@@ -137,34 +137,35 @@ describe("Contact email format validation (BUG-012)", () => {
       vi.mocked(mockDb.select).mockReturnValue({ from: mockFrom } as any);
 
       // Mock the insert returning a new contact
+      const mockContact = {
+        id: "new-contact-id",
+        organizationId: "org-123",
+        email: "valid@example.com",
+        emailHash: "abc123",
+        phone: null,
+        phoneHash: null,
+        firstName: null,
+        lastName: null,
+        company: null,
+        jobTitle: null,
+        emailStatus: "active",
+        smsStatus: null,
+        preferredChannel: null,
+        properties: {},
+        emailsSent: 0,
+        emailsOpened: 0,
+        emailsClicked: 0,
+        smsSent: 0,
+        smsClicked: 0,
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+        createdBy: "user-123",
+      };
       const mockInsert = {
         values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([
-            {
-              id: "new-contact-id",
-              organizationId: "org-123",
-              email: "valid@example.com",
-              emailHash: "abc123",
-              phone: null,
-              phoneHash: null,
-              firstName: null,
-              lastName: null,
-              company: null,
-              jobTitle: null,
-              emailStatus: "active",
-              smsStatus: null,
-              preferredChannel: null,
-              properties: {},
-              emailsSent: 0,
-              emailsOpened: 0,
-              emailsClicked: 0,
-              smsSent: 0,
-              smsClicked: 0,
-              createdAt: new Date("2024-01-01T00:00:00.000Z"),
-              updatedAt: new Date("2024-01-01T00:00:00.000Z"),
-              createdBy: "user-123",
-            },
-          ]),
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([mockContact]),
+          }),
         }),
       };
       vi.mocked(mockDb.insert).mockReturnValue(mockInsert as any);

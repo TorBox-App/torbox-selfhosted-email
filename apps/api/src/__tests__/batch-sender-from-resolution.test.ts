@@ -81,11 +81,22 @@ vi.mock("./variable-mappings", () => ({
 // DB mock with per-call resolution
 // ─────────────────────────────────────────────────────────────────────────────
 
-const mockDbInsertValues = vi.fn().mockResolvedValue(undefined);
+const mockDbInsertValues = vi.fn().mockImplementation(() => ({
+  onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+}));
 const mockDbUpdateSetWhere = vi.fn().mockResolvedValue(undefined);
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
+
+function thenable(rows: unknown[]) {
+  const obj: Record<string, unknown> = {
+    then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
+    limit: vi.fn().mockImplementation(() => thenable(rows)),
+    orderBy: vi.fn().mockImplementation(() => thenable(rows)),
+  };
+  return obj;
+}
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -97,12 +108,7 @@ vi.mock("@wraps/db", async () => {
         selectCallIndex += 1;
         return {
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue(rows),
-              orderBy: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue(rows),
-              }),
-            }),
+            where: vi.fn().mockImplementation(() => thenable(rows)),
           }),
         };
       }),
@@ -178,7 +184,8 @@ function makeSQSEvent() {
  * 2. contacts (getContactsChunk) — uses .where().orderBy().limit()
  * 3. template (from Promise.all)
  * 4. organization (from Promise.all)
- * 5. organizationExtension (only when batch.from is null)
+ * 5. alreadySent contactIds (dedup query)
+ * 6. organizationExtension (only when batch.from is null)
  */
 function setupSelects(opts: {
   batch: Record<string, unknown>;
@@ -207,6 +214,7 @@ function setupSelects(opts: {
       },
     ], // 3: template
     [{ name: "Test Org" }], // 4: organization
+    [], // 5: alreadySent (dedup — empty = no prior sends)
   ];
 
   // organizationExtension is only queried when batch.from is null

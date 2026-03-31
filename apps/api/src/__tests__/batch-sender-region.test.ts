@@ -50,53 +50,70 @@ vi.mock("@react-email/render", () => ({
   toPlainText: vi.fn().mockReturnValue("plain text"),
 }));
 
+let regionSelectIdx = 0;
+const regionSelectResults: unknown[][] = [
+  // 1. batch
+  [{
+    id: "batch-1",
+    organizationId: "org-1",
+    status: "queued",
+    audienceType: "all",
+    topicId: null,
+    segmentId: null,
+    emailTemplateId: "tmpl-1",
+    htmlContent: null,
+    subject: "Test",
+    from: "test@example.com",
+    fromName: "Test",
+    replyTo: null,
+    totalRecipients: 1,
+    processedRecipients: 0,
+    sent: 0,
+    failed: 0,
+    variableMappings: null,
+  }],
+  // 2. contacts
+  [{
+    id: "contact-1",
+    email: "user@example.com",
+    phone: null,
+    firstName: "Test",
+    lastName: "User",
+    company: null,
+    jobTitle: null,
+    properties: {},
+    createdAt: new Date("2026-01-15T10:00:00Z"),
+  }],
+  // 3. template
+  [{ sesTemplateName: "wraps-tmpl-1", compiledHtml: null, emailType: "marketing" }],
+  // 4. organization
+  [{ name: "Test Org" }],
+  // 5. dedup (empty = no prior sends)
+  [],
+];
+
+function regionThenable(rows: unknown[]) {
+  const obj: Record<string, unknown> = {
+    then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
+    limit: vi.fn().mockImplementation(() => regionThenable(rows)),
+    orderBy: vi.fn().mockImplementation(() => regionThenable(rows)),
+  };
+  return obj;
+}
+
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
   return {
     ...actual,
     db: {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              {
-                // batch record
-                id: "batch-1",
-                organizationId: "org-1",
-                status: "queued",
-                audienceType: "all",
-                topicId: null,
-                segmentId: null,
-                emailTemplateId: "tmpl-1",
-                htmlContent: null,
-                subject: "Test",
-                from: "test@example.com",
-                fromName: "Test",
-                replyTo: null,
-                totalRecipients: 1,
-                processedRecipients: 0,
-                sent: 0,
-                failed: 0,
-                variableMappings: null,
-              },
-            ]),
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue([
-                {
-                  id: "contact-1",
-                  email: "user@example.com",
-                  phone: null,
-                  firstName: "Test",
-                  lastName: "User",
-                  company: null,
-                  jobTitle: null,
-                  properties: {},
-                  createdAt: new Date("2026-01-15T10:00:00Z"),
-                },
-              ]),
-            }),
+      select: vi.fn().mockImplementation(() => {
+        const rows = regionSelectResults[regionSelectIdx] ?? [];
+        regionSelectIdx += 1;
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockImplementation(() => regionThenable(rows)),
           }),
-        }),
+        };
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -104,7 +121,9 @@ vi.mock("@wraps/db", async () => {
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
+        values: vi.fn().mockImplementation(() => ({
+          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        })),
       }),
     },
     sql: (...args: unknown[]) => args,
@@ -150,6 +169,7 @@ describe("batch-sender SES region", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sesClientInstances.length = 0;
+    regionSelectIdx = 0;
     process.env.AWS_REGION = "us-east-1";
     process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
   });

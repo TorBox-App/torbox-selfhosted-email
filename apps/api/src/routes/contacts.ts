@@ -506,39 +506,37 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         }
       }
 
-      // Create contact — catch unique constraint violation from race condition
-      let newContact;
-      try {
-        [newContact] = await db
-          .insert(contact)
-          .values({
-            organizationId: authContext.organizationId,
-            email: body.email,
-            emailHash: body.email ? hashValue(body.email) : null,
-            emailStatus: body.emailStatus ?? (body.email ? "active" : null),
-            phone: body.phone,
-            phoneHash: body.phone ? hashValue(body.phone) : null,
-            smsStatus:
-              body.smsStatus ?? (body.phone ? "pending_consent" : null),
-            firstName: body.firstName ?? null,
-            lastName: body.lastName ?? null,
-            company: body.company ?? null,
-            jobTitle: body.jobTitle ?? null,
-            preferredChannel: body.preferredChannel ?? null,
-            properties: body.properties ?? {},
-            createdBy: authContext.userId,
-          })
-          .returning();
-      } catch (err) {
-        // PostgreSQL unique_violation = 23505
-        // Drizzle wraps DB errors in DrizzleQueryError with the original as `cause`
-        const dbError =
-          err instanceof Error && "cause" in err ? (err as any).cause : err;
-        if (dbError?.code === "23505") {
-          ctx.set.status = 409;
-          return { error: "Contact already exists" };
-        }
-        throw err;
+      // Create contact — onConflictDoNothing covers both unique constraints
+      // (contact_unique_org_email_idx and contact_unique_org_phone_idx)
+      // so concurrent requests that pass the SELECT checks above won't 500.
+      const [newContact] = await db
+        .insert(contact)
+        .values({
+          organizationId: authContext.organizationId,
+          email: body.email,
+          emailHash: body.email ? hashValue(body.email) : null,
+          emailStatus: body.emailStatus ?? (body.email ? "active" : null),
+          phone: body.phone,
+          phoneHash: body.phone ? hashValue(body.phone) : null,
+          smsStatus:
+            body.smsStatus ?? (body.phone ? "pending_consent" : null),
+          firstName: body.firstName ?? null,
+          lastName: body.lastName ?? null,
+          company: body.company ?? null,
+          jobTitle: body.jobTitle ?? null,
+          preferredChannel: body.preferredChannel ?? null,
+          properties: body.properties ?? {},
+          createdBy: authContext.userId,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!newContact) {
+        // Race condition: another request created this contact between our
+        // SELECT check and INSERT. Return field-specific message.
+        ctx.set.status = 409;
+        if (body.email) return { error: "Contact with this email already exists" };
+        return { error: "Contact with this phone already exists" };
       }
 
       // Resolve topic slugs to IDs if provided

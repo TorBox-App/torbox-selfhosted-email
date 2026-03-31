@@ -156,4 +156,39 @@ describe("Contact creation race condition", () => {
       .where(eq(contact.organizationId, testOrg.id));
     expect(contacts).toHaveLength(1);
   });
+
+  it("concurrent POST /v1/contacts with same email: no 500, exactly one contact", async () => {
+    const app = createTestApp();
+    const email = `${TEST_PREFIX}-concurrent@example.com`;
+
+    const results = await Promise.all(
+      [1, 2, 3].map(() =>
+        app.handle(
+          new Request("http://localhost/v1/contacts", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email }),
+          })
+        )
+      )
+    );
+
+    const statuses = results.map((r) => r.status);
+
+    // No 500s — all should be 201 (created) or 409 (conflict)
+    for (const status of statuses) {
+      expect([201, 409]).toContain(status);
+    }
+
+    // Exactly one 201 (created), rest 409 (conflict)
+    expect(statuses.filter((s) => s === 201)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 409)).toHaveLength(2);
+
+    // Exactly one contact in DB
+    const contacts = await db
+      .select({ id: contact.id })
+      .from(contact)
+      .where(eq(contact.organizationId, testOrg.id));
+    expect(contacts).toHaveLength(1);
+  });
 });

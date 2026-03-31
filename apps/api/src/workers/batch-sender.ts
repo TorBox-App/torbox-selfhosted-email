@@ -29,7 +29,7 @@ import {
   template,
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
-import { and, exists, isNotNull, sql } from "drizzle-orm";
+import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
@@ -246,7 +246,34 @@ async function processJob(job: BatchJob): Promise<void> {
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
 
   // Filter email contacts
-  const emailContacts = contacts.filter((c) => channel === "email" && c.email);
+  let emailContacts = contacts.filter((c) => channel === "email" && c.email);
+
+  // Dedup: skip contacts that already have a send record for this batch
+  // (protects against SQS duplicate delivery)
+  if (emailContacts.length > 0) {
+    const alreadySent = await db
+      .select({ contactId: messageSend.contactId })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, organizationId),
+          eq(messageSend.batchSendId, batchId),
+          inArray(
+            messageSend.contactId,
+            emailContacts.map((c) => c.id)
+          )
+        )
+      );
+    if (alreadySent.length > 0) {
+      const sentIds = new Set(alreadySent.map((r) => r.contactId));
+      emailContacts = emailContacts.filter((c) => !sentIds.has(c.id));
+      log.info("Batch dedup: skipped already-sent contacts", {
+        batchId,
+        skipped: alreadySent.length,
+        remaining: emailContacts.length,
+      });
+    }
+  }
 
   const isMarketing = emailType === "marketing";
 
@@ -291,7 +318,7 @@ async function processJob(job: BatchJob): Promise<void> {
         "No sender email configured. Set a default sender in Settings > Sender Defaults.",
     }));
     if (failedRecords.length > 0) {
-      await db.insert(messageSend).values(failedRecords);
+      await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
     }
     await db
       .update(batchSend)
@@ -511,7 +538,7 @@ async function processJob(job: BatchJob): Promise<void> {
 
         // Batch insert all send records
         if (sendRecords.length > 0) {
-          await db.insert(messageSend).values(sendRecords);
+          await db.insert(messageSend).values(sendRecords).onConflictDoNothing();
         }
       } catch (error) {
         // Check if this is a throttle error
@@ -567,7 +594,7 @@ async function processJob(job: BatchJob): Promise<void> {
             status: "failed" as const,
             error: permError,
           }));
-          await db.insert(messageSend).values(failedRecords);
+          await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
           throw new Error(permError);
         }
 
@@ -594,7 +621,7 @@ async function processJob(job: BatchJob): Promise<void> {
           status: "failed" as const,
           error: errorMessage,
         }));
-        await db.insert(messageSend).values(failedRecords);
+        await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
         failed += recipientBatch.length;
       }
     }
@@ -725,7 +752,7 @@ async function processJob(job: BatchJob): Promise<void> {
 
       // Batch insert all send records
       if (sendRecords.length > 0) {
-        await db.insert(messageSend).values(sendRecords);
+        await db.insert(messageSend).values(sendRecords).onConflictDoNothing();
       }
     }
   }

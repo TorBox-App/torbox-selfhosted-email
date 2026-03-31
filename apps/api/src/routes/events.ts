@@ -126,9 +126,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             firstName: contactName || null,
             properties: {},
           })
-          .onConflictDoNothing({
-            target: [contact.organizationId, contact.emailHash],
-          })
+          .onConflictDoNothing()
           .returning();
 
         if (newContact) {

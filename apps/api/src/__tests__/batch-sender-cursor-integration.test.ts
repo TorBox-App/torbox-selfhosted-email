@@ -93,62 +93,83 @@ vi.mock("@wraps/db", async () => {
           const name = getTableName(table);
 
           if (name === "batch_send") {
+            const batchResult = [
+              {
+                id: "batch-1",
+                organizationId: "org-1",
+                status: "pending",
+                audienceType: "all",
+                topicId: null,
+                segmentId: null,
+                emailTemplateId: "tmpl-1",
+                from: "test@example.com",
+                fromName: "Test",
+                replyTo: null,
+                subject: "Hello",
+                htmlContent: null,
+                totalRecipients: 100,
+                processedRecipients: 0,
+                sent: 0,
+                failed: 0,
+                variableMappings: null,
+              },
+            ];
             return {
-              where: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue([
-                  {
-                    id: "batch-1",
-                    organizationId: "org-1",
-                    status: "pending",
-                    audienceType: "all",
-                    topicId: null,
-                    segmentId: null,
-                    emailTemplateId: "tmpl-1",
-                    from: "test@example.com",
-                    fromName: "Test",
-                    replyTo: null,
-                    subject: "Hello",
-                    htmlContent: null,
-                    totalRecipients: 100,
-                    processedRecipients: 0,
-                    sent: 0,
-                    failed: 0,
-                    variableMappings: null,
-                  },
-                ]),
-              }),
+              where: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) => Promise.resolve(batchResult).then(resolve),
+                limit: vi.fn().mockResolvedValue(batchResult),
+              })),
             };
           }
 
           if (name === "template") {
+            const tmplResult = [
+              {
+                sesTemplateName: "wraps-tmpl-1",
+                compiledHtml: null,
+                emailType: "marketing",
+              },
+            ];
             return {
-              where: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue([
-                  {
-                    sesTemplateName: "wraps-tmpl-1",
-                    compiledHtml: null,
-                    emailType: "marketing",
-                  },
-                ]),
-              }),
+              where: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) => Promise.resolve(tmplResult).then(resolve),
+                limit: vi.fn().mockResolvedValue(tmplResult),
+              })),
             };
           }
 
           if (name === "organization") {
+            const orgResult = [{ name: "Test Org" }];
             return {
-              where: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue([{ name: "Test Org" }]),
-              }),
+              where: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) => Promise.resolve(orgResult).then(resolve),
+                limit: vi.fn().mockResolvedValue(orgResult),
+              })),
+            };
+          }
+
+          if (name === "message_send") {
+            // Dedup query: return empty (no prior sends)
+            const result: unknown[] = [];
+            return {
+              where: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve),
+                limit: vi.fn().mockResolvedValue(result),
+              })),
             };
           }
 
           // Contact query: .where().orderBy().limit()
+          const contactResult = mockContacts;
           return {
-            where: vi.fn().mockReturnValue({
-              orderBy: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue(mockContacts),
-              }),
-            }),
+            where: vi.fn().mockImplementation(() => ({
+              then: (resolve: (v: unknown) => void) => Promise.resolve(contactResult).then(resolve),
+              orderBy: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) => Promise.resolve(contactResult).then(resolve),
+                limit: vi.fn().mockResolvedValue(contactResult),
+              })),
+              limit: vi.fn().mockResolvedValue(contactResult),
+            })),
           };
         }),
       }),
@@ -158,7 +179,9 @@ vi.mock("@wraps/db", async () => {
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
+        values: vi.fn().mockImplementation(() => ({
+          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        })),
       }),
     },
     sql: (...args: unknown[]) => args,
