@@ -1,6 +1,15 @@
 /**
  * Scoring System
- * Calculate email deliverability score based on check results
+ *
+ * Grade is determined by the auth triad (SPF, DKIM, DMARC) status.
+ * Score is placed within the grade's band based on secondary factors.
+ *
+ * Grade tiers:
+ *   A (90-100) — SPF + DKIM + DMARC enforcing (quarantine/reject)
+ *   B (80-89)  — All three present, but DMARC not enforcing or SPF issues
+ *   C (65-79)  — Missing one of the three core records
+ *   D (35-64)  — Missing two, or one critically broken
+ *   F (0-34)   — Missing all, +all, or blacklisted on Spamhaus
  */
 
 import type {
@@ -40,389 +49,49 @@ export type AllCheckResults = {
   caa: CaaResult;
 };
 
+const GRADE_BANDS = {
+  A: { min: 90, max: 100 },
+  B: { min: 80, max: 89 },
+  C: { min: 65, max: 79 },
+  D: { min: 35, max: 64 },
+  F: { min: 0, max: 34 },
+} as const;
+
 /**
  * Calculate email deliverability score
  */
 export function calculateScore(checks: AllCheckResults): ScoreResult {
-  let score = 100;
   const deductions: Deduction[] = [];
   const bonuses: Bonus[] = [];
 
-  // === SPF (30 points max) ===
-  if (!checks.spf.exists) {
-    score -= 30;
-    deductions.push({ check: "spf", points: 30, reason: "No SPF record" });
-  } else if (checks.spf.multipleRecords) {
-    score -= 30;
-    deductions.push({
-      check: "spf",
-      points: 30,
-      reason: "Multiple SPF records (RFC violation)",
-    });
-  } else if (!checks.spf.valid) {
-    score -= 30;
-    deductions.push({ check: "spf", points: 30, reason: "Invalid SPF syntax" });
-  } else if (checks.spf.allMechanism === "+all") {
-    score -= 30;
-    deductions.push({
-      check: "spf",
-      points: 30,
-      reason: "SPF +all allows anyone",
-    });
-  } else if (checks.spf.hasCircularInclude) {
-    score -= 30;
-    deductions.push({
-      check: "spf",
-      points: 30,
-      reason: "SPF has circular include (infinite loop)",
-    });
-  } else {
-    if (checks.spf.allMechanism === "?all") {
-      score -= 15;
-      deductions.push({
-        check: "spf",
-        points: 15,
-        reason: "SPF ?all is too permissive",
-      });
-    } else if (checks.spf.allMechanism === "~all") {
-      score -= 5;
-      deductions.push({
-        check: "spf",
-        points: 5,
-        reason: "SPF ~all (softfail) instead of -all",
-      });
-    }
-    if (checks.spf.lookupCount > 10) {
-      score -= 10;
-      deductions.push({
-        check: "spf",
-        points: 10,
-        reason: `SPF exceeds 10 lookups (${checks.spf.lookupCount})`,
-      });
-    }
-    if (checks.spf.hasPtr) {
-      score -= 2;
-      deductions.push({
-        check: "spf",
-        points: 2,
-        reason: "SPF uses deprecated ptr mechanism",
-      });
-    }
+  // Collect all issues (for the detail view)
+  collectSpfIssues(checks.spf, deductions);
+  collectDkimIssues(checks, deductions, bonuses);
+  collectDmarcIssues(checks.dmarc, deductions, bonuses);
+  collectInfraIssues(checks, deductions, bonuses);
+
+  // Grade is determined by the auth triad
+  const grade = determineGrade(checks);
+
+  // Score is placed within the grade's band
+  const band = GRADE_BANDS[grade];
+  let score = band.max;
+
+  // Secondary deductions pull score down within band
+  for (const d of deductions) {
+    score -= d.points;
   }
 
-  // === DKIM (25 points max) ===
-  // Check if domain uses AWS SES (which has random DKIM selectors we can't discover)
-  const usesAwsSes = checks.spf.includes.some(
-    (inc) => inc.includes("amazonses.com") || inc.includes("amazon.com")
-  );
-
-  if (checks.dkim.found) {
-    const validSelector = checks.dkim.selectors.find(
-      (s) => s.valid && !s.revoked
-    );
-    if (validSelector) {
-      if (
-        validSelector.keyType === "rsa" &&
-        validSelector.keyBits &&
-        validSelector.keyBits < 1024
-      ) {
-        score -= 20;
-        deductions.push({
-          check: "dkim",
-          points: 20,
-          reason: `DKIM key too weak (${validSelector.keyBits} bits)`,
-        });
-      } else if (
-        validSelector.keyType === "rsa" &&
-        validSelector.keyBits &&
-        validSelector.keyBits < 2048
-      ) {
-        score -= 5;
-        deductions.push({
-          check: "dkim",
-          points: 5,
-          reason: `DKIM key should be 2048+ bits (${validSelector.keyBits})`,
-        });
-      }
-      if (validSelector.testMode) {
-        score -= 10;
-        deductions.push({
-          check: "dkim",
-          points: 10,
-          reason: "DKIM in testing mode (t=y)",
-        });
-      }
-      // Bonus for multiple selectors
-      const validCount = checks.dkim.selectors.filter(
-        (s) => s.valid && !s.revoked
-      ).length;
-      if (validCount > 1) {
-        bonuses.push({
-          check: "dkim",
-          points: 2,
-          reason: `${validCount} valid DKIM selectors`,
-        });
-      }
-    } else {
-      score -= 25;
-      deductions.push({
-        check: "dkim",
-        points: 25,
-        reason: "No valid DKIM record",
-      });
-    }
-  } else if (usesAwsSes) {
-    // AWS SES uses random DKIM selectors that can't be discovered via DNS scanning
-    // Reduce penalty since DKIM likely exists but we can't verify it
-    score -= 5;
-    deductions.push({
-      check: "dkim",
-      points: 5,
-      reason:
-        "DKIM not verifiable (AWS SES uses random selectors). Send a test email to verify DKIM configuration.",
-    });
-  } else {
-    score -= 25;
-    deductions.push({
-      check: "dkim",
-      points: 25,
-      reason: "No DKIM record found",
-    });
-  }
-
-  // === DMARC (25 points max) ===
-  if (!checks.dmarc.exists) {
-    score -= 20;
-    deductions.push({ check: "dmarc", points: 20, reason: "No DMARC record" });
-  } else if (checks.dmarc.valid) {
-    if (checks.dmarc.policy === "none") {
-      score -= 10;
-      deductions.push({
-        check: "dmarc",
-        points: 10,
-        reason: "DMARC policy is none (not enforcing)",
-      });
-    }
-    if (checks.dmarc.percentage < 100) {
-      score -= 5;
-      deductions.push({
-        check: "dmarc",
-        points: 5,
-        reason: `DMARC pct=${checks.dmarc.percentage} (not 100%)`,
-      });
-    }
-    if (!checks.dmarc.reportingEnabled) {
-      score -= 5;
-      deductions.push({
-        check: "dmarc",
-        points: 5,
-        reason: "DMARC reporting not configured (no rua=)",
-      });
-    }
-    // Bonus for strict alignment
-    if (
-      checks.dmarc.alignmentSpf === "strict" &&
-      checks.dmarc.alignmentDkim === "strict"
-    ) {
-      bonuses.push({
-        check: "dmarc",
-        points: 2,
-        reason: "DMARC strict alignment configured",
-      });
-    }
-  } else {
-    score -= 20;
-    deductions.push({
-      check: "dmarc",
-      points: 20,
-      reason: "Invalid DMARC syntax",
-    });
-  }
-
-  // === MX (10 points max) ===
-  if (checks.mx.exists) {
-    const unresolving = checks.mx.records.filter((r) => !r.resolves);
-    if (unresolving.length > 0) {
-      score -= 5;
-      deductions.push({
-        check: "mx",
-        points: 5,
-        reason: `${unresolving.length} MX records don't resolve`,
-      });
-    }
-    // Bonus for redundancy
-    if (checks.mx.hasRedundancy) {
-      bonuses.push({
-        check: "mx",
-        points: 1,
-        reason: "Multiple MX records for redundancy",
-      });
-    }
-  } else {
-    score -= 5;
-    deductions.push({ check: "mx", points: 5, reason: "No MX records" });
-  }
-
-  // === Blacklists (10 points max) ===
-  const domainListings = checks.blacklist.domainChecks.listed;
-  const ipListings = checks.blacklist.ipChecks.listed;
-
-  for (const listing of [...domainListings, ...ipListings]) {
-    if (listing.zone.includes("spamhaus")) {
-      score -= 30;
-      deductions.push({
-        check: "blacklist",
-        points: 30,
-        reason: `Listed on ${listing.blacklist}`,
-      });
-    } else if (listing.priority === "critical" || listing.priority === "high") {
-      const pts = listing.priority === "critical" ? 15 : 10;
-      score -= pts;
-      deductions.push({
-        check: "blacklist",
-        points: pts,
-        reason: `Listed on ${listing.blacklist}`,
-      });
-    } else if (listing.priority === "medium") {
-      score -= 5;
-      deductions.push({
-        check: "blacklist",
-        points: 5,
-        reason: `Listed on ${listing.blacklist}`,
-      });
-    } else {
-      score -= 2;
-      deductions.push({
-        check: "blacklist",
-        points: 2,
-        reason: `Listed on ${listing.blacklist}`,
-      });
-    }
-  }
-
-  if (checks.blacklist.overallClean) {
-    bonuses.push({
-      check: "blacklist",
-      points: 5,
-      reason: "Clean on all blacklists",
-    });
-  }
-
-  // === Bonus checks ===
-
-  // MTA-STS
-  if (checks.mtaSts.configured && checks.mtaSts.policy?.mode === "enforce") {
-    bonuses.push({ check: "mta-sts", points: 5, reason: "MTA-STS enforcing" });
-  } else if (
-    checks.mtaSts.configured &&
-    checks.mtaSts.policy?.mode === "testing"
-  ) {
-    bonuses.push({
-      check: "mta-sts",
-      points: 2,
-      reason: "MTA-STS testing mode",
-    });
-  }
-
-  // TLS-RPT
-  if (checks.tlsRpt.configured) {
-    bonuses.push({ check: "tls-rpt", points: 2, reason: "TLS-RPT configured" });
-  }
-
-  // BIMI
-  if (checks.bimi.configured && checks.bimi.dmarcCompatible) {
-    if (checks.bimi.vmcValid) {
-      bonuses.push({ check: "bimi", points: 5, reason: "BIMI with VMC" });
-    } else if (checks.bimi.logoAccessible) {
-      bonuses.push({
-        check: "bimi",
-        points: 2,
-        reason: "BIMI configured (no VMC)",
-      });
-    }
-  }
-
-  // MX TLS (only if not skipped)
-  if (checks.mxTls.checked && !checks.mxTls.skipped) {
-    const allMxTls13 = checks.mxTls.servers.every((s) =>
-      s.tlsVersions?.includes("TLSv1.3")
-    );
-    if (allMxTls13) {
-      bonuses.push({
-        check: "mx-tls",
-        points: 2,
-        reason: "All MX servers support TLS 1.3",
-      });
-    }
-  }
-
-  // DNSSEC
-  if (checks.dnssec.enabled && checks.dnssec.valid) {
-    bonuses.push({
-      check: "dnssec",
-      points: 3,
-      reason: "DNSSEC enabled and valid",
-    });
-  } else if (checks.dnssec.enabled && !checks.dnssec.valid) {
-    score -= 5;
-    deductions.push({ check: "dnssec", points: 5, reason: "DNSSEC broken" });
-  }
-
-  // IPv6
-  if (checks.ipv6.mxHasIpv6 && checks.ipv6.spfIncludesIpv6) {
-    bonuses.push({ check: "ipv6", points: 2, reason: "Full IPv6 support" });
-  } else if (checks.ipv6.mxHasIpv6) {
-    bonuses.push({ check: "ipv6", points: 1, reason: "Partial IPv6 support" });
-  }
-
-  // Reverse DNS
-  if (checks.reverseDns.allHavePtr && checks.reverseDns.allConfirm) {
-    bonuses.push({ check: "ptr", points: 2, reason: "All PTR records valid" });
-  } else if (!checks.reverseDns.allHavePtr) {
-    score -= 5;
-    deductions.push({ check: "ptr", points: 5, reason: "Missing reverse DNS" });
-  }
-
-  // Domain age (only if data available)
-  if (checks.domainAge.ageInDays !== null) {
-    if (checks.domainAge.ageInDays < 30) {
-      score -= 10;
-      deductions.push({
-        check: "domain-age",
-        points: 10,
-        reason: "Domain less than 30 days old",
-      });
-    } else if (checks.domainAge.ageInDays < 90) {
-      score -= 5;
-      deductions.push({
-        check: "domain-age",
-        points: 5,
-        reason: "Domain less than 90 days old",
-      });
-    } else if (checks.domainAge.ageInDays > 365) {
-      bonuses.push({
-        check: "domain-age",
-        points: 2,
-        reason: "Domain over 1 year old",
-      });
-    }
-  }
-  // No penalty if age unknown (privacy/unavailable)
-
-  // CAA
-  if (checks.caa.configured) {
-    bonuses.push({ check: "caa", points: 1, reason: "CAA records configured" });
-  }
-
-  // Calculate final score
+  // Bonuses push back up (capped at band max)
   const totalBonus = bonuses.reduce((sum, b) => sum + b.points, 0);
-  const rawScore = score + Math.min(totalBonus, 20); // Cap bonus at 20
-  const finalScore = Math.min(100, Math.max(0, rawScore));
+  score += Math.min(totalBonus, 10);
+
+  const finalScore = Math.max(band.min, Math.min(band.max, score));
 
   return {
-    rawScore,
+    rawScore: score,
     finalScore,
-    grade: getGrade(finalScore),
+    grade,
     deductions,
     bonuses,
     breakdown: {
@@ -443,33 +112,443 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
         max: 10,
         score: Math.max(0, 10 - sumDeductions(deductions, "blacklist")),
       },
-      bonus: { earned: Math.min(totalBonus, 20), possible: 20 },
+      bonus: { earned: Math.min(totalBonus, 10), possible: 10 },
     },
   };
 }
 
-/**
- * Get letter grade from score
- */
-function getGrade(score: number): "A" | "B" | "C" | "D" | "F" {
-  if (score >= 90) {
-    return "A";
+// =============================================================================
+// Auth Triad Assessment
+// =============================================================================
+
+type AuthStatus = "good" | "present" | "weak" | "missing";
+
+function assessSpf(spf: SpfResult): AuthStatus {
+  if (!spf.exists || spf.multipleRecords || !spf.valid) return "missing";
+  if (spf.allMechanism === "+all" || spf.hasCircularInclude) return "missing";
+  if (spf.allMechanism === "?all") return "weak";
+  // ~all or -all both count as "present"
+  return "present";
+}
+
+function assessDkim(checks: AllCheckResults): AuthStatus {
+  if (checks.dkim.found) {
+    const valid = checks.dkim.selectors.find((s) => s.valid && !s.revoked);
+    return valid ? "present" : "missing";
   }
-  if (score >= 80) {
-    return "B";
-  }
-  if (score >= 70) {
-    return "C";
-  }
-  if (score >= 50) {
-    return "D";
-  }
-  return "F";
+  // AWS SES uses random DKIM selectors — give benefit of the doubt
+  const usesAwsSes = checks.spf.includes.some(
+    (inc) => inc.includes("amazonses.com") || inc.includes("amazon.com")
+  );
+  return usesAwsSes ? "weak" : "missing";
+}
+
+function assessDmarc(dmarc: DmarcResult): AuthStatus {
+  if (!(dmarc.exists && dmarc.valid)) return "missing";
+  if (dmarc.policy === "reject" || dmarc.policy === "quarantine") return "good";
+  return "present"; // policy=none
 }
 
 /**
- * Sum deductions for a check category
+ * Grade is determined by the auth triad status.
+ *
+ *   A — SPF present + DKIM present + DMARC enforcing
+ *   B — All three present, but DMARC not enforcing (or SPF weak)
+ *   C — Missing one of the three
+ *   D — Missing two, or one critically broken
+ *   F — Missing all three, or critical failure
  */
+function determineGrade(checks: AllCheckResults): "A" | "B" | "C" | "D" | "F" {
+  // Critical overrides → F
+  if (checks.spf.allMechanism === "+all") return "F";
+  const hasSpamhausListing = [
+    ...checks.blacklist.domainChecks.listed,
+    ...checks.blacklist.ipChecks.listed,
+  ].some((l) => l.zone.includes("spamhaus"));
+  if (hasSpamhausListing) return "F";
+
+  const spf = assessSpf(checks.spf);
+  const dkim = assessDkim(checks);
+  const dmarc = assessDmarc(checks.dmarc);
+
+  const presentCount = [spf, dkim, dmarc].filter((s) => s !== "missing").length;
+
+  // A: all three present and DMARC enforcing
+  if (
+    spf === "present" &&
+    (dkim === "present" || dkim === "good") &&
+    dmarc === "good"
+  ) {
+    return "A";
+  }
+
+  // B: all three present but not fully enforcing
+  if (presentCount === 3) return "B";
+
+  // C: missing one
+  if (presentCount === 2) return "C";
+
+  // D: missing two (but at least one present)
+  if (presentCount === 1) return "D";
+
+  // F: missing all
+  return "F";
+}
+
+// =============================================================================
+// Issue Collection (populates deductions/bonuses for the detail view)
+// =============================================================================
+
+function collectSpfIssues(spf: SpfResult, deductions: Deduction[]): void {
+  if (!spf.exists) {
+    deductions.push({ check: "spf", points: 5, reason: "No SPF record" });
+    return;
+  }
+  if (spf.multipleRecords) {
+    deductions.push({
+      check: "spf",
+      points: 5,
+      reason: "Multiple SPF records (RFC violation)",
+    });
+    return;
+  }
+  if (!spf.valid) {
+    deductions.push({ check: "spf", points: 5, reason: "Invalid SPF syntax" });
+    return;
+  }
+  if (spf.allMechanism === "+all") {
+    deductions.push({
+      check: "spf",
+      points: 5,
+      reason: "SPF +all allows anyone to send as your domain",
+    });
+    return;
+  }
+  if (spf.hasCircularInclude) {
+    deductions.push({
+      check: "spf",
+      points: 5,
+      reason: "SPF has circular include (infinite loop)",
+    });
+    return;
+  }
+
+  // SPF exists and is valid — minor issues
+  if (spf.allMechanism === "?all") {
+    deductions.push({
+      check: "spf",
+      points: 3,
+      reason: "SPF ?all is too permissive",
+    });
+  } else if (spf.allMechanism === "~all") {
+    deductions.push({
+      check: "spf",
+      points: 2,
+      reason: "SPF ~all (softfail) instead of -all (hardfail)",
+    });
+  }
+  if (spf.lookupCount > 10) {
+    deductions.push({
+      check: "spf",
+      points: 3,
+      reason: `SPF exceeds 10 DNS lookups (${spf.lookupCount})`,
+    });
+  }
+  if (spf.hasPtr) {
+    deductions.push({
+      check: "spf",
+      points: 1,
+      reason: "SPF uses deprecated ptr mechanism",
+    });
+  }
+}
+
+function collectDkimIssues(
+  checks: AllCheckResults,
+  deductions: Deduction[],
+  bonuses: Bonus[]
+): void {
+  const usesAwsSes = checks.spf.includes.some(
+    (inc) => inc.includes("amazonses.com") || inc.includes("amazon.com")
+  );
+
+  if (checks.dkim.found) {
+    const validSelector = checks.dkim.selectors.find(
+      (s) => s.valid && !s.revoked
+    );
+    if (!validSelector) {
+      deductions.push({
+        check: "dkim",
+        points: 5,
+        reason: "No valid DKIM record",
+      });
+      return;
+    }
+
+    if (
+      validSelector.keyType === "rsa" &&
+      validSelector.keyBits &&
+      validSelector.keyBits < 1024
+    ) {
+      deductions.push({
+        check: "dkim",
+        points: 4,
+        reason: `DKIM key too weak (${validSelector.keyBits} bits)`,
+      });
+    } else if (
+      validSelector.keyType === "rsa" &&
+      validSelector.keyBits &&
+      validSelector.keyBits < 2048
+    ) {
+      deductions.push({
+        check: "dkim",
+        points: 2,
+        reason: `DKIM key should be 2048+ bits (${validSelector.keyBits})`,
+      });
+    }
+    if (validSelector.testMode) {
+      deductions.push({
+        check: "dkim",
+        points: 3,
+        reason: "DKIM in testing mode (t=y)",
+      });
+    }
+
+    const validCount = checks.dkim.selectors.filter(
+      (s) => s.valid && !s.revoked
+    ).length;
+    if (validCount > 1) {
+      bonuses.push({
+        check: "dkim",
+        points: 1,
+        reason: `${validCount} valid DKIM selectors`,
+      });
+    }
+  } else if (usesAwsSes) {
+    deductions.push({
+      check: "dkim",
+      points: 2,
+      reason:
+        "DKIM not verifiable (AWS SES uses random selectors). Send a test email to verify.",
+    });
+  } else {
+    deductions.push({
+      check: "dkim",
+      points: 5,
+      reason: "No DKIM record found",
+    });
+  }
+}
+
+function collectDmarcIssues(
+  dmarc: DmarcResult,
+  deductions: Deduction[],
+  bonuses: Bonus[]
+): void {
+  if (!dmarc.exists) {
+    deductions.push({ check: "dmarc", points: 5, reason: "No DMARC record" });
+    return;
+  }
+  if (!dmarc.valid) {
+    deductions.push({
+      check: "dmarc",
+      points: 5,
+      reason: "Invalid DMARC syntax",
+    });
+    return;
+  }
+
+  if (dmarc.policy === "none") {
+    deductions.push({
+      check: "dmarc",
+      points: 3,
+      reason: "DMARC policy is none (not enforcing)",
+    });
+  }
+  if (dmarc.percentage < 100) {
+    deductions.push({
+      check: "dmarc",
+      points: 2,
+      reason: `DMARC pct=${dmarc.percentage} (not 100%)`,
+    });
+  }
+  if (!dmarc.reportingEnabled) {
+    deductions.push({
+      check: "dmarc",
+      points: 2,
+      reason: "DMARC reporting not configured (no rua=)",
+    });
+  }
+  if (dmarc.alignmentSpf === "strict" && dmarc.alignmentDkim === "strict") {
+    bonuses.push({
+      check: "dmarc",
+      points: 1,
+      reason: "DMARC strict alignment configured",
+    });
+  }
+}
+
+function collectInfraIssues(
+  checks: AllCheckResults,
+  deductions: Deduction[],
+  bonuses: Bonus[]
+): void {
+  // MX
+  if (checks.mx.exists) {
+    const unresolving = checks.mx.records.filter((r) => !r.resolves);
+    if (unresolving.length > 0) {
+      deductions.push({
+        check: "mx",
+        points: 2,
+        reason: `${unresolving.length} MX records don't resolve`,
+      });
+    }
+    if (checks.mx.hasRedundancy) {
+      bonuses.push({
+        check: "mx",
+        points: 1,
+        reason: "Multiple MX records for redundancy",
+      });
+    }
+  } else {
+    deductions.push({ check: "mx", points: 2, reason: "No MX records" });
+  }
+
+  // Blacklists
+  for (const listing of [
+    ...checks.blacklist.domainChecks.listed,
+    ...checks.blacklist.ipChecks.listed,
+  ]) {
+    if (listing.zone.includes("spamhaus")) {
+      deductions.push({
+        check: "blacklist",
+        points: 5,
+        reason: `Listed on ${listing.blacklist}`,
+      });
+    } else if (listing.priority === "critical" || listing.priority === "high") {
+      deductions.push({
+        check: "blacklist",
+        points: 3,
+        reason: `Listed on ${listing.blacklist}`,
+      });
+    } else {
+      deductions.push({
+        check: "blacklist",
+        points: 1,
+        reason: `Listed on ${listing.blacklist}`,
+      });
+    }
+  }
+  if (checks.blacklist.overallClean) {
+    bonuses.push({
+      check: "blacklist",
+      points: 1,
+      reason: "Clean on all blacklists",
+    });
+  }
+
+  // MTA-STS
+  if (checks.mtaSts.configured && checks.mtaSts.policy?.mode === "enforce") {
+    bonuses.push({ check: "mta-sts", points: 2, reason: "MTA-STS enforcing" });
+  } else if (
+    checks.mtaSts.configured &&
+    checks.mtaSts.policy?.mode === "testing"
+  ) {
+    bonuses.push({
+      check: "mta-sts",
+      points: 1,
+      reason: "MTA-STS testing mode",
+    });
+  }
+
+  // TLS-RPT
+  if (checks.tlsRpt.configured) {
+    bonuses.push({ check: "tls-rpt", points: 1, reason: "TLS-RPT configured" });
+  }
+
+  // BIMI
+  if (checks.bimi.configured && checks.bimi.dmarcCompatible) {
+    if (checks.bimi.vmcValid) {
+      bonuses.push({ check: "bimi", points: 2, reason: "BIMI with VMC" });
+    } else if (checks.bimi.logoAccessible) {
+      bonuses.push({
+        check: "bimi",
+        points: 1,
+        reason: "BIMI configured (no VMC)",
+      });
+    }
+  }
+
+  // MX TLS
+  if (checks.mxTls.checked && !checks.mxTls.skipped) {
+    const allMxTls13 = checks.mxTls.servers.every((s) =>
+      s.tlsVersions?.includes("TLSv1.3")
+    );
+    if (allMxTls13) {
+      bonuses.push({
+        check: "mx-tls",
+        points: 1,
+        reason: "All MX servers support TLS 1.3",
+      });
+    }
+  }
+
+  // DNSSEC
+  if (checks.dnssec.enabled && checks.dnssec.valid) {
+    bonuses.push({
+      check: "dnssec",
+      points: 1,
+      reason: "DNSSEC enabled and valid",
+    });
+  } else if (checks.dnssec.enabled && !checks.dnssec.valid) {
+    deductions.push({ check: "dnssec", points: 2, reason: "DNSSEC broken" });
+  }
+
+  // IPv6
+  if (checks.ipv6.mxHasIpv6 && checks.ipv6.spfIncludesIpv6) {
+    bonuses.push({ check: "ipv6", points: 1, reason: "Full IPv6 support" });
+  }
+
+  // Reverse DNS
+  if (checks.reverseDns.allHavePtr && checks.reverseDns.allConfirm) {
+    bonuses.push({ check: "ptr", points: 1, reason: "All PTR records valid" });
+  } else if (!checks.reverseDns.allHavePtr) {
+    deductions.push({ check: "ptr", points: 2, reason: "Missing reverse DNS" });
+  }
+
+  // Domain age
+  if (checks.domainAge.ageInDays !== null) {
+    if (checks.domainAge.ageInDays < 30) {
+      deductions.push({
+        check: "domain-age",
+        points: 3,
+        reason: "Domain less than 30 days old",
+      });
+    } else if (checks.domainAge.ageInDays < 90) {
+      deductions.push({
+        check: "domain-age",
+        points: 1,
+        reason: "Domain less than 90 days old",
+      });
+    } else if (checks.domainAge.ageInDays > 365) {
+      bonuses.push({
+        check: "domain-age",
+        points: 1,
+        reason: "Domain over 1 year old",
+      });
+    }
+  }
+
+  // CAA
+  if (checks.caa.configured) {
+    bonuses.push({ check: "caa", points: 1, reason: "CAA records configured" });
+  }
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
 function sumDeductions(deductions: Deduction[], check: string): number {
   return deductions
     .filter((d) => d.check === check)
@@ -484,8 +563,9 @@ export function getGradeColor(
 ): "green" | "yellow" | "orange" | "red" {
   switch (grade) {
     case "A":
-    case "B":
       return "green";
+    case "B":
+      return "yellow";
     case "C":
       return "yellow";
     case "D":
@@ -501,15 +581,15 @@ export function getGradeColor(
 export function getGradeDescription(grade: string): string {
   switch (grade) {
     case "A":
-      return "Excellent - all critical checks pass, best practices followed";
+      return "SPF + DKIM + DMARC enforcing — your domain is protected";
     case "B":
-      return "Good - all critical checks pass, minor improvements possible";
+      return "All three records present, but DMARC not enforcing";
     case "C":
-      return "Fair - some issues that could affect deliverability";
+      return "Missing one core record (SPF, DKIM, or DMARC)";
     case "D":
-      return "Poor - significant issues likely affecting deliverability";
+      return "Missing two core records — significant spoofing risk";
     case "F":
-      return "Failing - critical issues, emails likely going to spam";
+      return "No email authentication — anyone can spoof your domain";
     default:
       return "Unknown";
   }

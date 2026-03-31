@@ -182,14 +182,21 @@ export function displayResults(
   console.log(pc.dim("─".repeat(78)));
   console.log();
 
-  if (score.grade === "A" || score.grade === "B") {
+  if (score.grade === "A") {
+    const msg =
+      score.finalScore === 100
+        ? "Perfect! SPF + DKIM + DMARC enforcing with all best practices."
+        : "Excellent! SPF + DKIM + DMARC enforcing. Check deductions above for the last few points.";
+    console.log(pc.green(`✅ ${msg}`));
+  } else if (score.grade === "B") {
     console.log(
-      pc.green(
-        "✅ " +
-          (score.grade === "A"
-            ? "Excellent! Your email configuration follows all best practices."
-            : "Good! Your email configuration is solid with minor improvements possible.")
+      pc.yellow(
+        "⚠️  All three records present, but DMARC is not enforcing. Set policy to quarantine or reject to reach grade A."
       )
+    );
+    console.log();
+    console.log(
+      `  ${pc.cyan(`wraps.dev/tools?domain=${result.domain}&utm_source=mail-audit&utm_medium=cli&grade=${score.grade}`)}`
     );
   } else {
     console.log(

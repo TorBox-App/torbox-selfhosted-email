@@ -117,7 +117,7 @@ async function parseAndValidateSpf(
     // Handle each mechanism type
     switch (parsed.type) {
       case "all":
-        allMechanism = parsed.qualifier as SpfResult["allMechanism"];
+        allMechanism = `${parsed.qualifier}all` as SpfResult["allMechanism"];
         break;
 
       case "include":

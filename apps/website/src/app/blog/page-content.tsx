@@ -39,6 +39,20 @@ type BlogPost = {
 
 const posts: BlogPost[] = [
   {
+    slug: "yc-w26-email-security-audit",
+    title:
+      "We Graded 200 YC W26 Companies on Email Security. Only 23% Got an A.",
+    description:
+      "We scanned every YC W26 company for SPF, DKIM, and DMARC using public DNS records. 70% don't enforce DMARC. Full data and methodology.",
+    category: "Research",
+    date: "March 2026",
+    readTime: "5 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <Shield className="h-6 w-6" />,
+    image: "/blog/yc-w26-email-security-audit.webp",
+  },
+  {
     slug: "supabase-email-guide",
     title: "4 Email Flows Your Supabase App Needs Before Going Live",
     description:

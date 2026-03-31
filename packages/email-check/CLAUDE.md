@@ -67,40 +67,21 @@ src/
 
 ## Scoring Algorithm
 
-**Base: 100 points. Deductions for issues, bonuses for best practices.**
+**Grade is determined by the auth triad (SPF, DKIM, DMARC) status. Score is placed within the grade's band based on secondary factors. Bonuses move you within a band, not across grades.**
 
-### Deductions (Critical)
+### Grade Tiers (Auth Triad)
 
-| Check | Max Deduction | Examples |
-|-------|---------------|---------|
-| SPF | -30 | No record, `+all`, >10 lookups |
-| DKIM | -25 | No record (-25, or -5 if SES detected), weak key |
-| DMARC | -20 | No record, `p=none` (-10) |
-| MX | -5 | No records, non-resolving |
-| Blacklists | -30 | Spamhaus listing |
+| Grade | Requirement | Score Band |
+|-------|-------------|------------|
+| A | SPF + DKIM + DMARC enforcing (quarantine/reject) | 90-100 |
+| B | All three present, DMARC not enforcing | 80-89 |
+| C | Missing one of the three core records | 65-79 |
+| D | Missing two core records | 35-64 |
+| F | Missing all three, or critical failure (+all, Spamhaus) | 0-34 |
 
-### Bonuses (Capped at +20 total)
+### Within-Band Scoring
 
-| Feature | Bonus |
-|---------|-------|
-| MTA-STS enforcing | +5 |
-| BIMI with VMC | +5 |
-| DNSSEC valid | +3 |
-| Clean blacklists | +5 |
-| All MX TLS 1.3 | +2 |
-| Multiple DKIM selectors | +2 |
-| Strict DMARC alignment | +2 |
-| Domain >1 year old | +2 |
-
-### Grade Mapping
-
-| Grade | Score |
-|-------|-------|
-| A | 90-100 |
-| B | 80-89 |
-| C | 70-79 |
-| D | 50-69 |
-| F | <50 |
+Score starts at the band max and is adjusted by deductions (1-5 pts each) and bonuses (1-2 pts each, capped at +10 total). Common deductions: SPF ~all (-2), weak DKIM key (-2), no DMARC reporting (-2), MX issues (-2), new domain (-1 to -3). Common bonuses: MTA-STS (+2), BIMI (+1-2), DNSSEC (+1), clean blacklists (+1), MX redundancy (+1).
 
 ## Provider Detection
 
