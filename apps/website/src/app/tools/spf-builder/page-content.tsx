@@ -130,6 +130,12 @@ const PROVIDERS: Record<
     lookups: 1, // Only contains IP ranges
     logo: "aws.png",
   },
+  resend: {
+    name: "Resend",
+    mechanism: "include:send.resend.com",
+    lookups: 2, // Includes amazonses.com
+    logo: "resend.png",
+  },
   sendgrid: {
     name: "SendGrid",
     mechanism: "include:sendgrid.net",
@@ -142,6 +148,12 @@ const PROVIDERS: Record<
     lookups: 1, // Only contains IP ranges
     logo: "postmark.png",
   },
+  mailchimp: {
+    name: "Mailchimp",
+    mechanism: "include:servers.mcsv.net",
+    lookups: 1, // Only contains IP ranges
+    logo: "mailchimp.png",
+  },
   mailgun: {
     name: "Mailgun",
     mechanism: "include:mailgun.org",
@@ -149,6 +161,18 @@ const PROVIDERS: Record<
     logo: "mailgun.png",
   },
   // Marketing/CRM - verified
+  hubspot: {
+    name: "HubSpot",
+    mechanism: "include:hubspotemail.net",
+    lookups: 1, // Only contains IP ranges
+    logo: "hubspot.png",
+  },
+  drip: {
+    name: "Drip",
+    mechanism: "include:stspg-customer.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "drip.png",
+  },
   activecampaign: {
     name: "ActiveCampaign",
     mechanism: "include:emsd1.com",
@@ -180,6 +204,18 @@ const PROVIDERS: Record<
     logo: "klaviyo.png",
   },
   // Business tools - verified
+  shopify: {
+    name: "Shopify",
+    mechanism: "include:shops.shopify.com",
+    lookups: 1, // Only contains ~all (pass-through)
+    logo: "shopify.png",
+  },
+  intercom: {
+    name: "Intercom",
+    mechanism: "include:intercom-mail.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "intercom.png",
+  },
   salesforce: {
     name: "Salesforce",
     mechanism: "include:_spf.salesforce.com",
