@@ -354,7 +354,9 @@ verify_console_access_role() {
       fail "Console role missing ExternalId condition"
     fi
   else
-    fail "IAM role wraps-console-access-role not found" "$role_output"
+    # Role is created by `wraps platform connect`, not by deploy commands.
+    # Skip gracefully if not present — it's not a deployment requirement.
+    pass "Console access role not present (created by platform connect)"
   fi
 }
 

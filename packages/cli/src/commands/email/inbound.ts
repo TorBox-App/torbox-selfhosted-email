@@ -251,9 +251,8 @@ export async function inboundInit(
     getDNSCredentials,
     createInboundDNSRecordsForProvider,
     getDNSProviderDisplayName,
-    getDNSProviderTokenUrl,
     buildInboundDNSRecords: buildRecords,
-    formatDNSRecordsForDisplay: formatRecords,
+    formatManualDNSInstructions,
   } = await import("../../utils/dns/index.js");
   const { promptDNSProvider, promptContinueManualDNS } = await import(
     "../../utils/shared/prompts.js"
@@ -324,15 +323,6 @@ export async function inboundInit(
         credentialResult.error || "Could not validate credentials"
       );
 
-      if (dnsProvider === "vercel" || dnsProvider === "cloudflare") {
-        clack.log.info(
-          `Set the ${dnsProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} environment variable to enable automatic DNS management.`
-        );
-        clack.log.info(
-          `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(dnsProvider))}`
-        );
-      }
-
       const continueManual = await promptContinueManualDNS();
       if (continueManual) {
         dnsProvider = "manual";
@@ -343,18 +333,12 @@ export async function inboundInit(
   // Show manual DNS instructions if auto-creation was skipped or failed
   if (!dnsAutoCreated) {
     const dnsRecords = buildRecords(receivingDomain, region);
-    const formattedRecords = formatRecords(dnsRecords);
 
     console.log();
-    clack.log.info(pc.bold("DNS Records Required"));
-    console.log(
-      `  Add these records to your DNS provider for ${pc.cyan(receivingDomain)}:\n`
+    clack.note(
+      formatManualDNSInstructions(dnsRecords),
+      "DNS Records — Add these to your DNS provider"
     );
-
-    for (const record of formattedRecords) {
-      console.log(`  ${pc.dim(record.type.padEnd(6))} ${record.name}`);
-      console.log(`  ${pc.dim("→")} ${pc.green(record.value)}\n`);
-    }
   }
 
   // 16. Save metadata
@@ -1094,9 +1078,8 @@ export async function inboundAdd(
     getDNSCredentials,
     createInboundDNSRecordsForProvider,
     getDNSProviderDisplayName,
-    getDNSProviderTokenUrl,
     buildInboundDNSRecords: buildRecords,
-    formatDNSRecordsForDisplay: formatRecords,
+    formatManualDNSInstructions,
   } = await import("../../utils/dns/index.js");
   const { promptDNSProvider, promptContinueManualDNS } = await import(
     "../../utils/shared/prompts.js"
@@ -1167,15 +1150,6 @@ export async function inboundAdd(
         credentialResult.error || "Could not validate credentials"
       );
 
-      if (dnsProvider === "vercel" || dnsProvider === "cloudflare") {
-        clack.log.info(
-          `Set the ${dnsProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} environment variable to enable automatic DNS management.`
-        );
-        clack.log.info(
-          `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(dnsProvider))}`
-        );
-      }
-
       if (!options.yes) {
         const continueManual = await promptContinueManualDNS();
         if (continueManual) {
@@ -1188,18 +1162,12 @@ export async function inboundAdd(
   // Show manual DNS instructions if auto-creation was skipped or failed
   if (!dnsAutoCreated) {
     const dnsRecords = buildRecords(receivingDomain, region);
-    const formattedRecords = formatRecords(dnsRecords);
 
     console.log();
-    clack.log.info(pc.bold("DNS Records Required"));
-    console.log(
-      `  Add these records to your DNS provider for ${pc.cyan(receivingDomain)}:\n`
+    clack.note(
+      formatManualDNSInstructions(dnsRecords),
+      "DNS Records — Add these to your DNS provider"
     );
-
-    for (const record of formattedRecords) {
-      console.log(`  ${pc.dim(record.type.padEnd(6))} ${record.name}`);
-      console.log(`  ${pc.dim("→")} ${pc.green(record.value)}\n`);
-    }
   }
 
   // 11. Save to metadata

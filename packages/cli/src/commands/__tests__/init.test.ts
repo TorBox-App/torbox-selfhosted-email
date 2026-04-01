@@ -206,7 +206,22 @@ describe("init command", () => {
         value: "token1.dkim.amazonses.com",
         category: "dkim",
       },
+      {
+        name: "example.com",
+        type: "TXT",
+        value: "v=spf1 include:amazonses.com ~all",
+        category: "spf",
+      },
+      {
+        name: "_dmarc.example.com",
+        type: "TXT",
+        value: "v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com",
+        category: "dmarc",
+      },
     ]);
+    vi.mocked(dnsUtils.formatManualDNSInstructions).mockReturnValue(
+      "DKIM (3 CNAMEs)\n  CNAME token1._domainkey.example.com\n"
+    );
 
     // Mock prompt utilities
     vi.mocked(promptUtils.promptProvider).mockResolvedValue("vercel");
@@ -224,6 +239,10 @@ describe("init command", () => {
       selectedCategories: new Set(["dkim", "spf", "dmarc"]),
     });
     vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("manual");
+    vi.mocked(promptUtils.promptDNSRecordSelection).mockResolvedValue({
+      shouldCreate: true,
+      selectedCategories: new Set(["dkim", "spf", "dmarc"]),
+    });
     vi.mocked(promptUtils.promptContinueManualDNS).mockResolvedValue(true);
 
     // Mock deployEmailStack
@@ -463,7 +482,103 @@ describe("init command", () => {
 
       await init({});
 
-      // Should display DNS records via prompts.note or prompts.log
+      // Should display all DNS records via clack.note with formatted instructions
+      expect(prompts.note).toHaveBeenCalled();
+      expect(dnsUtils.formatManualDNSInstructions).toHaveBeenCalled();
+    });
+
+    it("should use per-record selection for Vercel DNS provider", async () => {
+      await setupPulumiMock();
+      vi.mocked(dnsUtils.detectAvailableDNSProviders).mockResolvedValue([
+        { provider: "vercel", detected: true, hint: "Token detected" },
+        {
+          provider: "manual",
+          detected: true,
+          hint: "I'll add DNS records myself",
+        },
+      ]);
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("vercel");
+      vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+        valid: true,
+        credentials: { provider: "vercel", token: "test-token" },
+      });
+      vi.mocked(promptUtils.promptDNSRecordSelection).mockResolvedValue({
+        shouldCreate: true,
+        selectedCategories: new Set(["dkim", "spf"]),
+      });
+
+      await init({});
+
+      // Should show per-record selection, not create all records blindly
+      expect(promptUtils.promptDNSRecordSelection).toHaveBeenCalled();
+      expect(dnsUtils.createDNSRecordsForProvider).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "vercel" }),
+        expect.any(Object),
+        expect.any(Set)
+      );
+    });
+
+    it("should use per-record selection for Cloudflare DNS provider", async () => {
+      await setupPulumiMock();
+      vi.mocked(dnsUtils.detectAvailableDNSProviders).mockResolvedValue([
+        { provider: "cloudflare", detected: true, hint: "Zone found" },
+        {
+          provider: "manual",
+          detected: true,
+          hint: "I'll add DNS records myself",
+        },
+      ]);
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("cloudflare");
+      vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+        valid: true,
+        credentials: {
+          provider: "cloudflare",
+          token: "test-token",
+          zoneId: "zone123",
+        },
+      });
+      vi.mocked(promptUtils.promptDNSRecordSelection).mockResolvedValue({
+        shouldCreate: true,
+        selectedCategories: new Set(["dkim", "spf", "dmarc"]),
+      });
+
+      await init({});
+
+      expect(promptUtils.promptDNSRecordSelection).toHaveBeenCalled();
+      expect(dnsUtils.createDNSRecordsForProvider).toHaveBeenCalled();
+    });
+
+    it("should skip DNS creation when user deselects all records", async () => {
+      await setupPulumiMock();
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("vercel");
+      vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+        valid: true,
+        credentials: { provider: "vercel", token: "test-token" },
+      });
+      vi.mocked(promptUtils.promptDNSRecordSelection).mockResolvedValue({
+        shouldCreate: false,
+        selectedCategories: new Set(),
+      });
+
+      await init({});
+
+      expect(dnsUtils.createDNSRecordsForProvider).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to manual when credentials are invalid", async () => {
+      await setupPulumiMock();
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("cloudflare");
+      vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+        valid: false,
+        error: "Invalid Cloudflare token — authentication failed",
+      });
+      vi.mocked(promptUtils.promptContinueManualDNS).mockResolvedValue(true);
+
+      await init({});
+
+      // Should warn and fall back to manual
+      expect(promptUtils.promptContinueManualDNS).toHaveBeenCalled();
+      // Should still show manual DNS instructions
       expect(prompts.note).toHaveBeenCalled();
     });
   });

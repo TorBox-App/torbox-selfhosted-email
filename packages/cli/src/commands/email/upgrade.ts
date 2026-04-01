@@ -7,9 +7,8 @@ import type { UpgradeOptions, WrapsEmailConfig } from "../../types/index.js";
 import {
   buildEmailDNSRecords,
   createDNSRecordsForProvider,
-  formatDNSRecordsForDisplay,
+  formatManualDNSInstructions,
   getDNSProviderDisplayName,
-  getDNSProviderTokenUrl,
 } from "../../utils/dns/create-records.js";
 import {
   detectAvailableDNSProviders,
@@ -2105,15 +2104,6 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           credResult.error ||
             `Unable to validate ${getDNSProviderDisplayName(dnsProvider)} credentials`
         );
-
-        if (dnsProvider === "vercel" || dnsProvider === "cloudflare") {
-          clack.log.info(
-            `Set ${dnsProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} to enable automatic DNS management.`
-          );
-          clack.log.info(
-            `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(dnsProvider))}`
-          );
-        }
       }
     }
 
@@ -2129,16 +2119,12 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         region,
       };
       const dnsRecords = buildEmailDNSRecords(dnsData);
-      const displayRecords = formatDNSRecordsForDisplay(dnsRecords);
 
-      console.log(
-        `\n${pc.bold("Add these DNS records to your DNS provider:")}\n`
+      console.log();
+      clack.note(
+        formatManualDNSInstructions(dnsRecords),
+        "DNS Records — Add these to your DNS provider"
       );
-      for (const record of displayRecords) {
-        console.log(`  ${pc.cyan(record.type)} ${record.name}`);
-        console.log(`       ${pc.dim(record.value)}`);
-      }
-      console.log("");
     }
   }
 

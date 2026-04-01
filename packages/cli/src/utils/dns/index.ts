@@ -15,8 +15,11 @@ export {
   buildInboundDNSRecords,
   createDNSRecordsForProvider,
   createInboundDNSRecordsForProvider,
+  DNS_RECORD_DESCRIPTIONS,
+  type DNSRecordCategory,
   type DNSRecordInfo,
   formatDNSRecordsForDisplay,
+  formatManualDNSInstructions,
   getDNSProviderDisplayName,
   getDNSProviderTokenUrl,
 } from "./create-records.js";

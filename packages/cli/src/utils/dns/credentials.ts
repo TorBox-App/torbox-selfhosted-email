@@ -2,6 +2,8 @@
  * DNS provider credential validation and management
  */
 
+import * as clack from "@clack/prompts";
+import pc from "picocolors";
 import { findHostedZone } from "../route53.js";
 import type { DNSProviderType } from "../shared/prompts.js";
 
@@ -189,8 +191,60 @@ export async function findCloudflareZoneId(
 }
 
 /**
+ * Interactively prompt the user for a DNS provider API token
+ */
+export async function promptDNSToken(
+  provider: "vercel" | "cloudflare"
+): Promise<{ token: string; teamId?: string } | null> {
+  const isVercel = provider === "vercel";
+  const providerName = isVercel ? "Vercel" : "Cloudflare";
+  const tokenUrl = isVercel
+    ? "https://vercel.com/account/tokens"
+    : "https://dash.cloudflare.com/profile/api-tokens";
+
+  console.log();
+  clack.log.info(pc.bold(`${providerName} API Token`));
+
+  if (isVercel) {
+    clack.log.info(pc.dim("Scope: Full Access, or a scoped token with DNS access"));
+  } else {
+    clack.log.info(pc.dim("Scope: Zone → DNS → Edit (for your domain's zone)"));
+    clack.log.info(pc.dim('Use the "Edit zone DNS" template when creating your token'));
+  }
+
+  clack.log.info(pc.dim(`Create one at: ${pc.cyan(tokenUrl)}`));
+
+  const token = await clack.password({
+    message: `${providerName} API token:`,
+  });
+
+  if (clack.isCancel(token) || !token) {
+    return null;
+  }
+
+  let teamId: string | undefined;
+  if (isVercel) {
+    const wantsTeam = await clack.confirm({
+      message: "Is this domain on a Vercel team account?",
+      initialValue: false,
+    });
+    if (!clack.isCancel(wantsTeam) && wantsTeam) {
+      const team = await clack.text({
+        message: "Vercel Team ID:",
+        placeholder: "team_xxxxx",
+      });
+      if (!clack.isCancel(team) && team) {
+        teamId = team;
+      }
+    }
+  }
+
+  return { token, teamId };
+}
+
+/**
  * Get and validate DNS credentials for a provider
- * Returns credentials if valid, null if invalid or missing
+ * Prompts interactively for tokens if env vars are not set.
  */
 export async function getDNSCredentials(
   provider: DNSProviderType,
@@ -214,12 +268,17 @@ export async function getDNSCredentials(
     }
 
     case "vercel": {
-      const token = process.env.VERCEL_TOKEN;
+      let token = process.env.VERCEL_TOKEN;
+      let teamId = process.env.VERCEL_TEAM_ID;
+
+      // Prompt interactively if env var is not set
       if (!token) {
-        return {
-          valid: false,
-          error: "VERCEL_TOKEN environment variable is not set",
-        };
+        const prompted = await promptDNSToken("vercel");
+        if (!prompted) {
+          return { valid: false, error: "No token provided" };
+        }
+        token = prompted.token;
+        teamId = prompted.teamId ?? teamId;
       }
 
       // Validate token
@@ -227,12 +286,11 @@ export async function getDNSCredentials(
       if (!isValid) {
         return {
           valid: false,
-          error: "Invalid VERCEL_TOKEN - authentication failed",
+          error: "Invalid Vercel token — authentication failed",
         };
       }
 
       // Check if domain is in Vercel DNS
-      const teamId = process.env.VERCEL_TEAM_ID;
       const hasDomain = await checkVercelDomain(token, domain, teamId);
       if (!hasDomain) {
         return {
@@ -248,12 +306,15 @@ export async function getDNSCredentials(
     }
 
     case "cloudflare": {
-      const token = process.env.CLOUDFLARE_API_TOKEN;
+      let token = process.env.CLOUDFLARE_API_TOKEN;
+
+      // Prompt interactively if env var is not set
       if (!token) {
-        return {
-          valid: false,
-          error: "CLOUDFLARE_API_TOKEN environment variable is not set",
-        };
+        const prompted = await promptDNSToken("cloudflare");
+        if (!prompted) {
+          return { valid: false, error: "No token provided" };
+        }
+        token = prompted.token;
       }
 
       // Validate token
@@ -261,7 +322,7 @@ export async function getDNSCredentials(
       if (!isValid) {
         return {
           valid: false,
-          error: "Invalid CLOUDFLARE_API_TOKEN - authentication failed",
+          error: "Invalid Cloudflare token — authentication failed",
         };
       }
 

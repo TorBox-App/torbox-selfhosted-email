@@ -6,6 +6,7 @@ import {
   ChangeResourceRecordSetsCommand,
   Route53Client,
 } from "@aws-sdk/client-route-53";
+import pc from "picocolors";
 import {
   createSelectedDNSRecords,
   type ProposedDNSRecord,
@@ -16,6 +17,19 @@ import type { DNSCreationResult, EmailDNSRecordData } from "./types.js";
 import { VercelDNSClient } from "./vercel.js";
 
 /**
+ * DNS record category type
+ */
+export type DNSRecordCategory =
+  | "dkim"
+  | "spf"
+  | "dmarc"
+  | "tracking"
+  | "mailfrom_mx"
+  | "mailfrom_spf"
+  | "inbound_mx"
+  | "inbound_spf";
+
+/**
  * DNS record to be created
  */
 export type DNSRecordInfo = {
@@ -23,15 +37,56 @@ export type DNSRecordInfo = {
   type: "CNAME" | "TXT" | "MX";
   value: string;
   priority?: number;
-  category:
-    | "dkim"
-    | "spf"
-    | "dmarc"
-    | "tracking"
-    | "mailfrom_mx"
-    | "mailfrom_spf"
-    | "inbound_mx"
-    | "inbound_spf";
+  category: DNSRecordCategory;
+};
+
+/**
+ * Human-readable descriptions for each DNS record category
+ */
+export const DNS_RECORD_DESCRIPTIONS: Record<
+  DNSRecordCategory,
+  { label: string; purpose: string; impact: string }
+> = {
+  dkim: {
+    label: "DKIM (3 CNAMEs)",
+    purpose: "Cryptographic signatures proving emails are from your domain",
+    impact: "Required — without DKIM, emails will likely land in spam",
+  },
+  spf: {
+    label: "SPF (TXT)",
+    purpose: "Authorizes Amazon SES to send email on behalf of your domain",
+    impact: "Required — prevents spoofing and improves deliverability",
+  },
+  dmarc: {
+    label: "DMARC (TXT)",
+    purpose: "Policy for how receivers handle emails failing DKIM/SPF checks",
+    impact: "Recommended — skip if you already have a DMARC policy",
+  },
+  tracking: {
+    label: "Tracking (CNAME)",
+    purpose: "Routes open/click tracking through your domain instead of AWS",
+    impact: "Optional — improves brand consistency in tracked links",
+  },
+  mailfrom_mx: {
+    label: "MAIL FROM MX",
+    purpose: "Routes bounce notifications to SES for proper bounce handling",
+    impact: "Recommended — required for full DMARC alignment",
+  },
+  mailfrom_spf: {
+    label: "MAIL FROM SPF (TXT)",
+    purpose: "Authorizes SES to send from the MAIL FROM subdomain",
+    impact: "Required when using custom MAIL FROM domain",
+  },
+  inbound_mx: {
+    label: "Inbound MX",
+    purpose: "Routes incoming email to AWS SES for processing",
+    impact: "Required for inbound email receiving",
+  },
+  inbound_spf: {
+    label: "Inbound SPF (TXT)",
+    purpose: "Authorizes SES for the inbound receiving domain",
+    impact: "Required for inbound email receiving",
+  },
 };
 
 /**
@@ -147,6 +202,35 @@ export function formatDNSRecordsForDisplay(
 }
 
 /**
+ * Format all DNS records for manual setup with descriptions
+ */
+export function formatManualDNSInstructions(records: DNSRecordInfo[]): string {
+  const categories = [...new Set(records.map((r) => r.category))];
+  const lines: string[] = [];
+
+  for (const cat of categories) {
+    const catRecords = records.filter((r) => r.category === cat);
+    const desc = DNS_RECORD_DESCRIPTIONS[cat];
+
+    lines.push(pc.bold(desc.label));
+    lines.push(pc.dim(desc.purpose));
+    lines.push(pc.dim(desc.impact));
+    lines.push("");
+
+    for (const record of catRecords) {
+      const value = record.priority
+        ? `${record.priority} ${record.value}`
+        : record.value;
+      lines.push(`  ${pc.cyan(record.type.padEnd(6))} ${record.name}`);
+      lines.push(`  ${pc.dim("→")}      ${pc.green(value)}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Create DNS records using the appropriate provider
  */
 export async function createDNSRecordsForProvider(
@@ -219,6 +303,13 @@ export async function createDNSRecordsForProvider(
         credentials.token,
         credentials.teamId
       );
+      if (selectedCategories) {
+        const records = buildEmailDNSRecords(data);
+        const filtered = records.filter((r) =>
+          selectedCategories.has(r.category)
+        );
+        return client.createRecords(filtered);
+      }
       return client.createEmailRecords(data);
     }
 
@@ -227,6 +318,13 @@ export async function createDNSRecordsForProvider(
         credentials.zoneId,
         credentials.token
       );
+      if (selectedCategories) {
+        const records = buildEmailDNSRecords(data);
+        const filtered = records.filter((r) =>
+          selectedCategories.has(r.category)
+        );
+        return client.createRecords(filtered);
+      }
       return client.createEmailRecords(data);
     }
 

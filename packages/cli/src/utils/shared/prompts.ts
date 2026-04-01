@@ -1040,11 +1040,13 @@ export async function promptDNSProvider(
         break;
       case "vercel":
         label = "Vercel DNS";
-        hint = p.detected ? "Token found" : "Requires VERCEL_TOKEN";
+        hint = p.detected ? "Token detected" : "Enter token or set VERCEL_TOKEN";
         break;
       case "cloudflare":
         label = "Cloudflare";
-        hint = p.detected ? "Token found" : "Requires CLOUDFLARE_API_TOKEN";
+        hint = p.detected
+          ? "Token detected"
+          : "Enter token or set CLOUDFLARE_API_TOKEN";
         break;
       case "manual":
         label = "Manual";
@@ -1174,6 +1176,90 @@ export async function promptWebhookUrl(): Promise<string | undefined> {
   }
 
   return url as string;
+}
+
+/**
+ * Display DNS records grouped by category and let user select which to create.
+ * Used for Vercel/Cloudflare where we don't have existing-record preview from Route53.
+ */
+export async function promptDNSRecordSelection(
+  records: Array<{
+    name: string;
+    type: string;
+    value: string;
+    priority?: number;
+    category: string;
+  }>,
+  providerName: string
+): Promise<{ shouldCreate: boolean; selectedCategories: Set<string> }> {
+  // Import descriptions here to avoid circular deps
+  const { DNS_RECORD_DESCRIPTIONS } = await import("../dns/create-records.js");
+
+  // Group records by category
+  const categories = new Map<
+    string,
+    Array<{ name: string; type: string; value: string; priority?: number }>
+  >();
+  for (const record of records) {
+    const existing = categories.get(record.category) || [];
+    existing.push(record);
+    categories.set(record.category, existing);
+  }
+
+  // Display all records grouped by category
+  console.log();
+  clack.log.info(pc.bold("DNS records to create:"));
+  console.log();
+
+  for (const [category, catRecords] of categories) {
+    const desc =
+      DNS_RECORD_DESCRIPTIONS[
+        category as keyof typeof DNS_RECORD_DESCRIPTIONS
+      ];
+    const label = desc?.label || DNS_CATEGORY_LABELS[category] || category;
+
+    console.log(`  ${pc.bold(label)}`);
+    if (desc) {
+      console.log(`  ${pc.dim(desc.purpose)}`);
+    }
+    for (const record of catRecords) {
+      const value = record.priority
+        ? `${record.priority} ${record.value}`
+        : record.value;
+      console.log(`    ${pc.cyan(record.type.padEnd(6))} ${record.name}`);
+      console.log(`    ${pc.dim("→")}      ${value}`);
+    }
+    console.log();
+  }
+
+  // Let user select which categories to create
+  const options = Array.from(categories.keys()).map((category) => {
+    const desc =
+      DNS_RECORD_DESCRIPTIONS[
+        category as keyof typeof DNS_RECORD_DESCRIPTIONS
+      ];
+    return {
+      value: category,
+      label: desc?.label || DNS_CATEGORY_LABELS[category] || category,
+      hint: desc?.impact || "",
+    };
+  });
+
+  const selected = await clack.multiselect({
+    message: `Select records to create in ${providerName}:`,
+    options,
+    initialValues: options.map((o) => o.value),
+    required: false,
+  });
+
+  if (clack.isCancel(selected) || (selected as string[]).length === 0) {
+    return { shouldCreate: false, selectedCategories: new Set() };
+  }
+
+  return {
+    shouldCreate: true,
+    selectedCategories: new Set(selected as string[]),
+  };
 }
 
 /**

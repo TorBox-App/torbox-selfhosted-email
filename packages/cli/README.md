@@ -416,59 +416,93 @@ The CLI offers four presets that control which AWS resources are created:
 ### Custom
 Select individual features. Useful if you want event storage without a dedicated IP, or specific event types only.
 
-## Automatic DNS Management
+## DNS Configuration
 
-During `wraps email init` and `wraps email upgrade`, the CLI can automatically create DNS records (DKIM, SPF, DMARC, MX) for your domain. Set the appropriate environment variable for your DNS provider:
+During `wraps email init`, `wraps email inbound init`, and `wraps email upgrade`, the CLI creates DNS records for email authentication. You choose your DNS provider and the CLI either creates records automatically or shows you exactly what to add manually.
+
+### What Records Are Created
+
+| Record | Type | Purpose | Required? |
+|--------|------|---------|-----------|
+| DKIM (3 records) | CNAME | Cryptographic signatures proving emails are from your domain | Yes |
+| SPF | TXT | Authorizes Amazon SES to send email on behalf of your domain | Yes |
+| DMARC | TXT | Policy for how receivers handle emails failing DKIM/SPF | Recommended (skip if you have one) |
+| MAIL FROM MX | MX | Routes bounce notifications to SES for proper handling | Recommended for DMARC alignment |
+| MAIL FROM SPF | TXT | Authorizes SES to send from the MAIL FROM subdomain | With MAIL FROM only |
+| Tracking | CNAME | Routes open/click tracking through your domain | Optional |
+
+The CLI shows all records before creating them and lets you select which to create. For example, if you already have a DMARC policy, you can deselect the DMARC record.
 
 ### Supported DNS Providers
 
-| Provider | Environment Variable | Optional |
-|----------|---------------------|----------|
-| AWS Route53 | *(uses AWS credentials)* | `AWS_PROFILE` |
-| Vercel DNS | `VERCEL_TOKEN` | `VERCEL_TEAM_ID` |
-| Cloudflare | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ZONE_ID` |
+| Provider | Authentication | Required Token Scopes |
+|----------|---------------|----------------------|
+| AWS Route53 | Your AWS credentials | `route53:ChangeResourceRecordSets` |
+| Cloudflare | API Token | Zone > DNS > Edit (for your zone) |
+| Vercel DNS | API Token | Full Access, or scoped with DNS access |
+| Manual | — | You add records yourself |
 
-### Setup
+### Providing Credentials
 
-**Vercel DNS:**
+**Option 1: Environment variables** (recommended for CI/CD and repeat use)
+
 ```bash
-# Create token at: https://vercel.com/account/tokens
-export VERCEL_TOKEN=your_token_here
+# Cloudflare
+export CLOUDFLARE_API_TOKEN=your_token
+export CLOUDFLARE_ZONE_ID=your_zone_id  # optional, auto-detected from domain
 
-# Optional: specify team (for team accounts)
-export VERCEL_TEAM_ID=team_xxxxx
-```
+# Vercel
+export VERCEL_TOKEN=your_token
+export VERCEL_TEAM_ID=team_xxxxx  # optional, for team accounts
 
-**Cloudflare:**
-```bash
-# Create token at: https://dash.cloudflare.com/profile/api-tokens
-# Token needs: Zone.DNS (Edit) permission
-export CLOUDFLARE_API_TOKEN=your_token_here
-
-# Optional: specify zone ID (auto-detected if not set)
-export CLOUDFLARE_ZONE_ID=your_zone_id
-```
-
-**AWS Route53:**
-```bash
-# Uses your existing AWS credentials
-# No additional setup required if you have a hosted zone for your domain
+# Route53 — uses your existing AWS credentials
 aws configure
 ```
 
+**Option 2: Interactive prompt**
+
+If no environment variable is set, the CLI prompts you to paste your token during setup. The token is used for the current session only and is never stored to disk.
+
+### Creating API Tokens
+
+**Cloudflare:**
+
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Click **Create Token**
+3. Use the **Edit zone DNS** template
+4. Under Zone Resources, select your domain's zone
+5. Create the token and copy it
+
+**Vercel:**
+
+1. Go to https://vercel.com/account/tokens
+2. Click **Create**
+3. Give it a descriptive name (e.g., "wraps-dns")
+4. Set scope to your team if applicable
+5. Create and copy the token
+
 ### Manual DNS
 
-If you don't set up a DNS provider token, the CLI will show you the DNS records to add manually:
+If you choose "Manual" or don't have a supported DNS provider, the CLI displays all required records grouped by purpose with copy-paste values:
 
 ```
-Add these DNS records to your DNS provider:
+DKIM (3 CNAMEs)
+Cryptographic signatures proving emails are from your domain
 
-  CNAME abc123._domainkey.example.com
-       abc123.dkim.amazonses.com
-  TXT example.com
-       "v=spf1 include:amazonses.com ~all"
-  TXT _dmarc.example.com
-       "v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com"
+  CNAME  abc123._domainkey.example.com
+  →      abc123.dkim.amazonses.com
+
+SPF (TXT)
+Authorizes Amazon SES to send email on behalf of your domain
+
+  TXT    example.com
+  →      v=spf1 include:amazonses.com ~all
+
+DMARC (TXT)
+Policy for how receivers handle emails failing DKIM/SPF checks
+
+  TXT    _dmarc.example.com
+  →      v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com
 ```
 
 ## Hosting Provider Integration

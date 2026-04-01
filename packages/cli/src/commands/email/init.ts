@@ -565,12 +565,12 @@ export async function init(options: InitOptions): Promise<void> {
       getDNSCredentials,
       createDNSRecordsForProvider,
       getDNSProviderDisplayName,
-      getDNSProviderTokenUrl,
       buildEmailDNSRecords,
     } = await import("../../utils/dns/index.js");
     const {
       promptDNSProvider,
       promptDNSConfirmation,
+      promptDNSRecordSelection,
       promptContinueManualDNS,
     } = await import("../../utils/shared/prompts.js");
     const { previewDNSChanges } = await import("../../utils/route53.js");
@@ -660,7 +660,7 @@ export async function init(options: InitOptions): Promise<void> {
             clack.log.warn(`Could not manage DNS records: ${msg}`);
           }
         } else {
-          // For Vercel and Cloudflare, create records directly
+          // For Vercel and Cloudflare, show records and let user select
           const recordData = {
             domain: outputs.domain,
             dkimTokens: outputs.dkimTokens,
@@ -669,54 +669,46 @@ export async function init(options: InitOptions): Promise<void> {
             region,
           };
 
-          // Show what will be created
           const records = buildEmailDNSRecords(recordData);
-          clack.log.info(pc.bold("DNS records to create:"));
-          for (const record of records) {
-            clack.log.info(
-              pc.dim(`  ${record.type} ${record.name} → ${record.value}`)
-            );
-          }
+          const providerDisplayName = getDNSProviderDisplayName(
+            credentials.provider
+          );
+          const { shouldCreate, selectedCategories } =
+            await promptDNSRecordSelection(records, providerDisplayName);
 
-          progress.start(
-            `Creating DNS records in ${getDNSProviderDisplayName(credentials.provider)}`
-          );
-          const result = await createDNSRecordsForProvider(
-            credentials,
-            recordData
-          );
-          if (result.success) {
-            progress.succeed(
-              `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(credentials.provider)}`
+          if (shouldCreate && selectedCategories.size > 0) {
+            progress.start(
+              `Creating DNS records in ${providerDisplayName}`
             );
-            dnsAutoCreated = true;
-          } else {
-            progress.fail("Failed to create some DNS records");
-            if (result.errors) {
-              for (const error of result.errors) {
-                clack.log.warn(error);
+            const result = await createDNSRecordsForProvider(
+              credentials,
+              recordData,
+              selectedCategories as Set<any>
+            );
+            if (result.success) {
+              progress.succeed(
+                `Created ${result.recordsCreated} DNS records in ${providerDisplayName}`
+              );
+              dnsAutoCreated = true;
+            } else {
+              progress.fail("Failed to create some DNS records");
+              if (result.errors) {
+                for (const error of result.errors) {
+                  clack.log.warn(error);
+                }
               }
             }
+          } else {
+            clack.log.info(
+              "Skipping DNS record creation. You can add them manually."
+            );
           }
         }
       } else {
-        // Credentials missing or invalid
+        // Credentials invalid or domain not found
         clack.log.warn(
           credentialResult.error || "Could not validate credentials"
         );
-
-        // Show how to get credentials for the provider
-        if (
-          selectedProvider === "vercel" ||
-          selectedProvider === "cloudflare"
-        ) {
-          clack.log.info(
-            `Set the ${selectedProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} environment variable to enable automatic DNS management.`
-          );
-          clack.log.info(
-            `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(selectedProvider))}`
-          );
-        }
 
         // Ask if user wants to continue with manual setup
         const continueManual = await promptContinueManualDNS();
@@ -733,22 +725,28 @@ export async function init(options: InitOptions): Promise<void> {
     }
   }
 
-  // 11. Format DNS records if domain was provided and DNS wasn't auto-created
-  const dnsRecords = [];
+  // 11. Show manual DNS instructions if DNS wasn't auto-created
   if (
     outputs.domain &&
     outputs.dkimTokens &&
     outputs.dkimTokens.length > 0 &&
     !dnsAutoCreated
   ) {
-    // Add DKIM CNAME records
-    for (const token of outputs.dkimTokens) {
-      dnsRecords.push({
-        name: `${token}._domainkey.${outputs.domain}`,
-        type: "CNAME",
-        value: `${token}.dkim.amazonses.com`,
-      });
-    }
+    const { buildEmailDNSRecords: buildRecords, formatManualDNSInstructions: formatManual } =
+      await import("../../utils/dns/index.js");
+    const allRecords = buildRecords({
+      domain: outputs.domain,
+      dkimTokens: outputs.dkimTokens,
+      mailFromDomain: outputs.mailFromDomain,
+      customTrackingDomain: outputs.customTrackingDomain,
+      region,
+    });
+
+    console.log();
+    clack.note(
+      formatManual(allRecords),
+      "DNS Records — Add these to your DNS provider"
+    );
   }
 
   // 12. Display success message
@@ -757,7 +755,7 @@ export async function init(options: InitOptions): Promise<void> {
     configSetName: outputs.configSetName,
     region: outputs.region!,
     tableName: outputs.tableName,
-    dnsRecords: dnsRecords.length > 0 ? dnsRecords : undefined,
+    dnsRecords: undefined,
     dnsAutoCreated,
     domain: outputs.domain,
     mailFromDomain: outputs.mailFromDomain,
