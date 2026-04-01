@@ -805,14 +805,10 @@ export async function scanAWSAccountFeatures(
       (i) => i.type === "DOMAIN" && !previousDomains.has(i.identity)
     );
     if (newDomains.length > 0) {
-      const isFirstDomain = previousDomains.size === 0;
       for (const domain of newDomains) {
         await trackDomainVerified(session.user.email, organizationId, {
           domain: domain.identity,
-          isFirstDomain,
         });
-        // Only the first new domain can be the org's first domain
-        break;
       }
     }
 

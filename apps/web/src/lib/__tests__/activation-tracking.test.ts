@@ -55,8 +55,10 @@ vi.mock("@wraps.dev/client", () => ({
   })),
 }));
 
-// Mock database — return count=1 so activation events fire
-const mockDbWhere = vi.fn(() => Promise.resolve([{ count: 1 }]));
+// Mock database — return count=1 so activation events fire.
+// Typed as unknown[] since different queries return different shapes
+// (count queries return { count }, feature queries return { features }).
+const mockDbWhere = vi.fn((): Promise<unknown[]> => Promise.resolve([{ count: 1 }]));
 const mockDbInsertOnConflict = vi.fn(() => Promise.resolve());
 const mockFindManyAwsAccounts = vi.fn(() =>
   Promise.resolve([
@@ -204,9 +206,20 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
         })
     );
 
+    // Mock first db.select call to return features for countVerifiedDomains
+    // (1 domain = first domain), then fall through to default for count queries
+    mockDbWhere.mockResolvedValueOnce([
+      {
+        features: {
+          email: {
+            identities: [{ type: "DOMAIN", identity: "example.com" }],
+          },
+        },
+      },
+    ]);
+
     await trackDomainVerified("user@example.com", "org-123", {
       domain: "example.com",
-      isFirstDomain: true,
     });
 
     expect(trackResolved).toBe(true);
@@ -624,9 +637,19 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   it("trackDomainVerified should PATCH hasDomainVerified on first domain", async () => {
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
+    // Mock countVerifiedDomains: 1 domain = first domain
+    mockDbWhere.mockResolvedValueOnce([
+      {
+        features: {
+          email: {
+            identities: [{ type: "DOMAIN", identity: "example.com" }],
+          },
+        },
+      },
+    ]);
+
     await trackDomainVerified("user@example.com", "org-123", {
       domain: "example.com",
-      isFirstDomain: true,
     });
 
     expect(mockPatch).toHaveBeenCalledWith(
@@ -637,6 +660,41 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
           properties: expect.objectContaining({ hasDomainVerified: true }),
         },
       })
+    );
+  });
+
+  it("trackDomainVerified should NOT emit activation event on second domain", async () => {
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    // Mock countVerifiedDomains: 2 domains = not first
+    mockDbWhere.mockResolvedValueOnce([
+      {
+        features: {
+          email: {
+            identities: [
+              { type: "DOMAIN", identity: "example.com" },
+              { type: "DOMAIN", identity: "mail.example.com" },
+            ],
+          },
+        },
+      },
+    ]);
+
+    await trackDomainVerified("user@example.com", "org-123", {
+      domain: "mail.example.com",
+    });
+
+    // Should emit domain.verified but NOT activation.domain_verified
+    expect(mockTrack).toHaveBeenCalledWith("domain.verified", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        domain: "mail.example.com",
+      }),
+    });
+    expect(mockTrack).not.toHaveBeenCalledWith(
+      "activation.domain_verified",
+      expect.anything()
     );
   });
 

@@ -53,6 +53,14 @@ export async function POST(request: Request, context: RouteContext) {
       where: eq(organizationExtension.organizationId, orgWithMembership.id),
     });
 
+    // If onboarding is already completed, return success without re-emitting events
+    if (existingExtension?.onboardingCompleted) {
+      return NextResponse.json({
+        success: true,
+        message: "Onboarding already completed",
+      });
+    }
+
     if (existingExtension) {
       // Update existing extension
       await db

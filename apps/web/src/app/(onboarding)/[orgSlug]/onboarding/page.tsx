@@ -97,6 +97,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const previousStep = useRef<number | null>(null);
   const hasRedirected = useRef(false);
   const userAdvancedPastBilling = useRef(false);
+  const isCompleting = useRef(false);
 
   // EFFECT 1: Initialize orgSlug, step, and URL params together
   // Consolidates: orgSlug resolution, step initialization, plan/interval storage
@@ -288,7 +289,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const completeOnboarding = async (
     pathOverride?: "start_building" | "connect_aws" | null
   ) => {
-    if (!orgSlug) return;
+    if (!orgSlug || isCompleting.current) return;
+    isCompleting.current = true;
     const path = pathOverride ?? onboardingPath ?? "connect_aws";
     const res = await fetch(`/api/${orgSlug}/onboarding/complete`, {
       method: "POST",
@@ -298,6 +300,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     if (!res.ok) {
       toast.error("Failed to complete onboarding. Please try again.");
       hasRedirected.current = false;
+      isCompleting.current = false;
       return;
     }
     await queryClient.invalidateQueries({

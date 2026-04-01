@@ -6,6 +6,7 @@ import {
   user,
   workflow,
 } from "@wraps/db";
+import { member } from "@wraps/db/schema/auth";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
 import { log } from "./logger";
@@ -150,6 +151,12 @@ export async function trackFirstEmailDelivered(
       },
     });
 
+    // Emit to platform API so activation workflows can trigger on SDK sends
+    const ownerEmail = await getOrgOwnerEmail(organizationId);
+    if (ownerEmail) {
+      await emit(ownerEmail, "activation.first_email_sent", props);
+    }
+
     log.info("Activation: first email delivery tracked from webhook", {
       organizationId,
       source,
@@ -165,6 +172,19 @@ async function getUserEmail(userId: string): Promise<string | null> {
     .select({ email: user.email })
     .from(user)
     .where(eq(user.id, userId))
+    .limit(1);
+  return row?.email ?? null;
+}
+
+/** Look up the org owner's email. Returns null if not found. */
+async function getOrgOwnerEmail(
+  organizationId: string
+): Promise<string | null> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(and(eq(member.organizationId, organizationId), eq(member.role, "owner")))
     .limit(1);
   return row?.email ?? null;
 }

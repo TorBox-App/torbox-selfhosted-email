@@ -145,6 +145,40 @@ async function countAwsAccounts(organizationId: string): Promise<number> {
   return r?.count ?? 0;
 }
 
+async function countVerifiedDomains(organizationId: string): Promise<number> {
+  const accounts = await db
+    .select({ features: awsAccount.features })
+    .from(awsAccount)
+    .where(eq(awsAccount.organizationId, organizationId));
+
+  const domains = new Set<string>();
+  for (const account of accounts) {
+    const identities =
+      (account.features as Record<string, unknown> | null)?.email;
+    if (
+      typeof identities === "object" &&
+      identities !== null &&
+      "identities" in identities
+    ) {
+      const list = (identities as { identities?: unknown[] }).identities;
+      if (Array.isArray(list)) {
+        for (const id of list) {
+          if (
+            typeof id === "object" &&
+            id !== null &&
+            "type" in id &&
+            "identity" in id &&
+            (id as { type: string }).type === "DOMAIN"
+          ) {
+            domains.add((id as { identity: string }).identity);
+          }
+        }
+      }
+    }
+  }
+  return domains.size;
+}
+
 async function countContacts(organizationId: string): Promise<number> {
   const [r] = await db
     .select({ count: count() })
@@ -249,7 +283,6 @@ export async function trackDomainVerified(
   organizationId: string,
   properties: {
     domain: string;
-    isFirstDomain: boolean;
   }
 ) {
   try {
@@ -259,7 +292,12 @@ export async function trackDomainVerified(
     };
     capture(userId, "domain_verified", props);
     await emit(userId, "domain.verified", props);
-    if (properties.isFirstDomain) {
+
+    // Count all verified domains across all AWS accounts for this org
+    // to determine if this is the first domain (called AFTER the domain
+    // is persisted to features JSON, so count === 1 means first)
+    const isFirstDomain = (await countVerifiedDomains(organizationId)) === 1;
+    if (isFirstDomain) {
       capture(userId, "activation_domain_verified", props, {
         activation_domain_verified: true,
       });
@@ -268,7 +306,7 @@ export async function trackDomainVerified(
     await updateActivationScore(
       userId,
       organizationId,
-      properties.isFirstDomain ? { hasDomainVerified: true } : undefined
+      isFirstDomain ? { hasDomainVerified: true } : undefined
     );
   } catch {
     // never throw from tracking
