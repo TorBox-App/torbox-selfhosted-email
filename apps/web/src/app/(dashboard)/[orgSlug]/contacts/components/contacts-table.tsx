@@ -571,7 +571,7 @@ export function ContactsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => handleSearch(event.target.value)}
-              placeholder="Search by email\u2026"
+              placeholder="Search by email"
               ref={searchInputRef}
               value={globalFilter}
             />

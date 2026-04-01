@@ -216,7 +216,7 @@ export function EmailsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search emails..."
+              placeholder="Search emails"
               ref={searchInputRef}
               value={globalFilter ?? ""}
             />

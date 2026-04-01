@@ -119,7 +119,7 @@ export function InboundEmailsTable({ data, orgSlug }: InboundEmailsTableProps) {
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search inbound emails..."
+              placeholder="Search inbound emails"
               ref={searchInputRef}
               value={globalFilter ?? ""}
             />

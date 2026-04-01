@@ -125,7 +125,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search SMS\u2026"
+              placeholder="Search SMS"
               ref={searchInputRef}
               value={globalFilter ?? ""}
             />

@@ -218,7 +218,7 @@ export function SegmentsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(event.target.value)}
-              placeholder="Search segments\u2026"
+              placeholder="Search segments"
               ref={searchInputRef}
               value={globalFilter}
             />
