@@ -22,12 +22,9 @@ export function useAiUsage(orgSlug: string) {
       }
       return response.json();
     },
-    // Refetch every 30 seconds to keep usage up to date
-    refetchInterval: 30_000,
-    // Don't refetch on window focus (to avoid too many requests)
+    // Only refetch on invalidation (after AI requests)
     refetchOnWindowFocus: false,
-    // Keep stale data while refetching
-    staleTime: 10_000,
+    staleTime: 5 * 60_000,
   });
 }
 

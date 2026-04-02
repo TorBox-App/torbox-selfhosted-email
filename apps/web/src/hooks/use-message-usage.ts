@@ -30,12 +30,9 @@ export function useMessageUsage(orgSlug: string) {
       }
       return response.json();
     },
-    // Refetch every minute to keep usage up to date
-    refetchInterval: 60_000,
-    // Don't refetch on window focus (to avoid too many requests)
+    // Only refetch on invalidation (after sending broadcasts)
     refetchOnWindowFocus: false,
-    // Keep stale data while refetching
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
   });
 }
 

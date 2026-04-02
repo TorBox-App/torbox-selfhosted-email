@@ -453,6 +453,12 @@ export const auth = betterAuth<BetterAuthOptions>({
       },
     },
   },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutes — avoids DB query on every getSession call
+    },
+  },
   trustedOrigins: [process.env.CORS_ORIGIN].filter((v): v is string => !!v),
   socialProviders: {
     google: {
