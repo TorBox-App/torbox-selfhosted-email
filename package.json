@@ -10,7 +10,7 @@
   "scripts": {
     "baseline": "pnpm dlx code-baseline@latest scan .",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --concurrency 12",
     "test": "turbo run test",
     "test:ee": "turbo run test:ee",
     "test:integration": "turbo run test:integration",

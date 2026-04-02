@@ -677,9 +677,7 @@ export async function init(options: InitOptions): Promise<void> {
             await promptDNSRecordSelection(records, providerDisplayName);
 
           if (shouldCreate && selectedCategories.size > 0) {
-            progress.start(
-              `Creating DNS records in ${providerDisplayName}`
-            );
+            progress.start(`Creating DNS records in ${providerDisplayName}`);
             const result = await createDNSRecordsForProvider(
               credentials,
               recordData,
@@ -732,8 +730,10 @@ export async function init(options: InitOptions): Promise<void> {
     outputs.dkimTokens.length > 0 &&
     !dnsAutoCreated
   ) {
-    const { buildEmailDNSRecords: buildRecords, formatManualDNSInstructions: formatManual } =
-      await import("../../utils/dns/index.js");
+    const {
+      buildEmailDNSRecords: buildRecords,
+      formatManualDNSInstructions: formatManual,
+    } = await import("../../utils/dns/index.js");
     const allRecords = buildRecords({
       domain: outputs.domain,
       dkimTokens: outputs.dkimTokens,

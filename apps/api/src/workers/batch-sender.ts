@@ -538,7 +538,10 @@ async function processJob(job: BatchJob): Promise<void> {
 
         // Batch insert all send records
         if (sendRecords.length > 0) {
-          await db.insert(messageSend).values(sendRecords).onConflictDoNothing();
+          await db
+            .insert(messageSend)
+            .values(sendRecords)
+            .onConflictDoNothing();
         }
       } catch (error) {
         // Check if this is a throttle error
@@ -594,7 +597,10 @@ async function processJob(job: BatchJob): Promise<void> {
             status: "failed" as const,
             error: permError,
           }));
-          await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
+          await db
+            .insert(messageSend)
+            .values(failedRecords)
+            .onConflictDoNothing();
           throw new Error(permError);
         }
 
@@ -621,7 +627,10 @@ async function processJob(job: BatchJob): Promise<void> {
           status: "failed" as const,
           error: errorMessage,
         }));
-        await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
+        await db
+          .insert(messageSend)
+          .values(failedRecords)
+          .onConflictDoNothing();
         failed += recipientBatch.length;
       }
     }

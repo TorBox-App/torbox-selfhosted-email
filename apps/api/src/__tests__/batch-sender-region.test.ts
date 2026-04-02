@@ -53,39 +53,49 @@ vi.mock("@react-email/render", () => ({
 let regionSelectIdx = 0;
 const regionSelectResults: unknown[][] = [
   // 1. batch
-  [{
-    id: "batch-1",
-    organizationId: "org-1",
-    status: "queued",
-    audienceType: "all",
-    topicId: null,
-    segmentId: null,
-    emailTemplateId: "tmpl-1",
-    htmlContent: null,
-    subject: "Test",
-    from: "test@example.com",
-    fromName: "Test",
-    replyTo: null,
-    totalRecipients: 1,
-    processedRecipients: 0,
-    sent: 0,
-    failed: 0,
-    variableMappings: null,
-  }],
+  [
+    {
+      id: "batch-1",
+      organizationId: "org-1",
+      status: "queued",
+      audienceType: "all",
+      topicId: null,
+      segmentId: null,
+      emailTemplateId: "tmpl-1",
+      htmlContent: null,
+      subject: "Test",
+      from: "test@example.com",
+      fromName: "Test",
+      replyTo: null,
+      totalRecipients: 1,
+      processedRecipients: 0,
+      sent: 0,
+      failed: 0,
+      variableMappings: null,
+    },
+  ],
   // 2. contacts
-  [{
-    id: "contact-1",
-    email: "user@example.com",
-    phone: null,
-    firstName: "Test",
-    lastName: "User",
-    company: null,
-    jobTitle: null,
-    properties: {},
-    createdAt: new Date("2026-01-15T10:00:00Z"),
-  }],
+  [
+    {
+      id: "contact-1",
+      email: "user@example.com",
+      phone: null,
+      firstName: "Test",
+      lastName: "User",
+      company: null,
+      jobTitle: null,
+      properties: {},
+      createdAt: new Date("2026-01-15T10:00:00Z"),
+    },
+  ],
   // 3. template
-  [{ sesTemplateName: "wraps-tmpl-1", compiledHtml: null, emailType: "marketing" }],
+  [
+    {
+      sesTemplateName: "wraps-tmpl-1",
+      compiledHtml: null,
+      emailType: "marketing",
+    },
+  ],
   // 4. organization
   [{ name: "Test Org" }],
   // 5. dedup (empty = no prior sends)
@@ -94,7 +104,8 @@ const regionSelectResults: unknown[][] = [
 
 function regionThenable(rows: unknown[]) {
   const obj: Record<string, unknown> = {
-    then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
+    then: (resolve: (v: unknown) => void) =>
+      Promise.resolve(rows).then(resolve),
     limit: vi.fn().mockImplementation(() => regionThenable(rows)),
     orderBy: vi.fn().mockImplementation(() => regionThenable(rows)),
   };

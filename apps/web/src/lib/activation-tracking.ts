@@ -153,8 +153,8 @@ async function countVerifiedDomains(organizationId: string): Promise<number> {
 
   const domains = new Set<string>();
   for (const account of accounts) {
-    const identities =
-      (account.features as Record<string, unknown> | null)?.email;
+    const identities = (account.features as Record<string, unknown> | null)
+      ?.email;
     if (
       typeof identities === "object" &&
       identities !== null &&

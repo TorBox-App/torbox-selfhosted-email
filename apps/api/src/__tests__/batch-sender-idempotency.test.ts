@@ -98,7 +98,8 @@ vi.mock("@wraps/db", async () => {
   // Helper: make a value that is both thenable (resolves to rows) and chainable
   function thenable(rows: unknown[]) {
     const obj: Record<string, unknown> = {
-      then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
+      then: (resolve: (v: unknown) => void) =>
+        Promise.resolve(rows).then(resolve),
       limit: vi.fn().mockImplementation(() => thenable(rows)),
       orderBy: vi.fn().mockImplementation(() => thenable(rows)),
     };
@@ -233,7 +234,13 @@ function setupSelects(opts: {
     // 2. contacts chunk
     opts.contacts ?? makeContacts(),
     // 3. template
-    [{ sesTemplateName: "wraps-tmpl-1", compiledHtml: "<p>Hi</p>", emailType: "marketing" }],
+    [
+      {
+        sesTemplateName: "wraps-tmpl-1",
+        compiledHtml: "<p>Hi</p>",
+        emailType: "marketing",
+      },
+    ],
     // 4. organization
     [{ name: "Test Org" }],
     // 5. already-sent contact IDs for dedup
@@ -261,8 +268,12 @@ describe("Batch sender idempotency", () => {
 
     // SES should only be called for contact-2 (not contact-1)
     expect(sesSendCalls).toHaveLength(2); // GetAccount + 1 bulk send
-    const bulkCall = sesSendCalls[1]?.[0] as Record<string, unknown> | undefined;
-    const entries = bulkCall?.BulkEmailEntries as Array<Record<string, unknown>> | undefined;
+    const bulkCall = sesSendCalls[1]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    const entries = bulkCall?.BulkEmailEntries as
+      | Array<Record<string, unknown>>
+      | undefined;
     expect(entries).toHaveLength(1);
   });
 
@@ -276,7 +287,8 @@ describe("Batch sender idempotency", () => {
 
     // Only GetAccount call, no bulk send
     const bulkSendCalls = sesSendCalls.filter(
-      (call) => (call[0] as Record<string, unknown>)?.BulkEmailEntries !== undefined
+      (call) =>
+        (call[0] as Record<string, unknown>)?.BulkEmailEntries !== undefined
     );
     expect(bulkSendCalls).toHaveLength(0);
   });
@@ -290,8 +302,12 @@ describe("Batch sender idempotency", () => {
     await handler(makeSQSEvent(), {} as never, vi.fn());
 
     // SES bulk send should include both contacts
-    const bulkCall = sesSendCalls[1]?.[0] as Record<string, unknown> | undefined;
-    const entries = bulkCall?.BulkEmailEntries as Array<Record<string, unknown>> | undefined;
+    const bulkCall = sesSendCalls[1]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    const entries = bulkCall?.BulkEmailEntries as
+      | Array<Record<string, unknown>>
+      | undefined;
     expect(entries).toHaveLength(2);
   });
 });

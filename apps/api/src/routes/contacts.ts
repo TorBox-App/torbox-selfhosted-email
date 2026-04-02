@@ -518,8 +518,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           emailStatus: body.emailStatus ?? (body.email ? "active" : null),
           phone: body.phone,
           phoneHash: body.phone ? hashValue(body.phone) : null,
-          smsStatus:
-            body.smsStatus ?? (body.phone ? "pending_consent" : null),
+          smsStatus: body.smsStatus ?? (body.phone ? "pending_consent" : null),
           firstName: body.firstName ?? null,
           lastName: body.lastName ?? null,
           company: body.company ?? null,
@@ -535,7 +534,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         // Race condition: another request created this contact between our
         // SELECT check and INSERT. Return field-specific message.
         ctx.set.status = 409;
-        if (body.email) return { error: "Contact with this email already exists" };
+        if (body.email)
+          return { error: "Contact with this email already exists" };
         return { error: "Contact with this phone already exists" };
       }
 

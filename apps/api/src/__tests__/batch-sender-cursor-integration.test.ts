@@ -116,7 +116,8 @@ vi.mock("@wraps/db", async () => {
             ];
             return {
               where: vi.fn().mockImplementation(() => ({
-                then: (resolve: (v: unknown) => void) => Promise.resolve(batchResult).then(resolve),
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve(batchResult).then(resolve),
                 limit: vi.fn().mockResolvedValue(batchResult),
               })),
             };
@@ -132,7 +133,8 @@ vi.mock("@wraps/db", async () => {
             ];
             return {
               where: vi.fn().mockImplementation(() => ({
-                then: (resolve: (v: unknown) => void) => Promise.resolve(tmplResult).then(resolve),
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve(tmplResult).then(resolve),
                 limit: vi.fn().mockResolvedValue(tmplResult),
               })),
             };
@@ -142,7 +144,8 @@ vi.mock("@wraps/db", async () => {
             const orgResult = [{ name: "Test Org" }];
             return {
               where: vi.fn().mockImplementation(() => ({
-                then: (resolve: (v: unknown) => void) => Promise.resolve(orgResult).then(resolve),
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve(orgResult).then(resolve),
                 limit: vi.fn().mockResolvedValue(orgResult),
               })),
             };
@@ -153,7 +156,8 @@ vi.mock("@wraps/db", async () => {
             const result: unknown[] = [];
             return {
               where: vi.fn().mockImplementation(() => ({
-                then: (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve),
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve(result).then(resolve),
                 limit: vi.fn().mockResolvedValue(result),
               })),
             };
@@ -163,9 +167,11 @@ vi.mock("@wraps/db", async () => {
           const contactResult = mockContacts;
           return {
             where: vi.fn().mockImplementation(() => ({
-              then: (resolve: (v: unknown) => void) => Promise.resolve(contactResult).then(resolve),
+              then: (resolve: (v: unknown) => void) =>
+                Promise.resolve(contactResult).then(resolve),
               orderBy: vi.fn().mockImplementation(() => ({
-                then: (resolve: (v: unknown) => void) => Promise.resolve(contactResult).then(resolve),
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve(contactResult).then(resolve),
                 limit: vi.fn().mockResolvedValue(contactResult),
               })),
               limit: vi.fn().mockResolvedValue(contactResult),

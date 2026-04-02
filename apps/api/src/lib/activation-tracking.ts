@@ -184,7 +184,9 @@ async function getOrgOwnerEmail(
     .select({ email: user.email })
     .from(member)
     .innerJoin(user, eq(user.id, member.userId))
-    .where(and(eq(member.organizationId, organizationId), eq(member.role, "owner")))
+    .where(
+      and(eq(member.organizationId, organizationId), eq(member.role, "owner"))
+    )
     .limit(1);
   return row?.email ?? null;
 }

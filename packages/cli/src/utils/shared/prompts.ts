@@ -1040,7 +1040,9 @@ export async function promptDNSProvider(
         break;
       case "vercel":
         label = "Vercel DNS";
-        hint = p.detected ? "Token detected" : "Enter token or set VERCEL_TOKEN";
+        hint = p.detected
+          ? "Token detected"
+          : "Enter token or set VERCEL_TOKEN";
         break;
       case "cloudflare":
         label = "Cloudflare";
@@ -1213,9 +1215,7 @@ export async function promptDNSRecordSelection(
 
   for (const [category, catRecords] of categories) {
     const desc =
-      DNS_RECORD_DESCRIPTIONS[
-        category as keyof typeof DNS_RECORD_DESCRIPTIONS
-      ];
+      DNS_RECORD_DESCRIPTIONS[category as keyof typeof DNS_RECORD_DESCRIPTIONS];
     const label = desc?.label || DNS_CATEGORY_LABELS[category] || category;
 
     console.log(`  ${pc.bold(label)}`);
@@ -1235,9 +1235,7 @@ export async function promptDNSRecordSelection(
   // Let user select which categories to create
   const options = Array.from(categories.keys()).map((category) => {
     const desc =
-      DNS_RECORD_DESCRIPTIONS[
-        category as keyof typeof DNS_RECORD_DESCRIPTIONS
-      ];
+      DNS_RECORD_DESCRIPTIONS[category as keyof typeof DNS_RECORD_DESCRIPTIONS];
     return {
       value: category,
       label: desc?.label || DNS_CATEGORY_LABELS[category] || category,

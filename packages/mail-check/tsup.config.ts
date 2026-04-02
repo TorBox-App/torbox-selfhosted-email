@@ -12,6 +12,11 @@ export default defineConfig({
   target: "node20",
   outDir: "dist",
   noExternal: [/(.*)/], // Bundle everything for zero runtime deps
+  esbuildOptions(options) {
+    options.alias = {
+      "@wraps/email-check": "../email-check/src/index.ts",
+    };
+  },
   banner: {
     js: "#!/usr/bin/env node",
   },

@@ -206,10 +206,14 @@ export async function promptDNSToken(
   clack.log.info(pc.bold(`${providerName} API Token`));
 
   if (isVercel) {
-    clack.log.info(pc.dim("Scope: Full Access, or a scoped token with DNS access"));
+    clack.log.info(
+      pc.dim("Scope: Full Access, or a scoped token with DNS access")
+    );
   } else {
     clack.log.info(pc.dim("Scope: Zone → DNS → Edit (for your domain's zone)"));
-    clack.log.info(pc.dim('Use the "Edit zone DNS" template when creating your token'));
+    clack.log.info(
+      pc.dim('Use the "Edit zone DNS" template when creating your token')
+    );
   }
 
   clack.log.info(pc.dim(`Create one at: ${pc.cyan(tokenUrl)}`));

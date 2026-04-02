@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -72,7 +73,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useQueryClient } from "@tanstack/react-query";
 import { getMessageUsageQueryKey } from "@/hooks/use-message-usage";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
 import { useRequireAws } from "@/hooks/use-require-aws";
@@ -455,7 +455,9 @@ export function BatchForm({
             organization_slug: orgSlug,
           });
 
-          queryClient.invalidateQueries({ queryKey: getMessageUsageQueryKey(orgSlug) });
+          queryClient.invalidateQueries({
+            queryKey: getMessageUsageQueryKey(orgSlug),
+          });
 
           toast.success(
             isScheduled ? "Broadcast scheduled" : "Broadcast created",

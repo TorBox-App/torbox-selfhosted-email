@@ -91,7 +91,8 @@ let selectResults: unknown[][] = [];
 
 function thenable(rows: unknown[]) {
   const obj: Record<string, unknown> = {
-    then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
+    then: (resolve: (v: unknown) => void) =>
+      Promise.resolve(rows).then(resolve),
     limit: vi.fn().mockImplementation(() => thenable(rows)),
     orderBy: vi.fn().mockImplementation(() => thenable(rows)),
   };

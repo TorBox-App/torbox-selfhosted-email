@@ -37,7 +37,7 @@ function resolveContactField(
     const value = contact[field as keyof Omit<ContactData, "properties">];
     return typeof value === "string" ? value : "";
   }
-  return undefined;
+  return;
 }
 
 function resolveSource(
@@ -47,7 +47,7 @@ function resolveSource(
   if (source.type === "static") return source.value;
   if (source.type === "contact")
     return resolveContactField(contact, source.field);
-  return undefined;
+  return;
 }
 
 export function applyVariableMappings(

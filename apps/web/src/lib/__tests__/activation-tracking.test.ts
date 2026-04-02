@@ -58,7 +58,9 @@ vi.mock("@wraps.dev/client", () => ({
 // Mock database — return count=1 so activation events fire.
 // Typed as unknown[] since different queries return different shapes
 // (count queries return { count }, feature queries return { features }).
-const mockDbWhere = vi.fn((): Promise<unknown[]> => Promise.resolve([{ count: 1 }]));
+const mockDbWhere = vi.fn(
+  (): Promise<unknown[]> => Promise.resolve([{ count: 1 }])
+);
 const mockDbInsertOnConflict = vi.fn(() => Promise.resolve());
 const mockFindManyAwsAccounts = vi.fn(() =>
   Promise.resolve([

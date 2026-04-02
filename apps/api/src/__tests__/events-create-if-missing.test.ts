@@ -16,7 +16,15 @@ import {
   user,
 } from "@wraps/db";
 import { and } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 vi.mock("../services/workflow-queue", () => ({
   enqueueWorkflowStep: vi.fn().mockResolvedValue(undefined),
@@ -83,14 +91,14 @@ function createTestApp() {
 
 function postEvent(
   app: ReturnType<typeof createTestApp>,
-  body: Record<string, unknown>,
+  body: Record<string, unknown>
 ) {
   return app.handle(
     new Request("http://localhost/v1/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }),
+    })
   );
 }
 
@@ -105,11 +113,17 @@ describe("POST /v1/events – createIfMissing", () => {
     await db
       .insert(organization)
       .values(testOrg)
-      .onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: testOrg.name },
+      });
     await db
       .insert(member)
       .values(testMember)
-      .onConflictDoUpdate({ target: member.id, set: { role: testMember.role } });
+      .onConflictDoUpdate({
+        target: member.id,
+        set: { role: testMember.role },
+      });
   });
 
   beforeEach(async () => {
@@ -117,12 +131,16 @@ describe("POST /v1/events – createIfMissing", () => {
     app = createTestApp();
 
     // Clean up contacts and events created by tests
-    await db.delete(contactEvent).where(eq(contactEvent.organizationId, testOrg.id));
+    await db
+      .delete(contactEvent)
+      .where(eq(contactEvent.organizationId, testOrg.id));
     await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
   });
 
   afterAll(async () => {
-    await db.delete(contactEvent).where(eq(contactEvent.organizationId, testOrg.id));
+    await db
+      .delete(contactEvent)
+      .where(eq(contactEvent.organizationId, testOrg.id));
     await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
     await db.delete(member).where(eq(member.id, testMember.id));
     await db.delete(organization).where(eq(organization.id, testOrg.id));
@@ -151,8 +169,8 @@ describe("POST /v1/events – createIfMissing", () => {
       .where(
         and(
           eq(contact.organizationId, testOrg.id),
-          eq(contact.email, "new-person@example.com"),
-        ),
+          eq(contact.email, "new-person@example.com")
+        )
       );
     expect(contacts).toHaveLength(1);
   });
@@ -175,8 +193,8 @@ describe("POST /v1/events – createIfMissing", () => {
       .where(
         and(
           eq(contact.organizationId, testOrg.id),
-          eq(contact.email, "named@example.com"),
-        ),
+          eq(contact.email, "named@example.com")
+        )
       );
     expect(c.firstName).toBe("Jane");
   });
@@ -209,8 +227,8 @@ describe("POST /v1/events – createIfMissing", () => {
       .where(
         and(
           eq(contact.organizationId, testOrg.id),
-          eq(contact.email, "existing@example.com"),
-        ),
+          eq(contact.email, "existing@example.com")
+        )
       );
     expect(contacts).toHaveLength(1);
   });
@@ -250,10 +268,7 @@ describe("POST /v1/events – createIfMissing", () => {
       .select()
       .from(contact)
       .where(
-        and(
-          eq(contact.organizationId, testOrg.id),
-          eq(contact.email, email),
-        ),
+        and(eq(contact.organizationId, testOrg.id), eq(contact.email, email))
       );
     expect(contacts).toHaveLength(1);
 
@@ -263,7 +278,10 @@ describe("POST /v1/events – createIfMissing", () => {
       .from(contactEvent)
       .where(eq(contactEvent.organizationId, testOrg.id));
     expect(events).toHaveLength(2);
-    expect(events.map((e) => e.eventName).sort()).toEqual(["event.a", "event.b"]);
+    expect(events.map((e) => e.eventName).sort()).toEqual([
+      "event.a",
+      "event.b",
+    ]);
   });
 
   it("handles triple concurrent createIfMissing", async () => {
@@ -271,8 +289,8 @@ describe("POST /v1/events – createIfMissing", () => {
 
     const results = await Promise.all(
       ["ev.1", "ev.2", "ev.3"].map((name) =>
-        postEvent(app, { name, contactEmail: email, createIfMissing: true }),
-      ),
+        postEvent(app, { name, contactEmail: email, createIfMissing: true })
+      )
     );
 
     for (const res of results) {
@@ -285,10 +303,7 @@ describe("POST /v1/events – createIfMissing", () => {
       .select()
       .from(contact)
       .where(
-        and(
-          eq(contact.organizationId, testOrg.id),
-          eq(contact.email, email),
-        ),
+        and(eq(contact.organizationId, testOrg.id), eq(contact.email, email))
       );
     expect(contacts).toHaveLength(1);
   });
