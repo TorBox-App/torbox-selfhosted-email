@@ -54,40 +54,46 @@ export default function SignInForm({
       password: "",
     },
     onSubmit: async ({ value }) => {
-      const _result = await authClient.signIn.email(
-        {
-          email: value.email,
-          password: value.password,
-        },
-        {
-          onSuccess: (ctx) => {
-            // Check if 2FA is required
-            if (ctx.data.twoFactorRedirect) {
-              setTwoFactorEmail(value.email);
-              setShow2FA(true);
-              toast.info("Please enter your 2FA code");
-              return;
-            }
-
-            setIsRedirecting(true);
-
-            // Identify user and capture sign-in event in PostHog
-            posthog.identify(value.email, {
-              email: value.email,
-            });
-            posthog.capture("user_signed_in", {
-              email: value.email,
-              method: "email",
-            });
-
-            toast.success("Sign in successful");
-            router.push(redirectTo);
+      try {
+        const _result = await authClient.signIn.email(
+          {
+            email: value.email,
+            password: value.password,
           },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        }
-      );
+          {
+            onSuccess: (ctx) => {
+              // Check if 2FA is required
+              if (ctx.data.twoFactorRedirect) {
+                setTwoFactorEmail(value.email);
+                setShow2FA(true);
+                toast.info("Please enter your 2FA code");
+                return;
+              }
+
+              setIsRedirecting(true);
+
+              // Identify user and capture sign-in event in PostHog
+              posthog.identify(value.email, {
+                email: value.email,
+              });
+              posthog.capture("user_signed_in", {
+                email: value.email,
+                method: "email",
+              });
+
+              toast.success("Sign in successful");
+              router.push(redirectTo);
+            },
+            onError: (error) => {
+              toast.error(error.error.message || error.error.statusText);
+            },
+          }
+        );
+      } catch {
+        toast.error(
+          "Unable to connect. Please check your internet connection and try again."
+        );
+      }
     },
     validators: {
       onSubmit: z.object({

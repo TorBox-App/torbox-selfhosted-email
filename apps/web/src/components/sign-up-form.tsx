@@ -69,11 +69,19 @@ export default function SignUpForm({
     },
     onSubmit: async ({ value }) => {
       // Step 1: Sign up the user
-      const signupResult = await authClient.signUp.email({
-        email: value.email,
-        password: value.password,
-        name: value.name,
-      });
+      let signupResult;
+      try {
+        signupResult = await authClient.signUp.email({
+          email: value.email,
+          password: value.password,
+          name: value.name,
+        });
+      } catch {
+        toast.error(
+          "Unable to connect. Please check your internet connection and try again."
+        );
+        return;
+      }
 
       if (signupResult.error) {
         toast.error(signupResult.error.message || "Failed to create account");
@@ -81,10 +89,19 @@ export default function SignUpForm({
       }
 
       // Step 2: Sign in immediately (since email verification is disabled)
-      const signinResult = await authClient.signIn.email({
-        email: value.email,
-        password: value.password,
-      });
+      let signinResult;
+      try {
+        signinResult = await authClient.signIn.email({
+          email: value.email,
+          password: value.password,
+        });
+      } catch {
+        toast.error(
+          "Account created but unable to sign in. Please try signing in manually."
+        );
+        router.push("/auth?mode=signin");
+        return;
+      }
 
       if (signinResult.error) {
         toast.error(
