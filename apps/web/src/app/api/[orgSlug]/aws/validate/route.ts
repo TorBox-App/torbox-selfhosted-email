@@ -45,7 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Parse request body
     const body = await request.json();
-    const { roleArn, externalId, region = "us-east-1" } = body;
+    const { roleArn, externalId, region: clientRegion } = body;
 
     if (!(roleArn && externalId)) {
       return NextResponse.json(
@@ -69,6 +69,12 @@ export async function POST(request: Request, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    // Extract region from CloudFormation stack ARN if present, fall back to client-provided or default
+    const region =
+      (isCfnStackId ? externalId.split(":")[3] : null) ||
+      clientRegion ||
+      "us-east-1";
 
     // Validate role ARN format
     const roleArnRegex = /^arn:aws:iam::(\d{12}):role\/(.+)$/;
@@ -109,6 +115,7 @@ export async function POST(request: Request, context: RouteContext) {
           .set({
             roleArn,
             externalId,
+            region,
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),

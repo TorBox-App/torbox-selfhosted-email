@@ -53,7 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
     const {
       roleArn,
       externalId,
-      region = "us-east-1",
+      region: clientRegion,
       webhookSecret: clientWebhookSecret,
     } = body;
 
@@ -86,6 +86,12 @@ export async function POST(request: Request, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    // Extract region from CloudFormation stack ARN if present, fall back to client-provided or default
+    const region =
+      (isCfnStackId ? externalId.split(":")[3] : null) ||
+      clientRegion ||
+      "us-east-1";
 
     // Validate role ARN format
     const roleArnRegex = /^arn:aws:iam::(\d{12}):role\/(.+)$/;
