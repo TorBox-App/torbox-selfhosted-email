@@ -24,6 +24,32 @@ const CONTACT_FIELDS = new Set([
   "jobTitle",
 ]);
 
+function resolveContactField(
+  contact: ContactData,
+  field: string
+): string | undefined {
+  if (field.startsWith("properties.")) {
+    const propKey = field.slice("properties.".length);
+    const value = contact.properties[propKey];
+    return value != null ? String(value) : "";
+  }
+  if (CONTACT_FIELDS.has(field)) {
+    const value = contact[field as keyof Omit<ContactData, "properties">];
+    return typeof value === "string" ? value : "";
+  }
+  return undefined;
+}
+
+function resolveSource(
+  source: VariableSource,
+  contact: ContactData
+): string | undefined {
+  if (source.type === "static") return source.value;
+  if (source.type === "contact")
+    return resolveContactField(contact, source.field);
+  return undefined;
+}
+
 export function applyVariableMappings(
   existingData: Record<string, string>,
   mappings: VariableMapping[] | undefined,
@@ -36,18 +62,9 @@ export function applyVariableMappings(
   const result = { ...existingData };
 
   for (const mapping of mappings) {
-    if (mapping.source.type === "static") {
-      result[mapping.variableName] = mapping.source.value;
-    } else if (mapping.source.type === "contact") {
-      const field = mapping.source.field;
-      if (field.startsWith("properties.")) {
-        const propKey = field.slice("properties.".length);
-        const value = contact.properties[propKey];
-        result[mapping.variableName] = value != null ? String(value) : "";
-      } else if (CONTACT_FIELDS.has(field)) {
-        const value = contact[field as keyof Omit<ContactData, "properties">];
-        result[mapping.variableName] = typeof value === "string" ? value : "";
-      }
+    const value = resolveSource(mapping.source, contact);
+    if (value !== undefined) {
+      result[mapping.variableName] = value;
     }
   }
 
