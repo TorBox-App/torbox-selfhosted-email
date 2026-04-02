@@ -233,11 +233,9 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     console.log(`  ${pc.green("✓")} Email sending via SES`);
   }
 
-  if (eventTracking?.dynamoDBHistory) {
-    console.log(
-      `  ${pc.green("✓")} DynamoDB read access (including DescribeTable)`
-    );
-  }
+  console.log(
+    `  ${pc.green("✓")} DynamoDB read access (including DescribeTable)`
+  );
 
   if (eventTracking?.enabled) {
     console.log(`  ${pc.green("✓")} EventBridge and SQS access`);
@@ -368,29 +366,28 @@ function buildConsolePolicyDocument(
     });
   }
 
-  // Allow DynamoDB access if history storage enabled
+  // Always allow DynamoDB access for email history — the dashboard queries
+  // wraps-email-history regardless of local metadata config, and the CloudFormation
+  // template always includes these permissions
+  statements.push({
+    Effect: "Allow",
+    Action: [
+      "dynamodb:DescribeTable",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:GetItem",
+      "dynamodb:BatchGetItem",
+    ],
+    Resource: [
+      "arn:aws:dynamodb:*:*:table/wraps-email-*",
+      "arn:aws:dynamodb:*:*:table/wraps-email-*/index/*",
+    ],
+  });
+
+  // Allow EventBridge access if event tracking enabled
   const eventTracking = emailConfig?.eventTracking as
     | Record<string, unknown>
     | undefined;
-  if (eventTracking?.dynamoDBHistory) {
-    statements.push({
-      Effect: "Allow",
-      Action: [
-        "dynamodb:PutItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:BatchGetItem",
-        "dynamodb:DescribeTable",
-      ],
-      Resource: [
-        "arn:aws:dynamodb:*:*:table/wraps-email-*",
-        "arn:aws:dynamodb:*:*:table/wraps-email-*/index/*",
-      ],
-    });
-  }
-
-  // Allow EventBridge access if event tracking enabled
   if (eventTracking?.enabled) {
     statements.push({
       Effect: "Allow",
