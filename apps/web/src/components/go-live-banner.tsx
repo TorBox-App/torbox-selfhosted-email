@@ -14,6 +14,7 @@ export function GoLiveBanner({ orgSlug }: GoLiveBannerProps) {
   const hasAwsAccounts = useProductsStore((s) => s.status?.hasAwsAccounts);
   const [dismissed, setDismissed] = useState(
     () =>
+      typeof window !== "undefined" &&
       sessionStorage.getItem(`go-live-banner-dismissed-${orgSlug}`) === "true"
   );
 
