@@ -12,6 +12,7 @@ import {
   db,
   eq,
   messageSend,
+  messageUsageMonthly,
   workflow,
   workflowExecution,
 } from "@wraps/db";
@@ -99,6 +100,33 @@ type EventBridgeEvent = {
   };
 };
 
+/**
+ * Increment delivery count for an org in message_usage_monthly.
+ * Counts ALL deliveries (SDK + batch + workflow) for billing and analytics.
+ */
+async function incrementDeliveryCount(organizationId: string) {
+  const now = new Date();
+  const periodKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  await db
+    .insert(messageUsageMonthly)
+    .values({
+      organizationId,
+      periodKey,
+      messageCount: 1,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [
+        messageUsageMonthly.organizationId,
+        messageUsageMonthly.periodKey,
+      ],
+      set: {
+        messageCount: sql`${messageUsageMonthly.messageCount} + 1`,
+        updatedAt: now,
+      },
+    });
+}
+
 const hasZeroRowCount = (value: unknown): boolean => {
   if (typeof value !== "object" || value === null || !("rowCount" in value)) {
     return false;
@@ -168,14 +196,18 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
     if (!message) {
       // Message not found — likely sent via SDK (direct SES).
-      // Still track activation so we know this org has sent emails.
-      if (eventType === "Delivery" || eventType === "Send") {
-        await trackFirstEmailDelivered(account.organizationId, "sdk").catch(
-          (err) =>
-            log.error("Activation tracking failed (SDK send)", err, {
-              organizationId: account.organizationId,
-            })
-        );
+      // Count delivery and track activation in parallel.
+      if (eventType === "Delivery") {
+        for (const r of await Promise.allSettled([
+          incrementDeliveryCount(account.organizationId),
+          trackFirstEmailDelivered(account.organizationId, "sdk"),
+        ])) {
+          if (r.status === "rejected") {
+            log.error("Webhook: SDK delivery side effect failed", r.reason, {
+              messageId,
+            });
+          }
+        }
       }
       log.info("Webhook: message not found", { messageId });
       return { status: "ignored", reason: "message not found" };
@@ -185,15 +217,19 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     try {
       switch (eventType) {
         case "Delivery":
+          // Critical: update message status (throws on failure → 500 → EventBridge retries)
           await processDelivery(message, event.detail.delivery?.timestamp);
-          await trackFirstEmailDelivered(
-            account.organizationId,
-            "platform"
-          ).catch((err) =>
-            log.error("Activation tracking failed", err, {
-              organizationId: account.organizationId,
-            })
-          );
+          // Best-effort side effects — don't fail the webhook
+          for (const r of await Promise.allSettled([
+            incrementDeliveryCount(account.organizationId),
+            trackFirstEmailDelivered(account.organizationId, "platform"),
+          ])) {
+            if (r.status === "rejected") {
+              log.error("Webhook: delivery side effect failed", r.reason, {
+                messageId,
+              });
+            }
+          }
           break;
 
         case "Open":
