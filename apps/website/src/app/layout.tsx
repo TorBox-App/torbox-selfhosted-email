@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/",
     images: [
       {
-        url: "/og-image.webp",
-        width: 712,
-        height: 376,
-        alt: "Wraps - AWS Infrastructure Wrappers Platform",
+        url: "/og-image.png",
+        width: 2848,
+        height: 1504,
+        alt: "Wraps — Workflows as code. Delivered by your AWS.",
       },
     ],
   },
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: "Wraps - The Email Platform That Sends Through Your AWS",
     description:
       "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app. Your marketing team edits and sends without code.",
-    images: ["/og-image.webp"],
+    images: ["/og-image.png"],
   },
   icons: {
     icon: [

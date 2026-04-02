@@ -24,7 +24,7 @@ const articleSchema = {
   headline: "The SPF 10-Lookup Limit: Why Your Email Might Be Failing",
   description:
     "SPF looks simple until you hit the 10-lookup limit. Learn how lookups are counted, which providers cost the most, and how to stay under the limit.",
-  image: "https://wraps.dev/og-image.webp",
+  image: "https://wraps.dev/og-image.png",
   datePublished: "2026-01-12T00:00:00.000Z",
   dateModified: "2026-01-12T00:00:00.000Z",
   author: {
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/spf-guide",
     images: [
       {
-        url: "https://wraps.dev/og-image.webp",
+        url: "https://wraps.dev/og-image.png",
         width: 1200,
         height: 630,
         alt: "SPF 10-Lookup Limit Guide",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     title: "The SPF 10-Lookup Limit | Wraps",
     description:
       "SPF looks simple until you hit the 10-lookup limit. Learn how lookups are counted and how to stay under.",
-    images: ["https://wraps.dev/og-image.webp"],
+    images: ["https://wraps.dev/og-image.png"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/spf-guide",
