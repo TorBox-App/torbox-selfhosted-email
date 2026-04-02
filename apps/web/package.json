@@ -68,7 +68,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-email/components": "1.0.1",
     "@react-email/render": "2.0.4",
-    "@sentry/nextjs": "10.46.0",
+    "@sentry/nextjs": "^10",
     "@tailwindcss/postcss": "^4.1.12",
     "@tanstack/pacer": "0.16.4",
     "@tanstack/react-form": "^1.23.8",
