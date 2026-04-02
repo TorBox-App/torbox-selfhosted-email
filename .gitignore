@@ -83,3 +83,6 @@ next-env.d.ts
 # MCP configuration (may contain connection strings)
 .mcp.json
 tests/deployment/pulumi/app/package-lock.json
+
+# Video package (local Remotion compositions)
+packages/video/
