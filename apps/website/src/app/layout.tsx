@@ -28,8 +28,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/og-image.png",
-        width: 2848,
-        height: 1504,
+        width: 1200,
+        height: 630,
         alt: "Wraps — Workflows as code. Delivered by your AWS.",
       },
     ],

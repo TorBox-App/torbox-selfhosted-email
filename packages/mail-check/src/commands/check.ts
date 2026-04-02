@@ -233,6 +233,7 @@ export function displayScoreBox(
           : pc.red;
 
   const line = (content: string): string => {
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequence stripping
     const visible = content.replace(/\x1B\[[0-9;]*m/g, "").length;
     const pad = Math.max(0, innerWidth - visible);
     return pc.dim("│") + content + " ".repeat(pad) + pc.dim("│");

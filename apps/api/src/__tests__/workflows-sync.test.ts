@@ -79,6 +79,7 @@ vi.mock("@wraps/db", () => ({
 
 vi.mock("drizzle-orm", () => ({
   inArray: vi.fn(),
+  relations: vi.fn(() => ({})),
   sql: (strings: TemplateStringsArray, ..._values: unknown[]) => ({
     sql: strings.join("?"),
   }),

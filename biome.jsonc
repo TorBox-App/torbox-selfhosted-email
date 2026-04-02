@@ -90,6 +90,12 @@
   },
   "overrides": [
     {
+      "includes": ["**/__tests__/**"],
+      "linter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": [
         "packages/ui/src/components/**",
         "packages/console-ui/src/components/**"

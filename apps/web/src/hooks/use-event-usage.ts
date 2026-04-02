@@ -30,7 +30,8 @@ export function useEventUsage(orgSlug: string) {
       }
       return response.json();
     },
-    // Only refetch on invalidation (after tracking events)
+    // Refetch every 5 minutes as fallback (events come from SDK, not dashboard)
+    refetchInterval: 5 * 60_000,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60_000,
   });
