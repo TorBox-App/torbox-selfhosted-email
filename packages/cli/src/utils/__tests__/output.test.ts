@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setJsonMode } from "../shared/json-output.js";
 import {
   DeploymentProgress,
-  type SuccessOutputs,
   displayStatus,
   displaySuccess,
+  type SuccessOutputs,
 } from "../shared/output.js";
 
 // Mock @clack/prompts
@@ -370,7 +370,7 @@ describe("displaySuccess output content", () => {
       domain: "example.com",
       dnsAutoCreated: true,
       dnsProvider: "cloudflare",
-    } as SuccessOutputs & { dnsProvider: string });
+    });
 
     // clack.note is called for the DNS auto-configured message
     const noteCall = (clack.note as ReturnType<typeof vi.fn>).mock.calls.find(

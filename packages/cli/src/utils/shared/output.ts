@@ -116,6 +116,7 @@ export type SuccessOutputs = {
   acmValidationRecords?: DNSRecord[];
   tableName?: string;
   dnsAutoCreated?: boolean;
+  dnsProvider?: "route53" | "vercel" | "cloudflare" | "manual";
   domain?: string;
   customTrackingDomain?: string;
   httpsTrackingEnabled?: boolean;
@@ -178,8 +179,16 @@ export function displaySuccess(outputs: SuccessOutputs) {
 
   // Show DNS auto-creation message
   if (outputs.dnsAutoCreated && outputs.domain) {
+    const providerNames: Record<string, string> = {
+      route53: "AWS Route53",
+      vercel: "Vercel DNS",
+      cloudflare: "Cloudflare",
+      manual: "Manual",
+    };
+    const providerDisplay =
+      providerNames[outputs.dnsProvider ?? "route53"] ?? "your DNS provider";
     clack.note(
-      `DNS records (DKIM, SPF, DMARC) were automatically created in Route53 for ${pc.cyan(
+      `DNS records (DKIM, SPF, DMARC) were automatically created in ${providerDisplay} for ${pc.cyan(
         outputs.domain
       )}.\n\nVerification should complete within a few minutes.`,
       pc.green("✓ DNS Auto-Configured")

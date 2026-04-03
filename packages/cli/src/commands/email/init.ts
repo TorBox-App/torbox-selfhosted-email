@@ -757,6 +757,7 @@ export async function init(options: InitOptions): Promise<void> {
     tableName: outputs.tableName,
     dnsRecords: undefined,
     dnsAutoCreated,
+    dnsProvider,
     domain: outputs.domain,
     mailFromDomain: outputs.mailFromDomain,
   });
