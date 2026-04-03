@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setJsonMode } from "../shared/json-output.js";
 import {
   DeploymentProgress,
+  type SuccessOutputs,
   displayStatus,
   displaySuccess,
 } from "../shared/output.js";
@@ -358,6 +359,30 @@ describe("displaySuccess output content", () => {
     const output = consoleLogSpy.mock.calls.map((c) => c[0]).join("\n");
     expect(output).toContain("@wraps.dev/email");
     expect(output).not.toContain("wraps.emails.send");
+  });
+
+  it("should display correct DNS provider name when DNS was auto-created", async () => {
+    const clack = await import("@clack/prompts");
+
+    displaySuccess({
+      roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
+      region: "us-east-1",
+      domain: "example.com",
+      dnsAutoCreated: true,
+      dnsProvider: "cloudflare",
+    } as SuccessOutputs & { dnsProvider: string });
+
+    // clack.note is called for the DNS auto-configured message
+    const noteCall = (clack.note as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([, title]: [string, string]) =>
+        typeof title === "string" && title.includes("DNS Auto-Configured")
+    );
+    expect(noteCall).toBeDefined();
+
+    const [noteBody] = noteCall!;
+    // Bug: the message hardcodes "Route53" regardless of the actual DNS provider
+    expect(noteBody).toContain("Cloudflare");
+    expect(noteBody).not.toContain("Route53");
   });
 });
 

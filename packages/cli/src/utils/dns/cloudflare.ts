@@ -65,8 +65,7 @@ export class CloudflareDNSClient implements DNSProviderClient {
     priority?: number
   ): Promise<boolean> {
     // Cloudflare requires TXT record content to be wrapped in double quotes
-    const recordContent =
-      type === "TXT" ? `"${content}"` : content;
+    const recordContent = type === "TXT" ? `"${content}"` : content;
 
     const body: Record<string, unknown> = {
       name,
