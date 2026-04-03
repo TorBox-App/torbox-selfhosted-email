@@ -49,7 +49,7 @@ type EventBridgeEvent = {
   region: string;
   detail: {
     eventType: SesEventType;
-    mail: {
+    mail?: {
       messageId: string;
       timestamp: string;
       source: string;
@@ -171,6 +171,15 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     // 3. Parse the EventBridge event
     const event = body as EventBridgeEvent;
     const { eventType, mail } = event.detail;
+
+    if (!mail?.messageId) {
+      log.warn("Webhook: event missing mail.messageId", {
+        eventType,
+        awsAccountNumber,
+      });
+      return { status: "ignored", reason: "missing mail.messageId" };
+    }
+
     const messageId = mail.messageId;
 
     log.info("Webhook: processing event", { eventType, messageId });
