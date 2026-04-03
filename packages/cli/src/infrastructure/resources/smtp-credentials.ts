@@ -85,9 +85,8 @@ async function userExists(userName: string): Promise<boolean> {
 /**
  * Create SMTP credentials resources.
  *
- * Creates an IAM user with ses:SendRawEmail permission scoped to the
- * specified SES configuration set, along with access keys that are
- * converted to SMTP credentials.
+ * Creates an IAM user with ses:SendRawEmail permission along with
+ * access keys that are converted to SMTP credentials.
  *
  * @param config - The SMTP credentials configuration
  * @returns The created resources including the derived SMTP password
@@ -122,7 +121,9 @@ export async function createSMTPCredentials(
         },
       });
 
-  // Attach SES send policy scoped to configuration set
+  // Attach SES send policy
+  // Note: ses:ConfigurationSetName is NOT a valid condition key for ses:SendRawEmail (SES v1).
+  // SMTP user is already limited to ses:SendRawEmail only.
   new aws.iam.UserPolicy("wraps-email-smtp-policy", {
     user: iamUser.name,
     policy: JSON.stringify({
@@ -132,11 +133,6 @@ export async function createSMTPCredentials(
           Effect: "Allow",
           Action: "ses:SendRawEmail",
           Resource: "*",
-          Condition: {
-            StringEquals: {
-              "ses:ConfigurationSetName": config.configSetName,
-            },
-          },
         },
       ],
     }),

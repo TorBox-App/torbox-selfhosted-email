@@ -46,10 +46,16 @@ vi.mock("@clack/prompts", () => ({
   })),
 }));
 
-// Mock metadata module
-vi.mock("../../utils/shared/metadata.js", () => ({
-  loadConnectionMetadata: vi.fn().mockResolvedValue(null),
-}));
+// Mock metadata module — re-export real getAllTrackedDomains since it's pure logic
+vi.mock("../../utils/shared/metadata.js", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../../utils/shared/metadata.js")
+  >();
+  return {
+    ...actual,
+    loadConnectionMetadata: vi.fn().mockResolvedValue(null),
+  };
+});
 
 // Mock telemetry
 vi.mock("../../telemetry/events.js", () => ({

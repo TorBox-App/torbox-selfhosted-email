@@ -33,10 +33,16 @@ vi.mock("@clack/prompts", () => ({
   })),
 }));
 
-// Mock metadata module
-vi.mock("../../utils/shared/metadata.js", () => ({
-  loadConnectionMetadata: vi.fn().mockResolvedValue(null),
-}));
+// Mock metadata module — re-export real getAllTrackedDomains since it's pure logic
+vi.mock("../../utils/shared/metadata.js", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../../utils/shared/metadata.js")
+  >();
+  return {
+    ...actual,
+    loadConnectionMetadata: vi.fn().mockResolvedValue(null),
+  };
+});
 
 // Mock telemetry
 vi.mock("../../telemetry/events.js", () => ({
@@ -168,6 +174,100 @@ describe("email test command", () => {
     await emailTest({ to: "success@simulator.amazonses.com" });
 
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("should use additionalDomains when primary domain is not set", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue({
+      ...MOCK_METADATA,
+      services: {
+        email: {
+          config: {
+            sendingEnabled: true,
+            additionalDomains: [
+              {
+                domain: "added-later.com",
+                addedAt: "2024-01-02T00:00:00.000Z",
+                purpose: "transactional" as const,
+              },
+            ],
+          },
+          preset: "starter" as const,
+          deployedAt: "2024-01-01T00:00:00.000Z",
+        },
+      },
+    });
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "test-additional-domain-id",
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+    });
+
+    // Should NOT have exited
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // Should have used the additionalDomain
+    const calls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args[0].input.FromEmailAddress).toBe(
+      "test@added-later.com"
+    );
+  });
+
+  it("should prompt domain selection when multiple domains exist", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue({
+      ...MOCK_METADATA,
+      services: {
+        email: {
+          config: {
+            domain: "primary.com",
+            sendingEnabled: true,
+            additionalDomains: [
+              {
+                domain: "secondary.com",
+                addedAt: "2024-01-02T00:00:00.000Z",
+                purpose: "marketing" as const,
+              },
+            ],
+          },
+          preset: "starter" as const,
+          deployedAt: "2024-01-01T00:00:00.000Z",
+        },
+      },
+    });
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.select).mockResolvedValue("secondary.com");
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "test-multi-domain-id",
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+    });
+
+    // Should have prompted for domain selection
+    expect(clack.select).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Which domain do you want to send from?",
+      })
+    );
+
+    // Should have used the selected domain
+    const calls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args[0].input.FromEmailAddress).toBe(
+      "test@secondary.com"
+    );
   });
 
   it("should handle MessageRejected error for unverified address", async () => {

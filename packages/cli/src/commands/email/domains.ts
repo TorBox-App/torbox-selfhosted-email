@@ -628,16 +628,18 @@ export async function addDomain(options: {
     const sesClient = new SESv2Client({ region });
 
     // Check if domain already exists in SES
+    let domainAlreadyExists = false;
+    let dkimTokens: string[] = [];
+
     try {
-      await sesClient.send(
+      const existing = await sesClient.send(
         new GetEmailIdentityCommand({ EmailIdentity: domain })
       );
-      progress.stop();
-      clack.log.warn(`Domain ${domain} already exists in SES`);
-      console.log(
-        `\nRun ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check verification status.\n`
+      domainAlreadyExists = true;
+      dkimTokens = existing.DkimAttributes?.Tokens || [];
+      clack.log.info(
+        `Domain ${pc.cyan(domain)} already exists in SES — adopting into Wraps`
       );
-      return;
     } catch (error) {
       if (!isAWSNotFoundError(error)) {
         throw error;
@@ -650,27 +652,42 @@ export async function addDomain(options: {
       purpose = await promptDomainPurpose();
     }
 
-    // 4. Create SES identity WITH config set
-    const { CreateEmailIdentityCommand } = await import(
-      "@aws-sdk/client-sesv2"
-    );
-    await progress.execute("Creating SES identity", async () => {
-      await sesClient.send(
-        new CreateEmailIdentityCommand({
-          EmailIdentity: domain,
-          ConfigurationSetName: "wraps-email-tracking",
-          DkimSigningAttributes: {
-            NextSigningKeyLength: "RSA_2048_BIT",
-          },
-        })
+    // 4. Create SES identity or associate config set for existing domains
+    if (domainAlreadyExists) {
+      // Associate wraps-email-tracking config set so events are tracked
+      const { PutEmailIdentityConfigurationSetAttributesCommand } = await import(
+        "@aws-sdk/client-sesv2"
       );
-    });
+      await progress.execute("Associating tracking configuration", async () => {
+        await sesClient.send(
+          new PutEmailIdentityConfigurationSetAttributesCommand({
+            EmailIdentity: domain,
+            ConfigurationSetName: "wraps-email-tracking",
+          })
+        );
+      });
+    } else {
+      const { CreateEmailIdentityCommand } = await import(
+        "@aws-sdk/client-sesv2"
+      );
+      await progress.execute("Creating SES identity", async () => {
+        await sesClient.send(
+          new CreateEmailIdentityCommand({
+            EmailIdentity: domain,
+            ConfigurationSetName: "wraps-email-tracking",
+            DkimSigningAttributes: {
+              NextSigningKeyLength: "RSA_2048_BIT",
+            },
+          })
+        );
+      });
 
-    // Get DKIM tokens
-    const sesIdentity = await sesClient.send(
-      new GetEmailIdentityCommand({ EmailIdentity: domain })
-    );
-    const dkimTokens = sesIdentity.DkimAttributes?.Tokens || [];
+      // Get DKIM tokens for newly created identity
+      const sesIdentity = await sesClient.send(
+        new GetEmailIdentityCommand({ EmailIdentity: domain })
+      );
+      dkimTokens = sesIdentity.DkimAttributes?.Tokens || [];
+    }
 
     // 5. Set up MAIL FROM
     let mailFromDomain: string | undefined;

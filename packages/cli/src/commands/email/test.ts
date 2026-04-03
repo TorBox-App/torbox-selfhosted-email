@@ -22,7 +22,10 @@ import {
 } from "../../utils/shared/aws.js";
 import { WrapsError } from "../../utils/shared/errors.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
-import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
+import {
+  getAllTrackedDomains,
+  loadConnectionMetadata,
+} from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
 /**
@@ -58,15 +61,35 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
     return;
   }
 
-  const emailConfig = metadata.services.email;
-  const domain = emailConfig.config.domain;
+  const trackedDomains = getAllTrackedDomains(metadata);
 
-  if (!domain) {
+  if (trackedDomains.length === 0) {
     progress.stop();
     clack.log.error("No domain configured in email infrastructure");
     console.log(`\nRun ${pc.cyan("wraps email init")} to set up a domain.\n`);
     process.exit(1);
     return;
+  }
+
+  let domain: string;
+  if (trackedDomains.length === 1) {
+    domain = trackedDomains[0].domain;
+  } else {
+    const selected = await clack.select({
+      message: "Which domain do you want to send from?",
+      options: trackedDomains.map((d) => ({
+        value: d.domain,
+        label: d.domain,
+        hint: d.isPrimary ? "primary" : d.purpose,
+      })),
+    });
+
+    if (clack.isCancel(selected)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    domain = selected as string;
   }
 
   // 4. Get recipient email

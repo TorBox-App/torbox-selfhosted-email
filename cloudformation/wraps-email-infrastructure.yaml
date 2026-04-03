@@ -916,9 +916,6 @@ Resources:
                 Action:
                   - "ses:SendRawEmail"
                 Resource: "*"
-                Condition:
-                  StringEquals:
-                    "ses:ConfigurationSetName": "wraps-email-tracking"
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation

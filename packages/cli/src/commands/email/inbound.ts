@@ -38,6 +38,7 @@ import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   addInboundDomainToMetadata,
   buildEmailStackConfig,
+  getAllTrackedDomains,
   loadConnectionMetadata,
   removeInboundDomainFromMetadata,
   saveConnectionMetadata,
@@ -104,13 +105,35 @@ export async function inboundInit(
     throw errors.inboundRequiresOutbound();
   }
 
-  const emailService = metadata.services.email;
-  const emailConfig = emailService.config;
-  const domain = emailConfig.domain;
+  const trackedDomains = getAllTrackedDomains(metadata);
 
-  if (!domain) {
+  if (trackedDomains.length === 0) {
     throw errors.inboundRequiresOutbound();
   }
+
+  let domain: string;
+  if (trackedDomains.length === 1) {
+    domain = trackedDomains[0].domain;
+  } else {
+    const selected = await clack.select({
+      message: "Which domain do you want to receive email on?",
+      options: trackedDomains.map((d) => ({
+        value: d.domain,
+        label: d.domain,
+        hint: d.isPrimary ? "primary" : d.purpose,
+      })),
+    });
+
+    if (clack.isCancel(selected)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    domain = selected as string;
+  }
+
+  const emailService = metadata.services.email;
+  const emailConfig = emailService.config;
 
   // 6. Prompt for subdomain (or root domain)
   const subdomain = options.root

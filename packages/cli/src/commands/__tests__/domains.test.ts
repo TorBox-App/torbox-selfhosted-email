@@ -3,6 +3,7 @@ import {
   DeleteEmailIdentityCommand,
   GetEmailIdentityCommand,
   ListEmailIdentitiesCommand,
+  PutEmailIdentityConfigurationSetAttributesCommand,
   PutEmailIdentityMailFromAttributesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
@@ -161,20 +162,150 @@ describe("Domain Management Commands", () => {
       });
     });
 
-    it("should handle domain already exists gracefully", async () => {
+    it("should adopt existing SES domain into metadata without creating new identity", async () => {
+      // Domain already exists in SES — return identity on first call, DKIM on second
       sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: {
+          Tokens: ["token1", "token2", "token3"],
+          Status: "SUCCESS",
+        },
+      });
+
+      sesClientMock
+        .on(PutEmailIdentityConfigurationSetAttributesCommand)
+        .resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
+
+      const metadata = await import("../../utils/shared/metadata");
+
+      await addDomain({ domain: "existing.com", yes: true });
+
+      // Should NOT have tried to create a new SES identity
+      const createCalls = sesClientMock.commandCalls(
+        CreateEmailIdentityCommand
+      );
+      expect(createCalls.length).toBe(0);
+
+      // Should have saved to metadata
+      expect(metadata.addDomainToMetadata).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          domain: "existing.com",
+        })
+      );
+      expect(metadata.saveConnectionMetadata).toHaveBeenCalled();
+    });
+
+    it("should associate config set on adopted existing domain", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
         DkimAttributes: {
           Tokens: ["token1"],
           Status: "SUCCESS",
         },
       });
 
-      const clack = await import("@clack/prompts");
+      sesClientMock
+        .on(PutEmailIdentityConfigurationSetAttributesCommand)
+        .resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
 
       await addDomain({ domain: "existing.com", yes: true });
 
-      expect(clack.log.warn).toHaveBeenCalledWith(
-        "Domain existing.com already exists in SES"
+      const configSetCalls = sesClientMock.commandCalls(
+        PutEmailIdentityConfigurationSetAttributesCommand
+      );
+      expect(configSetCalls.length).toBe(1);
+      expect(configSetCalls[0].args[0].input).toMatchObject({
+        EmailIdentity: "existing.com",
+        ConfigurationSetName: "wraps-email-tracking",
+      });
+    });
+
+    it("should set up MAIL FROM on adopted existing domain", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: {
+          Tokens: ["token1"],
+          Status: "SUCCESS",
+        },
+      });
+
+      sesClientMock
+        .on(PutEmailIdentityConfigurationSetAttributesCommand)
+        .resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      await addDomain({ domain: "existing.com", yes: true });
+
+      // Should have called PutEmailIdentityMailFromAttributes
+      const mailFromCalls = sesClientMock.commandCalls(
+        PutEmailIdentityMailFromAttributesCommand
+      );
+      expect(mailFromCalls.length).toBe(1);
+      expect(mailFromCalls[0].args[0].input).toMatchObject({
+        EmailIdentity: "existing.com",
+        MailFromDomain: "mail.existing.com",
+        BehaviorOnMxFailure: "USE_DEFAULT_VALUE",
+      });
+    });
+
+    it("should show adoption message for existing SES domain", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: {
+          Tokens: ["token1"],
+          Status: "SUCCESS",
+        },
+      });
+
+      sesClientMock
+        .on(PutEmailIdentityConfigurationSetAttributesCommand)
+        .resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
+
+      await addDomain({ domain: "existing.com", yes: true });
+
+      // Should show adoption info message
+      expect(clack.log.info).toHaveBeenCalledWith(
+        expect.stringContaining("already exists in SES")
+      );
+      expect(clack.log.info).toHaveBeenCalledWith(
+        expect.stringContaining("adopting into Wraps")
+      );
+    });
+
+    it("should use DKIM tokens from existing domain for DNS setup", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: {
+          Tokens: ["existing-tok1", "existing-tok2", "existing-tok3"],
+          Status: "SUCCESS",
+        },
+      });
+
+      sesClientMock
+        .on(PutEmailIdentityConfigurationSetAttributesCommand)
+        .resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      const dns = await import("../../utils/dns/index");
+
+      await addDomain({ domain: "existing.com", yes: true });
+
+      // Should have passed DKIM tokens to DNS record builder
+      expect(dns.buildEmailDNSRecords).toHaveBeenCalledWith(
+        expect.objectContaining({
+          domain: "existing.com",
+          dkimTokens: ["existing-tok1", "existing-tok2", "existing-tok3"],
+        })
       );
     });
 

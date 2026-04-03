@@ -50,6 +50,7 @@ import {
   promptCustomConfig,
   promptDomain,
   promptEstimatedVolume,
+  promptMailFromSubdomain,
   promptProvider,
   promptRegion,
   promptVercelConfig,
@@ -184,6 +185,28 @@ export async function init(options: InitOptions): Promise<void> {
   // Set domain if provided
   if (domain) {
     emailConfig.domain = domain;
+  }
+
+  // Prompt for MAIL FROM subdomain (skip in quick mode and custom preset which already prompts)
+  if (domain && !options.quick && preset !== "custom") {
+    const wantsMailFrom = await clack.confirm({
+      message: `Configure MAIL FROM for ${pc.cyan(domain)}? ${pc.dim("(improves DMARC alignment)")}`,
+      initialValue: true,
+    });
+
+    if (clack.isCancel(wantsMailFrom)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    if (wantsMailFrom) {
+      const mailFromFull = await promptMailFromSubdomain(domain);
+      // promptMailFromSubdomain returns "mail.example.com" — extract the subdomain part
+      const suffix = `.${domain}`;
+      emailConfig.mailFromSubdomain = mailFromFull.endsWith(suffix)
+        ? mailFromFull.slice(0, -suffix.length) || "mail"
+        : "mail";
+    }
   }
 
   // Get estimated volume for cost calculation (skip in quick mode)
