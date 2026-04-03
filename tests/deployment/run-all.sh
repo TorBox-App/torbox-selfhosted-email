@@ -66,12 +66,14 @@ else
   # Launch in parallel
   for method in "${METHODS[@]}"; do
     run_test "$method" &
-    PIDS[$method]=$!
+    local pid=$!
+    PIDS[$method]=$pid
   done
 
   # Wait and collect results
   for method in "${METHODS[@]}"; do
-    if wait ${PIDS[$method]}; then
+    local pid=${PIDS[$method]}
+    if wait $pid; then
       RESULTS[$method]="PASS"
     else
       RESULTS[$method]="FAIL"

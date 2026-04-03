@@ -30,7 +30,12 @@
     "sst:deploy": "sst deploy",
     "sst:remove": "sst remove",
     "sync:skills": "./scripts/sync-skills.sh",
-    "setup-worktree": "./scripts/setup-worktree.sh"
+    "setup-worktree": "./scripts/setup-worktree.sh",
+    "test:deploy": "./tests/deployment/run.sh",
+    "test:deploy:cli": "./tests/deployment/run.sh cli",
+    "test:deploy:cdk": "./tests/deployment/run.sh cdk",
+    "test:deploy:pulumi": "./tests/deployment/run.sh pulumi",
+    "test:deploy:cfn": "./tests/deployment/run.sh cfn"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.4",

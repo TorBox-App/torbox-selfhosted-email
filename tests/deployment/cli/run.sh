@@ -16,6 +16,7 @@ export AWS_DEFAULT_REGION="$WRAPS_TEST_REGION"
 
 DOMAIN="$WRAPS_TEST_DOMAIN"
 REGION="$WRAPS_TEST_REGION"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 # Use local CLI build (not globally installed wraps)
 REPO_ROOT="${ROOT_DIR:h:h}"
@@ -181,6 +182,67 @@ else
   fail "email domains verify missing DNS records"
 fi
 
+# doctor (starter — should find resources, all healthy, no orphans)
+section "Phase 1b: email doctor"
+DOCTOR_OUT=$(wraps email doctor --json --region "$REGION" 2>/dev/null | extract_json) || true
+
+if echo "$DOCTOR_OUT" | jq -e '.success == true' &>/dev/null; then
+  pass "email doctor succeeds"
+else
+  fail "email doctor failed" "$DOCTOR_OUT"
+fi
+
+if echo "$DOCTOR_OUT" | jq -e --arg r "$REGION" '.data.region == $r' &>/dev/null; then
+  pass "email doctor reports correct region"
+else
+  fail "email doctor region mismatch"
+fi
+
+if echo "$DOCTOR_OUT" | jq -e '.data.totalResources >= 2' &>/dev/null; then
+  typeset dr_count
+  dr_count=$(echo "$DOCTOR_OUT" | jq -r '.data.totalResources')
+  pass "email doctor found $dr_count resources (starter)"
+else
+  fail "email doctor found too few resources"
+fi
+
+if echo "$DOCTOR_OUT" | jq -e '[.data.resources[] | select(.status != "pass")] | length == 0' &>/dev/null; then
+  pass "email doctor all resources healthy (no orphans)"
+else
+  fail "email doctor found unhealthy or orphaned resources"
+fi
+
+# check (deliverability audit — DKIM may still be PENDING)
+section "Phase 1b: email check"
+CHECK_OUT=$(wraps email check --json --domain "$DOMAIN" --quick 2>/dev/null | extract_json) || true
+
+if echo "$CHECK_OUT" | jq -e '.success == true' &>/dev/null; then
+  pass "email check succeeds"
+else
+  fail "email check failed" "$CHECK_OUT"
+fi
+
+if echo "$CHECK_OUT" | jq -e '.data.score.finalScore | type == "number"' &>/dev/null; then
+  typeset check_score check_grade
+  check_score=$(echo "$CHECK_OUT" | jq -r '.data.score.finalScore')
+  check_grade=$(echo "$CHECK_OUT" | jq -r '.data.score.grade')
+  pass "email check score: $check_score/100 (grade $check_grade)"
+else
+  fail "email check missing score"
+fi
+
+if echo "$CHECK_OUT" | jq -e '.data.spf != null' &>/dev/null; then
+  pass "email check includes SPF results"
+else
+  fail "email check missing SPF results"
+fi
+
+if echo "$CHECK_OUT" | jq -e '.data.dkim != null' &>/dev/null; then
+  pass "email check includes DKIM results"
+else
+  fail "email check missing DKIM results"
+fi
+
 summary || { printf "${RED}Phase 1b FAILED${NC}\n"; exit 1; }
 
 # ─── Phase 2: Upgrade to production preset (adds events) ─────────────
@@ -244,6 +306,129 @@ verify_iam_events_policy
 verify_console_access_role
 
 summary || { printf "${RED}Phase 2b FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 2c: Add and verify a subdomain ────────────────────────────
+
+SUBDOMAIN="notifications.${DOMAIN}"
+
+printf "\n${YELLOW}Phase 2c: Add subdomain (${SUBDOMAIN})${NC}\n"
+
+wraps email domains add \
+  --domain "$SUBDOMAIN" \
+  --region "$REGION" \
+  --yes \
+  --json
+
+# Create DKIM DNS records for the subdomain
+create_dkim_records "$SUBDOMAIN" "$REGION"
+
+reset_counters
+
+section "Phase 2c: domains add"
+
+# Verify SES identity was created
+if aws sesv2 get-email-identity \
+  --email-identity "$SUBDOMAIN" \
+  --region "$REGION" &>/dev/null; then
+  pass "SES identity $SUBDOMAIN exists"
+else
+  fail "SES identity $SUBDOMAIN not found"
+fi
+
+# Verify config set is linked
+typeset sub_cs
+sub_cs=$(aws sesv2 get-email-identity \
+  --email-identity "$SUBDOMAIN" \
+  --region "$REGION" \
+  --query 'ConfigurationSetName' \
+  --output text 2>/dev/null)
+
+if [[ "$sub_cs" == "wraps-email-tracking" ]]; then
+  pass "Subdomain linked to wraps-email-tracking config set"
+else
+  fail "Subdomain config set mismatch: $sub_cs"
+fi
+
+# Verify MAIL FROM is configured (domains add --yes defaults to mail.{domain})
+typeset sub_mailfrom
+sub_mailfrom=$(aws sesv2 get-email-identity \
+  --email-identity "$SUBDOMAIN" \
+  --region "$REGION" \
+  --query 'MailFromAttributes.MailFromDomain' \
+  --output text 2>/dev/null)
+
+if [[ "$sub_mailfrom" == "mail.${SUBDOMAIN}" ]]; then
+  pass "Subdomain MAIL FROM configured: $sub_mailfrom"
+else
+  fail "Subdomain MAIL FROM expected mail.${SUBDOMAIN}, got: $sub_mailfrom"
+fi
+
+# domains verify
+section "Phase 2c: domains verify (subdomain)"
+SUB_VERIFY=$(wraps email domains verify --json --domain "$SUBDOMAIN" 2>/dev/null | extract_json) || true
+
+if echo "$SUB_VERIFY" | jq -e '.success == true' &>/dev/null; then
+  pass "email domains verify succeeds for subdomain"
+else
+  fail "email domains verify failed for subdomain" "$SUB_VERIFY"
+fi
+
+if echo "$SUB_VERIFY" | jq -e '.data.dkimStatus == "SUCCESS" or .data.dkimStatus == "PENDING"' &>/dev/null; then
+  typeset sub_dkim
+  sub_dkim=$(echo "$SUB_VERIFY" | jq -r '.data.dkimStatus')
+  pass "Subdomain DKIM status: $sub_dkim"
+else
+  fail "Subdomain DKIM unexpected status"
+fi
+
+# domains list — should include both primary and subdomain
+section "Phase 2c: domains list"
+LIST_OUT=$(wraps email domains list --json 2>/dev/null | extract_json) || true
+
+if echo "$LIST_OUT" | jq -e '.success == true' &>/dev/null; then
+  pass "email domains list succeeds"
+else
+  fail "email domains list failed" "$LIST_OUT"
+fi
+
+if echo "$LIST_OUT" | jq -e --arg d "$DOMAIN" '[.data.domains[] | select(.domain == $d)] | length > 0' &>/dev/null; then
+  pass "domains list includes primary domain"
+else
+  fail "domains list missing primary domain"
+fi
+
+if echo "$LIST_OUT" | jq -e --arg d "$SUBDOMAIN" '[.data.domains[] | select(.domain == $d)] | length > 0' &>/dev/null; then
+  pass "domains list includes subdomain"
+else
+  fail "domains list missing subdomain"
+fi
+
+# Remove subdomain
+section "Phase 2c: domains remove (subdomain)"
+wraps email domains remove \
+  --domain "$SUBDOMAIN" \
+  --force \
+  --json
+
+# Verify subdomain is gone from SES
+if aws sesv2 get-email-identity \
+  --email-identity "$SUBDOMAIN" \
+  --region "$REGION" &>/dev/null; then
+  fail "SES identity $SUBDOMAIN still exists after removal"
+else
+  pass "Subdomain removed from SES"
+fi
+
+# Verify primary domain still intact
+if aws sesv2 get-email-identity \
+  --email-identity "$DOMAIN" \
+  --region "$REGION" &>/dev/null; then
+  pass "Primary domain still intact after subdomain removal"
+else
+  fail "Primary domain was removed (should only remove subdomain)"
+fi
+
+summary || { printf "${RED}Phase 2c FAILED${NC}\n"; exit 1; }
 
 # ─── Phase 3: Add SMTP credentials ───────────────────────────────────
 
@@ -322,7 +507,65 @@ else
   fail "email test bounce address mismatch"
 fi
 
+# doctor (full deployment — should find all resources healthy)
+section "Phase 3b: email doctor (full deployment)"
+DOCTOR_FULL=$(wraps email doctor --json --region "$REGION" 2>/dev/null | extract_json) || true
+
+if echo "$DOCTOR_FULL" | jq -e '.success == true' &>/dev/null; then
+  pass "email doctor succeeds (full)"
+else
+  fail "email doctor failed (full)" "$DOCTOR_FULL"
+fi
+
+if echo "$DOCTOR_FULL" | jq -e '.data.totalResources >= 5' &>/dev/null; then
+  typeset dr_full_count
+  dr_full_count=$(echo "$DOCTOR_FULL" | jq -r '.data.totalResources')
+  pass "email doctor found $dr_full_count resources (production)"
+else
+  fail "email doctor found too few resources for production"
+fi
+
+if echo "$DOCTOR_FULL" | jq -e '[.data.resources[] | select(.status != "pass")] | length == 0' &>/dev/null; then
+  pass "email doctor all resources healthy (full)"
+else
+  fail "email doctor found unhealthy resources (full)"
+fi
+
+# check (DKIM should be SUCCESS by now — expect better score)
+section "Phase 3b: email check (full deployment)"
+CHECK_FULL=$(wraps email check --json --domain "$DOMAIN" --quick 2>/dev/null | extract_json) || true
+
+if echo "$CHECK_FULL" | jq -e '.success == true' &>/dev/null; then
+  pass "email check succeeds (full)"
+else
+  fail "email check failed (full)" "$CHECK_FULL"
+fi
+
+if echo "$CHECK_FULL" | jq -e '.data.score.finalScore | type == "number"' &>/dev/null; then
+  typeset check_full_score check_full_grade
+  check_full_score=$(echo "$CHECK_FULL" | jq -r '.data.score.finalScore')
+  check_full_grade=$(echo "$CHECK_FULL" | jq -r '.data.score.grade')
+  pass "email check score: $check_full_score/100 (grade $check_full_grade)"
+else
+  fail "email check missing score (full)"
+fi
+
+if echo "$CHECK_FULL" | jq -e '.data.dkim.found == true' &>/dev/null; then
+  pass "email check DKIM found (full deployment)"
+else
+  fail "email check DKIM not found (expected after DNS propagation)"
+fi
+
 summary || { printf "${RED}Phase 3b FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 3c: Platform role permission smoke test ───────────────────
+
+printf "\n${YELLOW}Phase 3c: Platform role permission smoke test${NC}\n"
+
+reset_counters
+verify_role_permissions "$ACCOUNT_ID" "$REGION" "$DOMAIN"
+
+summary || { printf "${RED}Phase 3c FAILED${NC}\n"; exit 1; }
 
 # ─── Phase 4: Idempotent re-deploy (same preset, nothing should change) ──
 
@@ -357,6 +600,24 @@ wraps email destroy \
 
 reset_counters
 verify_teardown "$DOMAIN" "$REGION"
+
+# doctor (post-teardown — should find zero resources)
+section "Teardown: email doctor (clean state)"
+DOCTOR_CLEAN=$(wraps email doctor --json --region "$REGION" 2>/dev/null | extract_json) || true
+
+if echo "$DOCTOR_CLEAN" | jq -e '.success == true' &>/dev/null; then
+  pass "email doctor succeeds (post-teardown)"
+else
+  fail "email doctor failed (post-teardown)" "$DOCTOR_CLEAN"
+fi
+
+if echo "$DOCTOR_CLEAN" | jq -e '.data.totalResources == 0' &>/dev/null; then
+  pass "email doctor found 0 resources (clean account)"
+else
+  typeset dr_leftover
+  dr_leftover=$(echo "$DOCTOR_CLEAN" | jq -r '.data.totalResources')
+  fail "email doctor found $dr_leftover leftover resources after teardown"
+fi
 
 summary || { printf "${RED}Teardown FAILED${NC}\n"; exit 1; }
 

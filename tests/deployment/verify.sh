@@ -1007,6 +1007,319 @@ verify_archiving() {
   fi
 }
 
+# ─── Platform Role Permission Smoke Test ──────────────────────────────
+#
+# Creates a temporary IAM role with the same policy that platform connect
+# would attach, assumes it, and verifies every AWS API call the platform
+# actually makes succeeds with those credentials.
+#
+# Usage: verify_role_permissions <account_id> <region> <domain>
+
+verify_role_permissions() {
+  local account_id="${1:?account_id required}"
+  local region="${2:?region required}"
+  local domain="${3:?domain required}"
+
+  local test_role="wraps-test-role-permissions"
+  local test_policy="wraps-test-policy"
+  local test_external_id="wraps-deploy-test-$$"
+  local session_name="wraps-permission-test"
+
+  section "Platform role: Setup test role"
+
+  # Build trust policy that allows the current account to assume
+  local trust_policy
+  trust_policy=$(cat <<TRUST
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "AWS": "arn:aws:iam::${account_id}:root" },
+    "Action": "sts:AssumeRole",
+    "Condition": { "StringEquals": { "sts:ExternalId": "${test_external_id}" } }
+  }]
+}
+TRUST
+)
+
+  # Build the same permission policy that platform connect creates
+  # for a production email deployment with events + DynamoDB history
+  local perm_policy
+  perm_policy=$(cat <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ses:GetAccount",
+        "ses:GetSendStatistics",
+        "ses:ListIdentities",
+        "ses:GetIdentityVerificationAttributes",
+        "ses:ListEmailIdentities",
+        "ses:GetEmailIdentity",
+        "ses:GetConfigurationSet",
+        "ses:GetConfigurationSetEventDestinations",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ses:GetTemplate",
+        "ses:ListTemplates",
+        "ses:GetEmailTemplate",
+        "ses:ListEmailTemplates",
+        "ses:CreateEmailTemplate",
+        "ses:UpdateEmailTemplate",
+        "ses:DeleteEmailTemplate",
+        "ses:TestRenderEmailTemplate"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ses:SendEmail",
+        "ses:SendRawEmail",
+        "ses:SendTemplatedEmail",
+        "ses:SendBulkTemplatedEmail",
+        "ses:SendBulkEmail"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchGetItem",
+        "dynamodb:DescribeTable"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:*:${account_id}:table/wraps-email-*",
+        "arn:aws:dynamodb:*:${account_id}:table/wraps-email-*/index/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["events:PutEvents", "events:DescribeEventBus"],
+      "Resource": "arn:aws:events:*:${account_id}:event-bus/wraps-email-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ],
+      "Resource": "arn:aws:sqs:*:${account_id}:wraps-email-*"
+    }
+  ]
+}
+POLICY
+)
+
+  # Create the test role
+  if aws iam create-role \
+    --role-name "$test_role" \
+    --assume-role-policy-document "$trust_policy" \
+    --tags '[{"Key":"ManagedBy","Value":"wraps-deploy-test"}]' \
+    &>/dev/null; then
+    pass "Created test role $test_role"
+  else
+    fail "Could not create test role"
+    return 1
+  fi
+
+  # Attach the permission policy
+  if aws iam put-role-policy \
+    --role-name "$test_role" \
+    --policy-name "$test_policy" \
+    --policy-document "$perm_policy" \
+    &>/dev/null; then
+    pass "Attached permission policy"
+  else
+    fail "Could not attach permission policy"
+    _cleanup_test_role "$test_role" "$test_policy"
+    return 1
+  fi
+
+  # IAM role propagation delay — new roles need a few seconds before AssumeRole works
+  printf "${CYAN}  Waiting for IAM role propagation...${NC}\n"
+  sleep 10
+
+  # AssumeRole
+  local creds
+  creds=$(aws sts assume-role \
+    --role-arn "arn:aws:iam::${account_id}:role/${test_role}" \
+    --role-session-name "$session_name" \
+    --external-id "$test_external_id" \
+    --duration-seconds 900 \
+    --output json 2>&1)
+
+  if [[ $? -ne 0 ]]; then
+    fail "Could not AssumeRole" "$creds"
+    _cleanup_test_role "$test_role" "$test_policy"
+    return 1
+  fi
+
+  pass "AssumeRole succeeded"
+
+  # Extract temporary credentials
+  local ak sk st
+  ak=$(echo "$creds" | jq -r '.Credentials.AccessKeyId')
+  sk=$(echo "$creds" | jq -r '.Credentials.SecretAccessKey')
+  st=$(echo "$creds" | jq -r '.Credentials.SessionToken')
+
+  # Helper: run an AWS CLI call with assumed credentials
+  _assumed() {
+    AWS_ACCESS_KEY_ID="$ak" \
+    AWS_SECRET_ACCESS_KEY="$sk" \
+    AWS_SESSION_TOKEN="$st" \
+    aws "$@" 2>&1
+  }
+
+  section "Platform role: SES read permissions"
+
+  # ses:GetAccount
+  if _assumed sesv2 get-account --region "$region" &>/dev/null; then
+    pass "ses:GetAccount"
+  else
+    fail "ses:GetAccount — AccessDenied"
+  fi
+
+  # ses:GetEmailIdentity
+  if _assumed sesv2 get-email-identity \
+    --email-identity "$domain" --region "$region" &>/dev/null; then
+    pass "ses:GetEmailIdentity"
+  else
+    fail "ses:GetEmailIdentity — AccessDenied"
+  fi
+
+  # ses:ListEmailIdentities
+  if _assumed sesv2 list-email-identities --region "$region" &>/dev/null; then
+    pass "ses:ListEmailIdentities"
+  else
+    fail "ses:ListEmailIdentities — AccessDenied"
+  fi
+
+  # ses:GetConfigurationSet
+  if _assumed sesv2 get-configuration-set \
+    --configuration-set-name wraps-email-tracking --region "$region" &>/dev/null; then
+    pass "ses:GetConfigurationSet"
+  else
+    fail "ses:GetConfigurationSet — AccessDenied"
+  fi
+
+  # ses:GetConfigurationSetEventDestinations
+  if _assumed sesv2 get-configuration-set-event-destinations \
+    --configuration-set-name wraps-email-tracking --region "$region" &>/dev/null; then
+    pass "ses:GetConfigurationSetEventDestinations"
+  else
+    fail "ses:GetConfigurationSetEventDestinations — AccessDenied"
+  fi
+
+  section "Platform role: SES send permissions"
+
+  # ses:SendEmail via SES simulator
+  if _assumed sesv2 send-email \
+    --from-email-address "test@${domain}" \
+    --destination '{"ToAddresses":["success@simulator.amazonses.com"]}' \
+    --content '{"Simple":{"Subject":{"Data":"Permission test"},"Body":{"Text":{"Data":"test"}}}}' \
+    --configuration-set-name wraps-email-tracking \
+    --region "$region" &>/dev/null; then
+    pass "ses:SendEmail (simulator)"
+  else
+    fail "ses:SendEmail — AccessDenied or send error"
+  fi
+
+  section "Platform role: SES template permissions"
+
+  # ses:ListEmailTemplates
+  if _assumed sesv2 list-email-templates --region "$region" &>/dev/null; then
+    pass "ses:ListEmailTemplates"
+  else
+    fail "ses:ListEmailTemplates — AccessDenied"
+  fi
+
+  section "Platform role: CloudWatch permissions"
+
+  # cloudwatch:GetMetricData (minimal query)
+  local end_time start_time
+  end_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  start_time=$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ)
+
+  if _assumed cloudwatch get-metric-data \
+    --metric-data-queries '[{"Id":"m1","MetricStat":{"Metric":{"Namespace":"AWS/SES","MetricName":"Send","Dimensions":[]},"Period":300,"Stat":"Sum"},"ReturnData":true}]' \
+    --start-time "$start_time" \
+    --end-time "$end_time" \
+    --region "$region" &>/dev/null; then
+    pass "cloudwatch:GetMetricData"
+  else
+    fail "cloudwatch:GetMetricData — AccessDenied"
+  fi
+
+  section "Platform role: DynamoDB permissions"
+
+  # dynamodb:DescribeTable
+  if _assumed dynamodb describe-table \
+    --table-name wraps-email-history --region "$region" &>/dev/null; then
+    pass "dynamodb:DescribeTable"
+  else
+    fail "dynamodb:DescribeTable — AccessDenied"
+  fi
+
+  # dynamodb:Query (scan first item)
+  if _assumed dynamodb query \
+    --table-name wraps-email-history \
+    --index-name accountId-sentAt-index \
+    --key-condition-expression "accountId = :aid" \
+    --expression-attribute-values "{\":aid\":{\"S\":\"${account_id}\"}}" \
+    --limit 1 \
+    --region "$region" &>/dev/null; then
+    pass "dynamodb:Query"
+  else
+    fail "dynamodb:Query — AccessDenied"
+  fi
+
+  section "Platform role: Negative test (should be denied)"
+
+  # iam:ListRoles should NOT be allowed
+  if _assumed iam list-roles --max-items 1 &>/dev/null; then
+    fail "iam:ListRoles should be denied but was allowed"
+  else
+    pass "iam:ListRoles correctly denied"
+  fi
+
+  # s3:ListBuckets should NOT be allowed
+  if _assumed s3api list-buckets &>/dev/null; then
+    fail "s3:ListBuckets should be denied but was allowed"
+  else
+    pass "s3:ListBuckets correctly denied"
+  fi
+
+  # Cleanup
+  section "Platform role: Cleanup"
+  _cleanup_test_role "$test_role" "$test_policy"
+}
+
+# Helper: delete test role and its inline policy
+_cleanup_test_role() {
+  local role="$1" policy="$2"
+  aws iam delete-role-policy --role-name "$role" --policy-name "$policy" &>/dev/null || true
+  if aws iam delete-role --role-name "$role" &>/dev/null; then
+    pass "Cleaned up test role $role"
+  else
+    fail "Could not clean up test role $role"
+  fi
+}
+
 # ─── Pre-Teardown ─────────────────────────────────────────────────────
 
 # Rename the MailManager archive before deleting so the name is freed immediately.
