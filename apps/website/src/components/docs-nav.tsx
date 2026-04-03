@@ -258,6 +258,11 @@ const navItems: NavSection[] = [
         icon: Layers,
       },
       {
+        title: "SMTP Credentials",
+        href: "/docs/guides/smtp",
+        icon: KeyRound,
+      },
+      {
         title: "Webhooks",
         href: "/docs/guides/webhooks",
         icon: Zap,
