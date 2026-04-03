@@ -106,6 +106,26 @@ describe("CloudflareDNSClient", () => {
       expect(result.errors).toContain("Network error");
     });
 
+    it("should wrap TXT record content in double quotes", async () => {
+      await client.createEmailRecords({
+        domain: "example.com",
+        dkimTokens: ["token1"],
+        region: "us-east-1",
+      });
+
+      const calls = vi.mocked(fetch).mock.calls;
+      // Find the SPF TXT record call (after the DKIM CNAME call)
+      const txtCalls = calls.filter((call) => {
+        const body = JSON.parse(call[1]?.body as string);
+        return body.type === "TXT";
+      });
+      expect(txtCalls.length).toBeGreaterThan(0);
+      for (const call of txtCalls) {
+        const body = JSON.parse(call[1]?.body as string);
+        expect(body.content).toMatch(/^".*"$/);
+      }
+    });
+
     it("should set proxied to false for email records", async () => {
       await client.createEmailRecords({
         domain: "example.com",

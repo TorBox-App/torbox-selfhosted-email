@@ -64,10 +64,14 @@ export class CloudflareDNSClient implements DNSProviderClient {
     content: string,
     priority?: number
   ): Promise<boolean> {
+    // Cloudflare requires TXT record content to be wrapped in double quotes
+    const recordContent =
+      type === "TXT" ? `"${content}"` : content;
+
     const body: Record<string, unknown> = {
       name,
       type,
-      content,
+      content: recordContent,
       ttl: 1800,
       proxied: false, // Must not be proxied for email records
     };
