@@ -121,9 +121,9 @@ export async function createSMTPCredentials(
         },
       });
 
-  // Attach SES send policy
+  // Attach SES send policy.
   // Note: ses:ConfigurationSetName is NOT a valid condition key for ses:SendRawEmail (SES v1).
-  // SMTP user is already limited to ses:SendRawEmail only.
+  // Resource is "*" because the user owns the account and may send from multiple domains.
   new aws.iam.UserPolicy("wraps-email-smtp-policy", {
     user: iamUser.name,
     policy: JSON.stringify({
