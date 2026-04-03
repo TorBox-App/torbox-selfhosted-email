@@ -23,6 +23,7 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
+import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import {
   type AWSResourceScan,
@@ -161,8 +162,40 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  // 2. Get region
-  const region = options.region || (await getAWSRegion());
+  // 2. Get region — auto-detect from metadata when not explicitly provided
+  let region = options.region || (await getAWSRegion());
+
+  if (
+    !(
+      options.region ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION
+    )
+  ) {
+    const emailConnections = await findConnectionsWithService(
+      identity.accountId,
+      "email"
+    );
+
+    if (emailConnections.length === 1) {
+      region = emailConnections[0].region;
+    } else if (emailConnections.length > 1 && !isJsonMode()) {
+      const selectedRegion = await clack.select({
+        message: "Multiple email deployments found. Which region?",
+        options: emailConnections.map((conn) => ({
+          value: conn.region,
+          label: conn.region,
+        })),
+      });
+
+      if (clack.isCancel(selectedRegion)) {
+        clack.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      region = selectedRegion as string;
+    }
+  }
 
   // 3. Scan AWS resources
   const scan = await progress.execute("Scanning AWS resources", async () =>
@@ -188,11 +221,12 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
       workDir: getPulumiWorkDir(),
     });
     hasStack = true;
-  } catch (error: unknown) {
-    // Stack not found — all wraps-* resources are orphaned
-    const isStackNotFound =
-      error instanceof Error && error.message.includes("no stack named");
-    if (!isStackNotFound) throw error;
+    // baseline:allow-next-line no-swallowed-errors — stack may not exist, Pulumi may not be installed
+  } catch (_error) {
+    // Any failure (stack not found, Pulumi not installed, missing project file,
+    // S3 backend issues) means we can't confirm stack state — treat resources as
+    // potentially orphaned. Doctor is a diagnostic tool and must not fail here.
+    hasStack = false;
   }
 
   progress.stop();

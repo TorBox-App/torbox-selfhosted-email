@@ -21,6 +21,7 @@ vi.mock("../../utils/shared/aws.js", () => ({
 }));
 vi.mock("../../utils/shared/metadata.js", () => ({
   loadConnectionMetadata: vi.fn().mockResolvedValue(null),
+  findConnectionsWithService: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("../../utils/shared/pulumi.js", () => ({
   ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
@@ -101,6 +102,7 @@ vi.mock("@aws-sdk/client-iam", () => ({
 
 import * as prompts from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import type { AWSResourceScan } from "../../utils/shared/scanner.js";
 import {
   filterWrapsResources,
@@ -109,6 +111,9 @@ import {
 
 const mockScanFn = scanAWSResources as ReturnType<typeof vi.fn>;
 const mockFilterFn = filterWrapsResources as ReturnType<typeof vi.fn>;
+const mockFindConnections = findConnectionsWithService as ReturnType<
+  typeof vi.fn
+>;
 
 describe("emailDoctor", () => {
   let mockSpinner: {
@@ -294,6 +299,70 @@ describe("emailDoctor", () => {
     // 1. ListRolePolicies, 2. DeleteRolePolicy (inline), 3. ListAttachedRolePolicies,
     // 4. DetachRolePolicy (managed), 5. DeleteRole
     expect(mockIamSend).toHaveBeenCalledTimes(5);
+  });
+
+  it("should handle non-standard Pulumi errors gracefully", async () => {
+    // Simulate an error other than "no stack named" (e.g., missing Pulumi.yaml, S3 issues)
+    vi.mocked(
+      pulumi.automation.LocalWorkspace.selectStack
+    ).mockRejectedValueOnce(
+      new Error("failed to load project: no Pulumi.yaml found")
+    );
+
+    const filteredScan: AWSResourceScan = {
+      identities: [],
+      configurationSets: [
+        { name: "wraps-email-config-set", eventDestinations: [] },
+      ],
+      snsTopics: [],
+      dynamoTables: [],
+      lambdaFunctions: [],
+      iamRoles: [],
+    };
+
+    mockScanFn.mockResolvedValue(filteredScan);
+    mockFilterFn.mockReturnValue(filteredScan);
+
+    const { emailDoctor } = await import("../email/doctor.js");
+
+    // Should NOT throw — doctor should handle this gracefully
+    await expect(emailDoctor({})).resolves.not.toThrow();
+
+    // Should treat resources as orphaned (no stack)
+    const allOutput = consoleLogSpy.mock.calls
+      .map((c) => c.join(" "))
+      .join("\n");
+    expect(allOutput).toContain("orphan");
+  });
+
+  it("should auto-detect region from metadata when no region flag or env var is set", async () => {
+    // Simulate a single email connection in us-west-2
+    mockFindConnections.mockResolvedValueOnce([
+      {
+        accountId: "123456789012",
+        region: "us-west-2",
+        services: { email: {} },
+      },
+    ]);
+
+    const emptyScan: AWSResourceScan = {
+      identities: [],
+      configurationSets: [],
+      snsTopics: [],
+      dynamoTables: [],
+      lambdaFunctions: [],
+      iamRoles: [],
+    };
+
+    mockScanFn.mockResolvedValue(emptyScan);
+    mockFilterFn.mockReturnValue(emptyScan);
+
+    const { emailDoctor } = await import("../email/doctor.js");
+    // No region option — should auto-detect from metadata
+    await emailDoctor({});
+
+    // scanAWSResources should be called with the auto-detected region, not us-east-1
+    expect(mockScanFn).toHaveBeenCalledWith("us-west-2");
   });
 
   it("should warn when --cleanup is passed but a Pulumi stack exists", async () => {
