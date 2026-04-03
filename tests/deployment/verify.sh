@@ -249,49 +249,60 @@ verify_base() {
 verify_iam_events_policy() {
   section "IAM: Conditional policy statements (events enabled)"
 
-  local policies_list
-  if policies_list=$(aws_check iam list-role-policies --role-name wraps-email-role); then
-    local policy_name
-    policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0]')
-    local policy_doc
-    policy_doc=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
-    local policy_text
-    policy_text=$(echo "$policy_doc" | jq -r '.PolicyDocument')
-
-    # DynamoDB access should be present when events.storeHistory is true
-    if echo "$policy_text" | grep -q 'dynamodb:PutItem'; then
-      pass "IAM policy has DynamoDB access (events.storeHistory)"
-    else
-      fail "IAM policy missing DynamoDB access"
+  # IAM is eventually consistent — retry policy read to avoid stale results after Pulumi update
+  local policies_list policy_name policy_doc policy_text
+  local max_attempts=3 attempt=0
+  while (( attempt < max_attempts )); do
+    if policies_list=$(aws_check iam list-role-policies --role-name wraps-email-role); then
+      policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0]')
+      policy_doc=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
+      policy_text=$(echo "$policy_doc" | jq -r '.PolicyDocument')
+      if echo "$policy_text" | grep -q 'dynamodb:PutItem'; then
+        break
+      fi
     fi
-
-    if echo "$policy_text" | grep -q 'dynamodb:Query'; then
-      pass "IAM policy has dynamodb:Query"
-    else
-      fail "IAM policy missing dynamodb:Query"
+    (( attempt++ ))
+    if (( attempt < max_attempts )); then
+      sleep 5
     fi
+  done
 
-    # EventBridge access should be present when events is configured
-    if echo "$policy_text" | grep -q 'events:PutEvents'; then
-      pass "IAM policy has events:PutEvents (events configured)"
-    else
-      fail "IAM policy missing events:PutEvents"
-    fi
+  if [[ -z "${policies_list:-}" ]]; then
+    fail "Could not list IAM role policies"
+    return
+  fi
 
-    # SQS access should be present when events is configured
-    if echo "$policy_text" | grep -q 'sqs:SendMessage'; then
-      pass "IAM policy has sqs:SendMessage (events configured)"
-    else
-      fail "IAM policy missing sqs:SendMessage"
-    fi
-
-    if echo "$policy_text" | grep -q 'sqs:ReceiveMessage'; then
-      pass "IAM policy has sqs:ReceiveMessage (events configured)"
-    else
-      fail "IAM policy missing sqs:ReceiveMessage"
-    fi
+  # DynamoDB access should be present when events.storeHistory is true
+  if echo "$policy_text" | grep -q 'dynamodb:PutItem'; then
+    pass "IAM policy has DynamoDB access (events.storeHistory)"
   else
-    fail "Could not list IAM role policies" "$policies_list"
+    fail "IAM policy missing DynamoDB access"
+  fi
+
+  if echo "$policy_text" | grep -q 'dynamodb:Query'; then
+    pass "IAM policy has dynamodb:Query"
+  else
+    fail "IAM policy missing dynamodb:Query"
+  fi
+
+  # EventBridge access should be present when events is configured
+  if echo "$policy_text" | grep -q 'events:PutEvents'; then
+    pass "IAM policy has events:PutEvents (events configured)"
+  else
+    fail "IAM policy missing events:PutEvents"
+  fi
+
+  # SQS access should be present when events is configured
+  if echo "$policy_text" | grep -q 'sqs:SendMessage'; then
+    pass "IAM policy has sqs:SendMessage (events configured)"
+  else
+    fail "IAM policy missing sqs:SendMessage"
+  fi
+
+  if echo "$policy_text" | grep -q 'sqs:ReceiveMessage'; then
+    pass "IAM policy has sqs:ReceiveMessage (events configured)"
+  else
+    fail "IAM policy missing sqs:ReceiveMessage"
   fi
 }
 

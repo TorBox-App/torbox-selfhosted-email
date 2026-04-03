@@ -22,6 +22,18 @@ TEMPLATE="$ROOT_DIR/../../cloudformation/wraps-email-infrastructure.yaml"
 # Get AWS account ID for webhook endpoint
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
+# Always destroy infrastructure on exit to avoid orphaned resources
+cleanup_on_exit() {
+  local exit_code=$?
+  if (( exit_code != 0 )); then
+    printf "\n${RED}Test failed (exit %d) — destroying resources to avoid orphans${NC}\n" "$exit_code"
+    aws cloudformation delete-stack --stack-name "$STACK_NAME" --region "$REGION" 2>/dev/null || true
+    aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region "$REGION" 2>/dev/null || true
+  fi
+  exit "$exit_code"
+}
+trap cleanup_on_exit EXIT
+
 printf "\n%s\n" "============================================"
 printf "  CloudFormation Deployment Test\n"
 printf "  Domain: %s  Region: %s\n" "$DOMAIN" "$REGION"
@@ -400,6 +412,7 @@ printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
 
 pre_teardown_rename_archive
 
+trap - EXIT
 aws cloudformation delete-stack \
   --stack-name "$STACK_NAME" \
   --region "$REGION"

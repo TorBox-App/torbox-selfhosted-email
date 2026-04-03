@@ -91,6 +91,7 @@ export type AWSResourceScan = {
   dynamoTables: DynamoTable[];
   lambdaFunctions: LambdaFunction[];
   iamRoles: IAMRole[];
+  scanErrors?: { identities: string };
 };
 
 /**
@@ -132,6 +133,12 @@ export async function scanSESIdentities(
 
     return identities;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === "AccessDeniedException" || error.name === "AccessDenied")
+    ) {
+      throw error;
+    }
     console.error(
       "Error scanning SES identities:",
       error instanceof Error ? error.message : error
@@ -377,20 +384,31 @@ export async function scanAWSResources(
   region: string
 ): Promise<AWSResourceScan> {
   const [
-    identities,
+    identityResult,
     configurationSets,
     snsTopics,
     dynamoTables,
     lambdaFunctions,
     iamRoles,
   ] = await Promise.all([
-    scanSESIdentities(region),
+    scanSESIdentities(region).catch((error) =>
+      error instanceof Error ? error : new Error(String(error))
+    ),
     scanSESConfigurationSets(region),
     scanSNSTopics(region),
     scanDynamoTables(region),
     scanLambdaFunctions(region),
     scanIAMRoles(region),
   ]);
+
+  let identities: SESIdentity[] = [];
+  let scanErrors: AWSResourceScan["scanErrors"];
+
+  if (identityResult instanceof Error) {
+    scanErrors = { identities: identityResult.name };
+  } else {
+    identities = identityResult;
+  }
 
   return {
     identities,
@@ -399,6 +417,7 @@ export async function scanAWSResources(
     dynamoTables,
     lambdaFunctions,
     iamRoles,
+    scanErrors,
   };
 }
 

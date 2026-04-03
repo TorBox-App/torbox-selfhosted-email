@@ -22,6 +22,23 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REPO_ROOT="${ROOT_DIR:h:h}"
 wraps() { node "${REPO_ROOT}/packages/cli/dist/cli.js" "$@"; }
 
+# Always destroy infrastructure on exit (success or failure) to avoid orphaned resources
+cleanup_on_exit() {
+  local exit_code=$?
+  if (( exit_code != 0 )); then
+    printf "\n${RED}Test failed (exit %d) — destroying resources to avoid orphans${NC}\n" "$exit_code"
+    wraps email destroy --region "$REGION" --force --json 2>/dev/null || true
+    # Also clean Pulumi stack state so next run starts fresh
+    local state_bucket="wraps-state-${ACCOUNT_ID}-${REGION}"
+    if aws s3 ls "s3://${state_bucket}" &>/dev/null; then
+      PULUMI_CONFIG_PASSPHRASE="" PULUMI_BACKEND_URL="s3://${state_bucket}" \
+        pulumi stack rm "wraps-${ACCOUNT_ID}-${REGION}" --yes --force --cwd ~/.wraps/pulumi 2>/dev/null || true
+    fi
+  fi
+  exit "$exit_code"
+}
+trap cleanup_on_exit EXIT
+
 printf "\n%s\n" "============================================"
 printf "  CLI Deployment Test\n"
 printf "  Domain: %s  Region: %s\n" "$DOMAIN" "$REGION"
@@ -588,10 +605,15 @@ verify_console_access_role
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
+# The trap handles destroy on failure. This section runs the explicit teardown
+# with post-destroy verification (doctor check) on the happy path.
 
 printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
 
 pre_teardown_rename_archive
+
+# Disable the trap — we're handling destroy explicitly now
+trap - EXIT
 
 wraps email destroy \
   --region "$REGION" \

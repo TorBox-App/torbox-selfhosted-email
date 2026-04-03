@@ -17,7 +17,15 @@ vi.mock("@pulumi/pulumi/automation", () => ({
   installPulumiCli: vi.fn(),
 }));
 vi.mock("@clack/prompts");
-vi.mock("../../utils/shared/aws.js");
+vi.mock("../../utils/shared/aws.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../../utils/shared/aws.js")>();
+  return {
+    ...mod,
+    validateAWSCredentials: vi.fn(),
+    getAWSRegion: vi.fn(),
+    checkRegion: vi.fn(),
+  };
+});
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
 vi.mock("../../utils/shared/pulumi.js");
@@ -394,6 +402,107 @@ describe("connect command", () => {
 
       await expect(connect({ yes: true })).rejects.toThrow();
     });
+
+    it("should show SES permission error when scanner reports access denied", async () => {
+      await setupPulumiMock();
+      vi.mocked(scanner.scanAWSResources).mockResolvedValue({
+        identities: [],
+        configurationSets: [],
+        topics: [],
+        tables: [],
+        functions: [],
+        roles: [],
+        scanErrors: { identities: "AccessDeniedException" },
+      } as any);
+
+      await expect(connect({ yes: true })).rejects.toThrow(/permission/i);
+    });
+
+    it("should suggest other regions when identities found elsewhere", async () => {
+      await setupPulumiMock();
+
+      // Primary scan in us-east-1: no identities
+      vi.mocked(scanner.scanAWSResources).mockResolvedValue({
+        identities: [],
+        configurationSets: [],
+        topics: [],
+        tables: [],
+        functions: [],
+        roles: [],
+      } as any);
+
+      // Multi-region scan finds identities in eu-west-1
+      vi.mocked(scanner.scanSESIdentities).mockResolvedValue([
+        { name: "example.com", verified: true, type: "Domain" },
+      ]);
+
+      // Should call scanSESIdentities for other regions
+      await expect(connect({ region: "us-east-1", yes: true })).rejects.toThrow();
+
+      // Should have scanned at least one other region
+      expect(scanner.scanSESIdentities).toHaveBeenCalled();
+    });
+  });
+
+  describe("Unverified Identity Warning", () => {
+    it("should warn when selected identities include unverified ones", async () => {
+      await setupPulumiMock();
+      vi.mocked(scanner.scanAWSResources).mockResolvedValue({
+        identities: [
+          { name: "verified.com", verified: true, type: "Domain" },
+          { name: "unverified.com", verified: false, type: "Domain" },
+        ],
+        configurationSets: [],
+        topics: [],
+        tables: [],
+        functions: [],
+        roles: [],
+      } as any);
+
+      // User selects the unverified identity
+      vi.mocked(promptUtils.promptSelectIdentities).mockResolvedValue([
+        "unverified.com",
+      ]);
+
+      await connect({ yes: true });
+
+      // Should warn about unverified identities
+      expect(prompts.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("unverified.com")
+      );
+    });
+
+    it("should not warn when all selected identities are verified", async () => {
+      await setupPulumiMock();
+      vi.mocked(scanner.scanAWSResources).mockResolvedValue({
+        identities: [
+          { name: "verified.com", verified: true, type: "Domain" },
+          { name: "unverified.com", verified: false, type: "Domain" },
+        ],
+        configurationSets: [],
+        topics: [],
+        tables: [],
+        functions: [],
+        roles: [],
+      } as any);
+
+      vi.mocked(promptUtils.promptSelectIdentities).mockResolvedValue([
+        "verified.com",
+      ]);
+
+      // Clear warn mock to isolate our check
+      vi.mocked(prompts.log.warn).mockClear();
+
+      await connect({ yes: true });
+
+      // Should NOT warn about unverified identities
+      const warnCalls = vi.mocked(prompts.log.warn).mock.calls;
+      const unverifiedWarns = warnCalls.filter(
+        (call) =>
+          typeof call[0] === "string" && call[0].includes("not yet verified")
+      );
+      expect(unverifiedWarns).toHaveLength(0);
+    });
   });
 
   describe("Provider-Specific Tests", () => {
@@ -467,6 +576,148 @@ describe("connect command", () => {
             }),
           }),
         })
+      );
+    });
+  });
+
+  describe("Preview Mode Tests", () => {
+    it("should run preview without deploying infrastructure", async () => {
+      const pulumi = await import("@pulumi/pulumi");
+      const pulumiAutomation = await import("@pulumi/pulumi/automation");
+
+      const mockStack = {
+        workspace: { selectStack: vi.fn() },
+        setConfig: vi.fn().mockResolvedValue(undefined),
+        up: vi.fn(),
+      } as any;
+
+      const createOrSelectStackMock = vi
+        .fn()
+        .mockImplementation(async (args) => {
+          if (args.program) await args.program();
+          return mockStack;
+        });
+
+      vi.mocked(
+        pulumi.automation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+      vi.mocked(
+        pulumiAutomation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+
+      vi.mocked(pulumiUtils.previewWithResourceChanges).mockResolvedValue({
+        changeSummary: { create: 5 },
+        resourceChanges: [],
+      } as any);
+
+      await connect({ preview: true, yes: true });
+
+      // Should call previewWithResourceChanges, NOT stack.up()
+      expect(pulumiUtils.previewWithResourceChanges).toHaveBeenCalled();
+      expect(mockStack.up).not.toHaveBeenCalled();
+
+      // Should NOT save metadata
+      expect(metadata.saveConnectionMetadata).not.toHaveBeenCalled();
+    });
+
+    it("should skip confirmation prompt in preview mode", async () => {
+      const pulumi = await import("@pulumi/pulumi");
+      const pulumiAutomation = await import("@pulumi/pulumi/automation");
+
+      const mockStack = {
+        workspace: { selectStack: vi.fn() },
+        setConfig: vi.fn().mockResolvedValue(undefined),
+        up: vi.fn(),
+      } as any;
+
+      const createOrSelectStackMock = vi
+        .fn()
+        .mockImplementation(async (args) => {
+          if (args.program) await args.program();
+          return mockStack;
+        });
+
+      vi.mocked(
+        pulumi.automation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+      vi.mocked(
+        pulumiAutomation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+
+      vi.mocked(pulumiUtils.previewWithResourceChanges).mockResolvedValue({
+        changeSummary: { create: 3 },
+        resourceChanges: [],
+      } as any);
+
+      await connect({ preview: true });
+
+      // Should NOT prompt for confirmation
+      expect(promptUtils.confirmConnect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Preview Error Handling", () => {
+    it("should throw stack locked error in preview mode", async () => {
+      const pulumi = await import("@pulumi/pulumi");
+      const pulumiAutomation = await import("@pulumi/pulumi/automation");
+
+      const mockStack = {
+        workspace: { selectStack: vi.fn() },
+        setConfig: vi.fn().mockResolvedValue(undefined),
+      } as any;
+
+      const createOrSelectStackMock = vi
+        .fn()
+        .mockImplementation(async (args) => {
+          if (args.program) await args.program();
+          return mockStack;
+        });
+
+      vi.mocked(
+        pulumi.automation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+      vi.mocked(
+        pulumiAutomation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+
+      vi.mocked(pulumiUtils.previewWithResourceChanges).mockRejectedValue(
+        new Error("the stack is currently locked by 1 lock(s)")
+      );
+
+      await expect(connect({ preview: true, yes: true })).rejects.toThrow(
+        /locked/
+      );
+    });
+
+    it("should throw descriptive error on preview failure", async () => {
+      const pulumi = await import("@pulumi/pulumi");
+      const pulumiAutomation = await import("@pulumi/pulumi/automation");
+
+      const mockStack = {
+        workspace: { selectStack: vi.fn() },
+        setConfig: vi.fn().mockResolvedValue(undefined),
+      } as any;
+
+      const createOrSelectStackMock = vi
+        .fn()
+        .mockImplementation(async (args) => {
+          if (args.program) await args.program();
+          return mockStack;
+        });
+
+      vi.mocked(
+        pulumi.automation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+      vi.mocked(
+        pulumiAutomation.LocalWorkspace.createOrSelectStack
+      ).mockImplementation(createOrSelectStackMock);
+
+      vi.mocked(pulumiUtils.previewWithResourceChanges).mockRejectedValue(
+        new Error("Some unexpected preview error")
+      );
+
+      await expect(connect({ preview: true, yes: true })).rejects.toThrow(
+        /Preview failed/
       );
     });
   });

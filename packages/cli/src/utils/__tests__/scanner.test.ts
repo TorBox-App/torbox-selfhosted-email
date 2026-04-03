@@ -154,6 +154,28 @@ describe("AWS Resource Scanner", () => {
 
       consoleErrorSpy.mockRestore();
     });
+
+    it("should re-throw AccessDeniedException instead of returning empty", async () => {
+      const accessDeniedError = new Error("User is not authorized to perform ses:ListIdentities");
+      accessDeniedError.name = "AccessDeniedException";
+
+      sesMock.on(ListIdentitiesCommand).rejects(accessDeniedError);
+
+      await expect(scanSESIdentities("us-east-1")).rejects.toThrow(
+        "User is not authorized to perform ses:ListIdentities"
+      );
+    });
+
+    it("should re-throw AccessDenied errors", async () => {
+      const accessDeniedError = new Error("Access Denied");
+      accessDeniedError.name = "AccessDenied";
+
+      sesMock.on(ListIdentitiesCommand).rejects(accessDeniedError);
+
+      await expect(scanSESIdentities("us-east-1")).rejects.toThrow(
+        "Access Denied"
+      );
+    });
   });
 
   describe("scanSESConfigurationSets", () => {
@@ -773,6 +795,44 @@ describe("AWS Resource Scanner", () => {
       expect(scan.dynamoTables).toHaveLength(1);
       expect(scan.lambdaFunctions).toHaveLength(1);
       expect(scan.iamRoles).toHaveLength(1);
+    });
+
+    it("should capture identity permission errors in scanErrors", async () => {
+      const accessDeniedError = new Error("Access Denied");
+      accessDeniedError.name = "AccessDeniedException";
+
+      sesMock
+        .on(ListIdentitiesCommand)
+        .rejects(accessDeniedError)
+        .on(ListConfigurationSetsCommand)
+        .resolves({ ConfigurationSets: [] });
+
+      snsMock.on(ListTopicsCommand).resolves({ Topics: [] });
+      dynamoMock.on(ListTablesCommand).resolves({ TableNames: [] });
+      lambdaMock.on(ListFunctionsCommand).resolves({ Functions: [] });
+      iamMock.on(ListRolesCommand).resolves({ Roles: [], IsTruncated: false });
+
+      const scan = await scanAWSResources("us-east-1");
+
+      expect(scan.identities).toEqual([]);
+      expect(scan.scanErrors?.identities).toBe("AccessDeniedException");
+    });
+
+    it("should not set scanErrors when scans succeed", async () => {
+      sesMock
+        .on(ListIdentitiesCommand)
+        .resolves({ Identities: [] })
+        .on(ListConfigurationSetsCommand)
+        .resolves({ ConfigurationSets: [] });
+
+      snsMock.on(ListTopicsCommand).resolves({ Topics: [] });
+      dynamoMock.on(ListTablesCommand).resolves({ TableNames: [] });
+      lambdaMock.on(ListFunctionsCommand).resolves({ Functions: [] });
+      iamMock.on(ListRolesCommand).resolves({ Roles: [], IsTruncated: false });
+
+      const scan = await scanAWSResources("us-east-1");
+
+      expect(scan.scanErrors).toBeUndefined();
     });
 
     it("should handle empty results from all scanners", async () => {

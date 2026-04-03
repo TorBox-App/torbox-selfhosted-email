@@ -10,6 +10,7 @@ import {
 import type { ConnectOptions, EmailStackConfig } from "../../types/index.js";
 import { getPreset } from "../../utils/email/presets.js";
 import {
+  SES_REGIONS,
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
@@ -41,7 +42,10 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
-import { scanAWSResources } from "../../utils/shared/scanner.js";
+import {
+  scanAWSResources,
+  scanSESIdentities,
+} from "../../utils/shared/scanner.js";
 
 /**
  * Connect command - Connect to existing AWS SES infrastructure
@@ -112,12 +116,46 @@ export async function connect(options: ConnectOptions): Promise<void> {
     `Found: ${scan.identities.length} identities, ${scan.configurationSets.length} config sets`
   );
 
-  // Check if any identities exist
+  // Check if identity scan failed due to permissions
+  if (scan.scanErrors?.identities) {
+    throw errors.sesPermissionDenied("ListIdentities");
+  }
+
+  // Check if any identities exist — if not, scan other regions for hints
   if (scan.identities.length === 0) {
-    clack.log.warn("No SES identities found in this region.");
-    clack.log.info(
-      `Use ${pc.cyan("wraps email init")} to create new email infrastructure instead.`
+    const otherRegions = SES_REGIONS.filter((r) => r !== region);
+
+    const regionHits = await progress.execute(
+      "Checking other regions for SES identities",
+      async () => {
+        const results = await Promise.all(
+          otherRegions.map(async (r) => {
+            try {
+              const ids = await scanSESIdentities(r);
+              return ids.length > 0 ? r : null;
+            } catch {
+              // Permission errors are expected in regions the user hasn't configured
+              return null;
+            }
+          })
+        );
+        return results.filter((r) => r !== null);
+      }
     );
+
+    if (regionHits.length > 0) {
+      clack.log.warn(
+        `No SES identities found in ${pc.cyan(region)}, but found identities in: ${regionHits.map((r) => pc.cyan(r)).join(", ")}`
+      );
+      clack.log.info(
+        `Run ${pc.cyan(`wraps email connect --region ${regionHits[0]}`)} to connect to your existing infrastructure.`
+      );
+    } else {
+      clack.log.warn("No SES identities found in any region.");
+      clack.log.info(
+        `Use ${pc.cyan("wraps email init")} to create new email infrastructure instead.`
+      );
+    }
     process.exit(0);
   }
 
@@ -152,6 +190,17 @@ export async function connect(options: ConnectOptions): Promise<void> {
   if (selectedIdentities.length === 0) {
     clack.log.warn("No identities selected. Nothing to connect.");
     process.exit(0);
+  }
+
+  // 7a. Warn about unverified identities
+  const unverifiedSelected = selectedIdentities.filter((name) => {
+    const identity = scan.identities.find((id) => id.name === name);
+    return identity && !identity.verified;
+  });
+  if (unverifiedSelected.length > 0) {
+    clack.log.warn(
+      `${unverifiedSelected.map((id) => pc.cyan(id)).join(", ")} not yet verified — SES will reject sends from unverified identities until verification is complete.`
+    );
   }
 
   // 8. Select configuration preset

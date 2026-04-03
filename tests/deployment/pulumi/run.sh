@@ -19,6 +19,17 @@ DOMAIN="$WRAPS_TEST_DOMAIN"
 REGION="$WRAPS_TEST_REGION"
 STACK_NAME="deployment-test"
 
+# Always destroy infrastructure on exit to avoid orphaned resources
+cleanup_on_exit() {
+  local exit_code=$?
+  if (( exit_code != 0 )); then
+    printf "\n${RED}Test failed (exit %d) — destroying resources to avoid orphans${NC}\n" "$exit_code"
+    (cd "$APP_DIR" && pulumi destroy --yes 2>/dev/null) || true
+  fi
+  exit "$exit_code"
+}
+trap cleanup_on_exit EXIT
+
 printf "\n%s\n" "============================================"
 printf "  Pulumi Deployment Test\n"
 printf "  Domain: %s  Region: %s\n" "$DOMAIN" "$REGION"
@@ -142,6 +153,7 @@ printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
 
 pre_teardown_rename_archive
 
+trap - EXIT
 (cd "$APP_DIR" && pulumi destroy --yes)
 (cd "$APP_DIR" && pulumi stack rm "$STACK_NAME" --yes)
 
