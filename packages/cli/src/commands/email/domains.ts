@@ -655,9 +655,8 @@ export async function addDomain(options: {
     // 4. Create SES identity or associate config set for existing domains
     if (domainAlreadyExists) {
       // Associate wraps-email-tracking config set so events are tracked
-      const { PutEmailIdentityConfigurationSetAttributesCommand } = await import(
-        "@aws-sdk/client-sesv2"
-      );
+      const { PutEmailIdentityConfigurationSetAttributesCommand } =
+        await import("@aws-sdk/client-sesv2");
       await progress.execute("Associating tracking configuration", async () => {
         await sesClient.send(
           new PutEmailIdentityConfigurationSetAttributesCommand({

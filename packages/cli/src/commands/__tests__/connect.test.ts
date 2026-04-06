@@ -18,7 +18,8 @@ vi.mock("@pulumi/pulumi/automation", () => ({
 }));
 vi.mock("@clack/prompts");
 vi.mock("../../utils/shared/aws.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../../utils/shared/aws.js")>();
+  const mod =
+    await importOriginal<typeof import("../../utils/shared/aws.js")>();
   return {
     ...mod,
     validateAWSCredentials: vi.fn(),
@@ -437,7 +438,9 @@ describe("connect command", () => {
       ]);
 
       // Should call scanSESIdentities for other regions
-      await expect(connect({ region: "us-east-1", yes: true })).rejects.toThrow();
+      await expect(
+        connect({ region: "us-east-1", yes: true })
+      ).rejects.toThrow();
 
       // Should have scanned at least one other region
       expect(scanner.scanSESIdentities).toHaveBeenCalled();

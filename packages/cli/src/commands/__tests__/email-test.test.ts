@@ -35,9 +35,8 @@ vi.mock("@clack/prompts", () => ({
 
 // Mock metadata module — re-export real getAllTrackedDomains since it's pure logic
 vi.mock("../../utils/shared/metadata.js", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("../../utils/shared/metadata.js")
-  >();
+  const actual =
+    await importOriginal<typeof import("../../utils/shared/metadata.js")>();
   return {
     ...actual,
     loadConnectionMetadata: vi.fn().mockResolvedValue(null),
@@ -265,9 +264,7 @@ describe("email test command", () => {
     // Should have used the selected domain
     const calls = sesv2Mock.commandCalls(SendEmailCommand);
     expect(calls).toHaveLength(1);
-    expect(calls[0].args[0].input.FromEmailAddress).toBe(
-      "test@secondary.com"
-    );
+    expect(calls[0].args[0].input.FromEmailAddress).toBe("test@secondary.com");
   });
 
   it("should handle MessageRejected error for unverified address", async () => {

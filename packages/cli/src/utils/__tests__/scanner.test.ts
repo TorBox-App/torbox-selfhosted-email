@@ -156,7 +156,9 @@ describe("AWS Resource Scanner", () => {
     });
 
     it("should re-throw AccessDeniedException instead of returning empty", async () => {
-      const accessDeniedError = new Error("User is not authorized to perform ses:ListIdentities");
+      const accessDeniedError = new Error(
+        "User is not authorized to perform ses:ListIdentities"
+      );
       accessDeniedError.name = "AccessDeniedException";
 
       sesMock.on(ListIdentitiesCommand).rejects(accessDeniedError);

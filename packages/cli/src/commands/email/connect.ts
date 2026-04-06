@@ -10,8 +10,8 @@ import {
 import type { ConnectOptions, EmailStackConfig } from "../../types/index.js";
 import { getPreset } from "../../utils/email/presets.js";
 import {
-  SES_REGIONS,
   getAWSRegion,
+  SES_REGIONS,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
@@ -133,9 +133,17 @@ export async function connect(options: ConnectOptions): Promise<void> {
             try {
               const ids = await scanSESIdentities(r);
               return ids.length > 0 ? r : null;
-            } catch {
+            } catch (error: unknown) {
               // Permission errors are expected in regions the user hasn't configured
-              return null;
+              if (
+                error instanceof Error &&
+                (error.name === "AccessDeniedException" ||
+                  error.name === "UnrecognizedClientException" ||
+                  error.message.includes("is not authorized"))
+              ) {
+                return null;
+              }
+              throw error;
             }
           })
         );

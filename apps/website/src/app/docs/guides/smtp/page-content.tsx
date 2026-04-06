@@ -283,9 +283,7 @@ export default function SMTPPageContent() {
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">Port</td>
-                  <td className="py-2">
-                    587 (STARTTLS) or 465 (TLS Wrapper)
-                  </td>
+                  <td className="py-2">587 (STARTTLS) or 465 (TLS Wrapper)</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">
@@ -294,21 +292,15 @@ export default function SMTPPageContent() {
                   <td className="py-2">Required (TLS or STARTTLS)</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2 font-medium text-foreground">
-                    Username
-                  </td>
+                  <td className="py-2 font-medium text-foreground">Username</td>
                   <td className="py-2">
                     IAM access key ID (starts with{" "}
-                    <code className="rounded bg-muted px-1.5 py-0.5">
-                      AKIA
-                    </code>
+                    <code className="rounded bg-muted px-1.5 py-0.5">AKIA</code>
                     )
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-medium text-foreground">
-                    Password
-                  </td>
+                  <td className="py-2 font-medium text-foreground">Password</td>
                   <td className="py-2">
                     Derived SMTP password (base64 string, not your AWS secret
                     key)
@@ -422,7 +414,8 @@ export default function SMTPPageContent() {
           >
             WP Mail SMTP
           </a>{" "}
-          plugin, then configure under <strong>WP Mail SMTP &rarr; Settings</strong>:
+          plugin, then configure under{" "}
+          <strong>WP Mail SMTP &rarr; Settings</strong>:
         </p>
         <CLICommand command={wordpressNote} />
       </section>
@@ -434,8 +427,9 @@ export default function SMTPPageContent() {
         <h3 className="mt-4 mb-3 font-medium text-lg">Rotate</h3>
         <p className="mb-4 text-muted-foreground">
           If credentials are compromised or you need a fresh set, run the
-          upgrade command again and select <strong>Manage SMTP credentials</strong>{" "}
-          &rarr; <strong>Rotate credentials</strong>. This invalidates the old
+          upgrade command again and select{" "}
+          <strong>Manage SMTP credentials</strong> &rarr;{" "}
+          <strong>Rotate credentials</strong>. This invalidates the old
           credentials immediately and generates new ones.
         </p>
         <CLICommand command="wraps email upgrade" />
@@ -466,9 +460,7 @@ export default function SMTPPageContent() {
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
-                  <td className="py-2 font-medium text-foreground">
-                    IAM User
-                  </td>
+                  <td className="py-2 font-medium text-foreground">IAM User</td>
                   <td className="py-2">
                     <code className="rounded bg-muted px-1.5 py-0.5">
                       wraps-email-smtp-user
