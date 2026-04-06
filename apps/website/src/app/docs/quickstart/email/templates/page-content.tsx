@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -152,6 +152,20 @@ export default function TemplatesQuickstartPageContent() {
         </p>
       </div>
 
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>A templates-as-code project with React Email components</li>
+          <li>Hot-reload local preview for rapid iteration</li>
+          <li>Templates pushed to AWS SES and ready to send</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~5 minutes</p>
+      </div>
+
       {/* Prerequisites */}
       <Card className="mb-8">
         <CardHeader>
@@ -226,8 +240,8 @@ export default function TemplatesQuickstartPageContent() {
               — project config (org, sender address, template directory)
             </li>
             <li>
-              <code className="rounded bg-muted px-1.5 py-0.5">brand.ts</code>{" "}
-              — shared brand kit for colors, fonts, and logos
+              <code className="rounded bg-muted px-1.5 py-0.5">brand.ts</code> —
+              shared brand kit for colors, fonts, and logos
             </li>
             <li>
               <code className="rounded bg-muted px-1.5 py-0.5">
@@ -295,7 +309,9 @@ export default function TemplatesQuickstartPageContent() {
           browser with hot-reload:
         </p>
         <CodeExample
-          code={"npx @wraps.dev/cli email templates preview\n# Opens http://localhost:3333 with hot-reload"}
+          code={
+            "npx @wraps.dev/cli email templates preview\n# Opens http://localhost:3333 with hot-reload"
+          }
           filename="terminal.sh"
           language="bash"
         />
@@ -338,8 +354,8 @@ export default function TemplatesQuickstartPageContent() {
               — see what would change without pushing
             </li>
             <li>
-              <code className="rounded bg-muted px-1.5 py-0.5">--force</code>{" "}
-              — re-push all templates regardless of changes
+              <code className="rounded bg-muted px-1.5 py-0.5">--force</code> —
+              re-push all templates regardless of changes
             </li>
           </ul>
         </div>
@@ -357,11 +373,7 @@ export default function TemplatesQuickstartPageContent() {
           Once pushed, send emails using the template name and pass dynamic data
           via the SDK:
         </p>
-        <CodeExample
-          code={sendCode}
-          filename="send.ts"
-          language="typescript"
-        />
+        <CodeExample code={sendCode} filename="send.ts" language="typescript" />
         <p className="mt-4 text-muted-foreground text-sm">
           Template data is merged at send time. Variable placeholders in the
           subject line (like{" "}

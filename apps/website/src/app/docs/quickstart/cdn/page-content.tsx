@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +99,20 @@ export default function CdnQuickstartPageContent() {
             setup costs ~$5-7/month for 10GB storage + 50GB bandwidth.
           </p>
         </div>
+      </div>
+
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>S3 bucket + CloudFront distribution for global CDN delivery</li>
+          <li>Custom domain with an auto-provisioned SSL certificate</li>
+          <li>Browser-based image optimization via query parameters</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~5 minutes</p>
       </div>
 
       {/* Prerequisites */}

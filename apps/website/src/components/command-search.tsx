@@ -3,22 +3,31 @@
 import { Command as CommandPrimitive } from "cmdk";
 import {
   AlertTriangle,
-  Bell,
-  Calendar,
-  CheckSquare,
-  CreditCard,
-  HelpCircle,
-  LayoutDashboard,
-  LayoutPanelLeft,
-  Link2,
+  ArrowRightLeft,
+  BarChart3,
+  Blocks,
+  Bot,
+  Box,
+  Cloud,
+  FileCode2,
+  FileJson,
+  Globe,
+  KeyRound,
+  Layers,
   type LucideIcon,
   Mail,
-  MessageCircle,
-  Palette,
+  MessageSquare,
+  Radio,
+  Rocket,
   Search,
+  Server,
   Settings,
-  Shield,
-  User,
+  ShieldCheck,
+  Sliders,
+  Terminal,
+  Workflow,
+  Wrench,
+  Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -104,7 +113,7 @@ const CommandItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Item
     className={cn(
-      "relative flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 text-sm text-zinc-700 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-zinc-100 data-[selected=true]:text-zinc-900 data-[disabled=true]:opacity-50 dark:text-zinc-300 dark:data-[selected=true]:bg-zinc-800 dark:data-[selected=true]:text-zinc-100 [&+[cmdk-item]]:mt-1",
+      "relative flex min-h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 py-2 text-sm text-zinc-700 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-zinc-100 data-[selected=true]:text-zinc-900 data-[disabled=true]:opacity-50 dark:text-zinc-300 dark:data-[selected=true]:bg-zinc-800 dark:data-[selected=true]:text-zinc-100 [&+[cmdk-item]]:mt-1",
       className
     )}
     ref={ref}
@@ -115,6 +124,7 @@ CommandItem.displayName = CommandPrimitive.Item.displayName;
 
 type SearchItem = {
   title: string;
+  description: string;
   url: string;
   group: string;
   icon?: LucideIcon;
@@ -130,137 +140,406 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const commandRef = React.useRef<HTMLDivElement>(null);
 
   const searchItems: SearchItem[] = [
-    // Dashboards
+    // Getting Started
     {
-      title: "Dashboard 1",
-      url: "/dashboard",
-      group: "Dashboards",
-      icon: LayoutDashboard,
+      title: "Introduction",
+      description: "Overview of Wraps and how it works",
+      url: "/docs",
+      group: "Getting Started",
+      icon: Rocket,
     },
     {
-      title: "Dashboard 2",
-      url: "/dashboard-2",
-      group: "Dashboards",
-      icon: LayoutPanelLeft,
-    },
-
-    // Apps
-    { title: "Mail", url: "/mail", group: "Apps", icon: Mail },
-    { title: "Tasks", url: "/tasks", group: "Apps", icon: CheckSquare },
-    { title: "Chat", url: "/chat", group: "Apps", icon: MessageCircle },
-    { title: "Calendar", url: "/calendar", group: "Apps", icon: Calendar },
-
-    // Auth Pages
-    {
-      title: "Sign In 1",
-      url: "/auth/sign-in",
-      group: "Auth Pages",
-      icon: Shield,
+      title: "Quickstart",
+      description: "Pick a service and start deploying",
+      url: "/docs/quickstart",
+      group: "Getting Started",
+      icon: Rocket,
     },
     {
-      title: "Sign In 2",
-      url: "/auth/sign-in-2",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Sign Up 1",
-      url: "/auth/sign-up",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Sign Up 2",
-      url: "/auth/sign-up-2",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Forgot Password 1",
-      url: "/auth/forgot-password",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Forgot Password 2",
-      url: "/auth/forgot-password-2",
-      group: "Auth Pages",
-      icon: Shield,
+      title: "Cookbook",
+      description: "Common recipes and usage patterns",
+      url: "/docs/cookbook",
+      group: "Getting Started",
+      icon: FileCode2,
     },
 
-    // Errors
+    // Platform
     {
-      title: "Unauthorized",
-      url: "/errors/unauthorized",
-      group: "Errors",
-      icon: AlertTriangle,
+      title: "Platform Quickstart",
+      description: "Connect your AWS account to the dashboard",
+      url: "/docs/quickstart/platform",
+      group: "Platform",
+      icon: Rocket,
     },
     {
-      title: "Forbidden",
-      url: "/errors/forbidden",
-      group: "Errors",
-      icon: AlertTriangle,
+      title: "Platform SDK Reference",
+      description: "Client SDK for dashboard and API access",
+      url: "/docs/client-sdk-reference",
+      group: "Platform",
+      icon: Blocks,
     },
     {
-      title: "Not Found",
-      url: "/errors/not-found",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Internal Server Error",
-      url: "/errors/internal-server-error",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Under Maintenance",
-      url: "/errors/under-maintenance",
-      group: "Errors",
-      icon: AlertTriangle,
+      title: "Platform CLI Commands",
+      description: "connect, status, and account management",
+      url: "/docs/cli-reference/platform",
+      group: "Platform",
+      icon: Terminal,
     },
 
-    // Settings
+    // Email
     {
-      title: "User Settings",
-      url: "/settings/user",
-      group: "Settings",
-      icon: User,
+      title: "Email Quickstart",
+      description: "Deploy SES and send your first email",
+      url: "/docs/quickstart/email",
+      group: "Email",
+      icon: Rocket,
     },
     {
-      title: "Account Settings",
-      url: "/settings/account",
-      group: "Settings",
+      title: "Email + Next.js",
+      description: "Send email from Next.js server actions",
+      url: "/docs/quickstart/email/nextjs",
+      group: "Email",
+      icon: Rocket,
+    },
+    {
+      title: "Email + Express",
+      description: "Send email from an Express API",
+      url: "/docs/quickstart/email/express",
+      group: "Email",
+      icon: Rocket,
+    },
+    {
+      title: "Email + Remix",
+      description: "Send email from Remix loaders and actions",
+      url: "/docs/quickstart/email/remix",
+      group: "Email",
+      icon: Rocket,
+    },
+    {
+      title: "Inbound Email",
+      description: "Receive and process incoming email",
+      url: "/docs/quickstart/email/inbound",
+      group: "Email",
+      icon: Mail,
+    },
+    {
+      title: "Email Templates",
+      description: "Build and manage reusable email templates",
+      url: "/docs/quickstart/email/templates",
+      group: "Email",
+      icon: FileCode2,
+    },
+    {
+      title: "Email Workflows",
+      description: "Automate multi-step email sequences",
+      url: "/docs/quickstart/email/workflows",
+      group: "Email",
+      icon: Workflow,
+    },
+    {
+      title: "Email SDK Reference",
+      description: "send, batch, templates, and tracking APIs",
+      url: "/docs/sdk-reference",
+      group: "Email",
+      icon: Mail,
+    },
+    {
+      title: "Email CLI Commands",
+      description: "init, status, verify, doctor, domains, templates",
+      url: "/docs/cli-reference/email",
+      group: "Email",
+      icon: Terminal,
+    },
+    {
+      title: "Email Infrastructure",
+      description: "SES, DKIM, SPF, and deployed resources",
+      url: "/docs/infrastructure/email",
+      group: "Email",
+      icon: Server,
+    },
+    {
+      title: "Domain Verification",
+      description: "Verify domains with DNS records for sending",
+      url: "/docs/guides/domain-verification",
+      group: "Email",
+      icon: Globe,
+    },
+    {
+      title: "Production Access",
+      description: "Move SES out of sandbox for real sending",
+      url: "/docs/guides/production-access",
+      group: "Email",
+      icon: ShieldCheck,
+    },
+    {
+      title: "SMTP Credentials",
+      description: "Generate SMTP credentials for legacy apps",
+      url: "/docs/guides/smtp",
+      group: "Email",
+      icon: KeyRound,
+    },
+    {
+      title: "Webhooks",
+      description: "Track bounces, deliveries, and opens",
+      url: "/docs/guides/webhooks",
+      group: "Email",
+      icon: Zap,
+    },
+    {
+      title: "Templates Guide",
+      description: "Create, edit, and deploy email templates",
+      url: "/docs/guides/templates",
+      group: "Email",
+      icon: FileCode2,
+    },
+    {
+      title: "Workflows Guide",
+      description: "Build automated email sequences and drips",
+      url: "/docs/guides/workflows",
+      group: "Email",
+      icon: Workflow,
+    },
+    {
+      title: "Configuration Presets",
+      description: "Pre-built configs for common setups",
+      url: "/docs/guides/configuration-presets",
+      group: "Email",
+      icon: Sliders,
+    },
+
+    // SMS
+    {
+      title: "SMS Quickstart",
+      description: "Deploy SMS infrastructure and send texts",
+      url: "/docs/quickstart/sms",
+      group: "SMS",
+      icon: Rocket,
+    },
+    {
+      title: "SMS SDK Reference",
+      description: "send, batch, opt-out, and number APIs",
+      url: "/docs/sms-sdk-reference",
+      group: "SMS",
+      icon: MessageSquare,
+    },
+    {
+      title: "SMS CLI Commands",
+      description: "init, status, numbers, and opt-out management",
+      url: "/docs/cli-reference/sms",
+      group: "SMS",
+      icon: Terminal,
+    },
+    {
+      title: "SMS Infrastructure",
+      description: "Pinpoint, numbers, and deployed resources",
+      url: "/docs/infrastructure/sms",
+      group: "SMS",
+      icon: Server,
+    },
+
+    // CDN
+    {
+      title: "CDN Quickstart",
+      description: "Deploy S3 + CloudFront for static assets",
+      url: "/docs/quickstart/cdn",
+      group: "CDN",
+      icon: Rocket,
+    },
+    {
+      title: "CDN CLI Commands",
+      description: "init, deploy, invalidate, and status",
+      url: "/docs/cli-reference/cdn",
+      group: "CDN",
+      icon: Terminal,
+    },
+    {
+      title: "CDN Infrastructure",
+      description: "S3 buckets, CloudFront, and distributions",
+      url: "/docs/infrastructure/cdn",
+      group: "CDN",
+      icon: Server,
+    },
+
+    // Reference
+    {
+      title: "API Reference",
+      description: "REST API endpoints and authentication",
+      url: "/docs/reference/api",
+      group: "Reference",
+      icon: FileCode2,
+    },
+    {
+      title: "CLI Overview",
+      description: "Install, configure, and global options",
+      url: "/docs/cli-reference",
+      group: "Reference",
+      icon: Terminal,
+    },
+    {
+      title: "Error Codes",
+      description: "All error codes and troubleshooting steps",
+      url: "/docs/reference/errors",
+      group: "Reference",
+      icon: AlertTriangle,
+    },
+    {
+      title: "Rate Limits",
+      description: "API and CLI rate limits by plan",
+      url: "/docs/reference/rate-limits",
+      group: "Reference",
+      icon: ShieldCheck,
+    },
+    {
+      title: "Environment Variables",
+      description: "All supported env vars and defaults",
+      url: "/docs/reference/environment-variables",
+      group: "Reference",
       icon: Settings,
     },
     {
-      title: "Plans & Billing",
-      url: "/settings/billing",
-      group: "Settings",
-      icon: CreditCard,
+      title: "JSON Output",
+      description: "Machine-readable output for CI/CD scripts",
+      url: "/docs/reference/json-output",
+      group: "Reference",
+      icon: FileJson,
     },
     {
-      title: "Appearance",
-      url: "/settings/appearance",
-      group: "Settings",
-      icon: Palette,
+      title: "EventBridge Events",
+      description: "Event schemas for email and SMS hooks",
+      url: "/docs/infrastructure/events",
+      group: "Reference",
+      icon: Zap,
     },
     {
-      title: "Notifications",
-      url: "/settings/notifications",
-      group: "Settings",
-      icon: Bell,
-    },
-    {
-      title: "Connections",
-      url: "/settings/connections",
-      group: "Settings",
-      icon: Link2,
+      title: "Telemetry",
+      description: "What data is collected and how to opt out",
+      url: "/docs/telemetry",
+      group: "Reference",
+      icon: BarChart3,
     },
 
-    // Pages
-    { title: "FAQs", url: "/faqs", group: "Pages", icon: HelpCircle },
-    { title: "Pricing", url: "/pricing", group: "Pages", icon: CreditCard },
+    // Resources
+    {
+      title: "AWS Setup",
+      description: "Configure your AWS account for Wraps",
+      url: "/docs/guides/aws-setup",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "AWS Quick Setup",
+      description: "Minimal AWS config to get started fast",
+      url: "/docs/guides/aws-setup/quick",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "AWS Full Setup",
+      description: "Complete AWS account configuration",
+      url: "/docs/guides/aws-setup/full",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "IAM Permissions",
+      description: "Required IAM policies and least privilege",
+      url: "/docs/guides/aws-setup/permissions",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "AWS Troubleshooting",
+      description: "Fix common AWS credential and access issues",
+      url: "/docs/guides/aws-setup/troubleshooting",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "Auth Commands",
+      description: "Login, logout, and session management",
+      url: "/docs/cli-reference/auth",
+      group: "Resources",
+      icon: KeyRound,
+    },
+    {
+      title: "AWS Commands",
+      description: "Configure and manage AWS connections",
+      url: "/docs/cli-reference/aws",
+      group: "Resources",
+      icon: Cloud,
+    },
+    {
+      title: "Vercel Setup",
+      description: "Deploy Wraps with Vercel integration",
+      url: "/docs/guides/vercel-setup",
+      group: "Resources",
+      icon: Rocket,
+    },
+    {
+      title: "Custom Events",
+      description: "Define and emit custom tracking events",
+      url: "/docs/guides/custom-events",
+      group: "Resources",
+      icon: Radio,
+    },
+    {
+      title: "Orchestration",
+      description: "Coordinate multi-service deployments",
+      url: "/docs/guides/orchestration",
+      group: "Resources",
+      icon: Layers,
+    },
+    {
+      title: "Migration Guide",
+      description: "Migrate from SendGrid, Postmark, or Resend",
+      url: "/docs/guides/migration",
+      group: "Resources",
+      icon: ArrowRightLeft,
+    },
+    {
+      title: "Context7 (AI Docs)",
+      description: "Use Wraps docs with AI coding assistants",
+      url: "/docs/guides/context7",
+      group: "Resources",
+      icon: Bot,
+    },
+    {
+      title: "CDK Construct",
+      description: "AWS CDK construct for Wraps infrastructure",
+      url: "/docs/cdk-reference",
+      group: "Resources",
+      icon: Layers,
+    },
+    {
+      title: "Pulumi Component",
+      description: "Pulumi component for Wraps infrastructure",
+      url: "/docs/pulumi-reference",
+      group: "Resources",
+      icon: Box,
+    },
+
+    // Tools & Pages
+    {
+      title: "SES Pricing Calculator",
+      description: "Estimate your AWS SES costs by volume",
+      url: "/tools/ses-calculator",
+      group: "Tools",
+      icon: Wrench,
+    },
+    {
+      title: "SPF Record Builder",
+      description: "Generate valid SPF DNS records",
+      url: "/tools/spf-builder",
+      group: "Tools",
+      icon: Wrench,
+    },
+    {
+      title: "Infrastructure Overview",
+      description: "All deployed resources across services",
+      url: "/docs/infrastructure",
+      group: "Reference",
+      icon: Server,
+    },
   ];
 
   const groupedItems = searchItems.reduce(
@@ -309,8 +588,15 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                       onSelect={() => handleSelect(item.url)}
                       value={item.title}
                     >
-                      {Icon && <Icon className="mr-2 h-4 w-4" />}
-                      {item.title}
+                      {Icon && (
+                        <Icon className="mr-2 h-4 w-4 shrink-0 self-start mt-0.5" />
+                      )}
+                      <div className="flex min-w-0 flex-col">
+                        <span>{item.title}</span>
+                        <span className="line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          {item.description}
+                        </span>
+                      </div>
                     </CommandItem>
                   );
                 })}

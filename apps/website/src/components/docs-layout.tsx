@@ -2,10 +2,11 @@
 
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { DocsNav } from "./docs-nav";
+import { DocsToc } from "./docs-toc";
 
 type DocsLayoutProps = {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ type DocsLayoutProps = {
 
 export function DocsLayout({ children, headerActions }: DocsLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,8 +78,15 @@ export function DocsLayout({ children, headerActions }: DocsLayoutProps) {
 
         {/* Main content */}
         <main className="min-w-0 flex-1 py-8 lg:pl-8">
-          <div className="mx-auto max-w-4xl">{children}</div>
+          <div className="mx-auto max-w-4xl" ref={contentRef}>
+            {children}
+          </div>
         </main>
+
+        {/* Table of contents - Desktop only */}
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 overflow-y-auto py-8 pl-8 xl:block">
+          <DocsToc contentRef={contentRef} />
+        </aside>
       </div>
     </div>
   );

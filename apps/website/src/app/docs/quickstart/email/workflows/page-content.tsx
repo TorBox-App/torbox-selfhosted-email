@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +120,20 @@ export default function WorkflowsQuickstartPageContent() {
         </p>
       </div>
 
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>An automated email sequence defined as TypeScript</li>
+          <li>Local validation to catch errors before deploying</li>
+          <li>A production workflow triggered by contact events or the SDK</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~5 minutes</p>
+      </div>
+
       {/* Prerequisites */}
       <Card className="mb-8">
         <CardHeader>
@@ -213,11 +227,9 @@ export default function WorkflowsQuickstartPageContent() {
         </h2>
         <p className="mb-4 text-muted-foreground">
           Each workflow is a TypeScript file that exports a{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            defineWorkflow
-          </code>{" "}
-          call. Here is a welcome sequence that sends an email, waits a day, then
-          branches based on whether the contact activated:
+          <code className="rounded bg-muted px-1.5 py-0.5">defineWorkflow</code>{" "}
+          call. Here is a welcome sequence that sends an email, waits a day,
+          then branches based on whether the contact activated:
         </p>
         <CodeExample
           code={workflowCode}
@@ -232,8 +244,7 @@ export default function WorkflowsQuickstartPageContent() {
               <code className="rounded bg-muted px-1 py-0.5">
                 contact_created
               </code>
-              ,{" "}
-              <code className="rounded bg-muted px-1 py-0.5">event</code>,{" "}
+              , <code className="rounded bg-muted px-1 py-0.5">event</code>,{" "}
               <code className="rounded bg-muted px-1 py-0.5">schedule</code>)
             </li>
             <li>
@@ -241,17 +252,16 @@ export default function WorkflowsQuickstartPageContent() {
               <code className="rounded bg-muted px-1 py-0.5">sendEmail</code>,{" "}
               <code className="rounded bg-muted px-1 py-0.5">delay</code>,{" "}
               <code className="rounded bg-muted px-1 py-0.5">condition</code>,{" "}
-              <code className="rounded bg-muted px-1 py-0.5">
-                waitForEvent
-              </code>
-              ,{" "}
-              <code className="rounded bg-muted px-1 py-0.5">exit</code>, and
+              <code className="rounded bg-muted px-1 py-0.5">waitForEvent</code>
+              , <code className="rounded bg-muted px-1 py-0.5">exit</code>, and
               more
             </li>
             <li>
               <strong>Template slugs</strong> — reference templates you have
               already pushed (e.g.{" "}
-              <code className="rounded bg-muted px-1 py-0.5">welcome-email</code>
+              <code className="rounded bg-muted px-1 py-0.5">
+                welcome-email
+              </code>
               )
             </li>
             <li>
@@ -272,8 +282,8 @@ export default function WorkflowsQuickstartPageContent() {
         </h2>
         <p className="mb-4 text-muted-foreground">
           Run validation to catch errors before pushing. This checks for unique
-          step IDs, valid template references, correct trigger configuration, and
-          more:
+          step IDs, valid template references, correct trigger configuration,
+          and more:
         </p>
         <CodeExample
           code="wraps email workflows validate"
@@ -315,8 +325,8 @@ export default function WorkflowsQuickstartPageContent() {
           <p className="font-medium text-sm">Useful flags</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
             <li>
-              <code className="rounded bg-muted px-1 py-0.5">--dry-run</code>{" "}
-              — preview changes without pushing
+              <code className="rounded bg-muted px-1 py-0.5">--dry-run</code> —
+              preview changes without pushing
             </li>
             <li>
               <code className="rounded bg-muted px-1 py-0.5">--draft</code> —
@@ -347,8 +357,8 @@ export default function WorkflowsQuickstartPageContent() {
           </code>{" "}
           triggers fire automatically when contacts are added. For{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">event</code> or{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">api</code>{" "}
-          triggers, use the SDK:
+          <code className="rounded bg-muted px-1.5 py-0.5">api</code> triggers,
+          use the SDK:
         </p>
         <CodeExample
           code={triggerCode}

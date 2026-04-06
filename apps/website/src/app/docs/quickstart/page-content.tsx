@@ -62,12 +62,7 @@ const cliGuides = [
       "Build email templates as React components with hot-reload preview and push to AWS SES from your codebase.",
     href: "/docs/quickstart/email/templates",
     icon: FileCode2,
-    features: [
-      "React Email",
-      "Hot-reload preview",
-      "Push to SES",
-      "Brand kit",
-    ],
+    features: ["React Email", "Hot-reload preview", "Push to SES", "Brand kit"],
   },
 ];
 

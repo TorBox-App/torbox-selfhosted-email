@@ -31,7 +31,7 @@ const guides = [
       "Move out of the AWS SES sandbox to send emails to any recipient. Learn what's required and how to get approved quickly.",
     href: "/docs/guides/production-access",
     icon: ShieldCheck,
-    readTime: "2 min read",
+    readTime: "5 min read",
   },
   {
     title: "Domain Verification",
@@ -39,7 +39,7 @@ const guides = [
       "Set up DKIM, SPF, and DMARC for your domain. Improve deliverability and protect your sender reputation.",
     href: "/docs/guides/domain-verification",
     icon: Globe,
-    readTime: "4 min read",
+    readTime: "10 min read",
   },
   {
     title: "Configuration Presets",
@@ -55,7 +55,7 @@ const guides = [
       "Write email templates as React components, preview them locally with hot-reload, and push to SES and the dashboard.",
     href: "/docs/guides/templates",
     icon: FileCode2,
-    readTime: "8 min read",
+    readTime: "5 min read",
   },
   {
     title: "Building Workflows",
@@ -63,7 +63,7 @@ const guides = [
       "Create automated email and SMS sequences using the Wraps workflow DSL. Define triggers, delays, conditions, and actions.",
     href: "/docs/guides/workflows",
     icon: Workflow,
-    readTime: "10 min read",
+    readTime: "5 min read",
   },
   {
     title: "Vercel Setup",
@@ -71,7 +71,7 @@ const guides = [
       "Deploy email infrastructure with Vercel OIDC federation. Zero stored credentials, automatic rotation, and seamless integration.",
     href: "/docs/guides/vercel-setup",
     icon: Rocket,
-    readTime: "5 min read",
+    readTime: "10 min read",
   },
   {
     title: "Migration Guide",
@@ -79,7 +79,7 @@ const guides = [
       "Switch from SendGrid, Postmark, or Resend to Wraps. Side-by-side code comparisons and step-by-step migration instructions.",
     href: "/docs/guides/migration",
     icon: ArrowRightLeft,
-    readTime: "6 min read",
+    readTime: "5 min read",
   },
 ];
 

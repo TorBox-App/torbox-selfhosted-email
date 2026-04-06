@@ -355,6 +355,28 @@ export default function PageContent() {
         </p>
       </div>
 
+      {/* Swagger Callout */}
+      <Card className="mb-12 border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-lg">Interactive API Explorer</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Try endpoints directly in your browser with the OpenAPI spec.
+          </p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button asChild>
+            <a
+              href="https://api.wraps.dev/swagger"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Open Swagger UI
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Base URL */}
       <section className="mb-12">
         <SectionHeading

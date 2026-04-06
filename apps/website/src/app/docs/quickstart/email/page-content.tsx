@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,20 @@ export default function EmailQuickstartPageContent() {
           Deploy production-ready email infrastructure to your AWS account in
           under 2 minutes and send your first email.
         </p>
+      </div>
+
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>Production-ready AWS SES with DKIM, SPF, and DMARC configured</li>
+          <li>A verified sending domain in your AWS account</li>
+          <li>Your first email sent via the TypeScript SDK</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~2 minutes</p>
       </div>
 
       {/* Prerequisites */}

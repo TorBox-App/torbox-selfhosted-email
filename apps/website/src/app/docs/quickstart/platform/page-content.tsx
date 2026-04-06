@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +97,22 @@ export default function PlatformQuickstartPageContent() {
           Use the type-safe Platform SDK to manage contacts, send batch emails,
           and interact with the Wraps API programmatically.
         </p>
+      </div>
+
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>
+            A type-safe Platform SDK client connected to your organization
+          </li>
+          <li>Contact management with create and list operations</li>
+          <li>Batch email sending to segments of contacts</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~3 minutes</p>
       </div>
 
       {/* Prerequisites */}
