@@ -64,10 +64,15 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
       // 3. Check if this is RFC 8058 one-click unsubscribe
       // RFC 8058 sends: Content-Type: application/x-www-form-urlencoded
       // Body: List-Unsubscribe=One-Click
-      const bodyStr = typeof body === "string" ? body : String(body ?? "");
+      // Elysia may parse the body as an object (possibly null-prototype) or leave it as a string
       const isOneClick =
         contentType.includes("application/x-www-form-urlencoded") &&
-        bodyStr.includes("List-Unsubscribe=One-Click");
+        (typeof body === "string"
+          ? body.includes("List-Unsubscribe=One-Click")
+          : typeof body === "object" &&
+            body !== null &&
+            (body as Record<string, unknown>)["List-Unsubscribe"] ===
+              "One-Click");
 
       // 4. Process unsubscribe based on whether it's topic-specific or global
       const now = new Date();
