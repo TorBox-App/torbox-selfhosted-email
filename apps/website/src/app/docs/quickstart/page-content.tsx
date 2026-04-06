@@ -3,10 +3,12 @@
 import {
   ArrowRight,
   Blocks,
+  FileCode2,
   HardDrive,
   Mail,
   MessageSquare,
   Sparkles,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
@@ -54,6 +56,19 @@ const cliGuides = [
       "Delivery tracking",
     ],
   },
+  {
+    title: "Templates",
+    description:
+      "Build email templates as React components with hot-reload preview and push to AWS SES from your codebase.",
+    href: "/docs/quickstart/email/templates",
+    icon: FileCode2,
+    features: [
+      "React Email",
+      "Hot-reload preview",
+      "Push to SES",
+      "Brand kit",
+    ],
+  },
 ];
 
 const platformGuide = {
@@ -67,6 +82,20 @@ const platformGuide = {
     "Batch email sends",
     "Type-safe API client",
     "Full TypeScript support",
+  ],
+};
+
+const workflowsGuide = {
+  title: "Workflows",
+  description:
+    "Define automated email sequences as TypeScript. Build drip campaigns, onboarding flows, and re-engagement sequences — all as code.",
+  href: "/docs/quickstart/email/workflows",
+  icon: Workflow,
+  features: [
+    "Workflows as code",
+    "Delays & conditions",
+    "Custom event triggers",
+    "Cross-channel cascade",
   ],
 };
 
@@ -154,6 +183,33 @@ export default function QuickstartPageContent() {
             >
               Subscribe to Platform
               <Sparkles className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Workflows Card */}
+      <Card className="mt-6 group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+        <CardHeader>
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <Workflow className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-2xl">{workflowsGuide.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{workflowsGuide.description}</p>
+          <ul className="grid grid-cols-2 gap-2 text-muted-foreground text-sm md:grid-cols-4">
+            {workflowsGuide.features.map((feature) => (
+              <li className="flex items-center gap-2" key={feature}>
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+          <Button asChild className="w-full md:w-auto">
+            <a href={workflowsGuide.href}>
+              Get Started with Workflows
+              <ArrowRight className="ml-2 h-4 w-4" />
             </a>
           </Button>
         </CardContent>

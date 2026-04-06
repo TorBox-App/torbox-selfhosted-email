@@ -67,6 +67,8 @@ const navItems: NavSection[] = [
           { title: "Remix", href: "/docs/quickstart/email/remix" },
           { title: "CDN", href: "/docs/quickstart/cdn" },
           { title: "SMS", href: "/docs/quickstart/sms" },
+          { title: "Templates", href: "/docs/quickstart/email/templates" },
+          { title: "Workflows", href: "/docs/quickstart/email/workflows" },
           { title: "Platform", href: "/docs/quickstart/platform" },
         ],
       },
