@@ -38,6 +38,7 @@ type NavItem = {
   href: string;
   icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  defaultExpanded?: boolean;
   children?: NavItem[];
 };
 
@@ -59,6 +60,7 @@ const navItems: NavSection[] = [
         title: "Quickstart",
         href: "/docs/quickstart",
         icon: Rocket,
+        defaultExpanded: true,
         children: [
           { title: "Email", href: "/docs/quickstart/email" },
           { title: "Inbound Email", href: "/docs/quickstart/email/inbound" },
@@ -306,8 +308,10 @@ function NavItemComponent({
   const isChildActive =
     hasChildren && item.children?.some((child) => pathname === child.href);
 
-  // Expand if this item or any child is active
-  const [isExpanded, setIsExpanded] = useState(isActive || isChildActive);
+  // Expand if this item or any child is active, or if defaultExpanded
+  const [isExpanded, setIsExpanded] = useState(
+    isActive || isChildActive || item.defaultExpanded === true
+  );
 
   const handleClick = (e: React.MouseEvent) => {
     if (hasChildren) {
