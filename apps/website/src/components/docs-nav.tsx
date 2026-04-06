@@ -5,7 +5,6 @@ import {
   ArrowRightLeft,
   BarChart3,
   Blocks,
-  Book,
   Bot,
   Box,
   ChevronRight,
@@ -14,7 +13,6 @@ import {
   FileJson,
   FileText,
   Globe,
-  HardDrive,
   KeyRound,
   Layers,
   Mail,
@@ -60,119 +58,140 @@ const navItems: NavSection[] = [
         title: "Quickstart",
         href: "/docs/quickstart",
         icon: Rocket,
+      },
+    ],
+  },
+  {
+    title: "Email",
+    items: [
+      {
+        title: "Quickstart",
+        href: "/docs/quickstart/email",
+        icon: Rocket,
         defaultExpanded: true,
         children: [
-          { title: "Email", href: "/docs/quickstart/email" },
-          { title: "Inbound Email", href: "/docs/quickstart/email/inbound" },
           { title: "Next.js", href: "/docs/quickstart/email/nextjs" },
           { title: "Express", href: "/docs/quickstart/email/express" },
           { title: "Remix", href: "/docs/quickstart/email/remix" },
-          { title: "CDN", href: "/docs/quickstart/cdn" },
-          { title: "SMS", href: "/docs/quickstart/sms" },
+          { title: "Inbound", href: "/docs/quickstart/email/inbound" },
           { title: "Templates", href: "/docs/quickstart/email/templates" },
           { title: "Workflows", href: "/docs/quickstart/email/workflows" },
-          { title: "Platform", href: "/docs/quickstart/platform" },
         ],
       },
       {
-        title: "Telemetry",
-        href: "/docs/telemetry",
-        icon: BarChart3,
-      },
-    ],
-  },
-  {
-    title: "CLI Reference",
-    items: [
-      {
-        title: "Overview",
-        href: "/docs/cli-reference",
-        icon: Terminal,
-      },
-      {
-        title: "Email Commands",
-        href: "/docs/cli-reference/email",
-        icon: Mail,
-      },
-      {
-        title: "CDN Commands",
-        href: "/docs/cli-reference/cdn",
-        icon: HardDrive,
-      },
-      {
-        title: "SMS Commands",
-        href: "/docs/cli-reference/sms",
-        icon: MessageSquare,
-      },
-      {
-        title: "Auth Commands",
-        href: "/docs/cli-reference/auth",
-        icon: KeyRound,
-      },
-      {
-        title: "AWS Commands",
-        href: "/docs/cli-reference/aws",
-        icon: Cloud,
-      },
-      {
-        title: "Platform Commands",
-        href: "/docs/cli-reference/platform",
-        icon: Blocks,
-      },
-    ],
-  },
-  {
-    title: "SDK Reference",
-    items: [
-      {
-        title: "Platform SDK",
-        href: "/docs/client-sdk-reference",
-        icon: Blocks,
-      },
-      {
-        title: "Email SDK",
+        title: "SDK Reference",
         href: "/docs/sdk-reference",
         icon: Mail,
       },
       {
-        title: "SMS SDK",
-        href: "/docs/sms-sdk-reference",
-        icon: MessageSquare,
+        title: "CLI Commands",
+        href: "/docs/cli-reference/email",
+        icon: Terminal,
       },
-    ],
-  },
-  {
-    title: "Infrastructure",
-    items: [
       {
-        title: "What Gets Deployed: Email",
+        title: "Infrastructure",
         href: "/docs/infrastructure/email",
         icon: Server,
       },
       {
-        title: "What Gets Deployed: SMS",
-        href: "/docs/infrastructure/sms",
-        icon: Server,
+        title: "Domain Verification",
+        href: "/docs/guides/domain-verification",
+        icon: Globe,
       },
       {
-        title: "What Gets Deployed: CDN",
-        href: "/docs/infrastructure/cdn",
-        icon: Server,
+        title: "Production Access",
+        href: "/docs/guides/production-access",
+        icon: ShieldCheck,
       },
       {
-        title: "EventBridge Events",
-        href: "/docs/infrastructure/events",
+        title: "SMTP Credentials",
+        href: "/docs/guides/smtp",
+        icon: KeyRound,
+      },
+      {
+        title: "Webhooks",
+        href: "/docs/guides/webhooks",
         icon: Zap,
       },
       {
-        title: "CDK Construct",
-        href: "/docs/cdk-reference",
-        icon: Layers,
+        title: "Templates Guide",
+        href: "/docs/guides/templates",
+        icon: FileCode2,
       },
       {
-        title: "Pulumi Component",
-        href: "/docs/pulumi-reference",
-        icon: Box,
+        title: "Workflows Guide",
+        href: "/docs/guides/workflows",
+        icon: Workflow,
+      },
+      {
+        title: "Configuration Presets",
+        href: "/docs/guides/configuration-presets",
+        icon: Sliders,
+      },
+    ],
+  },
+  {
+    title: "SMS",
+    items: [
+      {
+        title: "Quickstart",
+        href: "/docs/quickstart/sms",
+        icon: Rocket,
+      },
+      {
+        title: "SDK Reference",
+        href: "/docs/sms-sdk-reference",
+        icon: MessageSquare,
+      },
+      {
+        title: "CLI Commands",
+        href: "/docs/cli-reference/sms",
+        icon: Terminal,
+      },
+      {
+        title: "Infrastructure",
+        href: "/docs/infrastructure/sms",
+        icon: Server,
+      },
+    ],
+  },
+  {
+    title: "CDN",
+    items: [
+      {
+        title: "Quickstart",
+        href: "/docs/quickstart/cdn",
+        icon: Rocket,
+      },
+      {
+        title: "CLI Commands",
+        href: "/docs/cli-reference/cdn",
+        icon: Terminal,
+      },
+      {
+        title: "Infrastructure",
+        href: "/docs/infrastructure/cdn",
+        icon: Server,
+      },
+    ],
+  },
+  {
+    title: "Platform",
+    items: [
+      {
+        title: "Quickstart",
+        href: "/docs/quickstart/platform",
+        icon: Rocket,
+      },
+      {
+        title: "SDK Reference",
+        href: "/docs/client-sdk-reference",
+        icon: Blocks,
+      },
+      {
+        title: "CLI Commands",
+        href: "/docs/cli-reference/platform",
+        icon: Terminal,
       },
     ],
   },
@@ -185,6 +204,11 @@ const navItems: NavSection[] = [
         icon: FileCode2,
       },
       {
+        title: "CLI Overview",
+        href: "/docs/cli-reference",
+        icon: Terminal,
+      },
+      {
         title: "Error Codes",
         href: "/docs/reference/errors",
         icon: AlertTriangle,
@@ -195,19 +219,29 @@ const navItems: NavSection[] = [
         icon: ShieldCheck,
       },
       {
+        title: "Environment Variables",
+        href: "/docs/reference/environment-variables",
+        icon: Settings,
+      },
+      {
         title: "JSON Output",
         href: "/docs/reference/json-output",
         icon: FileJson,
       },
       {
-        title: "Environment Variables",
-        href: "/docs/reference/environment-variables",
-        icon: Settings,
+        title: "EventBridge Events",
+        href: "/docs/infrastructure/events",
+        icon: Zap,
+      },
+      {
+        title: "Telemetry",
+        href: "/docs/telemetry",
+        icon: BarChart3,
       },
     ],
   },
   {
-    title: "Guides",
+    title: "Resources",
     items: [
       {
         title: "AWS Setup",
@@ -227,54 +261,14 @@ const navItems: NavSection[] = [
         ],
       },
       {
-        title: "Production Access",
-        href: "/docs/guides/production-access",
-        icon: ShieldCheck,
-      },
-      {
-        title: "Domain Verification",
-        href: "/docs/guides/domain-verification",
-        icon: Globe,
-      },
-      {
-        title: "Configuration Presets",
-        href: "/docs/guides/configuration-presets",
-        icon: Sliders,
-      },
-      {
-        title: "Templates as Code",
-        href: "/docs/guides/templates",
-        icon: FileCode2,
-      },
-      {
-        title: "Building Workflows",
-        href: "/docs/guides/workflows",
-        icon: Workflow,
-      },
-      {
-        title: "Custom Events",
-        href: "/docs/guides/custom-events",
-        icon: Radio,
-      },
-      {
-        title: "Cross-Channel Orchestration",
-        href: "/docs/guides/orchestration",
-        icon: Layers,
-      },
-      {
-        title: "SMTP Credentials",
-        href: "/docs/guides/smtp",
+        title: "Auth Commands",
+        href: "/docs/cli-reference/auth",
         icon: KeyRound,
       },
       {
-        title: "Webhooks",
-        href: "/docs/guides/webhooks",
-        icon: Zap,
-      },
-      {
-        title: "Context7 (AI Docs)",
-        href: "/docs/guides/context7",
-        icon: Bot,
+        title: "AWS Commands",
+        href: "/docs/cli-reference/aws",
+        icon: Cloud,
       },
       {
         title: "Vercel Setup",
@@ -282,14 +276,34 @@ const navItems: NavSection[] = [
         icon: Rocket,
       },
       {
+        title: "Custom Events",
+        href: "/docs/guides/custom-events",
+        icon: Radio,
+      },
+      {
+        title: "Orchestration",
+        href: "/docs/guides/orchestration",
+        icon: Layers,
+      },
+      {
         title: "Migration Guide",
         href: "/docs/guides/migration",
         icon: ArrowRightLeft,
       },
       {
-        title: "All Guides",
-        href: "/docs/guides",
-        icon: Book,
+        title: "Context7 (AI Docs)",
+        href: "/docs/guides/context7",
+        icon: Bot,
+      },
+      {
+        title: "CDK Construct",
+        href: "/docs/cdk-reference",
+        icon: Layers,
+      },
+      {
+        title: "Pulumi Component",
+        href: "/docs/pulumi-reference",
+        icon: Box,
       },
     ],
   },
