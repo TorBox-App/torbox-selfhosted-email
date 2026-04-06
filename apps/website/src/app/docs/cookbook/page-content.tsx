@@ -173,7 +173,7 @@ const status = await email.events!.get("01234567-89ab-cdef-0123-456789abcdef");
 
 if (status) {
   console.log(\`Status: \${status.status}\`);
-  // "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained"
+  // "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "suppressed"
 
   for (const event of status.events) {
     console.log(\`  \${event.type} at \${new Date(event.timestamp).toISOString()}\`);

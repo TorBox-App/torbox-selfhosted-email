@@ -478,17 +478,11 @@ export default function CLIReferenceEmailPageContent() {
               <CardTitle className="text-lg">Options</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -t, --to &lt;address&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    Email address to send test to (must be on your inbound
-                    domain)
-                  </span>
-                </li>
-              </ul>
+              <p className="text-muted-foreground text-sm">
+                Sends a test email to your configured inbound receiving domain.
+                Accepts <code className="rounded bg-muted px-1 py-0.5">-r, --region</code> and{" "}
+                <code className="rounded bg-muted px-1 py-0.5">--json</code> flags.
+              </p>
             </CardContent>
           </Card>
         </div>

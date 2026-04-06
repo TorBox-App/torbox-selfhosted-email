@@ -48,16 +48,18 @@ export default defineWorkflow({
   ],
 });`;
 
-const triggerCode = `import { Wraps } from '@wraps.dev/email';
+const triggerCode = `import { createPlatformClient } from '@wraps.dev/client';
 
-const wraps = new Wraps();
+const client = createPlatformClient({
+  apiKey: process.env.WRAPS_API_KEY,
+});
 
-// Trigger a workflow via the SDK
-await wraps.workflows.trigger({
-  workflow: 'welcome-sequence',
-  contact: {
-    email: 'user@example.com',
-    firstName: 'Alex',
+// Trigger a workflow
+await client.POST('/v1/workflows/{workflowId}/trigger', {
+  params: { path: { workflowId: 'welcome-sequence' } },
+  body: {
+    contactEmail: 'user@example.com',
+    data: { firstName: 'Alex' },
   },
 });`;
 
@@ -286,7 +288,7 @@ export default function WorkflowsQuickstartPageContent() {
           and more:
         </p>
         <CodeExample
-          code="wraps email workflows validate"
+          code="npx @wraps.dev/cli email workflows validate"
           filename="terminal.sh"
           language="bash"
         />
@@ -297,7 +299,7 @@ export default function WorkflowsQuickstartPageContent() {
         </p>
         <div className="mt-2">
           <CodeExample
-            code="wraps email workflows validate --workflow welcome"
+            code="npx @wraps.dev/cli email workflows validate --workflow welcome"
             filename="terminal.sh"
             language="bash"
           />
@@ -317,7 +319,7 @@ export default function WorkflowsQuickstartPageContent() {
           automatically when their triggers fire:
         </p>
         <CodeExample
-          code="wraps email workflows push"
+          code="npx @wraps.dev/cli email workflows push"
           filename="terminal.sh"
           language="bash"
         />

@@ -977,7 +977,7 @@ ${typescriptCode}
 Important defaults and limits to keep in mind when using the SDK:
 
 - **No automatic retry on failure** — implement your own retry logic if \`retryable\` is \`true\`
-- **Default pagination**: 20 items per page
+- **Default pagination**: 50 items per page
 - **Presigned URL expiry**: 1 hour (for attachments)
 - **Bulk send limit**: 50 destinations per call
 - **Attachment limit**: 100 per email (10 MB total message size)`,
@@ -3519,7 +3519,7 @@ export default function SDKReferencePageContent() {
                     <code className="rounded bg-muted px-1.5 py-0.5">true</code>
                   </li>
                   <li>
-                    <strong>Default pagination</strong>: 20 items per page
+                    <strong>Default pagination</strong>: 50 items per page
                   </li>
                   <li>
                     <strong>Presigned URL expiry</strong>: 1 hour (for
