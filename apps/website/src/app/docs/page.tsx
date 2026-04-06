@@ -40,23 +40,31 @@ export default function DocsPage() {
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
-      {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
       <nav aria-hidden="true" className="sr-only">
         <h2>Wraps Documentation</h2>
         <p>
-          Deploy production-ready email infrastructure to your AWS account in
-          minutes. Learn how to use the CLI, SDK, and console.
+          Deploy email, SMS, and CDN infrastructure to your AWS account.
+          You own everything — we provide the tooling.
         </p>
-        <h2>Documentation Sections</h2>
+        <h3>Build</h3>
         <ul>
-          <li>Quickstart - Deploy your first email infrastructure</li>
-          <li>Platform SDK - Type-safe API client for contacts and batches</li>
-          <li>Email SDK - Learn how to use @wraps.dev/email</li>
-          <li>SMS SDK - Send SMS with @wraps.dev/sms</li>
-          <li>CDK Construct - Deploy with AWS CDK</li>
-          <li>Pulumi Component - Deploy with Pulumi</li>
-          <li>CLI Commands - Complete CLI reference</li>
-          <li>Guides - Production access, domain verification, and more</li>
+          <li>Email SDK - Send email, manage templates, track events</li>
+          <li>SMS SDK - Send SMS, manage opt-outs, verify numbers</li>
+          <li>Platform SDK - Contacts, batches, workflows, segments</li>
+        </ul>
+        <h3>Deploy</h3>
+        <ul>
+          <li>CLI Reference - All commands and flags</li>
+          <li>Infrastructure - What gets deployed to your AWS account</li>
+          <li>CDK - AWS CDK construct</li>
+          <li>Pulumi - Pulumi component</li>
+        </ul>
+        <h3>Operate</h3>
+        <ul>
+          <li>Guides - AWS setup, domains, production access</li>
+          <li>API Reference - REST API and OpenAPI spec</li>
+          <li>Errors - Error codes with solutions</li>
+          <li>Environment Variables - CLI, SDK, and CI/CD config</li>
         </ul>
       </nav>
       <DocsPageContent />
