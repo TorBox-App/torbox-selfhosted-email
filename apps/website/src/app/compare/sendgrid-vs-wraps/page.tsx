@@ -847,7 +847,7 @@ export default function SendGridVsWrapsPage() {
             <p>Last updated: March 2026</p>
             <p>
               We update this page regularly. If anything here is inaccurate,{" "}
-              <a className="text-primary underline" href="mailto:hey@wraps.dev">
+              <a className="text-primary underline" href="mailto:support@wraps.dev">
                 let us know
               </a>
               . All SendGrid pricing and features sourced from{" "}

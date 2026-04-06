@@ -1062,7 +1062,7 @@ export default function KlaviyoVsWrapsPage() {
             </p>
             <p>
               See something inaccurate?{" "}
-              <a className="text-primary underline" href="mailto:hey@wraps.dev">
+              <a className="text-primary underline" href="mailto:support@wraps.dev">
                 Let us know
               </a>{" "}
               and we&rsquo;ll fix it.

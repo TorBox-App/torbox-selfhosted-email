@@ -833,9 +833,9 @@ export default function AmazonSesVsWrapsPage() {
               us know at{" "}
               <a
                 className="underline transition-colors hover:text-foreground"
-                href="mailto:hey@wraps.dev"
+                href="mailto:support@wraps.dev"
               >
-                hey@wraps.dev
+                support@wraps.dev
               </a>
               .
             </p>

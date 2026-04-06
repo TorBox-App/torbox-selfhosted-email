@@ -52,9 +52,9 @@ export function NavHelp() {
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <a href="mailto:help@wraps.dev">
+                <a href="mailto:support@wraps.dev">
                   <Mail />
-                  Email help@wraps.dev
+                  Email support@wraps.dev
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">

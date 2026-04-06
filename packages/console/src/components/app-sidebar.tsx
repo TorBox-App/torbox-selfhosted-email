@@ -46,7 +46,7 @@ type NavItem = {
 const data = {
   user: {
     name: "Wraps Console",
-    email: "admin@wraps.dev",
+    email: "hello@wraps.dev",
     avatar: "/avatars/wraps.jpg",
   },
   navMain: [

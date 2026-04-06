@@ -223,7 +223,7 @@ export default function ComparePage() {
 
           <p className="mt-8 text-center text-muted-foreground text-xs">
             Last updated: March 2026. See something inaccurate?{" "}
-            <a className="underline" href="mailto:hey@wraps.dev">
+            <a className="underline" href="mailto:support@wraps.dev">
               Let us know
             </a>
             .
