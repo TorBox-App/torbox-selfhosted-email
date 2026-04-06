@@ -25,13 +25,15 @@ const curlExample = `curl -X GET https://api.wraps.dev/health
 curl -X GET https://api.wraps.dev/contacts \\
   -H "Authorization: Bearer wraps_your_api_key"`;
 
-const sdkExample = `import { WrapsClient } from '@wraps.dev/client';
+const sdkExample = `import { createPlatformClient } from '@wraps.dev/client';
 
-const client = new WrapsClient({
+const client = createPlatformClient({
   apiKey: process.env.WRAPS_API_KEY,
 });
 
-const contacts = await client.contacts.list();`;
+const { data } = await client.GET('/v1/contacts/', {
+  params: { query: { page: '1' } },
+});`;
 
 const triggerWorkflowExample = `curl -X POST https://api.wraps.dev/v1/workflows/:workflowId/trigger \\
   -H "Authorization: Bearer wraps_your_api_key" \\

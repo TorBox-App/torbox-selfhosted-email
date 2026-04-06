@@ -662,11 +662,11 @@ email.sendTemplate(params: SendTemplateParams): Promise<SendEmailResult>
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | \`from\` | string | Sender email address (must be verified) |
-| \`to\` | string \\| string[] | Recipient email address(es) |
+| \`to\` | string \\| EmailAddress | Recipient email address |
 | \`template\` | string | Template name (must exist in SES) |
 | \`templateData\` | Record<string, unknown> | Variables to substitute in template |
-| \`cc\` | string \\| string[] | CC recipients (optional) |
-| \`bcc\` | string \\| string[] | BCC recipients (optional) |
+| \`cc\` | string \\| EmailAddress | CC recipient (optional) |
+| \`bcc\` | string \\| EmailAddress | BCC recipient (optional) |
 | \`replyTo\` | string \\| string[] | Reply-to address(es) (optional) |
 | \`tags\` | Record<string, string> | SES message tags (optional) |
 | \`configurationSetName\` | string | Configuration set for tracking (optional) |
@@ -691,7 +691,7 @@ email.sendBulkTemplate(params: SendBulkTemplateParams): Promise<SendBulkTemplate
 | \`from\` | string | Sender email address (must be verified) |
 | \`template\` | string | Template name (must exist in SES) |
 | \`destinations\` | array | List of recipients with personalized data (max 50) |
-| \`destinations[].to\` | string \\| string[] | Recipient email address(es) |
+| \`destinations[].to\` | string \\| EmailAddress | Recipient email address |
 | \`destinations[].templateData\` | Record<string, unknown> | Per-recipient template variables |
 | \`defaultTemplateData\` | Record<string, unknown> | Default variables (merged with per-recipient) |
 | \`replyTo\` | string \\| string[] | Reply-to address(es) (optional) |
