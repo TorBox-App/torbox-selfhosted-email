@@ -493,6 +493,232 @@ export default function CLIReferenceEmailPageContent() {
           </Card>
         </div>
 
+        {/* inbound verify */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound verify
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Check that DNS records for your inbound receiving domain(s) are
+            correctly configured. Verifies MX records point to SES inbound SMTP
+            and SPF records include amazonses.com. Also confirms the SES receipt
+            rule set is active.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound verify [options]" />
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -r, --region &lt;region&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    AWS region to check
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">--json</code>{" "}
+                  <span className="text-muted-foreground">
+                    Output result as JSON
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">What It Checks</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+                <li>
+                  MX record points to{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    inbound-smtp.&lt;region&gt;.amazonaws.com
+                  </code>
+                </li>
+                <li>
+                  SPF TXT record includes{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    amazonses.com
+                  </code>
+                </li>
+                <li>SES receipt rule set is active</li>
+                <li>
+                  Checks all configured inbound domains when multiple exist
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* inbound add */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound add
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Add an additional receiving domain to your inbound email
+            infrastructure. Requires inbound to already be deployed via{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              wraps email inbound init
+            </code>
+            . Updates the SES receipt rule and optionally auto-creates DNS
+            records.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound add [options]" />
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -d, --domain &lt;domain&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Parent domain for the new inbound subdomain
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --subdomain &lt;name&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Subdomain prefix (e.g., inbound, support)
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">--root</code>{" "}
+                  <span className="text-muted-foreground">
+                    Use root domain instead of a subdomain
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -r, --region &lt;region&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    AWS region (must support SES inbound)
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">-y, --yes</code>{" "}
+                  <span className="text-muted-foreground">
+                    Skip confirmation prompts
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Examples</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Add a support subdomain interactively:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email inbound add" />
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Add a specific subdomain non-interactively:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email inbound add --domain yourdomain.com --subdomain support --yes" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* inbound remove */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound remove
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Remove an inbound receiving domain from SES receipt rules and
+            metadata. Cannot remove the last domain — use{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              wraps email inbound destroy
+            </code>{" "}
+            to remove all inbound infrastructure instead.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound remove [options]" />
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -d, --domain &lt;domain&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    The receiving domain to remove (e.g.,
+                    support.yourdomain.com)
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -r, --region &lt;region&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">AWS region</span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">-y, --yes</code>{" "}
+                  <span className="text-muted-foreground">
+                    Skip confirmation prompt
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Important Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+                <li>
+                  You must have at least two inbound domains to use this command
+                </li>
+                <li>
+                  After removal, manually delete the MX and SPF DNS records for
+                  the removed domain
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* inbound destroy */}
         <div className="mb-8 ml-4">
           <h3 className="mb-3 font-semibold text-xl">
@@ -786,6 +1012,105 @@ export default function CLIReferenceEmailPageContent() {
         </Card>
       </section>
 
+      {/* wraps email doctor */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email doctor
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Diagnose email infrastructure health by scanning your AWS account for
+          all <code className="rounded bg-muted px-1 py-0.5">wraps-*</code>{" "}
+          resources and checking whether they are managed by a Pulumi stack or
+          orphaned.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email doctor [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  -r, --region &lt;region&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS region to scan (auto-detected from metadata when omitted)
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--cleanup</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Interactively delete orphaned{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">wraps-*</code>{" "}
+                  resources that have no Pulumi stack. Prompts for confirmation
+                  before deleting. If a Pulumi stack exists, suggests using{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    wraps email destroy
+                  </code>{" "}
+                  or{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    wraps email upgrade
+                  </code>{" "}
+                  instead.
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output result as JSON
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">What It Scans</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>SES configuration sets</li>
+              <li>SNS topics</li>
+              <li>DynamoDB tables</li>
+              <li>Lambda functions</li>
+              <li>IAM roles</li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Examples</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="mb-2 text-muted-foreground text-sm">
+                Scan for issues:
+              </p>
+              <CLICommand command="npx @wraps.dev/cli email doctor" />
+            </div>
+            <div className="mt-4">
+              <p className="mb-2 text-muted-foreground text-sm">
+                Scan and clean up orphaned resources:
+              </p>
+              <CLICommand command="npx @wraps.dev/cli email doctor --cleanup" />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* wraps email test */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
@@ -892,9 +1217,48 @@ export default function CLIReferenceEmailPageContent() {
                 </p>
               </div>
               <div>
-                <code className="rounded bg-muted px-2 py-1">--quick</code>
+                <code className="rounded bg-muted px-2 py-1">-q, --quick</code>
                 <p className="mt-2 text-muted-foreground text-sm">
-                  Skip blacklist check for faster results
+                  Quick mode: check fewer DKIM selectors and only top blacklists
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--verbose</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Show all checks including passing ones (e.g., full SPF lookup
+                  tree)
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --dkimSelector &lt;selector&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Check a specific DKIM selector instead of scanning common
+                  ones. If omitted and a Wraps deployment exists, SES DKIM
+                  tokens are used automatically.
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --skipBlacklists
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip all blacklist checks entirely
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--skipTls</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip MX server TLS (STARTTLS) checks
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --timeout &lt;ms&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  DNS timeout in milliseconds
                 </p>
               </div>
               <div>
@@ -1074,6 +1438,73 @@ export default function CLIReferenceEmailPageContent() {
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      {/* wraps workflow init */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps workflow init
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Scaffold a workflows-as-code project with example workflow files and a
+          configuration file. Creates a{" "}
+          <code className="rounded bg-muted px-1 py-0.5">wraps/workflows/</code>{" "}
+          directory in your current project with ready-to-edit examples.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli workflow init [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-y, --yes</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Overwrite existing example files without prompting
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Creates</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>
+                <code className="rounded bg-muted px-1 py-0.5">
+                  wraps/wraps.config.ts
+                </code>{" "}
+                — Project configuration (org, from address, region)
+              </li>
+              <li>
+                <code className="rounded bg-muted px-1 py-0.5">
+                  wraps/workflows/cart-recovery.ts
+                </code>{" "}
+                — Cross-channel cascade example (email then SMS)
+              </li>
+              <li>
+                <code className="rounded bg-muted px-1 py-0.5">
+                  wraps/workflows/welcome-sequence.ts
+                </code>{" "}
+                — Welcome series with conditional branching
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
       </section>
 
       {/* wraps email config */}

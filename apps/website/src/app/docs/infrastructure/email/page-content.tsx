@@ -792,7 +792,7 @@ export default function InfrastructureEmailPageContent() {
       {/* Next Steps */}
       <section className="mb-12">
         <h2 className="mb-6 font-bold text-2xl">Next Steps</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="transition-colors hover:border-primary/50">
             <CardHeader>
               <CardTitle className="text-lg">CLI Reference</CardTitle>
@@ -838,6 +838,37 @@ export default function InfrastructureEmailPageContent() {
               <Button asChild variant="outline">
                 <Link href="/docs/guides/configuration-presets">
                   View Guide
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Infrastructure as Code</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-muted-foreground text-sm">
+                Deploy email infrastructure with{" "}
+                <Link
+                  className="text-primary underline"
+                  href="/docs/cdk-reference"
+                >
+                  CDK
+                </Link>{" "}
+                or{" "}
+                <Link
+                  className="text-primary underline"
+                  href="/docs/pulumi-reference"
+                >
+                  Pulumi
+                </Link>{" "}
+                instead of the CLI.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/docs/cdk-reference">
+                  View CDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

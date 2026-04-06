@@ -70,21 +70,21 @@ const email = new WrapsEmail({
 });`;
 
 const wrapsEmailConfigCode = `type WrapsEmailConfig = {
+  client?: SESClient;           // Pre-configured SES client (takes precedence)
+  s3Client?: S3Client;          // Pre-configured S3 client for inbox
+  inboxBucketName?: string;     // S3 bucket for inbound email storage
   region?: string;              // AWS region (default: 'us-east-1')
-  credentials?: {               // Explicit AWS credentials
+  credentials?: {               // Explicit AWS credentials (static or provider)
     accessKeyId: string;
     secretAccessKey: string;
     sessionToken?: string;
-  };
+  } | AwsCredentialIdentityProvider;
   roleArn?: string;             // IAM role for OIDC assumption
+  roleSessionName?: string;     // Session name for AssumeRole
   endpoint?: string;            // Custom endpoint (e.g., LocalStack)
-  configurationSetName?: string; // SES configuration set name
-  tableName?: string;           // DynamoDB table name override
-  accountId?: string;           // AWS account ID (for events)
-  suppressionListName?: string; // Custom suppression list name
-  maxRetries?: number;          // Max AWS SDK retries (default: 3)
-  timeout?: number;             // Request timeout in ms (default: 30000)
-  logger?: Logger;              // Custom logger instance
+  historyTableName?: string;    // DynamoDB table for email event history
+  dynamodbClient?: DynamoDBDocumentClient; // Pre-configured DynamoDB client
+  sesv2Client?: SESv2Client;    // Pre-configured SES v2 client for suppression
 };`;
 
 const basicEmailCode = `const result = await email.send({
@@ -239,9 +239,61 @@ result.status.forEach((item, i) => {
   }
 });`;
 
+const sendBatchCode = `const result = await email.sendBatch({
+  from: 'hello@yourdomain.com',
+  entries: [
+    {
+      to: 'alice@example.com',
+      subject: 'Hi Alice',
+      html: '<p>Hello Alice! Your order #1001 has shipped.</p>',
+    },
+    {
+      to: 'bob@example.com',
+      subject: 'Hi Bob',
+      html: '<p>Hello Bob! Your order #1002 has shipped.</p>',
+    },
+    {
+      to: 'carol@example.com',
+      subject: 'Hi Carol',
+      html: '<p>Hello Carol! Your order #1003 has shipped.</p>',
+    },
+  ],
+  replyTo: 'support@yourdomain.com',
+  tags: { campaign: 'order-shipped' },
+});
+
+console.log(\`Sent: \${result.successCount}, Failed: \${result.failureCount}\`);
+
+for (const entry of result.results) {
+  if (entry.status === 'success') {
+    console.log(\`Entry \${entry.index}: \${entry.messageId}\`);
+  } else {
+    console.log(\`Entry \${entry.index} failed: \${entry.error}\`);
+  }
+}`;
+
+const htmlToPlainTextCode = `import { htmlToPlainText } from '@wraps.dev/email';
+
+const html = '<h1>Welcome!</h1><p>Thanks for <a href="https://example.com">signing up</a>.</p>';
+const text = htmlToPlainText(html);
+
+console.log(text);
+// Welcome!
+//
+// Thanks for signing up (https://example.com).`;
+
+const inboxGetRawCode = `// Get a presigned URL for the raw MIME email (valid for 1 hour)
+const rawUrl = await email.inbox.getRaw('email-abc123');
+
+// Download the raw email
+const response = await fetch(rawUrl);
+const rawMime = await response.text();
+
+console.log('Raw MIME:', rawMime.substring(0, 200));`;
+
 // Inbox code examples
 const inboxInitCode = `const email = new WrapsEmail({
-  inboundBucket: 'your-inbound-bucket-name',
+  inboxBucketName: 'your-inbound-bucket-name',
 });`;
 
 const inboxListCode = `const { emails, nextToken } = await email.inbox.list({
@@ -455,15 +507,20 @@ new WrapsEmail(config?: WrapsEmailConfig)
 \`\`\`
 
 ### Options
-- \`region\` (optional): AWS region where your infrastructure is deployed. Defaults to \`us-east-1\`
-- \`credentials\` (optional): AWS credentials object. Auto-detected if not provided.
+- \`client\` (optional): Pre-configured SES client. Takes precedence over all other auth options.
+- \`region\` (optional): AWS region where your infrastructure is deployed. Defaults to \`us-east-1\`.
+- \`credentials\` (optional): AWS credentials (static object or provider function). Auto-detected if not provided.
+- \`roleArn\` (optional): IAM Role ARN to assume (for OIDC federation or cross-account access).
+- \`roleSessionName\` (optional): Session name for AssumeRole (defaults to \`wraps-email-session\`).
 - \`endpoint\` (optional): Custom SES endpoint (for testing with LocalStack).
+- \`inboxBucketName\` (optional): S3 bucket for inbound email storage. Enables \`inbox\` API.
+- \`historyTableName\` (optional): DynamoDB table for email event history. Enables \`events\` API.
 
 ### Authentication Order
-1. Explicit credentials passed to constructor
-2. Environment variables (\`AWS_ACCESS_KEY_ID\`, \`AWS_SECRET_ACCESS_KEY\`)
-3. Shared credentials file (\`~/.aws/credentials\`)
-4. IAM role (EC2, ECS, Lambda)
+1. Pre-configured client (\`client\` option)
+2. OIDC role assumption (\`roleArn\` option)
+3. Explicit credentials (\`credentials\` option)
+4. AWS credential chain (env vars, \`~/.aws/credentials\`, IAM role)
 
 ### Example with Options
 \`\`\`typescript
@@ -657,6 +714,74 @@ interface SendBulkTemplateResult {
 ${sendBulkTemplateCode}
 \`\`\``,
 
+  sendBatch: `## Send Batch
+
+Send unique emails to multiple recipients in a single API call (max 100 entries). Unlike \`sendBulkTemplate()\` which requires a pre-created SES template, \`sendBatch()\` lets you provide different subject, HTML, and text per recipient inline.
+
+Entries are processed in chunks of 50 via SES v2 \`SendBulkEmailCommand\`.
+
+### Method
+\`\`\`typescript
+email.sendBatch(params: SendBatchParams): Promise<SendBatchResult>
+\`\`\`
+
+### Parameters
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| \`from\` | string \\| EmailAddress | Sender email address (must be verified) |
+| \`entries\` | BatchEmailEntry[] | List of recipients with unique content (max 100) |
+| \`entries[].to\` | string \\| EmailAddress | Recipient email address |
+| \`entries[].subject\` | string | Email subject for this entry |
+| \`entries[].html\` | string | HTML body (optional, mutually exclusive with react) |
+| \`entries[].text\` | string | Plain text body (optional) |
+| \`entries[].react\` | ReactElement | React.email component (optional) |
+| \`entries[].tags\` | Record<string, string> | Per-entry SES tags (replaces defaults) |
+| \`replyTo\` | string \\| string[] | Reply-to address(es), shared across all entries (optional) |
+| \`tags\` | Record<string, string> | Default SES message tags (optional) |
+| \`configurationSetName\` | string | Configuration set for tracking (optional) |
+
+### Response
+\`\`\`typescript
+interface SendBatchResult {
+  results: BatchEntryResult[];
+  successCount: number;
+  failureCount: number;
+}
+
+interface BatchEntryResult {
+  index: number;
+  messageId?: string;
+  status: 'success' | 'failure';
+  error?: string;
+}
+\`\`\`
+
+### Example
+\`\`\`typescript
+${sendBatchCode}
+\`\`\``,
+
+  htmlToPlainText: `## htmlToPlainText Utility
+
+Convert HTML to plain text for email fallback. Handles block elements, line breaks, lists, links, and HTML entities. No external dependencies.
+
+The SDK uses this internally to auto-generate plain text from HTML when you don't provide a \`text\` parameter in \`send()\` or \`sendBatch()\`.
+
+### Import
+\`\`\`typescript
+import { htmlToPlainText } from '@wraps.dev/email';
+\`\`\`
+
+### Signature
+\`\`\`typescript
+htmlToPlainText(html: string): string
+\`\`\`
+
+### Example
+\`\`\`typescript
+${htmlToPlainTextCode}
+\`\`\``,
+
   inbox: `## Inbox (Inbound Emails)
 
 Read, reply to, and forward inbound emails. Requires inbound email infrastructure to be deployed with \`wraps email inbound init\`.
@@ -664,7 +789,7 @@ Read, reply to, and forward inbound emails. Requires inbound email infrastructur
 ### Initialize with Inbox
 \`\`\`typescript
 const email = new WrapsEmail({
-  inboundBucket: 'your-inbound-bucket-name',
+  inboxBucketName: 'your-inbound-bucket-name',
 });
 \`\`\`
 
@@ -729,6 +854,11 @@ const result = await email.inbox.forward('email-abc123', {
 const url = await email.inbox.getAttachment('email-abc123', 'attachment-id', {
   expiresIn: 3600, // seconds
 });
+\`\`\`
+
+### Get Raw MIME Email
+\`\`\`typescript
+${inboxGetRawCode}
 \`\`\`
 
 ### Delete Email
@@ -874,6 +1004,10 @@ ${SECTION_MD.templates}
 ${SECTION_MD.sendTemplate}
 
 ${SECTION_MD.sendBulkTemplate}
+
+${SECTION_MD.sendBatch}
+
+${SECTION_MD.htmlToPlainText}
 
 ${SECTION_MD.inbox}
 
@@ -1023,6 +1157,11 @@ export default function SDKReferencePageContent() {
               <h4 className="mb-2 font-medium">Options</h4>
               <ul className="space-y-2 text-muted-foreground text-sm">
                 <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">client</code>{" "}
+                  (optional): Pre-configured SES client. Takes precedence over
+                  all other auth options.
+                </li>
+                <li>
                   <code className="rounded bg-muted px-1.5 py-0.5">region</code>{" "}
                   (optional): AWS region where your infrastructure is deployed.
                   Defaults to{" "}
@@ -1034,8 +1173,15 @@ export default function SDKReferencePageContent() {
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     credentials
                   </code>{" "}
-                  (optional): AWS credentials object. Auto-detected if not
-                  provided.
+                  (optional): AWS credentials (static object or provider
+                  function). Auto-detected if not provided.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    roleArn
+                  </code>{" "}
+                  (optional): IAM Role ARN to assume (for OIDC federation or
+                  cross-account access).
                 </li>
                 <li>
                   <code className="rounded bg-muted px-1.5 py-0.5">
@@ -1043,31 +1189,53 @@ export default function SDKReferencePageContent() {
                   </code>{" "}
                   (optional): Custom SES endpoint (for testing with LocalStack).
                 </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    inboxBucketName
+                  </code>{" "}
+                  (optional): S3 bucket for inbound email storage. Enables{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">inbox</code>{" "}
+                  API.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    historyTableName
+                  </code>{" "}
+                  (optional): DynamoDB table for email event history. Enables{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">events</code>{" "}
+                  API.
+                </li>
               </ul>
             </div>
             <div className="mt-4">
               <h4 className="mb-2 font-medium">Authentication Order</h4>
               <ol className="list-inside list-decimal space-y-1 text-muted-foreground text-sm">
-                <li>Explicit credentials passed to constructor</li>
                 <li>
-                  Environment variables (
-                  <code className="rounded bg-muted px-1.5 py-0.5">
-                    AWS_ACCESS_KEY_ID
-                  </code>
-                  ,{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5">
-                    AWS_SECRET_ACCESS_KEY
-                  </code>
-                  )
+                  Pre-configured client (
+                  <code className="rounded bg-muted px-1.5 py-0.5">client</code>{" "}
+                  option)
                 </li>
                 <li>
-                  Shared credentials file (
+                  OIDC role assumption (
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    roleArn
+                  </code>{" "}
+                  option)
+                </li>
+                <li>
+                  Explicit credentials (
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    credentials
+                  </code>{" "}
+                  option)
+                </li>
+                <li>
+                  AWS credential chain (env vars,{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     ~/.aws/credentials
                   </code>
-                  )
+                  , IAM role)
                 </li>
-                <li>IAM role (EC2, ECS, Lambda)</li>
               </ol>
             </div>
           </CardContent>
@@ -1930,6 +2098,320 @@ export default function SDKReferencePageContent() {
         </CodeBlock>
       </section>
 
+      {/* Send Batch */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="send-batch"
+          markdown={SECTION_MD.sendBatch}
+          title="Send Batch"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Send unique emails to multiple recipients in a single API call (max
+          100 entries). Unlike{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            sendBulkTemplate()
+          </code>{" "}
+          which requires a pre-created SES template,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">sendBatch()</code>{" "}
+          lets you provide different subject, HTML, and text per recipient
+          inline.
+        </p>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Code2 className="h-5 w-5" />
+              Method
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <code className="block rounded bg-muted p-4 font-mono text-sm">
+              {
+                "email.sendBatch(params: SendBatchParams): Promise<SendBatchResult>"
+              }
+            </code>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-4 font-medium text-lg">Parameters</h3>
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Parameter</th>
+                  <th className="pb-2 text-left">Type</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">from</code>
+                  </td>
+                  <td className="py-2">string | EmailAddress</td>
+                  <td className="py-2">
+                    Sender email address (must be verified)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries
+                    </code>
+                  </td>
+                  <td className="py-2">BatchEmailEntry[]</td>
+                  <td className="py-2">
+                    List of recipients with unique content (max 100)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].to
+                    </code>
+                  </td>
+                  <td className="py-2">string | EmailAddress</td>
+                  <td className="py-2">Recipient email address</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].subject
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Email subject for this entry</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].html
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    HTML body (optional, mutually exclusive with react)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].text
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Plain text body (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].react
+                    </code>
+                  </td>
+                  <td className="py-2">ReactElement</td>
+                  <td className="py-2">React.email component (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      entries[].tags
+                    </code>
+                  </td>
+                  <td className="py-2">{"Record<string, string>"}</td>
+                  <td className="py-2">
+                    Per-entry SES tags (replaces defaults for this entry)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      replyTo
+                    </code>
+                  </td>
+                  <td className="py-2">string | string[]</td>
+                  <td className="py-2">
+                    Reply-to address(es), shared across all entries (optional)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">tags</code>
+                  </td>
+                  <td className="py-2">{"Record<string, string>"}</td>
+                  <td className="py-2">Default SES message tags (optional)</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      configurationSetName
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    Configuration set for tracking (optional)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-4 font-medium text-lg">Response</h3>
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Field</th>
+                  <th className="pb-2 text-left">Type</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      results
+                    </code>
+                  </td>
+                  <td className="py-2">BatchEntryResult[]</td>
+                  <td className="py-2">
+                    Per-entry results in the same order as input
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      successCount
+                    </code>
+                  </td>
+                  <td className="py-2">number</td>
+                  <td className="py-2">Number of entries sent successfully</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      failureCount
+                    </code>
+                  </td>
+                  <td className="py-2">number</td>
+                  <td className="py-2">Number of entries that failed</td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-4 font-medium text-lg">Example</h3>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "send-batch.ts",
+              code: sendBatchCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
+      {/* htmlToPlainText Utility */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="html-to-plain-text"
+          markdown={SECTION_MD.htmlToPlainText}
+          title="htmlToPlainText Utility"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Convert HTML to plain text for email fallback. Handles block elements,
+          line breaks, lists, links, and HTML entities. No external
+          dependencies.
+        </p>
+        <p className="mb-4 text-muted-foreground">
+          The SDK uses this internally to auto-generate plain text from HTML
+          when you don{"'"}t provide a{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">text</code> parameter
+          in <code className="rounded bg-muted px-1.5 py-0.5">send()</code> or{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">sendBatch()</code>.
+          You can also import and use it directly.
+        </p>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Code2 className="h-5 w-5" />
+              Signature
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <code className="block rounded bg-muted p-4 font-mono text-sm">
+              {"htmlToPlainText(html: string): string"}
+            </code>
+          </CardContent>
+        </Card>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "html-to-text.ts",
+              code: htmlToPlainTextCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
       {/* Inbox (Inbound Emails) */}
       <section className="mb-12">
         <SectionHeading
@@ -2167,6 +2649,48 @@ export default function SDKReferencePageContent() {
                   language: "typescript",
                   filename: "inbox-attachment.ts",
                   code: inboxAttachmentCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Get Raw MIME Email</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-get-raw.ts",
+                  code: inboxGetRawCode,
                 },
               ]}
               defaultValue="typescript"

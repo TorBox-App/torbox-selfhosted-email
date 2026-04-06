@@ -137,14 +137,6 @@ export default function GuidesPageContent() {
           );
         })}
       </div>
-
-      {/* Coming Soon */}
-      <div className="mt-12 rounded-lg border border-dashed p-8 text-center">
-        <p className="text-muted-foreground">
-          More guides coming soon: IP warming, bounce handling, compliance best
-          practices, and multi-tenant email architecture.
-        </p>
-      </div>
     </DocsLayout>
   );
 }

@@ -42,7 +42,7 @@ const installCommands = {
 const listInboundCode = `import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail({
-  inboundBucket: 'your-inbound-bucket-name',
+  inboxBucketName: 'your-inbound-bucket-name',
 });
 
 // List recent inbound emails

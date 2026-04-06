@@ -19,6 +19,30 @@ import {
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
 
+const eventLimitExample = `HTTP/1.1 429 Too Many Requests
+Retry-After: 1728000
+X-Event-Limit: 50000
+X-Event-Current: 62500
+X-Event-Remaining: 0
+X-Event-Percent: 125
+X-Event-Exceeded: true
+
+{
+  "error": "event_limit_exceeded",
+  "message": "Monthly event limit exceeded (125% used). Upgrade your plan to continue ingesting events.",
+  "upgradeUrl": "https://app.wraps.dev/settings/billing",
+  "current": 62500,
+  "limit": 50000,
+  "percentUsed": 125,
+  "resetsAt": "2026-05-01T00:00:00.000Z"
+}`;
+
+const eventHeadersExample = `HTTP/1.1 200 OK
+X-Event-Limit: 250000
+X-Event-Current: 48320
+X-Event-Remaining: 201680
+X-Event-Percent: 19`;
+
 const retryCode = `async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3) {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const response = await fetch(url, options);
@@ -93,6 +117,40 @@ ${headersExample}
 ${rateLimitedExample}
 \`\`\``,
 
+  eventLimits: `## Event Ingestion Limits
+
+Tracked events (sent via \`POST /v1/events\` and \`POST /v1/events/batch\`) are subject to monthly quotas separate from API rate limits. These limits are applied per organization and reset on the 1st of each month (UTC).
+
+| Plan | Monthly Events |
+|------|---------------|
+| Free | 5,000 |
+| Starter | 50,000 |
+| Growth | 250,000 |
+| Scale | 1,000,000 |
+| Enterprise | Unlimited |
+
+### Grace Period
+
+Event limits use a soft cap with a **25% grace period**:
+
+- **0-100%**: Normal operation
+- **100-125%**: Warning threshold -- events are still accepted, but dashboard warnings and email notifications are sent
+- **125%+**: Hard block -- the API returns \`429 Too Many Requests\` with an \`event_limit_exceeded\` error
+
+The \`Retry-After\` header indicates seconds until the limit resets (1st of next month).
+
+### Event Response Headers
+
+Every event ingestion response includes usage tracking headers:
+
+| Header | Description |
+|--------|-------------|
+| \`X-Event-Limit\` | Monthly event limit for your plan |
+| \`X-Event-Current\` | Events consumed this month |
+| \`X-Event-Remaining\` | Events remaining before soft limit |
+| \`X-Event-Percent\` | Percentage of limit used |
+| \`X-Event-Exceeded\` | Set to \`true\` when hard-blocked at 125% |`,
+
   handling429: `## Handling 429 Errors
 
 When you receive a 429 status code:
@@ -113,6 +171,8 @@ Rate limits for the Wraps Platform API by plan, with response headers and error 
 ${SECTION_MD.limitsByPlan}
 
 ${SECTION_MD.publicEndpoints}
+
+${SECTION_MD.eventLimits}
 
 ${SECTION_MD.responseHeaders}
 
@@ -257,6 +317,234 @@ export default function PageContent() {
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Event Ingestion Limits */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-6"
+          id="event-limits"
+          markdown={SECTION_MD.eventLimits}
+          title="Event Ingestion Limits"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Tracked events (sent via{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+            POST /v1/events
+          </code>{" "}
+          and{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+            POST /v1/events/batch
+          </code>
+          ) are subject to monthly quotas separate from API rate limits. Limits
+          reset on the 1st of each month (UTC).
+        </p>
+        <Card className="mb-6">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium">Plan</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Monthly Events
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  {[
+                    { plan: "Free", events: "5,000" },
+                    { plan: "Starter", events: "50,000" },
+                    { plan: "Growth", events: "250,000" },
+                    { plan: "Scale", events: "1,000,000" },
+                    { plan: "Enterprise", events: "Unlimited" },
+                  ].map((row, i) => (
+                    <tr className={i < 4 ? "border-b" : ""} key={row.plan}>
+                      <td className="px-4 py-2 font-medium text-foreground">
+                        {row.plan}
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          {row.events}
+                        </code>{" "}
+                        events
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-3 font-medium text-lg" id="grace-period">
+          Grace Period
+        </h3>
+        <p className="mb-4 text-muted-foreground">
+          Event limits use a soft cap with a 25% grace period:
+        </p>
+        <div className="mb-6 space-y-2">
+          {[
+            {
+              range: "0-100%",
+              desc: "Normal operation",
+            },
+            {
+              range: "100-125%",
+              desc: "Warning threshold -- events still accepted, dashboard warnings and email notifications sent",
+            },
+            {
+              range: "125%+",
+              desc: "Hard block -- API returns 429 with event_limit_exceeded error",
+            },
+          ].map((tier) => (
+            <div
+              className="flex items-start gap-3 rounded-lg border border-border p-3"
+              key={tier.range}
+            >
+              <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs">
+                {tier.range}
+              </code>
+              <span className="text-muted-foreground text-sm">{tier.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="mb-3 font-medium text-lg" id="event-response-headers">
+          Event Response Headers
+        </h3>
+        <p className="mb-4 text-muted-foreground">
+          Every event ingestion response includes usage tracking headers:
+        </p>
+        <Card className="mb-4">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium">Header</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  {[
+                    {
+                      header: "X-Event-Limit",
+                      desc: "Monthly event limit for your plan",
+                    },
+                    {
+                      header: "X-Event-Current",
+                      desc: "Events consumed this month",
+                    },
+                    {
+                      header: "X-Event-Remaining",
+                      desc: "Events remaining before soft limit",
+                    },
+                    {
+                      header: "X-Event-Percent",
+                      desc: "Percentage of limit used",
+                    },
+                    {
+                      header: "X-Event-Exceeded",
+                      desc: "Set to true when hard-blocked at 125%",
+                    },
+                  ].map((row, i) => (
+                    <tr className={i < 4 ? "border-b" : ""} key={row.header}>
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          {row.header}
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">{row.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mb-4">
+          <h4 className="mb-3 font-medium" id="event-headers-example">
+            Normal response
+          </h4>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "http",
+                filename: "event headers",
+                code: eventHeadersExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
+
+        <div>
+          <h4 className="mb-3 font-medium" id="event-limit-exceeded">
+            Limit exceeded response (429)
+          </h4>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "http",
+                filename: "event limit exceeded",
+                code: eventLimitExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
       </section>
 
       {/* Response Headers */}

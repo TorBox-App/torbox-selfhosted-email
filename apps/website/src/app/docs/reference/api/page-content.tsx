@@ -33,6 +33,58 @@ const client = new WrapsClient({
 
 const contacts = await client.contacts.list();`;
 
+const triggerWorkflowExample = `curl -X POST https://api.wraps.dev/v1/workflows/:workflowId/trigger \\
+  -H "Authorization: Bearer wraps_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contactEmail": "user@example.com",
+    "data": { "plan": "pro", "source": "api" }
+  }'`;
+
+const batchTriggerExample = `curl -X POST https://api.wraps.dev/v1/workflows/:workflowId/trigger/batch \\
+  -H "Authorization: Bearer wraps_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contacts": [
+      { "contactEmail": "alice@example.com", "data": { "tier": "gold" } },
+      { "contactEmail": "bob@example.com" }
+    ],
+    "data": { "campaign": "spring-2026" }
+  }'`;
+
+const retryExecutionExample = `curl -X POST https://api.wraps.dev/v1/workflows/executions/:executionId/retry \\
+  -H "Authorization: Bearer wraps_your_api_key"`;
+
+const cancelExecutionExample = `curl -X POST https://api.wraps.dev/v1/workflows/executions/:executionId/cancel \\
+  -H "Authorization: Bearer wraps_your_api_key"`;
+
+const batchStatusExample = `// GET /v1/batch/:id response
+{
+  "id": "batch_abc123",
+  "status": "completed",
+  "channel": "email",
+  "name": "Spring Campaign",
+  "totalRecipients": 5000,
+  "processedRecipients": 5000,
+  "sent": 4985,
+  "failed": 15,
+  "startedAt": "2026-04-06T10:00:00.000Z",
+  "completedAt": "2026-04-06T10:05:32.000Z",
+  "createdAt": "2026-04-06T09:59:58.000Z"
+}`;
+
+const contactTopicPatchExample = `# PATCH adds topics without removing existing ones
+curl -X PATCH https://api.wraps.dev/v1/contacts/:id \\
+  -H "Authorization: Bearer wraps_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "topicIds": ["topic_new"] }'
+
+# PUT replaces ALL topic subscriptions
+curl -X PUT https://api.wraps.dev/v1/contacts/:id/topics \\
+  -H "Authorization: Bearer wraps_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "topicIds": ["topic_a", "topic_b"] }'`;
+
 // ============================================================================
 // MARKDOWN CONTENT FOR AI COPY
 // ============================================================================
@@ -79,6 +131,110 @@ API keys are created in the Wraps dashboard under Settings > API Keys.`,
 | Unsubscribe | RFC 8058 one-click unsubscribe | Token-based |
 | Tools | Free email deliverability tools | No |`,
 
+  workflows: `## Workflows
+
+Trigger, manage, and control workflow executions via the API. Workflows must have \`triggerType: "api"\` and be enabled.
+
+### Trigger Workflow
+
+\`POST /v1/workflows/:workflowId/trigger\`
+
+Triggers a workflow for a single contact. Identify the contact by ID or email.
+
+**Request body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`contactId\` | string | One of contactId/contactEmail | Contact UUID |
+| \`contactEmail\` | string | One of contactId/contactEmail | Contact email address |
+| \`data\` | object | No | Arbitrary data passed to the workflow |
+
+**Response (200):**
+\`\`\`json
+{ "success": true, "message": "Workflow triggered successfully", "workflowId": "...", "workflowName": "...", "contactId": "..." }
+\`\`\`
+
+### Batch Trigger Workflow
+
+\`POST /v1/workflows/:workflowId/trigger/batch\`
+
+Trigger a workflow for multiple contacts in one request. Per-contact data is merged with common data. Duplicate contacts are automatically deduplicated.
+
+**Request body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`contacts\` | array | Yes | Array of \`{ contactId?, contactEmail?, data? }\` |
+| \`data\` | object | No | Common data merged into every trigger |
+
+**Response (200):**
+\`\`\`json
+{ "success": true, "workflowId": "...", "workflowName": "...", "triggered": 42, "errors": [] }
+\`\`\`
+
+### Retry Failed Execution
+
+\`POST /v1/workflows/executions/:executionId/retry\`
+
+Retries a failed workflow execution from the step where it failed. Previously completed steps are preserved. Only executions with \`status: "failed"\` can be retried.
+
+**Response (200):**
+\`\`\`json
+{ "success": true, "message": "Execution retry started" }
+\`\`\`
+
+### Cancel Execution
+
+\`POST /v1/workflows/executions/:executionId/cancel\`
+
+Cancels an active workflow execution. Cleans up any pending schedulers and adjusts workflow stats.
+
+**Response (200):**
+\`\`\`json
+{ "success": true }
+\`\`\``,
+
+  batch: `## Batch Sending
+
+### Create Batch Send
+
+\`POST /v1/batch\` -- Creates a batch send job and queues it for processing. Supports immediate and scheduled sends.
+
+### Get Batch Status
+
+\`GET /v1/batch/:id\` -- Returns the full status of a batch send job including progress tracking fields.
+
+**Response (200):**
+| Field | Type | Description |
+|-------|------|-------------|
+| \`id\` | string | Batch ID |
+| \`status\` | string | \`queued\`, \`scheduled\`, \`processing\`, \`completed\`, \`failed\`, or \`cancelled\` |
+| \`channel\` | string | \`email\` or \`sms\` |
+| \`name\` | string or null | Batch name |
+| \`totalRecipients\` | number | Total number of targeted recipients |
+| \`processedRecipients\` | number | Recipients processed so far |
+| \`sent\` | number | Successfully sent count |
+| \`failed\` | number | Failed send count |
+| \`startedAt\` | string or null | ISO 8601 timestamp when processing began |
+| \`completedAt\` | string or null | ISO 8601 timestamp when processing finished |
+| \`createdAt\` | string | ISO 8601 creation timestamp |
+
+### Cancel Batch Send
+
+\`DELETE /v1/batch/:id\` -- Cancels a batch in \`scheduled\`, \`queued\`, or \`processing\` status. Scheduled batches also have their EventBridge schedule deleted.`,
+
+  contactTopics: `## Contact Topics: PATCH vs PUT
+
+Topic subscriptions support two update strategies:
+
+### PATCH /v1/contacts/:id (with topicIds/topicSlugs)
+
+**Adds** topics to the contact's existing subscriptions without removing any. Existing subscriptions are preserved. If a topic requires double opt-in and was not previously confirmed, a confirmation email is sent.
+
+### PUT /v1/contacts/:id/topics
+
+**Replaces all** topic subscriptions. Existing subscriptions not in the new list are removed. Previously confirmed topics keep their confirmation status when re-subscribed. Triggers \`topic_subscribed\` and \`topic_unsubscribed\` workflow events as appropriate.
+
+Both endpoints accept \`topicIds\` (UUIDs) and \`topicSlugs\` (human-readable slugs) in the request body.`,
+
   openapi: `## OpenAPI Spec
 
 The full OpenAPI 3.0.3 specification is available at:
@@ -98,6 +254,12 @@ ${SECTION_MD.baseUrl}
 ${SECTION_MD.authentication}
 
 ${SECTION_MD.endpoints}
+
+${SECTION_MD.workflows}
+
+${SECTION_MD.batch}
+
+${SECTION_MD.contactTopics}
 
 ${SECTION_MD.openapi}
 `;
@@ -129,7 +291,7 @@ const endpointGroups = [
     name: "Batch",
     description: "Batch email sending for broadcasts",
     auth: true,
-    methods: ["POST"],
+    methods: ["POST", "GET", "DELETE"],
   },
   {
     name: "Events",
@@ -361,6 +523,570 @@ export default function PageContent() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Workflows */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-6"
+          id="workflows"
+          markdown={SECTION_MD.workflows}
+          title="Workflows"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Trigger, manage, and control workflow executions via the API.
+          Workflows must have{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+            triggerType: &quot;api&quot;
+          </code>{" "}
+          and be enabled.
+        </p>
+
+        {/* Trigger Workflow */}
+        <div className="mb-6">
+          <h3 className="mb-3 font-medium text-lg" id="trigger-workflow">
+            Trigger Workflow
+          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <Badge variant="secondary">POST</Badge>
+            <code className="text-sm">/v1/workflows/:workflowId/trigger</code>
+          </div>
+          <p className="mb-3 text-muted-foreground text-sm">
+            Triggers a workflow for a single contact. Identify the contact by ID
+            or email. Arbitrary data can be passed through to the workflow.
+          </p>
+          <Card className="mb-3">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-4 py-2 text-left font-medium">Field</th>
+                      <th className="px-4 py-2 text-left font-medium">Type</th>
+                      <th className="px-4 py-2 text-left font-medium">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-b">
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          contactId
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">string</td>
+                      <td className="px-4 py-2">
+                        Contact UUID (provide this or contactEmail)
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          contactEmail
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">string</td>
+                      <td className="px-4 py-2">
+                        Contact email (alternative to contactId)
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          data
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">object</td>
+                      <td className="px-4 py-2">
+                        Arbitrary data passed to the workflow
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "bash",
+                filename: "trigger workflow",
+                code: triggerWorkflowExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
+
+        {/* Batch Trigger */}
+        <div className="mb-6">
+          <h3 className="mb-3 font-medium text-lg" id="batch-trigger-workflow">
+            Batch Trigger Workflow
+          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <Badge variant="secondary">POST</Badge>
+            <code className="text-sm">
+              /v1/workflows/:workflowId/trigger/batch
+            </code>
+          </div>
+          <p className="mb-3 text-muted-foreground text-sm">
+            Trigger a workflow for multiple contacts in one request. Per-contact
+            data is merged with common data. Duplicate contacts are
+            automatically deduplicated.
+          </p>
+          <Card className="mb-3">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-4 py-2 text-left font-medium">Field</th>
+                      <th className="px-4 py-2 text-left font-medium">Type</th>
+                      <th className="px-4 py-2 text-left font-medium">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-b">
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          contacts
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">array</td>
+                      <td className="px-4 py-2">
+                        Array of{" "}
+                        <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                          {"{ contactId?, contactEmail?, data? }"}
+                        </code>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          data
+                        </code>
+                      </td>
+                      <td className="px-4 py-2">object</td>
+                      <td className="px-4 py-2">
+                        Common data merged into every trigger
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "bash",
+                filename: "batch trigger",
+                code: batchTriggerExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
+
+        {/* Retry Execution */}
+        <div className="mb-6">
+          <h3 className="mb-3 font-medium text-lg" id="retry-execution">
+            Retry Failed Execution
+          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <Badge variant="secondary">POST</Badge>
+            <code className="text-sm">
+              /v1/workflows/executions/:executionId/retry
+            </code>
+          </div>
+          <p className="mb-3 text-muted-foreground text-sm">
+            Retries a failed workflow execution from the step where it failed.
+            Previously completed steps are preserved. Only executions with
+            status{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">failed</code>{" "}
+            can be retried.
+          </p>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "bash",
+                filename: "retry execution",
+                code: retryExecutionExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
+
+        {/* Cancel Execution */}
+        <div className="mb-6">
+          <h3 className="mb-3 font-medium text-lg" id="cancel-execution">
+            Cancel Execution
+          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <Badge variant="secondary">POST</Badge>
+            <code className="text-sm">
+              /v1/workflows/executions/:executionId/cancel
+            </code>
+          </div>
+          <p className="mb-3 text-muted-foreground text-sm">
+            Cancels an active workflow execution. Cleans up any pending
+            schedulers and adjusts workflow stats.
+          </p>
+          <CodeBlock
+            className="h-auto"
+            data={[
+              {
+                language: "bash",
+                filename: "cancel execution",
+                code: cancelExecutionExample,
+              },
+            ]}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
+                {(item) => (
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
+                )}
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
+        </div>
+      </section>
+
+      {/* Batch Sending */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-6"
+          id="batch-sending"
+          markdown={SECTION_MD.batch}
+          title="Batch Sending"
+        />
+        <p className="mb-4 text-muted-foreground">
+          The{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+            GET /v1/batch/:id
+          </code>{" "}
+          endpoint returns the full batch status including progress tracking
+          fields:
+        </p>
+        <Card className="mb-4">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium">Field</th>
+                    <th className="px-4 py-2 text-left font-medium">Type</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  {[
+                    {
+                      field: "id",
+                      type: "string",
+                      desc: "Batch ID",
+                    },
+                    {
+                      field: "status",
+                      type: "string",
+                      desc: "queued, scheduled, processing, completed, failed, or cancelled",
+                    },
+                    {
+                      field: "channel",
+                      type: "string",
+                      desc: "email or sms",
+                    },
+                    {
+                      field: "name",
+                      type: "string | null",
+                      desc: "Batch name",
+                    },
+                    {
+                      field: "totalRecipients",
+                      type: "number",
+                      desc: "Total targeted recipients",
+                    },
+                    {
+                      field: "processedRecipients",
+                      type: "number",
+                      desc: "Recipients processed so far",
+                    },
+                    {
+                      field: "sent",
+                      type: "number",
+                      desc: "Successfully sent count",
+                    },
+                    {
+                      field: "failed",
+                      type: "number",
+                      desc: "Failed send count",
+                    },
+                    {
+                      field: "startedAt",
+                      type: "string | null",
+                      desc: "ISO 8601 timestamp when processing began",
+                    },
+                    {
+                      field: "completedAt",
+                      type: "string | null",
+                      desc: "ISO 8601 timestamp when processing finished",
+                    },
+                    {
+                      field: "createdAt",
+                      type: "string",
+                      desc: "ISO 8601 creation timestamp",
+                    },
+                  ].map((row, i) => (
+                    <tr className={i < 10 ? "border-b" : ""} key={row.field}>
+                      <td className="px-4 py-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                          {row.field}
+                        </code>
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs">
+                        {row.type}
+                      </td>
+                      <td className="px-4 py-2">{row.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "json",
+              filename: "batch status response",
+              code: batchStatusExample,
+            },
+          ]}
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <p className="mt-3 text-muted-foreground text-sm">
+          Use{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+            DELETE /v1/batch/:id
+          </code>{" "}
+          to cancel a batch in{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            scheduled
+          </code>
+          , <code className="rounded bg-muted px-1 py-0.5 text-xs">queued</code>
+          , or{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            processing
+          </code>{" "}
+          status.
+        </p>
+      </section>
+
+      {/* Contact Topics */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-6"
+          id="contact-topics"
+          markdown={SECTION_MD.contactTopics}
+          title="Contact Topics: PATCH vs PUT"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Topic subscriptions support two update strategies with different
+          semantics:
+        </p>
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                PATCH /v1/contacts/:id
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-sm">
+                <strong>Adds</strong> topics to existing subscriptions. No
+                topics are removed. Safe for incremental updates from multiple
+                sources.
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                PUT /v1/contacts/:id/topics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-sm">
+                <strong>Replaces all</strong> subscriptions. Topics not in the
+                new list are unsubscribed. Triggers workflow events for both
+                additions and removals.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        <p className="mb-4 text-muted-foreground text-sm">
+          Both endpoints accept{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">topicIds</code>{" "}
+          (UUIDs) and{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            topicSlugs
+          </code>{" "}
+          (human-readable slugs). Topics with double opt-in enabled will send a
+          confirmation email unless the contact was previously confirmed.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "bash",
+              filename: "PATCH vs PUT",
+              code: contactTopicPatchExample,
+            },
+          ]}
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
       </section>
 
       {/* SDK Usage */}

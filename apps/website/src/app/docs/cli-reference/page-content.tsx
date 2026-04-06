@@ -208,6 +208,15 @@ export default function CLIReferencePageContent() {
                   Open support channel
                 </p>
               </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">wraps update</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Update the CLI to the latest version. For standalone installs,
+                  downloads the latest release from GitHub, verifies the
+                  checksum, and replaces the binary. For npm installs, shows the
+                  appropriate npm update command instead.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

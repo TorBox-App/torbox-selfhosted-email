@@ -506,6 +506,37 @@ export default function InfrastructureSmsPageContent() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Infrastructure as Code</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-muted-foreground text-sm">
+                Deploy SMS infrastructure with{" "}
+                <Link
+                  className="text-primary underline"
+                  href="/docs/cdk-reference"
+                >
+                  CDK
+                </Link>{" "}
+                or{" "}
+                <Link
+                  className="text-primary underline"
+                  href="/docs/pulumi-reference"
+                >
+                  Pulumi
+                </Link>{" "}
+                instead of the CLI.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/docs/cdk-reference">
+                  View CDK Docs
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
