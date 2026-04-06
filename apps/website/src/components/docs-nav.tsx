@@ -62,6 +62,26 @@ const navItems: NavSection[] = [
     ],
   },
   {
+    title: "Platform",
+    items: [
+      {
+        title: "Quickstart",
+        href: "/docs/quickstart/platform",
+        icon: Rocket,
+      },
+      {
+        title: "SDK Reference",
+        href: "/docs/client-sdk-reference",
+        icon: Blocks,
+      },
+      {
+        title: "CLI Commands",
+        href: "/docs/cli-reference/platform",
+        icon: Terminal,
+      },
+    ],
+  },
+  {
     title: "Email",
     items: [
       {
@@ -172,26 +192,6 @@ const navItems: NavSection[] = [
         title: "Infrastructure",
         href: "/docs/infrastructure/cdn",
         icon: Server,
-      },
-    ],
-  },
-  {
-    title: "Platform",
-    items: [
-      {
-        title: "Quickstart",
-        href: "/docs/quickstart/platform",
-        icon: Rocket,
-      },
-      {
-        title: "SDK Reference",
-        href: "/docs/client-sdk-reference",
-        icon: Blocks,
-      },
-      {
-        title: "CLI Commands",
-        href: "/docs/cli-reference/platform",
-        icon: Terminal,
       },
     ],
   },
