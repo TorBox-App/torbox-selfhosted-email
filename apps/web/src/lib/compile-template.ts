@@ -109,7 +109,21 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
   };
 }
 
-function extractVariables(
+// Handlebars block helpers and built-ins — not user template variables.
+// The regex below already skips `{{#if}}` and `{{/if}}` (because of `#` and `/`),
+// but `{{else}}` matches as a bare word, so we filter it explicitly here.
+const HANDLEBARS_KEYWORDS = new Set([
+  "else",
+  "this",
+  "if",
+  "unless",
+  "each",
+  "with",
+  "lookup",
+  "log",
+]);
+
+export function extractVariables(
   html: string
 ): Array<{ name: string; fallback?: string }> {
   const vars: Array<{ name: string; fallback?: string }> = [];
@@ -119,7 +133,7 @@ function extractVariables(
 
   while (match !== null) {
     const name = match[1];
-    if (!seen.has(name)) {
+    if (!(seen.has(name) || HANDLEBARS_KEYWORDS.has(name))) {
       seen.add(name);
       vars.push({ name, fallback: match[2]?.trim() });
     }
