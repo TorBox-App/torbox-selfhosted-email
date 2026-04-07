@@ -87,6 +87,7 @@
       "flatted": "^3.4.0",
       "serialize-javascript": "^7.0.3",
       "rollup": "^4.59.0",
+      "vite": "^7.3.2",
       "ajv@<7": "^6.14.0",
       "ajv@>=8": "^8.18.0",
       "esbuild": "^0.25.0",
