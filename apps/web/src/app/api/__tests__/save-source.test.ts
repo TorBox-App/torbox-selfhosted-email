@@ -259,6 +259,101 @@ describe("Save Source API - POST /api/[orgSlug]/emails/templates/[id]/save-sourc
     expect(response.status).toBe(400);
   });
 
+  it("should return 413 when testData exceeds the 64KB limit", async () => {
+    await db.insert(template).values({
+      id: "test-savesrc-tmpl-toobig",
+      organizationId: testOrganization.id,
+      name: "Too Big TestData",
+      content: {},
+      status: "DRAFT",
+      createdBy: testUser.id,
+      sourceFormat: "react-email",
+      source: "// original",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/save-source/route"
+    );
+
+    // Build a testData object whose JSON-serialized form exceeds 64KB
+    const huge: Record<string, string> = {};
+    const chunk = "x".repeat(1024); // 1 KB string
+    for (let i = 0; i < 100; i++) {
+      huge[`field_${i}`] = chunk;
+    }
+
+    const request = new Request("http://localhost/api/save-source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "// source",
+        compiledHtml: "<html></html>",
+        compiledText: "",
+        variables: [],
+        testData: huge,
+      }),
+    });
+
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-savesrc-tmpl-toobig",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(413);
+
+    const data = await response.json();
+    expect(data.error).toMatch(/testData/i);
+
+    // Verify nothing was persisted
+    const [unchanged] = await db
+      .select()
+      .from(template)
+      .where(eq(template.id, "test-savesrc-tmpl-toobig"));
+    expect(unchanged.source).toBe("// original");
+  });
+
+  it("should accept testData under the 64KB limit", async () => {
+    await db.insert(template).values({
+      id: "test-savesrc-tmpl-undersized",
+      organizationId: testOrganization.id,
+      name: "Normal TestData",
+      content: {},
+      status: "DRAFT",
+      createdBy: testUser.id,
+      sourceFormat: "react-email",
+      source: "// original",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/save-source/route"
+    );
+
+    const request = new Request("http://localhost/api/save-source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "// new source",
+        compiledHtml: "<html></html>",
+        compiledText: "",
+        variables: [],
+        testData: { firstName: "Jane", company: "Acme" },
+      }),
+    });
+
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-savesrc-tmpl-undersized",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(200);
+  });
+
   it("should return 404 for non-existent template", async () => {
     const { POST } = await import(
       "../[orgSlug]/emails/templates/[id]/save-source/route"

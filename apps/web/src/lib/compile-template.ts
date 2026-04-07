@@ -66,8 +66,7 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
   const exportedEmailType =
     (resolvedExports.emailType as string) ?? "marketing";
   const exportedPreviewText = resolvedExports.previewText as string | undefined;
-  const exportedTestData =
-    (resolvedExports.testData as Record<string, unknown> | undefined) ?? {};
+  const exportedTestData = coerceTestDataExport(resolvedExports.testData);
 
   if (typeof Component !== "function") {
     throw new Error(
@@ -112,6 +111,19 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
     previewText: exportedPreviewText,
     testData: exportedTestData,
   };
+}
+
+/**
+ * Coerce a template's `testData` export into a plain object suitable
+ * for Handlebars substitution. Templates may export anything (string,
+ * array, null, etc.) — we only accept plain objects and fall back to
+ * an empty object otherwise.
+ */
+export function coerceTestDataExport(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
 }
 
 export function extractVariables(

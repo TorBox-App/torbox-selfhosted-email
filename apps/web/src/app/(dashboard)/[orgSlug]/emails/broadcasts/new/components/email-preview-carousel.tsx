@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SampleContact } from "@/lib/batch";
-import { renderForPreview } from "@/lib/handlebars";
 import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 
 type EmailPreviewCarouselProps = {
@@ -116,20 +115,37 @@ export function EmailPreviewCarousel({
 
   // Render HTML when template or test data changes
   useEffect(() => {
+    let cancelled = false;
+
     // For code-pushed templates, the stored compiledHtml still has raw
     // `{{var}}` and `{{#if}}/{{else}}/{{/if}}` placeholders so SES can
     // substitute per-recipient at send time. Run Handlebars over it with
     // the current contact's data so the preview matches what they'll see.
+    //
+    // The Handlebars module is ~120KB, so we lazy-import it instead of
+    // pulling it into every visitor's broadcast page bundle.
     if (sourceFormat === "react-email" && compiledHtml) {
-      setHtmlContent(renderForPreview(compiledHtml, testData));
-      return;
+      import("@/lib/handlebars")
+        .then(({ nestKeys, renderForPreview }) => {
+          if (!cancelled) {
+            setHtmlContent(renderForPreview(compiledHtml, nestKeys(testData)));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            // Fall back to raw compiled html so the preview pane isn't
+            // blank if the dynamic import somehow fails.
+            setHtmlContent(compiledHtml);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (!templateContent) {
       return;
     }
-
-    let cancelled = false;
 
     async function renderHtml() {
       try {

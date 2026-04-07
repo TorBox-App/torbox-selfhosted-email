@@ -93,6 +93,16 @@ export async function POST(request: Request, context: RouteContext) {
     const { source, compiledHtml, compiledText, variables, testData } =
       parsed.data;
 
+    // Reject oversized testData payloads (DoS protection — the column is
+    // jsonb with no built-in size limit and the schema accepts any shape).
+    const TEST_DATA_MAX_BYTES = 64 * 1024;
+    if (JSON.stringify(testData).length > TEST_DATA_MAX_BYTES) {
+      return NextResponse.json(
+        { error: "testData exceeds the 64KB limit" },
+        { status: 413 }
+      );
+    }
+
     // Compute source hash
     const sourceHash = createHash("sha256").update(source).digest("hex");
 
