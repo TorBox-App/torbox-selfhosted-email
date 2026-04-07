@@ -8,7 +8,11 @@
  * sucrase / @react-email/render dependencies.
  */
 
-import Handlebars from "handlebars";
+import {
+  type CompiledTemplate,
+  nestKeys as canonicalNestKeys,
+  compileTemplate,
+} from "@wraps/template-render";
 
 /**
  * Bare-word Handlebars tokens that the variable extractor regex matches
@@ -28,49 +32,12 @@ import Handlebars from "handlebars";
 export const HANDLEBARS_KEYWORDS = new Set(["else", "this"]);
 
 /**
- * Convert a flat dict whose keys may use dot notation into a Handlebars-
- * friendly object that supports both forms.
- *
- * Handlebars treats `{{contact.firstName}}` as a path lookup
- * (`data.contact.firstName`), not a flat-key lookup
- * (`data["contact.firstName"]`). Our preview callers build flat dicts with
- * dotted strings, so without this helper Handlebars can't resolve nested
- * variables and the preview shows blanks.
- *
- * The output preserves the original flat keys too, so templates that
- * use the short alias (`{{firstName}}`) continue to work alongside
- * templates that use the dotted form (`{{contact.firstName}}`).
+ * Re-export the canonical `nestKeys` from `@wraps/template-render`. This
+ * file used to ship its own copy; the canonical version is now the single
+ * source of truth and the dashboard preview, the broadcast variable mapper,
+ * the subscription mailer, and any future consumer all share it.
  */
-export function nestKeys(
-  flat: Record<string, unknown>
-): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...flat };
-
-  for (const [key, value] of Object.entries(flat)) {
-    if (!key.includes(".")) {
-      continue;
-    }
-    const segments = key.split(".");
-    let cursor: Record<string, unknown> = out;
-    for (let i = 0; i < segments.length - 1; i++) {
-      const seg = segments[i];
-      const existing = cursor[seg];
-      if (
-        typeof existing !== "object" ||
-        existing === null ||
-        Array.isArray(existing)
-      ) {
-        // Replace primitives or missing values with a fresh object so we
-        // can keep nesting under it.
-        cursor[seg] = {};
-      }
-      cursor = cursor[seg] as Record<string, unknown>;
-    }
-    cursor[segments.at(-1) as string] = value;
-  }
-
-  return out;
-}
+export const nestKeys = canonicalNestKeys;
 
 /**
  * Render compiled template HTML through Handlebars with substitution data
@@ -85,21 +52,27 @@ export function nestKeys(
  * Falls back to the raw HTML if Handlebars compilation fails so a malformed
  * template doesn't blank out the preview pane.
  */
-// Bounded cache of compiled Handlebars templates keyed by html string.
-// The carousel re-renders 5 times per recipient swap and the editor
-// re-renders on every keystroke; without memoization we'd recompile the
-// same template repeatedly. 32 entries is enough for any realistic
-// preview session — when full we drop everything and start over (a
-// proper LRU isn't worth the complexity at this scale).
+// Bounded cache of compiled templates keyed by html string. The carousel
+// re-renders 5 times per recipient swap and the editor re-renders on every
+// keystroke; without memoization we'd recompile the same template
+// repeatedly. 32 entries is enough for any realistic preview session — when
+// full we drop everything and start over (a proper LRU isn't worth the
+// complexity at this scale).
+//
+// The compile + render itself lives in @wraps/template-render so the
+// dashboard preview, the test-send endpoint, the workflow worker, and the
+// subscription mailer all use the same code path. This module just adds
+// the per-html memoization layer that's specific to the browser-side
+// preview hot path.
 const COMPILE_CACHE_MAX = 32;
-const compileCache = new Map<string, HandlebarsTemplateDelegate>();
+const compileCache = new Map<string, CompiledTemplate>();
 
-function getCompiledTemplate(html: string): HandlebarsTemplateDelegate {
+function getCompiledTemplate(html: string): CompiledTemplate {
   const cached = compileCache.get(html);
   if (cached) {
     return cached;
   }
-  const tmpl = Handlebars.compile(html, { noEscape: false });
+  const tmpl = compileTemplate(html);
   if (compileCache.size >= COMPILE_CACHE_MAX) {
     compileCache.clear();
   }
@@ -114,11 +87,5 @@ export function renderForPreview(
   if (!html) {
     return html;
   }
-  try {
-    const tmpl = getCompiledTemplate(html);
-    return tmpl(data);
-  } catch (err) {
-    console.warn("renderForPreview: Handlebars compile failed", err);
-    return html;
-  }
+  return getCompiledTemplate(html)(data);
 }

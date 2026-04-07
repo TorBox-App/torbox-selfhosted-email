@@ -8,6 +8,7 @@ import {
   organizationExtension,
   template,
 } from "@wraps/db";
+import { renderTemplate } from "@wraps/template-render";
 import { WrapsEmail } from "@wraps.dev/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -128,17 +129,15 @@ export async function POST(request: Request, context: RouteContext) {
 
     const compiledHtml = templateData.compiledHtml;
 
-    function renderTemplate(data: Record<string, unknown>): {
+    function renderForSend(data: Record<string, unknown>): {
       html: string;
       text: string;
     } {
-      let html = compiledHtml;
-      for (const [key, value] of Object.entries(data)) {
-        html = html.replace(
-          new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-          String(value)
-        );
-      }
+      // Use the canonical Wraps Handlebars renderer so test sends evaluate
+      // the same block helpers ({{#if}}, {{#each}}, etc.) that SES would
+      // evaluate at broadcast send time. The previous regex-only substituter
+      // here shipped raw `{{#if firstName}}...{{/if}}` to inboxes.
+      const html = renderTemplate(compiledHtml, data);
       return { html, text: toPlainText(html) };
     }
 
@@ -242,7 +241,7 @@ export async function POST(request: Request, context: RouteContext) {
           }
         }
 
-        const { html, text } = renderTemplate(recipientData);
+        const { html, text } = renderForSend(recipientData);
 
         const fromAddress = senderName
           ? `${senderName} <${senderEmail}>`

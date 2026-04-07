@@ -6,7 +6,7 @@
  */
 
 import { toPlainText } from "@react-email/render";
-import Handlebars from "handlebars";
+import { renderTemplate } from "@wraps/template-render";
 
 import { log } from "../../lib/logger";
 
@@ -28,14 +28,19 @@ export type WorkflowBranch =
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Substitute variables in text with values from a data object
- * Uses Handlebars to properly evaluate conditional syntax like:
- *   {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
+ * Substitute variables in text with values from a data object.
  *
- * This is needed because compiledHtml contains SES-compatible Handlebars syntax
- * from transformVariablesForSes, and workflow sends use direct HTML (not SES templates).
+ * Delegates to the canonical `@wraps/template-render` so workflow sends
+ * render templates exactly the same way as the dashboard preview, the
+ * test-send endpoint, and the subscription confirmation mailer. The
+ * package handles `{{var}}`, `{{#if}}/{{else}}/{{/if}}`, dot paths, and
+ * silently falls back to the raw template on parse errors.
  *
- * Handlebars automatically escapes HTML in {{variable}} expressions for safety.
+ * Handlebars automatically escapes HTML in `{{variable}}` expressions
+ * for safety — the canonical renderer keeps that default.
+ *
+ * The `_options` parameter is retained for backward compatibility with
+ * existing callers; it has no effect today.
  *
  * @exported for testing
  */
@@ -44,23 +49,7 @@ export function substituteVariables(
   data: Record<string, string>,
   _options: { escapeHtml?: boolean } = {}
 ): string {
-  try {
-    // Compile and execute the Handlebars template
-    const template = Handlebars.compile(text, { noEscape: false });
-    return template(data);
-  } catch (error) {
-    // If Handlebars fails, fall back to simple regex replacement
-    log.warn("Workflow: Handlebars compilation failed, using fallback", {
-      error: String(error),
-    });
-    return text.replace(
-      /\{\{\s*(?:contact\.)?([a-zA-Z0-9_]+)\s*\}\}/g,
-      (_match, key) => {
-        const value = data[key.trim()];
-        return value ?? "";
-      }
-    );
-  }
+  return renderTemplate(text, data);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -16,6 +16,7 @@ import {
   template,
   topicSettings,
 } from "@wraps/db";
+import { nestKeys, renderTemplate } from "@wraps/template-render";
 import { WrapsEmail } from "@wraps.dev/email";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
@@ -25,16 +26,22 @@ const structuredLog = (msg: string, data?: Record<string, unknown>) =>
 
 /**
  * Substitute variables in template content.
- * Variables are in the format {{variableName}} or {{object.property}}
+ *
+ * Delegates to the canonical `@wraps/template-render` so the topic
+ * confirmation mailer renders templates exactly the same way as the
+ * dashboard preview, the test-send endpoint, and the workflow worker —
+ * including `{{#if}}/{{else}}/{{/if}}` block helpers, which the previous
+ * regex-only implementation here would have shipped raw to inboxes.
+ *
+ * The flat dotted-key dict (`{"topic.name": "...", "contact.email": "..."}`)
+ * is nested via `nestKeys` so Handlebars can resolve `{{topic.name}}` as
+ * a path lookup on `data.topic.name`.
  */
 function substituteVariables(
   content: string,
   variables: Record<string, string | undefined>
 ): string {
-  return content.replace(
-    /\{\{\s*([^}]+)\s*\}\}/g,
-    (match, key) => variables[key.trim()] ?? match
-  );
+  return renderTemplate(content, nestKeys(variables));
 }
 
 /**

@@ -586,8 +586,69 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     expect(data.warnings[0]).toContain("unknown@example.com");
     expect(data.warnings[0]).toContain("not an existing contact");
 
-    // The placeholder should remain unresolved since no URLs were generated
+    // The renderer must NOT leak raw `{{unsubscribeUrl}}` into the email body.
+    // Since there's no contact, no URL was generated, so Handlebars resolves
+    // the missing variable to an empty string — better than shipping the
+    // literal placeholder to a real inbox. The warning above is the signal
+    // for the caller; the body itself stays clean.
     expect(lastSentEmail).not.toBeNull();
-    expect(lastSentEmail!.html).toContain("{{unsubscribeUrl}}");
+    expect(lastSentEmail!.html).not.toContain("{{unsubscribeUrl}}");
+    expect(lastSentEmail!.html).toContain('href=""');
+  });
+
+  it("evaluates `{{#if}}` Handlebars block helpers in the sent HTML and text", async () => {
+    // Regression: the test-send route used a dumb regex substituter that
+    // only matched `{{var}}` and ignored block helpers, so templates that
+    // used `{{#if firstName}}...{{/if}}` had the raw Handlebars source
+    // delivered to inboxes. After consolidating onto @wraps/template-render,
+    // block helpers must be evaluated.
+    await db.insert(template).values({
+      id: "test-template-handlebars-block",
+      organizationId: testOrganization.id,
+      name: "Handlebars Block Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      emailType: "transactional",
+      sourceFormat: "react-email",
+      compiledHtml:
+        "<html><body><h1>{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup just got easier.</h1></body></html>",
+      testData: { firstName: "Jane" },
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/send-test/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-handlebars-block/send-test`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: ["recipient@example.com"],
+          subject: "Test Subject",
+          testData: { firstName: "Jane" },
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-handlebars-block",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(200);
+
+    expect(lastSentEmail).not.toBeNull();
+    // Block helper must be evaluated, not passed through as raw text
+    expect(lastSentEmail!.html).not.toContain("{{#if");
+    expect(lastSentEmail!.html).not.toContain("{{else}}");
+    expect(lastSentEmail!.html).not.toContain("{{/if}}");
+    expect(lastSentEmail!.html).toContain(
+      "Hey Jane, the setup just got easier."
+    );
   });
 });

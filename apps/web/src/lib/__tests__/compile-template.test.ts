@@ -108,13 +108,16 @@ describe("renderForPreview", () => {
     }
   });
 
-  it("logs a warning when Handlebars compile fails", () => {
+  it("returns the raw html on Handlebars compile failure (no throw, no console.warn)", () => {
+    // The canonical @wraps/template-render renderer swallows compile errors
+    // and returns the raw template string. The literal `{{#if}}` showing in
+    // the preview pane tells the author they have a syntax error — quieter
+    // than a console.warn and easier to spot in the browser.
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const broken = "{{#if firstName}}Hey {{firstName}}";
-      renderForPreview(broken, { firstName: "Jane" });
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy.mock.calls[0][0]).toMatch(/renderForPreview/);
+      expect(renderForPreview(broken, { firstName: "Jane" })).toBe(broken);
+      expect(warnSpy).not.toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();
     }

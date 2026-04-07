@@ -1,0 +1,28 @@
+{
+  "name": "@wraps/template-render",
+  "version": "0.1.0",
+  "description": "Canonical template rendering for Wraps. One place for Handlebars substitution so the dashboard, API, workers, and CLI all render the same way.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "vitest": "^4.0.7"
+  },
+  "peerDependencies": {
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "handlebars": "4.7.9"
+  }
+}
