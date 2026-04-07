@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { EmailType, Template } from "@wraps/db";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
@@ -22,6 +22,7 @@ import {
   useUnpublishTemplate,
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
+import { renderForPreview } from "@/lib/compile-template";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { CodeTemplateAIPanel } from "./code-template-ai-panel";
@@ -84,13 +85,26 @@ export function CodeTemplateEditor({
     }
   }, [template.brandKitId, setSelectedBrandKitId]);
 
-  // Shared preview HTML state — stays mounted across tab switches
+  // Shared preview HTML state — stays mounted across tab switches.
+  // Holds the *raw* compiled HTML with `{{var}}` placeholders intact;
+  // we run Handlebars over it just before passing to the iframe.
   const [previewHtml, setPreviewHtml] = useState(template.compiledHtml ?? "");
 
   // Sync preview when template data changes externally (e.g. AI apply updates cache)
   useEffect(() => {
     setPreviewHtml(template.compiledHtml ?? "");
   }, [template.compiledHtml]);
+
+  // Render Handlebars conditionals and variable substitutions using the
+  // template's exported testData so the iframe matches what recipients see.
+  const renderedPreviewHtml = useMemo(
+    () =>
+      renderForPreview(
+        previewHtml,
+        (template.testData ?? {}) as Record<string, unknown>
+      ),
+    [previewHtml, template.testData]
+  );
 
   // Sender defaults for test email modal
   const [senderDefaults, setSenderDefaults] = useState<SenderDefaults | null>(
@@ -358,7 +372,7 @@ export function CodeTemplateEditor({
 
               {/* Right Panel: always-mounted preview */}
               <ResizablePanel defaultSize={50} minSize={25}>
-                <CodeTemplatePreview html={previewHtml} />
+                <CodeTemplatePreview html={renderedPreviewHtml} />
               </ResizablePanel>
             </ResizablePanelGroup>
 

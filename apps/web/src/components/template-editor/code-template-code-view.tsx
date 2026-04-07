@@ -131,6 +131,7 @@ export function CodeTemplateCodeView({
             compiledHtml: compiled.compiledHtml,
             compiledText: compiled.compiledText,
             variables: compiled.variables,
+            testData: compiled.testData,
           }),
         }
       );

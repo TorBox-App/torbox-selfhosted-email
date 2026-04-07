@@ -17,6 +17,7 @@ const saveSourceSchema = z
       .array(z.record(z.string(), z.unknown()))
       .optional()
       .default([]),
+    testData: z.record(z.string(), z.unknown()).optional().default({}),
   })
   .strict();
 
@@ -89,7 +90,8 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const { source, compiledHtml, compiledText, variables } = parsed.data;
+    const { source, compiledHtml, compiledText, variables, testData } =
+      parsed.data;
 
     // Compute source hash
     const sourceHash = createHash("sha256").update(source).digest("hex");
@@ -104,6 +106,7 @@ export async function POST(request: Request, context: RouteContext) {
         compiledHtml,
         compiledText,
         variables: variables as Record<string, unknown>[],
+        testData,
         lastEditedFrom: "dashboard",
         lastEditedBy: session.user.id,
         updatedAt: now,

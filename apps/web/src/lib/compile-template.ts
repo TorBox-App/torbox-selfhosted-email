@@ -1,3 +1,4 @@
+import Handlebars from "handlebars";
 import { transform } from "sucrase";
 
 type CompileResult = {
@@ -7,6 +8,7 @@ type CompileResult = {
   subject: string;
   emailType: string;
   previewText?: string;
+  testData: Record<string, unknown>;
 };
 
 /**
@@ -64,6 +66,8 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
   const exportedEmailType =
     (resolvedExports.emailType as string) ?? "marketing";
   const exportedPreviewText = resolvedExports.previewText as string | undefined;
+  const exportedTestData =
+    (resolvedExports.testData as Record<string, unknown> | undefined) ?? {};
 
   if (typeof Component !== "function") {
     throw new Error(
@@ -106,7 +110,35 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
     subject: exportedSubject,
     emailType: exportedEmailType,
     previewText: exportedPreviewText,
+    testData: exportedTestData,
   };
+}
+
+/**
+ * Render compiled template HTML through Handlebars with test data so the
+ * preview iframe shows what the email will actually look like — including
+ * `{{#if}}/{{else}}/{{/if}}` block evaluation and `{{var}}` substitution.
+ *
+ * The compiled HTML stored in the database keeps its raw `{{var}}` placeholders
+ * (so SES and the workflow runtime can substitute per-recipient at send time).
+ * This helper is for *display only* in the dashboard editor.
+ *
+ * Falls back to the raw HTML if Handlebars compilation fails so a malformed
+ * template doesn't blank out the preview pane.
+ */
+export function renderForPreview(
+  html: string,
+  data: Record<string, unknown>
+): string {
+  if (!html) {
+    return html;
+  }
+  try {
+    const tmpl = Handlebars.compile(html, { noEscape: false });
+    return tmpl(data);
+  } catch {
+    return html;
+  }
 }
 
 // Handlebars block helpers and built-ins — not user template variables.

@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { extractVariables } from "../compile-template";
+import { extractVariables, renderForPreview } from "../compile-template";
 
 describe("extractVariables", () => {
   it("extracts a simple variable", () => {
@@ -51,5 +51,56 @@ describe("extractVariables", () => {
   it("handles dotted variable names", () => {
     const vars = extractVariables("{{contact.email}}");
     expect(vars.map((v) => v.name)).toEqual(["contact.email"]);
+  });
+});
+
+describe("renderForPreview", () => {
+  it("substitutes simple variables", () => {
+    const html = renderForPreview("Hello {{firstName}}!", {
+      firstName: "Jane",
+    });
+    expect(html).toBe("Hello Jane!");
+  });
+
+  it("renders the truthy branch of an {{#if}} conditional", () => {
+    const html = renderForPreview(
+      "{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup just got easier.",
+      { firstName: "Jane" }
+    );
+    expect(html).toBe("Hey Jane, the setup just got easier.");
+  });
+
+  it("renders the {{else}} branch when the variable is missing", () => {
+    const html = renderForPreview(
+      "{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup just got easier.",
+      {}
+    );
+    expect(html).toBe("The setup just got easier.");
+  });
+
+  it("renders the {{else}} branch when the variable is empty string", () => {
+    const html = renderForPreview(
+      "{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup just got easier.",
+      { firstName: "" }
+    );
+    expect(html).toBe("The setup just got easier.");
+  });
+
+  it("escapes HTML in substituted values to prevent XSS in preview", () => {
+    const html = renderForPreview("{{firstName}}", {
+      firstName: "<script>alert(1)</script>",
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("returns the raw html on Handlebars compile failure", () => {
+    // {{#if without matching {{/if}} is a Handlebars syntax error
+    const broken = "{{#if firstName}}Hey {{firstName}}";
+    expect(renderForPreview(broken, { firstName: "Jane" })).toBe(broken);
+  });
+
+  it("returns empty string when given empty html", () => {
+    expect(renderForPreview("", { firstName: "Jane" })).toBe("");
   });
 });
