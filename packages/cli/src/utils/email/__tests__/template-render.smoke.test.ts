@@ -80,6 +80,17 @@ async function compileTemplateFromFile(filePath: string, slug: string) {
 
 describe("wraps/templates/*.tsx plain-text smoke test", () => {
   if (!existsSync(TEMPLATES_DIR)) {
+    // Loud skip: a silent skip would mean a CI configuration regression
+    // (templates dir disappeared from the workspace) goes unnoticed and
+    // the smoke test stops covering anything. Surface it as a console.warn
+    // so the missing dir is visible in CI logs and a human can decide
+    // whether to fix the configuration or accept the gap.
+    console.warn(
+      `[template-render.smoke] templates directory not found at ${TEMPLATES_DIR} — ` +
+        "skipping all production-template smoke checks. If you expected the " +
+        "templates repo to be checked out alongside this monorepo, this is a " +
+        "CI configuration issue that needs attention."
+    );
     it.skip("templates directory not present — skipping", () => {
       // no-op
     });

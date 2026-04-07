@@ -22,20 +22,29 @@ export function normalizePlainTextMustaches(
   text: string,
   canonicalVars: Set<string>
 ): string {
-  // Build a lowercased lookup so we can match an uppercased plain-text token
-  // back to its canonical camelCase variable name.
+  // Lowercased lookup for the full identifier — handles both bare names
+  // (`firstName`) and dotted paths (`contact.firstName`). The production
+  // canonical set is built by scanning the original HTML output, which
+  // preserves case, so full paths are always present when they should be.
   const canonicalByLower = new Map<string, string>();
   for (const name of canonicalVars) {
     canonicalByLower.set(name.toLowerCase(), name);
   }
 
+  // Restore an identifier that may contain dots (e.g. CONTACT.FIRSTNAME).
+  // Returns the original input unchanged when the lowercased form isn't
+  // in the canonical set — being conservative is safer than guessing,
+  // since a wrong guess just produces a different SES rejection error
+  // while leaving the author with no obvious fix.
   function restoreIdentifier(name: string): string {
-    const lower = name.toLowerCase();
-    return canonicalByLower.get(lower) ?? name;
+    return canonicalByLower.get(name.toLowerCase()) ?? name;
   }
 
+  // Token regex: optional sigil, dotted name, optional space-separated args.
+  // The name group now allows dots so {{CONTACT.FIRSTNAME}} matches as a
+  // single token instead of leaving the trailing `.FIRSTNAME` unmatched.
   return text.replace(
-    /\{\{([#/]?)([A-Z][A-Z0-9_]*)((?:\s+[A-Z0-9_.]+)*)\s*\}\}/g,
+    /\{\{([#/]?)([A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*)((?:\s+[A-Z0-9_.]+)*)\s*\}\}/g,
     (match, sigil: string, name: string, args: string) => {
       const lower = name.toLowerCase();
       const isHelper = lower === "else" || HANDLEBARS_BLOCK_HELPERS.has(lower);
@@ -48,8 +57,10 @@ export function normalizePlainTextMustaches(
         const suffix = restoredArgs ? ` ${restoredArgs}` : "";
         return `{{${sigil}${lower}${suffix}}}`;
       }
-      // Not a helper — check if the leading identifier is a known variable
-      // and the block has no trailing args (variables don't take arguments).
+      // Not a helper — restore the dotted identifier if its full form
+      // is in the canonical set. Variables don't take trailing arguments,
+      // so leave any template that has both a non-helper name AND args
+      // alone.
       if (!args && canonicalByLower.has(lower)) {
         return `{{${sigil}${canonicalByLower.get(lower)}}}`;
       }

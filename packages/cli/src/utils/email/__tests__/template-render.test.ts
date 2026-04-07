@@ -49,4 +49,20 @@ describe("renderTemplateWithProxy", () => {
     expect(text).toContain("{{else}}");
     expect(text).toContain("{{/if}}");
   });
+
+  it("throws a clear error when the component returns null", async () => {
+    // TemplateComponent's type allows `(props) => React.ReactElement | null`,
+    // so a feature-flagged or conditional template can legitimately return
+    // null. The previous implementation cast `element as React.ReactElement`
+    // and passed null to @react-email/render, which throws a confusing
+    // internal error. This pins the contract that null components are
+    // rejected at the boundary with an actionable message.
+    function NullTemplate(_props: Record<string, string>) {
+      return null;
+    }
+
+    await expect(renderTemplateWithProxy(NullTemplate)).rejects.toThrow(
+      /returned null/
+    );
+  });
 });

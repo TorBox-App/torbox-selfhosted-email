@@ -46,8 +46,19 @@ export async function renderTemplateWithProxy(
 
   const { render } = await import("@react-email/render");
   const element = Component(props);
-  const html = await render(element as React.ReactElement);
-  const rawText = await render(element as React.ReactElement, {
+  // TemplateComponent's type allows `(props) => React.ReactElement | null`,
+  // so a feature-flagged or conditional template can legitimately return
+  // null. @react-email/render doesn't throw on null — it silently returns
+  // a doctype-only HTML string and an empty plain-text body, which would
+  // result in the CLI publishing an empty template to SES with no error.
+  // Reject at the boundary with a clear, actionable message.
+  if (element === null) {
+    throw new Error(
+      "Template component returned null. Check that the component's default export returns a React element unconditionally."
+    );
+  }
+  const html = await render(element);
+  const rawText = await render(element, {
     plainText: true,
   });
 

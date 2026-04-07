@@ -72,4 +72,48 @@ describe("normalizePlainTextMustaches", () => {
       input
     );
   });
+
+  it("restores case of dotted variable references like {{CONTACT.FIRSTNAME}}", () => {
+    // Templates that use dotted Handlebars paths inside a <Heading>:
+    //   <Heading>Hi {{contact.firstName}}</Heading>
+    // get uppercased by html-to-text to {{CONTACT.FIRSTNAME}}. SES Handlebars
+    // is case-sensitive — it would treat CONTACT.FIRSTNAME as a missing
+    // attribute and reject the template at send time. The normalizer must
+    // walk each dotted segment and restore each one from the canonical set.
+    const out = normalizePlainTextMustaches(
+      "Hi {{CONTACT.FIRSTNAME}}, welcome to {{ORGANIZATION.NAME}}.",
+      new Set(["contact.firstName", "organization.name"])
+    );
+    expect(out).toBe(
+      "Hi {{contact.firstName}}, welcome to {{organization.name}}."
+    );
+  });
+
+  it("leaves dotted refs alone when the full path is not in the canonical set", () => {
+    // Conservative behavior: if the full lowercased path isn't a known
+    // variable, we don't guess at the right case. The production canonical
+    // set is built by scanning the original (case-preserving) HTML, so
+    // full dotted paths are always present when they should be —
+    // partial-match heuristics aren't needed and would risk mangling
+    // identifiers we don't actually know.
+    const out = normalizePlainTextMustaches(
+      "Hi {{CONTACT.FIRSTNAME}}",
+      new Set(["firstName"])
+    );
+    expect(out).toBe("Hi {{CONTACT.FIRSTNAME}}");
+  });
+
+  it("restores case of dotted refs inside block helpers", () => {
+    // {{#if contact.firstName}}...{{/if}} → {{#IF CONTACT.FIRSTNAME}}...{{/IF}}
+    // after html-to-text. Both the helper case AND the dotted argument case
+    // need to be restored. The block-helper arg path was already covered
+    // for single-word args; this pins the dotted-arg case.
+    const out = normalizePlainTextMustaches(
+      "{{#IF CONTACT.FIRSTNAME}}Hi {{CONTACT.FIRSTNAME}}{{else}}Hi there{{/IF}}",
+      new Set(["contact.firstName"])
+    );
+    expect(out).toBe(
+      "{{#if contact.firstName}}Hi {{contact.firstName}}{{else}}Hi there{{/if}}"
+    );
+  });
 });
