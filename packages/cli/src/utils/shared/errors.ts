@@ -278,7 +278,7 @@ export function handleCLIError(error: unknown, command?: string): never {
       code = `AWS_${parsed.code}`;
       trackError(code, cmdContext, { action: parsed.action });
       // Map to user-friendly WrapsError for message/suggestion
-      const wrapsErr = awsErrorToWrapsError(parsed.code, parsed.action);
+      const wrapsErr = awsErrorToWrapsError(parsed.code, parsed.action, error);
       message = wrapsErr.message;
       suggestion = wrapsErr.suggestion;
       docsUrl = wrapsErr.docsUrl;
@@ -345,7 +345,7 @@ export function handleCLIError(error: unknown, command?: string): never {
     const { code, action } = parseAWSError(error);
     trackError(`AWS_${code}`, cmdContext, { action });
 
-    const wrapsError = awsErrorToWrapsError(code, action);
+    const wrapsError = awsErrorToWrapsError(code, action, error);
 
     clack.log.error(wrapsError.message);
     if (wrapsError.suggestion) {
@@ -417,9 +417,18 @@ export function handleCLIError(error: unknown, command?: string): never {
 /**
  * Convert AWS error code to a user-friendly WrapsError.
  * Extracted to share between JSON and human-readable paths.
+ *
+ * The default branch must NEVER lie about credentials — if the request reached
+ * AWS far enough to throw a named exception, credentials are valid. Surface the
+ * real error name and message so users can self-diagnose.
  */
-function awsErrorToWrapsError(code: string, action?: string): WrapsError {
+export function awsErrorToWrapsError(
+  code: string,
+  action?: string,
+  originalError?: unknown
+): WrapsError {
   switch (code) {
+    // Credential / token errors — these mean the request never reached the API
     case "ExpiredTokenException":
     case "TokenRefreshRequired":
     case "SSOTokenExpired":
@@ -427,7 +436,10 @@ function awsErrorToWrapsError(code: string, action?: string): WrapsError {
     case "InvalidClientTokenId":
     case "InvalidAccessKeyId":
     case "SignatureDoesNotMatch":
+    case "UnrecognizedClientException":
       return errors.accessKeyInvalid();
+
+    // IAM permission errors — request reached AWS but was denied
     case "AccessDenied":
     case "AccessDeniedException":
     case "UnauthorizedAccess":
@@ -436,8 +448,38 @@ function awsErrorToWrapsError(code: string, action?: string): WrapsError {
         "AWS resource",
         "Ensure your IAM user/role has the required permissions."
       );
+
+    // SES SendEmail errors — request reached SES but was rejected
+    case "MessageRejected":
+      return errors.sesMessageRejected(sanitizeErrorMessage(originalError));
+    case "MailFromDomainNotVerifiedException":
+      return errors.sesMailFromNotVerified(sanitizeErrorMessage(originalError));
+    case "AccountSendingPausedException":
+      return errors.sesAccountSendingPaused();
+    case "ConfigurationSetSendingPausedException":
+      return errors.sesConfigSetSendingPaused();
+    case "ConfigurationSetDoesNotExistException":
+      return errors.sesConfigSetMissing(sanitizeErrorMessage(originalError));
+
+    // Throughput / quota errors
+    case "Throttling":
+    case "ThrottlingException":
+    case "TooManyRequestsException":
+      return errors.awsThrottled(action);
+    case "LimitExceededException":
+    case "ServiceQuotaExceededException":
+      return errors.awsLimitExceeded(
+        action,
+        sanitizeErrorMessage(originalError)
+      );
+
+    // Anything else — surface the real error instead of lying about credentials
     default:
-      return errors.noAWSCredentials();
+      return errors.awsUnknownError(
+        code,
+        action,
+        sanitizeErrorMessage(originalError)
+      );
   }
 }
 
@@ -669,6 +711,74 @@ export const errors = {
       "SES_PERMISSION_DENIED",
       `Your IAM user/role needs the "ses:${action}" permission.\n\nView required SES permissions:\n  wraps permissions --service email --json`,
       "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  // SES SendEmail rejection errors — request reached SES but the send failed
+  // for a reason unrelated to credentials.
+  sesMessageRejected: (detail: string) =>
+    new WrapsError(
+      `SES rejected the message: ${detail}`,
+      "SES_MESSAGE_REJECTED",
+      "Common causes:\n  • Account is in the SES sandbox and the recipient is not a verified address\n  • Sender identity (domain or email) is not verified for sending\n  • The sender domain is verified for receiving but not for sending\n\nCheck status:\n  wraps email status\n  wraps email doctor\n\nRequest production access (exit sandbox):\n  https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html",
+      "https://wraps.dev/docs/guides/email/troubleshooting"
+    ),
+
+  sesMailFromNotVerified: (detail: string) =>
+    new WrapsError(
+      `SES MAIL FROM domain is not verified: ${detail}`,
+      "SES_MAIL_FROM_NOT_VERIFIED",
+      "The custom MAIL FROM domain configured for this identity is not fully verified.\n\nCheck DNS records:\n  wraps email verify\n\nOr remove the custom MAIL FROM domain in the SES console and retry.",
+      "https://docs.aws.amazon.com/ses/latest/dg/mail-from.html"
+    ),
+
+  sesAccountSendingPaused: () =>
+    new WrapsError(
+      "SES account-level sending is paused",
+      "SES_ACCOUNT_SENDING_PAUSED",
+      "Your SES account is currently paused from sending email. This is usually caused by:\n  • A high bounce or complaint rate\n  • An AWS-initiated review\n\nCheck the SES console → Reputation Dashboard for details, then resume sending once the issue is resolved.",
+      "https://docs.aws.amazon.com/ses/latest/dg/reputationdashboard.html"
+    ),
+
+  sesConfigSetSendingPaused: () =>
+    new WrapsError(
+      "SES configuration set sending is paused",
+      "SES_CONFIG_SET_SENDING_PAUSED",
+      "The configuration set used for this send has sending paused. Resume it in the SES console under Configuration Sets, or send without specifying the paused configuration set.",
+      "https://docs.aws.amazon.com/ses/latest/dg/using-configuration-sets.html"
+    ),
+
+  sesConfigSetMissing: (detail: string) =>
+    new WrapsError(
+      `SES configuration set does not exist: ${detail}`,
+      "SES_CONFIG_SET_MISSING",
+      "The configuration set referenced by this send does not exist in the current region. Create it in the SES console, switch regions, or remove the ConfigurationSetName from the request.",
+      "https://docs.aws.amazon.com/ses/latest/dg/using-configuration-sets.html"
+    ),
+
+  // Generic AWS error fallbacks — used by awsErrorToWrapsError when no specific
+  // mapping exists. These NEVER claim credentials are missing.
+  awsThrottled: (action?: string) =>
+    new WrapsError(
+      `AWS request was throttled${action ? ` (${action})` : ""}`,
+      "AWS_THROTTLED",
+      "AWS is rate-limiting requests to this API. Wait a moment and retry.\n\nIf this happens repeatedly, request a service quota increase in the AWS console.",
+      "https://docs.aws.amazon.com/general/latest/gr/api-retries.html"
+    ),
+
+  awsLimitExceeded: (action?: string, detail?: string) =>
+    new WrapsError(
+      `AWS service limit exceeded${action ? ` (${action})` : ""}${detail ? `: ${detail}` : ""}`,
+      "AWS_LIMIT_EXCEEDED",
+      "You've hit a service quota for this AWS API.\n\nRequest a quota increase in the AWS console:\n  Service Quotas → AWS Services → (your service)",
+      "https://docs.aws.amazon.com/general/latest/gr/aws_service_limits.html"
+    ),
+
+  awsUnknownError: (code: string, action?: string, detail?: string) =>
+    new WrapsError(
+      `AWS API error: ${code}${action ? ` (${action})` : ""}${detail ? ` — ${detail}` : ""}`,
+      `AWS_${code}`,
+      `This is an AWS API error, not a credentials problem. Look up "${code}" in the AWS documentation for the failing service.\n\nIf you believe this is a Wraps bug, report it at:\n  https://github.com/wraps-team/wraps/issues`,
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   dynamoDBPermissionDenied: () =>

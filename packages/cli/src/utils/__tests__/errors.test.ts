@@ -235,6 +235,53 @@ describe("handleCLIError", () => {
       expect(output.error.message).toContain("session token has expired");
     });
 
+    it("should NOT report 'AWS credentials not found' for SES MessageRejected", () => {
+      // Bug repro: SES SendEmail throws MessageRejected (e.g., recipient not
+      // verified in sandbox mode). It has $metadata so isAWSError() returns true.
+      // The current default-case in awsErrorToWrapsError lies and says
+      // "AWS credentials not found" — but credentials are perfectly valid.
+      const error = new Error(
+        "Email address is not verified. The following identities failed the check in region US-EAST-1: test@jaststore.com"
+      ) as Error & { $metadata: { httpStatusCode: number } };
+      error.name = "MessageRejected";
+      error.$metadata = { httpStatusCode: 400 };
+
+      handleCLIError(error, "email.inbound.test");
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      // The user-facing message must not mention missing credentials
+      expect(output.error.message).not.toMatch(/credentials not found/i);
+      // And the suggestion must not push the user toward `aws configure`
+      expect(output.error.suggestion ?? "").not.toMatch(/aws configure/i);
+      // Code must be specific to MessageRejected, not the generic credentials code
+      expect(output.error.code).not.toBe("NO_AWS_CREDENTIALS");
+      expect(output.error.code).toBe("AWS_MessageRejected");
+    });
+
+    it("should report a meaningful error for MailFromDomainNotVerifiedException", () => {
+      // Bug repro: SES SendEmail throws MailFromDomainNotVerifiedException
+      // when the MAIL FROM domain is not verified. Currently maps to
+      // "AWS credentials not found" via the default case.
+      const error = new Error(
+        "Mail from domain mail.example.com is not verified."
+      ) as Error & { $metadata: { httpStatusCode: number } };
+      error.name = "MailFromDomainNotVerifiedException";
+      error.$metadata = { httpStatusCode: 400 };
+
+      handleCLIError(error, "email.inbound.test");
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.error.message).not.toMatch(/credentials not found/i);
+      expect(output.error.code).not.toBe("NO_AWS_CREDENTIALS");
+      // The user should see a message that points at the sender domain,
+      // not at credentials.
+      expect(output.error.message.toLowerCase()).toMatch(
+        /domain|mail from|verif/
+      );
+    });
+
     it("should map Pulumi errors to JSON envelope", () => {
       const error = new Error("AccessDenied for sqs:CreateQueue");
 
