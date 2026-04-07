@@ -97,15 +97,47 @@ export function CodeTemplateEditor({
     setPreviewHtml(template.compiledHtml ?? "");
   }, [template.compiledHtml]);
 
+  // Stable, narrowed view of template.testData. The DB schema types this as
+  // `Record<string, unknown> | null` so we coerce nulls to a stable empty
+  // object reference. Without the memo, an inline `?? EMPTY_OBJECT` would
+  // still work, but using useMemo here means downstream consumers (the
+  // SendTestModal preview deps, the renderedPreviewHtml memo) only re-run
+  // when the underlying jsonb value actually changes.
+  const stableTestData = useMemo(
+    () => (template.testData ?? {}) as Record<string, unknown>,
+    [template.testData]
+  );
+
+  // Stable, narrowed view of template.variables. The jsonb column is typed
+  // as `Record<string, unknown>[]` in Drizzle, so we narrow each row to
+  // `{ name: string; fallback?: string }` at the boundary. Rows missing a
+  // string `name` are dropped — they would render an unusable input
+  // otherwise. The narrowing happens once per template change, not per render.
+  const stableTemplateVariables = useMemo(() => {
+    const raw = (template.variables ?? []) as unknown[];
+    const narrowed: Array<{ name: string; fallback?: string }> = [];
+    for (const entry of raw) {
+      if (typeof entry !== "object" || entry === null) {
+        continue;
+      }
+      const obj = entry as Record<string, unknown>;
+      if (typeof obj.name !== "string" || obj.name.length === 0) {
+        continue;
+      }
+      const item: { name: string; fallback?: string } = { name: obj.name };
+      if (typeof obj.fallback === "string") {
+        item.fallback = obj.fallback;
+      }
+      narrowed.push(item);
+    }
+    return narrowed;
+  }, [template.variables]);
+
   // Render Handlebars conditionals and variable substitutions using the
   // template's exported testData so the iframe matches what recipients see.
   const renderedPreviewHtml = useMemo(
-    () =>
-      renderForPreview(
-        previewHtml,
-        (template.testData ?? {}) as Record<string, unknown>
-      ),
-    [previewHtml, template.testData]
+    () => renderForPreview(previewHtml, stableTestData),
+    [previewHtml, stableTestData]
   );
 
   // Sender defaults for test email modal
@@ -387,8 +419,16 @@ export function CodeTemplateEditor({
             )}
           </div>
 
-          {/* Send Test Modal — editor=null since code templates don't use TipTap */}
+          {/* Send Test Modal — editor=null since code templates don't use TipTap.
+              Pass compiled HTML + variables + testData so the modal can render
+              variable inputs, seed defaults, and produce a real preview via
+              Handlebars (matching what recipients see at send time).
+              stableTestData / stableTemplateVariables are memoized at the top
+              of this component so prop references stay stable across renders
+              — without that, the modal's variableDefaults memo + form-reset
+              effect would re-fire on every parent render and wipe user input. */}
           <SendTestModal
+            compiledHtml={previewHtml}
             defaultFrom={senderDefaults?.defaultFrom}
             defaultFromName={senderDefaults?.defaultFromName}
             editor={null}
@@ -396,6 +436,8 @@ export function CodeTemplateEditor({
             onClose={() => setShowSendTestModal(false)}
             orgSlug={orgSlug}
             templateId={templateId}
+            templateTestData={stableTestData}
+            templateVariables={stableTemplateVariables}
           />
         </div>
       </EditorErrorBoundary>

@@ -28,6 +28,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/lib/auth-client";
+import { renderForPreview } from "@/lib/handlebars";
+
+type TemplateVariable = { name: string; fallback?: string };
 
 type SendTestModalProps = {
   editor: Editor | null;
@@ -37,6 +40,25 @@ type SendTestModalProps = {
   onClose: () => void;
   defaultFrom?: string | null;
   defaultFromName?: string | null;
+  /**
+   * Compiled template HTML for code templates (where there is no TipTap
+   * editor instance). When provided, the preview is rendered with
+   * `renderForPreview` so `{{#if}}` blocks and `{{var}}` substitutions
+   * match what recipients will actually see at send time.
+   */
+  compiledHtml?: string | null;
+  /**
+   * Variables declared by the code template's compiler. Used to render
+   * inputs in the form and seed the preview substitution. Each entry's
+   * `fallback` (if any) seeds the input's default value.
+   */
+  templateVariables?: TemplateVariable[];
+  /**
+   * Default test data values curated alongside the template (e.g. exported
+   * from the React Email source). Pre-populates form inputs so users do not
+   * have to retype values they already curated for preview.
+   */
+  templateTestData?: Record<string, unknown>;
 };
 
 // System variables auto-injected by the server for marketing templates
@@ -64,6 +86,9 @@ export function SendTestModal({
   onClose,
   defaultFrom,
   defaultFromName,
+  compiledHtml,
+  templateVariables,
+  templateTestData,
 }: SendTestModalProps) {
   const { data: session } = useSession();
   const [isSending, setIsSending] = useState(false);
@@ -73,12 +98,51 @@ export function SendTestModal({
   // Get user's email for "Send to Self" feature
   const userEmail = session?.user?.email;
 
-  // Get template content and extract variables
-  const templateContent = editor?.getHTML() ?? "";
-  const variables = useMemo(
-    () => extractVariables(templateContent),
-    [templateContent]
-  );
+  // Source of truth for the template body. TipTap editor wins when present
+  // (WYSIWYG templates); otherwise fall back to the compiled HTML supplied
+  // by code templates. Either source contains raw `{{var}}` placeholders
+  // that get substituted at preview/send time.
+  const templateContent = editor?.getHTML() ?? compiledHtml ?? "";
+
+  // For code templates we trust the compiler's variable list (which has
+  // canonical fallbacks attached). For TipTap templates we extract via
+  // regex from the editor's HTML output, since TipTap doesn't track
+  // variables structurally.
+  const variables = useMemo(() => {
+    if (templateVariables && templateVariables.length > 0) {
+      return templateVariables.map((v) => v.name);
+    }
+    return extractVariables(templateContent);
+  }, [templateContent, templateVariables]);
+
+  // Map of variable name → default value for seeding form inputs.
+  // Priority: explicit testData > variable fallback > empty string.
+  // Non-primitive testData values (objects/arrays from jsonb) are
+  // JSON.stringified rather than coerced via String() so they don't
+  // render as the literal "[object Object]" in form inputs.
+  const variableDefaults = useMemo(() => {
+    const defaults: Record<string, string> = {};
+    if (templateVariables) {
+      for (const v of templateVariables) {
+        if (v.fallback !== undefined) {
+          defaults[v.name] = v.fallback;
+        }
+      }
+    }
+    if (templateTestData) {
+      for (const [key, value] of Object.entries(templateTestData)) {
+        if (value === undefined || value === null) {
+          continue;
+        }
+        if (typeof value === "object") {
+          defaults[key] = JSON.stringify(value);
+        } else {
+          defaults[key] = String(value);
+        }
+      }
+    }
+    return defaults;
+  }, [templateVariables, templateTestData]);
 
   // Build dynamic schema based on variables
   const formSchema = useMemo(() => {
@@ -102,7 +166,9 @@ export function SendTestModal({
       from: defaultFrom || "",
       to: "",
       subject: "",
-      ...Object.fromEntries(variables.map((v) => [v, ""])),
+      ...Object.fromEntries(
+        variables.map((v) => [v, variableDefaults[v] ?? ""])
+      ),
     } as FormValues,
     validators: {
       onSubmit: formSchema,
@@ -170,12 +236,14 @@ export function SendTestModal({
         from: defaultFrom || "",
         to: "",
         subject: "",
-        ...Object.fromEntries(variables.map((v) => [v, ""])),
+        ...Object.fromEntries(
+          variables.map((v) => [v, variableDefaults[v] ?? ""])
+        ),
       } as FormValues);
       setPreviewHtml(null);
       setActiveTab("form");
     }
-  }, [isOpen, form, variables, defaultFrom]);
+  }, [isOpen, form, variables, variableDefaults, defaultFrom]);
 
   // Fill recipient with user's email
   const handleSendToSelf = useCallback(() => {
@@ -184,12 +252,41 @@ export function SendTestModal({
     }
   }, [form, userEmail]);
 
-  // Generate preview HTML with variables replaced
+  // Generate preview HTML with variables replaced.
+  //
+  // Two paths:
+  //   1. Code templates (compiledHtml provided): use the canonical
+  //      `renderForPreview` Handlebars renderer so `{{#if}}` blocks and
+  //      nested-key substitution work the same way they will at send time.
+  //   2. TipTap templates (no compiledHtml): use the legacy regex
+  //      substitution. TipTap output never contains conditionals so the
+  //      simple replacement is sufficient and avoids pulling Handlebars
+  //      across content that wasn't authored for it.
   const generatePreview = useCallback(() => {
     const values = form.state.values;
-    let html = templateContent;
 
-    // Replace variables
+    // Code template path: take the Handlebars renderer when we have any
+    // compiled HTML to render. The explicit length check (rather than just
+    // `if (compiledHtml)`) makes the intent clear — empty-string compiled
+    // HTML legitimately falls through to the legacy path so the user sees
+    // the "fill in the form" alert instead of a blank preview.
+    if (compiledHtml != null && compiledHtml.length > 0) {
+      // Build substitution data from form values, falling back to the
+      // template's curated testData / fallbacks for any field the user
+      // didn't override. `renderForPreview` handles HTML escaping itself.
+      const data: Record<string, string> = { ...variableDefaults };
+      for (const variable of variables) {
+        const value = values[variable as keyof FormValues];
+        if (value !== undefined && value !== "") {
+          data[variable] = String(value);
+        }
+      }
+      setPreviewHtml(renderForPreview(compiledHtml, data));
+      setActiveTab("preview");
+      return;
+    }
+
+    let html = templateContent;
     for (const variable of variables) {
       const value = values[variable as keyof FormValues] ?? `{{${variable}}}`;
       // Escape user-provided variable values
@@ -201,7 +298,7 @@ export function SendTestModal({
 
     setPreviewHtml(html);
     setActiveTab("preview");
-  }, [form, templateContent, variables]);
+  }, [form, templateContent, variables, compiledHtml, variableDefaults]);
 
   return (
     <Dialog onOpenChange={(open) => !open && onClose()} open={isOpen}>
