@@ -42,7 +42,7 @@ import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { templateKeys } from "@/hooks/use-template-queries";
 import { extractTsxCode } from "@/lib/ai/extract-tsx-code";
-import { compileTemplate } from "@/lib/compile-template";
+import { type CompileResult, compileTemplate } from "@/lib/compile-template";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { AIAttachmentChips } from "./ai-attachment-chips";
@@ -56,7 +56,7 @@ type CodeTemplateAIPanelProps = {
   templateId: string;
   aiConversationId: string | null;
   currentSource: string;
-  onApply: (source: string, compiledHtml: string) => void;
+  onApply: (source: string, compiled: CompileResult) => void;
 };
 
 const QUICK_PROMPTS = [
@@ -323,9 +323,9 @@ export function CodeTemplateAIPanel({
           // Auto-fix response — try compiling directly
           setIsCompiling(true);
           compileTemplate(code)
-            .then(({ compiledHtml }) => {
+            .then((compiled) => {
               lastAppliedSourceRef.current = code;
-              onApply(code, compiledHtml);
+              onApply(code, compiled);
               setPendingSource(null);
               setAutoFixAttempted(false);
               toast.success("AI fixed the code successfully");
@@ -368,9 +368,9 @@ export function CodeTemplateAIPanel({
 
     setIsCompiling(true);
     try {
-      const { compiledHtml } = await compileTemplate(pendingSource);
+      const compiled = await compileTemplate(pendingSource);
       lastAppliedSourceRef.current = pendingSource;
-      onApply(pendingSource, compiledHtml);
+      onApply(pendingSource, compiled);
       setPendingSource(null);
       setAutoFixAttempted(false);
     } catch (error) {

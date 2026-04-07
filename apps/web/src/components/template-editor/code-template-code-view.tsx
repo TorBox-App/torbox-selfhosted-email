@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { compileTemplate } from "@/lib/compile-template";
+import { buildSaveSourcePayload } from "@/lib/save-source-payload";
 import { configureMonacoForReactEmail } from "./monaco-react-email";
 
 const STARTER_SOURCE = `import { Body, Container, Head, Html, Tailwind, Text } from "@react-email/components";
@@ -126,13 +127,7 @@ export function CodeTemplateCodeView({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source: editedSource,
-            compiledHtml: compiled.compiledHtml,
-            compiledText: compiled.compiledText,
-            variables: compiled.variables,
-            testData: compiled.testData,
-          }),
+          body: JSON.stringify(buildSaveSourcePayload(editedSource, compiled)),
         }
       );
 

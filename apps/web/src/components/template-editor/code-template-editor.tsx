@@ -22,7 +22,9 @@ import {
   useUnpublishTemplate,
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
-import { renderForPreview } from "@/lib/compile-template";
+import type { CompileResult } from "@/lib/compile-template";
+import { renderForPreview } from "@/lib/handlebars";
+import { buildSaveSourcePayload } from "@/lib/save-source-payload";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { CodeTemplateAIPanel } from "./code-template-ai-panel";
@@ -260,7 +262,7 @@ export function CodeTemplateEditor({
 
   // Handle AI "Apply" — save source and update preview
   const handleAIApply = useCallback(
-    async (source: string, compiledHtml: string) => {
+    async (source: string, compiled: CompileResult) => {
       setSaveStatus("saving");
       try {
         const resp = await fetch(
@@ -268,12 +270,7 @@ export function CodeTemplateEditor({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              source,
-              compiledHtml,
-              compiledText: "",
-              variables: [],
-            }),
+            body: JSON.stringify(buildSaveSourcePayload(source, compiled)),
           }
         );
 
@@ -290,7 +287,9 @@ export function CodeTemplateEditor({
               ? {
                   ...old,
                   source,
-                  compiledHtml,
+                  compiledHtml: compiled.compiledHtml,
+                  variables: compiled.variables,
+                  testData: compiled.testData,
                   lastEditedFrom: "dashboard",
                   updatedAt: new Date(),
                 }

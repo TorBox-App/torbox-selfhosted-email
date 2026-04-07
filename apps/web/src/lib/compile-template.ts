@@ -1,10 +1,7 @@
 import { transform } from "sucrase";
 import { HANDLEBARS_KEYWORDS } from "./handlebars";
 
-// Re-export for callers that already import this from compile-template
-export { renderForPreview } from "./handlebars";
-
-type CompileResult = {
+export type CompileResult = {
   compiledHtml: string;
   compiledText: string;
   variables: Array<{ name: string; fallback?: string }>;
