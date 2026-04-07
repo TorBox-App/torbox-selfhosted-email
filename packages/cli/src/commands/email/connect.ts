@@ -14,7 +14,7 @@ import {
   SES_REGIONS,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { errors, redactSensitiveValues } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -326,6 +326,11 @@ export async function connect(options: ConnectOptions): Promise<void> {
   }
 
   // DEPLOY MODE - actually create infrastructure
+  // Capture Pulumi output so we can surface it on failure (and stream it
+  // to stderr when WRAPS_DEBUG=1). On success the buffer is cleared so we
+  // don't hold ~MBs of deploy log until process exit.
+  let pulumiLog: string[] = [];
+  const debugPulumi = process.env.WRAPS_DEBUG === "1";
   let outputs;
   try {
     outputs = await progress.execute(
@@ -368,7 +373,14 @@ export async function connect(options: ConnectOptions): Promise<void> {
         );
         await stack.setConfig("aws:region", { value: region });
 
-        const upResult = await stack.up({ onOutput: () => {} });
+        const upResult = await stack.up({
+          onOutput: (msg) => {
+            pulumiLog.push(msg);
+            if (debugPulumi) {
+              process.stderr.write(msg);
+            }
+          },
+        });
         const pulumiOutputs = upResult.outputs;
 
         return {
@@ -404,9 +416,27 @@ export async function connect(options: ConnectOptions): Promise<void> {
       throw errors.stackLocked();
     }
 
+    // Dump tail of Pulumi output to stderr so the user can see what failed.
+    // This is critical because the error wrapping below loses detail when
+    // the message doesn't match parsePulumiError's keyword patterns.
+    //
+    // The output is run through sanitizeErrorMessage so account IDs, ARNs,
+    // emails, and domain names are scrubbed before they hit a terminal the
+    // user might paste into a public bug report.
+    if (pulumiLog.length > 0) {
+      const tail = pulumiLog.join("").split("\n").slice(-60).join("\n");
+      const redactedTail = redactSensitiveValues(tail);
+      process.stderr.write(
+        `\n${pc.dim("─── Pulumi output (last 60 lines, redacted) ───")}\n${redactedTail}\n${pc.dim("─── end Pulumi output ───")}\n\n`
+      );
+    }
+
     trackError("DEPLOYMENT_FAILED", "email:connect", { step: "deploy" });
     throw new Error(`Pulumi deployment failed: ${msg}`);
   }
+
+  // Free the captured Pulumi log on the success path — we won't need it.
+  pulumiLog = [];
 
   // 12. Create DNS records in Route53 (if hosted zone exists)
   if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {

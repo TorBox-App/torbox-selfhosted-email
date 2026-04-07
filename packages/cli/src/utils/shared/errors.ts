@@ -204,15 +204,18 @@ export function parsePulumiError(error: Error): {
 }
 
 /**
- * Sanitize error message to remove sensitive information
- * Removes: AWS account IDs, email addresses, domain names, ARNs with account IDs
+ * Strip sensitive values (account IDs, emails, non-AWS domains, ARN account
+ * portions) from a string. Used as the redaction layer for both error
+ * messages displayed to users and free-form output (e.g. Pulumi deploy logs)
+ * that may end up in bug reports.
+ *
+ * Does NOT truncate — callers that need length limits should apply them
+ * after redaction. Splitting redaction from truncation lets the multi-line
+ * Pulumi tail dump in `email connect` redact a 60-line block without losing
+ * 90% of it to a 500-char cutoff.
  */
-export function sanitizeErrorMessage(error: unknown): string {
-  if (!error) {
-    return "Unknown error";
-  }
-
-  let message = error instanceof Error ? error.message : String(error);
+export function redactSensitiveValues(input: string): string {
+  let message = input;
 
   // Remove AWS account IDs (12 digits)
   message = message.replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
@@ -241,12 +244,28 @@ export function sanitizeErrorMessage(error: unknown): string {
     "arn:aws:[SERVICE]:[REGION]:[ACCOUNT_ID]:"
   );
 
-  // Truncate very long messages
-  if (message.length > 500) {
-    message = `${message.slice(0, 500)}...`;
+  return message;
+}
+
+/**
+ * Sanitize an error for display: strip sensitive values and truncate.
+ * Returns "Unknown error" for null/undefined input so the result is always
+ * a non-empty user-facing string.
+ */
+export function sanitizeErrorMessage(error: unknown): string {
+  if (!error) {
+    return "Unknown error";
   }
 
-  return message;
+  const raw = error instanceof Error ? error.message : String(error);
+  const redacted = redactSensitiveValues(raw);
+
+  // Truncate very long messages so a wall-of-text error doesn't break
+  // the CLI's formatted output.
+  if (redacted.length > 500) {
+    return `${redacted.slice(0, 500)}...`;
+  }
+  return redacted;
 }
 
 /**
@@ -295,7 +314,8 @@ export function handleCLIError(error: unknown, command?: string): never {
         parsed.iamAction,
         parsed.service,
         parsed.resourceName,
-        parsed.resourceType
+        parsed.resourceType,
+        (error as Error)?.message
       );
       message = wrapsErr.message;
       suggestion = wrapsErr.suggestion;
@@ -378,7 +398,8 @@ export function handleCLIError(error: unknown, command?: string): never {
       iamAction,
       service,
       resourceName,
-      resourceType
+      resourceType,
+      (error as Error)?.message
     );
 
     clack.log.error(wrapsError.message);
@@ -492,7 +513,8 @@ function pulumiErrorToWrapsError(
   iamAction?: string,
   service?: string,
   resourceName?: string,
-  resourceType?: string
+  resourceType?: string,
+  originalMessage?: string
 ): WrapsError {
   switch (code) {
     case "RESOURCE_CONFLICT":
@@ -521,7 +543,14 @@ function pulumiErrorToWrapsError(
           : "Ensure your IAM user/role has the required permissions."
       );
     default:
-      return errors.pulumiError("Deployment failed");
+      // sanitizeErrorMessage(undefined) returns "Unknown error", which is
+      // truthy, so a `||` fallback to "Deployment failed" would be dead code.
+      // Use an explicit check on the input instead.
+      return errors.pulumiError(
+        originalMessage
+          ? sanitizeErrorMessage(originalMessage)
+          : "Deployment failed"
+      );
   }
 }
 

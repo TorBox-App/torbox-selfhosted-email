@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { sqsQueueExists } from "../shared/resource-checks.js";
 
 /**
  * SQS resources output
@@ -15,22 +16,46 @@ export type SQSResources = {
  * EventBridge -> SQS Queue -> Lambda (event-processor)
  *                    ↓
  *                   DLQ (failed messages after 3 retries)
+ *
+ * Both queues use the import-or-create pattern: if the queue already exists
+ * in AWS but isn't tracked in Pulumi state (e.g., from a prior failed
+ * deployment), we import it instead of creating from scratch. Without this,
+ * Pulumi's create call hits AWS's QueueAlreadyExists error on tag mismatch.
+ * Mirrors the SMS stack pattern in sms-stack.ts:createSMSSQSResources.
  */
+// Shared Pulumi resource options for both queues. The 2m timeouts match the
+// SMS stack's queue creation pattern and give SQS enough time to settle a
+// fresh CreateQueue against eventual-consistency reads on tags.
+const SQS_TIMEOUTS = {
+  customTimeouts: { create: "2m", update: "2m", delete: "2m" },
+} as const;
+
 export async function createSQSResources(): Promise<SQSResources> {
+  const dlqName = "wraps-email-events-dlq";
+  const queueName = "wraps-email-events";
+
+  const dlqUrl = await sqsQueueExists(dlqName);
+  const queueUrl = await sqsQueueExists(queueName);
+
   // Dead Letter Queue for failed event processing
-  const dlq = new aws.sqs.Queue("wraps-email-events-dlq", {
-    name: "wraps-email-events-dlq",
+  const dlqConfig = {
+    name: dlqName,
     messageRetentionSeconds: 1_209_600, // 14 days
     tags: {
       ManagedBy: "wraps-cli",
       Service: "email",
       Description: "Dead letter queue for failed SES event processing",
     },
+  };
+
+  const dlq = new aws.sqs.Queue(dlqName, dlqConfig, {
+    ...SQS_TIMEOUTS,
+    ...(dlqUrl ? { import: dlqUrl } : {}),
   });
 
   // Main queue for SES events
-  const queue = new aws.sqs.Queue("wraps-email-events", {
-    name: "wraps-email-events",
+  const queueConfig = {
+    name: queueName,
     visibilityTimeoutSeconds: 300, // Must be >= Lambda timeout (5 minutes)
     messageRetentionSeconds: 345_600, // 4 days
     receiveWaitTimeSeconds: 20, // Long polling
@@ -45,6 +70,11 @@ export async function createSQSResources(): Promise<SQSResources> {
       Service: "email",
       Description: "Queue for SES email events from EventBridge",
     },
+  };
+
+  const queue = new aws.sqs.Queue(queueName, queueConfig, {
+    ...SQS_TIMEOUTS,
+    ...(queueUrl ? { import: queueUrl } : {}),
   });
 
   return {
