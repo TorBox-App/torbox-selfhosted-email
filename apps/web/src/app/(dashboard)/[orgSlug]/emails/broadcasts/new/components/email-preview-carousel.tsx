@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SampleContact } from "@/lib/batch";
+import { renderForPreview } from "@/lib/handlebars";
 import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 
 type EmailPreviewCarouselProps = {
@@ -115,9 +116,12 @@ export function EmailPreviewCarousel({
 
   // Render HTML when template or test data changes
   useEffect(() => {
-    // For code-pushed templates, use pre-compiled HTML directly
+    // For code-pushed templates, the stored compiledHtml still has raw
+    // `{{var}}` and `{{#if}}/{{else}}/{{/if}}` placeholders so SES can
+    // substitute per-recipient at send time. Run Handlebars over it with
+    // the current contact's data so the preview matches what they'll see.
     if (sourceFormat === "react-email" && compiledHtml) {
-      setHtmlContent(compiledHtml);
+      setHtmlContent(renderForPreview(compiledHtml, testData));
       return;
     }
 

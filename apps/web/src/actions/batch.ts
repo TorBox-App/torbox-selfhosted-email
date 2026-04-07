@@ -39,6 +39,7 @@ import type {
   RecipientFilter,
   SampleContact,
 } from "@/lib/batch";
+import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
@@ -1146,6 +1147,11 @@ export async function extractTemplateVariables(
         fallback?: string;
       }>;
       for (const v of storedVars) {
+        // Defensive: stale rows from before the extractor was fixed may
+        // still contain Handlebars block keywords like `else`. Skip them.
+        if (HANDLEBARS_KEYWORDS.has(v.name)) {
+          continue;
+        }
         if (!seenVariables.has(v.name)) {
           seenVariables.add(v.name);
 

@@ -1,5 +1,8 @@
-import Handlebars from "handlebars";
 import { transform } from "sucrase";
+import { HANDLEBARS_KEYWORDS } from "./handlebars";
+
+// Re-export for callers that already import this from compile-template
+export { renderForPreview } from "./handlebars";
 
 type CompileResult = {
   compiledHtml: string;
@@ -113,47 +116,6 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
     testData: exportedTestData,
   };
 }
-
-/**
- * Render compiled template HTML through Handlebars with test data so the
- * preview iframe shows what the email will actually look like — including
- * `{{#if}}/{{else}}/{{/if}}` block evaluation and `{{var}}` substitution.
- *
- * The compiled HTML stored in the database keeps its raw `{{var}}` placeholders
- * (so SES and the workflow runtime can substitute per-recipient at send time).
- * This helper is for *display only* in the dashboard editor.
- *
- * Falls back to the raw HTML if Handlebars compilation fails so a malformed
- * template doesn't blank out the preview pane.
- */
-export function renderForPreview(
-  html: string,
-  data: Record<string, unknown>
-): string {
-  if (!html) {
-    return html;
-  }
-  try {
-    const tmpl = Handlebars.compile(html, { noEscape: false });
-    return tmpl(data);
-  } catch {
-    return html;
-  }
-}
-
-// Handlebars block helpers and built-ins — not user template variables.
-// The regex below already skips `{{#if}}` and `{{/if}}` (because of `#` and `/`),
-// but `{{else}}` matches as a bare word, so we filter it explicitly here.
-const HANDLEBARS_KEYWORDS = new Set([
-  "else",
-  "this",
-  "if",
-  "unless",
-  "each",
-  "with",
-  "lookup",
-  "log",
-]);
 
 export function extractVariables(
   html: string
