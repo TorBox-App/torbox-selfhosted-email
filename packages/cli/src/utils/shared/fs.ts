@@ -77,6 +77,15 @@ export async function ensurePulumiWorkDir(options?: {
   // Always set passphrase
   process.env.PULUMI_CONFIG_PASSPHRASE = "";
 
+  // Pre-resolve AWS credentials into env vars before spawning Pulumi.
+  // Pulumi's S3 state backend (gocloud.dev) uses AWS Go SDK v1, which has
+  // no SSO support. Without this, SSO users hit NoCredentialProviders even
+  // though their JS SDK v3 calls work fine. See aws.ts for details.
+  if (options?.accountId && options?.region) {
+    const { resolveAWSCredentialsToEnv } = await import("./aws.js");
+    await resolveAWSCredentialsToEnv();
+  }
+
   const useS3 =
     options?.accountId &&
     options?.region &&

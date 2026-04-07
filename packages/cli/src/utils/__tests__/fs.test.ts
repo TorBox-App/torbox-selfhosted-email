@@ -38,6 +38,13 @@ vi.mock("@clack/prompts", () => ({
   },
 }));
 
+// Mock aws module so credential resolution doesn't try to hit STS in tests
+const mockResolveAWSCredentialsToEnv = vi.fn().mockResolvedValue(undefined);
+vi.mock("../shared/aws.js", () => ({
+  resolveAWSCredentialsToEnv: (...args: any[]) =>
+    mockResolveAWSCredentialsToEnv(...args),
+}));
+
 // Import after mocks
 import {
   ensurePulumiWorkDir,
@@ -294,6 +301,46 @@ describe("fs utilities", () => {
       expect(clack.log.warn).toHaveBeenCalledWith(
         expect.stringContaining("S3 state backend unavailable")
       );
+    });
+
+    it("should pre-resolve AWS credentials when accountId/region provided", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      mockEnsureStateBucket.mockResolvedValue(
+        "wraps-state-123456789012-us-east-1"
+      );
+      mockGetS3BackendUrl.mockReturnValue(
+        "s3://wraps-state-123456789012-us-east-1"
+      );
+      mockNeedsMigration.mockResolvedValue(false);
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(mockResolveAWSCredentialsToEnv).toHaveBeenCalledTimes(1);
+    });
+
+    it("should NOT pre-resolve AWS credentials when accountId/region missing", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+
+      await ensurePulumiWorkDir();
+
+      expect(mockResolveAWSCredentialsToEnv).not.toHaveBeenCalled();
+    });
+
+    it("should pre-resolve credentials even with WRAPS_LOCAL_ONLY=1", async () => {
+      // The pulumi-aws provider still needs to authenticate to AWS even when
+      // state is local, so credential pre-resolution should happen regardless.
+      vi.mocked(existsSync).mockReturnValue(true);
+      process.env.WRAPS_LOCAL_ONLY = "1";
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(mockResolveAWSCredentialsToEnv).toHaveBeenCalledTimes(1);
     });
 
     it("should trigger migration when local state exists", async () => {

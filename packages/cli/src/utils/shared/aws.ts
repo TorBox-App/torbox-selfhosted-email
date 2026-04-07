@@ -130,6 +130,83 @@ export async function validateAWSCredentialsWithDetails(): Promise<CredentialVal
   }
 }
 
+/**
+ * Resolve AWS credentials from the SDK provider chain and inject them into
+ * process.env as static credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+ * AWS_SESSION_TOKEN).
+ *
+ * Why this exists: Pulumi's S3 state backend uses gocloud.dev, which is built
+ * on AWS Go SDK v1. v1 has no SSO support, so it cannot resolve credentials
+ * from an SSO profile (the most common modern AWS auth setup). When the Go
+ * subprocess tries to read state from S3, it fails with NoCredentialProviders.
+ *
+ * The fix: pre-resolve credentials in Node (where SDK v3 supports SSO natively)
+ * and pass them through as static env vars before spawning Pulumi. The Go SDK v1
+ * credential chain checks env vars first, so this works for any source the JS
+ * SDK v3 chain can resolve (env, profile, SSO, EC2, ECS, web identity).
+ *
+ * Idempotent — safe to call multiple times. No-op if env vars are already set
+ * (the SDK v3 chain would resolve to the same values anyway).
+ *
+ * Must be called AFTER validateAWSCredentials() so that an SSO session expiry
+ * is surfaced as a clean WrapsError before we try to resolve.
+ */
+export async function resolveAWSCredentialsToEnv(): Promise<void> {
+  // Clear AWS_PROFILE so downstream SDK callers (both our own JS clients and
+  // the AWS SDK v3 instances bundled inside Pulumi providers) don't emit the
+  // "Multiple credential sources detected" warning on every call. Done first
+  // so it runs in both the early-return and resolve branches — the warning
+  // fires precisely when both static env keys AND AWS_PROFILE are set, which
+  // is exactly the early-return case.
+  // Only affects this process; the user's shell env is unchanged.
+  // biome-ignore lint/performance/noDelete: process.env coerces undefined assignment to the string "undefined"; we need actual key removal so the SDK credential chain doesn't pick up a phantom profile.
+  delete process.env.AWS_PROFILE;
+
+  // Already-resolved env credentials — chain would just return these.
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    return;
+  }
+
+  // Reuse the same default credential chain as every other STS client in the
+  // CLI, so credentials stay consistent across the resolved env vars and any
+  // in-process SDK calls that come after this.
+  const sts = new STSClient({});
+  const provider = sts.config.credentials;
+  if (!provider) {
+    throw errors.noAWSCredentials();
+  }
+
+  let creds: Awaited<ReturnType<typeof provider>>;
+  try {
+    creds = typeof provider === "function" ? await provider() : provider;
+  } catch (error) {
+    // Match by error name first — substring matching on .message risks
+    // picking up unrelated phrases like "the role expired its trust".
+    if (error instanceof Error) {
+      if (
+        error.name === "ExpiredTokenException" ||
+        error.name === "TokenRefreshRequired" ||
+        error.name === "SSOTokenExpired"
+      ) {
+        throw errors.sessionTokenExpired();
+      }
+      // The credentials file path is the only place "Could not load
+      // credentials" reliably appears in SDK v3 error messages, so the
+      // substring match is precise enough.
+      if (error.message?.includes("Could not load credentials")) {
+        throw errors.credentialsFileMissing();
+      }
+    }
+    throw errors.noAWSCredentials();
+  }
+
+  process.env.AWS_ACCESS_KEY_ID = creds.accessKeyId;
+  process.env.AWS_SECRET_ACCESS_KEY = creds.secretAccessKey;
+  if (creds.sessionToken) {
+    process.env.AWS_SESSION_TOKEN = creds.sessionToken;
+  }
+}
+
 export const SES_REGIONS = [
   "us-east-1",
   "us-east-2",
