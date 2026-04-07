@@ -337,80 +337,87 @@ describe("destroy → init inconsistent state bug", () => {
     mockProcessExit.mockClear();
   });
 
-  it("should allow init after destroy partial failure (destroy clears both local and S3 metadata)", async () => {
-    // Step 1: Simulate existing deployment by seeding metadata in both stores
-    // (as saveConnectionMetadata would have done during the initial init)
-    const existingMetadata = {
-      version: "1.0.0",
-      accountId: "123456789012",
-      region: "us-east-1",
-      provider: "other",
-      timestamp: "2024-01-01T00:00:00.000Z",
-      services: {
-        email: {
-          preset: "starter",
-          config: {
-            domain: "example.com",
-            sendingEnabled: true,
-            tracking: { enabled: true },
-          },
-          pulumiStackName: "wraps-123456789012-us-east-1",
-          deployedAt: "2024-01-01T00:00:00.000Z",
-        },
-      },
-    };
-
-    localMetadataStore["123456789012-us-east-1"] = existingMetadata;
-    s3MetadataStore["123456789012-us-east-1"] = existingMetadata;
-
-    // Step 2: Run destroy with partial failure
-    mockStackDestroy.mockRejectedValue(
-      new Error(
-        "Command failed with exit code 255: pulumi destroy --yes --skip-preview"
-      )
-    );
-
-    const { emailDestroy } = await import("../commands/email/destroy.js");
-    await emailDestroy({ force: true, region: "us-east-1" });
-
-    // Verify destroy deleted local metadata
-    expect(mockDeleteConnectionMetadata).toHaveBeenCalledWith(
-      "123456789012",
-      "us-east-1"
-    );
-
-    // Step 3: Run init — it should NOT find existing metadata
-    // BUG: loadConnectionMetadata will re-download from S3 and return the old metadata
-    const { init } = await import("../commands/email/init.js");
-
-    // Reset the loadConnectionMetadata call count so we can track the init call
-    mockLoadConnectionMetadata.mockClear();
-
-    // init should proceed with deployment, NOT exit with "Connection already exists"
-    // If it exits (process.exit), the test will throw "process.exit called"
-    let initExitedEarly = false;
-    try {
-      await init({
-        provider: "other",
+  // Bumped from the 5s default — this test exercises destroy + init end-to-end
+  // through a chain of mocked AWS clients and runs in ~3s in isolation, but
+  // pushes past the default timeout under parallel suite load.
+  it(
+    "should allow init after destroy partial failure (destroy clears both local and S3 metadata)",
+    { timeout: 15_000 },
+    async () => {
+      // Step 1: Simulate existing deployment by seeding metadata in both stores
+      // (as saveConnectionMetadata would have done during the initial init)
+      const existingMetadata = {
+        version: "1.0.0",
+        accountId: "123456789012",
         region: "us-east-1",
-        domain: "example.com",
-        preset: "starter",
-        yes: true,
-        quick: true,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === "process.exit called") {
-        initExitedEarly = true;
-      } else {
-        throw error;
-      }
-    }
+        provider: "other",
+        timestamp: "2024-01-01T00:00:00.000Z",
+        services: {
+          email: {
+            preset: "starter",
+            config: {
+              domain: "example.com",
+              sendingEnabled: true,
+              tracking: { enabled: true },
+            },
+            pulumiStackName: "wraps-123456789012-us-east-1",
+            deployedAt: "2024-01-01T00:00:00.000Z",
+          },
+        },
+      };
 
-    // The bug: init finds metadata from S3 fallback and exits early
-    // This assertion should PASS when the bug is fixed (init should NOT exit early)
-    // Currently it FAILS because loadConnectionMetadata returns the S3 copy
-    expect(initExitedEarly).toBe(false);
-  });
+      localMetadataStore["123456789012-us-east-1"] = existingMetadata;
+      s3MetadataStore["123456789012-us-east-1"] = existingMetadata;
+
+      // Step 2: Run destroy with partial failure
+      mockStackDestroy.mockRejectedValue(
+        new Error(
+          "Command failed with exit code 255: pulumi destroy --yes --skip-preview"
+        )
+      );
+
+      const { emailDestroy } = await import("../commands/email/destroy.js");
+      await emailDestroy({ force: true, region: "us-east-1" });
+
+      // Verify destroy deleted local metadata
+      expect(mockDeleteConnectionMetadata).toHaveBeenCalledWith(
+        "123456789012",
+        "us-east-1"
+      );
+
+      // Step 3: Run init — it should NOT find existing metadata
+      // BUG: loadConnectionMetadata will re-download from S3 and return the old metadata
+      const { init } = await import("../commands/email/init.js");
+
+      // Reset the loadConnectionMetadata call count so we can track the init call
+      mockLoadConnectionMetadata.mockClear();
+
+      // init should proceed with deployment, NOT exit with "Connection already exists"
+      // If it exits (process.exit), the test will throw "process.exit called"
+      let initExitedEarly = false;
+      try {
+        await init({
+          provider: "other",
+          region: "us-east-1",
+          domain: "example.com",
+          preset: "starter",
+          yes: true,
+          quick: true,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "process.exit called") {
+          initExitedEarly = true;
+        } else {
+          throw error;
+        }
+      }
+
+      // The bug: init finds metadata from S3 fallback and exits early
+      // This assertion should PASS when the bug is fixed (init should NOT exit early)
+      // Currently it FAILS because loadConnectionMetadata returns the S3 copy
+      expect(initExitedEarly).toBe(false);
+    }
+  );
 
   it("deleteConnectionMetadata should remove S3 metadata too", async () => {
     // Seed metadata in both stores
