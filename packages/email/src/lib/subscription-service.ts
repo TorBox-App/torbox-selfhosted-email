@@ -36,12 +36,30 @@ const structuredLog = (msg: string, data?: Record<string, unknown>) =>
  * The flat dotted-key dict (`{"topic.name": "...", "contact.email": "..."}`)
  * is nested via `nestKeys` so Handlebars can resolve `{{topic.name}}` as
  * a path lookup on `data.topic.name`.
+ *
+ * Detection: when the renderer bails (compile or runtime error), it
+ * returns the raw template string unchanged. We detect that by checking
+ * whether Handlebars block markers survived the render — if the input
+ * contained `{{#` or `{{/` and the output is byte-identical, the renderer
+ * didn't evaluate the block helpers. Log so we have a paper trail when a
+ * malformed confirmation template ships raw to a real inbox.
+ *
+ * @internal Exported for testing — not part of the public package surface.
  */
-function substituteVariables(
+export function substituteVariables(
   content: string,
   variables: Record<string, string | undefined>
 ): string {
-  return renderTemplate(content, nestKeys(variables));
+  const rendered = renderTemplate(content, nestKeys(variables));
+
+  if (rendered === content && /\{\{[#/]/.test(content)) {
+    structuredLog("subscription template render failed, raw template sent", {
+      contentPreview: content.slice(0, 200),
+      variableKeys: Object.keys(variables),
+    });
+  }
+
+  return rendered;
 }
 
 /**

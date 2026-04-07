@@ -39,6 +39,15 @@ export type WorkflowBranch =
  * Handlebars automatically escapes HTML in `{{variable}}` expressions
  * for safety — the canonical renderer keeps that default.
  *
+ * Detection: when the renderer bails (compile or runtime error), it
+ * returns the raw template string unchanged. We detect that by checking
+ * whether Handlebars block markers survived the render — if the input
+ * contained `{{#` or `{{/` and the output is byte-identical, the renderer
+ * didn't evaluate the block helpers. Log a warning so on-call can detect
+ * malformed workflow templates in production. The previous regex-based
+ * implementation logged on every Handlebars throw; we preserve that
+ * observability through the consolidated renderer.
+ *
  * The `_options` parameter is retained for backward compatibility with
  * existing callers; it has no effect today.
  *
@@ -49,7 +58,19 @@ export function substituteVariables(
   data: Record<string, string>,
   _options: { escapeHtml?: boolean } = {}
 ): string {
-  return renderTemplate(text, data);
+  const rendered = renderTemplate(text, data);
+
+  // Renderer bailed if the output equals the input AND the input had block
+  // markers that should have been consumed. Bare `{{var}}` substitution
+  // doesn't trigger this — a no-op render of a static string is normal.
+  if (rendered === text && /\{\{[#/]/.test(text)) {
+    log.warn("Workflow: template render failed, raw template returned", {
+      textPreview: text.slice(0, 200),
+      dataKeys: Object.keys(data),
+    });
+  }
+
+  return rendered;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

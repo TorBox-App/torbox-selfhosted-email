@@ -13,8 +13,9 @@
  * Fix: Use Handlebars library to properly evaluate the conditional syntax.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { log } from "../../lib/logger";
 import { substituteVariables } from "../workers/workflow-processor";
 
 describe("substituteVariables with Handlebars conditionals", () => {
@@ -141,6 +142,61 @@ describe("substituteVariables with Handlebars conditionals", () => {
       });
       expect(resultWithoutName).toContain(">there<");
       expect(resultWithoutName).toContain(">our platform<");
+    });
+  });
+
+  describe("Render failure observability", () => {
+    // Why this exists: the previous regex-fallback implementation logged a
+    // warning when Handlebars threw. The consolidation onto
+    // @wraps/template-render dropped that log because the renderer swallows
+    // errors and returns the raw template string. Without observability, a
+    // malformed template silently ships raw `{{#if}}` to a paying customer's
+    // recipients on the workflow send path. This regression test asserts the
+    // worker still emits a warning when the renderer bails so on-call can
+    // detect and remediate.
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(log, "warn").mockImplementation(() => {
+        // intentionally silent in tests
+      });
+    });
+
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    it("logs a warning when the template fails to compile", () => {
+      // Unclosed {{#if}} block — Handlebars compile throws.
+      const malformed = "Hi {{#if firstName}}{{firstName}}";
+
+      const result = substituteVariables(malformed, { firstName: "Jane" });
+
+      // Renderer falls back to raw template — that's the contract.
+      expect(result).toBe(malformed);
+      // The worker MUST log a warning so we can detect this in production.
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      const [msg] = warnSpy.mock.calls[0];
+      expect(String(msg).toLowerCase()).toMatch(/template|render|substitute/);
+    });
+
+    it("does not log on a successful render", () => {
+      const result = substituteVariables("Hi {{firstName}}", {
+        firstName: "Jane",
+      });
+
+      expect(result).toBe("Hi Jane");
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not log when a well-formed template references a missing variable", () => {
+      // Missing variables resolve to empty string — that's normal Handlebars
+      // behavior, not a render failure. The warning is reserved for actual
+      // compile/runtime failures so on-call doesn't drown in false positives.
+      const result = substituteVariables("Hi {{firstName}}!", {});
+
+      expect(result).toBe("Hi !");
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 });
