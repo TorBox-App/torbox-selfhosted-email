@@ -10,6 +10,7 @@ import {
   findCliNodeModules,
   loadWrapsConfig,
 } from "../../../utils/email/template-compiler.js";
+import { renderTemplateWithProxy } from "../../../utils/email/template-render.js";
 import {
   getApiBaseUrl,
   resolveTokenAsync,
@@ -306,33 +307,16 @@ async function compileTemplate(
     );
   }
 
-  // Create proxy props that produce {{handlebars}} placeholders
-  // Track all property accesses — props used only in conditionals (e.g. url.startsWith("http"))
-  // won't appear in the rendered HTML, but the Proxy still sees them during destructuring
-  const accessedProps = new Set<string>();
-  const props = new Proxy(
-    {},
-    {
-      get: (_target, prop) => {
-        if (typeof prop === "symbol") {
-          return;
-        }
-        const name = String(prop);
-        accessedProps.add(name);
-        return `{{${name}}}`;
-      },
-    }
-  );
-
-  // Render with @react-email/render
-  // The template bundle includes its own React copy via jsx-automatic transform
-  // Call the component function to get a React element, then render to HTML
-  const { render } = await import("@react-email/render");
-
-  // The bundled component uses its own React — calling it produces React elements
-  const element = Component(props);
-  const html = await render(element);
-  const text = await render(element, { plainText: true });
+  // Render the React Email component with the Proxy+normalize pipeline.
+  // `renderTemplateWithProxy` tracks accessed props, produces the HTML and
+  // plain-text bodies, and normalizes the plain-text mustaches so that
+  // Handlebars tokens inside `<Heading>` elements (which html-to-text
+  // uppercases to `{{#IF FIRSTNAME}}`) are restored to their canonical
+  // lowercase/camelCase form. Without the normalization step SES rejects
+  // the template at send time with "Attribute 'IF' is not present in the
+  // rendering data."
+  const { html, text, accessedProps } =
+    await renderTemplateWithProxy(Component);
 
   // Extract variables from both rendered HTML and Proxy-tracked accesses
   // HTML extraction catches fallback syntax ({{var|default}}); Proxy catches
