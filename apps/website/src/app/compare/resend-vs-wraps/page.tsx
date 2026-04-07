@@ -774,7 +774,10 @@ export default function ResendVsWrapsPage() {
             </p>
             <p className="mt-1">
               Seen something inaccurate?{" "}
-              <a className="text-primary underline" href="mailto:support@wraps.dev">
+              <a
+                className="text-primary underline"
+                href="mailto:support@wraps.dev"
+              >
                 Let us know at support@wraps.dev
               </a>
             </p>

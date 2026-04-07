@@ -811,7 +811,10 @@ export default function CustomerIoVsWrapsPage() {
             </p>
             <p>
               See something inaccurate?{" "}
-              <a className="text-primary underline" href="mailto:support@wraps.dev">
+              <a
+                className="text-primary underline"
+                href="mailto:support@wraps.dev"
+              >
                 Let us know
               </a>{" "}
               and we will fix it.

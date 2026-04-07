@@ -29,7 +29,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { errors, WrapsError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -803,6 +803,109 @@ export async function inboundVerify(
   console.log();
 }
 
+// Hoisted: SES "Email address not verified" / "Domain not verified" messages
+// can arrive under several exception names; we also pattern-match the message.
+const NOT_VERIFIED_PATTERN = /not verified/i;
+
+/**
+ * Map an SES SendEmail error from the inbound test flow to a WrapsError with
+ * command-specific context. Wraps the generic Layer 1 error mapping with
+ * "you ran inbound test, here is what to check next" guidance.
+ *
+ * Exported for unit testing.
+ */
+export function mapInboundTestSendError(
+  error: unknown,
+  ctx: {
+    source: string;
+    recipient: string;
+    domain: string;
+    receivingDomain: string;
+    region: string;
+  }
+): Error {
+  // Already a WrapsError (e.g., wrapped upstream) — pass through
+  if (error instanceof WrapsError) {
+    return error;
+  }
+
+  if (!(error instanceof Error)) {
+    return new WrapsError(
+      `Failed to send inbound test email to ${ctx.recipient}`,
+      "INBOUND_TEST_SEND_FAILED",
+      "An unexpected error occurred while sending the test email.\n\nCheck infrastructure status:\n  wraps email status\n  wraps email doctor",
+      "https://wraps.dev/docs/guides/email/troubleshooting"
+    );
+  }
+
+  const name = error.name;
+  const message = error.message || "";
+
+  // Check the more specific MAIL FROM error BEFORE the generic "not verified"
+  // pattern, since its message also contains "not verified".
+  if (name === "MailFromDomainNotVerifiedException") {
+    return new WrapsError(
+      `Custom MAIL FROM domain is not verified for ${ctx.domain}`,
+      "INBOUND_TEST_MAIL_FROM_NOT_VERIFIED",
+      `The MAIL FROM domain configured for "${ctx.domain}" is not fully verified.\n\nVerify DNS records:\n  wraps email verify\n\nOr remove the custom MAIL FROM domain in the SES console and retry.`,
+      "https://docs.aws.amazon.com/ses/latest/dg/mail-from.html"
+    );
+  }
+
+  // SES sandbox or unverified identity — most common failure mode
+  if (
+    name === "MessageRejected" ||
+    name === "InvalidParameterValue" ||
+    NOT_VERIFIED_PATTERN.test(message)
+  ) {
+    return new WrapsError(
+      `SES rejected the inbound test send: ${message || name}`,
+      "INBOUND_TEST_MESSAGE_REJECTED",
+      [
+        `Tried to send: ${ctx.source} → ${ctx.recipient} (region ${ctx.region})`,
+        "",
+        "Most likely causes:",
+        `  • Your SES account is in the sandbox and ${ctx.recipient} is not a verified address`,
+        `  • The sender domain "${ctx.domain}" is not verified for sending in ${ctx.region}`,
+        `  • The receiving domain "${ctx.receivingDomain}" is verified for receiving (MX) but not for sending`,
+        "",
+        "Check status:",
+        "  wraps email status",
+        "  wraps email doctor",
+        "",
+        "Exit the SES sandbox to send to any address:",
+        "  https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html",
+      ].join("\n"),
+      "https://wraps.dev/docs/guides/email/troubleshooting"
+    );
+  }
+
+  if (
+    name === "AccountSendingPausedException" ||
+    name === "ConfigurationSetSendingPausedException"
+  ) {
+    return new WrapsError(
+      "SES sending is paused for this account",
+      "INBOUND_TEST_SENDING_PAUSED",
+      "Your SES account or configuration set has sending paused, usually due to a high bounce or complaint rate.\n\nCheck the SES Reputation Dashboard in the AWS console and resume sending once the issue is resolved.",
+      "https://docs.aws.amazon.com/ses/latest/dg/reputationdashboard.html"
+    );
+  }
+
+  if (name === "AccessDeniedException" || name === "AccessDenied") {
+    return new WrapsError(
+      `IAM permission denied: ses:SendEmail in ${ctx.region}`,
+      "INBOUND_TEST_PERMISSION_DENIED",
+      `Your AWS credentials lack the "ses:SendEmail" permission in region ${ctx.region}.\n\nView required SES permissions:\n  wraps permissions --service email --json`,
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    );
+  }
+
+  // Anything else — re-throw the original so the global handler (Layer 1)
+  // surfaces the real AWS error name and message instead of lying.
+  return error;
+}
+
 /**
  * Inbound Test command - Send a test email and verify it's received
  */
@@ -846,41 +949,54 @@ export async function inboundTest(
 
   // 4. Send test email via SES
   const testRecipient = `test@${receivingDomain}`;
+  const testSource = `test@${emailConfig.domain}`;
   const testSubject = `Wraps Inbound Test - ${new Date().toISOString()}`;
 
   await progress.execute(`Sending test email to ${testRecipient}`, async () => {
     const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses");
     const ses = new SESClient({ region });
 
-    await ses.send(
-      new SendEmailCommand({
-        Source: `test@${emailConfig.domain}`,
-        Destination: {
-          ToAddresses: [testRecipient],
-        },
-        Message: {
-          Subject: { Data: testSubject },
-          Body: {
-            Text: {
-              Data: "This is a test email from Wraps CLI to verify inbound email processing.",
-            },
-            Html: {
-              Data: "<h1>Wraps Inbound Test</h1><p>This email was sent to verify inbound email processing is working correctly.</p>",
+    try {
+      await ses.send(
+        new SendEmailCommand({
+          Source: testSource,
+          Destination: {
+            ToAddresses: [testRecipient],
+          },
+          Message: {
+            Subject: { Data: testSubject },
+            Body: {
+              Text: {
+                Data: "This is a test email from Wraps CLI to verify inbound email processing.",
+              },
+              Html: {
+                Data: "<h1>Wraps Inbound Test</h1><p>This email was sent to verify inbound email processing is working correctly.</p>",
+              },
             },
           },
-        },
-      })
-    );
+        })
+      );
+    } catch (error) {
+      throw mapInboundTestSendError(error, {
+        source: testSource,
+        recipient: testRecipient,
+        domain: emailConfig.domain || "",
+        receivingDomain,
+        region,
+      });
+    }
   });
 
   // 5. Poll S3 for the parsed email (up to 30s)
-  const spinner = clack.spinner();
-  spinner.start("Waiting for email to be processed...");
-
+  // Import S3 client BEFORE starting the spinner so a dynamic-import or
+  // client-construction failure cannot orphan the spinner.
   const { S3Client, ListObjectsV2Command, GetObjectCommand } = await import(
     "@aws-sdk/client-s3"
   );
   const s3 = new S3Client({ region });
+
+  const spinner = clack.spinner();
+  spinner.start("Waiting for email to be processed...");
 
   let found = false;
   const startTime = Date.now();

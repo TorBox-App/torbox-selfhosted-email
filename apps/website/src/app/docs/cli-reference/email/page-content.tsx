@@ -480,8 +480,12 @@ export default function CLIReferenceEmailPageContent() {
             <CardContent>
               <p className="text-muted-foreground text-sm">
                 Sends a test email to your configured inbound receiving domain.
-                Accepts <code className="rounded bg-muted px-1 py-0.5">-r, --region</code> and{" "}
-                <code className="rounded bg-muted px-1 py-0.5">--json</code> flags.
+                Accepts{" "}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  -r, --region
+                </code>{" "}
+                and <code className="rounded bg-muted px-1 py-0.5">--json</code>{" "}
+                flags.
               </p>
             </CardContent>
           </Card>
