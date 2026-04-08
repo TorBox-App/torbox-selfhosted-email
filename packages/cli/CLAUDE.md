@@ -18,7 +18,7 @@ export async function commandName(options: CommandOptions): Promise<void> {
 
 ## CLI Router (`src/cli.ts`)
 
-1. Parse args with `args.parse(process.argv)` → flags + subcommands
+1. Parse args with `parseCliArgs(process.argv)` (mri-backed) → `{ flags, sub }`
 2. Check global flags (`--help`, `--version`, `--json`) before routing
 3. Interactive menu if no command provided
 4. Route by service: `if (primaryCommand === "email") { switch(subCommand) { ... } }`

@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
-import args from "args";
 import pc from "picocolors";
 // Auth commands
 import { login as authLogin } from "./commands/auth/login.js";
@@ -83,6 +82,7 @@ import {
 import { workflowInit } from "./commands/workflow/init.js";
 import { getTelemetryClient } from "./telemetry/client.js";
 import { trackCommand } from "./telemetry/events.js";
+import { parseCliArgs } from "./utils/shared/arg-parser.js";
 import {
   printCompletionScript,
   setupTabCompletion,
@@ -301,240 +301,33 @@ function showHelp() {
   );
 }
 
-// Check for version before args parses
+// Check for version before the parser runs
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
   showVersion();
 }
 
-// Check for help before args parses (to override args' built-in help)
+// Check for help before the parser runs (custom help output beats any
+// parser-generated one)
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   showHelp();
   process.exit(0);
 }
 
-// Configure args
-args.options([
-  {
-    name: ["p", "provider"],
-    description: "Hosting provider (vercel, aws, railway, other)",
-    defaultValue: undefined,
-  },
-  {
-    name: ["r", "region"],
-    description: "AWS region",
-    defaultValue: undefined,
-  },
-  {
-    name: ["d", "domain"],
-    description: "Domain name",
-    defaultValue: undefined,
-  },
-  {
-    name: "account",
-    description: "AWS account ID or alias",
-    defaultValue: undefined,
-  },
-  {
-    name: "preset",
-    description:
-      "Configuration preset (starter, production, enterprise, custom)",
-    defaultValue: undefined,
-  },
-  {
-    name: ["y", "yes"],
-    description: "Skip confirmation prompts (non-destructive operations)",
-    defaultValue: false,
-  },
-  {
-    name: ["f", "force"],
-    description:
-      "Force operation without confirmation (destructive operations)",
-    defaultValue: false,
-  },
-  {
-    name: "port",
-    description: "Port for dashboard server",
-    defaultValue: undefined,
-  },
-  {
-    name: "noOpen",
-    description: "Don't open browser automatically",
-    defaultValue: false,
-  },
-  {
-    name: "preview",
-    description: "Preview changes without deploying",
-    defaultValue: false,
-  },
-  // SMS-specific options
-  {
-    name: "to",
-    description: "Destination phone number (E.164 format)",
-    defaultValue: undefined,
-  },
-  {
-    name: "message",
-    description: "SMS message content",
-    defaultValue: undefined,
-  },
-  // SMS verify-number options
-  {
-    name: "phoneNumber",
-    description: "Phone number to verify (E.164 format)",
-    defaultValue: undefined,
-  },
-  {
-    name: "code",
-    description: "Verification code received via SMS",
-    defaultValue: undefined,
-  },
-  {
-    name: "list",
-    description: "List all verified destination numbers",
-    defaultValue: false,
-  },
-  {
-    name: "delete",
-    description: "Delete a verified destination number",
-    defaultValue: false,
-  },
-  {
-    name: "resend",
-    description: "Resend verification code",
-    defaultValue: false,
-  },
-  // Email upgrade options
-  {
-    name: "action",
-    description:
-      "Upgrade action (preset, smtp-credentials, events, archiving, etc.)",
-    defaultValue: undefined,
-  },
-  // Email test options
-  {
-    name: "scenario",
-    description:
-      "Test scenario (success, bounce, complaint, ooto, suppression_list)",
-    defaultValue: undefined,
-  },
-  // Email verify options
-  {
-    name: ["w", "wait"],
-    description: "Poll until DNS records are verified",
-    defaultValue: false,
-  },
-  {
-    name: "interval",
-    description: "Polling interval in seconds (default: 30)",
-    defaultValue: undefined,
-  },
-  // Email check options
-  {
-    name: ["q", "quick"],
-    description: "Quick mode: fewer DKIM selectors, top blacklists only",
-    defaultValue: false,
-  },
-  {
-    name: ["j", "json"],
-    description: "Output results as JSON",
-    defaultValue: false,
-  },
-  {
-    name: "token",
-    description: "API key or token for authentication",
-    defaultValue: undefined,
-  },
-  {
-    name: "verbose",
-    description: "Show all checks including passing",
-    defaultValue: false,
-  },
-  {
-    name: "dkimSelector",
-    description: "Specific DKIM selector to check",
-    defaultValue: undefined,
-  },
-  {
-    name: "skipBlacklists",
-    description: "Skip blacklist checks",
-    defaultValue: false,
-  },
-  {
-    name: "skipTls",
-    description: "Skip MX TLS checks",
-    defaultValue: false,
-  },
-  {
-    name: "timeout",
-    description: "DNS timeout in milliseconds",
-    defaultValue: undefined,
-  },
-  // Permissions command options
-  {
-    name: "service",
-    description: "Service type for permissions (email, sms, cdn)",
-    defaultValue: undefined,
-  },
-  // Template-specific options
-  {
-    name: "template",
-    description: "Specific template to push (by name)",
-    defaultValue: undefined,
-  },
-  // Workflow-specific options
-  {
-    name: "workflow",
-    description: "Specific workflow to push (by name)",
-    defaultValue: undefined,
-  },
-  {
-    name: "dryRun",
-    description: "Preview changes without pushing",
-    defaultValue: false,
-  },
-  {
-    name: "draft",
-    description: "Push workflow as draft without enabling it",
-    defaultValue: false,
-  },
-  {
-    name: "noExample",
-    description: "Skip creating example template",
-    defaultValue: false,
-  },
-  {
-    name: "noClaude",
-    description: "Skip scaffolding .claude/ context files",
-    defaultValue: false,
-  },
-  {
-    name: "org",
-    description: "Organization slug",
-    defaultValue: undefined,
-  },
-  {
-    name: "subdomain",
-    description: "Subdomain for inbound email (e.g., inbound, support)",
-    defaultValue: undefined,
-  },
-  {
-    name: "root",
-    description: "Use root domain for inbound email (no subdomain)",
-    defaultValue: false,
-  },
-  {
-    name: "cleanup",
-    description: "Delete orphaned resources (used with email doctor)",
-    defaultValue: false,
-  },
-]);
-
-// Get command and flags
-const flags = args.parse(process.argv);
-const [primaryCommand, subCommand] = args.sub;
+// Parse command and flags with the mri-backed parser. This fixes
+// wraps-team/wraps#100: boolean flags no longer swallow the next positional.
+//
+// `flags` is intentionally typed loosely here to match the legacy `args` v5
+// return shape — command handlers (Provider, Preset, scenario unions) remain
+// the narrowing boundary. Strictly-typed access is available via CliFlags in
+// src/utils/shared/arg-parser.ts.
+const parsedCli = parseCliArgs(process.argv);
+// biome-ignore lint/suspicious/noExplicitAny: legacy-compat loose shape — see note above
+const flags: Record<string, any> = parsedCli.flags;
+const { sub } = parsedCli;
+const [primaryCommand, subCommand] = sub;
 
 // Enable JSON output mode globally when --json flag is passed
-setJsonMode(flags.json);
+setJsonMode(flags.json === true);
 
 // If no command provided, show interactive menu
 if (!primaryCommand) {
@@ -764,7 +557,7 @@ async function run() {
         case "check":
           // Domain can be positional arg or --domain flag
           await check({
-            domain: args.sub[2] || flags.domain,
+            domain: sub[2] || flags.domain,
             quick: flags.quick,
             json: flags.json,
             verbose: flags.verbose,
@@ -843,7 +636,7 @@ async function run() {
 
         case "inbound": {
           // Handle inbound subcommands
-          const inboundSubCommand = args.sub[2];
+          const inboundSubCommand = sub[2];
 
           switch (inboundSubCommand) {
             case "init":
@@ -922,7 +715,7 @@ async function run() {
 
         case "domains": {
           // Handle domains subcommands
-          const domainsSubCommand = args.sub[2];
+          const domainsSubCommand = sub[2];
 
           switch (domainsSubCommand) {
             case "add": {
@@ -992,7 +785,7 @@ async function run() {
         }
 
         case "templates": {
-          const templatesSubCommand = args.sub[2];
+          const templatesSubCommand = sub[2];
 
           switch (templatesSubCommand) {
             case "init":
@@ -1008,7 +801,9 @@ async function run() {
 
             case "push":
               await templatesPush({
-                template: flags.template,
+                // Positional slug (e.g. `wraps email templates push my-slug`)
+                // falls back to --template for a nicer UX.
+                template: sub[3] || flags.template,
                 dryRun: flags.dryRun,
                 force: flags.force,
                 yes: flags.yes,
@@ -1040,7 +835,7 @@ async function run() {
         }
 
         case "workflows": {
-          const workflowsSubCommand = args.sub[2];
+          const workflowsSubCommand = sub[2];
 
           switch (workflowsSubCommand) {
             case "init":
@@ -1421,7 +1216,8 @@ async function run() {
       // Convenience alias: wraps push → wraps email templates push
       case "push":
         await templatesPush({
-          template: flags.template,
+          // `wraps push my-slug` is the same shortcut as above.
+          template: sub[1] || flags.template,
           dryRun: flags.dryRun,
           force: flags.force,
           yes: flags.yes,
