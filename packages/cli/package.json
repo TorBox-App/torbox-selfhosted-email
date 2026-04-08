@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/cli",
-  "version": "2.18.10",
+  "version": "2.18.11",
   "description": "Deploy email, SMS, and CDN infrastructure to your AWS account with one command. Sets up SES with DKIM/SPF/DMARC, event processing, and history automatically.",
   "type": "module",
   "main": "./dist/cli.js",
@@ -84,7 +84,7 @@
     "conf": "^15.1.0",
     "cosmiconfig": "^9.0.0",
     "esbuild": "^0.25.12",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "get-port": "^7.1.0",
     "http-terminator": "^3.2.0",
     "isomorphic-dompurify": "2.32.0",
