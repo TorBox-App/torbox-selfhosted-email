@@ -1,8 +1,8 @@
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Github } from "lucide-react";
 import Image from "next/image";
-import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 import { HeroAnimatedCTA } from "./hero-cta";
+import { HeroTerminal } from "./hero-terminal";
 
 // Static content - server rendered, visible immediately
 export function HeroSection() {
@@ -34,63 +34,67 @@ export function HeroSection() {
       </svg>
 
       <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
-        <WrapsMotifLayers
-          className="pointer-events-none absolute bottom-0 right-4 hidden h-[100px] w-[110px] sm:block md:h-[120px] md:w-[133px] lg:right-8"
-          fillColor="var(--motif-fill)"
-          strokeColor="var(--muted-foreground)"
-        />
-        <div className="flex flex-col items-start">
-          {/* Badge */}
-          <div className="mb-6">
-            <a
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-orange-500 transition-colors hover:border-orange-500/50"
-              href="https://github.com/wraps-team/wraps"
-            >
-              <Github className="size-4" />
-              <span>Open Source</span>
-              <span className="text-muted-foreground">·</span>
-              <span>AGPLv3 Licensed</span>
-            </a>
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
+          {/* Left column — copy */}
+          <div className="flex flex-col items-start lg:flex-1">
+            {/* Badge */}
+            <div className="mb-6">
+              <a
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-orange-500 transition-colors hover:border-orange-500/50"
+                href="https://github.com/wraps-team/wraps"
+              >
+                <Github className="size-4" />
+                <span>Open Source</span>
+                <span className="text-muted-foreground">·</span>
+                <span>AGPLv3 Licensed</span>
+              </a>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] font-heading md:text-[42px] md:leading-[48px] lg:text-[52px] lg:leading-[60px]">
+              The email platform that sends through{" "}
+              <a
+                className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60 transition-colors"
+                href="/docs/quickstart/email"
+              >
+                your AWS.
+              </a>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="mt-4 max-w-[520px] text-left text-[16px] leading-[24px] text-foreground/70 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
+              One command deploys SES, event tracking, and analytics to your AWS
+              account. Templates, workflows, and broadcasts included — at{" "}
+              <strong className="text-foreground/90">$0.10 per 1,000 emails.</strong>
+            </p>
+
+            {/* Founder credibility */}
+            <div className="mt-4 flex items-center gap-2.5">
+              <Image
+                alt="Jarod, founder of Wraps"
+                className="shrink-0 rounded-full"
+                height={36}
+                src="/team/jarod-medium-smile.webp"
+                width={36}
+              />
+              <a
+                className="text-left text-[15px] leading-[22px] text-foreground/50 underline underline-offset-2 hover:text-foreground md:text-[16px]"
+                href="https://x.com/stewartjarod"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Built by an ex-SendGrid engineer
+              </a>
+            </div>
+
+            {/* CTA - client component for tracking */}
+            <HeroAnimatedCTA />
           </div>
 
-          {/* Main Headline */}
-          <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] font-heading md:text-[42px] md:leading-[48px] lg:text-[60px] lg:leading-[68px]">
-            The email platform that sends through{" "}
-            <a
-              className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60 transition-colors"
-              href="/docs/quickstart/email"
-            >
-              your AWS.
-            </a>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-foreground/70 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
-            Automate on user behavior. Design templates. Schedule broadcasts.
-            Transparent pricing. Sending infrastructure you own.
-          </p>
-
-          {/* Founder credibility */}
-          <div className="mt-4 flex items-center gap-2.5">
-            <Image
-              alt="Jarod, founder of Wraps"
-              className="shrink-0 rounded-full"
-              height={36}
-              src="/team/jarod-medium-smile.webp"
-              width={36}
-            />
-            <a
-              className="text-left text-[15px] leading-[22px] text-foreground/50 underline underline-offset-2 hover:text-foreground md:text-[16px]"
-              href="https://x.com/stewartjarod"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Built by an ex-SendGrid engineer
-            </a>
+          {/* Right column — terminal */}
+          <div className="hidden lg:block lg:flex-1">
+            <HeroTerminal />
           </div>
-
-          {/* CTA - client component for tracking */}
-          <HeroAnimatedCTA />
         </div>
       </div>
     </section>

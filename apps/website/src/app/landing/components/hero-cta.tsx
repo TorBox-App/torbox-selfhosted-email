@@ -6,45 +6,28 @@ import { trackEvent } from "@/utils/analytics";
 export function HeroAnimatedCTA() {
   return (
     <div className="mt-8">
-      <div className="flex items-center gap-3">
-        <Button
-          asChild
-          className="cursor-pointer rounded bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600"
+      <Button
+        asChild
+        className="cursor-pointer rounded bg-orange-500 px-5 py-2.5 text-sm font-semibold hover:bg-orange-600"
+        size="lg"
+      >
+        <a
+          href="https://app.wraps.dev/auth?mode=signup"
+          onClick={() =>
+            trackEvent("cta_click", {
+              location: "hero",
+              cta_text: "Start free",
+            })
+          }
         >
-          <a
-            href="https://app.wraps.dev/auth?mode=signup"
-            onClick={() =>
-              trackEvent("cta_click", {
-                location: "hero",
-                cta_text: "Send your first email",
-              })
-            }
-          >
-            Send your first email
-          </a>
-        </Button>
-        <Button
-          asChild
-          className="cursor-pointer rounded border-[0.5px] bg-white px-4 py-2 text-sm font-medium text-foreground hover:text-orange-500 dark:bg-transparent"
-          variant="outline"
-        >
-          <a
-            href="https://github.com/wraps-team/wraps"
-            onClick={() =>
-              trackEvent("cta_click", {
-                location: "hero",
-                cta_text: "View on GitHub",
-              })
-            }
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View on GitHub
-          </a>
-        </Button>
-      </div>
+          Start free
+        </a>
+      </Button>
       <p className="mt-3 text-[12px] text-foreground/50">
-        No account required. Free and open source.
+        No credit card. No vendor lock-in. Deploy with{" "}
+        <code className="rounded bg-foreground/5 px-1 py-0.5 font-mono text-foreground/70">
+          npx @wraps.dev/cli
+        </code>
       </p>
     </div>
   );
