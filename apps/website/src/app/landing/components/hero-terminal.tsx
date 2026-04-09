@@ -39,7 +39,8 @@ export function HeroTerminal() {
 
       <AnimatedSpan delay={6200}>
         <span className="text-foreground">
-          Infrastructure deployed in <strong className="text-orange-500">38s</strong>
+          Infrastructure deployed in{" "}
+          <strong className="text-orange-500">38s</strong>
         </span>
       </AnimatedSpan>
 

@@ -65,7 +65,9 @@ export function HeroSection() {
             <p className="mt-4 max-w-[520px] text-left text-[16px] leading-[24px] text-foreground/70 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
               One command deploys SES, event tracking, and analytics to your AWS
               account. Templates, workflows, and broadcasts included — at{" "}
-              <strong className="text-foreground/90">$0.10 per 1,000 emails.</strong>
+              <strong className="text-foreground/90">
+                $0.10 per 1,000 emails.
+              </strong>
             </p>
 
             {/* Founder credibility */}
