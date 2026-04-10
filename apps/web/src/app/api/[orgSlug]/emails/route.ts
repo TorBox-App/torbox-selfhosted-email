@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { messageSend } from "@wraps/db/schema/batch";
+import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import {
@@ -131,8 +132,40 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    // Aggregate and return
+    // Aggregate DynamoDB events
     const emails = aggregateEmailEvents(allEvents).slice(0, limit);
+
+    // Enrich with authoritative sentAt from PostgreSQL.
+    // DynamoDB Send events may be TTL-expired, leaving only engagement events
+    // with incorrect timestamps. The message_send table always has the real sentAt.
+    const messageIds = emails.map((e) => e.messageId).filter(Boolean);
+    if (messageIds.length > 0) {
+      const pgRecords = await db
+        .select({
+          messageId: messageSend.messageId,
+          sentAt: messageSend.sentAt,
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            inArray(messageSend.messageId, messageIds)
+          )
+        );
+
+      const pgSentAt = new Map(
+        pgRecords
+          .filter((r) => r.messageId && r.sentAt)
+          .map((r) => [r.messageId, r.sentAt!.getTime()])
+      );
+
+      for (const email of emails) {
+        const authoritative = pgSentAt.get(email.messageId);
+        if (authoritative && authoritative < email.sentAt) {
+          email.sentAt = authoritative;
+        }
+      }
+    }
 
     return NextResponse.json(emails);
   } catch (error) {
