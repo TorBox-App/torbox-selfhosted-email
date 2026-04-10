@@ -126,6 +126,26 @@ function formatTimestamp(timestamp: number): string {
   });
 }
 
+function formatSentDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffInDays = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffInDays === 0) {
+    return "today";
+  }
+  if (diffInDays === 1) {
+    return "yesterday";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export const columns: ColumnDef<EmailListItem>[] = [
   {
     id: "select",
@@ -191,7 +211,12 @@ export const columns: ColumnDef<EmailListItem>[] = [
       <DataTableColumnHeader column={column} label="Subject" />
     ),
     cell: ({ row }) => (
-      <div className="max-w-[400px] truncate">{row.original.subject}</div>
+      <div className="max-w-[400px]">
+        <div className="truncate">{row.original.subject}</div>
+        <div className="text-muted-foreground text-xs">
+          Sent {formatSentDate(row.original.sentAt)}
+        </div>
+      </div>
     ),
     meta: {
       label: "Subject",
@@ -231,75 +256,21 @@ export const columns: ColumnDef<EmailListItem>[] = [
     enableSorting: true,
   },
   {
-    id: "engagement",
-    accessorFn: (row) => ({
-      hasOpened: row.hasOpened,
-      hasClicked: row.hasClicked,
-    }),
+    id: "lastActivityAt",
+    accessorKey: "lastActivityAt",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Engagement" />
-    ),
-    cell: ({ row }) => {
-      const { hasOpened, hasClicked } = row.original;
-      if (!(hasOpened || hasClicked)) {
-        return <span className="text-muted-foreground text-sm">-</span>;
-      }
-      return (
-        <div className="flex items-center gap-2">
-          {hasOpened && (
-            <Badge
-              className="border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-400"
-              variant="outline"
-            >
-              <Mail className="mr-1 h-3 w-3" />
-              Opened
-            </Badge>
-          )}
-          {hasClicked && (
-            <Badge
-              className="border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-400"
-              variant="outline"
-            >
-              <MousePointerClick className="mr-1 h-3 w-3" />
-              Clicked
-            </Badge>
-          )}
-        </div>
-      );
-    },
-    enableColumnFilter: false,
-    enableSorting: false,
-  },
-  {
-    id: "sentAt",
-    accessorKey: "sentAt",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Sent" />
+      <DataTableColumnHeader column={column} label="Activity" />
     ),
     cell: ({ row }) => (
       <span className="text-muted-foreground text-sm">
-        {formatTimestamp(row.original.sentAt)}
+        {formatTimestamp(row.original.lastActivityAt)}
       </span>
     ),
     meta: {
-      label: "Sent Date",
+      label: "Activity",
       variant: "dateRange",
     },
     enableColumnFilter: true,
-    enableSorting: true,
-  },
-  {
-    id: "eventCount",
-    accessorKey: "eventCount",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Events" />
-    ),
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.eventCount}
-      </span>
-    ),
-    enableColumnFilter: false,
     enableSorting: true,
   },
 ];

@@ -40,6 +40,7 @@ export type EmailListItem = {
   subject: string;
   status: EmailStatus;
   sentAt: number;
+  lastActivityAt: number;
   eventCount: number;
   hasOpened: boolean;
   hasClicked: boolean;

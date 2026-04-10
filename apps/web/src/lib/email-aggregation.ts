@@ -104,6 +104,7 @@ export function aggregateEmailEvents(
       eventTypes: Set<string>;
       hasOpened: boolean;
       hasClicked: boolean;
+      lastActivityAt: number;
     }
   >();
 
@@ -125,6 +126,10 @@ export function aggregateEmailEvents(
 
         if (originalSentAt < existing.sentAt) {
           existing.sentAt = originalSentAt;
+        }
+
+        if (event.createdAt > existing.lastActivityAt) {
+          existing.lastActivityAt = event.createdAt;
         }
 
         // Don't promote status for bot opens
@@ -151,6 +156,7 @@ export function aggregateEmailEvents(
           eventTypes: new Set([event.eventType]),
           hasOpened: event.eventType === "Open" && !isBot,
           hasClicked: event.eventType === "Click",
+          lastActivityAt: event.createdAt,
         });
       }
     }
@@ -168,6 +174,7 @@ export function aggregateEmailEvents(
       eventCount: email.eventTypes.size,
       hasOpened: email.hasOpened,
       hasClicked: email.hasClicked,
+      lastActivityAt: email.lastActivityAt,
     }))
     .sort((a, b) => b.sentAt - a.sentAt);
 }

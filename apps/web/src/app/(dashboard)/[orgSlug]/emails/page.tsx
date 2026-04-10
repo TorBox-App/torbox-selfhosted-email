@@ -189,6 +189,11 @@ async function fetchEmails(
         subject: e.subject ?? "(no subject)",
         status: (e.status as EmailStatus) ?? "sent",
         sentAt: e.sentAt?.getTime() ?? 0,
+        lastActivityAt:
+          e.clickedAt?.getTime() ??
+          e.openedAt?.getTime() ??
+          e.sentAt?.getTime() ??
+          0,
         eventCount: 1,
         hasOpened: !!e.openedAt,
         hasClicked: !!e.clickedAt,

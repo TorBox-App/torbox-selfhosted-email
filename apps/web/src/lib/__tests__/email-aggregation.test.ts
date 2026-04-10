@@ -80,6 +80,71 @@ describe("aggregateEmailEvents", () => {
     expect(result[0].status).toBe("opened");
   });
 
+  it("returns lastActivityAt as the latest createdAt across all events", () => {
+    const events = [
+      {
+        messageId: "msg-1",
+        sentAt: 1000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Send",
+        eventData: "{}",
+        createdAt: 1000,
+        expiresAt: 9_999_999,
+      },
+      {
+        messageId: "msg-1",
+        sentAt: 2000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Delivery",
+        eventData: "{}",
+        createdAt: 2000,
+        expiresAt: 9_999_999,
+      },
+      {
+        messageId: "msg-1",
+        sentAt: 5000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Open",
+        eventData: "{}",
+        createdAt: 5000,
+        expiresAt: 9_999_999,
+      },
+    ];
+
+    const result = aggregateEmailEvents([events]);
+    expect(result[0].lastActivityAt).toBe(5000);
+  });
+
+  it("lastActivityAt equals sentAt when only a Send event exists", () => {
+    const events = [
+      {
+        messageId: "msg-1",
+        sentAt: 1000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Send",
+        eventData: "{}",
+        createdAt: 1000,
+        expiresAt: 9_999_999,
+      },
+    ];
+
+    const result = aggregateEmailEvents([events]);
+    expect(result[0].lastActivityAt).toBe(1000);
+    expect(result[0].sentAt).toBe(1000);
+  });
+
   it("treats opens without additionalData as real opens", () => {
     const events = [
       {

@@ -70,7 +70,7 @@ export function EmailsTable({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "sentAt", desc: true },
+    { id: "lastActivityAt", desc: true },
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
