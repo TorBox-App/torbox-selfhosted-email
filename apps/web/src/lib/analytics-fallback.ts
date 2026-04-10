@@ -21,6 +21,7 @@ export type DailyEmailMetrics = {
   complaints: number;
   opens: number;
   clicks: number;
+  renderingFailures: number;
 };
 
 export async function getEmailMetricsFromPostgres(
@@ -33,12 +34,13 @@ export async function getEmailMetricsFromPostgres(
   const rows = await db
     .select({
       date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
-      sent: sql<number>`count(*)::int`,
+      sent: sql<number>`count(*) filter (where ${messageSend.status} != 'failed')::int`,
       delivered: sql<number>`count(*) filter (where ${messageSend.deliveredAt} is not null)::int`,
       bounced: sql<number>`count(*) filter (where ${messageSend.bouncedAt} is not null)::int`,
       complaints: sql<number>`count(*) filter (where ${messageSend.complainedAt} is not null)::int`,
       opens: sql<number>`count(*) filter (where ${messageSend.openedAt} is not null)::int`,
       clicks: sql<number>`count(*) filter (where ${messageSend.clickedAt} is not null)::int`,
+      renderingFailures: sql<number>`count(*) filter (where ${messageSend.status} = 'failed')::int`,
     })
     .from(messageSend)
     .where(
@@ -64,6 +66,7 @@ export async function getEmailMetricsFromPostgres(
       complaints: row.complaints,
       opens: row.opens,
       clicks: row.clicks,
+      renderingFailures: row.renderingFailures,
     });
   }
   return map;

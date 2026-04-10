@@ -9,6 +9,7 @@ type AnalyticsOverview = {
   totalDelivered: number;
   totalBounced: number;
   totalComplaints: number;
+  totalRenderingFailures: number;
   deliveryRate: number;
   bounceRate: number;
   complaintRate: number;

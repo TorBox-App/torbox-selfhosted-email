@@ -58,6 +58,7 @@ export async function GET(request: Request, context: RouteContext) {
         totalDelivered: 0,
         totalBounced: 0,
         totalComplaints: 0,
+        totalRenderingFailures: 0,
         deliveryRate: 0,
         bounceRate: 0,
         complaintRate: 0,
@@ -84,7 +85,12 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     const calculateTotal = (
-      metricName: "sends" | "deliveries" | "bounces" | "complaints"
+      metricName:
+        | "sends"
+        | "deliveries"
+        | "bounces"
+        | "complaints"
+        | "renderingFailures"
     ) =>
       metricsResults.reduce((total, metrics) => {
         if (!metrics) {
@@ -98,6 +104,7 @@ export async function GET(request: Request, context: RouteContext) {
     let totalDelivered = calculateTotal("deliveries");
     let totalBounced = calculateTotal("bounces");
     let totalComplaints = calculateTotal("complaints");
+    let totalRenderingFailures = calculateTotal("renderingFailures");
 
     // Fallback to PostgreSQL message_send when CloudWatch returns no data
     if (totalSent === 0) {
@@ -111,19 +118,27 @@ export async function GET(request: Request, context: RouteContext) {
         totalDelivered += m.delivered;
         totalBounced += m.bounced;
         totalComplaints += m.complaints;
+        totalRenderingFailures += m.renderingFailures;
       }
     }
 
-    const deliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
-    const bounceRate = totalSent > 0 ? (totalBounced / totalSent) * 100 : 0;
+    // Rendering failures are counted as "sends" by CloudWatch but never
+    // actually left SES. Subtract them to get the true send denominator.
+    const effectiveSent = Math.max(0, totalSent - totalRenderingFailures);
+
+    const deliveryRate =
+      effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
+    const bounceRate =
+      effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
     const complaintRate =
-      totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
+      effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
 
     return NextResponse.json({
       totalSent: Math.round(totalSent),
       totalDelivered: Math.round(totalDelivered),
       totalBounced: Math.round(totalBounced),
       totalComplaints: Math.round(totalComplaints),
+      totalRenderingFailures: Math.round(totalRenderingFailures),
       deliveryRate: Number(deliveryRate.toFixed(2)),
       bounceRate: Number(bounceRate.toFixed(2)),
       complaintRate: Number(complaintRate.toFixed(2)),

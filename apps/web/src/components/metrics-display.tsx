@@ -20,12 +20,15 @@ export function MetricsDisplay({ metrics }: MetricsDisplayProps) {
   const deliveries = calculateTotal(metrics.deliveries);
   const bounces = calculateTotal(metrics.bounces);
   const complaints = calculateTotal(metrics.complaints);
+  const renderingFailures = calculateTotal(metrics.renderingFailures);
 
+  const effectiveSent = Math.max(0, sends - renderingFailures);
   const deliveryRate =
-    sends > 0 ? ((deliveries / sends) * 100).toFixed(2) : "0";
-  const bounceRate = sends > 0 ? ((bounces / sends) * 100).toFixed(2) : "0";
+    effectiveSent > 0 ? ((deliveries / effectiveSent) * 100).toFixed(2) : "0";
+  const bounceRate =
+    effectiveSent > 0 ? ((bounces / effectiveSent) * 100).toFixed(2) : "0";
   const complaintRate =
-    sends > 0 ? ((complaints / sends) * 100).toFixed(2) : "0";
+    effectiveSent > 0 ? ((complaints / effectiveSent) * 100).toFixed(2) : "0";
 
   const metricCards = [
     {

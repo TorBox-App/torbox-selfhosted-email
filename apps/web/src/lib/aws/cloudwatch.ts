@@ -211,6 +211,7 @@ export async function getSESMetricsSummary(params: {
       SES_METRICS.DELIVERY,
       SES_METRICS.BOUNCE,
       SES_METRICS.COMPLAINT,
+      SES_METRICS.RENDERING_FAILURE,
     ],
     period,
     startTime,
@@ -222,5 +223,6 @@ export async function getSESMetricsSummary(params: {
     deliveries: results[SES_METRICS.DELIVERY] || [],
     bounces: results[SES_METRICS.BOUNCE] || [],
     complaints: results[SES_METRICS.COMPLAINT] || [],
+    renderingFailures: results[SES_METRICS.RENDERING_FAILURE] || [],
   };
 }

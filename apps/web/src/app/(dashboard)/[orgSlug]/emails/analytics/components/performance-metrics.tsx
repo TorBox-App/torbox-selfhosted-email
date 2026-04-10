@@ -74,46 +74,31 @@ export function PerformanceMetrics({ orgSlug }: { orgSlug: string }) {
     );
   }
 
-  const totalSent = data.totalSent;
-
-  // Calculate estimated opens and clicks (placeholder until we have real data)
-  const estimatedOpens = Math.floor(data.totalDelivered * 0.42);
-  const estimatedClicks = Math.floor(data.totalDelivered * 0.18);
+  const effectiveSent = Math.max(
+    0,
+    data.totalSent - (data.totalRenderingFailures ?? 0)
+  );
 
   const metrics = [
     {
       label: "Delivered",
       value: data.totalDelivered,
-      total: totalSent,
-      percentage: (data.totalDelivered / totalSent) * 100,
+      total: effectiveSent,
+      percentage: data.deliveryRate,
       color: "bg-green-500",
-    },
-    {
-      label: "Opened",
-      value: estimatedOpens,
-      total: totalSent,
-      percentage: (estimatedOpens / totalSent) * 100,
-      color: "bg-blue-500",
-    },
-    {
-      label: "Clicked",
-      value: estimatedClicks,
-      total: totalSent,
-      percentage: (estimatedClicks / totalSent) * 100,
-      color: "bg-purple-500",
     },
     {
       label: "Bounced",
       value: data.totalBounced,
-      total: totalSent,
-      percentage: (data.totalBounced / totalSent) * 100,
+      total: effectiveSent,
+      percentage: data.bounceRate,
       color: "bg-yellow-500",
     },
     {
       label: "Complaints",
       value: data.totalComplaints,
-      total: totalSent,
-      percentage: (data.totalComplaints / totalSent) * 100,
+      total: effectiveSent,
+      percentage: data.complaintRate,
       color: "bg-red-500",
     },
   ];

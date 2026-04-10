@@ -7,17 +7,6 @@ import { useAnalyticsOverview } from "../hooks/use-analytics";
 export function AnalyticsOverview({ orgSlug }: { orgSlug: string }) {
   const { data, isLoading, error } = useAnalyticsOverview(orgSlug, 30);
 
-  // Calculate open and click rates from the data
-  const openRate =
-    data && data.totalDelivered > 0
-      ? ((data.totalDelivered * 0.42) / data.totalDelivered) * 100 // Placeholder calculation
-      : 0;
-
-  const clickRate =
-    data && data.totalDelivered > 0
-      ? ((data.totalDelivered * 0.18) / data.totalDelivered) * 100 // Placeholder calculation
-      : 0;
-
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -48,15 +37,13 @@ export function AnalyticsOverview({ orgSlug }: { orgSlug: string }) {
         icon={<Users className="h-6 w-6" />}
         isLoading={isLoading}
         title="Open Rate"
-        trend="up"
-        value={`${openRate.toFixed(1)}%`}
+        value={"\u2014"}
       />
       <StatCard
         icon={<MousePointerClick className="h-6 w-6" />}
         isLoading={isLoading}
         title="Click Rate"
-        trend="up"
-        value={`${clickRate.toFixed(1)}%`}
+        value={"\u2014"}
       />
     </div>
   );

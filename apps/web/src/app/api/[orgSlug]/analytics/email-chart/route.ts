@@ -41,6 +41,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
             totalDelivered: 0,
             totalBounced: 0,
             totalComplaints: 0,
+            totalRenderingFailures: 0,
             deliveryRate: 0,
             bounceRate: 0,
             complaintRate: 0,
@@ -57,6 +58,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
         SES_METRICS.COMPLAINT,
         SES_METRICS.OPEN,
         SES_METRICS.CLICK,
+        SES_METRICS.RENDERING_FAILURE,
       ];
 
       const metricsResults = await Promise.all(
@@ -82,6 +84,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
         "complaints",
         "opens",
         "clicks",
+        "renderingFailures",
       ] as const;
       let dailyMap = new Map<
         string,
@@ -103,6 +106,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
             metrics[SES_METRICS.COMPLAINT]?.[0]?.Values || [],
             metrics[SES_METRICS.OPEN]?.[0]?.Values || [],
             metrics[SES_METRICS.CLICK]?.[0]?.Values || [],
+            metrics[SES_METRICS.RENDERING_FAILURE]?.[0]?.Values || [],
           ],
           [...allKeys],
           timezone
@@ -116,6 +120,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
             complaints: 0,
             opens: 0,
             clicks: 0,
+            renderingFailures: 0,
           };
           dailyMap.set(dateStr, {
             sent: existing.sent + values.sent,
@@ -124,6 +129,8 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
             complaints: existing.complaints + values.complaints,
             opens: existing.opens + values.opens,
             clicks: existing.clicks + values.clicks,
+            renderingFailures:
+              existing.renderingFailures + values.renderingFailures,
           });
         }
       }
@@ -141,18 +148,23 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
       let totalDelivered = 0;
       let totalBounced = 0;
       let totalComplaints = 0;
+      let totalRenderingFailures = 0;
       for (const day of dailyMap.values()) {
         totalSent += day.sent;
         totalDelivered += day.delivered;
         totalBounced += day.bounced;
         totalComplaints += day.complaints;
+        totalRenderingFailures += day.renderingFailures;
       }
 
+      const effectiveSent = Math.max(0, totalSent - totalRenderingFailures);
+
       const deliveryRate =
-        totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
-      const bounceRate = totalSent > 0 ? (totalBounced / totalSent) * 100 : 0;
+        effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
+      const bounceRate =
+        effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
       const complaintRate =
-        totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
+        effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
 
       const dateRange = generateDateRange(startTime, endTime, timezone);
       const defaults = {
@@ -162,6 +174,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
         complaints: 0,
         opens: 0,
         clicks: 0,
+        renderingFailures: 0,
       };
       const filled = gapFillDates(dateRange, dailyMap, defaults);
 
@@ -190,6 +203,7 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
           totalDelivered: Math.round(totalDelivered),
           totalBounced: Math.round(totalBounced),
           totalComplaints: Math.round(totalComplaints),
+          totalRenderingFailures: Math.round(totalRenderingFailures),
           deliveryRate: Number(deliveryRate.toFixed(2)),
           bounceRate: Number(bounceRate.toFixed(2)),
           complaintRate: Number(complaintRate.toFixed(2)),
