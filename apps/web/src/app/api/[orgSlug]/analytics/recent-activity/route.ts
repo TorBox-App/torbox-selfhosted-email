@@ -86,6 +86,7 @@ export async function GET(request: Request, context: RouteContext) {
         subject: activity.subject,
         eventType: activity.eventType,
         timestamp: activity.timestamp,
+        sentAt: activity.sentAt,
         timestampFormatted: new Date(activity.timestamp).toISOString(),
         metadata: activity.metadata,
       }));

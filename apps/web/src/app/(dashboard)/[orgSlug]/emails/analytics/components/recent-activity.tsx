@@ -105,7 +105,7 @@ const getActivityBadgeConfig = (type: string) => {
   );
 };
 
-const formatTimestamp = (timestamp: number) => {
+const formatRelativeTime = (timestamp: number) => {
   const now = Date.now();
   const diff = now - timestamp;
 
@@ -184,7 +184,16 @@ export function RecentActivity({ orgSlug }: { orgSlug: string }) {
                     <ItemContent>
                       <ItemTitle>{activity.subject}</ItemTitle>
                       <ItemDescription>
-                        {formatTimestamp(activity.timestamp)}
+                        {formatRelativeTime(activity.timestamp)}
+                        {activity.sentAt &&
+                          activity.eventType !== "Send" &&
+                          activity.timestamp - activity.sentAt >
+                            24 * 60 * 60 * 1000 && (
+                            <span className="text-muted-foreground/60">
+                              {" "}
+                              · sent {formatRelativeTime(activity.sentAt)}
+                            </span>
+                          )}
                       </ItemDescription>
                     </ItemContent>
                     <Badge

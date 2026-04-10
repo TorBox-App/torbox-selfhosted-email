@@ -241,6 +241,7 @@ async function processJob(job: BatchJob): Promise<void> {
   // Send to contacts using SES
   let sent = 0;
   let failed = 0;
+  const sentContactIds: string[] = [];
 
   const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
@@ -511,6 +512,7 @@ async function processJob(job: BatchJob): Promise<void> {
               sentAt: new Date(),
             });
             sent++;
+            sentContactIds.push(recipient.id);
           } else {
             log.error("Bulk send failed for recipient", bulkResult?.Error, {
               email: recipient.email,
@@ -731,6 +733,7 @@ async function processJob(job: BatchJob): Promise<void> {
             sentAt: new Date(),
           });
           sent++;
+          sentContactIds.push(recipient.id);
         } else {
           log.error("Individual send failed", result.reason, {
             email: recipient.email,
@@ -774,6 +777,17 @@ async function processJob(job: BatchJob): Promise<void> {
     }).catch((err) =>
       log.error("Activation tracking failed", err, { organizationId })
     );
+  }
+
+  // Update contact email counters for successful sends
+  if (sentContactIds.length > 0) {
+    await db
+      .update(contact)
+      .set({
+        lastEmailSentAt: new Date(),
+        emailsSent: sql`COALESCE(${contact.emailsSent}, 0) + 1`,
+      })
+      .where(inArray(contact.id, sentContactIds));
   }
 
   // Update batch progress

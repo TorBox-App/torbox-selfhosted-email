@@ -275,6 +275,7 @@ export type RecentActivity = {
   subject: string;
   eventType: string;
   timestamp: number;
+  sentAt: number;
   timestampFormatted: string;
   metadata: Record<string, unknown>;
 };
@@ -320,13 +321,23 @@ export async function getRecentActivityFromPostgres(
       queued: "Send",
     };
     const eventType = statusToEventType[r.status] ?? "Send";
-    const ts = r.sentAt?.getTime() ?? Date.now();
+    const sentAtTs = r.sentAt?.getTime() ?? Date.now();
+
+    // Use the most recent event timestamp, not always sentAt
+    const eventTimeMap: Record<string, number | undefined> = {
+      Open: r.openedAt?.getTime(),
+      Click: r.clickedAt?.getTime(),
+      Bounce: r.bouncedAt?.getTime(),
+      Complaint: r.complainedAt?.getTime(),
+    };
+    const ts = eventTimeMap[eventType] ?? sentAtTs;
 
     return {
       id: r.id,
       subject: r.subject ?? "(no subject)",
       eventType,
       timestamp: ts,
+      sentAt: sentAtTs,
       timestampFormatted: new Date(ts).toISOString(),
       metadata: { to: r.recipient },
     };

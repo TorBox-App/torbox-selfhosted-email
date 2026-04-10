@@ -237,6 +237,7 @@ export async function getRecentEmailActivity(params: {
     subject: string;
     eventType: string;
     timestamp: number;
+    sentAt: number;
     metadata?: Record<string, unknown>;
   }>
 > {
@@ -258,6 +259,7 @@ export async function getRecentEmailActivity(params: {
     subject: event.subject,
     eventType: event.eventType,
     timestamp: event.createdAt,
+    sentAt: event.sentAt,
     metadata: event.additionalData
       ? JSON.parse(event.additionalData)
       : undefined,

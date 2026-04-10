@@ -43,6 +43,7 @@ type RecentActivity = {
   subject: string;
   eventType: string;
   timestamp: number;
+  sentAt: number;
   timestampFormatted: string;
   metadata?: Record<string, unknown>;
 };
