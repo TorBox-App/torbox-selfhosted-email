@@ -2,7 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
-import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { Mail } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
@@ -17,8 +17,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { queryEmailEvents } from "@/lib/aws/dynamodb";
-import { aggregateEmailEvents } from "@/lib/email-aggregation";
+import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
+import {
+  aggregateEmailEvents,
+  findIncompleteMessageIds,
+} from "@/lib/email-aggregation";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkHasAwsAccounts } from "@/lib/setup-status";
 import { EmailAnalytics } from "./components/email-analytics";
@@ -81,8 +84,75 @@ async function fetchEmails(
       })
     );
 
+    // Backfill complete events for messages missing their Send event.
+    // The time-windowed GSI query may only return engagement events (Open/Click)
+    // for old emails, missing the original Send/Delivery events.
+    const incomplete = findIncompleteMessageIds(allEvents);
+
+    if (incomplete.size > 0) {
+      const accountsByNumber = new Map(
+        accounts.map((a) => [a.accountId, a.id])
+      );
+
+      const byAccount = new Map<string, string[]>();
+      for (const [messageId, awsAccountNumber] of incomplete) {
+        const internalId = accountsByNumber.get(awsAccountNumber);
+        if (internalId) {
+          const existing = byAccount.get(internalId) || [];
+          existing.push(messageId);
+          byAccount.set(internalId, existing);
+        }
+      }
+
+      const backfilled = await Promise.all(
+        [...byAccount.entries()].map(async ([awsAccountId, messageIds]) => {
+          try {
+            return await queryEventsByMessageIds({ awsAccountId, messageIds });
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      for (const events of backfilled) {
+        allEvents.push(events);
+      }
+    }
+
     // Group events by messageId, filtering out bot opens
     const emails = aggregateEmailEvents(allEvents).slice(0, limit);
+
+    // Enrich with authoritative sentAt from PostgreSQL.
+    // DynamoDB Send events may be TTL-expired, leaving only engagement events
+    // with incorrect timestamps. The message_send table always has the real sentAt.
+    const messageIds = emails.map((e) => e.messageId).filter(Boolean);
+    if (messageIds.length > 0) {
+      const pgRecords = await db
+        .select({
+          messageId: messageSend.messageId,
+          sentAt: messageSend.sentAt,
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, organizationId),
+            inArray(messageSend.messageId, messageIds)
+          )
+        );
+
+      const pgSentAt = new Map(
+        pgRecords
+          .filter((r) => r.messageId && r.sentAt)
+          .map((r) => [r.messageId, r.sentAt?.getTime()])
+      );
+
+      for (const email of emails) {
+        const authoritative = pgSentAt.get(email.messageId);
+        if (authoritative && authoritative < email.sentAt) {
+          email.sentAt = authoritative;
+        }
+      }
+    }
 
     // If DynamoDB returned no data, fall back to PostgreSQL messageSend table
     if (emails.length === 0) {
