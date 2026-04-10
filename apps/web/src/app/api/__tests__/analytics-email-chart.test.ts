@@ -30,14 +30,40 @@ vi.mock("@/lib/organization", () => ({
   })),
 }));
 
+// Mock unstable_cache to just call the function directly (no caching)
 vi.mock("next/cache", () => ({
-  unstable_cache: (fn: Function) => (...args: unknown[]) => fn(...args),
+  unstable_cache: (fn: Function) => () => fn(),
+}));
+
+const mockGetCloudWatchMetricsBatch = vi.fn();
+vi.mock("@/lib/aws/cloudwatch", () => ({
+  getCloudWatchMetricsBatch: (...args: unknown[]) =>
+    mockGetCloudWatchMetricsBatch(...args),
+  SES_METRICS: {
+    SEND: "Send",
+    DELIVERY: "Delivery",
+    BOUNCE: "Bounce",
+    COMPLAINT: "Complaint",
+    OPEN: "Open",
+    CLICK: "Click",
+    RENDERING_FAILURE: "RenderingFailure",
+  },
 }));
 
 const mockGetEmailMetricsFromPostgres = vi.fn();
 vi.mock("@/lib/analytics-fallback", () => ({
   getEmailMetricsFromPostgres: (...args: unknown[]) =>
     mockGetEmailMetricsFromPostgres(...args),
+}));
+
+vi.mock("@wraps/db", () => ({
+  db: {
+    query: {
+      awsAccount: {
+        findMany: vi.fn(async () => [{ id: "acc-1", organizationId: "org-1" }]),
+      },
+    },
+  },
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -51,6 +77,22 @@ vi.mock("@/lib/logger", () => ({
 
 // Mock analytics-utils — return the data as-is
 vi.mock("@/lib/analytics-utils", () => ({
+  aggregateByDate: (
+    timestamps: Date[],
+    valueSets: number[][],
+    keys: string[]
+  ) => {
+    const map = new Map();
+    for (let i = 0; i < timestamps.length; i++) {
+      const date = timestamps[i].toISOString().slice(0, 10);
+      const entry: Record<string, number> = {};
+      for (let k = 0; k < keys.length; k++) {
+        entry[keys[k]] = valueSets[k]?.[i] || 0;
+      }
+      map.set(date, entry);
+    }
+    return map;
+  },
   gapFillDates: (
     range: string[],
     map: Map<string, Record<string, number>>,
@@ -73,18 +115,25 @@ vi.mock("@/lib/analytics-utils", () => ({
   validateTimezone: (tz: string | null | undefined) => tz || "UTC",
 }));
 
-function makePostgresMetrics(day: {
-  sent: number;
-  delivered: number;
-  bounced: number;
+function makeCloudWatchBatchResult(day: {
+  sends: number;
+  deliveries: number;
+  bounces: number;
   complaints: number;
   opens: number;
   clicks: number;
   renderingFailures: number;
 }) {
-  const map = new Map();
-  map.set("2026-04-10", { ...day });
-  return map;
+  const ts = [new Date("2026-04-10")];
+  return {
+    Send: [{ Timestamps: ts, Values: [day.sends] }],
+    Delivery: [{ Timestamps: ts, Values: [day.deliveries] }],
+    Bounce: [{ Timestamps: ts, Values: [day.bounces] }],
+    Complaint: [{ Timestamps: ts, Values: [day.complaints] }],
+    Open: [{ Timestamps: ts, Values: [day.opens] }],
+    Click: [{ Timestamps: ts, Values: [day.clicks] }],
+    RenderingFailure: [{ Timestamps: ts, Values: [day.renderingFailures] }],
+  };
 }
 
 describe("Email Chart API", () => {
@@ -93,11 +142,11 @@ describe("Email Chart API", () => {
   });
 
   it("returns correct deliveryRate in overview when rendering failures exist", async () => {
-    mockGetEmailMetricsFromPostgres.mockResolvedValueOnce(
-      makePostgresMetrics({
-        sent: 124,
-        delivered: 110,
-        bounced: 1,
+    mockGetCloudWatchMetricsBatch.mockResolvedValueOnce(
+      makeCloudWatchBatchResult({
+        sends: 124,
+        deliveries: 110,
+        bounces: 1,
         complaints: 0,
         opens: 20,
         clicks: 5,

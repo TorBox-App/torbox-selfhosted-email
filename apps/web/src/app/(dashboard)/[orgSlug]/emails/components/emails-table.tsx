@@ -336,7 +336,10 @@ export function EmailsTable({
 
       {/* Table */}
       <div
-        className={cn("rounded-md border transition-opacity", isFetching && !isLoading && "opacity-60")}
+        className={cn(
+          "rounded-md border transition-opacity",
+          isFetching && !isLoading && "opacity-60"
+        )}
       >
         <Table>
           <TableHeader>

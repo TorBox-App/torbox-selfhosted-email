@@ -98,33 +98,16 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
 
   const overview = data?.overview;
 
-  // Merge volume and engagement data by date, estimate opens/clicks from rates
   const chartData = React.useMemo(() => {
     if (!data?.volume) {
       return [];
     }
 
-    // Build a lookup map for engagement data by date
-    const engagementByDate = new Map(
-      data.engagement?.map((e) => [e.date, e]) ?? []
-    );
-
-    return data.volume.map((v) => {
-      const engagement = engagementByDate.get(v.date);
-      // Estimate opens and clicks from delivered count and rates
-      const opened = engagement
-        ? Math.round(v.delivered * (engagement.openRate / 100))
-        : 0;
-      const clicked = engagement
-        ? Math.round(v.delivered * (engagement.clickRate / 100))
-        : 0;
-
-      return {
-        ...v,
-        opened,
-        clicked,
-      };
-    });
+    return data.volume.map((v) => ({
+      ...v,
+      opened: v.opens,
+      clicked: v.clicks,
+    }));
   }, [data]);
 
   const maxValue = Math.max(

@@ -21,6 +21,8 @@ type VolumeDataPoint = {
   sent: number;
   delivered: number;
   bounced: number;
+  opens: number;
+  clicks: number;
 };
 
 type EngagementDataPoint = {
