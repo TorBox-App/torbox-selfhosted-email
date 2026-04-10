@@ -1,38 +1,44 @@
-const BOT_UA_PATTERNS = [
+/**
+ * Bot user-agent keywords used for both TypeScript and PostgreSQL filtering.
+ * Add new patterns here — they automatically apply everywhere.
+ */
+export const BOT_UA_KEYWORDS = [
   // Email security gateways
-  /barracuda/i,
-  /mimecast/i,
-  /proofpoint/i,
-  /fireeye/i,
-  /symantec/i,
-  /fortinet|fortiguard/i,
-  /sophos/i,
-  /trendmicro/i,
-  /messagelabs/i,
-  /ironport/i,
-  /cisco\s+email/i,
-  /forcepoint/i,
-
+  "barracuda",
+  "mimecast",
+  "proofpoint",
+  "fireeye",
+  "symantec",
+  "fortinet",
+  "fortiguard",
+  "sophos",
+  "trendmicro",
+  "messagelabs",
+  "ironport",
+  "cisco\\s+email",
+  "forcepoint",
   // Email image proxies
-  /GoogleImageProxy/i,
-  /YahooMailProxy/i,
-
+  "GoogleImageProxy",
+  "YahooMailProxy",
   // Generic bot patterns
-  /bot\b/i,
-  /crawler/i,
-  /spider/i,
-  /scanner/i,
-  /prefetch/i,
-  /preview/i,
-
+  "bot",
+  "crawler",
+  "spider",
+  "scanner",
+  "prefetch",
+  "preview",
   // Programmatic HTTP clients
-  /wget/i,
-  /curl/i,
-  /python-requests/i,
-  /java\//i,
-  /Go-http-client/i,
-  /node-fetch/i,
+  "wget",
+  "curl",
+  "python-requests",
+  "java/",
+  "Go-http-client",
+  "node-fetch",
 ];
+
+const BOT_UA_PATTERNS = BOT_UA_KEYWORDS.map(
+  (keyword) => new RegExp(keyword, "i")
+);
 
 export function isBotOpen(userAgent: string | undefined | null): boolean {
   if (!userAgent || userAgent.trim() === "") {

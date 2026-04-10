@@ -1,17 +1,12 @@
 import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
-import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
 import {
-  aggregateByDate,
   gapFillDates,
   generateDateRange,
   validateTimezone,
 } from "@/lib/analytics-utils";
-import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -21,200 +16,88 @@ type RouteContext = {
   }>;
 };
 
-function buildEmailChartData(orgId: string, days: number, timezone: string) {
-  return unstable_cache(
-    async () => {
-      const endTime = new Date();
-      const startTime = new Date(
-        endTime.getTime() - days * 24 * 60 * 60 * 1000
-      );
-      const period = days <= 7 ? 3600 : days <= 30 ? 3600 * 6 : 3600 * 24;
+async function buildEmailChartData(
+  orgId: string,
+  days: number,
+  timezone: string
+) {
+  const endTime = new Date();
+  const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-      const accounts = await db.query.awsAccount.findMany({
-        where: eq(awsAccount.organizationId, orgId),
-      });
-
-      if (accounts.length === 0) {
-        return {
-          overview: {
-            totalSent: 0,
-            totalDelivered: 0,
-            totalBounced: 0,
-            totalComplaints: 0,
-            totalRenderingFailures: 0,
-            deliveryRate: 0,
-            bounceRate: 0,
-            complaintRate: 0,
-          },
-          volume: [],
-          engagement: [],
-        };
-      }
-
-      const allMetrics = [
-        SES_METRICS.SEND,
-        SES_METRICS.DELIVERY,
-        SES_METRICS.BOUNCE,
-        SES_METRICS.COMPLAINT,
-        SES_METRICS.OPEN,
-        SES_METRICS.CLICK,
-        SES_METRICS.RENDERING_FAILURE,
-      ];
-
-      const metricsResults = await Promise.all(
-        accounts.map(async (account) => {
-          try {
-            return await getCloudWatchMetricsBatch({
-              awsAccountId: account.id,
-              metrics: allMetrics,
-              period,
-              startTime,
-              endTime,
-            });
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const allKeys = [
-        "sent",
-        "delivered",
-        "bounced",
-        "complaints",
-        "opens",
-        "clicks",
-        "renderingFailures",
-      ] as const;
-      let dailyMap = new Map<
-        string,
-        Record<(typeof allKeys)[number], number>
-      >();
-
-      for (const metrics of metricsResults) {
-        if (!metrics) {
-          continue;
-        }
-
-        const timestamps = metrics[SES_METRICS.SEND]?.[0]?.Timestamps || [];
-        const perAccount = aggregateByDate(
-          timestamps,
-          [
-            metrics[SES_METRICS.SEND]?.[0]?.Values || [],
-            metrics[SES_METRICS.DELIVERY]?.[0]?.Values || [],
-            metrics[SES_METRICS.BOUNCE]?.[0]?.Values || [],
-            metrics[SES_METRICS.COMPLAINT]?.[0]?.Values || [],
-            metrics[SES_METRICS.OPEN]?.[0]?.Values || [],
-            metrics[SES_METRICS.CLICK]?.[0]?.Values || [],
-            metrics[SES_METRICS.RENDERING_FAILURE]?.[0]?.Values || [],
-          ],
-          [...allKeys],
-          timezone
-        );
-
-        for (const [dateStr, values] of perAccount) {
-          const existing = dailyMap.get(dateStr) || {
-            sent: 0,
-            delivered: 0,
-            bounced: 0,
-            complaints: 0,
-            opens: 0,
-            clicks: 0,
-            renderingFailures: 0,
-          };
-          dailyMap.set(dateStr, {
-            sent: existing.sent + values.sent,
-            delivered: existing.delivered + values.delivered,
-            bounced: existing.bounced + values.bounced,
-            complaints: existing.complaints + values.complaints,
-            opens: existing.opens + values.opens,
-            clicks: existing.clicks + values.clicks,
-            renderingFailures:
-              existing.renderingFailures + values.renderingFailures,
-          });
-        }
-      }
-
-      if (dailyMap.size === 0) {
-        dailyMap = await getEmailMetricsFromPostgres(
-          orgId,
-          startTime,
-          endTime,
-          timezone
-        );
-      }
-
-      let totalSent = 0;
-      let totalDelivered = 0;
-      let totalBounced = 0;
-      let totalComplaints = 0;
-      let totalRenderingFailures = 0;
-      for (const day of dailyMap.values()) {
-        totalSent += day.sent;
-        totalDelivered += day.delivered;
-        totalBounced += day.bounced;
-        totalComplaints += day.complaints;
-        totalRenderingFailures += day.renderingFailures;
-      }
-
-      const effectiveSent = Math.max(0, totalSent - totalRenderingFailures);
-
-      const deliveryRate =
-        effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
-      const bounceRate =
-        effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
-      const complaintRate =
-        effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
-
-      const dateRange = generateDateRange(startTime, endTime, timezone);
-      const defaults = {
-        sent: 0,
-        delivered: 0,
-        bounced: 0,
-        complaints: 0,
-        opens: 0,
-        clicks: 0,
-        renderingFailures: 0,
-      };
-      const filled = gapFillDates(dateRange, dailyMap, defaults);
-
-      const volume = filled.map((d) => ({
-        date: d.date,
-        timestamp: d.timestamp,
-        sent: Math.round(d.sent),
-        delivered: Math.round(d.delivered),
-        bounced: Math.round(d.bounced),
-      }));
-
-      const engagement = filled.map((d) => {
-        const openRate = d.delivered > 0 ? (d.opens / d.delivered) * 100 : 0;
-        const clickRate = d.delivered > 0 ? (d.clicks / d.delivered) * 100 : 0;
-        return {
-          date: d.date,
-          timestamp: d.timestamp,
-          openRate: Number(openRate.toFixed(1)),
-          clickRate: Number(clickRate.toFixed(1)),
-        };
-      });
-
-      return {
-        overview: {
-          totalSent: Math.round(totalSent),
-          totalDelivered: Math.round(totalDelivered),
-          totalBounced: Math.round(totalBounced),
-          totalComplaints: Math.round(totalComplaints),
-          totalRenderingFailures: Math.round(totalRenderingFailures),
-          deliveryRate: Number(deliveryRate.toFixed(2)),
-          bounceRate: Number(bounceRate.toFixed(2)),
-          complaintRate: Number(complaintRate.toFixed(2)),
-        },
-        volume,
-        engagement,
-      };
-    },
-    ["email-chart", orgId, String(days), timezone],
-    { revalidate: 300, tags: [`email-chart-${orgId}`] }
+  const dailyMap = await getEmailMetricsFromPostgres(
+    orgId,
+    startTime,
+    endTime,
+    timezone
   );
+
+  let totalSent = 0;
+  let totalDelivered = 0;
+  let totalBounced = 0;
+  let totalComplaints = 0;
+  let totalRenderingFailures = 0;
+  for (const day of dailyMap.values()) {
+    totalSent += day.sent;
+    totalDelivered += day.delivered;
+    totalBounced += day.bounced;
+    totalComplaints += day.complaints;
+    totalRenderingFailures += day.renderingFailures;
+  }
+
+  const effectiveSent = Math.max(0, totalSent - totalRenderingFailures);
+
+  const deliveryRate =
+    effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
+  const bounceRate =
+    effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
+  const complaintRate =
+    effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
+
+  const dateRange = generateDateRange(startTime, endTime, timezone);
+  const defaults = {
+    sent: 0,
+    delivered: 0,
+    bounced: 0,
+    complaints: 0,
+    opens: 0,
+    clicks: 0,
+    renderingFailures: 0,
+  };
+  const filled = gapFillDates(dateRange, dailyMap, defaults);
+
+  const volume = filled.map((d) => ({
+    date: d.date,
+    timestamp: d.timestamp,
+    sent: d.sent,
+    delivered: d.delivered,
+    bounced: d.bounced,
+  }));
+
+  const engagement = filled.map((d) => {
+    const openRate = d.delivered > 0 ? (d.opens / d.delivered) * 100 : 0;
+    const clickRate = d.delivered > 0 ? (d.clicks / d.delivered) * 100 : 0;
+    return {
+      date: d.date,
+      timestamp: d.timestamp,
+      openRate: Number(openRate.toFixed(1)),
+      clickRate: Number(clickRate.toFixed(1)),
+    };
+  });
+
+  return {
+    overview: {
+      totalSent,
+      totalDelivered,
+      totalBounced,
+      totalComplaints,
+      totalRenderingFailures,
+      deliveryRate: Number(deliveryRate.toFixed(2)),
+      bounceRate: Number(bounceRate.toFixed(2)),
+      complaintRate: Number(complaintRate.toFixed(2)),
+    },
+    volume,
+    engagement,
+  };
 }
 
 export async function GET(request: Request, context: RouteContext) {
@@ -245,12 +128,12 @@ export async function GET(request: Request, context: RouteContext) {
     );
     const timezone = validateTimezone(searchParams.get("tz"));
 
-    const getCachedData = buildEmailChartData(
-      orgWithMembership.id,
-      days,
-      timezone
+    const getCachedData = unstable_cache(
+      buildEmailChartData,
+      ["email-chart", orgWithMembership.id, String(days), timezone],
+      { revalidate: 300, tags: [`email-chart-${orgWithMembership.id}`] }
     );
-    const result = await getCachedData();
+    const result = await getCachedData(orgWithMembership.id, days, timezone);
     return NextResponse.json(result);
   } catch (error) {
     const log = createRequestLogger({

@@ -2,8 +2,9 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import {
   aggregateEmailEvents,
@@ -165,6 +166,54 @@ export async function GET(request: Request, context: RouteContext) {
           email.sentAt = authoritative;
         }
       }
+    }
+
+    // If DynamoDB returned no data, fall back to PostgreSQL
+    if (emails.length === 0) {
+      const pgEmails = await db
+        .select({
+          id: messageSend.id,
+          messageId: messageSend.messageId,
+          from: messageSend.from,
+          recipient: messageSend.recipient,
+          subject: messageSend.subject,
+          status: messageSend.status,
+          sentAt: messageSend.sentAt,
+          openedAt: messageSend.openedAt,
+          clickedAt: messageSend.clickedAt,
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime)
+          )
+        )
+        .orderBy(desc(messageSend.sentAt))
+        .limit(limit);
+
+      return NextResponse.json(
+        pgEmails.map((e) => ({
+          id: e.id,
+          messageId: e.messageId ?? e.id,
+          from: e.from ?? "",
+          to: [e.recipient],
+          subject: e.subject ?? "(no subject)",
+          status: (e.status as EmailStatus) ?? "sent",
+          sentAt: e.sentAt?.getTime() ?? 0,
+          lastActivityAt:
+            e.clickedAt?.getTime() ??
+            e.openedAt?.getTime() ??
+            e.sentAt?.getTime() ??
+            0,
+          eventCount: 1,
+          hasOpened: !!e.openedAt,
+          hasClicked: !!e.clickedAt,
+        }))
+      );
     }
 
     return NextResponse.json(emails);

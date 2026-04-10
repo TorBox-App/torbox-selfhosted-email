@@ -1,13 +1,26 @@
 /**
- * PostgreSQL fallback for analytics endpoints.
+ * PostgreSQL analytics queries.
  *
- * When CloudWatch / DynamoDB are unreachable (e.g. demo orgs with no real AWS
- * infrastructure), we aggregate from the `message_send` table instead.
+ * Primary data source for the email chart and analytics endpoints.
+ * Aggregates from the `message_send` table with bot open filtering.
  */
 
 import { db } from "@wraps/db";
 import { messageSend } from "@wraps/db/schema/batch";
 import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { BOT_UA_KEYWORDS } from "./email-bot-detection";
+
+/**
+ * SQL fragment that returns TRUE when the open_user_agent is NOT a bot.
+ * Derives from the same BOT_UA_KEYWORDS list as the TypeScript `isBotOpen()`.
+ * null/empty UAs are considered bots.
+ */
+const botPattern = BOT_UA_KEYWORDS.join("|");
+const isNotBotOpen = sql`(
+  ${messageSend.openUserAgent} IS NOT NULL
+  AND ${messageSend.openUserAgent} != ''
+  AND ${messageSend.openUserAgent} !~* ${botPattern}
+)`;
 
 // ---------------------------------------------------------------------------
 // Daily email volume (sent / delivered / bounced / complaints / opens / clicks)
@@ -30,7 +43,7 @@ export async function getEmailMetricsFromPostgres(
   endTime: Date,
   timezone = "UTC"
 ): Promise<Map<string, DailyEmailMetrics>> {
-  const tzLiteral = sql.raw(`'${timezone}'`);
+  const tzLiteral = sql`${timezone}`;
   const rows = await db
     .select({
       date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
@@ -38,7 +51,7 @@ export async function getEmailMetricsFromPostgres(
       delivered: sql<number>`count(*) filter (where ${messageSend.deliveredAt} is not null)::int`,
       bounced: sql<number>`count(*) filter (where ${messageSend.bouncedAt} is not null)::int`,
       complaints: sql<number>`count(*) filter (where ${messageSend.complainedAt} is not null)::int`,
-      opens: sql<number>`count(*) filter (where ${messageSend.openedAt} is not null)::int`,
+      opens: sql<number>`count(*) filter (where ${messageSend.openedAt} is not null and ${isNotBotOpen})::int`,
       clicks: sql<number>`count(*) filter (where ${messageSend.clickedAt} is not null)::int`,
       renderingFailures: sql<number>`count(*) filter (where ${messageSend.status} = 'failed')::int`,
     })
@@ -89,7 +102,7 @@ export async function getBounceMetricsFromPostgres(
   endTime: Date,
   timezone = "UTC"
 ): Promise<Map<string, DailyBounceMetrics>> {
-  const tzLiteral = sql.raw(`'${timezone}'`);
+  const tzLiteral = sql`${timezone}`;
   const rows = await db
     .select({
       date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
@@ -139,7 +152,7 @@ export async function getComplaintMetricsFromPostgres(
   endTime: Date,
   timezone = "UTC"
 ): Promise<Map<string, DailyComplaintMetrics>> {
-  const tzLiteral = sql.raw(`'${timezone}'`);
+  const tzLiteral = sql`${timezone}`;
   const rows = await db
     .select({
       date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
@@ -183,7 +196,7 @@ export async function getSuppressionMetricsFromPostgres(
   endTime: Date,
   timezone = "UTC"
 ): Promise<Map<string, DailySuppressionMetrics>> {
-  const tzLiteral = sql.raw(`'${timezone}'`);
+  const tzLiteral = sql`${timezone}`;
   const rows = await db
     .select({
       date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
@@ -239,7 +252,7 @@ export async function getTopPerformersFromPostgres(
     .select({
       subject: messageSend.subject,
       sent: sql<number>`count(*)::int`,
-      opens: sql<number>`count(*) filter (where ${messageSend.openedAt} is not null)::int`,
+      opens: sql<number>`count(*) filter (where ${messageSend.openedAt} is not null and ${isNotBotOpen})::int`,
       clicks: sql<number>`count(*) filter (where ${messageSend.clickedAt} is not null)::int`,
       earliestSent: sql<Date>`min(${messageSend.sentAt})`,
     })

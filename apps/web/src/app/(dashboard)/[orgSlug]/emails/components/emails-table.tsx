@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -51,22 +52,26 @@ import {
 } from "@/components/ui/tooltip";
 import { emailCSVColumns } from "@/lib/csv-columns";
 import { exportTableToCSV } from "@/lib/csv-export";
-import type { EmailListItem } from "../types";
+import { cn } from "@/lib/utils";
+import { useEmailsData } from "../hooks/use-emails";
 import { columns } from "./columns";
 
 type EmailsTableProps = {
-  data: EmailListItem[];
   orgSlug: string;
   organizationId: string;
   days: number;
 };
 
 export function EmailsTable({
-  data,
   orgSlug,
   organizationId,
   days,
 }: EmailsTableProps) {
+  const {
+    data: emails = [],
+    isLoading,
+    isFetching,
+  } = useEmailsData(orgSlug, days);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
@@ -96,7 +101,7 @@ export function EmailsTable({
   }, []);
 
   const table = useReactTable({
-    data,
+    data: emails,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -152,17 +157,17 @@ export function EmailsTable({
   );
 
   const uniqueRecipientEmails = useMemo(() => {
-    const emails = new Set<string>();
+    const recipientSet = new Set<string>();
     for (const emailId of selectedEmailIds) {
-      const email = data.find((e) => e.id === emailId);
+      const email = emails.find((e) => e.id === emailId);
       if (email?.to) {
         for (const recipient of email.to) {
-          emails.add(recipient.toLowerCase());
+          recipientSet.add(recipient.toLowerCase());
         }
       }
     }
-    return [...emails];
-  }, [selectedEmailIds, data]);
+    return [...recipientSet];
+  }, [selectedEmailIds, emails]);
 
   // Handler for bulk create contacts
   const handleCreateContacts = async () => {
@@ -330,7 +335,9 @@ export function EmailsTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div
+        className={cn("rounded-md border transition-opacity", isFetching && !isLoading && "opacity-60")}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -349,7 +356,17 @@ export function EmailsTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  {columns.map((_, j) => (
+                    <TableCell key={`skeleton-${i}-${j}`}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   className="cursor-pointer hover:bg-muted/50"

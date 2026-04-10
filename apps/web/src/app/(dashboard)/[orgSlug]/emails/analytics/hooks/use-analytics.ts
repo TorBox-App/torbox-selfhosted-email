@@ -98,7 +98,7 @@ export function useEmailChartData(orgSlug: string, days = 30) {
       }
       return response.json();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
