@@ -182,12 +182,17 @@ export function SendVolumeSpark({
                   <ChartTooltipContent
                     hideLabel={false}
                     indicator="line"
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })
-                    }
+                    labelFormatter={(_value, payload) => {
+                      const date = payload?.[0]?.payload?.date;
+                      if (!date) return "";
+                      return new Date(`${date}T00:00:00`).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                        }
+                      );
+                    }}
                   />
                 }
               />
