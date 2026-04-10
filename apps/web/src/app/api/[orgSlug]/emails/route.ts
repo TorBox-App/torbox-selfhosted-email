@@ -164,7 +164,7 @@ export async function GET(request: Request, context: RouteContext) {
             to: event.to,
             subject: event.subject,
             status: mapEventTypeToStatus(event.eventType),
-            sentAt: event.sentAt,
+            sentAt: event.mailSentAt ?? event.sentAt,
             eventTypes: new Set([event.eventType]),
             hasOpened: event.eventType === "Open",
             hasClicked: event.eventType === "Click",

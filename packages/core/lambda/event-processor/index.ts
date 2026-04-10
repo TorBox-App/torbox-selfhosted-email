@@ -187,6 +187,7 @@ export async function handler(event: SQSEvent, context: Context) {
 
       // Store event in DynamoDB
       // Use eventTimestamp as sort key to ensure each event type creates a unique record
+      // mailSentAt preserves the original mail send time for display (sentAt is the event timestamp for DynamoDB key uniqueness)
       // Note: DynamoDB String Sets (SS) cannot be empty, so we use a List (L) for recipients
       await dynamodb.send(
         new PutItemCommand({
@@ -194,6 +195,7 @@ export async function handler(event: SQSEvent, context: Context) {
           Item: {
             messageId: { S: messageId },
             sentAt: { N: eventTimestamp.toString() },
+            mailSentAt: { N: mailTimestamp.toString() },
             accountId: { S: process.env.AWS_ACCOUNT_ID || "unknown" },
             from: { S: from },
             to: { L: to.map((email: string) => ({ S: email })) },

@@ -11,6 +11,7 @@ import { getOrAssumeRole } from "./credential-cache";
 type EmailEvent = {
   messageId: string;
   sentAt: number;
+  mailSentAt?: number;
   accountId: string;
   from: string;
   to: string[] | Set<string>; // Can be array (L) or Set (SS) depending on Lambda version
@@ -197,7 +198,7 @@ export function aggregateEmailEngagementMetrics(
         subject: event.subject,
         from: event.from,
         to: event.to,
-        sentAt: event.sentAt,
+        sentAt: event.mailSentAt ?? event.sentAt,
         eventTypes: new Set([event.eventType]),
         opens:
           event.eventType === "Open" && !isOpenEventBot(event.additionalData)
@@ -259,7 +260,7 @@ export async function getRecentEmailActivity(params: {
     subject: event.subject,
     eventType: event.eventType,
     timestamp: event.createdAt,
-    sentAt: event.sentAt,
+    sentAt: event.mailSentAt ?? event.sentAt,
     metadata: event.additionalData
       ? JSON.parse(event.additionalData)
       : undefined,

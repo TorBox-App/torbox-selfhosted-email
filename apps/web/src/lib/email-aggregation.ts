@@ -23,6 +23,7 @@ function mapEventTypeToStatus(eventType: string): EmailStatus {
 type DynamoEmailEvent = {
   messageId: string;
   sentAt: number;
+  mailSentAt?: number;
   accountId: string;
   from: string;
   to: string[];
@@ -72,6 +73,7 @@ export function aggregateEmailEvents(
       const isBot =
         event.eventType === "Open" && isOpenEventBot(event.additionalData);
       const existing = emailsMap.get(event.messageId);
+      const originalSentAt = event.mailSentAt ?? event.sentAt;
 
       if (existing) {
         existing.eventTypes.add(event.eventType);
@@ -82,8 +84,8 @@ export function aggregateEmailEvents(
           existing.hasClicked = true;
         }
 
-        if (event.sentAt < existing.sentAt) {
-          existing.sentAt = event.sentAt;
+        if (originalSentAt < existing.sentAt) {
+          existing.sentAt = originalSentAt;
         }
 
         // Don't promote status for bot opens
@@ -106,7 +108,7 @@ export function aggregateEmailEvents(
             event.eventType === "Open" && isBot
               ? "delivered"
               : mapEventTypeToStatus(event.eventType),
-          sentAt: event.sentAt,
+          sentAt: originalSentAt,
           eventTypes: new Set([event.eventType]),
           hasOpened: event.eventType === "Open" && !isBot,
           hasClicked: event.eventType === "Click",

@@ -143,7 +143,7 @@ export async function GET(_request: Request, context: RouteContext) {
       to: firstEvent.to,
       subject: firstEvent.subject,
       status: finalStatus,
-      sentAt: firstEvent.sentAt,
+      sentAt: firstEvent.mailSentAt ?? firstEvent.sentAt,
       body: firstEvent.additionalData
         ? (() => {
             try {
