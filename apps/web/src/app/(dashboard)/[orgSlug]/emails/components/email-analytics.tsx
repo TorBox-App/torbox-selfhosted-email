@@ -228,6 +228,8 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
                     />
                     <YAxis
                       axisLine={false}
+                      domain={[0, "auto"]}
+                      scale="sqrt"
                       tickFormatter={createYAxisFormatter(maxValue)}
                       tickLine={false}
                       tickMargin={8}
