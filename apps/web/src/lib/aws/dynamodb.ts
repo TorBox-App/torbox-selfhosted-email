@@ -142,6 +142,75 @@ export async function queryEmailEvents(
 }
 
 /**
+ * Queries all events for specific messageIds by primary key (no time constraint).
+ * Used to backfill complete event history for messages where the time-windowed
+ * GSI query only returned engagement events (Open/Click) without the original Send.
+ */
+export async function queryEventsByMessageIds(params: {
+  awsAccountId: string;
+  messageIds: string[];
+}): Promise<QueriedEmailEvent[]> {
+  const { awsAccountId, messageIds } = params;
+  if (messageIds.length === 0) {
+    return [];
+  }
+
+  const account = await db.query.awsAccount.findFirst({
+    where: (a, { eq }) => eq(a.id, awsAccountId),
+  });
+
+  if (!account) {
+    return [];
+  }
+
+  const credentials = await getOrAssumeRole({
+    roleArn: account.roleArn,
+    externalId: account.externalId,
+    region: account.region,
+  });
+
+  const client = new DynamoDBClient({
+    region: account.region,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+
+  const docClient = DynamoDBDocumentClient.from(client);
+
+  // Cap concurrent queries to avoid DynamoDB throttling
+  const MAX_CONCURRENT = 20;
+  const capped = messageIds.slice(0, MAX_CONCURRENT);
+
+  const results = await Promise.all(
+    capped.map(async (messageId) => {
+      try {
+        const result = await docClient.send(
+          new QueryCommand({
+            TableName: "wraps-email-history",
+            KeyConditionExpression: "messageId = :messageId",
+            ExpressionAttributeValues: { ":messageId": messageId },
+            ScanIndexForward: true,
+          })
+        );
+        return ((result.Items as EmailEvent[]) || []).map((event) => ({
+          ...event,
+          to: normalizeRecipients(event.to),
+        }));
+      } catch (error) {
+        // Non-fatal: individual backfill failures degrade gracefully
+        console.warn("Failed to backfill events for message", messageId, error);
+        return [];
+      }
+    })
+  );
+
+  return results.flat();
+}
+
+/**
  * Groups email events by messageId to calculate engagement metrics per email.
  * Returns aggregated data suitable for top performers analysis.
  */

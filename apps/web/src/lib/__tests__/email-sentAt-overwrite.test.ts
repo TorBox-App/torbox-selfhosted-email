@@ -9,7 +9,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { aggregateEmailEvents } from "../email-aggregation";
+import {
+  aggregateEmailEvents,
+  findIncompleteMessageIds,
+} from "../email-aggregation";
 
 const MARCH_12 = new Date("2026-03-12T10:00:00Z").getTime();
 const TODAY = new Date("2026-04-09T14:30:00Z").getTime();
@@ -117,5 +120,107 @@ describe("sentAt displays original mail send time, not event time", () => {
     expect(result).toHaveLength(1);
     expect(result[0].sentAt).toBe(MARCH_12);
     expect(result[0].eventCount).toBe(2);
+  });
+});
+
+describe("findIncompleteMessageIds", () => {
+  it("identifies messageIds missing a Send event", () => {
+    const events = [
+      [
+        createEvent({
+          messageId: "msg-complete",
+          sentAt: MARCH_12,
+          mailSentAt: MARCH_12,
+          eventType: "Send",
+        }),
+        createEvent({
+          messageId: "msg-complete",
+          sentAt: TODAY,
+          mailSentAt: MARCH_12,
+          eventType: "Open",
+        }),
+      ],
+      [
+        createEvent({
+          messageId: "msg-incomplete",
+          sentAt: TODAY,
+          mailSentAt: MARCH_12,
+          eventType: "Open",
+        }),
+      ],
+    ];
+
+    const incomplete = findIncompleteMessageIds(events);
+    expect(incomplete.size).toBe(1);
+    expect(incomplete.get("msg-incomplete")).toBe("acc-1");
+  });
+
+  it("returns empty map when all messages have Send events", () => {
+    const events = [
+      [
+        createEvent({
+          sentAt: MARCH_12,
+          eventType: "Send",
+        }),
+        createEvent({
+          sentAt: TODAY,
+          eventType: "Open",
+        }),
+      ],
+    ];
+
+    const incomplete = findIncompleteMessageIds(events);
+    expect(incomplete.size).toBe(0);
+  });
+});
+
+describe("backfill + re-aggregate produces correct sentAt and eventCount", () => {
+  it("shows correct sentAt and eventCount after merging backfilled events", () => {
+    // Scenario: 7-day query window returns only the Open event
+    const timeWindowEvents = [
+      [
+        createEvent({
+          sentAt: TODAY,
+          mailSentAt: undefined, // old event without mailSentAt
+          eventType: "Open",
+          createdAt: TODAY,
+        }),
+      ],
+    ];
+
+    // Without backfill: sentAt falls back to open time, only 1 event visible
+    const withoutBackfill = aggregateEmailEvents(timeWindowEvents);
+    expect(withoutBackfill[0].sentAt).toBe(TODAY);
+    expect(withoutBackfill[0].eventCount).toBe(1);
+
+    // Simulate backfill: query by messageId returns all events for the message
+    const backfilledEvents = [
+      createEvent({
+        sentAt: MARCH_12,
+        mailSentAt: MARCH_12,
+        eventType: "Send",
+      }),
+      createEvent({
+        sentAt: MARCH_12 + 5000,
+        mailSentAt: MARCH_12,
+        eventType: "Delivery",
+      }),
+      createEvent({
+        sentAt: TODAY,
+        mailSentAt: MARCH_12,
+        eventType: "Open",
+        createdAt: TODAY,
+      }),
+    ];
+
+    // After merging backfilled events, sentAt and eventCount are correct
+    const withBackfill = aggregateEmailEvents([
+      ...timeWindowEvents,
+      backfilledEvents,
+    ]);
+
+    expect(withBackfill[0].sentAt).toBe(MARCH_12);
+    expect(withBackfill[0].eventCount).toBe(3);
+    expect(withBackfill[0].status).toBe("opened");
   });
 });

@@ -49,6 +49,45 @@ const STATUS_PRIORITY: EmailStatus[] = [
   "sent",
 ];
 
+/**
+ * Identifies messageIds that are missing a "Send" event in the query results.
+ * This happens when the time-windowed query only returns engagement events
+ * (Open, Click) because the original Send event is outside the window.
+ * Returns a map of messageId → accountId (AWS account number) for backfilling.
+ */
+export function findIncompleteMessageIds(
+  allEvents: DynamoEmailEvent[][]
+): Map<string, string> {
+  const messageIdInfo = new Map<
+    string,
+    { accountId: string; hasSend: boolean }
+  >();
+
+  for (const events of allEvents) {
+    for (const event of events) {
+      const existing = messageIdInfo.get(event.messageId);
+      if (existing) {
+        if (event.eventType === "Send") {
+          existing.hasSend = true;
+        }
+      } else {
+        messageIdInfo.set(event.messageId, {
+          accountId: event.accountId,
+          hasSend: event.eventType === "Send",
+        });
+      }
+    }
+  }
+
+  const incomplete = new Map<string, string>();
+  for (const [messageId, info] of messageIdInfo) {
+    if (!info.hasSend) {
+      incomplete.set(messageId, info.accountId);
+    }
+  }
+  return incomplete;
+}
+
 export function aggregateEmailEvents(
   allEvents: DynamoEmailEvent[][]
 ): EmailListItem[] {

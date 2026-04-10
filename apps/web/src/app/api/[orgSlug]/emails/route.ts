@@ -3,8 +3,11 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
-import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
+import {
+  aggregateEmailEvents,
+  findIncompleteMessageIds,
+} from "@/lib/email-aggregation";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -13,24 +16,6 @@ type RouteContext = {
     orgSlug: string;
   }>;
 };
-
-// Map SES event types to our EmailStatus
-function mapEventTypeToStatus(eventType: string): EmailStatus {
-  const mapping: Record<string, EmailStatus> = {
-    Send: "sent",
-    Delivery: "delivered",
-    Open: "opened",
-    Click: "clicked",
-    Bounce: "bounced",
-    Suppressed: "suppressed",
-    Complaint: "complained",
-    Reject: "rejected",
-    "Rendering Failure": "rendering_failure",
-    RenderingFailure: "rendering_failure",
-    DeliveryDelay: "delivery_delay",
-  };
-  return (mapping[eventType] as EmailStatus) || "sent";
-}
 
 export async function GET(request: Request, context: RouteContext) {
   try {
@@ -84,7 +69,7 @@ export async function GET(request: Request, context: RouteContext) {
       orgSlug,
     });
 
-    // Fetch email events from all accounts
+    // Fetch email events from all accounts (time-windowed via GSI)
     const allEvents = await Promise.all(
       accounts.map(async (account) => {
         try {
@@ -92,7 +77,7 @@ export async function GET(request: Request, context: RouteContext) {
             awsAccountId: account.id,
             startTime,
             endTime,
-            limit: 500, // Get more to aggregate by message
+            limit: 500,
           });
         } catch (error) {
           log.error(
@@ -104,91 +89,50 @@ export async function GET(request: Request, context: RouteContext) {
       })
     );
 
-    // Group events by messageId
-    const emailsMap = new Map<
-      string,
-      {
-        id: string;
-        messageId: string;
-        from: string;
-        to: string[];
-        subject: string;
-        status: EmailStatus;
-        sentAt: number;
-        eventTypes: Set<string>;
-        hasOpened: boolean;
-        hasClicked: boolean;
-      }
-    >();
+    // Backfill complete events for messages missing their Send event.
+    // The time-windowed query may only return engagement events (Open/Click)
+    // for old emails, missing the original Send/Delivery events.
+    const incomplete = findIncompleteMessageIds(allEvents);
 
-    for (const events of allEvents) {
-      for (const event of events) {
-        const existing = emailsMap.get(event.messageId);
+    if (incomplete.size > 0) {
+      // Map AWS account numbers back to internal DB IDs
+      const accountsByNumber = new Map(
+        accounts.map((a) => [a.accountId, a.id])
+      );
 
-        if (existing) {
-          existing.eventTypes.add(event.eventType);
-          if (event.eventType === "Open") {
-            existing.hasOpened = true;
-          }
-          if (event.eventType === "Click") {
-            existing.hasClicked = true;
-          }
-
-          // Update status to most significant event
-          const newStatus = mapEventTypeToStatus(event.eventType);
-          const statusPriority: EmailStatus[] = [
-            "clicked",
-            "complained",
-            "suppressed",
-            "bounced",
-            "opened",
-            "delivered",
-            "sent",
-            "failed",
-            "rejected",
-            "rendering_failure",
-            "delivery_delay",
-          ];
-
-          const currentPriority = statusPriority.indexOf(existing.status);
-          const newPriority = statusPriority.indexOf(newStatus);
-
-          if (newPriority < currentPriority) {
-            existing.status = newStatus;
-          }
-        } else {
-          emailsMap.set(event.messageId, {
-            id: event.messageId,
-            messageId: event.messageId,
-            from: event.from,
-            to: event.to,
-            subject: event.subject,
-            status: mapEventTypeToStatus(event.eventType),
-            sentAt: event.mailSentAt ?? event.sentAt,
-            eventTypes: new Set([event.eventType]),
-            hasOpened: event.eventType === "Open",
-            hasClicked: event.eventType === "Click",
-          });
+      // Group incomplete messageIds by account
+      const byAccount = new Map<string, string[]>();
+      for (const [messageId, awsAccountNumber] of incomplete) {
+        const internalId = accountsByNumber.get(awsAccountNumber);
+        if (internalId) {
+          const existing = byAccount.get(internalId) || [];
+          existing.push(messageId);
+          byAccount.set(internalId, existing);
         }
+      }
+
+      // Query complete event history for each account's incomplete messages
+      const backfilled = await Promise.all(
+        [...byAccount.entries()].map(async ([awsAccountId, messageIds]) => {
+          try {
+            return await queryEventsByMessageIds({ awsAccountId, messageIds });
+          } catch (error) {
+            log.error(
+              { err: serializeError(error), awsAccountId },
+              "Failed to backfill events"
+            );
+            return [];
+          }
+        })
+      );
+
+      for (const events of backfilled) {
+        allEvents.push(events);
       }
     }
 
-    // Convert to array and sort by sentAt (newest first)
-    const emails = Array.from(emailsMap.values())
-      .map((email) => ({
-        id: email.id,
-        messageId: email.messageId,
-        from: email.from,
-        to: email.to,
-        subject: email.subject,
-        status: email.status,
-        sentAt: email.sentAt,
-        eventCount: email.eventTypes.size,
-        hasOpened: email.hasOpened,
-        hasClicked: email.hasClicked,
-      }))
-      .sort((a, b) => b.sentAt - a.sentAt)
-      .slice(0, limit);
+    // Aggregate and return
+    const emails = aggregateEmailEvents(allEvents).slice(0, limit);
 
     return NextResponse.json(emails);
   } catch (error) {
