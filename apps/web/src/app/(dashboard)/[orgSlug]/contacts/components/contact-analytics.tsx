@@ -86,7 +86,8 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
       setIsLoading(true);
       setError(null);
       const days = timeRange === "30d" ? 30 : 7;
-      const result = await getContactAnalytics(organizationId, days);
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const result = await getContactAnalytics(organizationId, days, tz);
       if (result.success) {
         setAnalytics(result.analytics);
       } else {

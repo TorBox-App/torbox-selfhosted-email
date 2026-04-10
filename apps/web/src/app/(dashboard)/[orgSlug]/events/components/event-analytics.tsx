@@ -104,7 +104,8 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
       setIsLoading(true);
       setError(null);
       const days = timeRange === "30d" ? 30 : 7;
-      const result = await getEventAnalytics(organizationId, days);
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const result = await getEventAnalytics(organizationId, days, tz);
       if (result.success) {
         setAnalytics(result.analytics);
       } else {

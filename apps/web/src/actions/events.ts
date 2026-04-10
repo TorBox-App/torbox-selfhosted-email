@@ -215,7 +215,8 @@ export type GetEventAnalyticsResult =
  */
 export async function getEventAnalytics(
   organizationId: string,
-  days: 7 | 30 = 30
+  days: 7 | 30 = 30,
+  timezone = "UTC"
 ): Promise<GetEventAnalyticsResult> {
   try {
     const access = await verifyOrgAccess(organizationId);
@@ -227,9 +228,29 @@ export async function getEventAnalytics(
     }
 
     const now = new Date();
-    const startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+
+    // Validate timezone — fall back to UTC if invalid
+    let tz = timezone;
+    try {
+      Intl.DateTimeFormat("en-CA", { timeZone: tz });
+    } catch {
+      tz = "UTC";
+    }
+
+    // Compute date boundaries in user's timezone
+    const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const startStr = new Date(Date.UTC(y, m - 1, d - days))
+      .toISOString()
+      .split("T")[0];
+
+    // SQL helper: convert stored UTC timestamp to user's timezone
+    // Use sql.raw for the timezone literal so all references produce identical
+    // SQL expressions — parameterized values get unique indices ($1, $3, $5...)
+    // which PostgreSQL treats as distinct in GROUP BY.
+    // Timezone is validated above via Intl.DateTimeFormat so this is injection-safe.
+    const tzLiteral = sql.raw(`'${tz}'`);
+    const createdAtLocal = sql`${contactEvent.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}`;
 
     // Get total events (all time)
     const [totalResult] = await db
@@ -246,7 +267,7 @@ export async function getEventAnalytics(
       .where(
         and(
           eq(contactEvent.organizationId, organizationId),
-          sql`${contactEvent.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       );
 
@@ -261,7 +282,7 @@ export async function getEventAnalytics(
       .where(
         and(
           eq(contactEvent.organizationId, organizationId),
-          sql`${contactEvent.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       );
 
@@ -273,26 +294,23 @@ export async function getEventAnalytics(
         ? Math.round((eventsThisPeriod / activeContacts) * 10) / 10
         : 0;
 
-    // Get daily events data for chart
-    // Cast DATE() to text so the Neon driver returns "YYYY-MM-DD" strings
-    // instead of Date objects (which serialize as "YYYY-MM-DDT07:00:00.000Z")
+    // Get daily events data for chart, grouped by user's local date
     const dailyEventsData = await db
       .select({
-        date: sql<string>`DATE(${contactEvent.createdAt})::text`,
+        date: sql<string>`DATE(${createdAtLocal})::text`,
         count: count(),
       })
       .from(contactEvent)
       .where(
         and(
           eq(contactEvent.organizationId, organizationId),
-          sql`${contactEvent.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       )
-      .groupBy(sql`DATE(${contactEvent.createdAt})`)
-      .orderBy(sql`DATE(${contactEvent.createdAt})`);
+      .groupBy(sql`DATE(${createdAtLocal})`)
+      .orderBy(sql`DATE(${createdAtLocal})`);
 
     // Fill in missing dates with 0 counts
-    // Normalize DB date keys to YYYY-MM-DD in case driver returns Date objects
     const dailyEvents: Array<{ date: string; count: number }> = [];
     const dateMap = new Map(
       dailyEventsData.map((d) => [
@@ -301,19 +319,11 @@ export async function getEventAnalytics(
       ])
     );
 
-    // Use UTC dates to match the SQL DATE() which returns UTC dates
-    const cursor = new Date(
-      Date.UTC(
-        startDate.getUTCFullYear(),
-        startDate.getUTCMonth(),
-        startDate.getUTCDate()
-      )
-    );
-    const endUTC = Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    );
+    // Walk from startStr to todayStr (both in user's timezone)
+    const [sy, sm, sd] = startStr.split("-").map(Number);
+    const cursor = new Date(Date.UTC(sy, sm - 1, sd));
+    const [ey, em, ed] = todayStr.split("-").map(Number);
+    const endUTC = Date.UTC(ey, em - 1, ed);
 
     while (cursor.getTime() <= endUTC) {
       const dateStr = cursor.toISOString().split("T")[0];
@@ -334,7 +344,7 @@ export async function getEventAnalytics(
       .where(
         and(
           eq(contactEvent.organizationId, organizationId),
-          sql`${contactEvent.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       )
       .groupBy(contactEvent.eventName)

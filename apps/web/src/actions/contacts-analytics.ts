@@ -298,7 +298,8 @@ export type GetContactAnalyticsResult =
  */
 export async function getContactAnalytics(
   organizationId: string,
-  days: 7 | 30 = 30
+  days: 7 | 30 = 30,
+  timezone = "UTC"
 ): Promise<GetContactAnalyticsResult> {
   try {
     const access = await verifyOrgAccess(organizationId);
@@ -310,13 +311,32 @@ export async function getContactAnalytics(
     }
 
     const now = new Date();
-    const startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
 
-    // For growth comparison, get the period before this one
-    const previousPeriodStart = new Date(startDate);
-    previousPeriodStart.setDate(previousPeriodStart.getDate() - days);
+    // Validate timezone — fall back to UTC if invalid
+    let tz = timezone;
+    try {
+      Intl.DateTimeFormat("en-CA", { timeZone: tz });
+    } catch {
+      tz = "UTC";
+    }
+
+    // Compute date boundaries in user's timezone
+    const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const startStr = new Date(Date.UTC(y, m - 1, d - days))
+      .toISOString()
+      .split("T")[0];
+    const prevStartStr = new Date(Date.UTC(y, m - 1, d - days * 2))
+      .toISOString()
+      .split("T")[0];
+
+    // SQL helper: convert stored UTC timestamp to user's timezone
+    // Use sql.raw for the timezone literal so all references produce identical
+    // SQL expressions — parameterized values get unique indices ($1, $3, $5...)
+    // which PostgreSQL treats as distinct in GROUP BY.
+    // Timezone is validated above via Intl.DateTimeFormat so this is injection-safe.
+    const tzLiteral = sql.raw(`'${tz}'`);
+    const createdAtLocal = sql`${contact.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}`;
 
     // Get total contacts
     const [totalResult] = await db
@@ -333,7 +353,7 @@ export async function getContactAnalytics(
       .where(
         and(
           eq(contact.organizationId, organizationId),
-          sql`${contact.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       );
 
@@ -346,8 +366,8 @@ export async function getContactAnalytics(
       .where(
         and(
           eq(contact.organizationId, organizationId),
-          sql`${contact.createdAt} >= ${previousPeriodStart}`,
-          sql`${contact.createdAt} < ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${prevStartStr}::date`,
+          sql`DATE(${createdAtLocal}) < ${startStr}::date`
         )
       );
 
@@ -385,26 +405,23 @@ export async function getContactAnalytics(
     const avgOpenRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
     const avgClickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
 
-    // Get daily growth data for chart
-    // Cast DATE() to text so the Neon driver returns "YYYY-MM-DD" strings
-    // instead of Date objects (which serialize as "YYYY-MM-DDT07:00:00.000Z")
+    // Get daily growth data for chart, grouped by user's local date
     const dailyGrowthData = await db
       .select({
-        date: sql<string>`DATE(${contact.createdAt})::text`,
+        date: sql<string>`DATE(${createdAtLocal})::text`,
         count: count(),
       })
       .from(contact)
       .where(
         and(
           eq(contact.organizationId, organizationId),
-          sql`${contact.createdAt} >= ${startDate}`
+          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
         )
       )
-      .groupBy(sql`DATE(${contact.createdAt})`)
-      .orderBy(sql`DATE(${contact.createdAt})`);
+      .groupBy(sql`DATE(${createdAtLocal})`)
+      .orderBy(sql`DATE(${createdAtLocal})`);
 
     // Fill in missing dates with 0 counts
-    // Normalize DB date keys to YYYY-MM-DD in case driver returns Date objects
     const dailyGrowth: Array<{ date: string; count: number }> = [];
     const dateMap = new Map(
       dailyGrowthData.map((d) => [
@@ -413,19 +430,11 @@ export async function getContactAnalytics(
       ])
     );
 
-    // Use UTC dates to match the SQL DATE() which returns UTC dates
-    const cursor = new Date(
-      Date.UTC(
-        startDate.getUTCFullYear(),
-        startDate.getUTCMonth(),
-        startDate.getUTCDate()
-      )
-    );
-    const endUTC = Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    );
+    // Walk from startStr to todayStr (both in user's timezone)
+    const [sy, sm, sd] = startStr.split("-").map(Number);
+    const [ey, em, ed] = todayStr.split("-").map(Number);
+    const cursor = new Date(Date.UTC(sy, sm - 1, sd));
+    const endUTC = Date.UTC(ey, em - 1, ed);
 
     while (cursor.getTime() <= endUTC) {
       const dateStr = cursor.toISOString().split("T")[0];
