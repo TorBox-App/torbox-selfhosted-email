@@ -3,7 +3,9 @@ import type { Monaco } from "@monaco-editor/react";
 const configuredInstances = new WeakSet<object>();
 
 export function configureMonacoForReactEmail(monaco: Monaco) {
-  if (configuredInstances.has(monaco)) return;
+  if (configuredInstances.has(monaco)) {
+    return;
+  }
   configuredInstances.add(monaco);
 
   monaco.languages.typescript.typescriptDefaults.setCompilerOptions({

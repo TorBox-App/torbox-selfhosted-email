@@ -45,7 +45,9 @@ vi.mock("../create-workflow-dialog", () => ({
 }));
 
 vi.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenu: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
   DropdownMenuTrigger: ({
     children,
   }: {
@@ -92,7 +94,11 @@ function buildWorkflow(
     name: "Order follow-up",
     description: "Send a reminder when a contact is created",
     topicId: null,
-    canvasViewport: { x: 0, y: 0, zoom: 1 } as WorkflowWithMeta["canvasViewport"],
+    canvasViewport: {
+      x: 0,
+      y: 0,
+      zoom: 1,
+    } as WorkflowWithMeta["canvasViewport"],
     status: "enabled",
     triggerType: "contact_created",
     triggerConfig: {} as WorkflowWithMeta["triggerConfig"],

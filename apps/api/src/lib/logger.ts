@@ -21,7 +21,9 @@ const axiomStream = new Writable({
 });
 
 async function flushAxiom() {
-  if (axiomBuffer.length === 0 || !axiomToken) return;
+  if (axiomBuffer.length === 0 || !axiomToken) {
+    return;
+  }
   const lines = axiomBuffer;
   axiomBuffer = [];
   const events = [];
@@ -30,7 +32,9 @@ async function flushAxiom() {
       events.push(JSON.parse(line));
     } catch {}
   }
-  if (events.length === 0) return;
+  if (events.length === 0) {
+    return;
+  }
   await fetch(`https://api.axiom.co/v1/datasets/${axiomDataset}/ingest`, {
     method: "POST",
     headers: {

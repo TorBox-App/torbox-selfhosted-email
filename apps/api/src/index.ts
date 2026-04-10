@@ -125,7 +125,9 @@ export const app = new Elysia()
 
     set.headers["x-request-id"] = requestId;
 
-    if (!auth) return;
+    if (!auth) {
+      return;
+    }
 
     const url = new URL(request.url);
     log.info("api.request", {

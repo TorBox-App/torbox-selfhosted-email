@@ -10,7 +10,9 @@
  * Validates an IANA timezone string, returning "UTC" if invalid.
  */
 export function validateTimezone(tz: string | null | undefined): string {
-  if (!tz) return "UTC";
+  if (!tz) {
+    return "UTC";
+  }
   try {
     Intl.DateTimeFormat("en-CA", { timeZone: tz });
     return tz;
@@ -24,7 +26,9 @@ export function validateTimezone(tz: string | null | undefined): string {
  * Falls back to UTC ISO date when no timezone is provided.
  */
 export function toLocaleDateStr(date: Date, timezone?: string): string {
-  if (!timezone || timezone === "UTC") return date.toISOString().split("T")[0];
+  if (!timezone || timezone === "UTC") {
+    return date.toISOString().split("T")[0];
+  }
   return date.toLocaleDateString("en-CA", { timeZone: timezone });
 }
 

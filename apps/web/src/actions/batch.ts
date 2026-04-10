@@ -1186,7 +1186,9 @@ export async function extractTemplateVariables(
       }
 
       extractedVariables.sort((a, b) => {
-        if (a.isKnown !== b.isKnown) return a.isKnown ? -1 : 1;
+        if (a.isKnown !== b.isKnown) {
+          return a.isKnown ? -1 : 1;
+        }
         return a.name.localeCompare(b.name);
       });
 

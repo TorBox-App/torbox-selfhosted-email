@@ -52,7 +52,9 @@ function createApp() {
   return new Elysia().use(toolsRoutes);
 }
 
-function createEmailCheckResult(domain: string = "example.com"): EmailCheckResult {
+function createEmailCheckResult(
+  domain: string = "example.com"
+): EmailCheckResult {
   return {
     domain,
     checkedAt: "2026-03-24T10:00:00.000Z",
@@ -212,7 +214,7 @@ function createEmailCheckResult(domain: string = "example.com"): EmailCheckResul
         blacklist: { score: 10, max: 10 },
       },
     },
-  } as EmailCheckResult;
+  } as unknown as EmailCheckResult;
 }
 
 function createCachedItem(data: unknown) {

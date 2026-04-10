@@ -35,7 +35,9 @@ async function emitPreferenceEvents(
   organizationId: string,
   changes: TopicChange[]
 ): Promise<void> {
-  if (changes.length === 0) return;
+  if (changes.length === 0) {
+    return;
+  }
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.wraps.dev";
   await fetch(`${apiUrl}/v1/preference-events`, {

@@ -1442,13 +1442,18 @@ export async function getWorkflowExecution(
     );
     const stepEngagement: Record<string, StepEngagement> = {};
     for (const step of exec.stepExecutions) {
-      if (step.stepType !== "send_email" && step.stepType !== "send_sms")
+      if (step.stepType !== "send_email" && step.stepType !== "send_sms") {
         continue;
+      }
       const result = step.result as Record<string, unknown> | null;
       const msgId = result?.messageId;
-      if (typeof msgId !== "string" || !msgId) continue;
+      if (typeof msgId !== "string" || !msgId) {
+        continue;
+      }
       const send = sendsByMessageId.get(msgId);
-      if (!send) continue;
+      if (!send) {
+        continue;
+      }
       stepEngagement[step.id] = {
         channel: send.channel as "email" | "sms",
         status: send.status,
@@ -1739,7 +1744,9 @@ export async function getWorkflowNodeStats(
 
       const messageIdsByStep = new Map<string, string[]>();
       for (const row of messageRows) {
-        if (!row.messageId) continue;
+        if (!row.messageId) {
+          continue;
+        }
         const existing = messageIdsByStep.get(row.stepId) ?? [];
         existing.push(row.messageId);
         messageIdsByStep.set(row.stepId, existing);
@@ -1779,12 +1786,24 @@ export async function getWorkflowNodeStats(
           };
           for (const msgId of msgIds) {
             const send = sendLookup.get(msgId);
-            if (!send) continue;
-            if (send.sentAt) stats.sent++;
-            if (send.deliveredAt) stats.delivered++;
-            if (send.openedAt) stats.opened++;
-            if (send.clickedAt) stats.clicked++;
-            if (send.bouncedAt) stats.bounced++;
+            if (!send) {
+              continue;
+            }
+            if (send.sentAt) {
+              stats.sent++;
+            }
+            if (send.deliveredAt) {
+              stats.delivered++;
+            }
+            if (send.openedAt) {
+              stats.opened++;
+            }
+            if (send.clickedAt) {
+              stats.clicked++;
+            }
+            if (send.bouncedAt) {
+              stats.bounced++;
+            }
           }
           engagementMap[stepId] = stats;
         }

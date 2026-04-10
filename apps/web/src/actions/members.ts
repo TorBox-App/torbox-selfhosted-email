@@ -437,7 +437,9 @@ export async function inviteMember(
           email?: { identities?: Array<{ type: string; identity: string }> };
         } | null;
         for (const id of features?.email?.identities ?? []) {
-          if (id.type === "DOMAIN") verifiedDomains.push(id.identity);
+          if (id.type === "DOMAIN") {
+            verifiedDomains.push(id.identity);
+          }
         }
       }
 

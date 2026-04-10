@@ -34,9 +34,13 @@ export function useCommandSearch(orgId: string | undefined) {
   const { data, isFetching } = useQuery({
     queryKey: searchKeys.results(orgId ?? "", debouncedQuery),
     queryFn: async () => {
-      if (!orgId) return EMPTY_RESULTS;
+      if (!orgId) {
+        return EMPTY_RESULTS;
+      }
       const result = await universalSearch(orgId, debouncedQuery);
-      if (!result.success) return EMPTY_RESULTS;
+      if (!result.success) {
+        return EMPTY_RESULTS;
+      }
       return result.results;
     },
     enabled: !!orgId && isServerMode,

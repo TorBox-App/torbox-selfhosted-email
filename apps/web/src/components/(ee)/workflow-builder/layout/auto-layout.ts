@@ -73,7 +73,9 @@ export function getLayoutedNodes(
   edges: WorkflowEdge[],
   options?: LayoutOptions
 ): WorkflowNode[] {
-  if (nodes.length < 2) return nodes;
+  if (nodes.length < 2) {
+    return nodes;
+  }
 
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
@@ -99,7 +101,9 @@ export function getLayoutedNodes(
 
   return nodes.map((node) => {
     const dagreNode = g.node(node.id);
-    if (!dagreNode) return node;
+    if (!dagreNode) {
+      return node;
+    }
 
     const { width, height } = getNodeDimensions(node, showStats);
     return {

@@ -17,8 +17,12 @@ function validateInterval(
   unit: string | undefined
 ): string | null {
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) return null;
-  if (unit && !VALID_UNITS.has(unit)) return null;
+  if (!Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) {
+    return null;
+  }
+  if (unit && !VALID_UNITS.has(unit)) {
+    return null;
+  }
   const resolvedUnit = unit && VALID_UNITS.has(unit) ? unit : "days";
   return `${num} ${resolvedUnit}`;
 }
@@ -52,7 +56,9 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
     }
     if (operator === "triggeredWithin") {
       const interval = validateInterval(value, unit);
-      if (!interval) return null;
+      if (!interval) {
+        return null;
+      }
       return sql`EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName} AND "created_at" > NOW() - INTERVAL ${interval})`;
     }
     // notTriggered
@@ -101,12 +107,16 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
         return sql`NOT (properties ? ${propertyKey})`;
       case "inList": {
         const values = value as string[];
-        if (values.length === 0) return sql`FALSE`;
+        if (values.length === 0) {
+          return sql`FALSE`;
+        }
         return sql`properties->>${propertyKey} = ANY(${values})`;
       }
       case "notInList": {
         const values = value as string[];
-        if (values.length === 0) return sql`TRUE`;
+        if (values.length === 0) {
+          return sql`TRUE`;
+        }
         return sql`properties->>${propertyKey} != ALL(${values})`;
       }
       default:
@@ -149,17 +159,23 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
       return sql`${col} IS NULL`;
     case "inList": {
       const values = value as string[];
-      if (values.length === 0) return sql`FALSE`;
+      if (values.length === 0) {
+        return sql`FALSE`;
+      }
       return sql`${col} = ANY(${values})`;
     }
     case "notInList": {
       const values = value as string[];
-      if (values.length === 0) return sql`TRUE`;
+      if (values.length === 0) {
+        return sql`TRUE`;
+      }
       return sql`${col} != ALL(${values})`;
     }
     case "within": {
       const interval = validateInterval(value, unit);
-      if (!interval) return null;
+      if (!interval) {
+        return null;
+      }
       return sql`${col} > NOW() - INTERVAL ${interval}`;
     }
     default:

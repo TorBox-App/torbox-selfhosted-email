@@ -289,7 +289,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const completeOnboarding = async (
     pathOverride?: "start_building" | "connect_aws" | null
   ) => {
-    if (!orgSlug || isCompleting.current) return;
+    if (!orgSlug || isCompleting.current) {
+      return;
+    }
     isCompleting.current = true;
     const path = pathOverride ?? onboardingPath ?? "connect_aws";
     const res = await fetch(`/api/${orgSlug}/onboarding/complete`, {
@@ -333,7 +335,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       hasRedirected.current = true;
       completeOnboarding(onboardingPath);
     }
-  }, [isInitialized, currentStep, onboardingPath]);
+  }, [isInitialized, currentStep, onboardingPath, completeOnboarding]);
 
   if (isPending || !isInitialized || !orgSlug || isOrgsLoading) {
     return <Loader fullScreen />;

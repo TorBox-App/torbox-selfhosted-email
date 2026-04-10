@@ -58,7 +58,9 @@ import {
 } from "./workflow-utils";
 
 function isSESPermissionError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const msg = error.message || "";
   const name = error.name || "";
   return (
@@ -691,8 +693,10 @@ export async function handleSendSms(
     phone: contactRecord.phone ?? "",
   };
 
-  const addIfPresent = (key: string, value: string | null | undefined) => {
-    if (value) replacementData[key] = value;
+  const _addIfPresent = (key: string, value: string | null | undefined) => {
+    if (value) {
+      replacementData[key] = value;
+    }
   };
 
   // Add contact properties
@@ -700,7 +704,9 @@ export async function handleSendSms(
   if (properties) {
     for (const [key, value] of Object.entries(properties)) {
       const strValue = value != null ? String(value) : null;
-      if (strValue) replacementData[key] = strValue;
+      if (strValue) {
+        replacementData[key] = strValue;
+      }
     }
   }
 
@@ -709,7 +715,9 @@ export async function handleSendSms(
   if (triggerData) {
     for (const [key, value] of Object.entries(triggerData)) {
       const strValue = value != null ? String(value) : null;
-      if (strValue) replacementData[key] = strValue;
+      if (strValue) {
+        replacementData[key] = strValue;
+      }
     }
   }
 

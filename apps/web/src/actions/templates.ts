@@ -597,7 +597,9 @@ export async function convertTiptapTemplate(
   templateId: string
 ): Promise<ConvertTemplateResult> {
   const access = await verifyOrgAccess(organizationId);
-  if (!access) return { success: false, error: "No access" };
+  if (!access) {
+    return { success: false, error: "No access" };
+  }
 
   const log = createActionLogger("convertTiptapTemplate", {
     orgSlug: access.orgSlug,

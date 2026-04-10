@@ -44,8 +44,12 @@ function getHealthIcon(level: HealthLevel) {
 }
 
 function getOverallLevel(channels: ChannelHealth[]): HealthLevel {
-  if (channels.some((c) => c.level === "critical")) return "critical";
-  if (channels.some((c) => c.level === "warning")) return "warning";
+  if (channels.some((c) => c.level === "critical")) {
+    return "critical";
+  }
+  if (channels.some((c) => c.level === "warning")) {
+    return "warning";
+  }
   return "healthy";
 }
 
@@ -104,7 +108,9 @@ export function HealthStatus({
       level = "critical";
       issues.push(`Complaint rate ${emailData.complaintRate.toFixed(2)}%`);
     } else if (emailData.complaintRate > 0.1) {
-      if (level !== "critical") level = "warning";
+      if (level !== "critical") {
+        level = "warning";
+      }
       issues.push(`Complaint rate ${emailData.complaintRate.toFixed(2)}%`);
     }
 
@@ -112,7 +118,9 @@ export function HealthStatus({
       level = "critical";
       issues.push(`Delivery rate ${emailData.deliveryRate.toFixed(1)}%`);
     } else if (emailData.totalSent > 0 && emailData.deliveryRate < 95) {
-      if (level !== "critical") level = "warning";
+      if (level !== "critical") {
+        level = "warning";
+      }
       issues.push(`Delivery rate ${emailData.deliveryRate.toFixed(1)}%`);
     }
 

@@ -110,7 +110,9 @@ export async function trackFirstEmailDelivered(
       .limit(1);
 
     // If activation score >= 7, the org is already well-activated — skip
-    if (ext && ext.activationScore >= 7) return;
+    if (ext && ext.activationScore >= 7) {
+      return;
+    }
 
     // Check whether we've already tracked this activation via messageSend records
     const [r] = await db
@@ -127,7 +129,9 @@ export async function trackFirstEmailDelivered(
     // Only fire here if there are zero messageSend records (pure SDK send)
     // or if we've never fired the activation event before
     const hasPlatformSends = (r?.count ?? 0) > 0;
-    if (source === "platform" && hasPlatformSends) return;
+    if (source === "platform" && hasPlatformSends) {
+      return;
+    }
 
     const props = {
       organization_id: organizationId,
@@ -198,7 +202,9 @@ async function setContactProperties(
 ) {
   try {
     const key = process.env.WRAPS_API_KEY;
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     const client = createPlatformClient({ apiKey: key });
     const searchResult = await client.GET("/v1/contacts/", {
       params: { query: { search: userEmail, pageSize: "10" } },
@@ -277,7 +283,9 @@ export async function trackFirstResourceCreated(
     }
 
     // Only fire "first" activation events when count === 1
-    if ((r?.count ?? 0) !== 1) return;
+    if ((r?.count ?? 0) !== 1) {
+      return;
+    }
 
     const eventName =
       resource === "template"

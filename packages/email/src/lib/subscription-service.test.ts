@@ -76,7 +76,7 @@ const mockState = vi.hoisted(() => {
     } as MockAccount | null,
     settings: null as MockSettings | null,
     template: null as MockTemplate | null,
-    identities: [] as Array<MockIdentity>,
+    identities: [] as MockIdentity[],
     assumeRoleResponse: {
       Credentials: {
         AccessKeyId: "AKIA123",
@@ -84,15 +84,15 @@ const mockState = vi.hoisted(() => {
         SessionToken: "session123",
       },
     } as MockAssumeRoleResponse,
-    whereCalls: [] as Array<WhereCall>,
-    sentEmails: [] as Array<SentEmail>,
-    wrapsEmailConfigs: [] as Array<WrapsEmailConfig>,
+    whereCalls: [] as WhereCall[],
+    sentEmails: [] as SentEmail[],
+    wrapsEmailConfigs: [] as WrapsEmailConfig[],
   };
 
   return {
     state,
     eq: vi.fn((left: unknown, right: unknown) => ({ kind: "eq", left, right })),
-    and: vi.fn((...conditions: Array<unknown>) => ({
+    and: vi.fn((...conditions: unknown[]) => ({
       kind: "and",
       conditions,
     })),
@@ -387,10 +387,7 @@ describe("sendTopicConfirmationEmail", () => {
     const emailSent = await sendTopicConfirmationEmail(createParams());
 
     expect(emailSent).toBe(true);
-    expect(mockState.eq).toHaveBeenCalledWith(
-      "template.id",
-      "template_123"
-    );
+    expect(mockState.eq).toHaveBeenCalledWith("template.id", "template_123");
     expect(mockState.eq).toHaveBeenCalledWith(
       "template.organizationId",
       "org_123"
@@ -416,9 +413,7 @@ describe("sendTopicConfirmationEmail", () => {
 
     expect(mockState.state.sentEmails[0]).toMatchObject({
       subject: "Confirm Product Updates",
-      html: expect.stringContaining(
-        "https://example.com/confirm/token_123"
-      ),
+      html: expect.stringContaining("https://example.com/confirm/token_123"),
       text: expect.stringContaining("plain:"),
     });
     expect(mockState.toPlainText).toHaveBeenCalledTimes(1);

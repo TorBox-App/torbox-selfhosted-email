@@ -272,8 +272,12 @@ vi.mock("node:dns/promises", () => ({
 
 vi.stubGlobal("fetch", mockFetch);
 
-const { handler, handleUpdateContact, handleWaitForEmailEngagement, handleWebhook } =
-  await import("../workers/workflow-processor");
+const {
+  handler,
+  handleUpdateContact,
+  handleWaitForEmailEngagement,
+  handleWebhook,
+} = await import("../workers/workflow-processor");
 
 const { trackFirstEmailSent: mockTrackFirstEmailSent } = await import(
   "../../lib/activation-tracking"

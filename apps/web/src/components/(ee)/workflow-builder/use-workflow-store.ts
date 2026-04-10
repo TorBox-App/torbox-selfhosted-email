@@ -200,7 +200,9 @@ function stepsToNodes(steps: WorkflowStep[]): WorkflowNode[] {
   // Process each cascade group → collapse into a single cascade node
   for (const groupId of cascadeGroupIds) {
     const groupSteps = steps.filter((s) => s.cascadeGroupId === groupId);
-    if (groupSteps.length === 0) continue;
+    if (groupSteps.length === 0) {
+      continue;
+    }
 
     // Look for cascadeChannels metadata on the first step
     const stepWithMeta = groupSteps.find((s) => s.cascadeChannels);
@@ -379,7 +381,9 @@ function transitionsToEdges(
 
     // Map legacy "none" branch to "timeout" handle ID
     let branch = transition.condition?.branch as string | undefined;
-    if (branch === "none") branch = "timeout";
+    if (branch === "none") {
+      branch = "timeout";
+    }
 
     let source = transition.fromStepId;
     let target = transition.toStepId;
@@ -474,7 +478,9 @@ function expandCascadeNode(node: WorkflowNode): {
     };
     steps.push(sendStep);
 
-    if (isFirst) firstStepId = sendId;
+    if (isFirst) {
+      firstStepId = sendId;
+    }
     lastSendId = sendId;
 
     // Chain from previous step
@@ -722,7 +728,9 @@ function filterInternalTransitions(
   cascadeMappings: Map<string, CascadeMapping>,
   engagedExternalCascades: Set<string>
 ): WorkflowTransition[] {
-  if (engagedExternalCascades.size === 0) return internalTransitions;
+  if (engagedExternalCascades.size === 0) {
+    return internalTransitions;
+  }
 
   // Collect exit step IDs for externally-routed cascades
   const exitStepIds = new Set<string>();
@@ -746,7 +754,9 @@ function filterEngagedExitSteps(
   cascadeMappings: Map<string, CascadeMapping>,
   engagedExternalCascades: Set<string>
 ): WorkflowStep[] {
-  if (engagedExternalCascades.size === 0) return steps;
+  if (engagedExternalCascades.size === 0) {
+    return steps;
+  }
 
   const exitStepIds = new Set<string>();
   for (const cascadeId of engagedExternalCascades) {
@@ -986,10 +996,14 @@ export const useWorkflowStore = create<WorkflowStoreState>()(
       insertNodeBetweenEdge: (type, edgeId, position, config) => {
         const state = get();
         const targetEdge = state.edges.find((e) => e.id === edgeId);
-        if (!targetEdge) return "";
+        if (!targetEdge) {
+          return "";
+        }
 
         // Prevent inserting trigger nodes (no input handle)
-        if (type === "trigger") return "";
+        if (type === "trigger") {
+          return "";
+        }
 
         // Create the new node (same logic as addNode)
         const id = crypto.randomUUID();
@@ -1303,7 +1317,9 @@ function mapCascadeValidationErrors(
   result: ValidationResult,
   cascadeMappings: Map<string, CascadeMapping>
 ): ValidationResult {
-  if (cascadeMappings.size === 0) return result;
+  if (cascadeMappings.size === 0) {
+    return result;
+  }
 
   // Build reverse map: primitive step ID → cascade node ID
   const primitiveToGroup = new Map<string, string>();
@@ -1389,7 +1405,9 @@ export function handleUndoRedo(event: {
   shiftKey: boolean;
 }) {
   const mod = event.metaKey || event.ctrlKey;
-  if (!mod) return;
+  if (!mod) {
+    return;
+  }
 
   if (event.key === "z" && event.shiftKey) {
     useWorkflowStore.temporal.getState().redo();

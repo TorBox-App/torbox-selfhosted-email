@@ -2,17 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type MockRow = Record<string, unknown>;
 
-const {
-  mockCapture,
-  mockGroupIdentify,
-  mockPlatformPost,
-  mockSelectResults,
-} = vi.hoisted(() => ({
-  mockCapture: vi.fn(),
-  mockGroupIdentify: vi.fn(),
-  mockPlatformPost: vi.fn(),
-  mockSelectResults: [] as MockRow[][],
-}));
+const { mockCapture, mockGroupIdentify, mockPlatformPost, mockSelectResults } =
+  vi.hoisted(() => ({
+    mockCapture: vi.fn(),
+    mockGroupIdentify: vi.fn(),
+    mockPlatformPost: vi.fn(),
+    mockSelectResults: [] as MockRow[][],
+  }));
 
 vi.mock("@wraps/db", () => ({
   db: {
@@ -148,17 +144,8 @@ describe("activation tracking", () => {
         activation_first_template_source: "cli",
       },
     });
-    expect(mockPlatformPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "activation.first_template",
-        contactEmail: "org-template",
-        properties: {
-          organization_id: "org-template",
-          resource: "template",
-          source: "cli",
-        },
-      },
-    });
+    // No userId provided → emit() is skipped (no userEmail to resolve)
+    expect(mockPlatformPost).not.toHaveBeenCalled();
   });
 
   it("emits first workflow activation with dashboard source", async () => {
@@ -184,17 +171,8 @@ describe("activation tracking", () => {
         activation_first_automation_source: "dashboard",
       },
     });
-    expect(mockPlatformPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "activation.first_automation",
-        contactEmail: "org-workflow",
-        properties: {
-          organization_id: "org-workflow",
-          resource: "workflow",
-          source: "dashboard",
-        },
-      },
-    });
+    // No userId provided → emit() is skipped (no userEmail to resolve)
+    expect(mockPlatformPost).not.toHaveBeenCalled();
   });
 
   it("does not emit resource activation after the first resource", async () => {

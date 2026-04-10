@@ -59,7 +59,9 @@ export function toBrandKitColors(
     | null
     | undefined
 ): BrandKitColors | undefined {
-  if (!kit) return;
+  if (!kit) {
+    return;
+  }
   return {
     primaryColor: kit.primaryColor,
     secondaryColor: kit.secondaryColor,

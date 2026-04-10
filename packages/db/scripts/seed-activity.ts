@@ -175,7 +175,7 @@ const fromDomains = ["demo.wraps.dev", "notifications.wraps.dev"];
 
 // --- SES event type mappings (what the Lambda processor writes to DynamoDB) ---
 
-const sesEventTypeMap: Record<string, string> = {
+const _sesEventTypeMap: Record<string, string> = {
   sent: "Send",
   delivered: "Delivery",
   opened: "Open",
@@ -186,7 +186,7 @@ const sesEventTypeMap: Record<string, string> = {
   failed: "Reject",
 };
 
-const smsEventTypeMap: Record<string, string> = {
+const _smsEventTypeMap: Record<string, string> = {
   sent: "TEXT_SENT",
   delivered: "TEXT_DELIVERED",
   clicked: "TEXT_DELIVERED", // SMS clicks are still delivered
@@ -586,7 +586,9 @@ async function main() {
             const linkedBatch = randomChoice(
               batches.filter((b) => b.channel === "email")
             );
-            if (linkedBatch) batchSendId = linkedBatch.id;
+            if (linkedBatch) {
+              batchSendId = linkedBatch.id;
+            }
           }
         } else {
           sourceType = "workflow";
@@ -777,7 +779,9 @@ async function main() {
             const linkedBatch = randomChoice(
               batches.filter((b) => b.channel === "sms")
             );
-            if (linkedBatch) batchSendId = linkedBatch.id;
+            if (linkedBatch) {
+              batchSendId = linkedBatch.id;
+            }
           }
         } else {
           sourceType = "workflow";
@@ -808,11 +812,11 @@ async function main() {
             ?.timestamp,
           clickedAt:
             lifecycle.status === "clicked"
-              ? afterDate(events.at(-1)!.timestamp, 10_000, 600_000)
+              ? afterDate(events.at(-1)?.timestamp, 10_000, 600_000)
               : undefined,
           optedOutAt:
             lifecycle.status === "opted_out"
-              ? afterDate(events.at(-1)!.timestamp, 30_000, 300_000)
+              ? afterDate(events.at(-1)?.timestamp, 30_000, 300_000)
               : undefined,
           error: lifecycle.error ?? null,
           createdAt: sentAt,

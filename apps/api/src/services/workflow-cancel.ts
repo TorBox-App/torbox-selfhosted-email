@@ -89,7 +89,9 @@ export async function cancelWorkflowExecution(params: {
       )
       .returning({ id: workflowExecution.id });
 
-    if (!updated) return false;
+    if (!updated) {
+      return false;
+    }
 
     await tx
       .update(workflow)

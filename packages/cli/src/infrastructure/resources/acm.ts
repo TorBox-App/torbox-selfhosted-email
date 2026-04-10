@@ -40,7 +40,7 @@ export async function checkCertificateValidation(
     }
 
     return false;
-  } catch (error) {
+  } catch (_error) {
     // If we can't check, assume not validated to be safe
     return false;
   }
@@ -183,10 +183,16 @@ export async function getCertificateValidationRecords(
   const options = describeResponse.Certificate?.DomainValidationOptions ?? [];
 
   return options
-    .filter((opt) => opt.ResourceRecord?.Name && opt.ResourceRecord?.Value)
+    .filter(
+      (
+        opt
+      ): opt is typeof opt & {
+        ResourceRecord: { Name: string; Value: string; Type?: string };
+      } => !!opt.ResourceRecord?.Name && !!opt.ResourceRecord?.Value
+    )
     .map((opt) => ({
-      name: opt.ResourceRecord!.Name!,
-      type: opt.ResourceRecord!.Type ?? "CNAME",
-      value: opt.ResourceRecord!.Value!,
+      name: opt.ResourceRecord.Name,
+      type: opt.ResourceRecord.Type ?? "CNAME",
+      value: opt.ResourceRecord.Value,
     }));
 }

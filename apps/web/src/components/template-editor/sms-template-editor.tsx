@@ -89,11 +89,13 @@ export function SmsTemplateEditor({
     // updateMutation.mutate is stable (TanStack Query) and templateData.compiledText
     // only changes on route navigation which unmounts the component anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body]);
+  }, [body, templateData.compiledText, updateMutation.mutate]);
 
   const insertVariable = useCallback((variable: string) => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      return;
+    }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;

@@ -5,7 +5,9 @@ export function useBeforeUnload() {
   const isDirty = useIsDirty();
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty) {
+      return;
+    }
 
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();

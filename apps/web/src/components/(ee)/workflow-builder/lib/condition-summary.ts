@@ -33,10 +33,14 @@ export function getConditionSummary(
   config: WorkflowStepConfig,
   sourceHandle: string | null | undefined
 ): ConditionSummary | null {
-  if (!sourceHandle) return null;
+  if (!sourceHandle) {
+    return null;
+  }
 
   if (config.type === "condition") {
-    if (!config.field) return null;
+    if (!config.field) {
+      return null;
+    }
 
     const fieldLabel = stripStepPrefix(config.field);
     const op = operatorLabels[config.operator] || config.operator;

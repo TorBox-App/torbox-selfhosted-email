@@ -59,7 +59,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   // Identify organization group in PostHog when active org changes
   useEffect(() => {
-    if (!activeOrgData) return;
+    if (!activeOrgData) {
+      return;
+    }
     const orgData = (activeOrgData as any).organization || activeOrgData;
     if (orgData?.id) {
       posthog.group("organization", orgData.id, {
@@ -72,8 +74,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   // Auto-set active org from URL when session has no active org
   // (e.g., after deleting the previously active org)
   useEffect(() => {
-    if (isPending || activeOrgData || autoSetAttempted.current) return;
-    if (!params.orgSlug) return;
+    if (isPending || activeOrgData || autoSetAttempted.current) {
+      return;
+    }
+    if (!params.orgSlug) {
+      return;
+    }
 
     autoSetAttempted.current = true;
     authClient.organization.setActive({

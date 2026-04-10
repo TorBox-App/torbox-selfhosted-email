@@ -34,7 +34,7 @@ type ExtractedBrandKitFromHtml = ExtractedBrandKit & {
  */
 export function extractBrandKitFromHtml(
   html: string,
-  templateName: string
+  _templateName: string
 ): ExtractedBrandKitFromHtml {
   const colorFrequency = new Map<string, number>();
   const fontFrequency = new Map<string, number>();
@@ -186,7 +186,9 @@ function isChromatic(hex: string): boolean {
   const min = Math.min(r, g, b);
   const l = (max + min) / 2;
 
-  if (max === min) return false; // achromatic
+  if (max === min) {
+    return false; // achromatic
+  }
   const d = max - min;
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
   return s > 0.1;

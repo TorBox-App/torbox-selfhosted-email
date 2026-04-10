@@ -35,12 +35,16 @@ const BOT_UA_PATTERNS = [
 ];
 
 export function isBotOpen(userAgent: string | undefined | null): boolean {
-  if (!userAgent || userAgent.trim() === "") return true;
+  if (!userAgent || userAgent.trim() === "") {
+    return true;
+  }
   return BOT_UA_PATTERNS.some((pattern) => pattern.test(userAgent));
 }
 
 export function isOpenEventBot(additionalData: string | undefined): boolean {
-  if (!additionalData) return false;
+  if (!additionalData) {
+    return false;
+  }
   try {
     const data = JSON.parse(additionalData);
     return isBotOpen(data.userAgent);

@@ -231,7 +231,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     upgradeOptions.push({
       value: "finish-tracking-domain",
       label: "Finish setting up custom tracking domain",
-      hint: `Complete HTTPS setup for ${config.tracking!.customRedirectDomain}`,
+      hint: `Complete HTTPS setup for ${config.tracking?.customRedirectDomain}`,
     });
   }
 
@@ -345,7 +345,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       // The email-stack will check if the ACM certificate is now validated
       // and create the CloudFront distribution if it is
       clack.log.info(
-        `Checking certificate status for ${pc.cyan(config.tracking!.customRedirectDomain!)}...`
+        `Checking certificate status for ${pc.cyan(config.tracking?.customRedirectDomain ?? "")}...`
       );
       updatedConfig = { ...config };
       newPreset = metadata.services.email?.preset;

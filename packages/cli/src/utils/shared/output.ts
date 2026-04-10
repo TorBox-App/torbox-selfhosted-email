@@ -18,7 +18,9 @@ export class DeploymentProgress {
    * Start a spinner with a message
    */
   start(message: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     if (this.currentSpinner) {
       this.currentSpinner.stop("");
       this.currentSpinner = null;
@@ -31,7 +33,9 @@ export class DeploymentProgress {
    * Mark current step as succeeded
    */
   succeed(message: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     if (this.currentSpinner) {
       this.currentSpinner.stop(message);
     }
@@ -42,7 +46,9 @@ export class DeploymentProgress {
    * Mark current step as failed
    */
   fail(message: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     if (this.currentSpinner) {
       this.currentSpinner.stop(message);
     }
@@ -53,7 +59,9 @@ export class DeploymentProgress {
    * Show info message
    */
   info(message: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     clack.log.info(message);
   }
 
@@ -61,7 +69,9 @@ export class DeploymentProgress {
    * Show step message
    */
   step(message: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     clack.log.step(message);
   }
 
@@ -88,7 +98,9 @@ export class DeploymentProgress {
    * Stop the spinner
    */
   stop(message?: string) {
-    if (this.silent) return;
+    if (this.silent) {
+      return;
+    }
     if (this.currentSpinner) {
       this.currentSpinner.stop(message || "");
     }

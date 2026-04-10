@@ -124,9 +124,15 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
 type AuthStatus = "good" | "present" | "weak" | "missing";
 
 function assessSpf(spf: SpfResult): AuthStatus {
-  if (!spf.exists || spf.multipleRecords || !spf.valid) return "missing";
-  if (spf.allMechanism === "+all" || spf.hasCircularInclude) return "missing";
-  if (spf.allMechanism === "?all") return "weak";
+  if (!spf.exists || spf.multipleRecords || !spf.valid) {
+    return "missing";
+  }
+  if (spf.allMechanism === "+all" || spf.hasCircularInclude) {
+    return "missing";
+  }
+  if (spf.allMechanism === "?all") {
+    return "weak";
+  }
   // ~all or -all both count as "present"
   return "present";
 }
@@ -144,8 +150,12 @@ function assessDkim(checks: AllCheckResults): AuthStatus {
 }
 
 function assessDmarc(dmarc: DmarcResult): AuthStatus {
-  if (!(dmarc.exists && dmarc.valid)) return "missing";
-  if (dmarc.policy === "reject" || dmarc.policy === "quarantine") return "good";
+  if (!(dmarc.exists && dmarc.valid)) {
+    return "missing";
+  }
+  if (dmarc.policy === "reject" || dmarc.policy === "quarantine") {
+    return "good";
+  }
   return "present"; // policy=none
 }
 
@@ -160,12 +170,16 @@ function assessDmarc(dmarc: DmarcResult): AuthStatus {
  */
 function determineGrade(checks: AllCheckResults): "A" | "B" | "C" | "D" | "F" {
   // Critical overrides → F
-  if (checks.spf.allMechanism === "+all") return "F";
+  if (checks.spf.allMechanism === "+all") {
+    return "F";
+  }
   const hasSpamhausListing = [
     ...checks.blacklist.domainChecks.listed,
     ...checks.blacklist.ipChecks.listed,
   ].some((l) => l.zone.includes("spamhaus"));
-  if (hasSpamhausListing) return "F";
+  if (hasSpamhausListing) {
+    return "F";
+  }
 
   const spf = assessSpf(checks.spf);
   const dkim = assessDkim(checks);
@@ -183,13 +197,19 @@ function determineGrade(checks: AllCheckResults): "A" | "B" | "C" | "D" | "F" {
   }
 
   // B: all three present but not fully enforcing
-  if (presentCount === 3) return "B";
+  if (presentCount === 3) {
+    return "B";
+  }
 
   // C: missing one
-  if (presentCount === 2) return "C";
+  if (presentCount === 2) {
+    return "C";
+  }
 
   // D: missing two (but at least one present)
-  if (presentCount === 1) return "D";
+  if (presentCount === 1) {
+    return "D";
+  }
 
   // F: missing all
   return "F";

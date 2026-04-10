@@ -39,12 +39,17 @@ export function calculateFunnelStages(input: FunnelInput): FunnelStage[] {
   } = input;
 
   const sentIssues: FunnelIssue[] = [];
-  if (failed > 0) sentIssues.push({ label: "failed", count: failed });
+  if (failed > 0) {
+    sentIssues.push({ label: "failed", count: failed });
+  }
 
   const deliveredIssues: FunnelIssue[] = [];
-  if (bounced > 0) deliveredIssues.push({ label: "bounced", count: bounced });
-  if (complained > 0)
+  if (bounced > 0) {
+    deliveredIssues.push({ label: "bounced", count: bounced });
+  }
+  if (complained > 0) {
     deliveredIssues.push({ label: "complained", count: complained });
+  }
 
   const stages: FunnelStage[] = [
     {
@@ -93,7 +98,9 @@ export function generateFunnelPath(
   widths: number[],
   dimensions: { width: number; height: number }
 ): string {
-  if (widths.length < 2) return "";
+  if (widths.length < 2) {
+    return "";
+  }
 
   const { width, height } = dimensions;
   const stageCount = widths.length;
@@ -152,7 +159,9 @@ export function generateFunnelSectionPaths(
   widths: number[],
   dimensions: { width: number; height: number }
 ): string[] {
-  if (widths.length < 2) return [];
+  if (widths.length < 2) {
+    return [];
+  }
 
   const { width, height } = dimensions;
   const stageCount = widths.length;

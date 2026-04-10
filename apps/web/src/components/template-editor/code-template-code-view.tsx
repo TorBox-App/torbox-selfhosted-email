@@ -195,9 +195,13 @@ export function CodeTemplateCodeView({
   // Live preview: debounced compile as you type
   const previewTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    if (!(editedSource && initializedRef.current)) return;
+    if (!(editedSource && initializedRef.current)) {
+      return;
+    }
     // Skip recompiling if source hasn't changed from the stored version
-    if (editedSource === originalSource) return;
+    if (editedSource === originalSource) {
+      return;
+    }
 
     clearTimeout(previewTimerRef.current);
     previewTimerRef.current = setTimeout(async () => {
@@ -224,7 +228,9 @@ export function CodeTemplateCodeView({
   // Auto-save: 1 minute after last source change
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    if (!hasChanges || isSaving) return;
+    if (!hasChanges || isSaving) {
+      return;
+    }
 
     clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
@@ -232,7 +238,7 @@ export function CodeTemplateCodeView({
     }, 60_000);
 
     return () => clearTimeout(autoSaveTimerRef.current);
-  }, [editedSource, hasChanges, isSaving, handleSave]);
+  }, [hasChanges, isSaving, handleSave]);
 
   return (
     <div className="flex h-full flex-col">

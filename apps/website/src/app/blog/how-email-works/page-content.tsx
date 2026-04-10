@@ -83,7 +83,9 @@ export const SectionReveal = ({
   className?: string;
 }) => {
   const prefersReduced = useReducedMotion();
-  if (prefersReduced) return <div className={className}>{children}</div>;
+  if (prefersReduced) {
+    return <div className={className}>{children}</div>;
+  }
   return (
     <motion.div
       className={className}
@@ -104,7 +106,9 @@ export const ReadingProgress = () => {
   const prefersReduced = useReducedMotion();
   const { scrollYProgress } = useScroll();
 
-  if (prefersReduced) return null;
+  if (prefersReduced) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -147,7 +151,9 @@ export const ChapterNav = () => {
 
     for (const ch of CHAPTERS) {
       const el = document.getElementById(ch.id);
-      if (el) observer.observe(el);
+      if (el) {
+        observer.observe(el);
+      }
     }
     return () => observer.disconnect();
   }, []);
@@ -262,7 +268,9 @@ export const ParallaxHero = () => {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    if (prefersReduced) return;
+    if (prefersReduced) {
+      return;
+    }
     const interval = setInterval(() => {
       setOffset((prev) => (prev + 1) % (SMTP_CONVERSATIONS.length * 24));
     }, 60);
@@ -332,7 +340,7 @@ export const ComposeViewer = () => {
       : "transition-colors";
 
   const rawMessage = useMemo(() => {
-    const boundary = "----=_Part_001";
+    const _boundary = "----=_Part_001";
     return `EHLO yourcompany.com
 MAIL FROM:<${from}>
 RCPT TO:<${to}>
@@ -437,10 +445,18 @@ QUIT`;
           <pre className="overflow-x-auto rounded bg-muted/50 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
             {rawMessage.split("\n").map((line, i) => {
               let hl = false;
-              if (activeHighlight === "from" && line.includes(from)) hl = true;
-              if (activeHighlight === "to" && line.includes(to)) hl = true;
-              if (activeHighlight === "subject" && line.startsWith("Subject:"))
+              if (activeHighlight === "from" && line.includes(from)) {
                 hl = true;
+              }
+              if (activeHighlight === "to" && line.includes(to)) {
+                hl = true;
+              }
+              if (
+                activeHighlight === "subject" &&
+                line.startsWith("Subject:")
+              ) {
+                hl = true;
+              }
               if (
                 activeHighlight === "body" &&
                 !line.startsWith("EHLO") &&
@@ -458,8 +474,9 @@ QUIT`;
                 !line.startsWith("QUIT") &&
                 line.trim() !== "" &&
                 i > 10
-              )
+              ) {
                 hl = true;
+              }
               return (
                 <span
                   className={hl ? "bg-orange-500/20 text-foreground" : ""}
@@ -545,12 +562,14 @@ export const SmtpTerminal = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [history]);
+  }, []);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!input.trim() || done) return;
+      if (!input.trim() || done) {
+        return;
+      }
 
       const cmd = input.trim();
       const newLines: TerminalLine[] = [{ type: "client", text: cmd }];
@@ -745,7 +764,9 @@ export const MxLookup = () => {
   const [error, setError] = useState<string | null>(null);
 
   const lookup = async () => {
-    if (!domain.trim()) return;
+    if (!domain.trim()) {
+      return;
+    }
     setLoading(true);
     setError(null);
     setResult(null);
@@ -971,7 +992,9 @@ export const PredictionPrompt = ({
   const recordPrediction = useReadingStore((s) => s.recordPrediction);
 
   const handleSelect = (index: number) => {
-    if (selected !== null) return; // Already answered
+    if (selected !== null) {
+      return; // Already answered
+    }
     setSelected(index);
     recordPrediction(options[index].correct);
   };
@@ -1156,8 +1179,11 @@ export const HeaderChain = () => {
   const toggleHeader = (index: number) => {
     setExpandedHeaders((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
       return next;
     });
   };

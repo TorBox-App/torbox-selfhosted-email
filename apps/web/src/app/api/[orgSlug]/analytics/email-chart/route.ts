@@ -118,7 +118,9 @@ export async function GET(request: Request, context: RouteContext) {
     let dailyMap = new Map<string, Record<(typeof allKeys)[number], number>>();
 
     for (const metrics of metricsResults) {
-      if (!metrics) continue;
+      if (!metrics) {
+        continue;
+      }
 
       const timestamps = metrics[SES_METRICS.SEND]?.[0]?.Timestamps || [];
       const perAccount = aggregateByDate(

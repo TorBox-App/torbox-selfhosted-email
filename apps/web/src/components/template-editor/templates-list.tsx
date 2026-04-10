@@ -232,7 +232,9 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
   };
 
   const handleBulkStatusChange = () => {
-    if (selectedStatus === "PUBLISHED" && !requireAws("publish")) return;
+    if (selectedStatus === "PUBLISHED" && !requireAws("publish")) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await bulkUpdateTemplateStatus(

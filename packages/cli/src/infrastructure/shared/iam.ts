@@ -49,8 +49,8 @@ export async function createServiceIAMRole(
         Effect: "Allow",
         Principal: {
           Service:
-            config.additionalVercelPrincipals!.length === 1
-              ? config.additionalVercelPrincipals![0]
+            config.additionalVercelPrincipals?.length === 1
+              ? config.additionalVercelPrincipals?.[0]
               : config.additionalVercelPrincipals,
         },
         Action: "sts:AssumeRole",

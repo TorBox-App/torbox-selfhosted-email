@@ -20,9 +20,13 @@ export function useWorkflowNodeStats(
   return useQuery({
     queryKey: workflowNodeStatsKeys.detail(workflowId ?? ""),
     queryFn: async () => {
-      if (!workflowId) return {};
+      if (!workflowId) {
+        return {};
+      }
       const result = await getWorkflowNodeStats(workflowId, organizationId);
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       return result.stats;
     },
     enabled: enabled && !!workflowId,
@@ -57,7 +61,9 @@ export function aggregateCascadeStats(
   let hasAny = false;
   for (const primitiveId of cascadePrimitiveIds) {
     const s = allStats[primitiveId];
-    if (!s) continue;
+    if (!s) {
+      continue;
+    }
     hasAny = true;
     aggregated.totalCount += s.totalCount;
     aggregated.completedCount += s.completedCount;
@@ -86,7 +92,9 @@ export function getNodeStats(
   stepId: string,
   cascadePrimitiveIds?: string[]
 ): WorkflowNodeStepStats | null {
-  if (!stats) return null;
+  if (!stats) {
+    return null;
+  }
 
   if (!cascadePrimitiveIds || cascadePrimitiveIds.length === 0) {
     return stats[stepId] ?? null;

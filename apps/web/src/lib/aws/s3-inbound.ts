@@ -116,7 +116,9 @@ export async function listInboundEmails(params: {
             })
           );
           const body = await getResponse.Body?.transformToString();
-          if (!body) throw new Error("Empty body");
+          if (!body) {
+            throw new Error("Empty body");
+          }
           const parsed = JSON.parse(body);
 
           return {
@@ -199,7 +201,9 @@ export async function getInboundEmail(params: {
     );
 
     const body = await getResponse.Body?.transformToString();
-    if (!body) throw new Error("Empty body");
+    if (!body) {
+      throw new Error("Empty body");
+    }
     return JSON.parse(body) as InboundEmailDetail;
   } catch (error) {
     if ((error as { name?: string }).name === "NoSuchKey") {

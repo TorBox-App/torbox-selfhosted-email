@@ -30,7 +30,9 @@ export function DocsToc({
   // Scan headings on mount and when content changes
   useEffect(() => {
     const container = contentRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     const headings = container.querySelectorAll("h2, h3");
     const tocItems: TocItem[] = [];
@@ -39,7 +41,9 @@ export function DocsToc({
       const el = heading as HTMLElement;
 
       // Skip headings inside cards (e.g. CardTitle, help sections)
-      if (el.closest("[data-slot='card']") || el.closest(".card")) continue;
+      if (el.closest("[data-slot='card']") || el.closest(".card")) {
+        continue;
+      }
 
       // Extract visible text, skipping badge/icon children
       let text = "";
@@ -56,11 +60,15 @@ export function DocsToc({
         }
       }
       text = text.trim();
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
 
       if (!el.id) {
         const slug = slugify(text);
-        if (!slug) continue;
+        if (!slug) {
+          continue;
+        }
         el.id = slug;
       }
 
@@ -76,10 +84,14 @@ export function DocsToc({
 
   // Track active section with IntersectionObserver
   useEffect(() => {
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      return;
+    }
 
     const container = contentRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     // Clean up previous observer
     if (observerRef.current) {

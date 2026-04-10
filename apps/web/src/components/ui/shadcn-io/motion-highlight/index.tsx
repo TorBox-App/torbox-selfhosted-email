@@ -295,6 +295,7 @@ function MotionHighlight<T extends string>({
       exitDelay,
       className,
       activeClassNameState,
+      shouldReduceMotion,
     ]
   );
 

@@ -186,9 +186,12 @@ export function useActiveBrandKit(
 ) {
   const { data: brandKits } = useBrandKits(orgSlug);
   return useMemo(() => {
-    if (!brandKits?.length) return null;
-    if (selectedBrandKitId)
+    if (!brandKits?.length) {
+      return null;
+    }
+    if (selectedBrandKitId) {
       return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
+    }
     return brandKits.find((kit) => kit.isDefault) ?? brandKits[0] ?? null;
   }, [brandKits, selectedBrandKitId]);
 }

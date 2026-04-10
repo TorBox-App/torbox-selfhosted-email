@@ -74,7 +74,9 @@ export function classifyDNSError(
  * are unambiguous — if the name matches, it's a not-found error.
  */
 export function isAWSNotFoundError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const awsError = error as Error & {
     $metadata?: { httpStatusCode?: number };
   };

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { checkSpf } from "./spf.js";
-import { nodeDns } from "../dns/node.js";
 import { setDnsProvider } from "../dns/index.js";
+import { nodeDns } from "../dns/node.js";
 import type { DnsProvider } from "../types.js";
+import { checkSpf } from "./spf.js";
 
 const dnsProvider: DnsProvider = {
   resolveTxt: async (domain) => {

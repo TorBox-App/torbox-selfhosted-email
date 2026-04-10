@@ -103,7 +103,9 @@ export function ContactDetailsSheet({
     queryKey: ["contact", "detail", idToFetch],
     queryFn: async () => {
       const result = await getContact(idToFetch!, organizationId);
-      if (!result.success) return null;
+      if (!result.success) {
+        return null;
+      }
       return result.contact;
     },
     enabled: open && !!idToFetch,

@@ -45,13 +45,23 @@ function formatDuration(
   startedAt: Date | null,
   completedAt: Date | null
 ): string {
-  if (!startedAt) return "-";
+  if (!startedAt) {
+    return "-";
+  }
   const end = completedAt ? new Date(completedAt) : new Date();
   const ms = end.getTime() - new Date(startedAt).getTime();
-  if (ms < 1000) return "<1s";
-  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
-  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
-  if (ms < 86_400_000) return `${(ms / 3_600_000).toFixed(1)}h`;
+  if (ms < 1000) {
+    return "<1s";
+  }
+  if (ms < 60_000) {
+    return `${Math.round(ms / 1000)}s`;
+  }
+  if (ms < 3_600_000) {
+    return `${Math.round(ms / 60_000)}m`;
+  }
+  if (ms < 86_400_000) {
+    return `${(ms / 3_600_000).toFixed(1)}h`;
+  }
   return `${Math.round(ms / 86_400_000)}d`;
 }
 
@@ -143,7 +153,9 @@ export function ExecutionsTable({
         header: "Started",
         cell: ({ row }: { row: { original: ExecutionWithContact } }) => {
           const date = row.original.startedAt;
-          if (!date) return <span className="text-muted-foreground">-</span>;
+          if (!date) {
+            return <span className="text-muted-foreground">-</span>;
+          }
           return (
             <span className="text-muted-foreground text-sm">
               {formatDistanceToNow(new Date(date), { addSuffix: true })}

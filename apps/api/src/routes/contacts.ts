@@ -534,8 +534,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         // Race condition: another request created this contact between our
         // SELECT check and INSERT. Return field-specific message.
         ctx.set.status = 409;
-        if (body.email)
+        if (body.email) {
           return { error: "Contact with this email already exists" };
+        }
         return { error: "Contact with this phone already exists" };
       }
 

@@ -156,7 +156,7 @@ export async function GET(request: Request, context: RouteContext) {
       const pgSentAt = new Map(
         pgRecords
           .filter((r) => r.messageId && r.sentAt)
-          .map((r) => [r.messageId, r.sentAt!.getTime()])
+          .map((r) => [r.messageId, r.sentAt?.getTime()])
       );
 
       for (const email of emails) {

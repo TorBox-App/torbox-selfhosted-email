@@ -43,10 +43,14 @@ export function FunnelChart(props: FunnelChartProps) {
   const [chartWidth, setChartWidth] = useState(800);
 
   useEffect(() => {
-    if (!containerRef.current || typeof ResizeObserver === "undefined") return;
+    if (!containerRef.current || typeof ResizeObserver === "undefined") {
+      return;
+    }
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry) setChartWidth(entry.contentRect.width);
+      if (entry) {
+        setChartWidth(entry.contentRect.width);
+      }
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
@@ -162,7 +166,9 @@ function FunnelIssues({
   gridCols: string;
 }) {
   const hasAnyIssues = stages.some((s) => s.issues.length > 0);
-  if (!hasAnyIssues) return null;
+  if (!hasAnyIssues) {
+    return null;
+  }
 
   return (
     <div

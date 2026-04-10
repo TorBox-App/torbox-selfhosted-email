@@ -431,7 +431,9 @@ export function ContactTimeline({
       try {
         const result = await getContactTimeline(contactId, organizationId);
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         if (result.success) {
           setEvents(result.events);

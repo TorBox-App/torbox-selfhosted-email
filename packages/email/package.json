@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "^4.0.7"
   },
   "peerDependencies": {
     "typescript": "catalog:"

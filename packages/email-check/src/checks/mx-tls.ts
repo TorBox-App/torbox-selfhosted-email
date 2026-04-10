@@ -366,11 +366,13 @@ function formatX509Name(name: tls.PeerCertificate["issuer"]): string {
     return "";
   }
   const parts: string[] = [];
-  if (name.O) {
-    parts.push(name.O);
+  const o = Array.isArray(name.O) ? name.O[0] : name.O;
+  if (o) {
+    parts.push(o);
   }
-  if (name.CN) {
-    parts.push(name.CN);
+  const cn = Array.isArray(name.CN) ? name.CN[0] : name.CN;
+  if (cn) {
+    parts.push(cn);
   }
   return parts.join(" - ") || JSON.stringify(name);
 }

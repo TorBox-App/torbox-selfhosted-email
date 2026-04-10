@@ -51,10 +51,14 @@ export function SankeyChart(props: SankeyChartProps) {
   const [chartWidth, setChartWidth] = useState(800);
 
   useEffect(() => {
-    if (!containerRef.current || typeof ResizeObserver === "undefined") return;
+    if (!containerRef.current || typeof ResizeObserver === "undefined") {
+      return;
+    }
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry) setChartWidth(entry.contentRect.width);
+      if (entry) {
+        setChartWidth(entry.contentRect.width);
+      }
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
@@ -62,7 +66,9 @@ export function SankeyChart(props: SankeyChartProps) {
 
   // Compute sankey layout
   const layout = useMemo(() => {
-    if (data.nodes.length === 0 || data.links.length === 0) return null;
+    if (data.nodes.length === 0 || data.links.length === 0) {
+      return null;
+    }
 
     const sankeyGen = sankey<SNode, SLink>()
       .nodeId((d) => d.index ?? 0)
@@ -84,7 +90,9 @@ export function SankeyChart(props: SankeyChartProps) {
 
   const linkPath = sankeyLinkHorizontal();
 
-  if (!layout) return null;
+  if (!layout) {
+    return null;
+  }
 
   return (
     <div className="w-full" ref={containerRef}>

@@ -6,11 +6,15 @@ export const dynamic = "force-static";
 
 function parseFrontmatter(content: string) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return {};
+  if (!match) {
+    return {};
+  }
   const fm: Record<string, string> = {};
   for (const line of match[1].split("\n")) {
     const idx = line.indexOf(":");
-    if (idx > 0) fm[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    if (idx > 0) {
+      fm[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    }
   }
   return fm;
 }
@@ -21,7 +25,9 @@ export async function GET() {
   const skills = [];
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
     const filePath = join(skillsDir, entry.name, "SKILL.md");
     try {
       const content = await readFile(filePath, "utf-8");

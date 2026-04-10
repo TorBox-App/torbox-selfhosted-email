@@ -229,7 +229,9 @@ export function InsightsSection({
   );
 
   for (const anomaly of anomalies) {
-    if (!anomaly.severity) continue;
+    if (!anomaly.severity) {
+      continue;
+    }
 
     const isRateMetric = anomaly.metric.includes("rate");
     const isVolumeDrop = anomaly.metric.includes("volume");
@@ -388,7 +390,9 @@ export function InsightsSection({
     });
   }
 
-  if (insights.length === 0) return null;
+  if (insights.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-2">

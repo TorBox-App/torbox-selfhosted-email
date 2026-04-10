@@ -25,9 +25,7 @@ function TemplateWithHandlebarsInHeading(props: Record<string, string>) {
   );
 }
 
-function TemplateWithDottedHandlebarsInHeading(
-  _props: Record<string, string>
-) {
+function TemplateWithDottedHandlebarsInHeading(_props: Record<string, string>) {
   return React.createElement(
     Html,
     null,

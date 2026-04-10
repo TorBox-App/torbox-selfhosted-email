@@ -132,9 +132,13 @@ export function DoubleOptInSettings({
             name="confirmationFromEmail"
             validators={{
               onBlur: ({ value }) => {
-                if (!value) return;
+                if (!value) {
+                  return;
+                }
                 const result = z.string().email().safeParse(value);
-                if (!result.success) return "Must be a valid email address";
+                if (!result.success) {
+                  return "Must be a valid email address";
+                }
                 const emailDomain = value.split("@")[1];
                 if (
                   verifiedDomains.length > 0 &&
@@ -188,9 +192,13 @@ export function DoubleOptInSettings({
             name="confirmationReplyToEmail"
             validators={{
               onBlur: ({ value }) => {
-                if (!value) return;
+                if (!value) {
+                  return;
+                }
                 const result = z.string().email().safeParse(value);
-                if (!result.success) return "Must be a valid email address";
+                if (!result.success) {
+                  return "Must be a valid email address";
+                }
                 return;
               },
             }}

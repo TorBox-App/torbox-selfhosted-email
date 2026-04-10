@@ -62,9 +62,13 @@ async function setContactProperties(
 ) {
   try {
     const key = process.env.WRAPS_API_KEY;
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     const normalizedEmail = userEmail.toLowerCase().trim();
-    if (!normalizedEmail) return;
+    if (!normalizedEmail) {
+      return;
+    }
     const client = createPlatformClient({ apiKey: key });
     const searchResult = await client.GET("/v1/contacts/", {
       params: { query: { search: normalizedEmail, pageSize: "10" } },

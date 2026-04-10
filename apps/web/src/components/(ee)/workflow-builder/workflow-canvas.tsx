@@ -124,7 +124,9 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
       event.dataTransfer.dropEffect = "move";
 
       const type = event.dataTransfer.types.includes("application/reactflow");
-      if (!type) return;
+      if (!type) {
+        return;
+      }
 
       // Detect if cursor is over an edge
       const edgeId = findEdgeAtPoint(event.clientX, event.clientY);
@@ -225,8 +227,9 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
 
   const onDragLeave = useCallback((event: React.DragEvent) => {
     // Only handle if leaving the canvas entirely (not entering a child element)
-    if (event.currentTarget.contains(event.relatedTarget as globalThis.Node))
+    if (event.currentTarget.contains(event.relatedTarget as globalThis.Node)) {
       return;
+    }
 
     if (hoveredEdgeRef.current) {
       const prevEdge = document.querySelector(
@@ -328,7 +331,9 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
       {ghostPreview &&
         (() => {
           const meta = paletteItemsByType[ghostPreview.type];
-          if (!meta) return null;
+          if (!meta) {
+            return null;
+          }
           return (
             <div
               className="pointer-events-none absolute z-50 flex items-center gap-2 rounded-lg border-2 border-dashed border-orange-500/50 bg-background/80 px-3 py-2 shadow-lg backdrop-blur-sm ghost-preview-enter"

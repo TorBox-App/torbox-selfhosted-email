@@ -356,7 +356,9 @@ export class CloudflareDNSClient implements DNSProviderClient {
     Array<{ flags: number; tag: string; value: string }>
   > {
     const zoneName = await this.getZoneName();
-    if (!zoneName) return [];
+    if (!zoneName) {
+      return [];
+    }
 
     const result = await this.request<CloudflareRecord[]>(
       "/dns_records?type=CAA"
@@ -416,7 +418,9 @@ export class CloudflareDNSClient implements DNSProviderClient {
    */
   async addAmazonCAARecord(): Promise<boolean> {
     const zoneName = await this.getZoneName();
-    if (!zoneName) return false;
+    if (!zoneName) {
+      return false;
+    }
 
     // Cloudflare CAA records use a data object format
     const body = {

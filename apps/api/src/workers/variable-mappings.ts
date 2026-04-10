@@ -44,9 +44,12 @@ function resolveSource(
   source: VariableSource,
   contact: ContactData
 ): string | undefined {
-  if (source.type === "static") return source.value;
-  if (source.type === "contact")
+  if (source.type === "static") {
+    return source.value;
+  }
+  if (source.type === "contact") {
     return resolveContactField(contact, source.field);
+  }
   return;
 }
 

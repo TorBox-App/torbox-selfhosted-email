@@ -18,7 +18,9 @@ vi.mock("@wraps/email", () => ({
 
 import { auth } from "../index";
 
-type EmailAndPasswordOptions = NonNullable<typeof auth.options.emailAndPassword>;
+type EmailAndPasswordOptions = NonNullable<
+  typeof auth.options.emailAndPassword
+>;
 type SendResetPasswordHandler = NonNullable<
   EmailAndPasswordOptions["sendResetPassword"]
 >;

@@ -71,7 +71,9 @@ export function CascadeConfig({
   };
 
   const removeChannel = (index: number) => {
-    if (channels.length <= 1) return;
+    if (channels.length <= 1) {
+      return;
+    }
     updateCascadeChannels(
       nodeId,
       channels.filter((_, i) => i !== index)
@@ -80,7 +82,9 @@ export function CascadeConfig({
 
   const moveChannel = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= channels.length) return;
+    if (newIndex < 0 || newIndex >= channels.length) {
+      return;
+    }
     const newChannels = [...channels];
     [newChannels[index], newChannels[newIndex]] = [
       newChannels[newIndex],

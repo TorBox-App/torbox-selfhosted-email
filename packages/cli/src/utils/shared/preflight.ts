@@ -24,11 +24,21 @@ export async function runPreflightScan(
 
   // Check for existing wraps-* resources
   const resourceTypes: string[] = [];
-  if (existing.hasConfigSet) resourceTypes.push("config set");
-  if (existing.hasSNSTopics) resourceTypes.push("SNS topic");
-  if (existing.hasDynamoTable) resourceTypes.push("DynamoDB table");
-  if (existing.hasLambdaFunctions) resourceTypes.push("Lambda function");
-  if (existing.hasIAMRole) resourceTypes.push("IAM role");
+  if (existing.hasConfigSet) {
+    resourceTypes.push("config set");
+  }
+  if (existing.hasSNSTopics) {
+    resourceTypes.push("SNS topic");
+  }
+  if (existing.hasDynamoTable) {
+    resourceTypes.push("DynamoDB table");
+  }
+  if (existing.hasLambdaFunctions) {
+    resourceTypes.push("Lambda function");
+  }
+  if (existing.hasIAMRole) {
+    resourceTypes.push("IAM role");
+  }
 
   if (resourceTypes.length > 0) {
     hasConflicts = true;

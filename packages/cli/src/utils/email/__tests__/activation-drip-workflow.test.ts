@@ -9,7 +9,7 @@ let activationDripSteps: StepDefinition[] = [];
 
 function getNestedStep(
   steps: StepDefinition[],
-  stepId: string,
+  stepId: string
 ): StepDefinition | undefined {
   for (const step of steps) {
     if (step.id === stepId) {
@@ -34,7 +34,7 @@ function getNestedStep(
 
 function getBranchStepIds(
   step: StepDefinition,
-  branch: "yes" | "no",
+  branch: "yes" | "no"
 ): string[] {
   const branchSteps = step.branches?.[branch];
   if (!branchSteps) {
@@ -54,7 +54,7 @@ beforeAll(async () => {
   const testFileDir = dirname(fileURLToPath(import.meta.url));
   const sourcePath = join(
     testFileDir,
-    "../../../../../../wraps/workflows/activation-drip.ts",
+    "../../../../../../wraps/workflows/activation-drip.ts"
   );
   const source = await readFile(sourcePath, "utf-8");
   const tempWorkflowPath = join(workflowsDir, "activation-drip.ts");
@@ -70,9 +70,18 @@ beforeAll(async () => {
 describe("activation drip workflow", () => {
   it("keeps the celebration email behind all three activation milestones", () => {
     const velocityGate = getNestedStep(activationDripSteps, "check-velocity");
-    const sentEmailGate = getNestedStep(activationDripSteps, "check-sent-email");
-    const workflowGate = getNestedStep(activationDripSteps, "check-has-workflow");
-    const broadcastGate = getNestedStep(activationDripSteps, "check-has-broadcast");
+    const sentEmailGate = getNestedStep(
+      activationDripSteps,
+      "check-sent-email"
+    );
+    const workflowGate = getNestedStep(
+      activationDripSteps,
+      "check-has-workflow"
+    );
+    const broadcastGate = getNestedStep(
+      activationDripSteps,
+      "check-has-broadcast"
+    );
     const celebrationStep = getNestedStep(activationDripSteps, "celebration");
 
     expect(velocityGate).toBeDefined();

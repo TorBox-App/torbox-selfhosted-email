@@ -98,7 +98,9 @@ function findMissingScopeViolations(
     const lines = content.split("\n");
     for (const match of content.matchAll(regex)) {
       const tableName = match[1];
-      if (!ORG_SCOPED_TABLES.has(tableName)) continue;
+      if (!ORG_SCOPED_TABLES.has(tableName)) {
+        continue;
+      }
 
       // Check if this line has a baseline:allow-unscoped comment
       const lineStart = content.lastIndexOf("\n", match.index) + 1;
@@ -107,7 +109,9 @@ function findMissingScopeViolations(
         lineStart,
         lineEnd === -1 ? undefined : lineEnd
       );
-      if (line.includes("baseline:allow-unscoped")) continue;
+      if (line.includes("baseline:allow-unscoped")) {
+        continue;
+      }
 
       const beforeMatch = content.slice(0, match.index);
       const lineNum = beforeMatch.split("\n").length;
@@ -185,21 +189,29 @@ describe("client components do not access private env vars", () => {
 
         // Skip comments
         const trimmed = line.trim();
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) {
+          continue;
+        }
 
         // Skip lines inside template literals (code examples in UI)
         const beforeLine = lines.slice(0, i).join("\n");
         const backticksBefore = (beforeLine.match(/`/g) || []).length;
-        if (backticksBefore % 2 === 1) continue;
+        if (backticksBefore % 2 === 1) {
+          continue;
+        }
 
         envRegex.lastIndex = 0;
 
         for (const match of line.matchAll(envRegex)) {
           const varName = match[1];
           // NEXT_PUBLIC_ vars are inlined by Next.js at build time — safe
-          if (varName.startsWith("NEXT_PUBLIC_")) continue;
+          if (varName.startsWith("NEXT_PUBLIC_")) {
+            continue;
+          }
           // NODE_ENV is always available
-          if (varName === "NODE_ENV") continue;
+          if (varName === "NODE_ENV") {
+            continue;
+          }
 
           violations.push(
             `${file}:${i + 1} — client component accesses private env var: process.env.${varName}`
@@ -233,7 +245,9 @@ describe("no client-only imports in server components", () => {
 
     for (const file of files) {
       const content = readFile(file);
-      if (!content.includes("@tanstack/react-form")) continue;
+      if (!content.includes("@tanstack/react-form")) {
+        continue;
+      }
 
       const isClient =
         content.startsWith('"use client"') ||
@@ -280,9 +294,12 @@ describe("no redirect() inside try/catch", () => {
       const content = readFile(file);
 
       // Only check files that import redirect from next/navigation
-      if (!content.includes('from "next/navigation"')) continue;
-      if (!(content.includes("redirect(") || content.includes("redirect,")))
+      if (!content.includes('from "next/navigation"')) {
         continue;
+      }
+      if (!(content.includes("redirect(") || content.includes("redirect,"))) {
+        continue;
+      }
 
       // Simple brace-depth tracker: find try blocks and check for redirect inside
       const lines = content.split("\n");
@@ -295,7 +312,9 @@ describe("no redirect() inside try/catch", () => {
         const trimmed = line.trim();
 
         // Skip comments
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) {
+          continue;
+        }
 
         // Detect try block start
         if (/\btry\s*\{/.test(line)) {
@@ -305,7 +324,9 @@ describe("no redirect() inside try/catch", () => {
 
         // Track brace depth
         for (const char of line) {
-          if (char === "{") braceDepth++;
+          if (char === "{") {
+            braceDepth++;
+          }
           if (char === "}") {
             braceDepth--;
             // Exiting the try block
@@ -351,15 +372,21 @@ describe("no console.log in web app", () => {
         const trimmed = line.trim();
 
         // Skip comments
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) {
+          continue;
+        }
 
         // Skip lines inside template literals (code examples in UI)
         const beforeLine = lines.slice(0, i).join("\n");
         const backticksBefore = (beforeLine.match(/`/g) || []).length;
-        if (backticksBefore % 2 === 1) continue;
+        if (backticksBefore % 2 === 1) {
+          continue;
+        }
 
         // Skip lines with escape hatch
-        if (line.includes("baseline:allow-console")) continue;
+        if (line.includes("baseline:allow-console")) {
+          continue;
+        }
 
         consoleLogRegex.lastIndex = 0;
         if (consoleLogRegex.test(line)) {
@@ -386,13 +413,17 @@ describe("icon buttons have accessible labels", () => {
 
     for (const file of files) {
       const content = readFile(file);
-      if (!content.includes('size="icon"')) continue;
+      if (!content.includes('size="icon"')) {
+        continue;
+      }
 
       const lines = content.split("\n");
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (!line.includes('size="icon"')) continue;
+        if (!line.includes('size="icon"')) {
+          continue;
+        }
 
         // Walk backwards to find the opening <Button or <button
         let elementStart = i;
@@ -457,7 +488,9 @@ describe("typography: use three dots not Unicode ellipsis", () => {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) {
+          continue;
+        }
 
         if (line.includes("\u2026")) {
           violations.push(
@@ -515,7 +548,9 @@ describe("metadata save order", () => {
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (line.includes("baseline:allow-early-save")) continue;
+        if (line.includes("baseline:allow-early-save")) {
+          continue;
+        }
 
         saveRegex.lastIndex = 0;
         deployRegex.lastIndex = 0;
@@ -528,7 +563,9 @@ describe("metadata save order", () => {
         }
       }
 
-      if (saveLines.length === 0 || deployLines.length === 0) continue;
+      if (saveLines.length === 0 || deployLines.length === 0) {
+        continue;
+      }
 
       // Check if any save appears before the first deploy
       const firstDeploy = Math.min(...deployLines);
@@ -687,7 +724,9 @@ describe("file size limits", () => {
 
         // Escape hatch: comment in first 5 lines
         const head = content.split("\n").slice(0, 5).join("\n");
-        if (head.includes("// baseline:allow-large-file")) continue;
+        if (head.includes("// baseline:allow-large-file")) {
+          continue;
+        }
 
         const lineCount = content.split("\n").length;
         if (lineCount > maxLines) {
@@ -715,13 +754,17 @@ describe("icon-only plain buttons have accessible labels", () => {
 
     for (const file of files) {
       const content = readFile(file);
-      if (!content.includes("<button")) continue;
+      if (!content.includes("<button")) {
+        continue;
+      }
 
       const lines = content.split("\n");
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (!/<button\b/.test(line)) continue;
+        if (!/<button\b/.test(line)) {
+          continue;
+        }
 
         // Walk forward to find the closing </button>
         let elementEnd = -1;
@@ -731,7 +774,9 @@ describe("icon-only plain buttons have accessible labels", () => {
             break;
           }
         }
-        if (elementEnd === -1) continue;
+        if (elementEnd === -1) {
+          continue;
+        }
 
         const elementBlock = lines.slice(i, elementEnd + 1).join("\n");
 
@@ -740,28 +785,37 @@ describe("icon-only plain buttons have accessible labels", () => {
           elementBlock.includes("aria-label") ||
           elementBlock.includes("title=") ||
           elementBlock.includes("baseline:allow-no-label")
-        )
+        ) {
           continue;
+        }
 
         // Find where the opening tag ends, handling JSX expressions
         // that may contain > (arrow functions, comparisons).
         // Track {}-depth so we only match > at depth 0.
         const buttonIdx = elementBlock.indexOf("<button");
-        if (buttonIdx === -1) continue;
+        if (buttonIdx === -1) {
+          continue;
+        }
         let depth = 0;
         let contentStart = -1;
         for (let c = buttonIdx + 7; c < elementBlock.length; c++) {
           const ch = elementBlock[c];
-          if (ch === "{") depth++;
-          else if (ch === "}") depth--;
-          else if (ch === ">" && depth === 0) {
+          if (ch === "{") {
+            depth++;
+          } else if (ch === "}") {
+            depth--;
+          } else if (ch === ">" && depth === 0) {
             contentStart = c + 1;
             break;
           }
         }
-        if (contentStart === -1) continue;
+        if (contentStart === -1) {
+          continue;
+        }
         const closingIndex = elementBlock.lastIndexOf("</button>");
-        if (closingIndex <= contentStart) continue;
+        if (closingIndex <= contentStart) {
+          continue;
+        }
 
         const innerContent = elementBlock.slice(contentStart, closingIndex);
 
@@ -810,8 +864,9 @@ describe("form inputs have labels", () => {
           content.includes('type="checkbox"') ||
           content.includes('type="radio"')
         )
-      )
+      ) {
         continue;
+      }
 
       const lines = content.split("\n");
 
@@ -819,8 +874,9 @@ describe("form inputs have labels", () => {
         const line = lines[i];
         if (
           !(line.includes('type="checkbox"') || line.includes('type="radio"'))
-        )
+        ) {
           continue;
+        }
 
         // Only match raw <input elements, not component wrappers
         // Walk backwards to find the opening <input
@@ -831,7 +887,9 @@ describe("form inputs have labels", () => {
             break;
           }
         }
-        if (!/<input\b/.test(lines[elementStart])) continue;
+        if (!/<input\b/.test(lines[elementStart])) {
+          continue;
+        }
 
         // Walk forward to find /> or >
         let elementEnd = i;
@@ -847,14 +905,17 @@ describe("form inputs have labels", () => {
           .join("\n");
 
         // Skip hidden inputs
-        if (elementBlock.includes('type="hidden"')) continue;
+        if (elementBlock.includes('type="hidden"')) {
+          continue;
+        }
 
         // Skip if it has accessibility attributes
         if (
           elementBlock.includes("aria-label") ||
           elementBlock.includes("baseline:allow-no-label")
-        )
+        ) {
           continue;
+        }
 
         // Check if wrapped in a <label> element (implicit association)
         let isWrappedInLabel = false;
@@ -867,9 +928,13 @@ describe("form inputs have labels", () => {
             isWrappedInLabel = true;
             break;
           }
-          if (/<\/label>/.test(lines[j])) break;
+          if (/<\/label>/.test(lines[j])) {
+            break;
+          }
         }
-        if (isWrappedInLabel) continue;
+        if (isWrappedInLabel) {
+          continue;
+        }
 
         // Check if it has an id
         const idMatch = elementBlock.match(/id=["'{]([^"'}]+)["'}]/);
@@ -879,8 +944,9 @@ describe("form inputs have labels", () => {
           if (
             content.includes(`htmlFor="${inputId}"`) ||
             content.includes(`htmlFor={'${inputId}'}`)
-          )
+          ) {
             continue;
+          }
         }
 
         violations.push(

@@ -58,7 +58,9 @@ export function createInboundRouter(config: ServerConfig): Router {
               })
             );
             const body = await getResponse.Body?.transformToString();
-            if (!body) throw new Error("Empty body");
+            if (!body) {
+              throw new Error("Empty body");
+            }
             const parsed = JSON.parse(body);
 
             return {
@@ -113,7 +115,9 @@ export function createInboundRouter(config: ServerConfig): Router {
       );
 
       const body = await getResponse.Body?.transformToString();
-      if (!body) throw new Error("Empty body");
+      if (!body) {
+        throw new Error("Empty body");
+      }
       const parsed = JSON.parse(body);
 
       res.json(parsed);

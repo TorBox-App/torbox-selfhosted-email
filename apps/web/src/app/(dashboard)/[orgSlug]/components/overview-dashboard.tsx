@@ -56,8 +56,12 @@ export function OverviewDashboard({
   const availableOptions = TIME_OPTIONS.filter((opt) => opt.days <= maxDays);
 
   const [timeRange, setTimeRange] = React.useState<TimeRange>(() => {
-    if (maxDays >= 30) return "30d";
-    if (maxDays >= 14) return "14d";
+    if (maxDays >= 30) {
+      return "30d";
+    }
+    if (maxDays >= 14) {
+      return "14d";
+    }
     return "7d";
   });
 
@@ -71,7 +75,9 @@ export function OverviewDashboard({
           <ToggleGroup
             className="*:data-[slot=toggle-group-item]:!px-4 hidden sm:flex"
             onValueChange={(v) => {
-              if (v) setTimeRange(v as TimeRange);
+              if (v) {
+                setTimeRange(v as TimeRange);
+              }
             }}
             type="single"
             value={timeRange}

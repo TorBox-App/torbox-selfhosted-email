@@ -170,7 +170,9 @@ export function CodeTemplateAIPanel({
       const resp = await fetch(
         `/api/${orgSlug}/emails/templates/${templateId}/conversation`
       );
-      if (!resp.ok) return { messages: [] };
+      if (!resp.ok) {
+        return { messages: [] };
+      }
       return resp.json();
     },
     enabled: !!aiConversationId,
@@ -358,7 +360,7 @@ export function CodeTemplateAIPanel({
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, [messages, isLoading]);
+  }, []);
 
   // Apply: compile first, then call onApply. On failure, ask AI to fix (once).
   const handleApply = useCallback(async () => {
@@ -472,7 +474,9 @@ export function CodeTemplateAIPanel({
                     `/api/${orgSlug}/emails/templates/${templateId}/conversation`,
                     { method: "DELETE" }
                   );
-                  if (!resp.ok) throw new Error("Delete failed");
+                  if (!resp.ok) {
+                    throw new Error("Delete failed");
+                  }
                   queryClient.invalidateQueries({
                     queryKey: templateKeys.detail(orgSlug, templateId),
                   });

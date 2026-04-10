@@ -108,7 +108,9 @@ export function WorkflowToolbar({
   const { fitView } = useReactFlow();
   const handleAutoLayout = () => {
     const { nodes, edges, setNodes } = useWorkflowStore.getState();
-    if (nodes.length < 2) return;
+    if (nodes.length < 2) {
+      return;
+    }
 
     const flowNodes = document.querySelectorAll(".react-flow__node");
     for (const el of flowNodes) {
@@ -147,14 +149,14 @@ export function WorkflowToolbar({
   // which would prevent re-validation on subsequent config changes)
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
-  const deferredNodes = useDeferredValue(nodes);
-  const deferredEdges = useDeferredValue(edges);
+  const _deferredNodes = useDeferredValue(nodes);
+  const _deferredEdges = useDeferredValue(edges);
   useEffect(() => {
     // Only run validation if we have nodes (workflow is loaded)
     if (nodeCount > 0) {
       runValidation();
     }
-  }, [runValidation, nodeCount, deferredNodes, deferredEdges]);
+  }, [runValidation, nodeCount]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -239,7 +241,9 @@ export function WorkflowToolbar({
   };
 
   const handleEnable = () => {
-    if (!requireAws("enable")) return;
+    if (!requireAws("enable")) {
+      return;
+    }
 
     // Run validation first
     const result = runValidation();

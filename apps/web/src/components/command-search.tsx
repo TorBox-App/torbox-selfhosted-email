@@ -167,20 +167,28 @@ const ENTITY_CONFIG: Record<
 };
 
 function getStatusStyle(status: string | null): string | null {
-  if (!status) return null;
+  if (!status) {
+    return null;
+  }
   const s = status.toLowerCase();
-  if (s === "draft")
+  if (s === "draft") {
     return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-  if (s === "published" || s === "enabled" || s === "completed")
+  }
+  if (s === "published" || s === "enabled" || s === "completed") {
     return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-  if (s === "archived" || s === "paused")
+  }
+  if (s === "archived" || s === "paused") {
     return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-muted-foreground";
-  if (s === "scheduled")
+  }
+  if (s === "scheduled") {
     return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-  if (s === "default")
+  }
+  if (s === "default") {
     return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
-  if (s === "failed")
+  }
+  if (s === "failed") {
     return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+  }
   return null;
 }
 
@@ -325,7 +333,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const groupedStatic = useMemo(() => {
     const groups: Record<string, StaticItem[]> = {};
     for (const item of staticItems) {
-      if (!groups[item.group]) groups[item.group] = [];
+      if (!groups[item.group]) {
+        groups[item.group] = [];
+      }
       groups[item.group].push(item);
     }
     return groups;
@@ -333,7 +343,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   // Quick actions
   const quickActions = useMemo(() => {
-    if (!orgSlug) return [];
+    if (!orgSlug) {
+      return [];
+    }
     return [
       {
         title: "New Contact",
@@ -394,7 +406,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   );
 
   // Count total server results
-  const totalResults = isServerMode
+  const _totalResults = isServerMode
     ? Object.values(results).reduce((sum, arr) => sum + arr.length, 0)
     : 0;
 
@@ -425,7 +437,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                   SearchResultItem[],
                 ][]
               ).map(([type, items]) => {
-                if (items.length === 0) return null;
+                if (items.length === 0) {
+                  return null;
+                }
                 const config = ENTITY_CONFIG[type];
                 const GroupIcon = config.icon;
                 return (
@@ -528,7 +542,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
 function StatusBadge({ status }: { status: string }) {
   const style = getStatusStyle(status);
-  if (!style) return null;
+  if (!style) {
+    return null;
+  }
   return (
     <span
       className={cn(

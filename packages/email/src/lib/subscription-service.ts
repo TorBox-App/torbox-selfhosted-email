@@ -9,8 +9,8 @@ import { ListEmailIdentitiesCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { toPlainText } from "@react-email/render";
 import {
-  awsAccount,
   and,
+  awsAccount,
   db,
   eq,
   organization,

@@ -359,7 +359,9 @@ export function BatchForm({
   };
 
   const handleSend = () => {
-    if (!requireAws("send")) return;
+    if (!requireAws("send")) {
+      return;
+    }
 
     if (!campaignData.awsAccountId) {
       toast.error("Please select an AWS account");
@@ -1520,7 +1522,9 @@ function SchedulingCard({
 
   // Sync parsed NL date → pickers (only when the value actually changes)
   useEffect(() => {
-    if (!parsedDate) return;
+    if (!parsedDate) {
+      return;
+    }
 
     // Snap time to nearest 30-minute slot
     const minutes = parsedDate.getMinutes();
@@ -1537,10 +1541,12 @@ function SchedulingCard({
     const dateUnchanged =
       data.scheduledDate && data.scheduledDate.getTime() === newDate.getTime();
     const timeUnchanged = data.scheduledTime === newTime;
-    if (dateUnchanged && timeUnchanged) return;
+    if (dateUnchanged && timeUnchanged) {
+      return;
+    }
 
     onChange({ scheduledDate: newDate, scheduledTime: newTime });
-  }, [parsedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [parsedDate, data.scheduledDate, data.scheduledTime, onChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear NL text when user picks via calendar/time dropdown
   const handlePickerDateChange = (date: Date | undefined) => {

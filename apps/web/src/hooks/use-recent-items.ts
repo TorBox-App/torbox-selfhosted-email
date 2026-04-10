@@ -14,7 +14,9 @@ export function useRecentItems(orgId: string | undefined) {
 
   // Hydration-safe: load from localStorage in useEffect
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId) {
+      return;
+    }
     try {
       const raw = localStorage.getItem(getStorageKey(orgId));
       if (raw) {
@@ -27,7 +29,9 @@ export function useRecentItems(orgId: string | undefined) {
 
   const addRecentItem = useCallback(
     (item: SearchResultItem) => {
-      if (!orgId) return;
+      if (!orgId) {
+        return;
+      }
       setItems((prev) => {
         const deduped = prev.filter((i) => i.id !== item.id);
         const next = [item, ...deduped].slice(0, MAX_RECENT_ITEMS);

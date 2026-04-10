@@ -205,28 +205,44 @@ export function isBlockedIp(ip: string): string | null {
   // IPv4-mapped IPv6 (::ffff:1.2.3.4) — extract the IPv4 and re-check
   if (ip.startsWith("::ffff:")) {
     const v4 = ip.slice(7);
-    if (v4.includes(".")) return isBlockedIp(v4);
+    if (v4.includes(".")) {
+      return isBlockedIp(v4);
+    }
   }
 
   for (const range of BLOCKED_IPV4_RANGES) {
-    if (ip.startsWith(range.prefix)) return range.label;
+    if (ip.startsWith(range.prefix)) {
+      return range.label;
+    }
   }
   // 100.64.0.0/10 (Carrier-grade NAT / AWS VPC)
   if (ip.startsWith("100.")) {
     const second = Number.parseInt(ip.split(".")[1], 10);
-    if (second >= 64 && second <= 127) return "private (100.64/10 CGN)";
+    if (second >= 64 && second <= 127) {
+      return "private (100.64/10 CGN)";
+    }
   }
   // 172.16.0.0/12
   if (ip.startsWith("172.")) {
     const second = Number.parseInt(ip.split(".")[1], 10);
-    if (second >= 16 && second <= 31) return "private (172.16/12)";
+    if (second >= 16 && second <= 31) {
+      return "private (172.16/12)";
+    }
   }
   // 192.168.0.0/16
-  if (ip.startsWith("192.168.")) return "private (192.168/16)";
+  if (ip.startsWith("192.168.")) {
+    return "private (192.168/16)";
+  }
   // IPv6
-  if (ip === "::1" || ip === "::") return "loopback";
-  if (ip.startsWith("fe80:")) return "link-local";
-  if (ip.startsWith("fd") || ip.startsWith("fc")) return "private (ULA)";
+  if (ip === "::1" || ip === "::") {
+    return "loopback";
+  }
+  if (ip.startsWith("fe80:")) {
+    return "link-local";
+  }
+  if (ip.startsWith("fd") || ip.startsWith("fc")) {
+    return "private (ULA)";
+  }
   return null;
 }
 

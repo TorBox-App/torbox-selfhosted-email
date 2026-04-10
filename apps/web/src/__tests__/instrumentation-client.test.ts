@@ -69,7 +69,9 @@ describe("client instrumentation", () => {
         dsn: "https://src-public@example.ingest.sentry.io/123",
       })
     );
-    expect(module.onRouterTransitionStart).toBe(mockCaptureRouterTransitionStart);
+    expect(module.onRouterTransitionStart).toBe(
+      mockCaptureRouterTransitionStart
+    );
   });
 
   it("leaves the src client Sentry DSN unset when NEXT_PUBLIC_SENTRY_DSN is missing", async () => {
@@ -103,7 +105,9 @@ describe("client instrumentation", () => {
         api_host: "https://o11y.wraps.dev",
       })
     );
-    expect(module.onRouterTransitionStart).toBe(mockCaptureRouterTransitionStart);
+    expect(module.onRouterTransitionStart).toBe(
+      mockCaptureRouterTransitionStart
+    );
   });
 
   it("leaves the root client Sentry DSN unset when NEXT_PUBLIC_SENTRY_DSN is missing", async () => {

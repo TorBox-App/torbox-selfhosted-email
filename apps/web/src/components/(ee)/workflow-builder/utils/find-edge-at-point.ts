@@ -15,7 +15,9 @@ export function findEdgeAtPoint(
     el.classList.contains("react-flow__edge-interaction")
   );
 
-  if (!interactionElement) return null;
+  if (!interactionElement) {
+    return null;
+  }
 
   // The interaction path is a child of the edge group element
   // which has the data-id attribute with the edge ID

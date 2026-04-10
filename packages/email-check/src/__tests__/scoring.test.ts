@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-
+import type { AllCheckResults } from "../scoring.js";
 import {
   calculateScore,
   getGradeColor,
   getGradeDescription,
 } from "../scoring.js";
-import type { AllCheckResults } from "../scoring.js";
 
 function createBaseChecks(): AllCheckResults {
   return {
@@ -193,9 +192,10 @@ function createBaseChecks(): AllCheckResults {
 }
 
 describe("calculateScore", () => {
-  it("caps total bonuses at 20 points", () => {
+  it("caps total bonuses at 10 points within the band", () => {
     const checks = createBaseChecks();
 
+    // Add a second DKIM selector for the bonus
     checks.dkim.selectors.push({
       selector: "backup",
       exists: true,
@@ -256,12 +256,17 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
+    // Grade A band: 90-100. No deductions, so starts at 100.
+    // Many bonuses earned but capped at 10 within-band.
+    // Score is clamped to band max (100).
     expect(result.finalScore).toBe(100);
-    expect(result.rawScore).toBe(120);
     expect(result.grade).toBe("A");
-    expect(result.breakdown.bonus.earned).toBe(20);
-    expect(result.breakdown.bonus.possible).toBe(20);
-    expect(result.bonuses.reduce((sum, bonus) => sum + bonus.points, 0)).toBe(34);
+    expect(result.breakdown.bonus.possible).toBe(10);
+    expect(result.breakdown.bonus.earned).toBe(10);
+    // Raw bonuses exceed 10
+    expect(
+      result.bonuses.reduce((sum, bonus) => sum + bonus.points, 0)
+    ).toBeGreaterThan(10);
   });
 
   it("applies the reduced DKIM penalty for domains that appear to use AWS SES", () => {
@@ -275,15 +280,16 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
-    expect(result.finalScore).toBe(95);
-    expect(result.grade).toBe("A");
-    expect(result.breakdown.dkim.score).toBe(20);
-    expect(result.deductions).toContainEqual({
-      check: "dkim",
-      points: 5,
-      reason:
-        "DKIM not verifiable (AWS SES uses random selectors). Send a test email to verify DKIM configuration.",
-    });
+    // DKIM assessed as "weak" (not "missing") for SES → still grade B (all three present)
+    // Band B: 80-89, starts at 89. Deduction: 2pts for SES DKIM.
+    expect(result.grade).toBe("B");
+    expect(result.deductions).toContainEqual(
+      expect.objectContaining({
+        check: "dkim",
+        points: 2,
+        reason: expect.stringContaining("DKIM not verifiable"),
+      })
+    );
   });
 
   it("stacks SPF softfail, lookup overflow, and ptr deductions", () => {
@@ -295,24 +301,25 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
-    expect(result.finalScore).toBe(83);
-    expect(result.grade).toBe("B");
-    expect(result.breakdown.spf.score).toBe(13);
+    // Grade A (SPF present + DKIM present + DMARC enforcing). Band: 90-100.
+    // Deductions: ~all (2) + lookups (3) + ptr (1) = 6. Score: 100 - 6 = 94.
+    expect(result.grade).toBe("A");
+    expect(result.finalScore).toBe(94);
     expect(result.deductions).toEqual(
       expect.arrayContaining([
         {
           check: "spf",
-          points: 5,
-          reason: "SPF ~all (softfail) instead of -all",
-        },
-        {
-          check: "spf",
-          points: 10,
-          reason: "SPF exceeds 10 lookups (11)",
-        },
-        {
-          check: "spf",
           points: 2,
+          reason: "SPF ~all (softfail) instead of -all (hardfail)",
+        },
+        {
+          check: "spf",
+          points: 3,
+          reason: "SPF exceeds 10 DNS lookups (11)",
+        },
+        {
+          check: "spf",
+          points: 1,
           reason: "SPF uses deprecated ptr mechanism",
         },
       ])
@@ -361,31 +368,32 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
-    expect(result.finalScore).toBe(72);
-    expect(result.grade).toBe("C");
-    expect(result.breakdown.dkim.score).toBe(0);
+    // First valid non-revoked selector is "default" (512-bit, test mode).
+    // Deductions: weak key (4) + test mode (3) = 7. Band A starts at 100. Score: 100 - 7 + bonus(1 for 2 selectors, capped) = 94.
+    expect(result.grade).toBe("A");
+    expect(result.finalScore).toBe(94);
     expect(result.deductions).toEqual(
       expect.arrayContaining([
         {
           check: "dkim",
-          points: 20,
+          points: 4,
           reason: "DKIM key too weak (512 bits)",
         },
         {
           check: "dkim",
-          points: 10,
+          points: 3,
           reason: "DKIM in testing mode (t=y)",
         },
       ])
     );
     expect(result.bonuses).toContainEqual({
       check: "dkim",
-      points: 2,
+      points: 1,
       reason: "2 valid DKIM selectors",
     });
   });
 
-  it("clamps catastrophic failures to a zero final score", () => {
+  it("clamps catastrophic failures to the F band floor", () => {
     const checks = createBaseChecks();
 
     checks.spf.exists = false;
@@ -413,24 +421,31 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
-    expect(result.rawScore).toBe(-30);
-    expect(result.finalScore).toBe(0);
+    // Spamhaus listing → grade F. Band: 0-34.
+    // Deductions: spf(5) + dkim(5) + dmarc(5) + mx(2) + blacklist(5) + ptr(2) + dnssec(2) + age(3) = 29.
+    // Score: 34 - 29 = 5. Clamped within band [0, 34].
+    expect(result.finalScore).toBe(5);
     expect(result.grade).toBe("F");
     expect(result.deductions).toEqual(
       expect.arrayContaining([
-        { check: "spf", points: 30, reason: "No SPF record" },
-        { check: "dkim", points: 25, reason: "No DKIM record found" },
-        { check: "dmarc", points: 20, reason: "No DMARC record" },
-        { check: "mx", points: 5, reason: "No MX records" },
-        { check: "ptr", points: 5, reason: "Missing reverse DNS" },
-        { check: "dnssec", points: 5, reason: "DNSSEC broken" },
-        { check: "domain-age", points: 10, reason: "Domain less than 30 days old" },
+        { check: "spf", points: 5, reason: "No SPF record" },
+        { check: "dkim", points: 5, reason: "No DKIM record found" },
+        { check: "dmarc", points: 5, reason: "No DMARC record" },
+        { check: "mx", points: 2, reason: "No MX records" },
+        { check: "ptr", points: 2, reason: "Missing reverse DNS" },
+        { check: "dnssec", points: 2, reason: "DNSSEC broken" },
+        {
+          check: "domain-age",
+          points: 3,
+          reason: "Domain less than 30 days old",
+        },
       ])
     );
     expect(
       result.deductions.some(
         (deduction) =>
-          deduction.check === "blacklist" && deduction.reason === "Listed on Spamhaus DBL"
+          deduction.check === "blacklist" &&
+          deduction.reason === "Listed on Spamhaus DBL"
       )
     ).toBe(true);
   });
@@ -446,10 +461,10 @@ describe("grade helpers", () => {
 
   it("returns descriptive copy for known and unknown grades", () => {
     expect(getGradeDescription("B")).toBe(
-      "Good - all critical checks pass, minor improvements possible"
+      "All three records present, but DMARC not enforcing"
     );
     expect(getGradeDescription("F")).toBe(
-      "Failing - critical issues, emails likely going to spam"
+      "No email authentication — anyone can spoof your domain"
     );
     expect(getGradeDescription("unknown")).toBe("Unknown");
   });

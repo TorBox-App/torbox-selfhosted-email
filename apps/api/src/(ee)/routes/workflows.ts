@@ -453,7 +453,9 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
           )
           .returning({ id: workflowExecution.id });
 
-        if (!updated) return false;
+        if (!updated) {
+          return false;
+        }
 
         await tx
           .update(workflow)

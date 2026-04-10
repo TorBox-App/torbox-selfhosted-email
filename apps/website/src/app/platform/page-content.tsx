@@ -18,7 +18,9 @@ export default function DashboardPageContent() {
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
-      if (!element) return;
+      if (!element) {
+        return;
+      }
 
       // Jump to approximate position immediately to avoid blank viewport
       element.scrollIntoView({ behavior: "instant" as ScrollBehavior });

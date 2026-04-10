@@ -367,13 +367,19 @@ export default function ToolsPageContent() {
 
   // Render Turnstile widget when script is loaded
   useEffect(() => {
-    if (!(turnstileReady && window.turnstile)) return;
+    if (!(turnstileReady && window.turnstile)) {
+      return;
+    }
 
     const sitekey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    if (!sitekey) return;
+    if (!sitekey) {
+      return;
+    }
 
     const container = document.getElementById("turnstile-container");
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     turnstileWidgetId.current = window.turnstile.render(container, {
       sitekey,

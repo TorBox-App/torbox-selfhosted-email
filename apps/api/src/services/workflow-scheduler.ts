@@ -189,7 +189,9 @@ export async function reconcileScheduleChains(): Promise<{
 
   for (const wf of workflows) {
     const config = wf.triggerConfig as TriggerConfig;
-    if (!config.schedule) continue;
+    if (!config.schedule) {
+      continue;
+    }
 
     const scheduleName = getScheduleName(wf.id);
 

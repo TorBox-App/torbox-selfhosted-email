@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  type AllCheckResults,
   calculateScore,
   getGradeColor,
   getGradeDescription,
-  type AllCheckResults,
 } from "./scoring.js";
 
 function createChecks(): AllCheckResults {
@@ -66,7 +66,7 @@ function createChecks(): AllCheckResults {
       alignmentSpf: "relaxed",
       alignmentDkim: "relaxed",
       failureOptions: "0",
-      reportInterval: 86400,
+      reportInterval: 86_400,
       reportFormat: "afrf",
       errors: [],
       warnings: [],
@@ -300,7 +300,9 @@ describe("calculateScore", () => {
     checks.spf.records = ["v=spf1 +all"];
     checks.spf.valid = false;
     checks.spf.allMechanism = "+all";
-    checks.spf.syntaxErrors = ["SPF ends with +all which allows anyone to send"];
+    checks.spf.syntaxErrors = [
+      "SPF ends with +all which allows anyone to send",
+    ];
 
     const result = calculateScore(checks);
 

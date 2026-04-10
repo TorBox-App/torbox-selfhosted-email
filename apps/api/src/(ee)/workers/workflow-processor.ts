@@ -241,7 +241,9 @@ async function triggerWorkflow(
       .onConflictDoNothing()
       .returning();
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
 
     await tx
       .update(workflow)

@@ -80,6 +80,9 @@ export async function handler(event: S3Event, context: Context) {
         new GetObjectCommand({ Bucket: bucket, Key: s3Key })
       );
       const rawBody = await rawResponse.Body?.transformToString();
+      if (!rawBody) {
+        throw new Error(`Empty or missing S3 object body: ${bucket}/${s3Key}`);
+      }
 
       // 2. Parse MIME
       const parsed = await simpleParser(rawBody);

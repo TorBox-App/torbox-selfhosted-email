@@ -20,7 +20,9 @@ const execAsync = promisify(exec);
  */
 function findSdkInstalledPulumi(): string | undefined {
   const versionsDir = join(homedir(), ".pulumi", "versions");
-  if (!existsSync(versionsDir)) return;
+  if (!existsSync(versionsDir)) {
+    return;
+  }
 
   // List version directories, pick the latest (highest semver)
   const versions = readdirSync(versionsDir, { withFileTypes: true })
@@ -31,7 +33,9 @@ function findSdkInstalledPulumi(): string | undefined {
 
   for (const version of versions) {
     const binPath = join(versionsDir, version, "bin", "pulumi");
-    if (existsSync(binPath)) return dirname(binPath);
+    if (existsSync(binPath)) {
+      return dirname(binPath);
+    }
   }
 
   return;

@@ -128,7 +128,9 @@ export function TemplateSelector({
   };
 
   const handleDuplicateAndEdit = async () => {
-    if (!selectedTemplateId) return;
+    if (!selectedTemplateId) {
+      return;
+    }
     setIsDuplicating(true);
     try {
       const duplicated =

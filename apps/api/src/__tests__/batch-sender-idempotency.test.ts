@@ -363,8 +363,12 @@ describe("Batch sender idempotency", () => {
 
     await handler(makeSQSEvent(), {} as never, vi.fn());
 
-    const bulkCall = sesSendCalls[1]?.[0] as Record<string, unknown> | undefined;
-    const entries = bulkCall?.BulkEmailEntries as Array<Record<string, unknown>> | undefined;
+    const bulkCall = sesSendCalls[1]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    const entries = bulkCall?.BulkEmailEntries as
+      | Array<Record<string, unknown>>
+      | undefined;
     expect(entries).toHaveLength(2);
 
     const progressUpdate = updateSetCalls.find(

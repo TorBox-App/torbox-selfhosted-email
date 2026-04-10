@@ -11,9 +11,10 @@ import {
 } from "../create-records.js";
 
 vi.mock("../../route53.js", async () => {
-  const actual = await vi.importActual<typeof import("../../route53.js")>(
-    "../../route53.js"
-  );
+  const actual =
+    await vi.importActual<typeof import("../../route53.js")>(
+      "../../route53.js"
+    );
 
   return {
     ...actual,
@@ -316,7 +317,9 @@ describe("formatManualDNSInstructions", () => {
 describe("createDNSRecordsForProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(route53Utils.createSelectedDNSRecords).mockResolvedValue(undefined);
+    vi.mocked(route53Utils.createSelectedDNSRecords).mockResolvedValue(
+      undefined
+    );
   });
 
   it("should include tracking in default Route53 category selection", async () => {

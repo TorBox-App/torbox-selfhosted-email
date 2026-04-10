@@ -465,7 +465,9 @@ function TemplateEditorContent({
 
   // Handle publish
   const handlePublish = useCallback(async () => {
-    if (!requireAws("publish")) return;
+    if (!requireAws("publish")) {
+      return;
+    }
     const isFirstPublish = template.status === "DRAFT";
 
     try {

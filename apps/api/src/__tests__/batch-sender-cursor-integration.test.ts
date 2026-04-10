@@ -339,6 +339,16 @@ describe("processJob cursor passing", () => {
           };
         }
 
+        if (name === "message_send") {
+          return {
+            where: vi.fn().mockReturnValue({
+              then: (resolve: (v: unknown) => void) =>
+                Promise.resolve([]).then(resolve),
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          };
+        }
+
         // Contact query returns short chunk (10 < 50)
         return {
           where: vi.fn().mockReturnValue({
@@ -489,6 +499,16 @@ describe("processJob cursor passing", () => {
           return {
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue([{ name: "Test Org" }]),
+            }),
+          };
+        }
+
+        if (name === "message_send") {
+          return {
+            where: vi.fn().mockReturnValue({
+              then: (resolve: (v: unknown) => void) =>
+                Promise.resolve([]).then(resolve),
+              limit: vi.fn().mockResolvedValue([]),
             }),
           };
         }

@@ -59,7 +59,9 @@ export function buildSankeyData(input: SankeyInput): SankeyData {
 
   function addNode(name: string): number {
     const existing = nodeMap.get(name);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      return existing;
+    }
     const idx = nodes.length;
     nodes.push({ name });
     nodeMap.set(name, idx);
@@ -67,7 +69,9 @@ export function buildSankeyData(input: SankeyInput): SankeyData {
   }
 
   function addLink(sourceName: string, targetName: string, value: number) {
-    if (value <= 0) return;
+    if (value <= 0) {
+      return;
+    }
     const source = addNode(sourceName);
     const target = addNode(targetName);
     links.push({ source, target, value });

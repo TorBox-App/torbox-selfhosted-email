@@ -11,7 +11,9 @@ export function useRequireAws(orgSlug: string) {
   >(null);
 
   const requireAws = (action: "send" | "publish" | "enable"): boolean => {
-    if (hasAwsAccounts) return true;
+    if (hasAwsAccounts) {
+      return true;
+    }
     setPendingAction(action);
     setDialogOpen(true);
     return false;

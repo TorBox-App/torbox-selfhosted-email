@@ -379,7 +379,7 @@ function ReceiveContent() {
   );
 }
 
-function ConsoleContent() {
+function _ConsoleContent() {
   return (
     <div className="space-y-8">
       <div className="group relative mx-auto max-w-4xl">

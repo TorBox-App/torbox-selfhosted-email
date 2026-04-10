@@ -93,7 +93,9 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
       const search = filterValue.toLowerCase();
 
       const dest = row.original.destinationNumber?.toLowerCase() ?? "";
-      if (dest.includes(search)) return true;
+      if (dest.includes(search)) {
+        return true;
+      }
       const from = row.original.originationNumber?.toLowerCase() ?? "";
       return from.includes(search);
     },

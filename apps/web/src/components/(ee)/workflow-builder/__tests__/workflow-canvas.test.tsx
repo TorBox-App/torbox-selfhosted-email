@@ -111,9 +111,8 @@ const {
 
   return {
     storeStateHolder: holder,
-    mockFindEdgeAtPoint: vi.fn<
-      (clientX: number, clientY: number) => string | null
-    >(),
+    mockFindEdgeAtPoint:
+      vi.fn<(clientX: number, clientY: number) => string | null>(),
     mockHandleUndoRedo: vi.fn<(event: KeyboardEvent) => void>(),
     mockUseWorkflowStore: useWorkflowStore,
     mockReactFlowInstance: {
@@ -272,9 +271,10 @@ describe("WorkflowCanvas", () => {
     mockFindEdgeAtPoint.mockReturnValue(null);
     mockHandleUndoRedo.mockReset();
     storeStateHolder.current = mockStoreState;
-    mockUseWorkflowStore.mockImplementation(<T,>(
-      selector: (state: MockWorkflowStoreState) => T
-    ) => selector(mockStoreState));
+    mockUseWorkflowStore.mockImplementation(
+      <T,>(selector: (state: MockWorkflowStoreState) => T) =>
+        selector(mockStoreState)
+    );
     mockUseWorkflowStore.getState.mockImplementation(() => mockStoreState);
     mockReactFlowInstance.flowToScreenPosition.mockImplementation(
       (position: Position) => position
