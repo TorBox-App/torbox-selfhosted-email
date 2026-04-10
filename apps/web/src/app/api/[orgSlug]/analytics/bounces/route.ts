@@ -4,7 +4,12 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getBounceMetricsFromPostgres } from "@/lib/analytics-fallback";
-import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
+import {
+  gapFillDates,
+  generateDateRange,
+  toLocaleDateStr,
+  validateTimezone,
+} from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -60,6 +65,7 @@ export async function GET(request: Request, context: RouteContext) {
       365,
       Math.max(1, Number.parseInt(searchParams.get("days") || "30", 10))
     );
+    const timezone = validateTimezone(searchParams.get("tz"));
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
@@ -110,7 +116,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     // Count sent emails by date
     for (const event of sendEvents) {
-      const date = new Date(event.sentAt).toISOString().split("T")[0];
+      const date = toLocaleDateStr(new Date(event.sentAt), timezone);
       const existing = dataPointsMap.get(date) || {
         permanent: 0,
         transient: 0,
@@ -135,7 +141,7 @@ export async function GET(request: Request, context: RouteContext) {
       }
 
       // Get the date (YYYY-MM-DD) from sentAt timestamp
-      const date = new Date(event.sentAt).toISOString().split("T")[0];
+      const date = toLocaleDateStr(new Date(event.sentAt), timezone);
 
       const existing = dataPointsMap.get(date) || {
         permanent: 0,
@@ -161,12 +167,13 @@ export async function GET(request: Request, context: RouteContext) {
       dataPointsMap = await getBounceMetricsFromPostgres(
         orgWithMembership.id,
         startTime,
-        endTime
+        endTime,
+        timezone
       );
     }
 
     // Gap-fill every day in the range including today, then compute rates
-    const dateRange = generateDateRange(startTime, endTime);
+    const dateRange = generateDateRange(startTime, endTime, timezone);
     const dataPoints: BounceDataPoint[] = gapFillDates(
       dateRange,
       dataPointsMap,

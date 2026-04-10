@@ -7,22 +7,45 @@
  */
 
 /**
- * Generates an array of YYYY-MM-DD date strings for every day from
- * `startTime` through `endTime` (inclusive), using UTC dates.
+ * Validates an IANA timezone string, returning "UTC" if invalid.
  */
-export function generateDateRange(startTime: Date, endTime: Date): string[] {
-  const cursor = new Date(
-    Date.UTC(
-      startTime.getUTCFullYear(),
-      startTime.getUTCMonth(),
-      startTime.getUTCDate()
-    )
-  );
-  const endUTC = Date.UTC(
-    endTime.getUTCFullYear(),
-    endTime.getUTCMonth(),
-    endTime.getUTCDate()
-  );
+export function validateTimezone(tz: string | null | undefined): string {
+  if (!tz) return "UTC";
+  try {
+    Intl.DateTimeFormat("en-CA", { timeZone: tz });
+    return tz;
+  } catch {
+    return "UTC";
+  }
+}
+
+/**
+ * Converts a Date to a YYYY-MM-DD string in the given timezone.
+ * Falls back to UTC ISO date when no timezone is provided.
+ */
+export function toLocaleDateStr(date: Date, timezone?: string): string {
+  if (!timezone || timezone === "UTC") return date.toISOString().split("T")[0];
+  return date.toLocaleDateString("en-CA", { timeZone: timezone });
+}
+
+/**
+ * Generates an array of YYYY-MM-DD date strings for every day from
+ * `startTime` through `endTime` (inclusive). When `timezone` is provided,
+ * boundaries are computed in the user's local time instead of UTC.
+ */
+export function generateDateRange(
+  startTime: Date,
+  endTime: Date,
+  timezone?: string
+): string[] {
+  const startStr = toLocaleDateStr(startTime, timezone);
+  const endStr = toLocaleDateStr(endTime, timezone);
+
+  const [sy, sm, sd] = startStr.split("-").map(Number);
+  const [ey, em, ed] = endStr.split("-").map(Number);
+
+  const cursor = new Date(Date.UTC(sy, sm - 1, sd));
+  const endUTC = Date.UTC(ey, em - 1, ed);
 
   const dates: string[] = [];
   while (cursor.getTime() <= endUTC) {
@@ -54,12 +77,13 @@ export function generateDateRange(startTime: Date, endTime: Date): string[] {
 export function aggregateByDate<K extends string>(
   timestamps: Date[],
   valueArrays: number[][],
-  keys: K[]
+  keys: K[],
+  timezone?: string
 ): Map<string, Record<K, number>> {
   const map = new Map<string, Record<K, number>>();
 
   for (let i = 0; i < timestamps.length; i++) {
-    const dateStr = timestamps[i].toISOString().split("T")[0];
+    const dateStr = toLocaleDateStr(timestamps[i], timezone);
     const existing =
       map.get(dateStr) ??
       (Object.fromEntries(keys.map((k) => [k, 0])) as Record<K, number>);

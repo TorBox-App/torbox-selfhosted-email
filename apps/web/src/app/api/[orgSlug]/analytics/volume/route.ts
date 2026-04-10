@@ -8,6 +8,7 @@ import {
   aggregateByDate,
   gapFillDates,
   generateDateRange,
+  validateTimezone,
 } from "@/lib/analytics-utils";
 import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -50,6 +51,7 @@ export async function GET(request: Request, context: RouteContext) {
       365,
       Math.max(1, Number.parseInt(searchParams.get("days") || "90", 10))
     );
+    const timezone = validateTimezone(searchParams.get("tz"));
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
@@ -103,7 +105,8 @@ export async function GET(request: Request, context: RouteContext) {
           metrics[SES_METRICS.DELIVERY]?.[0]?.Values || [],
           metrics[SES_METRICS.BOUNCE]?.[0]?.Values || [],
         ],
-        [...keys]
+        [...keys],
+        timezone
       );
 
       for (const [dateStr, values] of perAccount) {
@@ -125,7 +128,8 @@ export async function GET(request: Request, context: RouteContext) {
       const pgData = await getEmailMetricsFromPostgres(
         orgWithMembership.id,
         startTime,
-        endTime
+        endTime,
+        timezone
       );
       for (const [dateStr, m] of pgData) {
         dailyMap.set(dateStr, {
@@ -136,7 +140,7 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    const dateRange = generateDateRange(startTime, endTime);
+    const dateRange = generateDateRange(startTime, endTime, timezone);
     const dataPoints = gapFillDates(dateRange, dailyMap, {
       sent: 0,
       delivered: 0,

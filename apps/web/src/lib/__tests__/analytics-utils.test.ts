@@ -3,7 +3,45 @@ import {
   aggregateByDate,
   gapFillDates,
   generateDateRange,
+  toLocaleDateStr,
+  validateTimezone,
 } from "../analytics-utils";
+
+describe("validateTimezone", () => {
+  it("should return a valid IANA timezone as-is", () => {
+    expect(validateTimezone("America/Denver")).toBe("America/Denver");
+    expect(validateTimezone("Europe/London")).toBe("Europe/London");
+    expect(validateTimezone("UTC")).toBe("UTC");
+  });
+
+  it("should fall back to UTC for invalid, null, or undefined", () => {
+    expect(validateTimezone(null)).toBe("UTC");
+    expect(validateTimezone(undefined)).toBe("UTC");
+    expect(validateTimezone("")).toBe("UTC");
+    expect(validateTimezone("Not/A/Timezone")).toBe("UTC");
+  });
+});
+
+describe("toLocaleDateStr", () => {
+  it("should return UTC date when no timezone given", () => {
+    // 11pm Denver = 5am UTC next day
+    const date = new Date("2026-04-10T05:00:00Z");
+    expect(toLocaleDateStr(date)).toBe("2026-04-10");
+    expect(toLocaleDateStr(date, "UTC")).toBe("2026-04-10");
+  });
+
+  it("should convert to user's local date", () => {
+    // 5am UTC Apr 10 = 11pm MDT Apr 9
+    const date = new Date("2026-04-10T05:00:00Z");
+    expect(toLocaleDateStr(date, "America/Denver")).toBe("2026-04-09");
+  });
+
+  it("should handle positive UTC offsets", () => {
+    // 11pm UTC Apr 9 = 9am JST Apr 10
+    const date = new Date("2026-04-09T23:00:00Z");
+    expect(toLocaleDateStr(date, "Asia/Tokyo")).toBe("2026-04-10");
+  });
+});
 
 describe("generateDateRange", () => {
   it("should include both start and end dates", () => {
@@ -75,6 +113,30 @@ describe("generateDateRange", () => {
 
     expect(range).toHaveLength(0);
   });
+
+  it("should shift boundaries when timezone differs from UTC", () => {
+    // 5am UTC Apr 10 = 11pm MDT Apr 9
+    // 5am UTC Apr 8 = 11pm MDT Apr 7
+    const start = new Date("2026-04-08T05:00:00Z");
+    const end = new Date("2026-04-10T05:00:00Z");
+
+    const utcRange = generateDateRange(start, end);
+    const denverRange = generateDateRange(start, end, "America/Denver");
+
+    // UTC: Apr 8, 9, 10 (3 days)
+    expect(utcRange).toEqual(["2026-04-08", "2026-04-09", "2026-04-10"]);
+    // Denver: Apr 7, 8, 9 (3 days, shifted back one day)
+    expect(denverRange).toEqual(["2026-04-07", "2026-04-08", "2026-04-09"]);
+  });
+
+  it("should include today in user timezone when endTime is now-ish", () => {
+    // Simulate 11pm Denver time = 5am UTC next day
+    const end = new Date("2026-04-10T05:00:00Z");
+    const start = new Date("2026-04-08T05:00:00Z");
+
+    const range = generateDateRange(start, end, "America/Denver");
+    expect(range.at(-1)).toBe("2026-04-09"); // "today" in Denver, not Apr 10
+  });
 });
 
 describe("aggregateByDate", () => {
@@ -138,6 +200,33 @@ describe("aggregateByDate", () => {
       sent: 30,
       delivered: 9, // second entry defaults to 0
     });
+  });
+
+  it("should bucket timestamps by user timezone, not UTC", () => {
+    // These timestamps are all Apr 10 in UTC
+    // but in America/Denver (UTC-6), the first one is still Apr 9
+    const timestamps = [
+      new Date("2026-04-10T05:00:00Z"), // 11pm Apr 9 in Denver
+      new Date("2026-04-10T12:00:00Z"), // 6am Apr 10 in Denver
+      new Date("2026-04-10T18:00:00Z"), // 12pm Apr 10 in Denver
+    ];
+    const values = [10, 20, 30];
+
+    const utcResult = aggregateByDate(timestamps, [values], ["sent"]);
+    const denverResult = aggregateByDate(
+      timestamps,
+      [values],
+      ["sent"],
+      "America/Denver"
+    );
+
+    // UTC: all three on Apr 10
+    expect(utcResult.get("2026-04-10")).toEqual({ sent: 60 });
+    expect(utcResult.has("2026-04-09")).toBe(false);
+
+    // Denver: first goes to Apr 9, other two to Apr 10
+    expect(denverResult.get("2026-04-09")).toEqual({ sent: 10 });
+    expect(denverResult.get("2026-04-10")).toEqual({ sent: 50 });
   });
 
   it("should aggregate across multiple accounts (called multiple times)", () => {
@@ -228,6 +317,39 @@ describe("gapFillDates", () => {
 
     expect(result[0].sent).toBe(5);
     expect(result[1].sent).toBe(10);
+  });
+});
+
+describe("end-to-end: aggregate + gap-fill with timezone", () => {
+  it("should show today's data in user timezone, not shifted to tomorrow", () => {
+    // Scenario: user in America/Denver, it's 11pm local (5am UTC next day)
+    // They sent 5 emails today. Without timezone fix, these show up under
+    // tomorrow's date in the chart, making today appear as 0.
+    const timestamps = [
+      new Date("2026-04-10T03:00:00Z"), // 9pm Apr 9 Denver
+      new Date("2026-04-10T04:00:00Z"), // 10pm Apr 9 Denver
+      new Date("2026-04-10T05:00:00Z"), // 11pm Apr 9 Denver
+    ];
+    const sentValues = [2, 1, 2];
+
+    const tz = "America/Denver";
+    const startTime = new Date("2026-04-08T06:00:00Z"); // Apr 8 midnight Denver
+    const endTime = new Date("2026-04-10T05:30:00Z"); // Apr 9 11:30pm Denver
+
+    const dailyMap = aggregateByDate(timestamps, [sentValues], ["sent"], tz);
+    const dateRange = generateDateRange(startTime, endTime, tz);
+    const filled = gapFillDates(dateRange, dailyMap, { sent: 0 });
+
+    // "Today" in Denver is Apr 9 — all 5 emails should land there
+    const apr9 = filled.find((d) => d.date === "2026-04-09");
+    expect(apr9?.sent).toBe(5);
+
+    // Apr 10 should NOT appear (it's tomorrow in Denver)
+    const apr10 = filled.find((d) => d.date === "2026-04-10");
+    expect(apr10).toBeUndefined();
+
+    // Date range should end on Apr 9 (user's "today")
+    expect(dateRange.at(-1)).toBe("2026-04-09");
   });
 });
 

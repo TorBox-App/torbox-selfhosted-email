@@ -8,6 +8,7 @@ import {
   aggregateByDate,
   gapFillDates,
   generateDateRange,
+  validateTimezone,
 } from "@/lib/analytics-utils";
 import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -50,6 +51,7 @@ export async function GET(request: Request, context: RouteContext) {
       365,
       Math.max(1, Number.parseInt(searchParams.get("days") || "30", 10))
     );
+    const timezone = validateTimezone(searchParams.get("tz"));
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
     const period = days <= 7 ? 3600 : days <= 30 ? 3600 * 6 : 3600 * 24;
@@ -129,7 +131,8 @@ export async function GET(request: Request, context: RouteContext) {
           metrics[SES_METRICS.OPEN]?.[0]?.Values || [],
           metrics[SES_METRICS.CLICK]?.[0]?.Values || [],
         ],
-        [...allKeys]
+        [...allKeys],
+        timezone
       );
 
       for (const [dateStr, values] of perAccount) {
@@ -157,7 +160,8 @@ export async function GET(request: Request, context: RouteContext) {
       dailyMap = await getEmailMetricsFromPostgres(
         orgWithMembership.id,
         startTime,
-        endTime
+        endTime,
+        timezone
       );
     }
 
@@ -178,7 +182,7 @@ export async function GET(request: Request, context: RouteContext) {
     const complaintRate =
       totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
 
-    const dateRange = generateDateRange(startTime, endTime);
+    const dateRange = generateDateRange(startTime, endTime, timezone);
     const defaults = {
       sent: 0,
       delivered: 0,

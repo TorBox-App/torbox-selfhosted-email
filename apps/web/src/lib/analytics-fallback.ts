@@ -26,11 +26,13 @@ export type DailyEmailMetrics = {
 export async function getEmailMetricsFromPostgres(
   organizationId: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  timezone = "UTC"
 ): Promise<Map<string, DailyEmailMetrics>> {
+  const tzLiteral = sql.raw(`'${timezone}'`);
   const rows = await db
     .select({
-      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
       sent: sql<number>`count(*)::int`,
       delivered: sql<number>`count(*) filter (where ${messageSend.deliveredAt} is not null)::int`,
       bounced: sql<number>`count(*) filter (where ${messageSend.bouncedAt} is not null)::int`,
@@ -49,7 +51,7 @@ export async function getEmailMetricsFromPostgres(
       )
     )
     .groupBy(
-      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`
     );
 
   const map = new Map<string, DailyEmailMetrics>();
@@ -81,11 +83,13 @@ export type DailyBounceMetrics = {
 export async function getBounceMetricsFromPostgres(
   organizationId: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  timezone = "UTC"
 ): Promise<Map<string, DailyBounceMetrics>> {
+  const tzLiteral = sql.raw(`'${timezone}'`);
   const rows = await db
     .select({
-      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
       sent: sql<number>`count(*)::int`,
       permanent: sql<number>`count(*) filter (where ${messageSend.bounceType} = 'Permanent')::int`,
       transient: sql<number>`count(*) filter (where ${messageSend.bounceType} = 'Transient')::int`,
@@ -102,7 +106,7 @@ export async function getBounceMetricsFromPostgres(
       )
     )
     .groupBy(
-      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`
     );
 
   const map = new Map<string, DailyBounceMetrics>();
@@ -129,11 +133,13 @@ export type DailyComplaintMetrics = {
 export async function getComplaintMetricsFromPostgres(
   organizationId: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  timezone = "UTC"
 ): Promise<Map<string, DailyComplaintMetrics>> {
+  const tzLiteral = sql.raw(`'${timezone}'`);
   const rows = await db
     .select({
-      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
       sent: sql<number>`count(*)::int`,
       complaints: sql<number>`count(*) filter (where ${messageSend.complainedAt} is not null)::int`,
     })
@@ -148,7 +154,7 @@ export async function getComplaintMetricsFromPostgres(
       )
     )
     .groupBy(
-      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`
     );
 
   const map = new Map<string, DailyComplaintMetrics>();
@@ -171,11 +177,13 @@ export type DailySuppressionMetrics = {
 export async function getSuppressionMetricsFromPostgres(
   organizationId: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  timezone = "UTC"
 ): Promise<Map<string, DailySuppressionMetrics>> {
+  const tzLiteral = sql.raw(`'${timezone}'`);
   const rows = await db
     .select({
-      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+      date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`,
       sent: sql<number>`count(*)::int`,
       suppressed: sql<number>`count(*) filter (where ${messageSend.suppressedAt} is not null)::int`,
     })
@@ -190,7 +198,7 @@ export async function getSuppressionMetricsFromPostgres(
       )
     )
     .groupBy(
-      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+      sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}, 'YYYY-MM-DD')`
     );
 
   const map = new Map<string, DailySuppressionMetrics>();

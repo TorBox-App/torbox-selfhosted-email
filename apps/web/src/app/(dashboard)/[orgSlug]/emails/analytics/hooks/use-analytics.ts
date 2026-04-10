@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 type AnalyticsOverview = {
   totalSent: number;
   totalDelivered: number;
@@ -88,7 +90,7 @@ export function useEmailChartData(orgSlug: string, days = 30) {
     queryKey: ["analytics", "email-chart", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/email-chart?days=${days}`
+        `/api/${orgSlug}/analytics/email-chart?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch email chart data");
@@ -104,7 +106,7 @@ export function useAnalyticsOverview(orgSlug: string, days = 30) {
     queryKey: ["analytics", "overview", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/overview?days=${days}`
+        `/api/${orgSlug}/analytics/overview?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch analytics overview");
@@ -120,7 +122,7 @@ export function useVolumeData(orgSlug: string, days = 90) {
     queryKey: ["analytics", "volume", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/volume?days=${days}`
+        `/api/${orgSlug}/analytics/volume?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch volume data");
@@ -136,7 +138,7 @@ export function useEngagementData(orgSlug: string, days = 90) {
     queryKey: ["analytics", "engagement", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/engagement?days=${days}`
+        `/api/${orgSlug}/analytics/engagement?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch engagement data");
@@ -152,7 +154,7 @@ export function useTopPerformers(orgSlug: string, days = 30, limit = 5) {
     queryKey: ["analytics", "top-performers", orgSlug, days, limit],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/top-performers?days=${days}&limit=${limit}`
+        `/api/${orgSlug}/analytics/top-performers?days=${days}&limit=${limit}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch top performers");
@@ -184,7 +186,7 @@ export function useBounceData(orgSlug: string, days = 30) {
     queryKey: ["analytics", "bounces", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/bounces?days=${days}`
+        `/api/${orgSlug}/analytics/bounces?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch bounce data");
@@ -200,7 +202,7 @@ export function useComplaintData(orgSlug: string, days = 30) {
     queryKey: ["analytics", "complaints", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/complaints?days=${days}`
+        `/api/${orgSlug}/analytics/complaints?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch complaint data");
@@ -216,7 +218,7 @@ export function useSuppressionData(orgSlug: string, days = 30) {
     queryKey: ["analytics", "suppression", orgSlug, days],
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/analytics/suppression?days=${days}`
+        `/api/${orgSlug}/analytics/suppression?days=${days}&tz=${encodeURIComponent(browserTz)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch suppression data");
