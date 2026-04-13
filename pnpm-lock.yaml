@@ -1819,6 +1819,12 @@ importers:
 
   wraps:
     devDependencies:
+      '@email-lint/core':
+        specifier: 0.2.1
+        version: 0.2.1(prettier@3.8.1)
+      '@email-lint/react-email':
+        specifier: 0.2.1
+        version: 0.2.1(@react-email/render@2.0.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(prettier@3.8.1)(react@19.2.4)
       '@react-email/components':
         specifier: 0.0.41
         version: 0.0.41(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -3357,6 +3363,23 @@ packages:
     resolution: {integrity: sha512-LcbLHa0zE6FJKWPWKsIC/f+62wbDv3aXydqcNPVPyqNcaUgwvCajIi+5kHEU6GO3oXUCpzKaMsb3gsjt8sLzFQ==}
     peerDependencies:
       elysia: '>= 1.3.0'
+
+  '@email-lint/core@0.2.1':
+    resolution: {integrity: sha512-PIrLUKs8fJbKJfyN3XJxCVlau29RxtmF2ZqsWdJcexwyQ+xU0YVgWQEEaoJJfAa7XJJZK3TqmZM9cgWBvXFEPA==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+
+  '@email-lint/react-email@0.2.1':
+    resolution: {integrity: sha512-XqDA0ScKyBF4PpzlqcYZwGoVpaCa8xAl4u4x5r7EfHQAEXU6ztfQiiMLz6ElIGQcZh2hLkhF5yzWAtsfMhrCUA==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@react-email/render': '>=1.0.0'
+      react: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@react-email/render':
+        optional: true
+      react:
+        optional: true
 
   '@emnapi/core@1.7.1':
     resolution: {integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==}
@@ -7720,6 +7743,22 @@ packages:
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
 
+  '@trivago/prettier-plugin-sort-imports@5.2.2':
+    resolution: {integrity: sha512-fYDQA9e6yTNmA13TLVSA+WMQRc5Bn/c0EUBditUHNfMMxN7M82c38b1kEggVE3pLpZ0FwkwJkUEKMiOi52JXFA==}
+    engines: {node: '>18.12'}
+    peerDependencies:
+      '@vue/compiler-sfc': 3.x
+      prettier: 2.x - 3.x
+      prettier-plugin-svelte: 3.x
+      svelte: 4.x || 5.x
+    peerDependenciesMeta:
+      '@vue/compiler-sfc':
+        optional: true
+      prettier-plugin-svelte:
+        optional: true
+      svelte:
+        optional: true
+
   '@trpc/server@11.8.1':
     resolution: {integrity: sha512-P4rzZRpEL7zDFgjxK65IdyH0e41FMFfTkQkuq0BA5tKcr7E6v9/v38DEklCpoDN6sPiB1Sigy/PUEzHENhswDA==}
     peerDependencies:
@@ -8864,6 +8903,9 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
+  binary-search@1.3.6:
+    resolution: {integrity: sha512-nbE1WxOTTrUWIfsfZ4aHGYu5DOuNkbxGokjV6Z2kxfJK3uaAb8zNK1muzOeipoLHZjInT4Br88BHpzevc681xA==}
+
   birpc@2.9.0:
     resolution: {integrity: sha512-KrayHS5pBi69Xi9JmvoqrIgYGDkD6mcSe/i6YKi3w5kekCLzrX4+nawcXqrj2tIp50Kw/mT/s3p+GVK0A0sKxw==}
 
@@ -8989,6 +9031,10 @@ packages:
   camelcase-css@2.0.1:
     resolution: {integrity: sha512-QOSvevhslijgYwRx6Rv7zKdMF8lbRmx+uQGx2+vDc+KI/eBnsy9kit5aj23AgGu3pa4t9AgwbnXWqS+iOY+2aA==}
     engines: {node: '>= 6'}
+
+  caniemail@1.0.5:
+    resolution: {integrity: sha512-T2UURmpxAKu6p+c4VpX69LztyE8+SDowBCvWgtoWL++GjyZ63wAtDeNz7m1rL+yi/szWDzec29HSlR7Zy2Nhrw==}
+    engines: {node: '>=20.19.0'}
 
   caniuse-lite@1.0.30001787:
     resolution: {integrity: sha512-mNcrMN9KeI68u7muanUpEejSLghOKlVhRqS/Za2IeyGllJ9I9otGpR9g3nsw7n4W378TE/LyIteA0+/FOZm4Kg==}
@@ -9570,6 +9616,10 @@ packages:
   dot-prop@10.1.0:
     resolution: {integrity: sha512-MVUtAugQMOff5RnBy2d9N31iG0lNwg1qAoAOn7pOK5wf94WIaE3My2p3uwTQuvS2AcqchkcR3bHByjaM0mmi7Q==}
     engines: {node: '>=20'}
+
+  dot-prop@9.0.0:
+    resolution: {integrity: sha512-1gxPBJpI/pcjQhKgIU91II6Wkay+dLcN3M6rf2uwP8hRur3HtQXjVrdAK3sjC0piaEuxzMwjXChcETiJl47lAQ==}
+    engines: {node: '>=18'}
 
   dotenv-cli@11.0.0:
     resolution: {integrity: sha512-r5pA8idbk7GFWuHEU7trSTflWcdBpQEK+Aw17UrSHjS6CReuhrrPcyC3zcQBPQvhArRHnBo/h6eLH1fkCvNlww==}
@@ -10577,6 +10627,9 @@ packages:
     resolution: {integrity: sha512-X7rqawQBvfdjS10YU1y1YVreA3SsLrW9dX2CewP2EbBJM4ypVNLDkO5y04gejPwKIY9lR+7r9gn3rFPt/kmWFg==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
+  inline-style-parser@0.2.7:
+    resolution: {integrity: sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA==}
+
   input-otp@1.4.2:
     resolution: {integrity: sha512-l3jWwYNvrEa6NTCt7BECfCm48GvwuZzkoeG3gBL2w4CHeOXW3eKFmf9UNYkNfYc3mxMrthMnxjIE07MT0zLBQA==}
     peerDependencies:
@@ -10830,6 +10883,9 @@ packages:
   jackspeak@4.1.1:
     resolution: {integrity: sha512-zptv57P3GpL+O0I7VdMJNBZCu+BPHVQUk55Ft8/QCJjTVxrnJHuVuX/0Bl2A6/+2oyR/ZMEuFKwmzqqZ/U5nPQ==}
     engines: {node: 20 || >=22}
+
+  javascript-natural-sort@0.7.1:
+    resolution: {integrity: sha512-nO6jcEfZWQXDhOiBtG2KvKyEptz7RVbpGP4vTD2hLBdmNQSsCiicO2Ioinv6UI4y9ukqnBpy+XZ9H6uLNgJTlw==}
 
   jest-worker@27.5.1:
     resolution: {integrity: sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg==}
@@ -13066,6 +13122,10 @@ packages:
   spdx-license-ids@3.0.22:
     resolution: {integrity: sha512-4PRT4nh1EImPbt2jASOKHX7PB7I+e4IWNLvkKFDxNhJlfjbYlleYQh285Z/3mPTHSAK/AvdMmw5BNNuYH8ShgQ==}
 
+  split-lines@3.0.0:
+    resolution: {integrity: sha512-d0TpRBL/VfKDXsk8JxPF7zgF5pCUDdBMSlEL36xBgVeaX448t+yGXcJaikUyzkoKOJ0l6KpMfygzJU9naIuivw==}
+    engines: {node: '>=12'}
+
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
@@ -13278,6 +13338,9 @@ packages:
 
   style-mod@4.1.3:
     resolution: {integrity: sha512-i/n8VsZydrugj3Iuzll8+x/00GH2vnYsk1eomD8QiRrSAeW6ItbCQDtfXCeJHd0iwiNagqjQkvpvREEPtW3IoQ==}
+
+  style-to-object@1.0.14:
+    resolution: {integrity: sha512-LIN7rULI0jBscWQYaSswptyderlarFkjQ+t79nzty8tcIAceVomEVlLzH5VP4Cmsv6MtKhs7qaAiwlcp+Mgaxw==}
 
   styled-jsx@5.1.6:
     resolution: {integrity: sha512-qSVyDTeMotdvQYoHWLNGwRFJHC+i+ZvdBRYosOFgC+Wg1vx4frN2/RG/NA7SYqqvKNLf39P2LSRA2pu6n0XYZA==}
@@ -18511,6 +18574,32 @@ snapshots:
       openapi-types: 12.1.3
       pathe: 1.1.2
 
+  '@email-lint/core@0.2.1(prettier@3.8.1)':
+    dependencies:
+      caniemail: 1.0.5(prettier@3.8.1)
+      citty: 0.1.6
+      jiti: 2.6.1
+      picocolors: 1.1.1
+    transitivePeerDependencies:
+      - '@vue/compiler-sfc'
+      - prettier
+      - prettier-plugin-svelte
+      - supports-color
+      - svelte
+
+  '@email-lint/react-email@0.2.1(@react-email/render@2.0.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(prettier@3.8.1)(react@19.2.4)':
+    dependencies:
+      '@email-lint/core': 0.2.1(prettier@3.8.1)
+    optionalDependencies:
+      '@react-email/render': 2.0.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react: 19.2.4
+    transitivePeerDependencies:
+      - '@vue/compiler-sfc'
+      - prettier
+      - prettier-plugin-svelte
+      - supports-color
+      - svelte
+
   '@emnapi/core@1.7.1':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -23342,6 +23431,18 @@ snapshots:
 
   '@tokenizer/token@0.3.0': {}
 
+  '@trivago/prettier-plugin-sort-imports@5.2.2(prettier@3.8.1)':
+    dependencies:
+      '@babel/generator': 7.28.5
+      '@babel/parser': 7.28.5
+      '@babel/traverse': 7.28.5
+      '@babel/types': 7.28.5
+      javascript-natural-sort: 0.7.1
+      lodash: 4.18.1
+      prettier: 3.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@trpc/server@11.8.1(typescript@5.9.3)':
     dependencies:
       typescript: 5.9.3
@@ -24713,6 +24814,8 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
+  binary-search@1.3.6: {}
+
   birpc@2.9.0: {}
 
   bmp-ts@1.0.9: {}
@@ -24860,6 +24963,26 @@ snapshots:
   callsites@3.1.0: {}
 
   camelcase-css@2.0.1: {}
+
+  caniemail@1.0.5(prettier@3.8.1):
+    dependencies:
+      '@adobe/css-tools': 4.4.4
+      '@trivago/prettier-plugin-sort-imports': 5.2.2(prettier@3.8.1)
+      binary-search: 1.3.6
+      css-what: 6.2.2
+      domhandler: 5.0.3
+      dot-prop: 9.0.0
+      htmlparser2: 10.0.0
+      micromatch: 4.0.8
+      onetime: 7.0.0
+      split-lines: 3.0.0
+      style-to-object: 1.0.14
+    transitivePeerDependencies:
+      - '@vue/compiler-sfc'
+      - prettier
+      - prettier-plugin-svelte
+      - supports-color
+      - svelte
 
   caniuse-lite@1.0.30001787: {}
 
@@ -25395,6 +25518,10 @@ snapshots:
   dot-prop@10.1.0:
     dependencies:
       type-fest: 5.5.0
+
+  dot-prop@9.0.0:
+    dependencies:
+      type-fest: 4.41.0
 
   dotenv-cli@11.0.0:
     dependencies:
@@ -26550,6 +26677,8 @@ snapshots:
 
   ini@4.1.3: {}
 
+  inline-style-parser@0.2.7: {}
+
   input-otp@1.4.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       react: 19.2.4
@@ -26805,6 +26934,8 @@ snapshots:
   jackspeak@4.1.1:
     dependencies:
       '@isaacs/cliui': 8.0.2
+
+  javascript-natural-sort@0.7.1: {}
 
   jest-worker@27.5.1:
     dependencies:
@@ -28135,7 +28266,7 @@ snapshots:
       jiti: 1.21.7
       postcss: 8.4.47
       semver: 7.7.4
-      webpack: 5.105.0
+      webpack: 5.105.0(esbuild@0.25.12)
     transitivePeerDependencies:
       - typescript
 
@@ -29340,6 +29471,8 @@ snapshots:
 
   spdx-license-ids@3.0.22: {}
 
+  split-lines@3.0.0: {}
+
   split2@4.2.0: {}
 
   sprintf-js@1.0.3: {}
@@ -29563,9 +29696,13 @@ snapshots:
 
   style-loader@4.0.0(webpack@5.105.0):
     dependencies:
-      webpack: 5.105.0
+      webpack: 5.105.0(esbuild@0.25.12)
 
   style-mod@4.1.3: {}
+
+  style-to-object@1.0.14:
+    dependencies:
+      inline-style-parser: 0.2.7
 
   styled-jsx@5.1.6(react@19.2.4):
     dependencies:
@@ -29658,7 +29795,7 @@ snapshots:
       minizlib: 3.1.0
       yallist: 5.0.0
 
-  terser-webpack-plugin@5.4.0(esbuild@0.25.12)(webpack@5.105.0(esbuild@0.25.12)):
+  terser-webpack-plugin@5.4.0(esbuild@0.25.12)(webpack@5.105.0):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
@@ -29667,14 +29804,6 @@ snapshots:
       webpack: 5.105.0(esbuild@0.25.12)
     optionalDependencies:
       esbuild: 0.25.12
-
-  terser-webpack-plugin@5.4.0(webpack@5.105.0):
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      jest-worker: 27.5.1
-      schema-utils: 4.3.3
-      terser: 5.46.1
-      webpack: 5.105.0
 
   terser@5.46.1:
     dependencies:
@@ -30513,38 +30642,6 @@ snapshots:
 
   webpack-sources@3.3.4: {}
 
-  webpack@5.105.0:
-    dependencies:
-      '@types/eslint-scope': 3.7.7
-      '@types/estree': 1.0.8
-      '@types/json-schema': 7.0.15
-      '@webassemblyjs/ast': 1.14.1
-      '@webassemblyjs/wasm-edit': 1.14.1
-      '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.16.0
-      acorn-import-phases: 1.0.4(acorn@8.16.0)
-      browserslist: 4.28.2
-      chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.20.1
-      es-module-lexer: 2.0.0
-      eslint-scope: 5.1.1
-      events: 3.3.0
-      glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.11
-      json-parse-even-better-errors: 2.3.1
-      loader-runner: 4.3.1
-      mime-types: 2.1.35
-      neo-async: 2.6.2
-      schema-utils: 4.3.3
-      tapable: 2.3.2
-      terser-webpack-plugin: 5.4.0(webpack@5.105.0)
-      watchpack: 2.5.1
-      webpack-sources: 3.3.4
-    transitivePeerDependencies:
-      - '@swc/core'
-      - esbuild
-      - uglify-js
-
   webpack@5.105.0(esbuild@0.25.12):
     dependencies:
       '@types/eslint-scope': 3.7.7
@@ -30569,7 +30666,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.2
-      terser-webpack-plugin: 5.4.0(esbuild@0.25.12)(webpack@5.105.0(esbuild@0.25.12))
+      terser-webpack-plugin: 5.4.0(esbuild@0.25.12)(webpack@5.105.0)
       watchpack: 2.5.1
       webpack-sources: 3.3.4
     transitivePeerDependencies:
