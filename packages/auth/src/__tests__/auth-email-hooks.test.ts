@@ -60,7 +60,7 @@ describe("Better Auth email hooks", () => {
     expect(sendTemplateMock).toHaveBeenCalledWith({
       from: "Wraps <hello@wraps.dev>",
       to: "user@example.com",
-      template: "Password-Reset",
+      template: "password-reset",
       templateData: {
         privacyUrl: "https://wraps.dev/privacy",
         resetPasswordUrl:
@@ -85,7 +85,7 @@ describe("Better Auth email hooks", () => {
     expect(sendTemplateMock).toHaveBeenCalledWith({
       from: "Wraps <hello@wraps.dev>",
       to: "user@example.com",
-      template: "Password-Changed",
+      template: "password-changed",
       templateData: {
         name: "Test User",
         email: "user@example.com",

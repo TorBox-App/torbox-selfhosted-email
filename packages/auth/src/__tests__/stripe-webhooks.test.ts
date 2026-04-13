@@ -329,7 +329,7 @@ describe("handlePaymentFailed", () => {
     expect(mockSendTemplate).toHaveBeenCalledTimes(2);
     expect(mockSendTemplate).toHaveBeenCalledWith(
       expect.objectContaining({
-        template: "Payment-Failure",
+        template: "payment-failure",
         templateData: expect.objectContaining({
           amount: "USD 29.00",
           organizationName: "Test Org",

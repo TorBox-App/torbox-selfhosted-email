@@ -1,8 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock the email client used by sendMobileRescueEmail
+// Mock getWrapsClient (used by sendMobileRescueEmail)
+type TemplateCall = {
+  template: string;
+  to: string;
+  from: string;
+  templateData: Record<string, unknown>;
+};
+const mockSendTemplate = vi.fn<
+  (params: TemplateCall) => Promise<{ messageId: string }>
+>(async () => ({ messageId: "test-msg-id" }));
 vi.mock("@wraps/email/lib/client", () => ({
-  sendEmail: vi.fn(async () => ({ success: true, messageId: "test-msg-id" })),
+  getWrapsClient: vi.fn(async () => ({
+    sendTemplate: mockSendTemplate,
+  })),
 }));
 
 // Mock verifyOrgAccess
@@ -23,7 +34,6 @@ vi.mock("@/lib/posthog-server", () => ({
 }));
 
 import { sendMobileRescueEmail } from "@wraps/email/emails/mobile-rescue";
-import { sendEmail } from "@wraps/email/lib/client";
 import { sendDesktopLink } from "../mobile-rescue";
 
 describe("sendMobileRescueEmail", () => {
@@ -31,23 +41,22 @@ describe("sendMobileRescueEmail", () => {
     vi.clearAllMocks();
   });
 
-  it("sends email with correct subject, HTML dashboard link, and plain text", async () => {
+  it("sends template with correct name and data", async () => {
     await sendMobileRescueEmail({
       to: "user@example.com",
       dashboardUrl: "https://app.wraps.dev/my-org/onboarding",
       orgName: "my-org",
     });
 
-    expect(sendEmail).toHaveBeenCalledOnce();
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(mockSendTemplate).toHaveBeenCalledOnce();
+    const call = mockSendTemplate.mock.calls[0]![0]!;
 
-    expect(call.subject).toBe("Continue setting up my-org on your computer");
-    expect(call.html).toContain(
-      'href="https://app.wraps.dev/my-org/onboarding"'
-    );
-    expect(call.html).toContain("my-org");
-    expect(call.text).toContain("https://app.wraps.dev/my-org/onboarding");
+    expect(call.template).toBe("mobile-rescue");
     expect(call.to).toBe("user@example.com");
+    expect(call.templateData).toEqual({
+      orgName: "my-org",
+      dashboardUrl: "https://app.wraps.dev/my-org/onboarding",
+    });
   });
 });
 
@@ -62,7 +71,7 @@ describe("sendDesktopLink", () => {
     const result = await sendDesktopLink("org-123");
 
     expect(result).toEqual({ success: false, error: "No access" });
-    expect(sendEmail).not.toHaveBeenCalled();
+    expect(mockSendTemplate).not.toHaveBeenCalled();
   });
 
   it("sends email and returns success on valid access", async () => {
@@ -76,10 +85,27 @@ describe("sendDesktopLink", () => {
     const result = await sendDesktopLink("org-123");
 
     expect(result).toEqual({ success: true });
-    expect(sendEmail).toHaveBeenCalledOnce();
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(mockSendTemplate).toHaveBeenCalledOnce();
+    const call = mockSendTemplate.mock.calls[0]![0]!;
     expect(call.to).toBe("user@example.com");
-    expect(call.subject).toContain("my-org");
+    expect(call.templateData.orgName).toBe("my-org");
+  });
+
+  it("returns error when email sending throws", async () => {
+    mockVerifyOrgAccess.mockResolvedValue({
+      userId: "user-1",
+      userEmail: "user@example.com",
+      role: "owner",
+      orgSlug: "my-org",
+    });
+    mockSendTemplate.mockRejectedValueOnce(
+      new Error("SES role assumption failed")
+    );
+
+    const result = await sendDesktopLink("org-123");
+
+    expect(result).toEqual({ success: false, error: "Failed to send email" });
+    expect(mockCapture).not.toHaveBeenCalled();
   });
 
   it("captures PostHog event with correct properties", async () => {

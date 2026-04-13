@@ -1,35 +1,77 @@
-import {
-  type RenderInvitationEmailParams,
-  renderInvitationEmail,
-} from "@wraps/email/emails/invitation";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-const baseParams: RenderInvitationEmailParams = {
-  inviteLink: "https://app.wraps.dev/invitations/123/accept",
-  declineLink: "https://app.wraps.dev/invitations/123/decline",
-  organizationName: "Acme Corp",
-  inviterName: "Jane Doe",
-  role: "admin",
+// Mock getWrapsClient
+type TemplateCall = {
+  template: string;
+  to: string;
+  from: string;
+  templateData: Record<string, unknown>;
 };
+const mockSendTemplate = vi.fn<
+  (params: TemplateCall) => Promise<{ messageId: string }>
+>(async () => ({ messageId: "test-msg-id" }));
+vi.mock("@wraps/email/lib/client", () => ({
+  getWrapsClient: vi.fn(async () => ({
+    sendTemplate: mockSendTemplate,
+  })),
+}));
 
-describe("renderInvitationEmail", () => {
-  it("returns HTML with inviter name, org name, and CTA buttons", () => {
-    const { html, text } = renderInvitationEmail(baseParams);
+import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 
-    expect(html).toContain("Jane Doe");
-    expect(html).toContain("Acme Corp");
-    expect(html).toContain("https://app.wraps.dev/invitations/123/accept");
-    expect(html).toContain("https://app.wraps.dev/invitations/123/decline");
-    expect(html).toContain("Accept Invitation");
-
-    expect(text).toContain("Jane Doe");
-    expect(text).toContain("Acme Corp");
-    expect(text).toContain("https://app.wraps.dev/invitations/123/accept");
+describe("sendInvitationEmail", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("includes workspace context section when provided", () => {
-    const { html, text } = renderInvitationEmail({
-      ...baseParams,
+  it("sends template with inviter name, org name, and links", async () => {
+    await sendInvitationEmail({
+      to: "user@example.com",
+      inviteLink: "https://app.wraps.dev/invitations/123/accept",
+      declineLink: "https://app.wraps.dev/invitations/123/decline",
+      organizationName: "Acme Corp",
+      inviterName: "Jane Doe",
+      role: "admin",
+    });
+
+    expect(mockSendTemplate).toHaveBeenCalledOnce();
+    const call = mockSendTemplate.mock.calls[0]![0]!;
+
+    expect(call.template).toBe("team-invitation");
+    expect(call.to).toBe("user@example.com");
+    expect(call.templateData.inviterName).toBe("Jane Doe");
+    expect(call.templateData.organizationName).toBe("Acme Corp");
+    expect(call.templateData.role).toBe("admin");
+    expect(call.templateData.roleArticle).toBe("an");
+    expect(call.templateData.inviteLink).toBe(
+      "https://app.wraps.dev/invitations/123/accept"
+    );
+    expect(call.templateData.declineLink).toBe(
+      "https://app.wraps.dev/invitations/123/decline"
+    );
+  });
+
+  it("uses 'a' article for member role", async () => {
+    await sendInvitationEmail({
+      to: "user@example.com",
+      inviteLink: "https://app.wraps.dev/invitations/123/accept",
+      declineLink: "https://app.wraps.dev/invitations/123/decline",
+      organizationName: "Acme Corp",
+      inviterName: "Jane Doe",
+      role: "member",
+    });
+
+    const call = mockSendTemplate.mock.calls[0]![0]!;
+    expect(call.templateData.roleArticle).toBe("a");
+  });
+
+  it("includes workspace context as HTML when provided", async () => {
+    await sendInvitationEmail({
+      to: "user@example.com",
+      inviteLink: "https://app.wraps.dev/invitations/123/accept",
+      declineLink: "https://app.wraps.dev/invitations/123/decline",
+      organizationName: "Acme Corp",
+      inviterName: "Jane Doe",
+      role: "admin",
       workspaceContext: {
         templateCount: 3,
         contactCount: 150,
@@ -39,24 +81,36 @@ describe("renderInvitationEmail", () => {
       },
     });
 
-    expect(html).toContain("3 email templates");
-    expect(html).toContain("150 contacts");
-    expect(html).toContain("acme.com");
-    expect(html).toContain("AWS connected");
-    expect(text).toContain("3 email templates");
+    const call = mockSendTemplate.mock.calls[0]![0]!;
+    expect(call.templateData.workspaceItemsHtml).toContain("3 email templates");
+    expect(call.templateData.workspaceItemsHtml).toContain("150 contacts");
+    expect(call.templateData.workspaceItemsHtml).toContain("AWS connected");
+    expect(call.templateData.workspaceItemsHtml).toContain("acme.com");
+    expect(call.templateData.showAwsWarning).toBe(false);
   });
 
-  it("omits workspace context section when not provided", () => {
-    const { html } = renderInvitationEmail(baseParams);
+  it("sends empty workspace items when not provided", async () => {
+    await sendInvitationEmail({
+      to: "user@example.com",
+      inviteLink: "https://app.wraps.dev/invitations/123/accept",
+      declineLink: "https://app.wraps.dev/invitations/123/decline",
+      organizationName: "Acme Corp",
+      inviterName: "Jane Doe",
+      role: "admin",
+    });
 
-    expect(html).not.toContain("set up so far");
-    expect(html).not.toContain("email templates");
-    expect(html).not.toContain("AWS connected");
+    const call = mockSendTemplate.mock.calls[0]![0]!;
+    expect(call.templateData.workspaceItemsHtml).toBe("");
   });
 
-  it("shows AWS not connected message when hasAwsAccount is false", () => {
-    const { html } = renderInvitationEmail({
-      ...baseParams,
+  it("shows AWS warning when account not connected", async () => {
+    await sendInvitationEmail({
+      to: "user@example.com",
+      inviteLink: "https://app.wraps.dev/invitations/123/accept",
+      declineLink: "https://app.wraps.dev/invitations/123/decline",
+      organizationName: "Acme Corp",
+      inviterName: "Jane Doe",
+      role: "admin",
       workspaceContext: {
         templateCount: 0,
         contactCount: 0,
@@ -66,6 +120,7 @@ describe("renderInvitationEmail", () => {
       },
     });
 
-    expect(html).toContain("AWS infrastructure hasn't been connected yet");
+    const call = mockSendTemplate.mock.calls[0]![0]!;
+    expect(call.templateData.showAwsWarning).toBe(true);
   });
 });

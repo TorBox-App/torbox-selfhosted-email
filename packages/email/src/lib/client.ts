@@ -1,47 +1,21 @@
 import { SESClient } from "@aws-sdk/client-ses";
-import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { WrapsEmail } from "@wraps.dev/email";
 
 /**
- * Create SES client with two-step role assumption for production (Vercel):
- * 1. Vercel OIDC -> AWS_ROLE_ARN (backend account role)
- * 2. Backend role -> WRAPS_EMAIL_ROLE_ARN (email infrastructure role)
+ * Create SES client for production (Vercel):
+ * Uses Vercel OIDC to assume the email role directly.
+ * The dogfood account's wraps-email-role trusts the Vercel OIDC provider
+ * via AssumeRoleWithWebIdentity — no intermediary backend role needed.
  */
-async function createProductionSESClient(): Promise<SESClient> {
+function createProductionSESClient(): SESClient {
   const region = process.env.AWS_REGION || "us-east-1";
 
-  // Step 1: Get base credentials from Vercel OIDC
-  const baseCredentials = awsCredentialsProvider({
-    roleArn: process.env.AWS_ROLE_ARN!,
-  });
-
-  // Step 2: Assume email infrastructure role
-  const stsClient = new STSClient({
-    region,
-    credentials: baseCredentials,
-  });
-
-  const assumeRoleResponse = await stsClient.send(
-    new AssumeRoleCommand({
-      RoleArn: process.env.WRAPS_EMAIL_ROLE_ARN!,
-      RoleSessionName: "wraps-email-session",
-      DurationSeconds: 3600,
-    })
-  );
-
-  if (!assumeRoleResponse.Credentials) {
-    throw new Error("Failed to assume email role: No credentials returned");
-  }
-
-  // Step 3: Create SES client with assumed credentials
   return new SESClient({
     region,
-    credentials: {
-      accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
-      secretAccessKey: assumeRoleResponse.Credentials.SecretAccessKey!,
-      sessionToken: assumeRoleResponse.Credentials.SessionToken!,
-    },
+    credentials: awsCredentialsProvider({
+      roleArn: process.env.WRAPS_EMAIL_ROLE_ARN!,
+    }),
   });
 }
 
@@ -49,7 +23,7 @@ async function createProductionSESClient(): Promise<SESClient> {
  * Get a properly configured WrapsEmail client instance
  *
  * In development: Uses standard AWS credential chain (env vars, profiles, etc.)
- * In production: Uses two-step OIDC role assumption for Vercel
+ * In production: Uses Vercel OIDC to assume the email role directly
  *
  * @example
  * ```ts
@@ -61,18 +35,12 @@ async function createProductionSESClient(): Promise<SESClient> {
 export async function getWrapsClient(): Promise<WrapsEmail> {
   const region = process.env.AWS_REGION || "us-east-1";
 
-  // Check if we're in production (Vercel) and need two-step role assumption
   const isProduction =
-    process.env.VERCEL === "1" &&
-    process.env.AWS_ROLE_ARN &&
-    process.env.WRAPS_EMAIL_ROLE_ARN;
+    process.env.VERCEL === "1" && process.env.WRAPS_EMAIL_ROLE_ARN;
 
-  // Create Wraps SDK instance
   return isProduction
-    ? // Production: Use custom SES client with two-step role assumption
-      new WrapsEmail({ client: await createProductionSESClient() })
-    : // Development: Let SDK handle credentials (env vars, AWS profiles, etc.)
-      new WrapsEmail({
+    ? new WrapsEmail({ client: createProductionSESClient() })
+    : new WrapsEmail({
         region,
         roleArn: process.env.WRAPS_EMAIL_ROLE_ARN,
       });
@@ -89,7 +57,7 @@ export type SendEmailParams = {
  * Send an email using the Wraps Email SDK
  *
  * In development: Uses standard AWS credential chain (env vars, profiles, etc.)
- * In production: Uses two-step OIDC role assumption for Vercel
+ * In production: Uses Vercel OIDC to assume the email role directly
  *
  * @example
  * ```ts

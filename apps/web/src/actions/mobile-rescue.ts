@@ -12,11 +12,15 @@ export async function sendDesktopLink(organizationId: string) {
 
   const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev"}/${access.orgSlug}/onboarding`;
 
-  await sendMobileRescueEmail({
-    to: access.userEmail,
-    dashboardUrl,
-    orgName: access.orgSlug,
-  });
+  try {
+    await sendMobileRescueEmail({
+      to: access.userEmail,
+      dashboardUrl,
+      orgName: access.orgSlug,
+    });
+  } catch {
+    return { success: false as const, error: "Failed to send email" };
+  }
 
   const posthog = getPostHogClient();
   posthog.capture({

@@ -50,13 +50,18 @@ export function MobileRescueGate({
 
   const handleSendLink = async () => {
     setSending(true);
-    const result = await sendDesktopLink(organizationId);
-    if (result.success) {
-      setEmailSent(true);
-    } else {
+    try {
+      const result = await sendDesktopLink(organizationId);
+      if (result.success) {
+        setEmailSent(true);
+      } else {
+        toast.error("Failed to send email. Please try again.");
+      }
+    } catch {
       toast.error("Failed to send email. Please try again.");
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   const handleBypass = () => {

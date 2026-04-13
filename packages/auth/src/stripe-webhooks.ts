@@ -238,7 +238,7 @@ export async function handlePaymentFailed(
       await wraps.sendTemplate({
         from: "Wraps <billing@wraps.dev>",
         to: admin.user.email,
-        template: "Payment-Failure",
+        template: "payment-failure",
         templateData: {
           name: admin.user.name || "there",
           amount: `${currency} ${amount}`,
