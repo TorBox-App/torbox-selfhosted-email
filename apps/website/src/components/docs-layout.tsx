@@ -1,10 +1,10 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
 import { DocsNav } from "./docs-nav";
 import { DocsToc } from "./docs-toc";
 

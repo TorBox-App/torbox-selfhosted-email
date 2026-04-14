@@ -1,14 +1,14 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
 import { DocsLayout } from "@/components/docs-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,

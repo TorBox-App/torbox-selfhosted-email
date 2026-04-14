@@ -1,5 +1,27 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
+import { Input } from "@wraps/ui/components/ui/input";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Switch } from "@wraps/ui/components/ui/switch";
 import {
   ArrowRight,
   ChevronDown,
@@ -20,23 +42,6 @@ import {
 import { Suspense } from "react";
 import { BillingToggle } from "@/app/landing/components/billing-toggle";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { BillingInterval } from "@/config/pricing";
 import {
   getCtaLink,

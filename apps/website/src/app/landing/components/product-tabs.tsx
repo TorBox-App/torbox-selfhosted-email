@@ -1,5 +1,7 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -24,8 +26,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { assetUrl, cn } from "@/lib/utils";
 import { trackEvent } from "@/utils/analytics";
 

@@ -1,11 +1,16 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,

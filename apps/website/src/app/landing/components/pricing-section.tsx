@@ -1,5 +1,5 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { PRICING_COPY, PRICING_TIERS } from "@/config/pricing";
 import { PricingCards } from "./pricing-cards";
 import { TrackedEventsExplainer } from "./tracked-events-explainer";

@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@wraps/ui/components/ui/dialog";
 import { Command as CommandPrimitive } from "cmdk";
 import {
   AlertTriangle,
@@ -31,8 +36,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const Command = React.forwardRef<

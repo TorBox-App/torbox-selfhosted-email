@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   AlertTriangle,
   ArrowRight,
@@ -15,8 +17,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { trackEvent } from "@/utils/analytics";
 
 // Animated email headers scrolling in hero section only

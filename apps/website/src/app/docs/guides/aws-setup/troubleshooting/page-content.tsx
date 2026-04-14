@@ -1,5 +1,12 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   AlertCircle,
   CheckCircle2,
@@ -8,8 +15,6 @@ import {
   Terminal,
 } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,

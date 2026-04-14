@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@wraps/ui/components/ui/button";
 import { trackEvent } from "@/utils/analytics";
 
 export function HeroAnimatedCTA() {

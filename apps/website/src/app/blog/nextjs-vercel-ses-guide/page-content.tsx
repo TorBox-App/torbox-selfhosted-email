@@ -1,9 +1,9 @@
 "use client";
 
+import { Card } from "@wraps/ui/components/ui/card";
 import { Check, Cloud, Copy, Lock, Mail, Server, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
-import { Card } from "@/components/ui/card";
 import { assetUrl } from "@/lib/utils";
 
 // Code block with copy functionality

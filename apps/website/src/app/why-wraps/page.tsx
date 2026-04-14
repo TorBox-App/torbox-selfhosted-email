@@ -1,3 +1,10 @@
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
   Calculator,
@@ -10,8 +17,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyLinkButton } from "./components/copy-link-button";
 import { FaqSection } from "./components/faq-section";
 

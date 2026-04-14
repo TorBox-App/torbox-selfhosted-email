@@ -1,8 +1,8 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { Clock } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
-import { Badge } from "@/components/ui/badge";
 import {
   CodeBlock,
   CodeBlockBody,

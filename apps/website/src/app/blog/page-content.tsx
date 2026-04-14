@@ -1,3 +1,11 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
   Calendar,
@@ -15,14 +23,6 @@ import {
 } from "lucide-react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 type BlogPost = {
   slug: string;

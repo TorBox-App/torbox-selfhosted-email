@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   ArrowRight,
   Code,
@@ -11,7 +12,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Image3D } from "@/components/image-3d";
-import { Button } from "@/components/ui/button";
 import { assetUrl } from "@/lib/utils";
 import { SectionWrapper } from "./section-card";
 

@@ -1,6 +1,15 @@
 "use client";
 
 import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@wraps/ui/components/ui/sidebar";
+import {
   AlertTriangle,
   Calendar,
   CheckSquare,
@@ -21,15 +30,6 @@ import { Logo } from "@/components/logo";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { SidebarNotification } from "@/components/sidebar-notification";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 
 const data = {
   user: {

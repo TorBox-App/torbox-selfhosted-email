@@ -1,3 +1,5 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   ArrowRight,
   BookOpen,
@@ -15,8 +17,6 @@ import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnatomyInteractive } from "./components/anatomy-interactive";
 import { AnimatedInbox } from "./components/animated-inbox";

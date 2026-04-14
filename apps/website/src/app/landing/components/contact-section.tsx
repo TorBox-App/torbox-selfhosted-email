@@ -7,9 +7,14 @@ import { memo } from "react";
 
 const Cal = dynamic(() => import("@calcom/embed-react"), { ssr: false });
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 
 const ContactSection = memo(function ContactSection() {
   return (

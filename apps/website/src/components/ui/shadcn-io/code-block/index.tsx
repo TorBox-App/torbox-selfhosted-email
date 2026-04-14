@@ -72,6 +72,14 @@ import {
   SiWebassembly,
 } from "@icons-pack/react-simple-icons";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import type {
   ComponentProps,
@@ -86,14 +94,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export type BundledLanguage = string;

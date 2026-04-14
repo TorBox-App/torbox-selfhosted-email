@@ -1,9 +1,9 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { Cloud, Github, Lock, Package, Zap } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { CardDecorator } from "@/components/ui/card-decorator";
 
 const values = [

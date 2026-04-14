@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
   Check,
@@ -17,7 +18,6 @@ import {
   Zap,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
 import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 import {
   AnimatedSpan,

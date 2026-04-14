@@ -1,9 +1,9 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Badge } from "@/components/ui/badge";
 import { DomainChecker, GradeDistribution, StatCard } from "./page-content";
 
 const articleSchema = {

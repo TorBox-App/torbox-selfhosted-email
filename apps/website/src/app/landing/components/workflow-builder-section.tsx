@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   ArrowDown,
   ChevronRight,
@@ -12,7 +13,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type StepType = "trigger" | "wait" | "wait_event" | "condition" | "action";

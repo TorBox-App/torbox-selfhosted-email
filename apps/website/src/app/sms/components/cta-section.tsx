@@ -1,6 +1,6 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, BookOpen, Check, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 const benefits = [
   "Toll-free numbers included",

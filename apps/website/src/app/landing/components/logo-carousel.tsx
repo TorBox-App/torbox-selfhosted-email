@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@wraps/ui/components/ui/card";
 
 // Simple icon component for company logos
 const SimpleIcon = ({

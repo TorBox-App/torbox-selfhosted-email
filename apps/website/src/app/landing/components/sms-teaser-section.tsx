@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Check, Globe, Mail, MessageSquare } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const services = [
   {

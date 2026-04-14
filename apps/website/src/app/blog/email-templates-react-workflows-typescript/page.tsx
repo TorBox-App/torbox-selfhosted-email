@@ -1,3 +1,4 @@
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   Check,
   ChevronRight,
@@ -12,7 +13,6 @@ import type { Metadata } from "next";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Card } from "@/components/ui/card";
 import {
   CLIDemo,
   CodeBlock,

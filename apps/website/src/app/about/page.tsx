@@ -1,9 +1,9 @@
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { Cloud, Github, Lock, Package, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
-import { Card, CardContent } from "@/components/ui/card";
 import { CardDecorator } from "@/components/ui/card-decorator";
 
 export const metadata: Metadata = {

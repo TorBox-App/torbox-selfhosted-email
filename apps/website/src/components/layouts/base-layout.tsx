@@ -1,10 +1,10 @@
 "use client";
 
+import { SidebarInset, SidebarProvider } from "@wraps/ui/components/ui/sidebar";
 import type * as React from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UpgradeToProButton } from "@/components/upgrade-to-pro-button";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 

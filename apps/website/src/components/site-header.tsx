@@ -1,11 +1,11 @@
 "use client";
 
 import { ModeToggle } from "@wraps/ui/components/mode-toggle";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { SidebarTrigger } from "@wraps/ui/components/ui/sidebar";
 import * as React from "react";
 import { CommandSearch, SearchTrigger } from "@/components/command-search";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getAppUrl } from "@/lib/utils";
 
 export function SiteHeader() {

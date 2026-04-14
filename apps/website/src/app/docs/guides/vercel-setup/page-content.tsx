@@ -1,5 +1,13 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,9 +20,6 @@ import {
 import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,

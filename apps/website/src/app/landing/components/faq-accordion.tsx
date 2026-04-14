@@ -1,12 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@wraps/ui/components/ui/accordion";
+import type { ReactNode } from "react";
 
 const faqLink =
   "text-foreground underline underline-offset-2 hover:text-orange-500";

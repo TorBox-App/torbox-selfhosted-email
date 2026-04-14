@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   AlertTriangle,
   ArrowRight,
@@ -18,8 +20,6 @@ import {
 } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { trackEvent } from "@/utils/analytics";
 
 // ---------------------------------------------------------------------------

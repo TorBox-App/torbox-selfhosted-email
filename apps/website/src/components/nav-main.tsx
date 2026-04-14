@@ -1,14 +1,10 @@
 "use client";
 
-import { ChevronRight, type LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@wraps/ui/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -18,7 +14,10 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
+} from "@wraps/ui/components/ui/sidebar";
+import { ChevronRight, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function NavMain({
   label,

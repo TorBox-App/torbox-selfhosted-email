@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { FadeIn } from "./animations";
 import { AutomationsCodePanel } from "./automations-code-panel";
 

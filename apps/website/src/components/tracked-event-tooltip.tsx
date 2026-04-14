@@ -1,11 +1,11 @@
 "use client";
 
-import { Info } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from "@wraps/ui/components/ui/hover-card";
+import { Info } from "lucide-react";
 
 type TrackedEventTooltipProps = {
   /** The text to display. Defaults to "tracked events" */

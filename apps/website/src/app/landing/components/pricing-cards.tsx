@@ -1,9 +1,9 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { Check } from "lucide-react";
 import { memo, useState } from "react";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
-import { Button } from "@/components/ui/button";
 import {
   type BillingInterval,
   getCtaLink,

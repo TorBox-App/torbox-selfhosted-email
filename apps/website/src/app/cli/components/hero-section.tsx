@@ -1,9 +1,9 @@
 "use client";
 
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { Terminal } from "lucide-react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
-import { Badge } from "@/components/ui/badge";
 import {
   Snippet,
   SnippetCopyButton,

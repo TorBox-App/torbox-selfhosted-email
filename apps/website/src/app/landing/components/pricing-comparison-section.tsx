@@ -1,9 +1,9 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Mail, Send, Workflow } from "lucide-react";
 import { useState } from "react";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type UseCase = {

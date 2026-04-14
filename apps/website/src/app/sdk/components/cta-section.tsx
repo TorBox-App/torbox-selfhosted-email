@@ -1,9 +1,9 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Terminal } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
-import { Button } from "@/components/ui/button";
 
 export function SdkCtaSection() {
   const ref = useRef<HTMLDivElement>(null);

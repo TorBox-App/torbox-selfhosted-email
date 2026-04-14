@@ -1,8 +1,8 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { memo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 
 // Code examples organized for CodeTabs - keys are tab labels, values are code strings

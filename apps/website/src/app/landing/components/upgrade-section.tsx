@@ -1,10 +1,10 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Check, X } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import Link from "next/link";
 import { useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { PRICING_TIERS } from "@/config/pricing";
 import { FadeIn } from "./animations";
 

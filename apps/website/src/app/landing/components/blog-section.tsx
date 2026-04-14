@@ -1,9 +1,9 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 
 const blogs = [
   {

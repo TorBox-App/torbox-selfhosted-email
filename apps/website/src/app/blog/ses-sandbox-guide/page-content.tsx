@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   AlertTriangle,
   ArrowDown,
@@ -21,8 +23,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 // ============================================================================
 // DATA

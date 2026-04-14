@@ -1,9 +1,9 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import type { LucideIcon } from "lucide-react";
 import { Bot, Code2, GitBranch, MousePointerClick, Play } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   CodeBlock,
   CodeBlockBody,

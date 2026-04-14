@@ -1,8 +1,8 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
 import type { Metadata } from "next";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Badge } from "@/components/ui/badge";
 import SandboxGuideContent from "./page-content";
 
 const faqSchema = {

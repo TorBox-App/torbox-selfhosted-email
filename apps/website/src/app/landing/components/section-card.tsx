@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type SectionCardProps = {
   children: React.ReactNode;

@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
   Check,
@@ -14,7 +15,6 @@ import {
   Zap,
 } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Card } from "@/components/ui/card";
 
 // Animated typing effect hook
 function useTypingEffect(

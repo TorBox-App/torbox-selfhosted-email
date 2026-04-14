@@ -1,7 +1,7 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { Cloud } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { AwsDynamodb } from "@/components/ui/svgs/awsDynamodb";
 import { AwsEventbridge } from "@/components/ui/svgs/awsEventbridge";
 import { AwsLambda } from "@/components/ui/svgs/awsLambda";

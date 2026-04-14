@@ -1,7 +1,7 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Github } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { trackEvent } from "@/utils/analytics";
 
 export function CTAButtons() {

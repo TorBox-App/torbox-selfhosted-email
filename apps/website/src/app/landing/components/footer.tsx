@@ -1,11 +1,11 @@
 "use client";
 
 import { ModeToggle } from "@wraps/ui/components/mode-toggle";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import { Github, Heart } from "lucide-react";
 import { XLogo } from "@/components/icons/x-logo";
 import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 
 const footerLinks = {

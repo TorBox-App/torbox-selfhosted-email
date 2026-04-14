@@ -1,5 +1,11 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,17 +16,11 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { AwsDynamodbIcon } from "@/components/ui/svgs/awsDynamodbIcon";
 import { AwsEventbridgeIcon } from "@/components/ui/svgs/awsEventbridgeIcon";
 import { AwsLambdaIcon } from "@/components/ui/svgs/awsLambdaIcon";
 import { AwsSesIcon } from "@/components/ui/svgs/awsSesIcon";
 import { AwsSqsIcon } from "@/components/ui/svgs/awsSqsIcon";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export type ArchitectureTabKey = "send" | "track" | "deploy";
 

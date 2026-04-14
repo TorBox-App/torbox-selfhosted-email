@@ -1,9 +1,9 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { Calendar, Filter, Send, Tag, Users } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
-import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
 
 const features = [

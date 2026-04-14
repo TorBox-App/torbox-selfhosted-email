@@ -1,15 +1,11 @@
 "use client";
 
-import { useTheme } from "@wraps/ui/hooks/use-theme";
-import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@wraps/ui/components/ui/collapsible";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -17,13 +13,17 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
+} from "@wraps/ui/components/ui/navigation-menu";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@wraps/ui/components/ui/sheet";
+import { useTheme } from "@wraps/ui/hooks/use-theme";
+import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Logo } from "@/components/logo";
 import { trackEvent } from "@/utils/analytics";
 
 const navigationItems: {

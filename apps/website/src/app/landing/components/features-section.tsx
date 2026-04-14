@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   ArrowRight,
   Cloud,
@@ -13,7 +14,6 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import { Image3D } from "@/components/image-3d";
-import { Button } from "@/components/ui/button";
 import { IconBox, SectionWrapper } from "./section-card";
 
 const mainFeatures = [

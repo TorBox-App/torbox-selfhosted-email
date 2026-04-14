@@ -1,5 +1,5 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { PRICING_COPY, PRICING_TIERS } from "@/config/pricing";
 
 const freeTier = PRICING_TIERS[0];

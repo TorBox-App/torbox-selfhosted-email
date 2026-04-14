@@ -1,9 +1,9 @@
+import { Card } from "@wraps/ui/components/ui/card";
 import { ArrowRight, Database, DollarSign, Shield, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Card } from "@/components/ui/card";
 import { CodeBlock, OIDCDiagram, TerminalDemo } from "./page-content";
 
 const articleSchema = {

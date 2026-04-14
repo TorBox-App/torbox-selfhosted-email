@@ -1,5 +1,19 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
+import { Input } from "@wraps/ui/components/ui/input";
 import {
   AlertTriangle,
   ArrowRight,
@@ -24,15 +38,6 @@ import Link from "next/link";
 import Script from "next/script";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
 
 // Turnstile types for Cloudflare bot protection
 declare global {

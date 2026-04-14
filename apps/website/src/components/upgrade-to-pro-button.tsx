@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowRight, Blocks, LayoutDashboard, Rocket } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from "@wraps/ui/components/ui/hover-card";
+import { ArrowRight, Blocks, LayoutDashboard, Rocket } from "lucide-react";
 import { assetUrl } from "@/lib/utils";
 
 const WRAPS_URL = "https://wraps.dev";

@@ -1,16 +1,6 @@
 "use client";
 
 import {
-  BellDot,
-  CircleUser,
-  CreditCard,
-  EllipsisVertical,
-  LogOut,
-} from "lucide-react";
-import Link from "next/link";
-
-import { Logo } from "@/components/logo";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -18,13 +8,22 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from "@wraps/ui/components/ui/sidebar";
+import {
+  BellDot,
+  CircleUser,
+  CreditCard,
+  EllipsisVertical,
+  LogOut,
+} from "lucide-react";
+import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 export function NavUser({
   user,

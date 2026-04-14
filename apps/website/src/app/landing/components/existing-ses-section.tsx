@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   ArrowRight,
   Check,
@@ -10,7 +11,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const command = "npx @wraps.dev/cli email connect";
 
