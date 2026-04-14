@@ -4,6 +4,21 @@ import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import type { ReusableBlock } from "@wraps/db";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@wraps/ui/components/ui/tabs";
+import {
   FolderOpen,
   Grid3X3,
   List,
@@ -14,22 +29,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useBlocks,
   useDeleteBlock,

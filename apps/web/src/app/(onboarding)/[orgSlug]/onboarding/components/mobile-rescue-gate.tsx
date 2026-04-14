@@ -1,18 +1,18 @@
 "use client";
 
-import { CheckCircleIcon, MailIcon, MonitorIcon } from "lucide-react";
-import posthog from "posthog-js";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { sendDesktopLink } from "@/actions/mobile-rescue";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { CheckCircleIcon, MailIcon, MonitorIcon } from "lucide-react";
+import posthog from "posthog-js";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { sendDesktopLink } from "@/actions/mobile-rescue";
+import { Button } from "@/components/ui/button";
 
 type MobileRescueGateProps = {
   orgSlug: string;

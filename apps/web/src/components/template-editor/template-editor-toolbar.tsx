@@ -2,6 +2,22 @@
 
 import type { Editor } from "@tiptap/react";
 import type { EmailType } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@wraps/ui/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   ArrowLeft,
   BookOpen,
@@ -30,23 +46,7 @@ import {
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "./brand-kit-selector";

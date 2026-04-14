@@ -2,13 +2,6 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CloudIcon, ExternalLinkIcon } from "lucide-react";
-import posthog from "posthog-js";
-import { useMemo } from "react";
-import { toast } from "sonner";
-import { uuidv7 } from "uuidv7";
-import z from "zod";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,9 +9,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { Label } from "@wraps/ui/components/ui/label";
+import { CloudIcon, ExternalLinkIcon } from "lucide-react";
+import posthog from "posthog-js";
+import { useMemo } from "react";
+import { toast } from "sonner";
+import { uuidv7 } from "uuidv7";
+import z from "zod";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 type AwsConnectStepProps = {
   onNext: () => void;

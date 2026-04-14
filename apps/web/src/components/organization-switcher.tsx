@@ -1,17 +1,18 @@
 "use client";
 
-import { Check, ChevronsUpDown, Plus, Settings, UserPlus } from "lucide-react";
-import { useState } from "react";
-import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@wraps/ui/components/ui/avatar";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,14 +20,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { Check, ChevronsUpDown, Plus, Settings, UserPlus } from "lucide-react";
+import { useState } from "react";
+import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveOrganization } from "@/contexts/organization-context";
 
 export function OrganizationSwitcher() {

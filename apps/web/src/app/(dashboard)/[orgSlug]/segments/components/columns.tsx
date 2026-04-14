@@ -1,16 +1,16 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { formatDistanceToNow } from "date-fns";
-import { MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { formatDistanceToNow } from "date-fns";
+import { MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { SegmentWithMeta } from "@/lib/segments";
 
 type ColumnActions = {

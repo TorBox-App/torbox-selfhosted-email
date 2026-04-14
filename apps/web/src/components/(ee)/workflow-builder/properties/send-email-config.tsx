@@ -1,23 +1,22 @@
 "use client";
 
-import { AlertCircle, Pencil, Plus, RefreshCw, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-
-import {
-  getVerifiedDomains,
-  type VerifiedIdentity,
-} from "@/actions/aws-accounts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
+import { AlertCircle, Pencil, Plus, RefreshCw, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  getVerifiedDomains,
+  type VerifiedIdentity,
+} from "@/actions/aws-accounts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useTemplates } from "@/hooks/use-template-queries";
 import { useWorkflowStore } from "../use-workflow-store";
 import type { NodeConfigProps } from "./index";

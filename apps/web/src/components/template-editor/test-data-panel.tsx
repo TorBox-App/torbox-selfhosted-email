@@ -1,13 +1,13 @@
 "use client";
 
 import type { Editor } from "@tiptap/react";
+import { Label } from "@wraps/ui/components/ui/label";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import { Braces, FlaskConical, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useTemplateStore } from "@/stores/template-store";
 
 type TestDataPanelProps = {

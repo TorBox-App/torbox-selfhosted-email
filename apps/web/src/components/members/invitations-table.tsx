@@ -1,13 +1,6 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
-import { Mail, X } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import type { PendingInvitation } from "@/actions/members";
-import { cancelInvitation } from "@/actions/members";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -15,7 +8,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import { Mail, X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { PendingInvitation } from "@/actions/members";
+import { cancelInvitation } from "@/actions/members";
+import { Button } from "@/components/ui/button";
 
 type InvitationsTableProps = {
   invitations: PendingInvitation[];

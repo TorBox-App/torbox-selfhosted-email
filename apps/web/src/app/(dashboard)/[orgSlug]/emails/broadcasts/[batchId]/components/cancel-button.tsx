@@ -1,10 +1,5 @@
 "use client";
 
-import { XCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { cancelBatchSend } from "@/actions/batch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +10,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@wraps/ui/components/ui/alert-dialog";
+import { XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { cancelBatchSend } from "@/actions/batch";
 import { Button } from "@/components/ui/button";
 
 type CancelBatchButtonProps = {

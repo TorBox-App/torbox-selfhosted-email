@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +8,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { TopicWithMeta } from "@/lib/topics";
 import { generateSlug } from "@/lib/topics";
 

@@ -5,6 +5,9 @@ import { useThrottler } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
+import { Avatar, AvatarFallback } from "@wraps/ui/components/ui/avatar";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { DefaultChatTransport } from "ai";
 import {
   AlertTriangle,
@@ -22,15 +25,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ui/reasoning";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";

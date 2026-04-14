@@ -1,13 +1,18 @@
 "use client";
 
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
   type MailIcon,
   SendIcon,
   SparklesIcon,
   WorkflowIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { RecentItem } from "../page";
 

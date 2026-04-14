@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
 import { useQueryState } from "nuqs";
 import { OrganizationSettingsApiKeys } from "@/components/organization-settings-api-keys";
 import { OrganizationSettingsAwsAccounts } from "@/components/organization-settings-aws-accounts";
@@ -7,7 +13,6 @@ import { OrganizationSettingsBilling } from "@/components/organization-settings-
 import { OrganizationSettingsBrandKits } from "@/components/organization-settings-brand-kits";
 import { OrganizationSettingsGeneral } from "@/components/organization-settings-general";
 import { OrganizationSettingsMembers } from "@/components/organization-settings-members";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type OrganizationSettingsTabsProps = {
   organization: {

@@ -7,15 +7,15 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
-import { Pencil } from "lucide-react";
-import { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@wraps/ui/components/ui/popover";
+import { Pencil } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { TailwindColorPicker } from "@/components/ui/tailwind-color-picker";
 import { DragHandle } from "./drag-handle";
 

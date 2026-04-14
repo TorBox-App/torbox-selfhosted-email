@@ -1,20 +1,20 @@
 "use client";
 
 import type { Template } from "@wraps/db";
-import { ArrowLeft, ChevronDown, Loader2, MessageSquare } from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { ArrowLeft, ChevronDown, Loader2, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   usePublishTemplate,
   useUpdateTemplate,

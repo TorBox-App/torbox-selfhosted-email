@@ -1,12 +1,21 @@
 "use client";
 
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@wraps/ui/components/ui/popover";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "./input";
-import { Label } from "./label";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 
 /**
  * Tailwind color palette with hex values

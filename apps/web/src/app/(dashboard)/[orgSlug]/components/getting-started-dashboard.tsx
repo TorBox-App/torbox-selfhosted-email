@@ -1,5 +1,27 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Progress } from "@wraps/ui/components/ui/progress";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
@@ -29,25 +51,8 @@ import {
   saveWebhookSecretAction,
   scanAWSAccountFeatures,
 } from "@/actions/aws-accounts";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { AccountFeatures, AwsAccountData, SetupStatus } from "../page";
 import { CAL_BOOKING_URL, HelpCard } from "./help-card";

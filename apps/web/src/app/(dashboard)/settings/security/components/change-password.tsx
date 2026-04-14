@@ -3,29 +3,29 @@
 import { mergeForm, useForm } from "@tanstack/react-form";
 import { initialFormState, useTransform } from "@tanstack/react-form-nextjs";
 import { useStore } from "@tanstack/react-store";
-import { CheckCircle2, Key, Mail, XCircle } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { changePasswordAction } from "@/actions/account";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { CheckCircle2, Key, Mail, XCircle } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { changePasswordAction } from "@/actions/account";
+import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
 import { changePasswordFormOpts } from "@/lib/forms/update-account";
 

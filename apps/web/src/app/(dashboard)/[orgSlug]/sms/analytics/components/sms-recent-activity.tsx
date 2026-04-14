@@ -1,5 +1,13 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -9,8 +17,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Item,
   ItemContent,
@@ -20,7 +26,6 @@ import {
   ItemSeparator,
   ItemTitle,
 } from "@/components/ui/item";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSMSRecentActivity } from "../hooks/use-sms-analytics";
 

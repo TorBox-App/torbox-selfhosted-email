@@ -1,84 +1,14 @@
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import {
+  Button as BaseButton,
+  buttonVariants,
+} from "@wraps/ui/components/ui/button";
 import type * as React from "react";
-import { Spinner } from "@/components/ui/spinner";
-
-import { cn } from "@/lib/utils";
-
-const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2 has-[>svg]:px-3 md:h-9",
-        sm: "h-9 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5 md:h-8",
-        lg: "h-11 rounded-md px-6 has-[>svg]:px-4 md:h-10",
-        icon: "size-10 md:size-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
 
 function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  loading = false,
-  children,
-  disabled,
+  size = "touch",
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    loading?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
-
-  // When using asChild with loading, we can't render the spinner
-  // because Slot expects a single child. The consumer should handle
-  // the loading state in their child component.
-  if (asChild) {
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        data-slot="button"
-        disabled={disabled || loading}
-        {...props}
-      >
-        {children}
-      </Comp>
-    );
-  }
-
-  return (
-    <Comp
-      className={cn(buttonVariants({ variant, size, className }))}
-      data-slot="button"
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading && <Spinner />}
-      {children}
-    </Comp>
-  );
+}: React.ComponentProps<typeof BaseButton>) {
+  return <BaseButton size={size} {...props} />;
 }
 
 export { Button, buttonVariants };

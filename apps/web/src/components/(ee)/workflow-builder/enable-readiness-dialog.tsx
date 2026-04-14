@@ -2,6 +2,14 @@
 
 import type { Workflow } from "@wraps/db";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@wraps/ui/components/ui/dialog";
+import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
@@ -15,14 +23,6 @@ import {
   type ReadinessCheck,
 } from "@/actions/workflow-readiness";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { WorkflowNode } from "./use-workflow-store";
 import { useWorkflowStore } from "./use-workflow-store";
 

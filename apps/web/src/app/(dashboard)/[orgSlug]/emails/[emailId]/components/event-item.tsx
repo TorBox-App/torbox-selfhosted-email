@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Bot,
   Check,
@@ -12,7 +13,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isBotOpen } from "@/lib/email-bot-detection";
 

@@ -1,9 +1,5 @@
 "use client";
 
-import { CheckCircle2Icon, CopyIcon, TerminalIcon } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,7 +7,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { CheckCircle2Icon, CopyIcon, TerminalIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 type CliInstallStepProps = {
   onNext: () => void;

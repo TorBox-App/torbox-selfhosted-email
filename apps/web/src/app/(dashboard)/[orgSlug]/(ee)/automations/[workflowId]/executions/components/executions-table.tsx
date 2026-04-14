@@ -5,14 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, ListChecks } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
-import type { ExecutionWithContact } from "@/actions/workflows";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -20,7 +13,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import { ArrowLeft, ListChecks } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo } from "react";
+import type { ExecutionWithContact } from "@/actions/workflows";
+import { Button } from "@/components/ui/button";
 import {
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,

@@ -1,6 +1,21 @@
 "use client";
 
 import type { awsAccount } from "@wraps/db";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import type { InferSelectModel } from "drizzle-orm";
 import {
   AlertCircle,
@@ -16,23 +31,8 @@ import {
   removeWebhookSecretAction,
   saveWebhookSecretAction,
 } from "@/actions/aws-accounts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 
 type WebhookConfigurationProps = {
   account: InferSelectModel<typeof awsAccount>;

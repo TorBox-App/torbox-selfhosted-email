@@ -1,9 +1,14 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import { TrendingUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useTopPerformers } from "../hooks/use-analytics";
 
 export function TopPerformers({ orgSlug }: { orgSlug: string }) {

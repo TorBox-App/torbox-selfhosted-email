@@ -1,15 +1,15 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@wraps/ui/components/ui/select";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import type { NodeConfigProps } from "./index";
 
 export function WebhookConfig({ config, onChange }: NodeConfigProps) {

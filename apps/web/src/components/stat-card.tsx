@@ -1,8 +1,8 @@
 "use client";
 
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export type StatCardProps = {
   title: string;

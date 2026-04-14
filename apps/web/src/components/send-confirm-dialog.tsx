@@ -9,7 +9,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@wraps/ui/components/ui/alert-dialog";
 
 type SendConfirmDialogProps = {
   open: boolean;

@@ -1,6 +1,22 @@
 "use client";
 
 import type { EmailType, Template } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@wraps/ui/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   ArrowLeft,
   Cloud,
@@ -20,23 +36,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { type SaveStatus, SaveStatusIndicator } from "./save-status-indicator";
 import { SubjectEditDialog } from "./subject-edit-dialog";

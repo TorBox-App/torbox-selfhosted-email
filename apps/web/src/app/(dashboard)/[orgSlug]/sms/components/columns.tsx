@@ -1,6 +1,8 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   Ban,
   CheckCircle2,
@@ -9,8 +11,6 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import type { SMSListItem, SMSStatus } from "../types";
 

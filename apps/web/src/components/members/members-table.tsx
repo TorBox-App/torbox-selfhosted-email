@@ -1,11 +1,5 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
-import { MoreVertical, Shield, Trash2, UserCog, Users } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import type { MemberWithUser } from "@/actions/members";
-import { removeMember } from "@/actions/members";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,10 +9,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@wraps/ui/components/ui/alert-dialog";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@wraps/ui/components/ui/avatar";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +23,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -34,7 +31,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import { MoreVertical, Shield, Trash2, UserCog, Users } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { MemberWithUser } from "@/actions/members";
+import { removeMember } from "@/actions/members";
+import { Button } from "@/components/ui/button";
 import { ChangeRoleDialog } from "./change-role-dialog";
 
 type MembersTableProps = {

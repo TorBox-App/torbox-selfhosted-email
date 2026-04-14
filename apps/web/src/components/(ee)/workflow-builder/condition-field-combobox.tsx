@@ -1,9 +1,5 @@
 "use client";
 
-import { Check, ChevronsUpDown, Pencil } from "lucide-react";
-import { useId, useState } from "react";
-
-import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -11,13 +7,16 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
+} from "@wraps/ui/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@wraps/ui/components/ui/popover";
+import { Check, ChevronsUpDown, Pencil } from "lucide-react";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { usePropertyKeys } from "@/hooks/use-property-keys";
 import { CONDITION_FIELD_GROUPS, getFieldLabel } from "@/lib/condition-fields";
 import { cn } from "@/lib/utils";

@@ -3,30 +3,30 @@
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
-import { Loader2, Lock, Plus, Trash2, X } from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { getContact } from "@/actions/contacts";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
+} from "@wraps/ui/components/ui/select";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@wraps/ui/components/ui/sheet";
+import { Loader2, Lock, Plus, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { getContact } from "@/actions/contacts";
+import { Button } from "@/components/ui/button";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   type ContactStatus,
   type ContactWithMeta,

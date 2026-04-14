@@ -1,5 +1,21 @@
 "use client";
 
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
 import {
   CheckCircle2,
   Code2,
@@ -10,18 +26,7 @@ import {
   Mail,
   Sparkles,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useArchivedEmail } from "@/hooks/use-archived-email";
 
 type EmailArchiveViewerProps = {

@@ -1,5 +1,14 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import {
   AlertCircle,
   CheckCircle,
@@ -7,15 +16,6 @@ import {
   FileCheck,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
 
 function getRegistrationStatusInfo(status: string): {

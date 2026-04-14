@@ -1,6 +1,12 @@
 "use client";
 
 import type { WorkflowStepExecutionRecord } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   CheckCircle,
   CircleDot,
@@ -16,12 +22,6 @@ import {
   Zap,
 } from "lucide-react";
 import type { StepEngagement } from "@/actions/workflows";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { STEP_STATUS_COLORS, STEP_STATUS_LABELS } from "@/lib/workflows";
 

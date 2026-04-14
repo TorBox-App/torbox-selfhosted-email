@@ -2,10 +2,6 @@
 
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
-import { Code2, FileCode, FileText, Import, Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +9,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+} from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { Code2, FileCode, FileText, Import, Loader2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { parseHTMLToTipTap } from "@/lib/serializers/html-to-tiptap";
 import { parseReactEmailToTipTap } from "@/lib/serializers/react-email-to-tiptap";
 

@@ -1,15 +1,15 @@
 "use client";
 
 import type { awsAccountPermission, member, user } from "@wraps/db";
-import type { InferSelectModel } from "drizzle-orm";
-import { PermissionsList } from "@/components/permissions-list";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import type { InferSelectModel } from "drizzle-orm";
+import { PermissionsList } from "@/components/permissions-list";
 
 type PermissionWithUser = InferSelectModel<typeof awsAccountPermission> & {
   user: InferSelectModel<typeof user>;

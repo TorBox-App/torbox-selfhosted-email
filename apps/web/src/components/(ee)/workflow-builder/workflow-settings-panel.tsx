@@ -1,6 +1,15 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import { Loader2, RefreshCw, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -14,15 +23,6 @@ import {
 import { updateWorkflow } from "@/actions/workflows";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useWorkflowStore } from "./use-workflow-store";
 
 type AwsAccount = {

@@ -1,10 +1,10 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { redirect } from "next/navigation";
 import { AWSAccountList } from "@/components/aws-account-list";
 import { ConnectAccountSection } from "@/components/connect-account-section";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type AWSAccountsPageProps = {

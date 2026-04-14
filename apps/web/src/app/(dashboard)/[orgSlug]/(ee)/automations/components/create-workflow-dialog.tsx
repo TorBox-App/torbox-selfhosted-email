@@ -1,10 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { createWorkflow } from "@/actions/workflows";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +7,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { createWorkflow } from "@/actions/workflows";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 type CreateWorkflowDialogProps = {
   open: boolean;

@@ -2,19 +2,15 @@
 
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import type { Editor } from "@tiptap/react";
-import { Check, Monitor, Settings, Smartphone, Tablet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { Label } from "@wraps/ui/components/ui/label";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -22,8 +18,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+} from "@wraps/ui/components/ui/sheet";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@wraps/ui/components/ui/toggle-group";
+import { Check, Monitor, Settings, Smartphone, Tablet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 import { useTemplateActions, useTestData } from "@/stores/template-store";
 

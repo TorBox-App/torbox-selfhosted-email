@@ -1,6 +1,19 @@
 "use client";
 
 import type { awsAccount } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
 import type { InferSelectModel } from "drizzle-orm";
 import {
   Archive,
@@ -26,20 +39,7 @@ import {
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { scanAWSAccountFeatures } from "@/actions/aws-accounts";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 type AccountFeaturesProps = {

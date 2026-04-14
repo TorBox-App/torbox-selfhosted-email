@@ -3,6 +3,11 @@
 import MonacoEditor from "@monaco-editor/react";
 import type { Template } from "@wraps/db";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
+import {
   AlertTriangle,
   Check,
   Copy,
@@ -14,11 +19,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { compileTemplate } from "@/lib/compile-template";
 import { buildSaveSourcePayload } from "@/lib/save-source-payload";
 import { configureMonacoForReactEmail } from "./monaco-react-email";

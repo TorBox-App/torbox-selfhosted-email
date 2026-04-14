@@ -1,6 +1,15 @@
 "use client";
 
 import type { CascadeChannelConfig } from "@wraps/db";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import {
   ArrowDown,
   ArrowUp,
@@ -11,18 +20,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useTemplates } from "@/hooks/use-template-queries";
 import { amountUnitToSeconds, parseDurationToAmountUnit } from "@/lib/utils";
 import { useWorkflowStore } from "../use-workflow-store";

@@ -1,6 +1,15 @@
 "use client";
 
 import type { Editor } from "@tiptap/react";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@wraps/ui/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   Braces,
   Code2,
@@ -13,16 +22,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "../brand-kit-selector";

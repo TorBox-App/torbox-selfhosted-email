@@ -1,14 +1,14 @@
 "use client";
 
-import { Globe, Loader2, Plus, Upload } from "lucide-react";
-import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@wraps/ui/components/ui/popover";
+import { Globe, Loader2, Plus, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export type ImageAttachment = {

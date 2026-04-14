@@ -4,6 +4,14 @@ import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
+import { Avatar, AvatarFallback } from "@wraps/ui/components/ui/avatar";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import { DefaultChatTransport } from "ai";
 import {
   AlertTriangle,
@@ -21,20 +29,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ui/reasoning";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { extractWorkflowFromMessage } from "@/lib/ai/workflow-parser";

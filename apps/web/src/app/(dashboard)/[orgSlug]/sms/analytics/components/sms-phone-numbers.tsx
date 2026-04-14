@@ -1,15 +1,15 @@
 "use client";
 
-import { AlertCircle, MessageSquareMore, Phone } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@wraps/ui/components/ui/card";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { AlertCircle, MessageSquareMore, Phone } from "lucide-react";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
 
 function formatPhoneNumber(phone: string): string {

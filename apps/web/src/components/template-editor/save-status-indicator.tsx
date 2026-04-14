@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Cloud, CloudOff, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@wraps/ui/components/ui/tooltip";
+import { Check, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export type SaveStatus = "saved" | "saving" | "unsaved" | "offline" | "error";

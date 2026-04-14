@@ -3,6 +3,20 @@
 import MonacoEditor from "@monaco-editor/react";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor as TiptapEditor } from "@tiptap/react";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   AlertTriangle,
   Check,
@@ -17,21 +31,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { parseHTMLToTipTap } from "@/lib/serializers/html-to-tiptap";
 import { parseReactEmailToTipTap } from "@/lib/serializers/react-email-to-tiptap";
 import {

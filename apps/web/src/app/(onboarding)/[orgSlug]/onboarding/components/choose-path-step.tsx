@@ -1,13 +1,13 @@
-import { CloudIcon, PencilRulerIcon } from "lucide-react";
-import posthog from "posthog-js";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { CloudIcon, PencilRulerIcon } from "lucide-react";
+import posthog from "posthog-js";
+import { Button } from "@/components/ui/button";
 
 type ChoosePathStepProps = {
   onNext: () => void;

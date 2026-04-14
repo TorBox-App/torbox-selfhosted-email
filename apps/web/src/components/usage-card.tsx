@@ -1,16 +1,16 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+} from "@wraps/ui/components/ui/card";
+import { Progress } from "@wraps/ui/components/ui/progress";
+import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type UsageData = {

@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,13 +16,6 @@ import {
   type PendingInvitation,
 } from "@/actions/members";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { InvitationsTable } from "./invitations-table";
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { MembersTable } from "./members-table";

@@ -2,18 +2,19 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { topicSettings } from "@wraps/db";
-import { ExternalLink, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { ExternalLink, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -21,7 +22,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   generatePreferenceCenterPreviewUrl,
   updateTopicSettings,

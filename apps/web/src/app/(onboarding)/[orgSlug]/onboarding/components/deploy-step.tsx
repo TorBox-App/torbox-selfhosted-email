@@ -1,9 +1,5 @@
 "use client";
 
-import { CheckCircle2Icon, CopyIcon, ServerIcon } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,8 +7,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@wraps/ui/components/ui/card";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
+import { CheckCircle2Icon, CopyIcon, ServerIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 type DeployStepProps = {
   onNext: () => void;

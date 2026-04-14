@@ -3,11 +3,6 @@
 import { useForm } from "@tanstack/react-form";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
-import { Loader2, Package, Save } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +10,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { Loader2, Package, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -23,14 +31,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useCreateBlock } from "@/hooks/use-block-queries";
 
 type SaveBlockModalProps = {

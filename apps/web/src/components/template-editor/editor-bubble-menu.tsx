@@ -4,6 +4,17 @@ import { BubbleMenuPlugin } from "@tiptap/extension-bubble-menu";
 import { NodeSelection } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@wraps/ui/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
+import {
   AlignCenter,
   AlignJustify,
   AlignLeft,
@@ -23,17 +34,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type EditorBubbleMenuProps = {

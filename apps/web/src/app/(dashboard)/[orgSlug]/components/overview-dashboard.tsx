@@ -1,17 +1,20 @@
 "use client";
 
-import * as React from "react";
-import { EventUsageBanner } from "@/components/event-usage-banner";
-import { EventUsageCard } from "@/components/event-usage-card";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+} from "@wraps/ui/components/ui/select";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@wraps/ui/components/ui/toggle-group";
+import * as React from "react";
+import { EventUsageBanner } from "@/components/event-usage-banner";
+import { EventUsageCard } from "@/components/event-usage-card";
 import { getHistoryRetentionDays, getPlan } from "@/lib/plans";
 import { useProductsStore } from "@/stores/products-store";
 import type { RecentItem, SetupStatus } from "../page";

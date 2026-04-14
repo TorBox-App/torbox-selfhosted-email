@@ -2,6 +2,18 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { topicSettings } from "@wraps/db";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@wraps/ui/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -10,21 +22,12 @@ import { z } from "zod";
 import { TemplateSelector } from "@/components/template-editor/template-selector";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Field,
   FieldContent,
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { updateTopicSettings } from "../actions";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;

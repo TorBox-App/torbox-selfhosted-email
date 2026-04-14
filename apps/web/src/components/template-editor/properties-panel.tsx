@@ -3,6 +3,22 @@
 import { NodeSelection } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@wraps/ui/components/ui/collapsible";
+import { Label } from "@wraps/ui/components/ui/label";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@wraps/ui/components/ui/select";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { Slider } from "@wraps/ui/components/ui/slider";
+import {
   ChevronDown,
   Layout,
   Link2,
@@ -11,23 +27,7 @@ import {
   Type,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import {
   borderRadiusPresets,
   fontSizePresets,

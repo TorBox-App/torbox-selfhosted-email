@@ -1,5 +1,12 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   CheckCircle2Icon,
   GlobeIcon,
@@ -7,8 +14,6 @@ import {
   MailIcon,
   ServerIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SetupStatus } from "../page";
 
 type InfrastructureStatusCardProps = {

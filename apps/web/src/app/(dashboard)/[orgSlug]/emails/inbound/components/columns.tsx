@@ -1,8 +1,8 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import { Paperclip, ShieldAlert, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import type { InboundEmailListItem } from "../types";
 

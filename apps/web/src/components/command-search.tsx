@@ -1,6 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@wraps/ui/components/ui/dialog";
 import { Command as CommandPrimitive } from "cmdk";
 import {
   BarChart3,
@@ -38,7 +43,6 @@ import {
 } from "react";
 import { getContact } from "@/actions/contacts";
 import type { SearchEntityType, SearchResultItem } from "@/actions/search";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useActiveOrganization } from "@/contexts/organization-context";
 import { useCommandSearch } from "@/hooks/use-command-search";
 import { useRecentItems } from "@/hooks/use-recent-items";

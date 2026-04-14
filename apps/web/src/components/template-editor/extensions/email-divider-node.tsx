@@ -7,14 +7,14 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
-import { Settings2 } from "lucide-react";
-import { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@wraps/ui/components/ui/popover";
+import { Settings2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   PresetSelector,
   paddingPresets,

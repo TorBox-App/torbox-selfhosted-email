@@ -1,16 +1,16 @@
 "use client";
 
-import { Plus, Trash2, X } from "lucide-react";
-import { useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
+import { Plus, Trash2, X } from "lucide-react";
+import { useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   CONTACT_STATUS_OPTIONS,
   createEmptyFilter,

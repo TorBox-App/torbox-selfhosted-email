@@ -1,20 +1,19 @@
 "use client";
 
-import { ChevronRight, type LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo } from "react";
-
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@wraps/ui/components/ui/collapsible";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from "@wraps/ui/components/ui/hover-card";
+import { ChevronRight, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   SidebarGroup,
   SidebarMenu,

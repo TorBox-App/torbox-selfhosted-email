@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardAction,
@@ -9,23 +7,28 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@wraps/ui/components/ui/chart";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+} from "@wraps/ui/components/ui/select";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@wraps/ui/components/ui/toggle-group";
+import * as React from "react";
+import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmailChartData } from "../analytics/hooks/use-analytics";
 

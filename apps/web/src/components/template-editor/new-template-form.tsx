@@ -1,6 +1,8 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { Mail, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -15,8 +17,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useCreateTemplate } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
 

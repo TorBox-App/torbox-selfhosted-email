@@ -1,13 +1,13 @@
 "use client";
 
 import type { awsAccountPermission, member, user } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import type { InferSelectModel } from "drizzle-orm";
 import { useState } from "react";
 import { toast } from "sonner";
 import { revokeAccessAction } from "@/actions/permissions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 type PermissionWithUser = InferSelectModel<typeof awsAccountPermission> & {
   user: InferSelectModel<typeof user>;

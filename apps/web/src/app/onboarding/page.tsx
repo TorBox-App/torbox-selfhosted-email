@@ -1,10 +1,5 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
-import Loader from "@/components/loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+} from "@wraps/ui/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -24,7 +18,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
+import Loader from "@/components/loader";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 export default function OnboardingPage() {

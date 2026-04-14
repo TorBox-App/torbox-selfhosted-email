@@ -1,23 +1,23 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Eye, MoreHorizontal, User } from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@wraps/ui/components/ui/tooltip";
+import { ArrowUpDown, Eye, MoreHorizontal, User } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import type { EventWithContact } from "@/lib/events";
 import { formatRelativeTime } from "@/lib/utils";
 

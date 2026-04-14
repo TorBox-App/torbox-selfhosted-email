@@ -1,13 +1,18 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { member, organization } from "@wraps/db/schema/auth";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Metadata for the landing page
 export const metadata: Metadata = {

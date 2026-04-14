@@ -1,15 +1,15 @@
 "use client";
 
-import { AlertCircle, DollarSign } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@wraps/ui/components/ui/card";
+import { Progress } from "@wraps/ui/components/ui/progress";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { AlertCircle, DollarSign } from "lucide-react";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
 
 function formatCurrency(amount: number): string {

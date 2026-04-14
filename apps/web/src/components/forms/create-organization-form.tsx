@@ -1,12 +1,12 @@
 "use client";
 
+import { Label } from "@wraps/ui/components/ui/label";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useState } from "react";
 import { createOrganizationAction } from "@/actions/organizations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { generateSlug } from "@/lib/utils/slug";
 
 type CreateOrganizationFormProps = {

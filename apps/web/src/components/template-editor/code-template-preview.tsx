@@ -1,8 +1,11 @@
 "use client";
 
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@wraps/ui/components/ui/toggle-group";
 import { Monitor, Smartphone, Tablet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type DeviceType = "desktop" | "tablet" | "mobile";
 

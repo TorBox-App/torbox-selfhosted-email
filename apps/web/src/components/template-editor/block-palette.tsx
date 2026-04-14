@@ -4,6 +4,12 @@ import { useDraggable } from "@dnd-kit/core";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@wraps/ui/components/ui/hover-card";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import {
   Braces,
   Circle,
   Code,
@@ -30,12 +36,6 @@ import {
   User,
 } from "lucide-react";
 import { memo, useMemo } from "react";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { ALL_BLOCK_EXAMPLES } from "@/lib/ai/block-examples";
 import {

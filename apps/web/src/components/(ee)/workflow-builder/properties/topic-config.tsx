@@ -1,13 +1,13 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
 import { useWorkflowData } from "../workflow-data-context";
 import type { NodeConfigProps } from "./index";
 

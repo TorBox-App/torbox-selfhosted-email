@@ -1,9 +1,5 @@
 "use client";
 
-import { Laptop, Loader2, LogOut, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { UAParser } from "ua-parser-js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,15 +9,19 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+} from "@wraps/ui/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { Laptop, Loader2, LogOut, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { UAParser } from "ua-parser-js";
+import { Button } from "@/components/ui/button";
 import { authClient, useSession } from "@/lib/auth-client";
 
 type ActiveSession = {

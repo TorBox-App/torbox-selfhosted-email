@@ -1,13 +1,13 @@
 "use client";
 
-import { useOnViewportChange } from "@xyflow/react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@wraps/ui/components/ui/popover";
+import { useOnViewportChange } from "@xyflow/react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { getConditionSummary } from "../lib/condition-summary";
 import { useWorkflowStore } from "../use-workflow-store";
 

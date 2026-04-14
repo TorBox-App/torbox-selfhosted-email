@@ -1,9 +1,6 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useEffect } from "react";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +8,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { useEffect } from "react";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -20,7 +21,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 const templateNameSchema = z.object({
   name: z

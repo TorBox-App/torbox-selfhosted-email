@@ -1,8 +1,13 @@
 "use client";
 
 import type { topicSettings } from "@wraps/db";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
 import { useQueryState } from "nuqs";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TopicWithMeta } from "@/lib/topics";
 import { DoubleOptInSettings } from "./double-opt-in-settings";
 import { PreferenceCenterSettings } from "./preference-center-settings";

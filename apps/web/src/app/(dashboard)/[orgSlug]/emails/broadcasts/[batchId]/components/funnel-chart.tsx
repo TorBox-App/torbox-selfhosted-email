@@ -1,7 +1,7 @@
 "use client";
 
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   calculateFunnelStages,
   type FunnelStage,

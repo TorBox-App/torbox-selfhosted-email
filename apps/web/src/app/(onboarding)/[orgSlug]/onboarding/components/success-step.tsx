@@ -1,6 +1,19 @@
 "use client";
 
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@wraps/ui/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import {
   AlertTriangleIcon,
   BookOpenIcon,
   CheckCircle2Icon,
@@ -9,16 +22,7 @@ import {
   TerminalIcon,
 } from "lucide-react";
 import posthog from "posthog-js";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 function NeedHelpBlock() {
   return (

@@ -1,26 +1,23 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { Bell, Mail, MessageSquare } from "lucide-react";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+} from "@wraps/ui/components/ui/card";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from "@wraps/ui/components/ui/select";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -28,7 +25,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { Bell, Mail, MessageSquare } from "lucide-react";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 
 const notificationsFormSchema = z.object({
   emailSecurity: z.boolean(),

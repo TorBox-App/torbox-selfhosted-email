@@ -1,6 +1,5 @@
 "use client";
 
-import { BookOpen, Calendar, CircleHelp, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
+import { BookOpen, Calendar, CircleHelp, Mail } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuButton,

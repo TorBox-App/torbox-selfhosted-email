@@ -2,6 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { EmailType, Template } from "@wraps/db";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@wraps/ui/components/ui/resizable";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,11 +14,6 @@ import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import {
   templateKeys,
   useDeleteTemplate,

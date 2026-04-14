@@ -1,9 +1,6 @@
 "use client";
 
 import type { EmailType } from "@wraps/db";
-import { Info } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,17 +8,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
+} from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@wraps/ui/components/ui/radio-group";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@wraps/ui/components/ui/tooltip";
+import { Info } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type SubjectEditDialogProps = {
   isOpen: boolean;

@@ -2,13 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { Editor } from "@tiptap/react";
-import { escape as escapeHTML } from "he";
-import { AlertCircle, Loader2, Mail, Send, User } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +10,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@wraps/ui/components/ui/tabs";
+import { escape as escapeHTML } from "he";
+import { AlertCircle, Loader2, Mail, Send, User } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -24,9 +32,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/lib/auth-client";
 import { renderForPreview } from "@/lib/handlebars";
 

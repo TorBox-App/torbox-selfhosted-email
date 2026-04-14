@@ -3,17 +3,17 @@
 import { mergeForm, useForm } from "@tanstack/react-form";
 import { initialFormState, useTransform } from "@tanstack/react-form-nextjs";
 import { useStore } from "@tanstack/react-store";
-import { useActionState, useEffect } from "react";
-import { z } from "zod";
-import { updateAccountAction } from "@/actions/account";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { useActionState, useEffect } from "react";
+import { z } from "zod";
+import { updateAccountAction } from "@/actions/account";
+import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";

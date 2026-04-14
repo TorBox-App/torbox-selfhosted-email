@@ -7,13 +7,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Eye, EyeOff, MoreHorizontal, Plus, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
-import { createTopic, deleteTopic, updateTopic } from "@/actions/topics";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +15,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -36,7 +30,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { Eye, EyeOff, MoreHorizontal, Plus, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { createTopic, deleteTopic, updateTopic } from "@/actions/topics";
+import { Button } from "@/components/ui/button";
 import type { TopicWithMeta } from "@/lib/topics";
 import { TopicFormDialog } from "./topic-form-dialog";
 import { TopicSubscribersSheet } from "./topic-subscribers-sheet";

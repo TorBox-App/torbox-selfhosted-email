@@ -1,14 +1,14 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmailArchiveViewer } from "@/components/email-archive-viewer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { isOpenEventBot } from "@/lib/email-bot-detection";
 import { getOrganizationWithMembership } from "@/lib/organization";

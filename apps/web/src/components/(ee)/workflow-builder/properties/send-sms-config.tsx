@@ -1,7 +1,7 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import type { NodeConfigProps } from "./index";
 
 export function SendSmsConfig({ config, onChange }: NodeConfigProps) {

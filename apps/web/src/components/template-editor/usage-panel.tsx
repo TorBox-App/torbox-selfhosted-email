@@ -1,27 +1,22 @@
 "use client";
 
 import type { Template } from "@wraps/db";
-import { Check, Copy, ExternalLink, Info } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
+} from "@wraps/ui/components/ui/input-group";
+import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -29,7 +24,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { Check, Copy, ExternalLink, Info } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 import { cn } from "@/lib/utils";
 
 type UsagePanelProps = {

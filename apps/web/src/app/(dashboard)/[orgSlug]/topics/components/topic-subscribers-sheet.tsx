@@ -1,23 +1,18 @@
 "use client";
 
-import { ChevronRight, Code2, Pencil, Trash2, Users } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { getTopicSubscribers } from "@/actions/topics";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
+} from "@wraps/ui/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@wraps/ui/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -25,7 +20,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { ChevronRight, Code2, Pencil, Trash2, Users } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { getTopicSubscribers } from "@/actions/topics";
+import { Button } from "@/components/ui/button";
+import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 import type { TopicWithMeta } from "@/lib/topics";
 
 type Subscriber = {

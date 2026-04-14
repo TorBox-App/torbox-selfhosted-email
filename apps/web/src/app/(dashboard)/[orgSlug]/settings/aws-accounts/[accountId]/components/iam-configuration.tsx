@@ -1,17 +1,17 @@
 "use client";
 
 import type { awsAccount } from "@wraps/db";
-import type { InferSelectModel } from "drizzle-orm";
-import { Copy } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import type { InferSelectModel } from "drizzle-orm";
+import { Copy } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 type IAMConfigurationProps = {
   account: InferSelectModel<typeof awsAccount>;

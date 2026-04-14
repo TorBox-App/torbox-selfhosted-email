@@ -6,16 +6,16 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
-import { Eye, Pencil } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+} from "@wraps/ui/components/ui/popover";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
+import { Eye, Pencil } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { DragHandle } from "./drag-handle";
 
 export type EmailPreviewAttributes = {

@@ -1,14 +1,14 @@
 "use client";
 
-import { Keyboard } from "lucide-react";
-import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@wraps/ui/components/ui/dialog";
+import { Keyboard } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type ShortcutItem = {
   keys: string[];

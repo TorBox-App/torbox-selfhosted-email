@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import { Building2, CheckCircle2, Mail, Shield, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -8,15 +17,6 @@ import { toast } from "sonner";
 import type { InvitationDetails } from "@/actions/invitations";
 import { acceptInvitation } from "@/actions/invitations";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { authClient, useSession } from "@/lib/auth-client";
 
 type AcceptInvitationFormProps = {

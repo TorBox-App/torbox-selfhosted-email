@@ -1,24 +1,24 @@
-import { UserPlus } from "lucide-react";
-import posthog from "posthog-js";
-import { useState } from "react";
-import { toast } from "sonner";
-import { inviteMember } from "@/actions/members";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+} from "@wraps/ui/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
+import { UserPlus } from "lucide-react";
+import posthog from "posthog-js";
+import { useState } from "react";
+import { toast } from "sonner";
+import { inviteMember } from "@/actions/members";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type InviteMembersStepProps = {
   onNext: () => void;

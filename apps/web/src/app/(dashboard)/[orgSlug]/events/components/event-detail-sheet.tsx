@@ -1,18 +1,18 @@
 "use client";
 
-import { format } from "date-fns";
-import { Copy, ExternalLink, User, Zap } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@wraps/ui/components/ui/sheet";
+import { format } from "date-fns";
+import { Copy, ExternalLink, User, Zap } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { EventWithContact } from "@/lib/events";
 
 type EventDetailSheetProps = {

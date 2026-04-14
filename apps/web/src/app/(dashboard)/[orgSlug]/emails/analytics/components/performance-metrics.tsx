@@ -1,8 +1,13 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Progress } from "@wraps/ui/components/ui/progress";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import { useAnalyticsOverview } from "../hooks/use-analytics";
 
 type MetricRowProps = {

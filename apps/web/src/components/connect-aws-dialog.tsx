@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -9,7 +8,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@wraps/ui/components/ui/alert-dialog";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 type ConnectAwsDialogProps = {

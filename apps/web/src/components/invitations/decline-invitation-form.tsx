@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { AlertCircle, Building2, Mail, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -8,14 +16,6 @@ import { toast } from "sonner";
 import type { InvitationDetails } from "@/actions/invitations";
 import { declineInvitation } from "@/actions/invitations";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 type DeclineInvitationFormProps = {
   invitation: InvitationDetails;

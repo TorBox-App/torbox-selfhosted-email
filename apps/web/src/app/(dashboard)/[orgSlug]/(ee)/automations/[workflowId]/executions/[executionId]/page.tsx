@@ -1,12 +1,17 @@
 import { auth } from "@wraps/auth";
 import type { WorkflowStep } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { ArrowLeft, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getWorkflowExecution } from "@/actions/workflows";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import {
   EXECUTION_STATUS_COLORS,

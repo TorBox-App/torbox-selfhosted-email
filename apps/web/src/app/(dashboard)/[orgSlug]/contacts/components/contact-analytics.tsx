@@ -1,11 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-  type ContactAnalytics as ContactAnalyticsData,
-  getContactAnalytics,
-} from "@/actions/contacts-analytics";
 import {
   Card,
   CardAction,
@@ -13,22 +7,31 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@wraps/ui/components/ui/chart";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+} from "@wraps/ui/components/ui/select";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@wraps/ui/components/ui/toggle-group";
+import * as React from "react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  type ContactAnalytics as ContactAnalyticsData,
+  getContactAnalytics,
+} from "@/actions/contacts-analytics";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const chartConfig = {

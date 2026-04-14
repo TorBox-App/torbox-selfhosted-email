@@ -1,6 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import { Sparkles, Zap } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
@@ -10,14 +18,6 @@ import { createFreeSubscription } from "@/actions/subscriptions";
 import Loader from "@/components/loader";
 import { PlanSelector } from "@/components/plan-selector";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
 import {
   getDisplayPrice,

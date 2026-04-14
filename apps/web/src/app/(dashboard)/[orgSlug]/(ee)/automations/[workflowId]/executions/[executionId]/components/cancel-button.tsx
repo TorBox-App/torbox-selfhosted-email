@@ -1,10 +1,5 @@
 "use client";
 
-import { Ban } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { cancelWorkflowExecution } from "@/actions/workflows";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +10,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@wraps/ui/components/ui/alert-dialog";
+import { Ban } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { cancelWorkflowExecution } from "@/actions/workflows";
 import { Button } from "@/components/ui/button";
 
 export function CancelButton({

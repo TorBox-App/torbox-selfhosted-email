@@ -2,6 +2,14 @@
 
 import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@wraps/ui/components/ui/command";
 import { Braces, X } from "lucide-react";
 import type React from "react";
 import {
@@ -13,14 +21,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 export type VariableItem = {

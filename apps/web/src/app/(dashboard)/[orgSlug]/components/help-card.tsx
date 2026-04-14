@@ -1,6 +1,6 @@
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { BookOpenIcon, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 export const CAL_BOOKING_URL = "https://cal.com/wraps/get-started-with-wraps";
 

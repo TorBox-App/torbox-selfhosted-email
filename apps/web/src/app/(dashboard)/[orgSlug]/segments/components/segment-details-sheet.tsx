@@ -1,18 +1,13 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
-import { Pencil, RefreshCw, Trash2, Users } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
-import { previewSegment } from "@/actions/segments";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@wraps/ui/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -20,7 +15,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import { Pencil, RefreshCw, Trash2, Users } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { previewSegment } from "@/actions/segments";
+import { Button } from "@/components/ui/button";
 import {
   FILTER_FIELDS,
   type FilterCondition,

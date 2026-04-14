@@ -3,6 +3,15 @@
 import { mergeForm, useForm } from "@tanstack/react-form";
 import { initialFormState, useTransform } from "@tanstack/react-form-nextjs";
 import { useStore } from "@tanstack/react-store";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
+import { Label } from "@wraps/ui/components/ui/label";
+import { Switch } from "@wraps/ui/components/ui/switch";
 import { Smartphone } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import {
@@ -10,17 +19,8 @@ import {
   updateSecuritySettingsAction,
 } from "@/actions/account";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { securitySettingsFormOpts } from "@/lib/forms/update-account";
 
 export function LoginAlerts() {

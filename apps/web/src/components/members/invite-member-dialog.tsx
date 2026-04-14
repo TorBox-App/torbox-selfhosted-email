@@ -1,10 +1,5 @@
 "use client";
 
-import posthog from "posthog-js";
-import { useState } from "react";
-import { toast } from "sonner";
-import { inviteMember } from "@/actions/members";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +7,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
+import posthog from "posthog-js";
+import { useState } from "react";
+import { toast } from "sonner";
+import { inviteMember } from "@/actions/members";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type InviteMemberDialogProps = {
   organizationId: string;

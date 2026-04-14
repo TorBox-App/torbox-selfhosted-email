@@ -1,5 +1,11 @@
 "use client";
 
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -23,12 +29,6 @@ import {
   type TimelineEventType,
 } from "@/actions/contacts-analytics";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type ContactTimelineProps = {

@@ -1,9 +1,9 @@
 import type { awsAccount } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import type { InferSelectModel } from "drizzle-orm";
 import { ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 type AWSAccountListProps = {
   accounts: Array<

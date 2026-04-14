@@ -1,3 +1,5 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import {
   ArrowUpRight,
   Clock5,
@@ -7,8 +9,6 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const performanceMetrics = [

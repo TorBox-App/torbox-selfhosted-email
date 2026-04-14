@@ -1,5 +1,6 @@
 "use client";
 
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   KeyRound,
   Mail,
@@ -15,7 +16,6 @@ import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useCreateTemplate } from "@/hooks/use-template-queries";
 import { compileTemplate } from "@/lib/compile-template";
 import {

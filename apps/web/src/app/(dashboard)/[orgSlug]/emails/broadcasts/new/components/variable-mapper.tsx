@@ -1,26 +1,38 @@
 "use client";
 
-import { AlertCircle, Check, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
-import { extractTemplateVariables } from "@/actions/batch";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@wraps/ui/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+} from "@wraps/ui/components/ui/collapsible";
+import { Label } from "@wraps/ui/components/ui/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@wraps/ui/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@wraps/ui/components/ui/select";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { AlertCircle, Check, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { extractTemplateVariables } from "@/actions/batch";
+import { Input } from "@/components/ui/input";
 import type { ExtractedVariable, VariableMapping } from "@/lib/batch";
 import { cn } from "@/lib/utils";
 

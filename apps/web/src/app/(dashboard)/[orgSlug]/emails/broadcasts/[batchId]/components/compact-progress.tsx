@@ -1,11 +1,11 @@
 "use client";
 
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Progress } from "@wraps/ui/components/ui/progress";
 import { CheckCircle, Clock, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { BATCH_STATUS_COLORS, BATCH_STATUS_LABELS } from "@/lib/batch";
 
 type CompactProgressProps = {

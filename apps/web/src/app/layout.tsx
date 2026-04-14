@@ -3,11 +3,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+import { Toaster } from "@wraps/ui/components/ui/sonner";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/contexts/query-client-context";
 import { SessionProvider } from "@/contexts/session-context";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";

@@ -1,6 +1,13 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@wraps/ui/components/ui/tooltip";
 import { useReactFlow } from "@xyflow/react";
 import {
   AlertCircle,
@@ -31,14 +38,7 @@ import {
   updateWorkflow,
 } from "@/actions/workflows";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useRequireAws } from "@/hooks/use-require-aws";
 import { EnableReadinessDialog } from "./enable-readiness-dialog";
 import { getLayoutedNodes } from "./layout/auto-layout";

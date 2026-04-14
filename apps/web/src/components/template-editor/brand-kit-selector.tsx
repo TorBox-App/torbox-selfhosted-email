@@ -1,21 +1,21 @@
 "use client";
 
-import { ExternalLink, Palette, Plus } from "lucide-react";
-import Link from "next/link";
-import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@wraps/ui/components/ui/tooltip";
+import { ExternalLink, Palette, Plus } from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";

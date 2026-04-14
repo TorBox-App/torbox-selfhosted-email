@@ -1,12 +1,11 @@
 "use client";
 
 import type { WorkflowStepConfig } from "@wraps/db";
+import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
+import { Label } from "@wraps/ui/components/ui/label";
 import { AlertCircle, Settings, Trash2, X } from "lucide-react";
-
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { configComponents } from "./properties";
 import { CascadeConfig } from "./properties/cascade-config";
 import { TopicConfig } from "./properties/topic-config";

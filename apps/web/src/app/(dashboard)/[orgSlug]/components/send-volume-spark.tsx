@@ -1,16 +1,21 @@
 "use client";
 
-import { ArrowRightIcon, MailIcon, MessageSquareIcon } from "lucide-react";
-import Link from "next/link";
-import { Area, AreaChart } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@wraps/ui/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@wraps/ui/components/ui/chart";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { ArrowRightIcon, MailIcon, MessageSquareIcon } from "lucide-react";
+import Link from "next/link";
+import { Area, AreaChart } from "recharts";
 import { useProductsStore } from "@/stores/products-store";
 import { useVolumeData } from "../emails/analytics/hooks/use-analytics";
 import { useSMSVolumeData } from "../sms/analytics/hooks/use-sms-analytics";
