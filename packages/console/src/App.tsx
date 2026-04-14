@@ -1,3 +1,16 @@
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from "@wraps/ui/components/ui/breadcrumb";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@wraps/ui/components/ui/sidebar";
+import { Toaster } from "@wraps/ui/components/ui/sonner";
 import * as React from "react";
 import {
   BrowserRouter,
@@ -20,19 +33,6 @@ import { SMSLogs } from "@/components/SMSLogs";
 import { SMSMetrics } from "@/components/SMSMetrics";
 import { SMSSettings } from "@/components/SMSSettings";
 import { ThemeProvider } from "@/components/theme-provider";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/sonner";
 
 function AppContent() {
   const location = useLocation();

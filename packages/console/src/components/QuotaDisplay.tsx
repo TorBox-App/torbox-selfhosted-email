@@ -1,12 +1,12 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+} from "@wraps/ui/components/ui/card";
+import { Progress } from "@wraps/ui/components/ui/progress";
 
 type QuotaDisplayProps = {
   quota: {

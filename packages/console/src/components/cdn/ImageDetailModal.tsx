@@ -1,3 +1,7 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Dialog, DialogContent } from "@wraps/ui/components/ui/dialog";
+import { Separator } from "@wraps/ui/components/ui/separator";
 import { format } from "date-fns";
 import {
   Download,
@@ -6,10 +10,6 @@ import {
   FileImage,
   X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { CopyButton } from "./CopyButton";
 import { DeleteButton } from "./DeleteButton";
 import { StarButton } from "./StarButton";

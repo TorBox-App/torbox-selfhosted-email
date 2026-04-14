@@ -1,12 +1,12 @@
-import { Activity, Mail, TrendingUp, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { Activity, Mail, TrendingUp, Users } from "lucide-react";
 import { useSSE } from "@/hooks/useSSE";
 import { MetricsChart } from "./MetricsChart";
 import { QuotaDisplay } from "./QuotaDisplay";

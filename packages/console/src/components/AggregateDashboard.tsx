@@ -1,11 +1,11 @@
-import { Activity, Layers, Mail, MessageSquare, Wifi } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
+import { Activity, Layers, Mail, MessageSquare, Wifi } from "lucide-react";
 
 export function AggregateDashboard() {
   return (

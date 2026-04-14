@@ -1,15 +1,15 @@
-import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
-import type React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@wraps/ui/components/ui/card";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
+import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
+import type React from "react";
 import { CopyButton } from "./CopyButton";
 import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";

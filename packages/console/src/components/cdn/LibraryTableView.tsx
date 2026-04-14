@@ -1,14 +1,11 @@
-import { formatDistanceToNow } from "date-fns";
-import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
-import type React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
+import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card";
+} from "@wraps/ui/components/ui/hover-card";
 import {
   Table,
   TableBody,
@@ -16,7 +13,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@wraps/ui/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
+import type React from "react";
 import { CopyButton } from "./CopyButton";
 import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";

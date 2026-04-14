@@ -1,14 +1,8 @@
 import {
-  AlertCircle,
-  CheckCircle2,
-  Globe,
-  MessageSquare,
-  Phone,
-  Shield,
-} from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@wraps/ui/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,18 +12,28 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@wraps/ui/components/ui/alert-dialog";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@wraps/ui/components/ui/card";
+import { Separator } from "@wraps/ui/components/ui/separator";
+import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Globe,
+  MessageSquare,
+  Phone,
+  Shield,
+} from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
 
 type SMSSettings = {
   phoneNumber?: {

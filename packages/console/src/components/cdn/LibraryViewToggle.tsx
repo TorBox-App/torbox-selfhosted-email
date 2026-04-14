@@ -1,5 +1,5 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import { LayoutGrid, Table } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { ViewMode } from "./types";
 
 type LibraryViewToggleProps = {

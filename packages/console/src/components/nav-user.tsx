@@ -1,9 +1,10 @@
 "use client";
 
-import { useTheme } from "@wraps/ui/hooks/use-theme";
-import { ChevronsUpDown, Moon, Sun, X } from "lucide-react";
-import * as React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@wraps/ui/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,13 +12,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@wraps/ui/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from "@wraps/ui/components/ui/sidebar";
+import { useTheme } from "@wraps/ui/hooks/use-theme";
+import { ChevronsUpDown, Moon, Sun, X } from "lucide-react";
+import * as React from "react";
 
 type UserInfo = {
   accountId: string;

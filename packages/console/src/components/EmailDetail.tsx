@@ -1,22 +1,22 @@
-import { ArrowLeft, Ban, Check, Clock, Mail, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { CopyButton } from "@/components/cdn";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
+} from "@wraps/ui/components/ui/input-group";
+import { ArrowLeft, Ban, Check, Clock, Mail, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { CopyButton } from "@/components/cdn";
 import { EmailArchiveViewer } from "./EmailArchiveViewer";
 
 type EmailEvent = {

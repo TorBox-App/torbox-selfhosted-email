@@ -1,7 +1,7 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import { Check, Copy, Loader2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type CopyButtonProps = {

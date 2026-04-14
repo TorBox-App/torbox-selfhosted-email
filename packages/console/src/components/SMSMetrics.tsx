@@ -1,20 +1,20 @@
-import { Activity, MessageSquare, Phone, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@wraps/ui/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@wraps/ui/components/ui/select";
+import { Activity, MessageSquare, Phone, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type SMSMetricsData = {
   metrics: {

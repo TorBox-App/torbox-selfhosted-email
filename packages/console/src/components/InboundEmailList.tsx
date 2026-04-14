@@ -1,3 +1,13 @@
+import { Badge } from "@wraps/ui/components/ui/badge";
+import { Input } from "@wraps/ui/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@wraps/ui/components/ui/table";
 import {
   ArrowRight,
   Paperclip,
@@ -7,16 +17,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type InboundEmailAddress = {
   address: string;

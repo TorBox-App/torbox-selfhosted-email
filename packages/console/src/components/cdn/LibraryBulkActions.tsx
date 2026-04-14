@@ -1,5 +1,5 @@
+import { Button } from "@wraps/ui/components/ui/button";
 import { Star, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type LibraryBulkActionsProps = {
   selectedCount: number;

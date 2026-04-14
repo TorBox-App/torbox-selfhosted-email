@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInput,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@wraps/ui/components/ui/sidebar";
 import { useTheme } from "@wraps/ui/hooks/use-theme";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -14,19 +27,6 @@ import {
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NavUser } from "@/components/nav-user";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInput,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 
 type SubItem = {
   title: string;
