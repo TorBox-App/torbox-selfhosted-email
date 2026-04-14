@@ -1,5 +1,6 @@
 "use client";
 
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import {
   Card,
   CardAction,
@@ -24,12 +25,9 @@ import {
   SelectValue,
 } from "@wraps/ui/components/ui/select";
 import { Skeleton } from "@wraps/ui/components/ui/skeleton";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@wraps/ui/components/ui/toggle-group";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSMSVolumeData } from "../hooks/use-sms-analytics";
 
@@ -79,18 +77,36 @@ export function SMSDeliverabilityChart({ orgSlug }: { orgSlug: string }) {
           </span>
           <span className="@[540px]/card:hidden">Delivery status</span>
         </CardDescription>
-        <CardAction>
-          <ToggleGroup
-            className="*:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex hidden"
-            onValueChange={setTimeRange}
-            type="single"
-            value={timeRange}
-            variant="outline"
-          >
-            <ToggleGroupItem value="90d">90 days</ToggleGroupItem>
-            <ToggleGroupItem value="30d">30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">7 days</ToggleGroupItem>
-          </ToggleGroup>
+        <CardAction className="self-center">
+          <ButtonGroup className="@[767px]/card:flex hidden">
+            <Button
+              aria-pressed={timeRange === "90d"}
+              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+              onClick={() => setTimeRange("90d")}
+              size="sm"
+              variant="outline"
+            >
+              90 days
+            </Button>
+            <Button
+              aria-pressed={timeRange === "30d"}
+              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+              onClick={() => setTimeRange("30d")}
+              size="sm"
+              variant="outline"
+            >
+              30 days
+            </Button>
+            <Button
+              aria-pressed={timeRange === "7d"}
+              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+              onClick={() => setTimeRange("7d")}
+              size="sm"
+              variant="outline"
+            >
+              7 days
+            </Button>
+          </ButtonGroup>
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
               aria-label="Select time range"

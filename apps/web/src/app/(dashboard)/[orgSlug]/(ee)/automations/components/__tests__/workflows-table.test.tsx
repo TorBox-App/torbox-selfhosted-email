@@ -44,7 +44,7 @@ vi.mock("../create-workflow-dialog", () => ({
   CreateWorkflowDialog: () => null,
 }));
 
-vi.mock("@/components/ui/dropdown-menu", () => ({
+vi.mock("@wraps/ui/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => (
     <div>{children}</div>
   ),

@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "./styles/globals.css";
 
+@source "../../ui/src";
+
 /* Console-specific overrides and customizations can go here */
 
 /* Force sidebar spacer to have correct width based on state */

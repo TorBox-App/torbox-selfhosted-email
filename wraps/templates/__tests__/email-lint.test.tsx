@@ -1,5 +1,5 @@
-import { createElement } from "react";
 import { lintComponent } from "@email-lint/react-email";
+import { createElement } from "react";
 
 const templates = import.meta.glob<{
   default: (props: Record<string, unknown>) => React.ReactElement;
@@ -22,7 +22,7 @@ for (const [path, mod] of Object.entries(templates)) {
         .filter((d) => d.severity === "error")
         .map(
           (d) =>
-            `  ${d.title}: ${d.message} (${d.variants.length}/${d.familySize} variants) [${d.family}]`,
+            `  ${d.title}: ${d.message} (${d.variants.length}/${d.familySize} variants) [${d.family}]`
         )
         .join("\n");
       throw new Error(`${result.errorCount} error(s):\n${errors}`);

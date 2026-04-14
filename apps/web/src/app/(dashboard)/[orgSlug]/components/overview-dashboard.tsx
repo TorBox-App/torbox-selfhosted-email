@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@wraps/ui/components/ui/badge";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import {
   Select,
   SelectContent,
@@ -8,13 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@wraps/ui/components/ui/select";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@wraps/ui/components/ui/toggle-group";
 import * as React from "react";
 import { EventUsageBanner } from "@/components/event-usage-banner";
 import { EventUsageCard } from "@/components/event-usage-card";
+import { Button } from "@/components/ui/button";
 import { getHistoryRetentionDays, getPlan } from "@/lib/plans";
 import { useProductsStore } from "@/stores/products-store";
 import type { RecentItem, SetupStatus } from "../page";
@@ -75,23 +73,20 @@ export function OverviewDashboard({
       <EventUsageBanner orgSlug={orgSlug} />
       <div className="space-y-6 px-4 lg:px-6 py-6">
         <div className="flex items-center justify-end gap-3">
-          <ToggleGroup
-            className="*:data-[slot=toggle-group-item]:!px-4 hidden sm:flex"
-            onValueChange={(v) => {
-              if (v) {
-                setTimeRange(v as TimeRange);
-              }
-            }}
-            type="single"
-            value={timeRange}
-            variant="outline"
-          >
+          <ButtonGroup className="hidden sm:flex">
             {availableOptions.map((opt) => (
-              <ToggleGroupItem key={opt.value} value={opt.value}>
+              <Button
+                aria-pressed={timeRange === opt.value}
+                className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+                key={opt.value}
+                onClick={() => setTimeRange(opt.value)}
+                size="sm"
+                variant="outline"
+              >
                 {opt.label}
-              </ToggleGroupItem>
+              </Button>
             ))}
-          </ToggleGroup>
+          </ButtonGroup>
           <Select
             onValueChange={(v) => setTimeRange(v as TimeRange)}
             value={timeRange}

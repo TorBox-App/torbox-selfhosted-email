@@ -768,7 +768,7 @@ export function ContactsTable({
               <Button
                 className="rounded-l-none focus:z-10"
                 onClick={() => setCreateDialogOpen(true)}
-                size="sm"
+                size="default"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Contact
