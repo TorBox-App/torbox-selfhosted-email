@@ -57,7 +57,6 @@ sst-env.d.ts
 
 # Project notes (keep local)
 ai-notes/
-notes/
 
 # AI tools
 .claude/
