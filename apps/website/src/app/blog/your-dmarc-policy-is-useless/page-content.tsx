@@ -115,7 +115,10 @@ export const EmailHeaderScroller = () => {
           <div className="py-1" key={i}>
             {headers.map((h, j) => (
               <div className="py-0.5" key={`${i}-${j}`}>
-                <span className="text-muted-foreground">
+                <span
+                  className="text-muted-foreground"
+                  suppressHydrationWarning
+                >
                   {new Date(
                     Date.now() - (i * headers.length + j) * 1000
                   ).toISOString()}

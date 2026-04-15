@@ -333,6 +333,20 @@ export const ComposeViewer = () => {
     "Hi Alice,\n\nJust wanted to follow up on our conversation yesterday.\n\nBest,\nYou"
   );
   const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  const [messageHeaders, setMessageHeaders] = useState<{
+    date: string;
+    id: string;
+  }>({
+    date: "",
+    id: "example-id",
+  });
+
+  useEffect(() => {
+    setMessageHeaders({
+      date: new Date().toUTCString(),
+      id: String(Date.now()),
+    });
+  }, []);
 
   const highlightClass = (field: string) =>
     activeHighlight === field
@@ -350,13 +364,13 @@ To: ${to}
 Subject: ${subject}
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Date: ${new Date().toUTCString()}
-Message-ID: <${Date.now()}@yourcompany.com>
+Date: ${messageHeaders.date}
+Message-ID: <${messageHeaders.id}@yourcompany.com>
 
 ${body}
 .
 QUIT`;
-  }, [to, from, subject, body]);
+  }, [to, from, subject, body, messageHeaders]);
 
   return (
     <Card className="overflow-hidden p-0">

@@ -688,6 +688,7 @@ We are committed to maintaining excellent deliverability and sender reputation. 
                 : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
             onClick={handleCopy}
+            type="button"
           >
             {copied ? (
               <>
@@ -700,9 +701,40 @@ We are committed to maintaining excellent deliverability and sender reputation. 
             )}
           </button>
         </div>
-        <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border bg-background p-4 font-mono text-foreground/80 text-sm leading-relaxed">
-          {template}
-        </pre>
+        <div
+          aria-label={copied ? "Copied to clipboard" : "Click to copy template"}
+          className="group relative w-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          onClick={handleCopy}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCopy();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border bg-background p-4 font-mono text-foreground/80 text-sm leading-relaxed transition-colors group-hover:border-primary/50 group-hover:bg-accent/30">
+            {template}
+          </pre>
+          <span
+            className={`pointer-events-none absolute top-2 right-2 flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs transition-opacity ${
+              copied
+                ? "bg-green-500/20 text-green-600 opacity-100 dark:text-green-400"
+                : "bg-background/90 text-muted-foreground opacity-0 group-hover:opacity-100"
+            }`}
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Click to copy
+              </>
+            )}
+          </span>
+        </div>
         <div
           className={`mt-3 flex items-center gap-2 font-mono text-sm ${wordCount >= 400 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
         >
@@ -1013,6 +1045,36 @@ export default function SandboxGuideContent() {
             field in the SES console. Don't be afraid to make it longer —
             detailed requests dramatically outperform brief ones.
           </InfoCard>
+        </section>
+
+        {/* Mid-page CTA — reached after users have their template in hand */}
+        <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-6 md:p-8">
+          <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+            <div className="flex-1">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-primary text-xs uppercase tracking-wider">
+                <Zap className="h-3 w-3" /> One command
+              </div>
+              <h3 className="mb-2 font-bold text-xl md:text-2xl">
+                Or skip the wait entirely
+              </h3>
+              <p className="text-muted-foreground">
+                Wraps deploys production-ready SES (DKIM, SPF, DMARC, bounce
+                handling, SNS, suppression) to your AWS account in minutes.
+                Still your AWS, still $0.10/1K — just no boilerplate.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
+              <Button asChild size="lg">
+                <Link href="/docs/quickstart/email">
+                  Deploy in one command
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/tools/ses-calculator">See your cost</Link>
+              </Button>
+            </div>
+          </div>
         </section>
 
         {/* After Submission */}

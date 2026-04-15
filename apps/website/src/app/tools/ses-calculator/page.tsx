@@ -142,6 +142,43 @@ export default function SESCalculatorPage() {
               <SESCalculatorPageContent />
             </Suspense>
 
+            {/* Mid-page CTA — high-intent users who just saw their number */}
+            <section className="mt-12">
+              <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background">
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+                    <div className="flex-1">
+                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-primary text-xs uppercase tracking-wider">
+                        One command
+                      </div>
+                      <h3 className="mb-2 font-bold text-2xl tracking-tight">
+                        Deploy this exact setup in minutes
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Wraps provisions every service in your breakdown —
+                        Lambda, SQS, DynamoDB, EventBridge — to your AWS
+                        account. Still AWS pricing, still your data, no
+                        boilerplate.
+                      </p>
+                    </div>
+                    <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto md:flex-col lg:flex-row">
+                      <Button asChild size="lg">
+                        <a href="https://app.wraps.dev/auth?mode=signup">
+                          Start free
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                        <Link href="/docs/quickstart/email">
+                          See quickstart
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
             {/* Educational Content Section */}
             <section className="mt-16 space-y-8">
               <div className="text-center">
