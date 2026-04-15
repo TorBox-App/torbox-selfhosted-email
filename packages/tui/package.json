@@ -10,12 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.750.0",
-    "@aws-sdk/client-dynamodb": "^3.750.0",
-    "@aws-sdk/client-ses": "^3.750.0",
-    "@aws-sdk/client-sesv2": "^3.750.0",
-    "@aws-sdk/client-sts": "^3.750.0",
-    "@aws-sdk/util-dynamodb": "^3.750.0",
+    "@aws-sdk/client-cloudwatch-logs": "catalog:",
+    "@aws-sdk/client-dynamodb": "catalog:",
+    "@aws-sdk/client-ses": "catalog:",
+    "@aws-sdk/client-sesv2": "catalog:",
+    "@aws-sdk/client-sts": "catalog:",
+    "@aws-sdk/util-dynamodb": "catalog:",
     "@opentui/core": "latest",
     "@opentui/react": "latest",
     "react": "^19.0.0"

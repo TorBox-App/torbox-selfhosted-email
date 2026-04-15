@@ -4,6 +4,29 @@ packages:
   - 'wraps'
 
 catalog:
+  '@aws-sdk/client-acm': 3.1030.0
+  '@aws-sdk/client-cloudformation': 3.1030.0
+  '@aws-sdk/client-cloudfront': 3.1030.0
+  '@aws-sdk/client-cloudwatch': 3.1030.0
+  '@aws-sdk/client-cloudwatch-logs': 3.1030.0
+  '@aws-sdk/client-dynamodb': 3.1030.0
+  '@aws-sdk/client-eventbridge': 3.1030.0
+  '@aws-sdk/client-iam': 3.1030.0
+  '@aws-sdk/client-lambda': 3.1030.0
+  '@aws-sdk/client-mailmanager': 3.1030.0
+  '@aws-sdk/client-pinpoint-sms-voice-v2': 3.1030.0
+  '@aws-sdk/client-route-53': 3.1030.0
+  '@aws-sdk/client-s3': 3.1030.0
+  '@aws-sdk/client-scheduler': 3.1030.0
+  '@aws-sdk/client-ses': 3.1030.0
+  '@aws-sdk/client-sesv2': 3.1030.0
+  '@aws-sdk/client-sns': 3.1030.0
+  '@aws-sdk/client-sqs': 3.1030.0
+  '@aws-sdk/client-sts': 3.1030.0
+  '@aws-sdk/credential-providers': 3.1030.0
+  '@aws-sdk/lib-dynamodb': 3.1030.0
+  '@aws-sdk/s3-request-presigner': 3.1030.0
+  '@aws-sdk/util-dynamodb': 3.996.2
   better-auth: 1.5.5
   dotenv: ^17.2.2
   stripe: ^19.1.0
