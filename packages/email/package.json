@@ -1,5 +1,6 @@
 {
   "name": "@wraps/email",
+  "private": true,
   "type": "module",
   "exports": {
     ".": {

@@ -1,6 +1,7 @@
 {
   "name": "@wraps/template-render",
   "version": "0.1.0",
+  "private": true,
   "description": "Canonical template rendering for Wraps. One place for Handlebars substitution so the dashboard, API, workers, and CLI all render the same way.",
   "type": "module",
   "exports": {
