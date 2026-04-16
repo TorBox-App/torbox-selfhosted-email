@@ -1715,6 +1715,78 @@ describe("handleWebhook", () => {
     expect(mockDnsLookup).toHaveBeenCalledWith("internal.example.com");
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it("returns error without throwing when fetch times out (AbortError)", async () => {
+    const abortError = new Error("The operation was aborted");
+    abortError.name = "AbortError";
+    mockFetch.mockRejectedValue(abortError);
+
+    const result = await handleWebhook(
+      {
+        type: "webhook",
+        url: "https://example.com/hook",
+        method: "POST",
+      } as never,
+      makeContact() as never,
+      makeExecution() as never
+    );
+
+    expect(result.action).toBe("next");
+    expect(result.data).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining("aborted"),
+      })
+    );
+    expect(result.data.status).toBeUndefined();
+    expect(mockFetch).toHaveBeenCalled();
+  });
+
+  it("returns {status, ok} in data for non-2xx responses", async () => {
+    mockFetch.mockResolvedValue({ status: 500, ok: false });
+
+    const result = await handleWebhook(
+      {
+        type: "webhook",
+        url: "https://example.com/hook",
+        method: "POST",
+      } as never,
+      makeContact() as never,
+      makeExecution() as never
+    );
+
+    expect(result.action).toBe("next");
+    expect(result.data).toEqual(
+      expect.objectContaining({
+        status: 500,
+        ok: false,
+      })
+    );
+    expect(result.data.error).toBeUndefined();
+  });
+
+  it("returns error without throwing on network error (ECONNRESET)", async () => {
+    const networkError = new Error("read ECONNRESET");
+    (networkError as { code?: string }).code = "ECONNRESET";
+    mockFetch.mockRejectedValue(networkError);
+
+    const result = await handleWebhook(
+      {
+        type: "webhook",
+        url: "https://example.com/hook",
+        method: "POST",
+      } as never,
+      makeContact() as never,
+      makeExecution() as never
+    );
+
+    expect(result.action).toBe("next");
+    expect(result.data).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining("ECONNRESET"),
+      })
+    );
+    expect(result.data.status).toBeUndefined();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
