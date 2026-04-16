@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc -b",
+    "test": "vitest run",
     "deploy:vercel": "vercel --prod",
     "deploy:vercel:preview": "vercel"
   },
@@ -83,6 +84,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "tw-animate-css": "^1.3.6",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

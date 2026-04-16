@@ -11,6 +11,7 @@ import {
 import {
   ArrowRight,
   Blocks,
+  Bot,
   FileCode2,
   HardDrive,
   Mail,
@@ -68,6 +69,19 @@ const cliGuides = [
     href: "/docs/quickstart/email/templates",
     icon: FileCode2,
     features: ["React Email", "Hot-reload preview", "Push to SES", "Brand kit"],
+  },
+  {
+    title: "Agents",
+    description:
+      "Wire Wraps into your agent's tool calls. Send from your AWS account, no stored credentials, MCP-ready.",
+    href: "/docs/quickstart/email/agents",
+    icon: Bot,
+    features: [
+      "Agent tool signature",
+      "MCP via Context7",
+      "Your AWS SES",
+      "@wraps.dev/email SDK",
+    ],
   },
 ];
 

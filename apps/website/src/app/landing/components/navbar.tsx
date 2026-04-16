@@ -65,6 +65,11 @@ const productItems = [
     description: "Receive and process emails in your AWS",
   },
   {
+    name: "Agents",
+    href: "/agents",
+    description: "Email infrastructure your agent owns",
+  },
+  {
     name: "Platform",
     href: "/platform",
     description: "Wraps Platform for templates & broadcasts",

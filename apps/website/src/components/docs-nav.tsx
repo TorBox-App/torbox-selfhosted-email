@@ -98,6 +98,7 @@ const navItems: NavSection[] = [
           { title: "Inbound", href: "/docs/quickstart/email/inbound" },
           { title: "Templates", href: "/docs/quickstart/email/templates" },
           { title: "Workflows", href: "/docs/quickstart/email/workflows" },
+          { title: "Agents", href: "/docs/quickstart/email/agents" },
         ],
       },
       {

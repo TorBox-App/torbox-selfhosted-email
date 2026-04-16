@@ -1,7 +1,15 @@
-import { Cloud, GitPullRequest, ShieldCheck, Users } from "lucide-react";
+import { Bot, Cloud, GitPullRequest, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
 import { FadeIn } from "./animations";
 
-const principles = [
+type Principle = {
+  icon: typeof GitPullRequest;
+  title: string;
+  description: string;
+  href?: string;
+};
+
+const principles: Principle[] = [
   {
     icon: GitPullRequest,
     title: "Code You Can Review",
@@ -25,6 +33,13 @@ const principles = [
     title: "Sends Through Your AWS",
     description:
       "Your SES. Your DynamoDB. Your domain reputation. Pay AWS directly. Leave anytime, keep everything.",
+  },
+  {
+    icon: Bot,
+    title: "Built for Agents Too",
+    href: "/agents",
+    description:
+      "Agents write TypeScript. They open PRs. They iterate in seconds. Wraps workflows are TypeScript files; templates are React components — your agent can ship what your team ships.",
   },
 ];
 
@@ -86,29 +101,42 @@ export function PrinciplesSection() {
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Principles Grid */}
         <FadeIn>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
             {principles.map((principle) => {
               const Icon = principle.icon;
+              const body = (
+                <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
+                  {/* Large background icon */}
+                  <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
+                    <Icon className="size-24 text-orange-500" />
+                  </div>
+
+                  {/* Small accent icon */}
+                  <div className="absolute left-4 top-4">
+                    <Icon className="size-5 text-orange-500" />
+                  </div>
+
+                  <h3 className="relative mb-1 font-semibold text-sm text-foreground/70">
+                    {principle.title}
+                  </h3>
+                  <p className="relative text-foreground/70 text-xs leading-relaxed">
+                    {principle.description}
+                  </p>
+                </div>
+              );
+
               return (
                 <div key={principle.title}>
-                  <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
-                    {/* Large background icon */}
-                    <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
-                      <Icon className="size-24 text-orange-500" />
-                    </div>
-
-                    {/* Small accent icon */}
-                    <div className="absolute left-4 top-4">
-                      <Icon className="size-5 text-orange-500" />
-                    </div>
-
-                    <h3 className="relative mb-1 font-semibold text-sm text-foreground/70">
-                      {principle.title}
-                    </h3>
-                    <p className="relative text-foreground/70 text-xs leading-relaxed">
-                      {principle.description}
-                    </p>
-                  </div>
+                  {principle.href ? (
+                    <Link
+                      className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
+                      href={principle.href}
+                    >
+                      {body}
+                    </Link>
+                  ) : (
+                    body
+                  )}
                 </div>
               );
             })}

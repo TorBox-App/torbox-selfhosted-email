@@ -67,6 +67,7 @@ await email.send({
 - [Express Guide](https://wraps.dev/docs/quickstart/email/express): Send email from Express
 - [Remix Guide](https://wraps.dev/docs/quickstart/email/remix): Send email from Remix
 - [Inbound Email](https://wraps.dev/docs/quickstart/email/inbound): Receive and process inbound email
+- [Agent Email Quickstart](https://wraps.dev/docs/quickstart/email/agents): Wire Wraps into agent tool calls; SES lives in your AWS, not ours
 - [Email SDK Reference](https://wraps.dev/docs/sdk-reference): @wraps.dev/email API
 - [SMS SDK Reference](https://wraps.dev/docs/sms-sdk-reference): @wraps.dev/sms API
 - [Platform SDK Reference](https://wraps.dev/docs/client-sdk-reference): @wraps.dev/client API
@@ -118,12 +119,14 @@ await email.send({
 - [Production Access](https://wraps.dev/docs/guides/production-access): Get SES production access
 - [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
 - [Migration](https://wraps.dev/docs/guides/migration): Migrate from other email providers
+- [Context7 (AI Docs)](https://wraps.dev/docs/guides/context7): Pipe current Wraps docs into Claude Code, Cursor, Windsurf, or any MCP-compatible editor
 
 ## Product Pages
 
 - [CLI](https://wraps.dev/cli): CLI product overview
 - [SMS](https://wraps.dev/sms): SMS product overview
 - [Inbound Email](https://wraps.dev/inbound): Inbound email receiving
+- [Agents](https://wraps.dev/agents): Email infrastructure your agent owns
 - [Why Wraps](https://wraps.dev/why-wraps): Value proposition and differentiators
 
 ## Compare
