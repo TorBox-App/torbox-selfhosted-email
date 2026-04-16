@@ -62,7 +62,7 @@
     "next-themes": "^0.4.6",
     "nuqs": "2.7.3",
     "posthog-js": "1.367.0",
-    "posthog-node": "^5.29.2",
+    "posthog-node": "catalog:",
     "radix-ui": "1.4.3",
     "react": "19.2.4",
     "react-day-picker": "^9.8.1",
@@ -75,7 +75,7 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
     "vaul": "^1.1.2",
-    "zod": "^4.0.15",
+    "zod": "catalog:",
     "zustand": "^5.0.7"
   },
   "devDependencies": {

@@ -27,9 +27,17 @@ catalog:
   '@aws-sdk/lib-dynamodb': 3.1030.0
   '@aws-sdk/s3-request-presigner': 3.1030.0
   '@aws-sdk/util-dynamodb': 3.996.2
+  '@react-email/components': 1.0.8
+  '@react-email/render': 2.0.4
+  '@vitest/coverage-v8': 4.0.18
   better-auth: 1.5.5
   dotenv: ^17.2.2
+  drizzle-orm: ^0.45.2
+  handlebars: 4.7.9
+  posthog-node: ^5.29.2
   stripe: ^19.1.0
   tsdown: ^0.15.5
+  tsup: ^8.5.1
   typescript: ^5.9.3
+  vitest: 4.0.18
   zod: ^4.1.12

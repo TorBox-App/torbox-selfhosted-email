@@ -79,7 +79,7 @@
     "@clack/prompts": "^0.11.0",
     "@pulumi/aws": "^7.15.0",
     "@pulumi/pulumi": "^3.216.0",
-    "@react-email/render": "2.0.4",
+    "@react-email/render": "catalog:",
     "better-auth": "catalog:",
     "conf": "^15.1.0",
     "cosmiconfig": "^9.0.0",
@@ -102,15 +102,15 @@
     "@types/node": "^20.11.0",
     "@types/react": "19.2.4",
     "@types/uuid": "^10.0.0",
-    "@vitest/coverage-v8": "4.0.7",
+    "@vitest/coverage-v8": "catalog:",
     "@wraps/core": "workspace:*",
     "@wraps/email-check": "workspace:*",
     "aws-sdk-client-mock": "4.1.0",
     "aws-sdk-client-mock-vitest": "7.0.1",
-    "tsup": "^8.0.1",
+    "tsup": "catalog:",
     "tsx": "4.20.6",
     "typescript": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20.0.0"

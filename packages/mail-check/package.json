@@ -33,9 +33,9 @@
     "@wraps/email-check": "workspace:*",
     "@types/node": "^20.11.0",
     "picocolors": "^1.1.1",
-    "tsup": "^8.0.1",
+    "tsup": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20.0.0"

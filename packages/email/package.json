@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"
@@ -26,7 +26,7 @@
     "@aws-sdk/client-ses": "catalog:",
     "@aws-sdk/client-sesv2": "catalog:",
     "@aws-sdk/client-sts": "catalog:",
-    "@react-email/render": "2.0.4",
+    "@react-email/render": "catalog:",
     "@vercel/oidc-aws-credentials-provider": "3.0.4",
     "@wraps.dev/email": "^0.5.1",
     "@wraps/db": "workspace:*",

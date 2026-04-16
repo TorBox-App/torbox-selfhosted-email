@@ -55,13 +55,13 @@
     "@aws-sdk/lib-dynamodb": "catalog:",
     "@smithy/node-http-handler": "^4.4.14",
     "@types/mailparser": "^3.4.5",
-    "@vitest/coverage-v8": "^4.0.7",
+    "@vitest/coverage-v8": "catalog:",
     "esbuild": "^0.24.2",
     "mailparser": "^3.9.3",
-    "tsup": "^8.5.1",
+    "tsup": "catalog:",
     "tsx": "^4.19.2",
-    "typescript": "^5.8.3",
-    "vitest": "^4.0.7"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "publishConfig": {
     "access": "public"

@@ -52,7 +52,7 @@
     "sst": "4.2.4",
     "turbo": "^2.2.3",
     "ultracite": "6.3.2",
-    "vitest": "4.0.18"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20",
@@ -118,7 +118,7 @@
     ]
   },
   "dependencies": {
-    "@react-email/components": "1.0.8",
+    "@react-email/components": "catalog:",
     "tailwindcss": "^4.1.17"
   }
 }

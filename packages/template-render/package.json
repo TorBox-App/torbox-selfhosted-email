@@ -17,12 +17,12 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"
   },
   "dependencies": {
-    "handlebars": "4.7.9"
+    "handlebars": "catalog:"
   }
 }

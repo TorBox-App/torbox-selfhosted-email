@@ -20,7 +20,7 @@
   "devDependencies": {
     "tsdown": "catalog:",
     "vite": "7.3.2",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"
@@ -36,8 +36,8 @@
     "@wraps/email": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.45.2",
-    "posthog-node": "^5.29.2",
+    "drizzle-orm": "catalog:",
+    "posthog-node": "catalog:",
     "stripe": "catalog:",
     "zod": "catalog:"
   }

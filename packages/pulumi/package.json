@@ -78,9 +78,9 @@
     "tsx": "^4.20.6",
     "@pulumi/pulumi": "^3.207.0",
     "@types/node": "^20.11.0",
-    "tsup": "^8.0.1",
+    "tsup": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -19,10 +19,10 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@vitest/coverage-v8": "4.0.7",
-    "tsup": "^8.0.1",
+    "@vitest/coverage-v8": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^4.0.7"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=20.0.0"
