@@ -165,7 +165,7 @@
     "@types/dagre": "0.7.54",
     "@types/he": "1.2.3",
     "@types/mailparser": "3.4.6",
-    "@types/node": "^20",
+    "@types/node": "catalog:",
     "@types/react": "19.2.4",
     "@types/react-dom": "19.2.4",
     "@vitest/coverage-v8": "catalog:",

@@ -99,7 +99,7 @@
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/mailparser": "3.4.6",
-    "@types/node": "^20.11.0",
+    "@types/node": "catalog:",
     "@types/react": "19.2.4",
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "catalog:",

@@ -77,7 +77,7 @@
     "@pulumi/command": "^1.0.3",
     "tsx": "^4.20.6",
     "@pulumi/pulumi": "^3.207.0",
-    "@types/node": "^20.11.0",
+    "@types/node": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
