@@ -100,7 +100,8 @@
       "ajv@<7": "^6.14.0",
       "ajv@>=8": "^8.18.0",
       "esbuild": "^0.25.0",
-      "@opentelemetry/api": "1.9.0"
+      "@opentelemetry/api": "1.9.0",
+      "protobufjs": "^7.5.5"
     },
     "packageExtensions": {},
     "onlyBuiltDependencies": [
