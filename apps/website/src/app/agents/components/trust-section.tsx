@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@wraps/ui/components/ui/card";
-import { AlertTriangle, Mail, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Mail, MessageSquare, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 const differentiators = [
   {
@@ -57,6 +58,40 @@ export function AgentsTrustSection() {
               Use Policy and will burn your sending domain. Don't ship that;
               neither will we.
             </p>
+          </div>
+        </div>
+
+        <div className="mb-10 rounded-lg border border-border bg-card p-5">
+          <div className="flex items-start gap-3">
+            <MessageSquare className="mt-0.5 size-4 shrink-0 text-orange-500" />
+            <div>
+              <p className="font-medium">Signed reply-to threading, now in beta.</p>
+              <p className="mt-1 text-muted-foreground text-sm">
+                When a recipient replies, your inbound Lambda verifies the{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Reply-To</code>{" "}
+                header against an HMAC secret your AWS account owns. The event
+                arrives with a <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">replyToken</code>{" "}
+                carrying a verified <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">conversationId</code>{" "}
+                — no database round-trip, no spoofable header chain. Wraps
+                never sees the secret.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link
+                  className="inline-flex items-center gap-1 text-orange-500 text-sm underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
+                  href="/docs/guides/reply-threading"
+                >
+                  Guide
+                  <ArrowRight className="size-3" />
+                </Link>
+                <Link
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground underline decoration-muted-foreground/30 underline-offset-4 hover:text-foreground hover:decoration-muted-foreground/60"
+                  href="/blog/signed-reply-threading"
+                >
+                  Read the writeup
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
