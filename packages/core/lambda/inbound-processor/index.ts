@@ -8,9 +8,16 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import type { Context, S3Event } from "aws-lambda";
 import { simpleParser } from "mailparser";
+import {
+  type DecodedReplyToken,
+  decodeReplyToken,
+  type ReplyTokenStatus,
+  verifyReplyToken,
+} from "../../src/reply-token.js";
 
 const awsDefaults = {
   requestHandler: new NodeHttpHandler({
@@ -22,6 +29,7 @@ const awsDefaults = {
 
 const s3 = new S3Client(awsDefaults);
 const eventbridge = new EventBridgeClient(awsDefaults);
+const ssm = new SSMClient(awsDefaults);
 
 const BUCKET_NAME = process.env.BUCKET_NAME!;
 const INBOUND_EVENT_SOURCE =
@@ -29,6 +37,176 @@ const INBOUND_EVENT_SOURCE =
 
 /** Max HTML size in EventBridge detail (200KB) */
 const MAX_HTML_SIZE = 200 * 1024;
+
+type CachedSecret = {
+  kid: number;
+  current: Buffer;
+  previous?: Buffer;
+  /** kid of the `previous` secret. If absent, falls back to `kid - 1`. */
+  previousKid?: number;
+  fetchedAt: number;
+};
+
+const SECRET_CACHE_TTL_MS = 5 * 60 * 1000;
+const domainSecretCache = new Map<string, CachedSecret>();
+
+// Well-formed DNS label per RFC 1035: lowercase a-z, 0-9, hyphen (not at
+// start/end), 2+ labels separated by dots. Prevents SSM path injection via
+// malformed recipient hostnames.
+const DOMAIN_REGEX =
+  /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+function isValidDomain(domain: string): boolean {
+  if (!domain || domain.length > 253 || domain.includes("..")) {
+    return false;
+  }
+  return DOMAIN_REGEX.test(domain.toLowerCase());
+}
+
+type ReplyTokenEvent =
+  | {
+      conversationId: string;
+      sendId: string;
+      status: "valid";
+    }
+  | {
+      conversationId: null;
+      sendId: null;
+      status: Exclude<ReplyTokenStatus, "valid">;
+    };
+
+async function getReplySecretForDomain(
+  domain: string
+): Promise<CachedSecret | null> {
+  const prefix = process.env.REPLY_SECRET_PARAMETER_PREFIX;
+  if (!prefix) {
+    return null;
+  }
+  if (!isValidDomain(domain)) {
+    return null;
+  }
+  const now = Date.now();
+  const cached = domainSecretCache.get(domain);
+  if (cached && now - cached.fetchedAt < SECRET_CACHE_TTL_MS) {
+    return cached;
+  }
+  try {
+    const res = await ssm.send(
+      new GetParameterCommand({
+        Name: prefix + domain,
+        WithDecryption: true,
+      })
+    );
+    const value = res.Parameter?.Value;
+    if (!value) {
+      return null;
+    }
+    let parsed: {
+      kid: number;
+      current: string;
+      previous?: string;
+      previousKid?: number;
+    };
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return null;
+    }
+    if (
+      !parsed ||
+      typeof parsed.kid !== "number" ||
+      typeof parsed.current !== "string"
+    ) {
+      return null;
+    }
+    const entry: CachedSecret = {
+      kid: parsed.kid,
+      current: Buffer.from(parsed.current, "base64"),
+      previous:
+        typeof parsed.previous === "string"
+          ? Buffer.from(parsed.previous, "base64")
+          : undefined,
+      previousKid:
+        typeof parsed.previousKid === "number" ? parsed.previousKid : undefined,
+      fetchedAt: now,
+    };
+    domainSecretCache.set(domain, entry);
+    return entry;
+  } catch (error) {
+    const name = (error as { name?: string }).name;
+    if (name === "ParameterNotFound") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+type RecipientAddr = { address: string };
+
+function findReplyRecipient(
+  headers: Record<string, unknown>,
+  toAddresses: RecipientAddr[],
+  ccAddresses: RecipientAddr[]
+): { address: string; replyDomain: string; sendingDomain: string } | null {
+  const xOriginalTo =
+    typeof headers["x-original-to"] === "string"
+      ? (headers["x-original-to"] as string).trim()
+      : null;
+  const candidates: string[] = xOriginalTo
+    ? [xOriginalTo]
+    : [
+        ...toAddresses.map((a) => a.address),
+        ...ccAddresses.map((a) => a.address),
+      ];
+  for (const addr of candidates) {
+    if (!addr) {
+      continue;
+    }
+    const at = addr.lastIndexOf("@");
+    if (at < 1) {
+      continue;
+    }
+    const host = addr.slice(at + 1).toLowerCase();
+    if (host.startsWith("r.mail.")) {
+      return {
+        address: addr,
+        replyDomain: host,
+        sendingDomain: host.slice("r.mail.".length),
+      };
+    }
+  }
+  return null;
+}
+
+function buildSecretsMap(cached: CachedSecret): Record<number, Buffer> {
+  const out: Record<number, Buffer> = { [cached.kid]: cached.current };
+  if (cached.previous) {
+    const prevKid = cached.previousKid ?? cached.kid - 1;
+    out[prevKid] = cached.previous;
+  }
+  return out;
+}
+
+function detectAutoReply(headers: Record<string, unknown>): boolean {
+  const autoSubmitted =
+    typeof headers["auto-submitted"] === "string"
+      ? (headers["auto-submitted"] as string).toLowerCase()
+      : "";
+  if (autoSubmitted && autoSubmitted !== "no") {
+    return true;
+  }
+  const precedence =
+    typeof headers.precedence === "string"
+      ? (headers.precedence as string).toLowerCase()
+      : "";
+  if (precedence === "bulk" || precedence === "auto_reply") {
+    return true;
+  }
+  if ("x-autoreply" in headers || "x-autorespond" in headers) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Lambda handler for processing inbound emails from S3 (via SES Receipt Rule)
@@ -191,6 +369,15 @@ export async function handler(event: S3Event, context: Context) {
             }))
         : [];
 
+      const ccAddresses = parsed.cc
+        ? (Array.isArray(parsed.cc) ? parsed.cc : [parsed.cc])
+            .flatMap((addr) => ("value" in addr ? addr.value : [addr]))
+            .map((a) => ({
+              address: a.address || "",
+              name: a.name || "",
+            }))
+        : [];
+
       const fromAddress = parsed.from?.value?.[0]
         ? {
             address: parsed.from.value[0].address || "",
@@ -198,8 +385,73 @@ export async function handler(event: S3Event, context: Context) {
           }
         : { address: "", name: "" };
 
-      // Derive receiving domain from first to: address
-      const receivingDomain = toAddresses[0]?.address?.split("@")[1] || null;
+      // Prefer X-Original-To for recipient derivation (SES envelope),
+      // then fall back to scanning To + CC for r.mail.* recipients.
+      const replyRecipient = findReplyRecipient(
+        headers,
+        toAddresses,
+        ccAddresses
+      );
+
+      const receivingDomain =
+        replyRecipient?.replyDomain ||
+        toAddresses[0]?.address?.split("@")[1] ||
+        null;
+
+      let replyToken: ReplyTokenEvent | null = null;
+      let cacheHit = false;
+      const replyThreadingEnabled = Boolean(
+        process.env.REPLY_SECRET_PARAMETER_PREFIX
+      );
+      if (replyRecipient && replyThreadingEnabled) {
+        const localPart = replyRecipient.address.slice(
+          0,
+          replyRecipient.address.lastIndexOf("@")
+        );
+        const decoded: DecodedReplyToken | null = decodeReplyToken(localPart);
+        if (decoded) {
+          const beforeCache = domainSecretCache.get(
+            replyRecipient.sendingDomain
+          );
+          const cached = await getReplySecretForDomain(
+            replyRecipient.sendingDomain
+          );
+          cacheHit = beforeCache !== undefined && cached !== null;
+          if (cached) {
+            const verified = verifyReplyToken(
+              decoded,
+              buildSecretsMap(cached),
+              Math.floor(Date.now() / 1000)
+            );
+            replyToken =
+              verified.status === "valid"
+                ? {
+                    status: "valid",
+                    conversationId: verified.conversationId,
+                    sendId: verified.sendId,
+                  }
+                : {
+                    status: verified.status,
+                    conversationId: null,
+                    sendId: null,
+                  };
+          } else {
+            replyToken = {
+              status: "unknown-domain",
+              conversationId: null,
+              sendId: null,
+            };
+          }
+        } else {
+          replyToken = {
+            status: "malformed",
+            conversationId: null,
+            sendId: null,
+          };
+        }
+      }
+
+      const autoReply = detectAutoReply(headers);
 
       const parsedEmail = {
         emailId,
@@ -207,14 +459,7 @@ export async function handler(event: S3Event, context: Context) {
         receivingDomain,
         from: fromAddress,
         to: toAddresses,
-        cc: parsed.cc
-          ? (Array.isArray(parsed.cc) ? parsed.cc : [parsed.cc])
-              .flatMap((addr) => ("value" in addr ? addr.value : [addr]))
-              .map((a) => ({
-                address: a.address || "",
-                name: a.name || "",
-              }))
-          : [],
+        cc: ccAddresses,
         subject: parsed.subject || "",
         date: parsed.date?.toISOString() || new Date().toISOString(),
         html,
@@ -226,6 +471,8 @@ export async function handler(event: S3Event, context: Context) {
         virusVerdict,
         rawS3Key: s3Key,
         receivedAt: new Date().toISOString(),
+        replyToken,
+        autoReply,
       };
 
       // 7. Store parsed JSON at parsed/{emailId}.json
@@ -256,7 +503,13 @@ export async function handler(event: S3Event, context: Context) {
         })
       );
 
-      log("Published EventBridge event", { emailId });
+      log("Processed inbound", {
+        emailId,
+        sendingDomain: replyRecipient?.sendingDomain ?? null,
+        replyTokenStatus: replyToken?.status ?? null,
+        autoReply,
+        cacheHit,
+      });
     } catch (error) {
       logError("Error processing inbound email", error, { s3Key });
       // Re-throw to trigger Lambda retry / DLQ

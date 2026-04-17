@@ -137,6 +137,11 @@ const navItems: NavSection[] = [
         icon: Zap,
       },
       {
+        title: "Reply Threading",
+        href: "/docs/guides/reply-threading",
+        icon: Radio,
+      },
+      {
         title: "Templates Guide",
         href: "/docs/guides/templates",
         icon: FileCode2,

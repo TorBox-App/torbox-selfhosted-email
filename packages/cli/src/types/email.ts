@@ -132,6 +132,23 @@ export type WrapsEmailConfig = {
   // Inbound receiving domains (multi-domain support)
   inboundDomains?: InboundDomain[];
 
+  // Reply-threading signed-address feature: one SSM SecureString parameter
+  // per sending domain. `initialSecret` is transient (base64, supplied by
+  // the CLI, stripped from metadata after the first successful deploy).
+  replyThreading?: {
+    enabled: boolean;
+    domains: Array<{
+      domain: string;
+      parameterArn?: string;
+      parameterName?: string;
+      currentKid?: number;
+      previousKid?: number;
+      rotatedAt?: string;
+      createdAt?: string;
+      initialSecret?: string; // base64, transient — stripped after deploy
+    }>;
+  };
+
   // Additional domains managed via `wraps email domains add`
   additionalDomains?: AdditionalDomain[];
 
@@ -237,6 +254,12 @@ export type EmailStackOutputs = {
   inboundBucketArn?: string;
   inboundLambdaArn?: string;
   inboundReceivingDomain?: string;
+  // Reply-threading outputs: one SSM parameter per sending domain. Keyed by
+  // the sending domain (e.g., "support.foo.com"), not `r.mail.X`.
+  replySecrets?: Record<
+    string,
+    { parameterArn: string; parameterName: string }
+  >;
   // User webhook outputs
   userWebhookUrl?: string;
   userWebhookSecret?: string;
@@ -468,5 +491,53 @@ export type EmailInboundRemoveOptions = {
  */
 export type EmailInboundTestOptions = {
   region?: string;
+  json?: boolean;
+};
+
+/**
+ * Command options for email reply init
+ */
+export type EmailReplyInitOptions = {
+  region?: string;
+  domain?: string;
+  all?: boolean;
+  yes?: boolean;
+  json?: boolean;
+};
+
+/**
+ * Command options for email reply rotate
+ */
+export type EmailReplyRotateOptions = {
+  region?: string;
+  domain?: string;
+  yes?: boolean;
+  json?: boolean;
+};
+
+/**
+ * Command options for email reply status
+ */
+export type EmailReplyStatusOptions = {
+  region?: string;
+  json?: boolean;
+};
+
+/**
+ * Command options for email reply destroy
+ */
+export type EmailReplyDestroyOptions = {
+  region?: string;
+  domain?: string;
+  all?: boolean;
+  force?: boolean;
+  json?: boolean;
+};
+
+/**
+ * Command options for email reply decode (local-only)
+ */
+export type EmailReplyDecodeOptions = {
+  address?: string;
   json?: boolean;
 };

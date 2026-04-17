@@ -116,6 +116,7 @@ await email.send({
 - [Custom Events](https://wraps.dev/docs/guides/custom-events): Track and trigger on custom events
 - [Orchestration](https://wraps.dev/docs/guides/orchestration): Cross-channel cascades and advanced orchestration
 - [Webhooks](https://wraps.dev/docs/guides/webhooks): Webhook event delivery setup
+- [Reply Threading](https://wraps.dev/docs/guides/reply-threading): HMAC-signed reply-to addresses for verified conversation threading on inbound email
 - [Production Access](https://wraps.dev/docs/guides/production-access): Get SES production access
 - [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
 - [Migration](https://wraps.dev/docs/guides/migration): Migrate from other email providers

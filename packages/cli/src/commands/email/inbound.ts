@@ -298,7 +298,15 @@ export async function inboundInit(
     );
     progress.stop();
 
-    dnsProvider = await promptDNSProvider(domain, availableProviders);
+    if (options.yes || isJsonMode()) {
+      // Non-interactive: auto-pick first detected provider, else manual.
+      const first = availableProviders.find(
+        (p) => p.provider !== "manual" && p.detected
+      );
+      dnsProvider = first?.provider ?? "manual";
+    } else {
+      dnsProvider = await promptDNSProvider(domain, availableProviders);
+    }
   }
 
   if (dnsProvider !== "manual") {
@@ -351,9 +359,14 @@ export async function inboundInit(
         credentialResult.error || "Could not validate credentials"
       );
 
-      const continueManual = await promptContinueManualDNS();
-      if (continueManual) {
+      if (options.yes || isJsonMode()) {
+        // Non-interactive: fall back to manual, caller handles DNS externally.
         dnsProvider = "manual";
+      } else {
+        const continueManual = await promptContinueManualDNS();
+        if (continueManual) {
+          dnsProvider = "manual";
+        }
       }
     }
   }
@@ -1210,8 +1223,22 @@ export async function inboundAdd(
     emailConfig.inbound?.bucketName ||
     `wraps-inbound-${identity.accountId}-${region}`;
 
+  const replyThreadingEnabled =
+    emailConfig.replyThreading?.enabled === true &&
+    (emailConfig.replyThreading?.domains?.length ?? 0) > 0;
+
   await progress.execute("Updating SES receipt rule", async () => {
     await addDomainToReceiptRule(region, receivingDomain, bucketName);
+    // If reply-threading is enabled globally, also register r.mail.{parent}
+    // as a catch-all recipient so signed-reply addresses route into the same
+    // Lambda pipeline.
+    if (replyThreadingEnabled) {
+      await addDomainToReceiptRule(
+        region,
+        `r.mail.${parentDomain}`,
+        bucketName
+      );
+    }
   });
 
   // 10. DNS automation
@@ -1281,6 +1308,28 @@ export async function inboundAdd(
           `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
         );
         dnsAutoCreated = true;
+
+        // If reply threading is enabled, also publish r.mail.{parent} MX+SPF
+        // via the same provider credentials.
+        if (replyThreadingEnabled) {
+          try {
+            const replyResult = await createInboundDNSRecordsForProvider(
+              credentialResult.credentials,
+              `r.mail.${parentDomain}`,
+              region,
+              parentDomain
+            );
+            if (replyResult.success && replyResult.recordsCreated > 0) {
+              progress.succeed(
+                `Created ${replyResult.recordsCreated} DNS records for r.mail.${parentDomain}`
+              );
+            }
+          } catch (error) {
+            clack.log.warn(
+              `Failed to create DNS for r.mail.${parentDomain}: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
       } else {
         progress.fail("Failed to create some DNS records");
         if (result.errors) {
@@ -1312,6 +1361,16 @@ export async function inboundAdd(
       formatManualDNSInstructions(dnsRecords),
       "DNS Records — Add these to your DNS provider"
     );
+
+    // Also show manual DNS for r.mail.{parent} when reply threading is on.
+    if (replyThreadingEnabled) {
+      const replyRecords = buildRecords(`r.mail.${parentDomain}`, region);
+      console.log();
+      clack.note(
+        formatManualDNSInstructions(replyRecords),
+        `DNS Records for r.mail.${parentDomain} — Add these to your DNS provider`
+      );
+    }
   }
 
   // 11. Save to metadata

@@ -51,6 +51,77 @@ extract_json() {
   grep -E '^\{' | tail -1
 }
 
+# Helper: create MX + SPF records in Route53 for an inbound-capable domain.
+# JSON mode skips DNS management, so we do it manually. SES inbound SMTP uses
+# `inbound-smtp.{region}.amazonaws.com`.
+create_inbound_dns_records() {
+  local host="$1" region="$2" parent="$3"
+  local zone_id
+
+  zone_id=$(aws route53 list-hosted-zones \
+    --query "HostedZones[?Name=='${parent}.'].Id" \
+    --output text 2>/dev/null | sed 's|/hostedzone/||')
+
+  [[ -z "$zone_id" ]] && { printf "${YELLOW}  No hosted zone for ${parent}, skipping inbound DNS${NC}\n"; return 0; }
+
+  local mx_target="inbound-smtp.${region}.amazonaws.com"
+  local changes
+  changes=$(jq -n \
+    --arg name "$host" \
+    --arg mx "10 ${mx_target}" \
+    --arg spf "\"v=spf1 include:amazonses.com ~all\"" \
+    '[
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":$name,"Type":"MX","TTL":300,"ResourceRecords":[{"Value":$mx}]}},
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":$name,"Type":"TXT","TTL":300,"ResourceRecords":[{"Value":$spf}]}}
+    ]')
+
+  aws route53 change-resource-record-sets \
+    --hosted-zone-id "$zone_id" \
+    --change-batch "{\"Changes\": $changes}" \
+    --query 'ChangeInfo.Id' --output text &>/dev/null
+
+  printf "${CYAN}  Created MX + SPF DNS records for ${host}${NC}\n"
+}
+
+# Delete MX + SPF records created by create_inbound_dns_records.
+delete_inbound_dns_records() {
+  local host="$1" parent="$2"
+  local zone_id
+
+  zone_id=$(aws route53 list-hosted-zones \
+    --query "HostedZones[?Name=='${parent}.'].Id" \
+    --output text 2>/dev/null | sed 's|/hostedzone/||')
+
+  [[ -z "$zone_id" ]] && return 0
+
+  # Read existing records so DELETE matches exactly — Route53 requires the
+  # ResourceRecords to match the stored values or it rejects the change.
+  typeset -a record_types
+  record_types=(MX TXT)
+  local t existing changes_list="[]"
+
+  for t in "${record_types[@]}"; do
+    existing=$(aws route53 list-resource-record-sets \
+      --hosted-zone-id "$zone_id" \
+      --query "ResourceRecordSets[?Name=='${host}.' && Type=='${t}']" \
+      --output json 2>/dev/null)
+    [[ "$(echo "$existing" | jq 'length')" == "0" ]] && continue
+    local rrs
+    rrs=$(echo "$existing" | jq '.[0]')
+    changes_list=$(echo "$changes_list" | jq \
+      --argjson rrs "$rrs" \
+      '. + [{"Action":"DELETE","ResourceRecordSet": $rrs}]')
+  done
+
+  if [[ "$(echo "$changes_list" | jq 'length')" != "0" ]]; then
+    aws route53 change-resource-record-sets \
+      --hosted-zone-id "$zone_id" \
+      --change-batch "{\"Changes\": $changes_list}" \
+      --query 'ChangeInfo.Id' --output text &>/dev/null || true
+    printf "${CYAN}  Removed MX + SPF DNS records for ${host}${NC}\n"
+  fi
+}
+
 # Helper: create DKIM CNAME records in Route53 for the test domain
 # JSON mode skips DNS management, so we do it manually
 create_dkim_records() {
@@ -603,6 +674,379 @@ verify_smtp
 verify_console_access_role
 
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 5: Reply threading end-to-end ─────────────────────────────
+#
+# Deploys inbound + reply-threading, then round-trips a real signed email
+# through SES: sign a token locally → send to the r.mail.{DOMAIN} reply
+# address → Lambda verifies → parsed JSON lands in S3 → assert status=valid
+# and that conversationId/sendId round-trip exactly.
+
+printf "\n${YELLOW}Phase 5: Reply threading (inbound + signed Reply-To round-trip)${NC}\n"
+
+# 5a. Deploy inbound on the root domain (reply-threading is a prerequisite).
+printf "${CYAN}  5a: Deploy inbound on ${DOMAIN}${NC}\n"
+wraps email inbound init \
+  --region "$REGION" \
+  --root \
+  --yes \
+  --json
+create_inbound_dns_records "$DOMAIN" "$REGION" "$DOMAIN"
+
+# 5b. Enable reply-threading for the same domain.
+printf "${CYAN}  5b: Enable reply-threading for ${DOMAIN}${NC}\n"
+wraps email reply init \
+  --domain "$DOMAIN" \
+  --region "$REGION" \
+  --yes \
+  --json
+create_inbound_dns_records "r.mail.${DOMAIN}" "$REGION" "$DOMAIN"
+
+# 5c. Verify AWS resources
+reset_counters
+verify_reply_threading "$REGION" "$DOMAIN"
+summary || { printf "${RED}Phase 5c FAILED${NC}\n"; exit 1; }
+
+# 5d. CLI command smoke tests (status + decode)
+printf "\n${YELLOW}Phase 5d: email reply status + decode${NC}\n"
+reset_counters
+
+section "Phase 5d: email reply status"
+REPLY_STATUS=$(wraps email reply status --json --region "$REGION" 2>/dev/null | extract_json) || true
+
+if echo "$REPLY_STATUS" | jq -e '.success == true' &>/dev/null; then
+  pass "email reply status succeeds"
+else
+  fail "email reply status failed" "$REPLY_STATUS"
+fi
+
+if echo "$REPLY_STATUS" | jq -e --arg d "$DOMAIN" '[.data.domains[] | select(.domain == $d)] | length > 0' &>/dev/null; then
+  pass "reply status lists $DOMAIN"
+else
+  fail "reply status missing $DOMAIN"
+fi
+
+if echo "$REPLY_STATUS" | jq -e --arg d "$DOMAIN" '.data.domains[] | select(.domain == $d) | .currentKid >= 1' &>/dev/null; then
+  typeset status_kid
+  status_kid=$(echo "$REPLY_STATUS" | jq -r --arg d "$DOMAIN" '.data.domains[] | select(.domain == $d) | .currentKid')
+  pass "reply status reports currentKid=$status_kid"
+else
+  fail "reply status missing currentKid"
+fi
+
+summary || { printf "${RED}Phase 5d FAILED${NC}\n"; exit 1; }
+
+# 5e. End-to-end signed round-trip
+#
+# Mint a token with the current SSM secret, send an email addressed to
+# <token>@r.mail.{DOMAIN} via SES. The SES receipt rule stores the raw MIME
+# in S3, the inbound-processor Lambda parses it and writes
+# parsed/{emailId}.json with the verification result.
+printf "\n${YELLOW}Phase 5e: End-to-end signed round-trip${NC}\n"
+reset_counters
+
+section "Phase 5e: mint + send + verify"
+
+# Fetch the secret + kid from SSM (customer AWS — same account we just deployed to).
+SSM_VALUE=$(aws ssm get-parameter \
+  --name "/wraps/email/reply-secret/${DOMAIN}" \
+  --with-decryption \
+  --region "$REGION" \
+  --query 'Parameter.Value' --output text 2>/dev/null)
+
+if [[ -z "$SSM_VALUE" ]]; then
+  fail "Could not read SSM reply-secret"
+  summary || { printf "${RED}Phase 5e FAILED${NC}\n"; exit 1; }
+else
+  pass "Read SSM reply-secret"
+
+  SECRET_B64=$(echo "$SSM_VALUE" | jq -r '.current')
+  KID=$(echo "$SSM_VALUE" | jq -r '.kid')
+
+  # Mint a signed token locally (pure node:crypto).
+  TOKEN_OUT=$(REPLY_SECRET_B64="$SECRET_B64" REPLY_KID="$KID" \
+    node "${SCRIPT_DIR}/sign-reply-token.mjs")
+  TOKEN=$(echo "$TOKEN_OUT" | jq -r '.token')
+  EXPECTED_CONV=$(echo "$TOKEN_OUT" | jq -r '.conversationId')
+  EXPECTED_SEND=$(echo "$TOKEN_OUT" | jq -r '.sendId')
+
+  if [[ ${#TOKEN} -eq 51 ]]; then
+    pass "Minted 51-char signed token"
+  else
+    fail "Token has unexpected length ${#TOKEN} (expected 51)"
+  fi
+
+  REPLY_ADDRESS="${TOKEN}@r.mail.${DOMAIN}"
+  INBOUND_BUCKET="wraps-inbound-${ACCOUNT_ID}-${REGION}"
+  SUBJECT="reply-threading-test-$(date +%s)-$$"
+  SEND_START=$(date -u +%s)
+
+  # Send to the signed reply address. Sender is our verified domain so this
+  # works in SES sandbox. The MX for r.mail.{DOMAIN} we just created delivers
+  # the message straight back into our inbound receipt rule.
+  if MESSAGE_ID=$(aws sesv2 send-email \
+    --from-email-address "test@${DOMAIN}" \
+    --destination "{\"ToAddresses\":[\"${REPLY_ADDRESS}\"]}" \
+    --content "{\"Simple\":{\"Subject\":{\"Data\":\"${SUBJECT}\"},\"Body\":{\"Text\":{\"Data\":\"e2e reply threading test\"}}}}" \
+    --configuration-set-name wraps-email-tracking \
+    --region "$REGION" \
+    --query 'MessageId' --output text 2>&1); then
+    pass "Sent email to ${REPLY_ADDRESS} (MessageId: ${MESSAGE_ID})"
+  else
+    fail "SES send failed" "$MESSAGE_ID"
+    summary || { printf "${RED}Phase 5e FAILED${NC}\n"; exit 1; }
+    exit 1
+  fi
+
+  # Poll S3 for the parsed object. SES inbound delivery + Lambda processing
+  # is typically 15–45 s; we allow up to 3 min to tolerate cold starts.
+  # We use grep to match the unique subject (sidesteps jq strict-mode choking
+  # on control chars in email header values) and python3 to extract fields.
+  printf "${CYAN}  Polling s3://${INBOUND_BUCKET}/parsed/ for subject '${SUBJECT}'...${NC}\n"
+  typeset -i POLL_DEADLINE=$((SEND_START + 180))
+  FOUND_JSON=""
+  FOUND_KEY=""
+  while (( $(date -u +%s) < POLL_DEADLINE )); do
+    OBJECTS_JSON=$(aws s3api list-objects-v2 \
+      --bucket "$INBOUND_BUCKET" \
+      --prefix "parsed/" \
+      --region "$REGION" \
+      --output json 2>/dev/null || echo '{"Contents":[]}')
+
+    for key in $(echo "$OBJECTS_JSON" | jq -r '.Contents[]?.Key'); do
+      tmpfile=$(mktemp)
+      aws s3api get-object \
+        --bucket "$INBOUND_BUCKET" \
+        --key "$key" \
+        --region "$REGION" \
+        "$tmpfile" &>/dev/null || { rm -f "$tmpfile"; continue; }
+      if grep -qF "$SUBJECT" "$tmpfile"; then
+        FOUND_JSON=$(cat "$tmpfile")
+        FOUND_KEY="$key"
+        rm -f "$tmpfile"
+        break
+      fi
+      rm -f "$tmpfile"
+    done
+
+    [[ -n "$FOUND_JSON" ]] && break
+    sleep 3
+  done
+
+  if [[ -z "$FOUND_JSON" ]]; then
+    typeset -i elapsed=$(( $(date -u +%s) - SEND_START ))
+    fail "Timeout after ${elapsed}s — no parsed email with subject '${SUBJECT}' found in S3"
+  else
+    typeset -i elapsed=$(( $(date -u +%s) - SEND_START ))
+    pass "Found parsed email in S3 after ${elapsed}s (key: ${FOUND_KEY})"
+
+    # Extract fields with python3 — more tolerant than jq for real-world MIME.
+    EXTRACT=$(printf '%s' "$FOUND_JSON" | python3 -c "
+import sys, json
+d = json.loads(sys.stdin.read())
+rt = d.get('replyToken') or {}
+print(rt.get('status', 'MISSING'))
+print(rt.get('conversationId', 'MISSING'))
+print(rt.get('sendId', 'MISSING'))
+print('true' if d.get('autoReply') else 'false')
+print(d.get('receivingDomain', 'MISSING'))
+")
+    GOT_STATUS=$(echo "$EXTRACT" | sed -n '1p')
+    GOT_CONV=$(echo "$EXTRACT" | sed -n '2p')
+    GOT_SEND=$(echo "$EXTRACT" | sed -n '3p')
+    GOT_AUTO=$(echo "$EXTRACT" | sed -n '4p')
+    GOT_DOMAIN=$(echo "$EXTRACT" | sed -n '5p')
+
+    if [[ "$GOT_STATUS" == "valid" ]]; then
+      pass "Lambda emitted replyToken.status = valid"
+    else
+      fail "replyToken.status expected 'valid', got '$GOT_STATUS'"
+    fi
+
+    if [[ "$GOT_CONV" == "$EXPECTED_CONV" ]]; then
+      pass "conversationId round-trips ($EXPECTED_CONV)"
+    else
+      fail "conversationId mismatch — sent $EXPECTED_CONV, got $GOT_CONV"
+    fi
+
+    if [[ "$GOT_SEND" == "$EXPECTED_SEND" ]]; then
+      pass "sendId round-trips"
+    else
+      fail "sendId mismatch — sent $EXPECTED_SEND, got $GOT_SEND"
+    fi
+
+    if [[ "$GOT_AUTO" == "false" ]]; then
+      pass "autoReply correctly false (no Auto-Submitted header)"
+    else
+      fail "autoReply expected false, got $GOT_AUTO"
+    fi
+
+    if [[ "$GOT_DOMAIN" == "r.mail.${DOMAIN}" ]]; then
+      pass "receivingDomain = r.mail.${DOMAIN}"
+    else
+      fail "receivingDomain expected r.mail.${DOMAIN}, got $GOT_DOMAIN"
+    fi
+  fi
+fi
+
+summary || { printf "${RED}Phase 5e FAILED${NC}\n"; exit 1; }
+
+# 5f. Rotate secret → new kid, verify new tokens still round-trip.
+printf "\n${YELLOW}Phase 5f: Rotate + round-trip with new kid${NC}\n"
+reset_counters
+
+section "Phase 5f: reply rotate"
+
+OLD_KID="$KID"
+ROTATE_OUT=$(wraps email reply rotate \
+  --domain "$DOMAIN" \
+  --region "$REGION" \
+  --yes \
+  --json 2>/dev/null | extract_json) || true
+
+if echo "$ROTATE_OUT" | jq -e '.success == true' &>/dev/null; then
+  pass "email reply rotate succeeded"
+else
+  fail "email reply rotate failed" "$ROTATE_OUT"
+fi
+
+# Re-read SSM, assert new kid + previousKid.
+SSM_VALUE_AFTER=$(aws ssm get-parameter \
+  --name "/wraps/email/reply-secret/${DOMAIN}" \
+  --with-decryption \
+  --region "$REGION" \
+  --query 'Parameter.Value' --output text 2>/dev/null)
+
+NEW_KID=$(echo "$SSM_VALUE_AFTER" | jq -r '.kid')
+STORED_PREV_KID=$(echo "$SSM_VALUE_AFTER" | jq -r '.previousKid // "null"')
+NEW_SECRET_B64=$(echo "$SSM_VALUE_AFTER" | jq -r '.current')
+
+if [[ "$NEW_KID" == "$((OLD_KID + 1))" ]]; then
+  pass "SSM kid incremented $OLD_KID → $NEW_KID"
+else
+  fail "SSM kid did not increment (expected $((OLD_KID + 1)), got $NEW_KID)"
+fi
+
+if [[ "$STORED_PREV_KID" == "$OLD_KID" ]]; then
+  pass "SSM blob carries previousKid=$OLD_KID"
+else
+  fail "SSM previousKid expected $OLD_KID, got $STORED_PREV_KID"
+fi
+
+# Send a fresh token signed with the NEW kid. The Lambda's 5-min cache holds
+# the OLD value, so this forces a container with a cold cache to verify. In
+# practice the existing container will re-fetch because cache TTL on the first
+# send was set before rotation; a new S3 event picks up whichever Lambda
+# container Amazon picks. Either way, the NEW secret must verify.
+section "Phase 5f: round-trip with rotated kid"
+
+# Wait BEFORE sending so any warm Lambda containers expire their pre-rotation
+# secret cache (TTL is 5 min; +15s margin). Sending before the wait would let
+# a warm container process the email with the old cache and return
+# `invalid-signature`, since the new-kid token isn't in the old secrets map.
+printf "${CYAN}  Waiting 5m15s for Lambda secret cache TTL to expire...${NC}\n"
+sleep 315
+
+TOKEN_OUT_2=$(REPLY_SECRET_B64="$NEW_SECRET_B64" REPLY_KID="$NEW_KID" \
+  node "${SCRIPT_DIR}/sign-reply-token.mjs")
+TOKEN_2=$(echo "$TOKEN_OUT_2" | jq -r '.token')
+EXPECTED_CONV_2=$(echo "$TOKEN_OUT_2" | jq -r '.conversationId')
+EXPECTED_SEND_2=$(echo "$TOKEN_OUT_2" | jq -r '.sendId')
+REPLY_ADDRESS_2="${TOKEN_2}@r.mail.${DOMAIN}"
+SUBJECT_2="reply-threading-rotate-test-$(date +%s)-$$"
+SEND_START_2=$(date -u +%s)
+
+aws sesv2 send-email \
+  --from-email-address "test@${DOMAIN}" \
+  --destination "{\"ToAddresses\":[\"${REPLY_ADDRESS_2}\"]}" \
+  --content "{\"Simple\":{\"Subject\":{\"Data\":\"${SUBJECT_2}\"},\"Body\":{\"Text\":{\"Data\":\"rotate round-trip\"}}}}" \
+  --configuration-set-name wraps-email-tracking \
+  --region "$REGION" \
+  --query 'MessageId' --output text &>/dev/null
+
+# Poll S3 for the second parsed object (grep + python3 for same reasons as 5e).
+typeset -i POLL_DEADLINE_2=$(( $(date -u +%s) + 180 ))
+FOUND_JSON_2=""
+while (( $(date -u +%s) < POLL_DEADLINE_2 )); do
+  OBJECTS_JSON_2=$(aws s3api list-objects-v2 \
+    --bucket "$INBOUND_BUCKET" \
+    --prefix "parsed/" \
+    --region "$REGION" \
+    --output json 2>/dev/null || echo '{"Contents":[]}')
+
+  for key in $(echo "$OBJECTS_JSON_2" | jq -r '.Contents[]?.Key'); do
+    tmpfile=$(mktemp)
+    aws s3api get-object \
+      --bucket "$INBOUND_BUCKET" \
+      --key "$key" \
+      --region "$REGION" \
+      "$tmpfile" &>/dev/null || { rm -f "$tmpfile"; continue; }
+    if grep -qF "$SUBJECT_2" "$tmpfile"; then
+      FOUND_JSON_2=$(cat "$tmpfile")
+      rm -f "$tmpfile"
+      break
+    fi
+    rm -f "$tmpfile"
+  done
+
+  [[ -n "$FOUND_JSON_2" ]] && break
+  sleep 3
+done
+
+if [[ -z "$FOUND_JSON_2" ]]; then
+  fail "Timeout waiting for rotated-kid parsed email"
+else
+  pass "Found parsed email signed with new kid $NEW_KID"
+
+  EXTRACT_2=$(printf '%s' "$FOUND_JSON_2" | python3 -c "
+import sys, json
+d = json.loads(sys.stdin.read())
+rt = d.get('replyToken') or {}
+print(rt.get('status', 'MISSING'))
+print(rt.get('conversationId', 'MISSING'))
+print(rt.get('sendId', 'MISSING'))
+")
+  GOT_STATUS_2=$(echo "$EXTRACT_2" | sed -n '1p')
+  GOT_CONV_2=$(echo "$EXTRACT_2" | sed -n '2p')
+  GOT_SEND_2=$(echo "$EXTRACT_2" | sed -n '3p')
+
+  if [[ "$GOT_STATUS_2" == "valid" ]]; then
+    pass "Rotated kid: replyToken.status = valid"
+  else
+    fail "Rotated kid: expected status=valid, got $GOT_STATUS_2"
+  fi
+
+  if [[ "$GOT_CONV_2" == "$EXPECTED_CONV_2" ]]; then
+    pass "Rotated kid: conversationId round-trips"
+  else
+    fail "Rotated kid: conversationId mismatch"
+  fi
+
+  if [[ "$GOT_SEND_2" == "$EXPECTED_SEND_2" ]]; then
+    pass "Rotated kid: sendId round-trips"
+  else
+    fail "Rotated kid: sendId mismatch"
+  fi
+fi
+
+summary || { printf "${RED}Phase 5f FAILED${NC}\n"; exit 1; }
+
+# 5g. Cleanup reply-threading + inbound so main teardown starts from a
+# known baseline. The final `wraps email destroy` below is belt-and-braces.
+printf "\n${YELLOW}Phase 5g: Cleanup reply-threading + inbound${NC}\n"
+
+wraps email reply destroy \
+  --domain "$DOMAIN" \
+  --region "$REGION" \
+  --force \
+  --json || true
+delete_inbound_dns_records "r.mail.${DOMAIN}" "$DOMAIN"
+
+wraps email inbound destroy \
+  --region "$REGION" \
+  --force \
+  --json || true
+delete_inbound_dns_records "$DOMAIN" "$DOMAIN"
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 # The trap handles destroy on failure. This section runs the explicit teardown

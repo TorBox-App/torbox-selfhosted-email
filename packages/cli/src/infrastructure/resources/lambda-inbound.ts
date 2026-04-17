@@ -11,6 +11,13 @@ export type LambdaInboundConfig = {
   accountId: string;
   region: string;
   dlqArn: pulumi.Output<string>;
+  /**
+   * When true, adds a wildcard `ssm:GetParameter` grant on
+   * `/wraps/email/reply-secret/*` and sets the
+   * `REPLY_SECRET_PARAMETER_PREFIX` env var so the inbound processor can
+   * fetch per-domain signing secrets for reply-threading verification.
+   */
+  replyThreadingEnabled?: boolean;
 };
 
 /**
@@ -64,31 +71,44 @@ export async function deployInboundLambda(
     role: lambdaRole.name,
     policy: pulumi
       .all([config.bucketArn, config.dlqArn])
-      .apply(([bucketArn, dlqArn]) =>
-        JSON.stringify({
+      .apply(([bucketArn, dlqArn]) => {
+        const statements: Record<string, unknown>[] = [
+          {
+            // S3 read (raw/) and write (parsed/, attachments/)
+            Effect: "Allow",
+            Action: ["s3:GetObject", "s3:PutObject", "s3:HeadObject"],
+            Resource: `${bucketArn}/*`,
+          },
+          {
+            // EventBridge PutEvents for email.received events
+            Effect: "Allow",
+            Action: ["events:PutEvents"],
+            Resource: `arn:aws:events:${config.region}:${config.accountId}:event-bus/default`,
+          },
+          {
+            // SQS access for DLQ
+            Effect: "Allow",
+            Action: ["sqs:SendMessage"],
+            Resource: dlqArn,
+          },
+        ];
+
+        if (config.replyThreadingEnabled) {
+          statements.push({
+            // Reply-threading: fetch per-domain signing secrets. Wildcard is
+            // scoped to the one SSM path prefix in this account, never
+            // cross-tenant.
+            Effect: "Allow",
+            Action: ["ssm:GetParameter"],
+            Resource: `arn:aws:ssm:${config.region}:${config.accountId}:parameter/wraps/email/reply-secret/*`,
+          });
+        }
+
+        return JSON.stringify({
           Version: "2012-10-17",
-          Statement: [
-            {
-              // S3 read (raw/) and write (parsed/, attachments/)
-              Effect: "Allow",
-              Action: ["s3:GetObject", "s3:PutObject", "s3:HeadObject"],
-              Resource: `${bucketArn}/*`,
-            },
-            {
-              // EventBridge PutEvents for email.received events
-              Effect: "Allow",
-              Action: ["events:PutEvents"],
-              Resource: `arn:aws:events:${config.region}:${config.accountId}:event-bus/default`,
-            },
-            {
-              // SQS access for DLQ
-              Effect: "Allow",
-              Action: ["sqs:SendMessage"],
-              Resource: dlqArn,
-            },
-          ],
-        })
-      ),
+          Statement: statements,
+        });
+      }),
   });
 
   const functionName = "wraps-inbound-email-processor";
@@ -106,6 +126,11 @@ export async function deployInboundLambda(
       variables: {
         BUCKET_NAME: config.bucketName,
         INBOUND_EVENT_SOURCE: "wraps.inbound",
+        ...(config.replyThreadingEnabled
+          ? {
+              REPLY_SECRET_PARAMETER_PREFIX: "/wraps/email/reply-secret/",
+            }
+          : {}),
       },
     },
     deadLetterConfig: {

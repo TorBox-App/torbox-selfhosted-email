@@ -23,6 +23,19 @@ export {
   VERCEL_OIDC_THUMBPRINT,
   VERCEL_OIDC_URL,
 } from "./constants.js";
+// Reply-token codec
+export {
+  type DecodedReplyToken,
+  decodeReplyToken,
+  type EncodeReplyTokenInput,
+  encodeReplyToken,
+  generateConversationId,
+  generateSendId,
+  REPLY_TOKEN_VERSION,
+  type ReplyTokenStatus,
+  type VerifiedReplyToken,
+  verifyReplyToken,
+} from "./reply-token.js";
 // Retention utilities
 export {
   calculateTTL,

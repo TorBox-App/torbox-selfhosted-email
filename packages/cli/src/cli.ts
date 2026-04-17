@@ -40,6 +40,13 @@ import {
   inboundVerify,
 } from "./commands/email/inbound.js";
 import { init } from "./commands/email/init.js";
+import {
+  replyDecode,
+  replyDestroy,
+  replyInit,
+  replyRotate,
+  replyStatus,
+} from "./commands/email/reply.js";
 import { restore } from "./commands/email/restore.js";
 import { emailStatus } from "./commands/email/status.js";
 // Email commands
@@ -708,6 +715,66 @@ async function run() {
               );
               throw new Error(
                 `Unknown inbound command: ${inboundSubCommand || "(none)"}`
+              );
+          }
+          break;
+        }
+
+        case "reply": {
+          const replySubCommand = sub[2];
+
+          switch (replySubCommand) {
+            case "init":
+              await replyInit({
+                region: flags.region,
+                domain: flags.domain,
+                all: flags.all,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
+            case "rotate":
+              await replyRotate({
+                region: flags.region,
+                domain: flags.domain,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
+            case "status":
+              await replyStatus({
+                region: flags.region,
+                json: flags.json,
+              });
+              break;
+
+            case "destroy":
+              await replyDestroy({
+                region: flags.region,
+                domain: flags.domain,
+                all: flags.all,
+                force: flags.force,
+                json: flags.json,
+              });
+              break;
+
+            case "decode": {
+              const addressArg = sub[3];
+              await replyDecode(addressArg, { json: flags.json });
+              break;
+            }
+
+            default:
+              clack.log.error(
+                `Unknown reply command: ${replySubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("rotate")}, ${pc.cyan("status")}, ${pc.cyan("destroy")}, ${pc.cyan("decode")}\n`
+              );
+              throw new Error(
+                `Unknown reply command: ${replySubCommand || "(none)"}`
               );
           }
           break;

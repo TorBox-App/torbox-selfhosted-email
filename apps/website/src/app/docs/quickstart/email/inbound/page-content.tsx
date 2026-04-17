@@ -114,7 +114,13 @@ const eventBridgeEventCode = `// EventBridge event payload (email.received)
     "virusVerdict": "PASS",
     "attachments": [
       { "id": "att-1", "filename": "screenshot.png", "size": 12345 }
-    ]
+    ],
+    "replyToken": {
+      "conversationId": "aGVsbG8gd29y",
+      "sendId": "MDEyMzQ1Njc",
+      "status": "valid"
+    },
+    "autoReply": false
   }
 }`;
 
@@ -650,6 +656,21 @@ TTL: 300`,
             )}
           </CodeBlockBody>
         </CodeBlock>
+
+        <p className="mb-4 text-muted-foreground text-sm">
+          Filter{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            event.detail.replyToken?.status === "valid"
+          </code>{" "}
+          to thread replies. See the{" "}
+          <Link
+            className="font-medium text-primary underline"
+            href="/docs/guides/reply-threading"
+          >
+            reply-threading guide
+          </Link>
+          .
+        </p>
 
         <p className="mb-2 font-medium text-sm">Example Lambda Handler</p>
         <CodeBlock

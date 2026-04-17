@@ -1331,6 +1331,138 @@ _cleanup_test_role() {
   fi
 }
 
+# ─── Reply-Threading Verification ─────────────────────────────────────
+
+# Verifies AWS resources created by `wraps email reply init`:
+#   1. SSM SecureString parameter at /wraps/email/reply-secret/{domain}
+#   2. Inbound Lambda has REPLY_SECRET_PARAMETER_PREFIX env var
+#   3. Lambda IAM policy grants ssm:GetParameter on the reply-secret path
+#   4. SES receipt rule includes r.mail.{domain} as a recipient
+#
+# Usage: verify_reply_threading <region> <domain>
+
+verify_reply_threading() {
+  local region="${1:?region required}"
+  local domain="${2:?domain required}"
+  local param_name="/wraps/email/reply-secret/${domain}"
+
+  section "Reply threading: SSM parameter"
+
+  local ssm_output
+  if ssm_output=$(aws_check ssm get-parameter \
+    --name "$param_name" \
+    --region "$region" 2>&1); then
+    pass "SSM parameter $param_name exists"
+
+    local param_type
+    param_type=$(echo "$ssm_output" | jq -r '.Parameter.Type // "NONE"')
+    if [[ "$param_type" == "SecureString" ]]; then
+      pass "SSM parameter type: SecureString"
+    else
+      fail "SSM parameter type: expected SecureString, got $param_type"
+    fi
+  else
+    fail "SSM parameter $param_name not found" "$ssm_output"
+  fi
+
+  # Tags
+  local ssm_tags
+  ssm_tags=$(aws ssm list-tags-for-resource \
+    --resource-type Parameter \
+    --resource-id "$param_name" \
+    --region "$region" \
+    --output json 2>/dev/null)
+  local ssm_managed_by
+  ssm_managed_by=$(echo "$ssm_tags" | jq -r '.TagList[]? | select(.Key=="ManagedBy") | .Value // ""')
+  if [[ "$ssm_managed_by" == wraps-* ]]; then
+    pass "SSM parameter ManagedBy tag: $ssm_managed_by"
+  else
+    fail "SSM parameter missing/unexpected ManagedBy tag: $ssm_managed_by"
+  fi
+
+  section "Reply threading: Inbound Lambda configuration"
+
+  local inbound_lambda=""
+  if ! inbound_lambda=$(aws lambda get-function \
+    --function-name wraps-inbound-email-processor \
+    --region "$region" \
+    --output json 2>&1); then
+    fail "Lambda wraps-inbound-email-processor not found" "$inbound_lambda"
+    return
+  fi
+  pass "Inbound Lambda exists"
+
+  # Env var
+  local prefix_env
+  prefix_env=$(echo "$inbound_lambda" | jq -r '.Configuration.Environment.Variables.REPLY_SECRET_PARAMETER_PREFIX // ""')
+  if [[ "$prefix_env" == "/wraps/email/reply-secret/" ]]; then
+    pass "Lambda REPLY_SECRET_PARAMETER_PREFIX env var set correctly"
+  else
+    fail "Lambda REPLY_SECRET_PARAMETER_PREFIX: expected '/wraps/email/reply-secret/', got '$prefix_env'"
+  fi
+
+  # IAM: ssm:GetParameter permission on the reply-secret path
+  local inbound_role_name
+  inbound_role_name=$(echo "$inbound_lambda" | jq -r '.Configuration.Role // ""' | sed 's|.*/||')
+
+  if [[ -z "$inbound_role_name" ]]; then
+    fail "Could not resolve inbound Lambda IAM role"
+  else
+    local lambda_policies
+    lambda_policies=$(aws iam list-role-policies --role-name "$inbound_role_name" --query 'PolicyNames' --output json 2>/dev/null)
+    local found_ssm_stmt=0
+    local p
+    for p in $(echo "$lambda_policies" | jq -r '.[]'); do
+      local doc
+      doc=$(aws iam get-role-policy --role-name "$inbound_role_name" --policy-name "$p" --query 'PolicyDocument' --output json 2>/dev/null)
+      if echo "$doc" | grep -q 'ssm:GetParameter'; then
+        found_ssm_stmt=1
+        break
+      fi
+    done
+
+    if (( found_ssm_stmt == 1 )); then
+      pass "Inbound Lambda IAM policy grants ssm:GetParameter"
+    else
+      fail "Inbound Lambda IAM policy missing ssm:GetParameter"
+    fi
+  fi
+
+  section "Reply threading: SES receipt rule"
+
+  # Find the receipt rule set in use
+  local rule_set
+  rule_set=$(aws ses describe-active-receipt-rule-set \
+    --region "$region" \
+    --query 'Metadata.Name' --output text 2>/dev/null)
+
+  if [[ -z "$rule_set" || "$rule_set" == "None" ]]; then
+    fail "No active SES receipt rule set"
+    return
+  fi
+  pass "Active SES receipt rule set: $rule_set"
+
+  # Check the CLI's catch-all rule has r.mail.{domain} in Recipients.
+  local rule_output
+  rule_output=$(aws ses describe-receipt-rule \
+    --rule-set-name "$rule_set" \
+    --rule-name wraps-inbound-catch-all \
+    --region "$region" \
+    --output json 2>/dev/null)
+
+  if [[ -z "$rule_output" ]]; then
+    fail "SES receipt rule wraps-inbound-catch-all not found in $rule_set"
+  else
+    local recipients
+    recipients=$(echo "$rule_output" | jq -r '.Rule.Recipients // [] | join(",")')
+    if [[ "$recipients" == *"r.mail.${domain}"* ]]; then
+      pass "Receipt rule includes r.mail.${domain}"
+    else
+      fail "Receipt rule missing r.mail.${domain}; got: $recipients"
+    fi
+  fi
+}
+
 # ─── Pre-Teardown ─────────────────────────────────────────────────────
 
 # Rename the MailManager archive before deleting so the name is freed immediately.
@@ -1468,6 +1600,20 @@ verify_teardown() {
     fail "IAM role wraps-console-access-role still exists"
   else
     pass "IAM role wraps-console-access-role removed"
+  fi
+
+  # Reply-threading SSM parameter (per-domain, scoped by prefix)
+  local reply_params
+  reply_params=$(aws ssm describe-parameters \
+    --parameter-filters "Key=Name,Option=BeginsWith,Values=/wraps/email/reply-secret/" \
+    --region "$region" \
+    --query 'Parameters[].Name' --output json 2>/dev/null)
+  local reply_param_count
+  reply_param_count=$(echo "$reply_params" | jq 'length // 0')
+  if (( reply_param_count > 0 )); then
+    fail "SSM reply-secret parameter(s) still exist: $(echo "$reply_params" | jq -r 'join(",")')"
+  else
+    pass "SSM reply-secret parameters removed"
   fi
 
   # MailManager archive (accepts PENDING_DELETION as removed — archives take time to purge)

@@ -252,6 +252,19 @@ export async function deployEmailStack(
       }
     | undefined;
 
+  // Per-domain reply-threading SSM parameter ARNs, returned as a stack output
+  // so the CLI can persist each domain's `parameterArn` / `parameterName` into
+  // local metadata.
+  let replySecretsOutput:
+    | Record<
+        string,
+        {
+          parameterArn: import("@pulumi/pulumi").Output<string>;
+          parameterName: string;
+        }
+      >
+    | undefined;
+
   if (emailConfig.inbound?.enabled) {
     // S3 bucket for inbound email storage
     const { createS3InboundResources } = await import(
@@ -269,6 +282,37 @@ export async function deployEmailStack(
     );
     const sqsInbound = await createSQSInboundResources();
 
+    // 12a. Reply-threading SSM parameters (one per sending domain).
+    // Reply threading requires inbound — only run this block inside the
+    // `inbound.enabled` branch. Silent no-op if the feature isn't enabled.
+    const replyDomains = emailConfig.replyThreading?.enabled
+      ? (emailConfig.replyThreading.domains ?? [])
+      : [];
+    if (replyDomains.length > 0) {
+      const { createReplySecret } = await import("./resources/reply-secret.js");
+      replySecretsOutput = {};
+      for (const entry of replyDomains) {
+        if (!entry.initialSecret) {
+          // No initial secret supplied on this apply — the parameter already
+          // exists in SSM (previous deploy), and `ignoreChanges: ["value"]`
+          // preserves its current rotated value. Skip recreation.
+          continue;
+        }
+        const secret = createReplySecret({
+          domain: entry.domain,
+          accountId,
+          region: config.region,
+          initialSecret: Buffer.from(entry.initialSecret, "base64"),
+        });
+        replySecretsOutput[entry.domain] = {
+          parameterArn: secret.parameterArn,
+          parameterName: secret.parameterName,
+        };
+      }
+    }
+
+    const replyThreadingEnabled = replyDomains.length > 0;
+
     // Lambda function for MIME parsing
     const { deployInboundLambda } = await import(
       "./resources/lambda-inbound.js"
@@ -279,6 +323,7 @@ export async function deployEmailStack(
       accountId,
       region: config.region,
       dlqArn: sqsInbound.dlq.arn,
+      replyThreadingEnabled,
     });
 
     // S3 bucket notification to trigger Lambda on raw/ uploads
@@ -369,6 +414,22 @@ export async function deployEmailStack(
       : undefined,
     userWebhookSecret: emailConfig.userWebhook?.enabled
       ? emailConfig.userWebhook.secret
+      : undefined,
+    // Reply-threading: per-domain SSM parameter ARNs. Pulumi `Output<string>`
+    // values are unwrapped at the stack-output boundary (mirrors the existing
+    // `as any as string` pattern used throughout this file).
+    replySecrets: replySecretsOutput
+      ? (Object.fromEntries(
+          Object.entries(replySecretsOutput).map(
+            ([domain, { parameterArn, parameterName }]) => [
+              domain,
+              {
+                parameterArn: parameterArn as unknown as string,
+                parameterName,
+              },
+            ]
+          )
+        ) as Record<string, { parameterArn: string; parameterName: string }>)
       : undefined,
   };
 }

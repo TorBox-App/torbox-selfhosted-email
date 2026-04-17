@@ -371,7 +371,13 @@ const inboundPayload = `{
     "to": ["inbox@yourapp.com"],
     "subject": "Re: Your recent order",
     "date": "2025-01-15T14:00:00.000Z",
-    "receivedAt": "2025-01-15T14:00:00.500Z"
+    "receivedAt": "2025-01-15T14:00:00.500Z",
+    "replyToken": {
+      "conversationId": "aGVsbG8gd29y",
+      "sendId": "MDEyMzQ1Njc",
+      "status": "valid"
+    },
+    "autoReply": false
   }
 }`;
 
@@ -1537,6 +1543,20 @@ export default function InfrastructureEventsPageContent() {
                 code={inboundPayload}
                 filename="inbound-event.json"
               />
+              <p className="text-muted-foreground text-sm">
+                When replying to a signed message,{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  replyToken.status === "valid"
+                </code>{" "}
+                confirms the token verified; see the{" "}
+                <Link
+                  className="font-medium text-primary underline"
+                  href="/docs/guides/reply-threading"
+                >
+                  reply-threading guide
+                </Link>
+                .
+              </p>
             </div>
           </ExpandableSection>
         </div>
