@@ -40,7 +40,7 @@ function VideoCard({ title, description, video, className }: VideoCardProps) {
 export function ProductShowcaseSection() {
   return (
     <section className="py-16 md:py-24" id="features">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="text-center">
           <h2 className="font-bold text-3xl tracking-tight font-heading md:text-4xl text-balance">
             Everything you need to send.{" "}
