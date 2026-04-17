@@ -1,6 +1,8 @@
 import {
   Blocks,
+  Bot,
   Cloud,
+  Compass,
   Gauge,
   Gift,
   HardDrive,
@@ -43,6 +45,125 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.19.0",
+    date: "April 2026",
+    icon: MessageSquare,
+    iconColor:
+      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    title: "Signed Reply-To Threading",
+    items: [
+      <>
+        <Code>wraps email reply init --domain yourdomain.com</Code> to enable
+        cryptographic reply threading for agent workflows
+      </>,
+      <>
+        Outbound: SDK accepts a <Code>conversationId</Code> option on{" "}
+        <Code>email.send</Code> and returns{" "}
+        <Code>{"{ conversationId, sendId }"}</Code>
+      </>,
+      <>
+        Inbound: <Code>email.received</Code> now includes{" "}
+        <Code>{"replyToken: { status, conversationId?, sendId? }"}</Code> and{" "}
+        <Code>autoReply: boolean</Code>
+      </>,
+      "HMAC secret stays in your AWS SSM Parameter Store — Wraps platform never sees it",
+      <>
+        Fix: <Code>wraps email inbound init</Code> now respects{" "}
+        <Code>--yes</Code> and <Code>--json</Code> on the DNS confirmation
+        prompt for CI scripting
+      </>,
+      <>
+        See the{" "}
+        <a
+          className="underline underline-offset-2 hover:text-foreground"
+          href="/docs/guides/reply-threading"
+        >
+          reply threading guide
+        </a>
+      </>,
+    ],
+  },
+  {
+    version: "Platform v0.16.0",
+    date: "March 2026",
+    icon: Compass,
+    iconColor:
+      "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
+    title: "Onboarding Activation",
+    items: [
+      "Choose Path step replaces Welcome — start building or connect AWS first",
+      "Mobile signup rescue gate with device-based continuation flow",
+      "Go-live banner with AWS action gates across dashboard pages",
+      "Activation score tracking with API endpoint and contact property sync",
+      "Invite members onboarding step plus sidebar invite activation loop",
+      "Template gallery with 6 starters and AI path on empty state",
+      "Two-path activation drip: start-building vs connect-aws users",
+      "Power-user activation template for velocity signups",
+    ],
+  },
+  {
+    version: "Template Editor v2",
+    date: "March 2026",
+    icon: Sparkles,
+    iconColor:
+      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    title: "AI Conversation Persistence & Brand Kits",
+    items: [
+      "AI chat history persists across sessions — pick up where you left off",
+      "Brand kit auto-applied in AI code assistant for on-brand output",
+      "Version history with restore — every AI apply is recoverable",
+      "New templates default to react-email with JIT TipTap migration",
+      <>
+        <Code>previewText</Code> column on templates for inbox preheaders
+      </>,
+      "Real unsubscribe and preference URLs in test email sends",
+      "Shared preview panel across code template editor tabs",
+      "Broadcast stats with Sankey diagram, click URL tracking, engagement funnel",
+    ],
+  },
+  {
+    version: "Agent-Ready Platform",
+    date: "March 2026",
+    icon: Bot,
+    iconColor:
+      "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+    title: "Built for AI Coding Agents",
+    items: [
+      <>
+        <Code>agent.json</Code> at the root for AI agent discovery
+      </>,
+      <>
+        <Code>llms.txt</Code> expanded with agent guidance, comparisons, and
+        skills
+      </>,
+      <>
+        <Code>context7.json</Code> for Context7 documentation indexing
+      </>,
+      "Full API reference docs with linked OpenAPI spec",
+      "Rate limits documentation for agent integration",
+      "Agent-discoverable npm descriptions and keywords across all packages",
+      "Context7 guide for AI-assisted development with Wraps",
+    ],
+  },
+  {
+    version: "mail-audit v1.1.1",
+    date: "March 2026",
+    icon: ShieldCheck,
+    iconColor:
+      "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    title: "Standalone Deliverability CLI",
+    items: [
+      <>
+        <Code>npx mail-audit yourdomain.com</Code> to grade any sending domain
+        without a Wraps account
+      </>,
+      "Auth triad grading across SPF, DKIM, and DMARC with weighted scoring",
+      "Reliable bar chars and auto-padded borders in terminal score box",
+      "YC W26 batch audit blog post covering deliverability findings",
+      "Free tool to capture SES-curious developers before the full Wraps flow",
+    ],
+  },
   {
     version: "CLI v2.14–2.17",
     date: "February 2026",

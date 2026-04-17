@@ -14,6 +14,7 @@ import {
   Database,
   FileCheck,
   Inbox,
+  KeyRound,
   Mail,
   Network,
   Server,
@@ -38,6 +39,17 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "signed-reply-threading",
+    title: "Signed Reply-To for Agents",
+    description:
+      "Cryptographic conversation correlation for email agents. HMAC-signed reply-to addresses verified in a Lambda running in your AWS account — the signing secret never leaves your cloud.",
+    category: "Engineering",
+    date: "April 2026",
+    readTime: "6 min read",
+    author: "Wraps Team",
+    icon: <KeyRound className="h-6 w-6" />,
+  },
   {
     slug: "yc-w26-email-security-audit",
     title:

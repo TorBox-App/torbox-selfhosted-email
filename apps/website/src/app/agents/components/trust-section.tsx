@@ -1,5 +1,11 @@
 import { Card, CardContent } from "@wraps/ui/components/ui/card";
-import { AlertTriangle, ArrowRight, Mail, MessageSquare, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Mail,
+  MessageSquare,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 
 const differentiators = [
@@ -65,15 +71,25 @@ export function AgentsTrustSection() {
           <div className="flex items-start gap-3">
             <MessageSquare className="mt-0.5 size-4 shrink-0 text-orange-500" />
             <div>
-              <p className="font-medium">Signed reply-to threading, now in beta.</p>
+              <p className="font-medium">
+                Signed reply-to threading, now in beta.
+              </p>
               <p className="mt-1 text-muted-foreground text-sm">
                 When a recipient replies, your inbound Lambda verifies the{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Reply-To</code>{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                  Reply-To
+                </code>{" "}
                 header against an HMAC secret your AWS account owns. The event
-                arrives with a <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">replyToken</code>{" "}
-                carrying a verified <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">conversationId</code>{" "}
-                — no database round-trip, no spoofable header chain. Wraps
-                never sees the secret.
+                arrives with a{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                  replyToken
+                </code>{" "}
+                carrying a verified{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                  conversationId
+                </code>{" "}
+                — no database round-trip, no spoofable header chain. Wraps never
+                sees the secret.
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <Link
