@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack --port 3001",
+    "dev": "portless website.wraps next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc -b",

@@ -281,7 +281,7 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
 
     // The unsubscribe link should be a valid URL pointing to the API unsubscribe endpoint
     // It should match the pattern: https://api.wraps.dev/unsubscribe/<jwt-token>
-    // or http://localhost:3001/unsubscribe/<jwt-token> in dev
+    // or https://api.wraps.localhost/unsubscribe/<jwt-token> in dev
     expect(lastSentEmail!.html).toMatch(
       /href="https?:\/\/[^"]+\/unsubscribe\/[A-Za-z0-9_\-.]+"/
     );

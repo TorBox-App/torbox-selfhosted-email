@@ -6,6 +6,8 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig = {
+  allowedDevOrigins: ["website.wraps.localhost", "*.wraps.localhost"],
+
   // Emit browser source maps so PostHog can resolve minified stack traces.
   // Public exposure is acceptable — this site is AGPLv3 open source.
   // For private apps, use @posthog/cli sourcemap upload in CI instead.

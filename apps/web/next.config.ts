@@ -3,6 +3,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["web.wraps.localhost", "*.wraps.localhost"],
+
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
   },

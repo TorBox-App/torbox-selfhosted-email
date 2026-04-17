@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "dev": "bun run --env-file=../web/.env.local --watch src/index.ts",
+    "dev": "portless api.wraps bun run --env-file=../web/.env.local --watch src/index.ts",
     "build": "bun build src/lambda.ts --outdir dist --target node",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude='**/*.integration.test.ts'",

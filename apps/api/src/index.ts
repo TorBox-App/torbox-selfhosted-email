@@ -252,5 +252,5 @@ const isLambda =
   !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.SST_DEV;
 
 if (!isLambda && process.env.NODE_ENV !== "production") {
-  app.listen(3002);
+  app.listen(Number(process.env.PORT) || 3002);
 }
