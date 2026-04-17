@@ -23,10 +23,12 @@ import { resolve } from "node:path";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
 import {
+  awsAccount,
   contact,
   contactTopic,
   db,
   member,
+  messageSend,
   organization,
   topic,
   user,
@@ -36,9 +38,13 @@ import {
   workflowExecution,
   workflowStepExecution,
 } from "@wraps/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-
+import {
+  buildBounceEvent,
+  buildClickEvent,
+  buildOpenEvent,
+} from "../../__tests__/fixtures/ses-events";
 import type { WorkflowJob } from "../../services/workflow-queue";
 
 // -----------------------------------------------------------------------------
@@ -246,6 +252,23 @@ const testTopic = {
   createdAt: new Date(),
   updatedAt: new Date(),
   createdBy: testUser.id,
+};
+
+const testAwsAccount = {
+  id: `${TEST_PREFIX}-aws-1`,
+  organizationId: testOrg.id,
+  name: "Integration Test AWS Account",
+  accountId: "123456789012",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::123456789012:role/wraps-integration-test",
+  externalId: `${TEST_PREFIX}-external-id`,
+  webhookSecret: `${TEST_PREFIX}-webhook-secret`,
+  isVerified: true,
+  emailEnabled: true,
+  smsEnabled: false,
+  createdBy: testUser.id,
+  createdAt: new Date(),
+  updatedAt: new Date(),
 };
 
 // -----------------------------------------------------------------------------
@@ -719,6 +742,106 @@ function createWaitForEmailEngagementWorkflow(timeoutSeconds = 86_400) {
   };
 }
 
+function createEngagementBranchWorkflow(timeoutSeconds = 86_400) {
+  const triggerId = "trigger-1";
+  const waitId = "wait-1";
+  const exitOpenedId = "exit-opened";
+  const exitClickedId = "exit-clicked";
+  const exitBouncedId = "exit-bounced";
+  const exitTimeoutId = "exit-timeout";
+
+  const steps: WorkflowStep[] = [
+    {
+      id: triggerId,
+      type: "trigger",
+      name: "Trigger",
+      position: { x: 0, y: 0 },
+      config: { type: "trigger", triggerType: "api" },
+    },
+    {
+      id: waitId,
+      type: "wait_for_email_engagement",
+      name: "Wait for Email Engagement",
+      position: { x: 0, y: 100 },
+      config: {
+        type: "wait_for_email_engagement",
+        timeoutSeconds,
+      },
+    },
+    {
+      id: exitOpenedId,
+      type: "exit",
+      name: "Opened",
+      position: { x: -200, y: 200 },
+      config: { type: "exit" },
+    },
+    {
+      id: exitClickedId,
+      type: "exit",
+      name: "Clicked",
+      position: { x: -50, y: 200 },
+      config: { type: "exit" },
+    },
+    {
+      id: exitBouncedId,
+      type: "exit",
+      name: "Bounced",
+      position: { x: 100, y: 200 },
+      config: { type: "exit" },
+    },
+    {
+      id: exitTimeoutId,
+      type: "exit",
+      name: "Timeout",
+      position: { x: 250, y: 200 },
+      config: { type: "exit" },
+    },
+  ];
+
+  const transitions: WorkflowTransition[] = [
+    { id: "t1", fromStepId: triggerId, toStepId: waitId },
+    {
+      id: "t2",
+      fromStepId: waitId,
+      toStepId: exitOpenedId,
+      condition: { branch: "opened" },
+    },
+    {
+      id: "t3",
+      fromStepId: waitId,
+      toStepId: exitClickedId,
+      condition: { branch: "clicked" },
+    },
+    {
+      id: "t4",
+      fromStepId: waitId,
+      toStepId: exitBouncedId,
+      condition: { branch: "bounced" },
+    },
+    {
+      id: "t5",
+      fromStepId: waitId,
+      toStepId: exitTimeoutId,
+      condition: { branch: "timeout" },
+    },
+  ];
+
+  return {
+    id: `${TEST_PREFIX}-wf-engagement-branch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    organizationId: testOrg.id,
+    name: "Email Engagement Branch Workflow",
+    status: "enabled" as const,
+    triggerType: "api" as const,
+    triggerConfig: {},
+    steps,
+    transitions,
+    allowReentry: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: testUser.id,
+  };
+}
+
 function createSubscribeTopicWorkflow(topicId: string) {
   const triggerId = "trigger-1";
   const subscribeId = "subscribe-1";
@@ -884,9 +1007,46 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           target: contact.id,
           set: { updatedAt: new Date(), properties: testContact.properties },
         });
+
+      // Defensive: remove any stale awsAccount rows that share our test
+      // accountId. The webhook route matches on accountId with .limit(1) and
+      // there's no unique constraint on accountId — a leftover row from
+      // another test (or a prior failed run) would silently steal auth.
+      const staleAccounts = await db
+        .select({ id: awsAccount.id })
+        .from(awsAccount)
+        .where(
+          and(
+            eq(awsAccount.accountId, testAwsAccount.accountId),
+            ne(awsAccount.id, testAwsAccount.id)
+          )
+        );
+      for (const stale of staleAccounts) {
+        await db
+          .delete(messageSend)
+          .where(eq(messageSend.awsAccountId, stale.id));
+        await db.delete(awsAccount).where(eq(awsAccount.id, stale.id));
+      }
+
+      // Insert test AWS account (for webhook authentication)
+      await db
+        .insert(awsAccount)
+        .values(testAwsAccount)
+        .onConflictDoUpdate({
+          target: awsAccount.id,
+          set: {
+            webhookSecret: testAwsAccount.webhookSecret,
+            updatedAt: new Date(),
+          },
+        });
     });
 
     beforeEach(async () => {
+      // Clean up message sends (must precede execution cleanup due to FK)
+      await db
+        .delete(messageSend)
+        .where(eq(messageSend.organizationId, testOrg.id));
+
       // Clean up any executions from previous tests
       await db
         .delete(workflowExecution)
@@ -897,11 +1057,13 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
         .delete(contactTopic)
         .where(eq(contactTopic.contactId, testContact.id));
 
-      // Reset contact properties before each test
+      // Reset contact properties + email engagement state before each test
       await db
         .update(contact)
         .set({
           properties: testContact.properties,
+          emailStatus: testContact.emailStatus,
+          emailBouncedAt: null,
           updatedAt: new Date(),
         })
         .where(eq(contact.id, testContact.id));
@@ -934,6 +1096,14 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
       await db
         .delete(contactTopic)
         .where(eq(contactTopic.contactId, testContact.id));
+
+      // Clean up message sends (scoped to test org)
+      await db
+        .delete(messageSend)
+        .where(eq(messageSend.organizationId, testOrg.id));
+
+      // Clean up AWS account
+      await db.delete(awsAccount).where(eq(awsAccount.id, testAwsAccount.id));
 
       // Clean up test data
       await db.delete(contact).where(eq(contact.id, testContact.id));
@@ -1628,6 +1798,214 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
 
           // The winning branch should be either "opened" or "timeout" (not both)
           expect(["opened", "timeout"]).toContain(waitSteps[0].branch);
+        }
+      );
+    });
+
+    describe("Webhook Engagement Resume (real SES events → real SQS)", () => {
+      /**
+       * Helper: enqueue trigger, wait for waiting state, then rewrite
+       * waitingForEvent so the webhook's `email_engagement:${messageId}`
+       * lookup matches our seeded messageSend row.
+       *
+       * The wait_for_email_engagement handler sets
+       * `waitingForEvent = email_engagement:unknown` when no previous
+       * send_email step is present (see workers/workflow-step-handlers.ts).
+       */
+      async function triggerAndArmEngagementWait(opts: {
+        workflowId: string;
+        messageId: string;
+      }) {
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: opts.workflowId,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        const execution = await waitForExecutionCreated(
+          opts.workflowId,
+          testContact.id
+        );
+        expect(execution).not.toBeNull();
+
+        const waiting = await waitForExecutionStatus(
+          execution!.id,
+          "waiting",
+          15_000
+        );
+        expect(waiting?.status).toBe("waiting");
+
+        // Rewrite waitingForEvent to point at our seeded messageId so the
+        // webhook's resumeWaitingExecutions() lookup will find this execution.
+        await db
+          .update(workflowExecution)
+          .set({
+            waitingForEvent: `email_engagement:${opts.messageId}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(workflowExecution.id, execution!.id));
+
+        return execution!;
+      }
+
+      async function postSesEvent(event: unknown) {
+        return fetch(
+          `${sstOutputs.apiUrl}/webhooks/ses/${testAwsAccount.accountId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-wraps-api-key": testAwsAccount.webhookSecret,
+            },
+            body: JSON.stringify(event),
+          }
+        );
+      }
+
+      function seedMessageSend(messageId: string) {
+        return db.insert(messageSend).values({
+          id: `${TEST_PREFIX}-msg-${messageId}`,
+          organizationId: testOrg.id,
+          contactId: testContact.id,
+          awsAccountId: testAwsAccount.id,
+          channel: "email",
+          sourceType: "workflow",
+          recipient: testContact.email,
+          subject: "Integration test",
+          from: "noreply@test.com",
+          messageId,
+          status: "sent",
+          sentAt: new Date(),
+          createdAt: new Date(),
+        });
+      }
+
+      it(
+        "resumes on Open event with branch='opened'",
+        { timeout: 60_000 },
+        async () => {
+          const messageId = `${TEST_PREFIX}-open-${Date.now()}`;
+          const wf = createEngagementBranchWorkflow();
+          await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+          createdWorkflowIds.push(wf.id);
+
+          await seedMessageSend(messageId);
+
+          const execution = await triggerAndArmEngagementWait({
+            workflowId: wf.id,
+            messageId,
+          });
+
+          const response = await postSesEvent(
+            buildOpenEvent({
+              account: testAwsAccount.accountId,
+              mail: { messageId, destination: [testContact.email] },
+            })
+          );
+          expect(response.status).toBe(200);
+
+          const finalExecution = await waitForExecutionStatus(
+            execution.id,
+            "completed",
+            30_000
+          );
+          expect(finalExecution?.status).toBe("completed");
+          expect(finalExecution?.waitingForEvent).toBeNull();
+
+          const stepExecs = await getStepExecutions(execution.id);
+          const waitStep = stepExecs.find(
+            (s) => s.stepType === "wait_for_email_engagement"
+          );
+          expect(waitStep?.branch).toBe("opened");
+        }
+      );
+
+      it(
+        "resumes on Click event with branch='clicked'",
+        { timeout: 60_000 },
+        async () => {
+          const messageId = `${TEST_PREFIX}-click-${Date.now()}`;
+          const wf = createEngagementBranchWorkflow();
+          await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+          createdWorkflowIds.push(wf.id);
+
+          await seedMessageSend(messageId);
+
+          const execution = await triggerAndArmEngagementWait({
+            workflowId: wf.id,
+            messageId,
+          });
+
+          const response = await postSesEvent(
+            buildClickEvent({
+              account: testAwsAccount.accountId,
+              mail: { messageId, destination: [testContact.email] },
+            })
+          );
+          expect(response.status).toBe(200);
+
+          const finalExecution = await waitForExecutionStatus(
+            execution.id,
+            "completed",
+            30_000
+          );
+          expect(finalExecution?.status).toBe("completed");
+
+          const stepExecs = await getStepExecutions(execution.id);
+          const waitStep = stepExecs.find(
+            (s) => s.stepType === "wait_for_email_engagement"
+          );
+          expect(waitStep?.branch).toBe("clicked");
+        }
+      );
+
+      it(
+        "resumes on permanent Bounce event with branch='bounced' and marks contact bounced",
+        { timeout: 60_000 },
+        async () => {
+          const messageId = `${TEST_PREFIX}-bounce-${Date.now()}`;
+          const wf = createEngagementBranchWorkflow();
+          await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+          createdWorkflowIds.push(wf.id);
+
+          await seedMessageSend(messageId);
+
+          const execution = await triggerAndArmEngagementWait({
+            workflowId: wf.id,
+            messageId,
+          });
+
+          const response = await postSesEvent(
+            buildBounceEvent({
+              account: testAwsAccount.accountId,
+              bounceType: "Permanent",
+              mail: { messageId, destination: [testContact.email] },
+              recipients: [testContact.email],
+            })
+          );
+          expect(response.status).toBe(200);
+
+          const finalExecution = await waitForExecutionStatus(
+            execution.id,
+            "completed",
+            30_000
+          );
+          expect(finalExecution?.status).toBe("completed");
+
+          const stepExecs = await getStepExecutions(execution.id);
+          const waitStep = stepExecs.find(
+            (s) => s.stepType === "wait_for_email_engagement"
+          );
+          expect(waitStep?.branch).toBe("bounced");
+
+          // Permanent bounce should mark the contact as bounced
+          const [updatedContact] = await db
+            .select()
+            .from(contact)
+            .where(eq(contact.id, testContact.id));
+          expect(updatedContact.emailStatus).toBe("bounced");
+          expect(updatedContact.emailBouncedAt).not.toBeNull();
         }
       );
     });

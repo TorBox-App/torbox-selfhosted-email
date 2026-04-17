@@ -1,0 +1,45 @@
+language js
+
+// Require db.update(<orgScopedTable>).set(...).where(...) chains to include a
+// syntactic `<table>.organizationId` reference inside the WHERE predicate.
+//
+// Cross-org IDOR defense: the mutation itself must carry the scope so the
+// protection survives refactors, even if a caller validated ownership earlier.
+//
+// Escape hatch: use `// biome-ignore lint/plugin: <reason>` on the .where(
+// line when scope is guaranteed by context (id came from an org-scoped
+// lookup in the same function).
+`db.update($table).set($set).where($where)` as $source where {
+  $table <: or {
+    `contact`,
+    `topic`,
+    `topicSettings`,
+    `template`,
+    `reusableBlock`,
+    `templateVariable`,
+    `brandKit`,
+    `aiConversation`,
+    `workflow`,
+    `workflowExecution`,
+    `awsAccount`,
+    `apiKey`,
+    `auditLog`,
+    `batchSend`,
+    `messageSend`,
+    `segment`,
+    `contactEvent`,
+    `emailTemplate`,
+    `organizationExtension`,
+    `member`,
+    `invitation`,
+    `statement`,
+    `aiUsageMonthly`,
+    `aiUsageLog`,
+    `apiUsageDaily`,
+    `apiRateLimitWindow`,
+    `messageUsageMonthly`,
+    `eventUsageMonthly`
+  },
+  ! $where <: contains `$table.organizationId`,
+  register_diagnostic(span=$source, severity="warn", message="db.update(<orgScopedTable>) WHERE clause missing <table>.organizationId scope. Add eq(<table>.organizationId, ...) to the predicate, or add `// biome-ignore lint/plugin: <reason>` on the .where( line if the id is guaranteed org-scoped in this context.")
+}
