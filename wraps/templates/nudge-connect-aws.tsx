@@ -12,10 +12,10 @@ import { Footer } from "./_components/footer";
 
 // -- Metadata --
 
-export const subject = "let me set this up for you";
+export const subject = "one step from sending";
 export const emailType = "marketing" as const;
 export const previewText =
-  "Book 15 min and I'll get your AWS email infra running live on the call.";
+  "Connect your AWS account and you're sending — here's the quickstart.";
 
 // -- Test Data (for preview) --
 
@@ -50,20 +50,14 @@ export default function NudgeConnectAws({ unsubscribeUrl }: Props) {
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              I do these setups all the time.{" "}
+              The whole flow is in the{" "}
               <Link
                 className="text-gray-800 underline"
-                href="https://cal.com/wraps/get-started-with-wraps"
+                href="https://wraps.dev/docs/quickstart/email"
               >
-                Book 15 minutes with me
+                quickstart guide
               </Link>{" "}
-              and I&apos;ll walk you through connecting your account and
-              verifying your first domain live on the call. Most people are
-              sending emails before we hang up.
-            </Text>
-
-            <Text className="text-[15px] leading-relaxed text-gray-800">
-              Or if you prefer self-serve, run{" "}
+              &mdash; run{" "}
               <code
                 style={{
                   backgroundColor: "#f3f4f6",
@@ -74,7 +68,7 @@ export default function NudgeConnectAws({ unsubscribeUrl }: Props) {
               >
                 wraps aws setup
               </code>{" "}
-              to get credentials wired up, then{" "}
+              to wire up credentials, then{" "}
               <code
                 style={{
                   backgroundColor: "#f3f4f6",
@@ -85,7 +79,12 @@ export default function NudgeConnectAws({ unsubscribeUrl }: Props) {
               >
                 wraps email init
               </code>{" "}
-              to deploy SES to your account.
+              to deploy SES to your account. Most people are sending in under 10
+              minutes.
+            </Text>
+
+            <Text className="text-[15px] leading-relaxed text-gray-800">
+              Hit reply if you get stuck on anything.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

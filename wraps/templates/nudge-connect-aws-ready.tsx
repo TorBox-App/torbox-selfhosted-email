@@ -72,15 +72,14 @@ export default function NudgeConnectAwsReady({ unsubscribeUrl }: Props) {
               >
                 wraps email init
               </code>{" "}
-              to deploy SES. Or{" "}
+              to deploy SES. The{" "}
               <Link
                 className="text-gray-800 underline"
-                href="https://cal.com/wraps/get-started-with-wraps"
+                href="https://wraps.dev/docs/quickstart/email"
               >
-                book 15 minutes with me
+                quickstart guide
               </Link>{" "}
-              and I&apos;ll walk you through it live. Most people are sending
-              before we hang up.
+              walks through both. Most people are sending in under 10 minutes.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

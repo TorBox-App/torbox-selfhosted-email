@@ -61,14 +61,15 @@ export default function NudgeVerifyDomain({ unsubscribeUrl }: Props) {
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              If you hit any DNS weirdness,{" "}
+              The{" "}
               <Link
                 className="text-gray-800 underline"
-                href="https://cal.com/wraps/get-started-with-wraps"
+                href="https://wraps.dev/docs/quickstart/email"
               >
-                grab a slot
+                quickstart guide
               </Link>{" "}
-              and I&apos;ll sort it out with you. Or just reply here.
+              has the full walkthrough if you want a reference. If you hit any
+              DNS weirdness, just reply here.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
