@@ -161,7 +161,7 @@ export default function ProductUpdateEmail({
             <Section className="mt-5">
               <Button
                 className="rounded-md border border-solid border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
-                href="https://wraps.dev/docs/templates-as-code"
+                href="https://wraps.dev/docs/guides/templates"
               >
                 Read the Docs
               </Button>
@@ -262,7 +262,7 @@ export default function ProductUpdateEmail({
             <Section className="mt-5">
               <Button
                 className="rounded-md border border-solid border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
-                href="https://wraps.dev/docs/cli-auth"
+                href="https://wraps.dev/docs/cli-reference/auth"
               >
                 Set Up CLI Auth
               </Button>

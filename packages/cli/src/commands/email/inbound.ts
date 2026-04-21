@@ -852,7 +852,7 @@ export function mapInboundTestSendError(
       `Failed to send inbound test email to ${ctx.recipient}`,
       "INBOUND_TEST_SEND_FAILED",
       "An unexpected error occurred while sending the test email.\n\nCheck infrastructure status:\n  wraps email status\n  wraps email doctor",
-      "https://wraps.dev/docs/guides/email/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     );
   }
 
@@ -894,7 +894,7 @@ export function mapInboundTestSendError(
         "Exit the SES sandbox to send to any address:",
         "  https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html",
       ].join("\n"),
-      "https://wraps.dev/docs/guides/email/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     );
   }
 

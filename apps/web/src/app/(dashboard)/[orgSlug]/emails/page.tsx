@@ -75,7 +75,7 @@ export default async function EmailsPage({
               </Button>
               <Button asChild variant="ghost">
                 <a
-                  href="https://docs.wraps.dev/email"
+                  href="https://wraps.dev/docs/quickstart/email"
                   rel="noopener noreferrer"
                   target="_blank"
                 >

@@ -214,7 +214,7 @@ export default async function SMSPage({ params, searchParams }: SMSPageProps) {
               </Button>
               <Button asChild variant="ghost">
                 <a
-                  href="https://docs.wraps.dev/sms"
+                  href="https://wraps.dev/docs/quickstart/sms"
                   rel="noopener noreferrer"
                   target="_blank"
                 >

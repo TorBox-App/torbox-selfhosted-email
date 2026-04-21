@@ -83,7 +83,7 @@ export default async function SendPage({
               </Button>
               <Button asChild variant="ghost">
                 <a
-                  href="https://docs.wraps.dev/email/broadcasts"
+                  href="https://wraps.dev/docs/guides/templates"
                   rel="noopener noreferrer"
                   target="_blank"
                 >

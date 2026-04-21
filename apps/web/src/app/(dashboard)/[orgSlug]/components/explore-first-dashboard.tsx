@@ -210,7 +210,7 @@ export function ExploreFirstDashboard({
                 </Button>
                 <Button asChild className="w-full" size="sm" variant="ghost">
                   <a
-                    href="https://docs.wraps.dev"
+                    href="https://wraps.dev/docs"
                     rel="noopener noreferrer"
                     target="_blank"
                   >

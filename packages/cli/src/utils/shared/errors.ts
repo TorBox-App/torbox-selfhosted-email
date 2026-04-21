@@ -613,7 +613,7 @@ export const errors = {
       "The Pulumi stack is locked from a previous run",
       "STACK_LOCKED",
       "This happens when a previous deployment was interrupted.\n\nFor local state, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nFor S3 state, delete the lock object in your wraps-state-* bucket under .pulumi/locks/\n\nThen try your command again.",
-      "https://wraps.dev/docs/guides/aws-setup/permissions/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   // SMS-specific errors
@@ -751,7 +751,7 @@ export const errors = {
       `SES rejected the message: ${detail}`,
       "SES_MESSAGE_REJECTED",
       "Common causes:\n  • Account is in the SES sandbox and the recipient is not a verified address\n  • Sender identity (domain or email) is not verified for sending\n  • The sender domain is verified for receiving but not for sending\n\nCheck status:\n  wraps email status\n  wraps email doctor\n\nRequest production access (exit sandbox):\n  https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html",
-      "https://wraps.dev/docs/guides/email/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   sesMailFromNotVerified: (detail: string) =>
@@ -914,7 +914,7 @@ export const errors = {
       "wraps/wraps.config.ts not found",
       "WRAPS_CONFIG_NOT_FOUND",
       "Initialize templates first:\n  wraps email templates init",
-      "https://wraps.dev/docs/templates-as-code"
+      "https://wraps.dev/docs/guides/templates"
     ),
 
   templateCompilationFailed: (name: string, error: string) =>
@@ -922,7 +922,7 @@ export const errors = {
       `Failed to compile template "${name}": ${error}`,
       "TEMPLATE_COMPILATION_FAILED",
       "Check your template for syntax errors and ensure all imports are valid.",
-      "https://wraps.dev/docs/templates-as-code"
+      "https://wraps.dev/docs/guides/templates"
     ),
 
   notAuthenticated: () =>
@@ -930,7 +930,7 @@ export const errors = {
       "Not authenticated to Wraps Platform",
       "NOT_AUTHENTICATED",
       "Sign in first:\n  wraps auth login\n\nOr provide an API key:\n  wraps push --token wraps_...\n  WRAPS_API_KEY=wraps_... wraps push",
-      "https://wraps.dev/docs/auth"
+      "https://wraps.dev/docs/cli-reference/auth"
     ),
 
   templatePushFailed: (name: string, error: string) =>
@@ -938,6 +938,6 @@ export const errors = {
       `Failed to push template "${name}": ${error}`,
       "TEMPLATE_PUSH_FAILED",
       "Check your API key and network connection.",
-      "https://wraps.dev/docs/templates-as-code"
+      "https://wraps.dev/docs/guides/templates"
     ),
 };

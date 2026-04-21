@@ -85,7 +85,7 @@ export default async function EmailSetupPage({ params }: EmailSetupPageProps) {
           <div className="mt-4 flex gap-2">
             <Button asChild variant="outline">
               <a
-                href="https://docs.wraps.dev/email/quickstart"
+                href="https://wraps.dev/docs/quickstart/email"
                 rel="noopener noreferrer"
                 target="_blank"
               >

@@ -85,7 +85,7 @@ export default async function SMSSetupPage({ params }: SMSSetupPageProps) {
           <div className="mt-4 flex gap-2">
             <Button asChild variant="outline">
               <a
-                href="https://docs.wraps.dev/sms/quickstart"
+                href="https://wraps.dev/docs/quickstart/sms"
                 rel="noopener noreferrer"
                 target="_blank"
               >

@@ -277,7 +277,7 @@ async function replyInitForSingleDomain(params: {
       `SSM parameter for ${domain} was not created`,
       "REPLY_SECRET_PARAMETER_MISSING",
       `The Pulumi deploy completed but the SSM parameter ${ssmParameterName(domain)} was not found. Run:\n  wraps email reply status\nto diagnose, or retry the init.`,
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -413,7 +413,7 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
       "Reply threading requires inbound email infrastructure",
       "REPLY_REQUIRES_INBOUND",
       "Deploy inbound first:\n  wraps email inbound init\n\nThen enable reply threading:\n  wraps email reply init --domain yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -431,7 +431,7 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
       "No inbound domains configured",
       "REPLY_NO_INBOUND_DOMAINS",
       "Add an inbound domain first:\n  wraps email inbound add --domain yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -462,7 +462,7 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
         `Domain ${target} is not configured for inbound email`,
         "REPLY_INBOUND_DOMAIN_NOT_FOUND",
         `Add it to inbound first:\n  wraps email inbound add ${target}`,
-        "https://wraps.dev/docs/guides/email/reply-threading"
+        "https://wraps.dev/docs/guides/reply-threading"
       );
     }
     if (isReplyEnabledFor(metadata, target)) {
@@ -470,7 +470,7 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
         `Reply threading is already enabled for ${target}`,
         "REPLY_ALREADY_ENABLED",
         `To rotate the signing secret, run:\n  wraps email reply rotate --domain ${target}`,
-        "https://wraps.dev/docs/guides/email/reply-threading"
+        "https://wraps.dev/docs/guides/reply-threading"
       );
     }
     targetDomains = [target];
@@ -479,7 +479,7 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
       "Specify a domain or use --all",
       "REPLY_MISSING_DOMAIN",
       "Use one of:\n  wraps email reply init --domain yourapp.com\n  wraps email reply init --all",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -555,7 +555,7 @@ export async function replyRotate(
       "--domain is required for rotate",
       "REPLY_ROTATE_MISSING_DOMAIN",
       "Usage:\n  wraps email reply rotate --domain yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -571,7 +571,7 @@ export async function replyRotate(
       "Reply threading is not enabled",
       "REPLY_NOT_ENABLED",
       "Enable it first:\n  wraps email reply init --domain yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -582,7 +582,7 @@ export async function replyRotate(
       `Reply threading is not enabled for ${options.domain}`,
       "REPLY_DOMAIN_NOT_ENABLED",
       `Enable it first:\n  wraps email reply init --domain ${options.domain}`,
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -614,7 +614,7 @@ export async function replyRotate(
           `SSM parameter ${parameterName} not found`,
           "REPLY_SECRET_PARAMETER_MISSING",
           `The signing secret for ${options.domain} has not been created yet. Run:\n  wraps email reply init --domain ${options.domain}`,
-          "https://wraps.dev/docs/guides/email/reply-threading"
+          "https://wraps.dev/docs/guides/reply-threading"
         );
       }
       throw error;
@@ -942,7 +942,7 @@ export async function replyDestroy(
       "Specify a domain or use --all",
       "REPLY_DESTROY_MISSING_DOMAIN",
       "Usage:\n  wraps email reply destroy --domain yourapp.com\n  wraps email reply destroy --all",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -1024,7 +1024,7 @@ export async function replyDecode(
       "Usage: wraps email reply decode <token>@r.mail.yourapp.com",
       "REPLY_DECODE_MISSING_ADDRESS",
       "Provide a signed reply address like:\n  wraps email reply decode abcDEF123@r.mail.yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 
@@ -1035,7 +1035,7 @@ export async function replyDecode(
       "Address must be in the form <token>@r.mail.example.com",
       "REPLY_DECODE_MALFORMED_ADDRESS",
       "Pass a full signed reply address:\n  wraps email reply decode abcDEF123@r.mail.yourapp.com",
-      "https://wraps.dev/docs/guides/email/reply-threading"
+      "https://wraps.dev/docs/guides/reply-threading"
     );
   }
 

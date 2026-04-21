@@ -176,7 +176,7 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
             <div className="mt-4 flex gap-2">
               <Button asChild variant="outline">
                 <a
-                  href="https://docs.wraps.dev/email/inbound"
+                  href="https://wraps.dev/docs/quickstart/email/inbound"
                   rel="noopener noreferrer"
                   target="_blank"
                 >
