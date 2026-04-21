@@ -54,7 +54,7 @@ export default function NudgeVerifyDomain({ unsubscribeUrl }: Props) {
                   fontSize: "14px",
                 }}
               >
-                wraps email setup
+                wraps email init
               </code>{" "}
               and it&apos;ll give you the DNS records to add. Most providers
               propagate in under 10 minutes.

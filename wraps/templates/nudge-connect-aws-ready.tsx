@@ -59,9 +59,20 @@ export default function NudgeConnectAwsReady({ unsubscribeUrl }: Props) {
                   fontSize: "14px",
                 }}
               >
-                wraps auth connect
+                wraps aws setup
               </code>{" "}
-              and follow the prompts, or{" "}
+              to wire up credentials, then{" "}
+              <code
+                style={{
+                  backgroundColor: "#f3f4f6",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+              >
+                wraps email init
+              </code>{" "}
+              to deploy SES. Or{" "}
               <Link
                 className="text-gray-800 underline"
                 href="https://cal.com/wraps/get-started-with-wraps"

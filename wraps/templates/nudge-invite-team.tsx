@@ -72,9 +72,20 @@ export default function NudgeInviteTeam({ unsubscribeUrl }: Props) {
                   fontSize: "14px",
                 }}
               >
-                wraps auth connect
+                wraps aws setup
               </code>{" "}
-              and follow the prompts.
+              to get credentials sorted, then{" "}
+              <code
+                style={{
+                  backgroundColor: "#f3f4f6",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+              >
+                wraps email init
+              </code>{" "}
+              to deploy SES.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

@@ -197,7 +197,7 @@ export default function MarchUpdateEmail({
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
               •&ensp;
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
-                wraps deploy
+                wraps email init
               </code>{" "}
               pre-flight scan catches resource conflicts before touching AWS
             </Text>
