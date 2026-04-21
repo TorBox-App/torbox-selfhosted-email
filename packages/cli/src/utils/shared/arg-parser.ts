@@ -61,6 +61,9 @@ export type CliFlags = {
   // Doctor
   cleanup?: boolean;
 
+  // Inbound status
+  revealSecret?: boolean;
+
   // Help / version (informational; cli.ts short-circuits before parsing)
   help?: boolean;
   version?: boolean;
@@ -126,6 +129,7 @@ const BOOLEAN_FLAGS = [
   "draft",
   "root",
   "cleanup",
+  "reveal-secret",
   "help",
   "version",
 ] as const;

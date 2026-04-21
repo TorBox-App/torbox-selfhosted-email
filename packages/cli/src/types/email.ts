@@ -454,6 +454,7 @@ export type EmailInboundDestroyOptions = {
 export type EmailInboundStatusOptions = {
   region?: string;
   json?: boolean;
+  revealSecret?: boolean;
 };
 
 /**

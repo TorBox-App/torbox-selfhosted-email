@@ -401,6 +401,8 @@ export async function inboundInit(
       subdomain,
       bucketName: `wraps-inbound-${identity.accountId}-${region}`,
       webhookUrl: webhookUrl || null,
+      webhookSecret: webhookUrl ? webhookSecret : null,
+      webhookHeader: webhookUrl ? "X-Wraps-Inbound-Key" : null,
       dnsAutoCreated,
       region,
     });
@@ -420,6 +422,29 @@ export async function inboundInit(
   if (dnsAutoCreated) {
     console.log(`  ${pc.dim("DNS:")}              ${pc.green("Auto-created")}`);
   }
+
+  if (webhookUrl) {
+    const setupLines = [
+      `EventBridge will POST every ${pc.cyan("email.received")} event to:`,
+      `  ${pc.cyan(webhookUrl)}`,
+      "",
+      "Verify the request by checking this header on every POST:",
+      `  ${pc.bold("X-Wraps-Inbound-Key")}: ${pc.yellow(webhookSecret)}`,
+      "",
+      pc.bold("Save this secret now — it is only shown once."),
+      `Retrieve it later with: ${pc.cyan("wraps email inbound status --reveal-secret")}`,
+      "",
+      "Body shape (JSON):",
+      pc.dim(
+        '  { "emailId", "from", "to", "subject", "html", "text", "attachments", "headers", ... }'
+      ),
+      "",
+      `Docs: ${pc.cyan("https://wraps.dev/docs/quickstart/email/inbound")}`,
+    ].join("\n");
+    console.log();
+    clack.note(setupLines, "Webhook setup");
+  }
+
   console.log();
   console.log(pc.bold("Next steps:"));
   if (dnsAutoCreated) {
@@ -629,6 +654,11 @@ export async function inboundStatus(
       bucketName: inbound.bucketName || "",
       region,
       webhookUrl: inbound.webhookUrl || null,
+      webhookHeader: inbound.webhookUrl ? "X-Wraps-Inbound-Key" : null,
+      webhookSecret:
+        options.revealSecret && inbound.webhookUrl
+          ? inbound.webhookSecret || null
+          : null,
       receiptRuleSetActive: activeRuleSet === RULE_SET_NAME,
       retention: inbound.retention || null,
     });
@@ -653,6 +683,20 @@ export async function inboundStatus(
   console.log(
     `  ${pc.dim("Webhook URL:")}       ${inbound.webhookUrl ? pc.cyan(inbound.webhookUrl) : pc.dim("not configured")}`
   );
+  if (inbound.webhookUrl) {
+    console.log(
+      `  ${pc.dim("Webhook header:")}    ${pc.cyan("X-Wraps-Inbound-Key")}`
+    );
+    if (options.revealSecret) {
+      console.log(
+        `  ${pc.dim("Webhook secret:")}    ${inbound.webhookSecret ? pc.yellow(inbound.webhookSecret) : pc.dim("not set")}`
+      );
+    } else {
+      console.log(
+        `  ${pc.dim("Webhook secret:")}    ${pc.dim("hidden — pass --reveal-secret to show")}`
+      );
+    }
+  }
   console.log(
     `  ${pc.dim("Receipt rule set:")}  ${activeRuleSet === RULE_SET_NAME ? pc.green("active") : pc.yellow("inactive")}`
   );

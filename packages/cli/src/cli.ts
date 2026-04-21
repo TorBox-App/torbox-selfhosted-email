@@ -669,6 +669,7 @@ async function run() {
               await inboundStatus({
                 region: flags.region,
                 json: flags.json,
+                revealSecret: flags.revealSecret,
               });
               break;
 
