@@ -87,6 +87,9 @@ const sendCode = `import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail();
 
+// Sending via the SDK calls SES directly from your AWS account.
+// You provide the unsubscribe URL — it points at an endpoint you own.
+// See "Unsubscribe handling" below for the platform-managed alternative.
 await email.sendTemplate({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
@@ -94,9 +97,19 @@ await email.sendTemplate({
   templateData: {
     firstName: 'Alice',
     companyName: 'Acme',
-    unsubscribeUrl: 'https://app.example.com/unsubscribe',
+    unsubscribeUrl: 'https://yourdomain.com/unsubscribe?token=abc123',
   },
 });`;
+
+const broadcastTemplateCode = `export const emailType = 'marketing' as const;
+
+// In any marketing template, reference the Wraps-managed placeholder.
+// When sent via a broadcast or workflow, Wraps generates a signed,
+// per-recipient URL and substitutes it at send time.
+<Footer unsubscribeUrl={unsubscribeUrl} />
+
+// {{preferencesUrl}} is also auto-injected if you want a
+// "manage preferences" link instead of a hard unsubscribe.`;
 
 function CodeExample({
   code,
@@ -387,6 +400,131 @@ export default function TemplatesQuickstartPageContent() {
           </code>
           ) are also replaced automatically.
         </p>
+      </section>
+
+      {/* Unsubscribe Handling */}
+      <section className="mb-12">
+        <h2 className="mb-4 font-bold text-2xl">Unsubscribe handling</h2>
+        <p className="mb-6 text-muted-foreground">
+          Every variable accessed on the template's props (including{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">unsubscribeUrl</code>
+          ) is compiled into a{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            {"{{unsubscribeUrl}}"}
+          </code>{" "}
+          placeholder in the template pushed to SES. What fills that
+          placeholder at send time depends on how you send:
+        </p>
+
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">SDK (your SES)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-muted-foreground text-sm">
+              <p>
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  @wraps.dev/email
+                </code>{" "}
+                calls SES directly from your AWS account. Wraps is not in the
+                path.
+              </p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  You pass{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    unsubscribeUrl
+                  </code>{" "}
+                  in{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    templateData
+                  </code>
+                  — it points at an endpoint you own.
+                </li>
+                <li>
+                  You run the unsubscribe handler and maintain your own
+                  suppression list (or use{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    email.suppression
+                  </code>
+                  ).
+                </li>
+                <li>
+                  No{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    List-Unsubscribe
+                  </code>{" "}
+                  headers are added for you — add them with the{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    headers
+                  </code>{" "}
+                  option if you need RFC 8058 one-click unsubscribe.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Platform broadcasts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-muted-foreground text-sm">
+              <p>
+                When the send goes through a Wraps broadcast or workflow step,
+                Wraps handles unsubscribe end-to-end.
+              </p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  Wraps generates a signed, per-recipient URL and substitutes{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    {"{{unsubscribeUrl}}"}
+                  </code>{" "}
+                  at send time.
+                </li>
+                <li>
+                  Clicks land on the hosted unsubscribe page, suppress the
+                  contact, and emit a workflow event — no endpoint to build.
+                </li>
+                <li>
+                  Requires{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    export const emailType = 'marketing' as const;
+                  </code>{" "}
+                  on the template. That flag also enables RFC 8058{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    List-Unsubscribe
+                  </code>{" "}
+                  and{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    List-Unsubscribe-Post
+                  </code>{" "}
+                  headers for Gmail/Apple Mail one-click unsubscribe.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    {"{{preferencesUrl}}"}
+                  </code>{" "}
+                  is available alongside{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    {"{{unsubscribeUrl}}"}
+                  </code>{" "}
+                  if you prefer a preferences page over a hard unsubscribe.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        <p className="mb-3 text-muted-foreground">
+          The template file itself is the same for both paths. Mark marketing
+          templates with the <code>emailType</code> flag and reference the
+          placeholder:
+        </p>
+        <CodeExample
+          code={broadcastTemplateCode}
+          filename="wraps/templates/newsletter.tsx"
+          language="tsx"
+        />
       </section>
 
       {/* Next Steps */}
