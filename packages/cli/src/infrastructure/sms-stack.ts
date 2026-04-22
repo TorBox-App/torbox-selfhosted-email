@@ -1,6 +1,5 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { getDefaultRegion } from "../constants.js";
 import type {
   Provider,
   SMSStackConfig,
@@ -165,15 +164,14 @@ function createSMSOptOutList(): aws.pinpoint.Smsvoicev2OptOutList {
  * Check if a wraps-managed phone number already exists
  */
 async function findExistingPhoneNumber(
-  phoneNumberType: string
+  phoneNumberType: string,
+  region: string
 ): Promise<string | null> {
   try {
     const { PinpointSMSVoiceV2Client, DescribePhoneNumbersCommand } =
       await import("@aws-sdk/client-pinpoint-sms-voice-v2");
 
-    const client = new PinpointSMSVoiceV2Client({
-      region: getDefaultRegion(),
-    });
+    const client = new PinpointSMSVoiceV2Client({ region });
 
     const numberTypeMap: Record<string, string> = {
       simulator: "SIMULATOR",
@@ -221,7 +219,8 @@ async function findExistingPhoneNumber(
  */
 async function createSMSPhoneNumber(
   phoneNumberType: string,
-  optOutList: aws.pinpoint.Smsvoicev2OptOutList
+  optOutList: aws.pinpoint.Smsvoicev2OptOutList,
+  region: string
 ): Promise<aws.pinpoint.Smsvoicev2PhoneNumber> {
   // Map our phone number type to AWS number type
   const numberTypeMap: Record<string, string> = {
@@ -232,7 +231,7 @@ async function createSMSPhoneNumber(
   };
 
   // Check for existing phone number
-  const existingArn = await findExistingPhoneNumber(phoneNumberType);
+  const existingArn = await findExistingPhoneNumber(phoneNumberType, region);
 
   const phoneConfig = {
     isoCountryCode: "US",
@@ -279,15 +278,15 @@ async function createSMSPhoneNumber(
 /**
  * Create SQS queues for event processing
  */
-async function createSMSSQSResources(): Promise<{
+async function createSMSSQSResources(config: { region: string }): Promise<{
   queue: aws.sqs.Queue;
   dlq: aws.sqs.Queue;
 }> {
   const dlqName = "wraps-sms-events-dlq";
   const queueName = "wraps-sms-events";
 
-  const dlqUrl = await sqsQueueExists(dlqName);
-  const queueUrl = await sqsQueueExists(queueName);
+  const dlqUrl = await sqsQueueExists(dlqName, config.region);
+  const queueUrl = await sqsQueueExists(queueName, config.region);
 
   const dlqConfig = {
     name: dlqName,
@@ -345,12 +344,13 @@ async function createSMSSQSResources(): Promise<{
 async function createSMSSNSResources(config: {
   queueArn: pulumi.Output<string>;
   queueUrl: pulumi.Output<string>;
+  region: string;
 }): Promise<{
   topic: aws.sns.Topic;
   subscription: aws.sns.TopicSubscription;
 }> {
   const topicName = "wraps-sms-events";
-  const topicArn = await snsTopicExists(topicName);
+  const topicArn = await snsTopicExists(topicName, config.region);
 
   const topicConfig = {
     name: topicName,
@@ -433,9 +433,11 @@ async function createSMSSNSResources(config: {
 /**
  * Create DynamoDB table for SMS history
  */
-async function createSMSDynamoDBTable(): Promise<aws.dynamodb.Table> {
+async function createSMSDynamoDBTable(config: {
+  region: string;
+}): Promise<aws.dynamodb.Table> {
   const tableName = "wraps-sms-history";
-  const exists = await tableExists(tableName);
+  const exists = await tableExists(tableName, config.region);
 
   const tableConfig = {
     name: tableName,
@@ -647,7 +649,8 @@ export async function deploySMSStack(
   if (smsConfig.phoneNumberType) {
     phoneNumber = await createSMSPhoneNumber(
       smsConfig.phoneNumberType,
-      optOutList
+      optOutList,
+      config.region
     );
     // Note: Phone pool is created via AWS SDK after Pulumi deployment
   }
@@ -655,7 +658,7 @@ export async function deploySMSStack(
   // 6. Create SQS queues (if event tracking enabled)
   let sqsResources;
   if (smsConfig.eventTracking?.enabled) {
-    sqsResources = await createSMSSQSResources();
+    sqsResources = await createSMSSQSResources({ region: config.region });
   }
 
   // 7. Create SNS topic (if event tracking enabled)
@@ -664,6 +667,7 @@ export async function deploySMSStack(
     snsResources = await createSMSSNSResources({
       queueArn: sqsResources.queue.arn,
       queueUrl: sqsResources.queue.url,
+      region: config.region,
     });
     // Note: Event destination is created via AWS SDK after Pulumi deployment
   }
@@ -671,7 +675,7 @@ export async function deploySMSStack(
   // 8. Create DynamoDB table (if history storage enabled)
   let dynamoTable;
   if (smsConfig.eventTracking?.dynamoDBHistory) {
-    dynamoTable = await createSMSDynamoDBTable();
+    dynamoTable = await createSMSDynamoDBTable({ region: config.region });
   }
 
   // 9. Deploy Lambda function (if event tracking + DynamoDB enabled)

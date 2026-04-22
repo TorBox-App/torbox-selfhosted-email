@@ -214,6 +214,9 @@ export function detectHostingProvider():
  */
 export async function validateCredentials(): Promise<string | null> {
   try {
+    // STS GetCallerIdentity is identity-only, but AWS SDK v3 refuses to build
+    // a client without a region. Pin to us-east-1 so detection still works in
+    // a shell that has creds but no AWS_REGION set.
     const sts = new STSClient({ region: "us-east-1" });
     const identity = await sts.send(new GetCallerIdentityCommand({}));
     return identity.Account || null;

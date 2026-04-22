@@ -3,10 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { EmailRestoreOptions } from "../../types/index.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { WrapsError } from "../../utils/shared/errors.js";
 import { getPulumiWorkDir } from "../../utils/shared/fs.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
@@ -22,6 +19,7 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 /**
  * Restore command - Remove Wraps infrastructure (alias for destroy)
@@ -71,12 +69,14 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
 
   progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
-  // 2. Get region
-  let region = options.region;
-  if (!region) {
-    const defaultRegion = await getAWSRegion();
-    region = defaultRegion;
-  }
+  // 2. Get region — option → env → saved metadata. Never silent-defaults to
+  // us-east-1 when the user has a real deployment saved elsewhere.
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    service: "email",
+    label: "email deployment",
+  });
 
   // 3. Load connection metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);

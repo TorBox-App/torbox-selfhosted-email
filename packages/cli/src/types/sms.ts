@@ -218,6 +218,7 @@ export type SMSTestOptions = {
  */
 export type SMSStatusOptions = {
   account?: string;
+  region?: string;
   json?: boolean;
 };
 

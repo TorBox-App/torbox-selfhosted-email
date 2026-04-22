@@ -584,6 +584,21 @@ export const errors = {
       "https://docs.aws.amazon.com/general/latest/gr/rande.html"
     ),
 
+  // The accountId parameter is kept in the signature so callers don't
+  // have to change, but it is deliberately not included in the output —
+  // the user ran the command so they know their own account, and keeping
+  // IDs out of error text matches the `sanitizeErrorMessage` posture used
+  // elsewhere in the error system.
+  regionRequired: (_accountId: string, savedRegions: readonly string[]) =>
+    new WrapsError(
+      "Region is required and could not be determined",
+      "REGION_REQUIRED",
+      savedRegions.length > 0
+        ? `Pass --region or set AWS_REGION.\nSaved regions: ${savedRegions.join(", ")}`
+        : "Pass --region or set AWS_REGION.\nNo saved Wraps deployments found.",
+      "https://wraps.dev/docs/cli-reference"
+    ),
+
   pulumiError: (message: string) =>
     new WrapsError(
       `Infrastructure deployment failed: ${message}`,

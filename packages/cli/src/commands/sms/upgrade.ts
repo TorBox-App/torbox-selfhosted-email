@@ -17,10 +17,7 @@ import type {
   SMSUpgradeOptions,
   WrapsSMSConfig,
 } from "../../types/index.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
@@ -35,6 +32,7 @@ import {
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
 import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 import {
   calculateSMSCosts,
   formatCost,
@@ -73,12 +71,13 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
 
   progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
-  // 3. Get region
-  let region = options.region;
-  if (!region) {
-    const defaultRegion = await getAWSRegion();
-    region = defaultRegion;
-  }
+  // 3. Get region — option → env → saved SMS metadata.
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    service: "sms",
+    label: "SMS deployment",
+  });
 
   // 4. Load existing connection metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);

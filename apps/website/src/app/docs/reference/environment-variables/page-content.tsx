@@ -69,7 +69,8 @@ const SECTION_MD = {
 | \`AWS_ACCESS_KEY_ID\` | AWS access key | - |
 | \`AWS_SECRET_ACCESS_KEY\` | AWS secret key | - |
 | \`AWS_SESSION_TOKEN\` | Temporary session token (for STS/SSO) | - |
-| \`AWS_REGION\` | AWS region | \`us-east-1\` |
+| \`AWS_REGION\` | AWS region. Post-deploy commands auto-resolve from saved connection metadata when unset. | - |
+| \`AWS_DEFAULT_REGION\` | Alternative to \`AWS_REGION\`; checked second. | - |
 | \`AWS_PROFILE\` | Named AWS CLI profile | \`default\` |
 | \`AWS_ROLE_ARN\` | IAM role ARN for OIDC assumption | - |`,
 
@@ -277,8 +278,15 @@ export default function PageContent() {
                 },
                 {
                   variable: "AWS_REGION",
-                  description: "AWS region",
-                  defaultValue: "us-east-1",
+                  description:
+                    "AWS region. Post-deploy commands (upgrade, restore, doctor, etc.) auto-resolve from saved connection metadata when unset — the CLI only falls back to us-east-1 when no saved deployments are found.",
+                  defaultValue: "-",
+                },
+                {
+                  variable: "AWS_DEFAULT_REGION",
+                  description:
+                    "Alternative to AWS_REGION; checked second in the resolution chain.",
+                  defaultValue: "-",
                 },
                 {
                   variable: "AWS_PROFILE",

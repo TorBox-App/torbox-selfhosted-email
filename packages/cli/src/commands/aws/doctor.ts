@@ -216,22 +216,28 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
     }
   }
 
-  // Check SES sandbox status (only if we have credentials and region)
+  // Check SES sandbox status if we have credentials. Doctor is explicitly the
+  // diagnostic command, so we DO run the check with a default region when
+  // none is set — but we annotate the result with the region used so the
+  // user can see whether that matches their intended deployment.
   if (state.credentialsConfigured) {
+    const regionUsed = state.region || "us-east-1";
+    const regionNote = state.region
+      ? `Region: ${regionUsed}`
+      : `No AWS_REGION set — defaulted to ${regionUsed}. Set AWS_REGION if your deployment lives elsewhere.`;
     try {
-      const region = state.region || "us-east-1";
-      const sandbox = await isSESSandbox(region);
+      const sandbox = await isSESSandbox(regionUsed);
       if (sandbox) {
         results.push({
           status: "warn",
           message: "SES is in sandbox mode",
-          details:
-            "You can only send to verified emails. Request production access in AWS console.",
+          details: `You can only send to verified emails. Request production access in AWS console.\n${regionNote}`,
         });
       } else {
         results.push({
           status: "pass",
           message: "SES has production access",
+          details: regionNote,
         });
       }
       // baseline:allow-next-line no-swallowed-errors — SES check is non-blocking diagnostic
@@ -239,7 +245,7 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
       results.push({
         status: "info",
         message: "Could not check SES status",
-        details: "SES may not be enabled in this region",
+        details: `SES may not be enabled in this region.\n${regionNote}`,
       });
     }
   }

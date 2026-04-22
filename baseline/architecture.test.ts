@@ -958,3 +958,116 @@ describe("form inputs have labels", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Test: No `"us-east-1"` hardcoded region outside the allow-list.
+//
+// The allow-list covers places where us-east-1 is load-bearing (ACM for
+// CloudFront must be us-east-1, CloudFront control plane is us-east-1,
+// SES_REGIONS data arrays, IAM is global), plus test fixtures. New
+// violations must either be fixed (thread region) or documented here with
+// a reason.
+// ─────────────────────────────────────────────────────────
+
+describe("no hardcoded us-east-1 outside allow-list", () => {
+  const US_EAST_1_ALLOW_LIST: RegExp[] = [
+    // Legitimate defaults / data / user-facing suggestions
+    /^packages\/cli\/src\/constants\.ts$/,
+    /^packages\/cli\/src\/infrastructure\/resources\/acm\.ts$/,
+    /^packages\/cli\/src\/infrastructure\/resources\/cloudfront\.ts$/,
+    /^packages\/cli\/src\/infrastructure\/resources\/s3-cdn\.ts$/,
+    /^packages\/cli\/src\/commands\/cdn\//,
+    /^packages\/cli\/src\/utils\/shared\/s3-state\.ts$/,
+    /^packages\/cli\/src\/utils\/shared\/aws\.ts$/,
+    /^packages\/cli\/src\/utils\/shared\/prompts\.ts$/,
+    /^packages\/cli\/src\/types\/email\.ts$/,
+    /^packages\/cli\/src\/commands\/aws\/setup\.ts$/,
+    // Scaffolding: string literals inside generated example configs users
+    // copy into their own projects. Not runtime region pins.
+    /^packages\/cli\/src\/commands\/workflow\/init\.ts$/,
+    /^packages\/cli\/src\/commands\/email\/workflows\/init\.ts$/,
+    /^packages\/cli\/src\/commands\/email\/templates\/init\.ts$/,
+    /^packages\/cli\/src\/commands\/email\/templates\/claude-content\.ts$/,
+    // STS GetCallerIdentity is identity-only but SDK v3 requires a region to
+    // build the client — us-east-1 is a harmless pin.
+    /^packages\/cli\/src\/utils\/shared\/aws-detection\.ts$/,
+    // Doctor is the diagnostic command — it deliberately falls back to
+    // us-east-1 for the SES sandbox probe and annotates the result.
+    /^packages\/cli\/src\/commands\/aws\/doctor\.ts$/,
+    // IAM is global — the region is cosmetic on the client.
+    /^packages\/cli\/src\/infrastructure\/vercel-oidc\.ts$/,
+    /^packages\/cli\/src\/infrastructure\/resources\/smtp-credentials\.ts$/,
+    /^packages\/cli\/src\/infrastructure\/shared\/resource-checks\.ts$/,
+    /^packages\/cli\/src\/commands\/platform\/connect\.ts$/,
+    /^packages\/cli\/src\/commands\/platform\/update-role\.ts$/,
+    // Test fixtures. `__tests__/` covers most; the `.test.ts(x)` patterns
+    // catch colocated tests that don't live under a `__tests__/` dir.
+    /\/__tests__\//,
+    /\.test\.ts$/,
+    /\.test\.tsx$/,
+    /^baseline\//,
+  ];
+
+  test("packages/cli/src is free of us-east-1 literals outside allow-list", () => {
+    const files = findFiles("packages/cli/src/**/*.ts");
+
+    const violations: string[] = [];
+    for (const file of files) {
+      if (US_EAST_1_ALLOW_LIST.some((rx) => rx.test(file))) {
+        continue;
+      }
+
+      const content = readFile(file);
+      const lines = content.split("\n");
+      // Match "us-east-1", 'us-east-1', or `us-east-1` — single-quote and
+      // template-literal forms are TypeScript-legal and would otherwise
+      // evade the ratchet.
+      const literalRegex = /['"`]us-east-1['"`]/;
+      for (let i = 0; i < lines.length; i++) {
+        if (literalRegex.test(lines[i])) {
+          violations.push(`${file}:${i + 1} — ${lines[i].trim()}`);
+        }
+      }
+    }
+
+    // Ratchet: 0 violations outside allow-list.
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test: No silent region fallback in packages/cli/src/infrastructure/**.
+//
+// This pattern masks a missing region — the resolved value lies about the
+// user's intent. Infrastructure must receive region explicitly and error
+// if it's missing, not fall back to some default.
+//
+// Catches `||` and `??` on config.region / options.region. Earlier version
+// only caught `||` on `config.region`; `??` and `options.region` variants
+// would have bypassed the ratchet.
+// ─────────────────────────────────────────────────────────
+
+describe("no region fallback in infrastructure", () => {
+  test("packages/cli/src/infrastructure is free of region fallback patterns", () => {
+    const files = findFiles("packages/cli/src/infrastructure/**/*.ts").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
+
+    const violations: string[] = [];
+    // Match `config.region ||`, `config.region ??`, `options.region ||`,
+    // `options.region ??` — all equivalent silent-default shapes.
+    const fallbackRegex = /(config|options)\.region\s*(\|\||\?\?)/;
+
+    for (const file of files) {
+      const content = readFile(file);
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (fallbackRegex.test(lines[i])) {
+          violations.push(`${file}:${i + 1} — ${lines[i].trim()}`);
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});

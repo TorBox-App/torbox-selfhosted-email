@@ -7,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { build } from "esbuild";
-import { getDefaultRegion } from "../../constants.js";
 import { lambdaFunctionExists } from "../shared/resource-checks.js";
 
 // Node.js built-in modules must be external when bundling ESM for Lambda
@@ -57,15 +56,14 @@ export type LambdaFunctions = {
  */
 async function findEventSourceMapping(
   functionName: string,
-  queueArn: string
+  queueArn: string,
+  region: string
 ): Promise<string | null> {
   try {
     const { LambdaClient, ListEventSourceMappingsCommand } = await import(
       "@aws-sdk/client-lambda"
     );
-    const lambda = new LambdaClient({
-      region: getDefaultRegion(),
-    });
+    const lambda = new LambdaClient({ region });
 
     const response = await lambda.send(
       new ListEventSourceMappingsCommand({
@@ -227,7 +225,7 @@ export async function deployLambdaFunctions(
 
   // Check if Lambda function already exists
   const functionName = "wraps-email-event-processor";
-  const exists = await lambdaFunctionExists(functionName);
+  const exists = await lambdaFunctionExists(functionName, config.region);
 
   // Lambda environment variables
   const lambdaEnvironment = {
@@ -283,7 +281,8 @@ export async function deployLambdaFunctions(
   const queueArnValue = `arn:aws:sqs:${config.region}:${config.accountId}:wraps-email-events`;
   const existingMappingUuid = await findEventSourceMapping(
     functionName,
-    queueArnValue
+    queueArnValue,
+    config.region
   );
 
   // Create SQS event source mapping for Lambda

@@ -3,10 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { SMSStatusOptions } from "../../types/index.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -15,6 +12,7 @@ import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 /**
  * Display SMS status in a formatted box
@@ -83,7 +81,7 @@ function displaySMSStatus(options: {
 /**
  * SMS Status command - Show current SMS infrastructure setup
  */
-export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
+export async function smsStatus(options: SMSStatusOptions): Promise<void> {
   await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
@@ -98,8 +96,14 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  // 2. Get region
-  const region = await getAWSRegion();
+  // 2. Get region — option → env → saved SMS metadata so a fresh shell with
+  // no AWS_REGION still points at the user's real SMS deployment.
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    service: "sms",
+    label: "SMS deployment",
+  });
 
   // 3. Check for existing metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);

@@ -3,20 +3,20 @@
  *
  * These functions call the AWS SDK to determine whether a resource already
  * exists before Pulumi tries to create it, so we can `import` instead.
+ *
+ * Regional probes (DynamoDB, SQS, SNS, Lambda) take `region` as a required
+ * parameter — never fall back to a default, or the probe will check the wrong
+ * region and Pulumi will duplicate the resource.
  */
-
-import { getDefaultRegion } from "../../constants.js";
 
 /**
  * Check if an IAM role exists by name.
- * IAM is global; the SDK still requires a region parameter.
+ * IAM is global; region on the client is cosmetic, so we pin to us-east-1.
  */
 export async function roleExists(roleName: string): Promise<boolean> {
   try {
     const { IAMClient, GetRoleCommand } = await import("@aws-sdk/client-iam");
-    const iam = new IAMClient({
-      region: getDefaultRegion(),
-    });
+    const iam = new IAMClient({ region: "us-east-1" });
 
     await iam.send(new GetRoleCommand({ RoleName: roleName }));
     return true;
@@ -38,14 +38,15 @@ export async function roleExists(roleName: string): Promise<boolean> {
 /**
  * Check if a DynamoDB table exists by name.
  */
-export async function tableExists(tableName: string): Promise<boolean> {
+export async function tableExists(
+  tableName: string,
+  region: string
+): Promise<boolean> {
   try {
     const { DynamoDBClient, DescribeTableCommand } = await import(
       "@aws-sdk/client-dynamodb"
     );
-    const dynamodb = new DynamoDBClient({
-      region: getDefaultRegion(),
-    });
+    const dynamodb = new DynamoDBClient({ region });
 
     await dynamodb.send(new DescribeTableCommand({ TableName: tableName }));
     return true;
@@ -63,15 +64,14 @@ export async function tableExists(tableName: string): Promise<boolean> {
  * Returns the queue URL if found, null otherwise.
  */
 export async function sqsQueueExists(
-  queueName: string
+  queueName: string,
+  region: string
 ): Promise<string | null> {
   try {
     const { SQSClient, GetQueueUrlCommand } = await import(
       "@aws-sdk/client-sqs"
     );
-    const sqs = new SQSClient({
-      region: getDefaultRegion(),
-    });
+    const sqs = new SQSClient({ region });
     const response = await sqs.send(
       new GetQueueUrlCommand({ QueueName: queueName })
     );
@@ -87,15 +87,14 @@ export async function sqsQueueExists(
  * Returns the topic ARN if found, null otherwise.
  */
 export async function snsTopicExists(
-  topicName: string
+  topicName: string,
+  region: string
 ): Promise<string | null> {
   try {
     const { SNSClient, ListTopicsCommand } = await import(
       "@aws-sdk/client-sns"
     );
-    const sns = new SNSClient({
-      region: getDefaultRegion(),
-    });
+    const sns = new SNSClient({ region });
     let nextToken: string | undefined;
 
     do {
@@ -122,15 +121,14 @@ export async function snsTopicExists(
  * Check if a Lambda function exists by name.
  */
 export async function lambdaFunctionExists(
-  functionName: string
+  functionName: string,
+  region: string
 ): Promise<boolean> {
   try {
     const { LambdaClient, GetFunctionCommand } = await import(
       "@aws-sdk/client-lambda"
     );
-    const lambda = new LambdaClient({
-      region: getDefaultRegion(),
-    });
+    const lambda = new LambdaClient({ region });
 
     await lambda.send(new GetFunctionCommand({ FunctionName: functionName }));
     return true;

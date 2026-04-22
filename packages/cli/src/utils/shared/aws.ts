@@ -84,7 +84,11 @@ export async function validateAWSCredentialsWithDetails(): Promise<CredentialVal
     }
   }
 
-  // Try to validate credentials with STS
+  // Try to validate credentials with STS. GetCallerIdentity is identity-only,
+  // but AWS SDK v3 requires a region to build the client. Pin to us-east-1 so
+  // validation still works when the user has creds but no AWS_REGION set
+  // (common on first run); command-level code uses resolveRegionForCommand
+  // for the real deployment region.
   const sts = new STSClient({ region: "us-east-1" });
 
   try {
@@ -152,24 +156,20 @@ export async function validateAWSCredentialsWithDetails(): Promise<CredentialVal
  * is surfaced as a clean WrapsError before we try to resolve.
  */
 export async function resolveAWSCredentialsToEnv(): Promise<void> {
-  // Clear AWS_PROFILE so downstream SDK callers (both our own JS clients and
-  // the AWS SDK v3 instances bundled inside Pulumi providers) don't emit the
-  // "Multiple credential sources detected" warning on every call. Done first
-  // so it runs in both the early-return and resolve branches — the warning
-  // fires precisely when both static env keys AND AWS_PROFILE are set, which
-  // is exactly the early-return case.
-  // Only affects this process; the user's shell env is unchanged.
-  // biome-ignore lint/performance/noDelete: process.env coerces undefined assignment to the string "undefined"; we need actual key removal so the SDK credential chain doesn't pick up a phantom profile.
-  delete process.env.AWS_PROFILE;
-
-  // Already-resolved env credentials — chain would just return these.
+  // Already-resolved env credentials — the chain would just return these, so
+  // skip the resolution step. Still clear AWS_PROFILE below to silence the
+  // "Multiple credential sources detected" warning.
   if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    // biome-ignore lint/performance/noDelete: process.env coerces undefined assignment to the string "undefined"; we need actual key removal so the SDK credential chain doesn't pick up a phantom profile.
+    delete process.env.AWS_PROFILE;
     return;
   }
 
-  // Reuse the same default credential chain as every other STS client in the
-  // CLI, so credentials stay consistent across the resolved env vars and any
-  // in-process SDK calls that come after this.
+  // Resolve credentials via the default chain WHILE AWS_PROFILE is still set —
+  // otherwise the chain silently falls back to the `default` profile, which
+  // may point to a different AWS account. That's a serious credential-swap
+  // bug: the user sets AWS_PROFILE=foo (account A), Pulumi ends up deploying
+  // to account B (the default profile) instead.
   const sts = new STSClient({});
   const provider = sts.config.credentials;
   if (!provider) {
@@ -205,6 +205,13 @@ export async function resolveAWSCredentialsToEnv(): Promise<void> {
   if (creds.sessionToken) {
     process.env.AWS_SESSION_TOKEN = creds.sessionToken;
   }
+
+  // Now that static creds are in env, clear AWS_PROFILE so downstream SDK
+  // callers (both our own clients and the AWS SDK v3 bundled inside Pulumi
+  // providers) don't emit "Multiple credential sources detected" on every
+  // call. Only affects this process; the user's shell env is unchanged.
+  // biome-ignore lint/performance/noDelete: process.env coerces undefined assignment to the string "undefined"; we need actual key removal so the SDK credential chain doesn't pick up a phantom profile.
+  delete process.env.AWS_PROFILE;
 }
 
 export const SES_REGIONS = [

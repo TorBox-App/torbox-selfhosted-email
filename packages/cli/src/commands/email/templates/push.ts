@@ -454,26 +454,35 @@ async function pushToSES(
 ): Promise<Array<{ slug: string; success: boolean }>> {
   const results: Array<{ slug: string; success: boolean }> = [];
 
-  // Try to validate AWS credentials
-  let hasAWSCredentials = false;
-  let region = "us-east-1";
-
+  // Validate AWS credentials. Missing creds is a soft skip; any other error
+  // (including REGION_REQUIRED from the resolver below) must surface so the
+  // user can act on it instead of seeing a misleading "no credentials" skip.
+  const { validateAWSCredentialsWithDetails } = await import(
+    "../../../utils/shared/aws.js"
+  );
+  let identity: Awaited<
+    ReturnType<typeof validateAWSCredentialsWithDetails>
+  >["identity"];
   try {
-    const { validateAWSCredentialsWithDetails, getAWSRegion } = await import(
-      "../../../utils/shared/aws.js"
-    );
-    await validateAWSCredentialsWithDetails();
-    hasAWSCredentials = true;
-    region = await getAWSRegion();
+    const result = await validateAWSCredentialsWithDetails();
+    identity = result.identity;
     // baseline:allow-next-line no-swallowed-errors — no credentials means skip SES push
   } catch {
     progress.info("No AWS credentials — skipping SES push");
     return templates.map((t) => ({ slug: t.slug, success: false }));
   }
 
-  if (!hasAWSCredentials) {
-    return templates.map((t) => ({ slug: t.slug, success: false }));
-  }
+  // Resolve region via option → env → saved email metadata. Never silent-
+  // defaults to us-east-1. If this throws (e.g. ambiguous regions in non-
+  // interactive mode), let it bubble — don't hide it behind the creds skip.
+  const { resolveRegionForCommand } = await import(
+    "../../../utils/shared/region-resolver.js"
+  );
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    service: "email",
+    label: "email deployment",
+  });
 
   // Use SESv2 client (JSON protocol) — avoids XML entity expansion limits in v1
   const {

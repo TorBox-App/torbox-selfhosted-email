@@ -111,6 +111,30 @@ describe("resolveAWSCredentialsToEnv", () => {
     expect(process.env.AWS_PROFILE).toBeUndefined();
   });
 
+  it("keeps AWS_PROFILE visible to the credential provider while it resolves", async () => {
+    // Regression: an earlier version deleted AWS_PROFILE FIRST, so the SDK
+    // chain fell back to the `default` profile. That silently swapped
+    // credentials between AWS accounts — a user who ran `AWS_PROFILE=foo
+    // wraps email init` ended up deploying with their `default` profile's
+    // creds instead. The contract: the provider sees AWS_PROFILE when it
+    // runs; AWS_PROFILE is only deleted AFTER static creds are in env.
+    process.env.AWS_PROFILE = "test-profile";
+    let profileVisibleDuringResolve: string | undefined;
+    mockCredentialsProvider.mockImplementation(() => {
+      profileVisibleDuringResolve = process.env.AWS_PROFILE;
+      return Promise.resolve({
+        accessKeyId: "ASIATEST",
+        secretAccessKey: "secret",
+        sessionToken: "token",
+      });
+    });
+
+    await resolveAWSCredentialsToEnv();
+
+    expect(profileVisibleDuringResolve).toBe("test-profile");
+    expect(process.env.AWS_PROFILE).toBeUndefined();
+  });
+
   it("omits AWS_SESSION_TOKEN when the provider returns long-lived static creds", async () => {
     mockCredentialsProvider.mockResolvedValue({
       accessKeyId: "AKIATEST",

@@ -7,13 +7,11 @@ import { confirm, intro, isCancel, log, outro } from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { UpdateRoleOptions } from "../../types/index.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 /**
  * Update platform access role command
@@ -43,8 +41,15 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  // 2. Get region
-  const region = options.region || (await getAWSRegion());
+  // 2. Get region — option → env → saved metadata, so the command never
+  // silent-defaults to us-east-1 when the deployment lives elsewhere.
+  // (The IAM client below stays on us-east-1 — IAM is global, region is
+  // cosmetic on the client.)
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    label: "connection",
+  });
 
   // 3. Load metadata to check if deployment exists
   const metadata = await loadConnectionMetadata(identity.accountId, region);

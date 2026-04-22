@@ -27,6 +27,8 @@ vi.mock("../../utils/shared/metadata.js", async () => {
     loadConnectionMetadata: vi.fn(),
     saveConnectionMetadata: vi.fn(),
     updateEmailConfig: vi.fn(),
+    findConnectionsWithService: vi.fn().mockResolvedValue([]),
+    findConnectionsForAccount: vi.fn().mockResolvedValue([]),
   };
 });
 vi.mock("../../utils/shared/prompts.js");

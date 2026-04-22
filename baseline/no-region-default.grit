@@ -1,0 +1,14 @@
+language js
+
+// Flag hardcoded us-east-1 literals. Many legitimate cases exist (ACM for
+// CloudFront, IAM control plane, SES_REGIONS data, scaffolding templates);
+// the baseline architecture test at baseline/architecture.test.ts is the
+// real ratchet with an allow-list. This plugin just gives IDE feedback so
+// developers notice new hardcodes while editing.
+//
+// severity="warn" is required — without it, Biome defaults to error and
+// CI fails on every legitimate allow-listed use. `register_diagnostic`
+// defaults to error when severity is omitted; always set it explicitly.
+`"us-east-1"` as $source where {
+  register_diagnostic(span=$source, severity="warn", message="Avoid hardcoded 'us-east-1'. Thread the user's region through instead. See .claude/sdlc/region-enforcement for the allow-list of legitimate cases (ACM for CloudFront, IAM clients, SES_REGIONS data).")
+}

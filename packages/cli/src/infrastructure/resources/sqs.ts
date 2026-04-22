@@ -30,12 +30,18 @@ const SQS_TIMEOUTS = {
   customTimeouts: { create: "2m", update: "2m", delete: "2m" },
 } as const;
 
-export async function createSQSResources(): Promise<SQSResources> {
+export type SQSConfig = {
+  region: string;
+};
+
+export async function createSQSResources(
+  config: SQSConfig
+): Promise<SQSResources> {
   const dlqName = "wraps-email-events-dlq";
   const queueName = "wraps-email-events";
 
-  const dlqUrl = await sqsQueueExists(dlqName);
-  const queueUrl = await sqsQueueExists(queueName);
+  const dlqUrl = await sqsQueueExists(dlqName, config.region);
+  const queueUrl = await sqsQueueExists(queueName, config.region);
 
   // Dead Letter Queue for failed event processing
   const dlqConfig = {

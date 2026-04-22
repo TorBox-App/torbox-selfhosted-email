@@ -6,6 +6,7 @@ import { tableExists } from "../shared/resource-checks.js";
  * DynamoDB configuration
  */
 export type DynamoDBConfig = {
+  region: string;
   retention?: ArchiveRetention;
 };
 
@@ -20,11 +21,11 @@ export type DynamoDBTables = {
  * Create DynamoDB tables for email tracking
  */
 export async function createDynamoDBTables(
-  _config?: DynamoDBConfig
+  config: DynamoDBConfig
 ): Promise<DynamoDBTables> {
   // Check if table already exists
   const tableName = "wraps-email-history";
-  const exists = await tableExists(tableName);
+  const exists = await tableExists(tableName, config.region);
 
   // Email history table (TTL is set based on retention in Lambda via expiresAt field)
   // Note: retention config is passed but TTL is actually managed by Lambda setting expiresAt

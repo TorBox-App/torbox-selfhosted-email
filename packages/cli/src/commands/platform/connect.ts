@@ -21,10 +21,7 @@ import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import type { PlatformConnectOptions } from "../../types/index.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   getApiBaseUrl,
   type OrgInfo,
@@ -47,6 +44,7 @@ import {
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
 import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 /**
  * IAM policy statement type
@@ -288,11 +286,12 @@ async function validateAndLoadMetadata(
   );
   progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
-  // Get region
-  let region = options.region;
-  if (!region) {
-    region = await getAWSRegion();
-  }
+  // Get region — option → env → saved connection metadata for this account.
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    label: "connection",
+  });
 
   // Load metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);
@@ -814,11 +813,13 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
 
     progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
-    // 3. Get region
-    let region = options.region;
-    if (!region) {
-      region = await getAWSRegion();
-    }
+    // 3. Get region — option → env → saved metadata so a fresh shell can
+    // still connect the only deployment without prompting.
+    const region = await resolveRegionForCommand({
+      accountId: identity.accountId,
+      optionRegion: options.region,
+      label: "connection",
+    });
 
     // 4. Load connection metadata
     const metadata = await loadConnectionMetadata(identity.accountId, region);

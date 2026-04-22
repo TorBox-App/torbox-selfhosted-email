@@ -3,6 +3,22 @@ import pc from "picocolors";
 import type { ArchiveRetention, DomainPurpose } from "../../types/index.js";
 
 /**
+ * Is the current process attached to an interactive terminal?
+ *
+ * Clack's `select()` hangs silently when called without a TTY (e.g., CI,
+ * scripted pipes). Call this before any interactive prompt and throw a
+ * region-required error instead of hanging. The CI env var catches cases
+ * where TTYs are inherited through wrappers.
+ */
+export function isInteractive(): boolean {
+  return (
+    process.stdin.isTTY === true &&
+    process.stdout.isTTY === true &&
+    !process.env.CI
+  );
+}
+
+/**
  * Hosting provider type
  */
 export type Provider = "vercel" | "aws" | "railway" | "other";

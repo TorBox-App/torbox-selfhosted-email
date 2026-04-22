@@ -10,7 +10,6 @@ import {
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
 import type * as pulumi from "@pulumi/pulumi";
-import { getDefaultRegion } from "../../constants.js";
 import type { ArchiveRetention } from "../../types/index.js";
 
 /**
@@ -20,7 +19,7 @@ export type MailManagerArchiveConfig = {
   name: string;
   retention: ArchiveRetention;
   configSetName: pulumi.Output<string>;
-  region?: string;
+  region: string;
   kmsKeyArn?: string; // Optional: provide existing KMS key, otherwise AWS-managed key is used
 };
 
@@ -92,7 +91,7 @@ function retentionToAWSPeriod(retention: ArchiveRetention): RetentionPeriod {
 export async function createMailManagerArchive(
   config: MailManagerArchiveConfig
 ): Promise<MailManagerArchiveResources> {
-  const region = config.region || getDefaultRegion();
+  const region = config.region;
   const archiveName = `wraps-${config.name}-archive`;
 
   // Initialize clients

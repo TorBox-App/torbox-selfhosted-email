@@ -158,6 +158,7 @@ export async function deployEmailStack(
   let dynamoTables;
   if (emailConfig.eventTracking?.dynamoDBHistory) {
     dynamoTables = await createDynamoDBTables({
+      region: config.region,
       retention: emailConfig.eventTracking.archiveRetention,
     });
   }
@@ -165,7 +166,7 @@ export async function deployEmailStack(
   // 6. SQS queues (if event tracking enabled)
   let sqsResources;
   if (emailConfig.eventTracking?.enabled) {
-    sqsResources = await createSQSResources();
+    sqsResources = await createSQSResources({ region: config.region });
   }
 
   // 7. EventBridge rule to route SES events to SQS (if event tracking enabled)

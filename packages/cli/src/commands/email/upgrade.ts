@@ -16,10 +16,7 @@ import {
 } from "../../utils/dns/credentials.js";
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
-import {
-  getAWSRegion,
-  validateAWSCredentials,
-} from "../../utils/shared/aws.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
@@ -48,6 +45,7 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 /**
  * Upgrade command - Enhance existing Wraps infrastructure
@@ -86,12 +84,14 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
-  // 3. Get region
-  let region = options.region;
-  if (!region) {
-    const defaultRegion = await getAWSRegion();
-    region = defaultRegion;
-  }
+  // 3. Get region — option → env → saved metadata. Errors if ambiguous and
+  // non-interactive so the command never silently upgrades the wrong region.
+  const region = await resolveRegionForCommand({
+    accountId: identity.accountId,
+    optionRegion: options.region,
+    service: "email",
+    label: "email deployment",
+  });
 
   // 4. Load existing connection metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);
