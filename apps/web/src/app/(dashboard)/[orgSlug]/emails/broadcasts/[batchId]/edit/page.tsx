@@ -11,10 +11,8 @@ import {
 } from "@/actions/batch";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkFeatureAccess } from "@/lib/plan-limits";
-import {
-  BatchForm,
-  mapBatchToCampaignData,
-} from "../../new/components/batch-form";
+import { BatchForm } from "../../new/components/batch-form";
+import { mapBatchToCampaignData } from "../../new/components/batch-form-utils";
 
 type EditBatchPageProps = {
   params: Promise<{

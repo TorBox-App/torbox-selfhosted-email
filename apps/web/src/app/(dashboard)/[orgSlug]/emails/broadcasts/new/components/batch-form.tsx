@@ -83,13 +83,9 @@ import { getMessageUsageQueryKey } from "@/hooks/use-message-usage";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
 import { useRequireAws } from "@/hooks/use-require-aws";
 import { useTemplates } from "@/hooks/use-template-queries";
-import type {
-  BatchSendWithMeta,
-  CreateDraftBatchInput,
-  SampleContact,
-  VariableMapping,
-} from "@/lib/batch";
+import type { CreateDraftBatchInput, SampleContact } from "@/lib/batch";
 import { cn } from "@/lib/utils";
+import type { CampaignData, ScheduleType } from "./batch-form-utils";
 import { EmailPreviewCarousel } from "./email-preview-carousel";
 import { VariableMapper } from "./variable-mapper";
 
@@ -146,43 +142,6 @@ type BatchFormProps = {
 };
 
 /**
- * Map a loaded batch row → the CampaignData shape this form uses.
- * Used by the edit page to pre-fill the wizard from a draft row.
- *
- * - `from` splits into `fromPrefix` (left of `@`) and `fromDomain` (right).
- * - `templateId` null → `contentType='html'`; otherwise `'template'`.
- * - Scheduling is status-neutral here: drafts ship without carrying the schedule
- *   forward, so we always start with "send now" and let the user re-pick.
- */
-export function mapBatchToCampaignData(
-  batch: BatchSendWithMeta
-): Partial<CampaignData> {
-  const result: Partial<CampaignData> = {
-    contentType: batch.templateId ? "template" : "html",
-    // Drafts don't carry scheduling forward — always start at "send now".
-    scheduleType: "now",
-  };
-
-  // Only set fields that exist on the batch. Empty/null values are left off
-  // so the caller's defaults (org from, first AWS account) stay in effect.
-  if (batch.name) result.name = batch.name;
-  if (batch.subject) result.subject = batch.subject;
-  if (batch.previewText) result.previewText = batch.previewText;
-  if (batch.fromName) result.fromName = batch.fromName;
-  if (batch.replyTo) result.replyTo = batch.replyTo;
-  if (batch.templateId) result.templateId = batch.templateId;
-  if (batch.awsAccount?.id) result.awsAccountId = batch.awsAccount.id;
-
-  if (batch.from?.includes("@")) {
-    const [prefix, domain] = batch.from.split("@");
-    if (prefix) result.fromPrefix = prefix;
-    if (domain) result.fromDomain = domain;
-  }
-
-  return result;
-}
-
-/**
  * Build the server-action input payload from the wizard's CampaignData.
  * Shared by save-draft (create or update) and promote-from-draft paths.
  */
@@ -216,32 +175,6 @@ function mapCampaignDataToActionInput(
 }
 
 type Step = "setup" | "content" | "audience" | "review";
-
-type ScheduleType = "now" | "later";
-
-type CampaignData = {
-  name: string;
-  subject: string;
-  previewText: string;
-  fromPrefix: string;
-  fromDomain: string;
-  fromName: string;
-  replyTo: string;
-  awsAccountId: string;
-  // Content
-  contentType: ContentType;
-  templateId: string;
-  htmlContent: string;
-  variableMappings: VariableMapping[];
-  // Audience
-  audienceType: AudienceType;
-  topicId: string;
-  segmentId: string;
-  // Scheduling
-  scheduleType: ScheduleType;
-  scheduledDate: Date | undefined;
-  scheduledTime: string;
-};
 
 export function BatchForm({
   awsAccounts,
