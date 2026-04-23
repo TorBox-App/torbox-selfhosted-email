@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { SESv2Client } from "@aws-sdk/client-sesv2";
 import { toPlainText } from "@react-email/render";
 import { auth } from "@wraps/auth";
 import {
@@ -8,8 +9,8 @@ import {
   organizationExtension,
   template,
 } from "@wraps/db";
+import { sendEmail } from "@wraps/email-send";
 import { renderTemplate } from "@wraps/template-render";
-import { WrapsEmail } from "@wraps.dev/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -191,8 +192,11 @@ export async function POST(request: Request, context: RouteContext) {
       region: customerAwsAccount.region,
     });
 
-    // Initialize Wraps SDK with the org's credentials
-    const wraps = new WrapsEmail({
+    // Use SESv2 directly (mirroring the broadcast batch-sender pipeline) so
+    // test sends carry the same List-Unsubscribe headers, configuration set,
+    // and EmailTags as production broadcasts. The SDK's `send()` is built on
+    // SES v1 and can't attach custom headers without falling back to raw MIME.
+    const sesClient = new SESv2Client({
       region: customerAwsAccount.region,
       credentials: {
         accessKeyId: credentials.accessKeyId,
@@ -225,15 +229,20 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Send to each recipient (marketing URLs generated per-recipient)
     const warnings: string[] = [];
+    const fromAddress = senderName
+      ? `${senderName} <${senderEmail}>`
+      : senderEmail;
     const results = await Promise.allSettled(
       recipients.map(async (recipient: string) => {
         const recipientData = { ...mergedTestData };
+        let unsubscribeUrl: string | undefined;
 
         if (isMarketing) {
           const marketingUrls = await getMarketingUrls(recipient);
           if (marketingUrls) {
             recipientData.unsubscribeUrl = marketingUrls.unsubscribeUrl;
             recipientData.preferencesUrl = marketingUrls.preferencesUrl;
+            unsubscribeUrl = marketingUrls.unsubscribeUrl;
           } else {
             warnings.push(
               `${recipient} is not an existing contact — unsubscribe and preference center links will not work in this test send.`
@@ -243,15 +252,20 @@ export async function POST(request: Request, context: RouteContext) {
 
         const { html, text } = renderForSend(recipientData);
 
-        const fromAddress = senderName
-          ? `${senderName} <${senderEmail}>`
-          : senderEmail;
-        const result = await wraps.send({
+        const result = await sendEmail({
+          client: sesClient,
           from: fromAddress,
           to: recipient,
           subject,
           html,
           text,
+          marketing:
+            isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined,
+          tags: [
+            { name: "organizationId", value: orgId },
+            { name: "templateId", value: id },
+            { name: "source", value: "test" },
+          ],
         });
         return { recipient, messageId: result.messageId };
       })

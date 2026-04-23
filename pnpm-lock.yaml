@@ -280,6 +280,9 @@ importers:
       '@wraps/email-check':
         specifier: workspace:*
         version: link:../../packages/email-check
+      '@wraps/email-send':
+        specifier: workspace:*
+        version: link:../../packages/email-send
       '@wraps/template-render':
         specifier: workspace:*
         version: link:../../packages/template-render
@@ -608,6 +611,9 @@ importers:
       '@wraps/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@wraps/email-send':
+        specifier: workspace:*
+        version: link:../../packages/email-send
       '@wraps/template-render':
         specifier: workspace:*
         version: link:../../packages/template-render
@@ -1494,6 +1500,22 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.1)(tsx@4.20.6)(yaml@2.8.2)
+
+  packages/email-send:
+    dependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+    devDependencies:
+      '@aws-sdk/client-sesv2':
+        specifier: 'catalog:'
+        version: 3.1030.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.15.12(oxc-resolver@11.19.1)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
         version: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.1)(tsx@4.20.6)(yaml@2.8.2)

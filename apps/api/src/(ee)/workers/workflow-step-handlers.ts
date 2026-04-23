@@ -36,6 +36,7 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
+import { sendEmail } from "@wraps/email-send";
 import { and, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { awsDefaults } from "../../lib/aws-defaults";
@@ -344,8 +345,15 @@ export async function handleSendEmail(
   // Step-level subject override takes precedence over template subject
   const baseSubject = config.subject || tmpl.subject || "Message";
 
-  let result: { MessageId?: string };
+  let messageId: string;
   let subject: string;
+
+  // Marketing payload shared across all three send paths
+  const marketing =
+    isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined;
+  // Raw-HTML paths consume @wraps/email-send tag shape ({name, value}); the
+  // SES-template path uses the AWS SDK's upper-case shape via `emailTags`.
+  const sharedTags = emailTags.map((t) => ({ name: t.Name, value: t.Value }));
 
   try {
     if (sesTemplateName && !config.subject) {
@@ -354,7 +362,7 @@ export async function handleSendEmail(
       // when there's no step-level override)
       subject = sanitizeEmailSubject(tmpl.subject || "Message");
 
-      result = await sesClient.send(
+      const response = await sesClient.send(
         new SendEmailCommand({
           FromEmailAddress: fromDisplay,
           ReplyToAddresses: replyTo ? [replyTo] : undefined,
@@ -372,6 +380,10 @@ export async function handleSendEmail(
           EmailTags: emailTags,
         })
       );
+      if (!response.MessageId) {
+        throw new Error("SES SendEmail returned no MessageId");
+      }
+      messageId = response.MessageId;
 
       log.info("Workflow: email sent via SES template", {
         template: sesTemplateName,
@@ -387,27 +399,18 @@ export async function handleSendEmail(
       const rawSubject = substituteVariables(baseSubject, replacementData);
       subject = sanitizeEmailSubject(rawSubject);
 
-      result = await sesClient.send(
-        new SendEmailCommand({
-          FromEmailAddress: fromDisplay,
-          ReplyToAddresses: replyTo ? [replyTo] : undefined,
-          Destination: {
-            ToAddresses: [contactRecord.email],
-          },
-          Content: {
-            Simple: {
-              Subject: { Data: subject },
-              Body: {
-                Html: { Data: html },
-                Text: { Data: htmlToPlainText(html) },
-              },
-              Headers: headers.length > 0 ? headers : undefined,
-            },
-          },
-          ConfigurationSetName: "wraps-email-tracking",
-          EmailTags: emailTags,
-        })
-      );
+      const result = await sendEmail({
+        client: sesClient,
+        from: fromDisplay,
+        to: contactRecord.email,
+        subject,
+        html,
+        text: htmlToPlainText(html),
+        replyTo: replyTo ?? undefined,
+        marketing,
+        tags: sharedTags,
+      });
+      messageId = result.messageId;
 
       log.info("Workflow: email sent via raw HTML (subject override)", {
         to: contactRecord.email,
@@ -422,27 +425,18 @@ export async function handleSendEmail(
       const rawSubject = substituteVariables(baseSubject, replacementData);
       subject = sanitizeEmailSubject(rawSubject);
 
-      result = await sesClient.send(
-        new SendEmailCommand({
-          FromEmailAddress: fromDisplay,
-          ReplyToAddresses: replyTo ? [replyTo] : undefined,
-          Destination: {
-            ToAddresses: [contactRecord.email],
-          },
-          Content: {
-            Simple: {
-              Subject: { Data: subject },
-              Body: {
-                Html: { Data: html },
-                Text: { Data: htmlToPlainText(html) },
-              },
-              Headers: headers.length > 0 ? headers : undefined,
-            },
-          },
-          ConfigurationSetName: "wraps-email-tracking",
-          EmailTags: emailTags,
-        })
-      );
+      const result = await sendEmail({
+        client: sesClient,
+        from: fromDisplay,
+        to: contactRecord.email,
+        subject,
+        html,
+        text: htmlToPlainText(html),
+        replyTo: replyTo ?? undefined,
+        marketing,
+        tags: sharedTags,
+      });
+      messageId = result.messageId;
 
       log.info("Workflow: email sent via raw HTML", {
         to: contactRecord.email,
@@ -458,8 +452,6 @@ export async function handleSendEmail(
     }
     throw error;
   }
-
-  const messageId = result.MessageId ?? crypto.randomUUID();
 
   // Record the send in messageSend table
   await db.insert(messageSend).values({

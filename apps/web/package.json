@@ -106,6 +106,7 @@
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
+    "@wraps/email-send": "workspace:*",
     "@wraps/template-render": "workspace:*",
     "@wraps/ui": "workspace:*",
     "@xyflow/react": "12.10.0",

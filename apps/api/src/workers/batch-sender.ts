@@ -11,7 +11,6 @@ import {
   GetAccountCommand,
   SESv2Client,
   SendBulkEmailCommand,
-  SendEmailCommand,
 } from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
@@ -28,6 +27,7 @@ import {
   segment,
   template,
 } from "@wraps/db";
+import { sendEmail } from "@wraps/email-send";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
@@ -682,49 +682,27 @@ async function processJob(job: BatchJob): Promise<void> {
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
           }
 
-          // Build headers for marketing emails (RFC 8058)
-          const headers: Array<{ Name: string; Value: string }> = [];
-          if (isMarketing && unsubscribeUrl) {
-            headers.push(
-              { Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` },
-              {
-                Name: "List-Unsubscribe-Post",
-                Value: "List-Unsubscribe=One-Click",
-              }
-            );
-          }
+          const result = await sendEmail({
+            client: sesClient,
+            from: fromDisplay,
+            to: recipient.email!,
+            subject,
+            html,
+            text: htmlToPlainText(html),
+            replyTo: batch.replyTo ?? undefined,
+            marketing:
+              isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined,
+            tags: [
+              { name: "batchId", value: batchId },
+              { name: "organizationId", value: organizationId },
+              ...(batch.emailTemplateId
+                ? [{ name: "templateId", value: batch.emailTemplateId }]
+                : []),
+              { name: "source", value: "broadcast" },
+            ],
+          });
 
-          const result = await sesClient.send(
-            new SendEmailCommand({
-              FromEmailAddress: fromDisplay,
-              ReplyToAddresses: batch.replyTo ? [batch.replyTo] : undefined,
-              Destination: {
-                ToAddresses: [recipient.email!],
-              },
-              Content: {
-                Simple: {
-                  Subject: { Data: subject },
-                  Body: {
-                    Html: { Data: html },
-                    Text: { Data: htmlToPlainText(html) },
-                  },
-                  Headers: headers.length > 0 ? headers : undefined,
-                },
-              },
-              ConfigurationSetName: "wraps-email-tracking",
-              // Message tags for tracking in CloudWatch and EventBridge
-              EmailTags: [
-                { Name: "batchId", Value: batchId },
-                { Name: "organizationId", Value: organizationId },
-                ...(batch.emailTemplateId
-                  ? [{ Name: "templateId", Value: batch.emailTemplateId }]
-                  : []),
-                { Name: "source", Value: "broadcast" },
-              ],
-            })
-          );
-
-          return { recipient, messageId: result.MessageId };
+          return { recipient, messageId: result.messageId };
         })
       );
 
@@ -747,7 +725,7 @@ async function processJob(job: BatchJob): Promise<void> {
             from: batch.from,
             fromName: batch.fromName,
             emailTemplateId: batch.emailTemplateId,
-            messageId: result.value.messageId ?? "",
+            messageId: result.value.messageId,
             status: "sent",
             sentAt: new Date(),
           });

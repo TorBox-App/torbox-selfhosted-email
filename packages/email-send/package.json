@@ -1,0 +1,28 @@
+{
+  "name": "@wraps/email-send",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical SES v2 send pipeline for Wraps. One place for List-Unsubscribe headers, configuration set, and EmailTags so test sends, broadcasts, and workflow sends produce identical messages.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-sesv2": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-sesv2": "catalog:",
+    "typescript": "catalog:"
+  }
+}

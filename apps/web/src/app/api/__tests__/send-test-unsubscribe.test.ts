@@ -118,26 +118,58 @@ vi.mock("@/lib/aws/credential-cache", () => ({
   })),
 }));
 
-// Capture what was sent via WrapsEmail.send()
-let lastSentEmail: {
+// Capture what was sent via SESv2 SendEmailCommand
+type SentEmail = {
   from: string;
   to: string;
   subject: string;
   html: string;
   text: string;
-} | null = null;
+  headers: Array<{ Name: string; Value: string }>;
+  configurationSetName: string | undefined;
+  emailTags: Array<{ Name: string; Value: string }>;
+};
 
-vi.mock("@wraps.dev/email", () => ({
-  WrapsEmail: class MockWrapsEmail {
-    async send(params: {
-      from: string;
-      to: string;
-      subject: string;
-      html: string;
-      text: string;
-    }) {
-      lastSentEmail = params;
-      return { messageId: "test-message-id" };
+let lastSentEmail: SentEmail | null = null;
+const sentEmails: SentEmail[] = [];
+
+type SendEmailInput = {
+  FromEmailAddress?: string;
+  Destination?: { ToAddresses?: string[] };
+  Content?: {
+    Simple?: {
+      Subject?: { Data?: string };
+      Body?: { Html?: { Data?: string }; Text?: { Data?: string } };
+      Headers?: Array<{ Name: string; Value: string }>;
+    };
+  };
+  ConfigurationSetName?: string;
+  EmailTags?: Array<{ Name: string; Value: string }>;
+};
+
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class MockSESv2Client {
+    send(command: { input: SendEmailInput }) {
+      const input = command.input;
+      const captured: SentEmail = {
+        from: input.FromEmailAddress ?? "",
+        to: input.Destination?.ToAddresses?.[0] ?? "",
+        subject: input.Content?.Simple?.Subject?.Data ?? "",
+        html: input.Content?.Simple?.Body?.Html?.Data ?? "",
+        text: input.Content?.Simple?.Body?.Text?.Data ?? "",
+        headers: input.Content?.Simple?.Headers ?? [],
+        configurationSetName: input.ConfigurationSetName,
+        emailTags: input.EmailTags ?? [],
+      };
+      lastSentEmail = captured;
+      sentEmails.push(captured);
+      return Promise.resolve({ MessageId: "test-message-id" });
+    }
+  },
+  SendEmailCommand: class MockSendEmailCommand {
+    input: SendEmailInput;
+    constructor(input: SendEmailInput) {
+      this.input = input;
     }
   },
 }));
@@ -193,6 +225,7 @@ beforeEach(async () => {
     .delete(contact)
     .where(eq(contact.organizationId, testOrganization.id));
   lastSentEmail = null;
+  sentEmails.length = 0;
 });
 
 afterAll(async () => {
@@ -285,6 +318,22 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     expect(lastSentEmail!.html).toMatch(
       /href="https?:\/\/[^"]+\/unsubscribe\/[A-Za-z0-9_\-.]+"/
     );
+
+    // RFC 8058: marketing test sends MUST carry the same List-Unsubscribe
+    // headers a real broadcast would attach, so Gmail/Yahoo show the
+    // one-click unsubscribe affordance and don't downgrade reputation.
+    const listUnsub = lastSentEmail!.headers.find(
+      (h) => h.Name === "List-Unsubscribe"
+    );
+    const listUnsubPost = lastSentEmail!.headers.find(
+      (h) => h.Name === "List-Unsubscribe-Post"
+    );
+    expect(listUnsub).toBeDefined();
+    expect(listUnsub!.Value).toMatch(
+      /^<https?:\/\/[^>]+\/unsubscribe\/[A-Za-z0-9_\-.]+>$/
+    );
+    expect(listUnsubPost).toBeDefined();
+    expect(listUnsubPost!.Value).toBe("List-Unsubscribe=One-Click");
   });
 
   it("should inject valid preferences URL when recipient is an existing contact (code-pushed)", async () => {
@@ -457,6 +506,15 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     expect(lastSentEmail).not.toBeNull();
     expect(lastSentEmail!.html).not.toContain("unsubscribe");
     expect(lastSentEmail!.html).not.toContain("preferences");
+
+    // Transactional sends MUST NOT carry List-Unsubscribe headers — those
+    // are reserved for marketing mail per RFC 8058.
+    expect(
+      lastSentEmail!.headers.find((h) => h.Name === "List-Unsubscribe")
+    ).toBeUndefined();
+    expect(
+      lastSentEmail!.headers.find((h) => h.Name === "List-Unsubscribe-Post")
+    ).toBeUndefined();
   });
 
   it("should inject valid unsubscribe URL into TipTap-rendered marketing template", async () => {
