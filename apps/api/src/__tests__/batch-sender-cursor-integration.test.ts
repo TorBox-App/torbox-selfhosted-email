@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 // Capture SQS SendMessageCommand calls
 const sqsSendCalls: Array<{ MessageBody: string; DelaySeconds?: number }> = [];
@@ -266,7 +267,7 @@ describe("processJob cursor passing", () => {
       chunkIndex: 0,
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // Should have enqueued a next chunk
     expect(sqsSendCalls.length).toBe(1);
@@ -374,7 +375,7 @@ describe("processJob cursor passing", () => {
       },
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // Should NOT enqueue another chunk
     expect(sqsSendCalls.length).toBe(0);
@@ -447,7 +448,7 @@ describe("processJob cursor passing", () => {
       },
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     const updateCalls = (db.update as ReturnType<typeof vi.fn>).mock.calls;
     expect(updateCalls.length).toBeGreaterThan(0);
@@ -545,7 +546,7 @@ describe("processJob cursor passing", () => {
       chunkIndex: 0,
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // shouldEnqueueNextChunk should be false: 0 + 50 < 50 is false
     expect(sqsSendCalls.length).toBe(0);

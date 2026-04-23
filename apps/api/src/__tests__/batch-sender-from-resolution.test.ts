@@ -5,6 +5,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 const sesSendCalls: unknown[][] = [];
 
@@ -248,7 +249,7 @@ describe("batch-sender from address resolution", () => {
   it("uses batch.from when set", async () => {
     setupSelects({ batch: makeBatch({ from: "sender@mycompany.com" }) });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // GetAccountCommand + SendBulkEmailCommand = 2 calls
     expect(sesSendCalls).toHaveLength(2);
@@ -267,7 +268,7 @@ describe("batch-sender from address resolution", () => {
       },
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(sesSendCalls).toHaveLength(2);
     const sendInput = sesSendCalls[1][0] as Record<string, string>;
@@ -285,7 +286,7 @@ describe("batch-sender from address resolution", () => {
       },
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(sesSendCalls).toHaveLength(2);
     const sendInput = sesSendCalls[1][0] as Record<string, string>;
@@ -300,7 +301,7 @@ describe("batch-sender from address resolution", () => {
       orgExt: { defaultFrom: null, defaultFromName: null },
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // Only GetAccountCommand — no email send attempted
     expect(sesSendCalls).toHaveLength(1);
@@ -320,7 +321,7 @@ describe("batch-sender from address resolution", () => {
       batch: makeBatch({ from: null, fromName: null }),
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // Only GetAccountCommand — no email send attempted
     expect(sesSendCalls).toHaveLength(1);

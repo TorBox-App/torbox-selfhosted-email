@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 let selectCallCount = 0;
 const updateSetCalls: Record<string, unknown>[] = [];
@@ -173,7 +174,7 @@ describe("batch-sender unsupported channel handling", () => {
       ],
     };
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     const failedUpdate = updateSetCalls.find(
       (values) => values.status === "failed"

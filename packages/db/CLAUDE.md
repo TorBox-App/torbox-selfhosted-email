@@ -198,4 +198,25 @@ pnpm --filter @wraps/db db:migrate    # Run migrations (production)
 pnpm --filter @wraps/db db:studio     # Open Drizzle Studio GUI
 ```
 
+### CONCURRENT Indexes (out-of-band)
+
+drizzle-kit wraps every migration in a transaction, which rejects
+`CREATE INDEX CONCURRENTLY`. For large tables where a blocking index build
+is unacceptable, the pattern is:
+
+1. **Declare the index in `schema/*.ts` as the source of truth.** Drizzle's
+   snapshot will then list it as existing.
+2. **Strip the `CREATE INDEX` statements** from the generated migration SQL
+   file (leave a `-- NOTE:` pointer to the script instead).
+3. **Create the index out-of-band** via a one-off TypeScript script under
+   `packages/db/scripts/` that uses `@neondatabase/serverless` directly
+   (no drizzle-kit involvement), with `CREATE INDEX CONCURRENTLY IF NOT
+   EXISTS`. Run manually after the drizzle migration:
+   `DATABASE_URL=... pnpm tsx packages/db/scripts/<name>.ts`.
+4. **Document the deploy order** in the PR description — e.g., "Run
+   `db:migrate` first, then the script, then ship the code that relies
+   on the index."
+
+Reference: `packages/db/scripts/create-broadcast-resume-indexes.ts`.
+
 Config in `drizzle.config.ts` reads env from `apps/web/.env.local`.

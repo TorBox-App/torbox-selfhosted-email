@@ -10,10 +10,16 @@
 import { schedulerGroup, schedulerRole } from "./scheduler-resources";
 import { axiomToken } from "./secrets";
 
-// Dead Letter Queue for failed batch jobs
+// Dead Letter Queue for failed batch jobs.
+// A consumer (apps/api/src/workers/batch-dlq-consumer.ts) drains it and
+// re-enqueues the NEXT chunk on batchQueue using batchSend.lastChunkIndex
+// + lastCursor as the resume pointer. Subscription is wired AFTER
+// batchQueue is declared (we need its URL/ARN).
 export const batchDlq = new sst.aws.Queue("BatchDlq", {
   transform: {
     queue: {
+      // Consumer timeout is 60s; visibility timeout must exceed that.
+      visibilityTimeoutSeconds: 70,
       messageRetentionSeconds: 1_209_600, // 14 days
       tags: {
         ManagedBy: "sst",
@@ -32,7 +38,9 @@ export const batchQueue = new sst.aws.Queue("BatchQueue", {
   transform: {
     queue: {
       visibilityTimeoutSeconds: 300, // 5 minutes for processing
-      messageRetentionSeconds: 86_400, // 1 day
+      // 14 days — matches DLQ retention so in-flight chunks can wait out
+      // long incidents without silent message loss.
+      messageRetentionSeconds: 1_209_600,
       tags: {
         ManagedBy: "sst",
         Service: "wraps-api",
@@ -40,6 +48,43 @@ export const batchQueue = new sst.aws.Queue("BatchQueue", {
     },
   },
 });
+
+// Subscribe DLQ consumer — re-enqueues next chunk onto batchQueue based on
+// the durable heartbeat in batchSend.lastChunkIndex/lastCursor. Kill switch
+// via BROADCAST_DLQ_CONSUMER_ENABLED=false.
+batchDlq.subscribe(
+  {
+    handler: "apps/api/src/workers/batch-dlq-consumer.handler",
+    runtime: "nodejs22.x",
+    timeout: "1 minute",
+    memory: "256 MB",
+    environment: {
+      NODE_ENV: "production",
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
+      BATCH_QUEUE_URL: batchQueue.url,
+      BROADCAST_DLQ_CONSUMER_ENABLED:
+        process.env.BROADCAST_DLQ_CONSUMER_ENABLED ?? "true",
+    },
+    nodejs: {
+      install: ["pg"],
+    },
+    permissions: [
+      // Re-enqueue chunks onto the main batch queue.
+      {
+        actions: ["sqs:SendMessage"],
+        resources: [batchQueue.arn],
+      },
+    ],
+  },
+  {
+    batch: {
+      size: 10,
+      partialResponses: true,
+    },
+  }
+);
 
 // Subscribe batch worker to the queue
 // The worker is defined in apps/api/src/workers/batch-sender.ts

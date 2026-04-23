@@ -498,4 +498,140 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
           "Cancels a scheduled or queued batch send. If scheduled, also deletes the EventBridge schedule.",
       },
     }
+  )
+  .post(
+    "/:id/resume",
+    async (ctx) => {
+      const { params, body, set } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Kill switch — turn off without a redeploy if resume starts misbehaving.
+      if (process.env.BROADCAST_RESUME_ENABLED === "false") {
+        set.status = 503;
+        return { error: "Broadcast resume is temporarily disabled" };
+      }
+
+      const [batch] = await db
+        .select()
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, params.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!batch) {
+        set.status = 404;
+        return { error: "Batch not found" };
+      }
+
+      if (!(batch.status === "processing" || batch.status === "failed")) {
+        set.status = 409;
+        return {
+          error: `Cannot resume batch in '${batch.status}' status. Only 'processing' or 'failed' batches can be resumed.`,
+        };
+      }
+
+      // SMS resume is out of scope — worker would immediately stamp the
+      // batch as failed again via the unsupported-channel path.
+      if (batch.channel !== "email") {
+        set.status = 409;
+        return {
+          error: `Resume is only supported for email batches. Channel: ${batch.channel}`,
+        };
+      }
+
+      // AWS account disconnected after the batch was scheduled — operator
+      // must reconnect before we can resume.
+      if (!batch.awsAccountId) {
+        set.status = 409;
+        return {
+          error:
+            "AWS account is not attached to this batch; reconnect it before resuming.",
+        };
+      }
+
+      // Resume point: caller override wins, else use the durable heartbeat.
+      // Off-by-one safety: lastChunkIndex == null means NO chunk completed,
+      // so resume at 0 with cursor undefined (NOT 1 with null cursor).
+      const override = body?.fromChunkIndex;
+      const nextIndex =
+        override == null
+          ? batch.lastChunkIndex == null
+            ? 0
+            : batch.lastChunkIndex + 1
+          : override;
+      const cursor =
+        override != null ? undefined : (batch.lastCursor ?? undefined);
+
+      // Append audit trail on batchSend.errorDetails — Axiom logs age out
+      // after 30d but the DB audit sticks around.
+      const existingDetails =
+        (batch.errorDetails as Record<string, unknown> | null) ?? {};
+      const existingResumes = Array.isArray(existingDetails.resumes)
+        ? (existingDetails.resumes as Record<string, unknown>[])
+        : [];
+      const resumedBy = authContext.userId ?? authContext.apiKeyId ?? "unknown";
+      const nextDetails = {
+        ...existingDetails,
+        resumes: [
+          ...existingResumes,
+          {
+            resumedAt: new Date().toISOString(),
+            resumedBy,
+            fromChunkIndex: nextIndex,
+          },
+        ],
+      };
+
+      await db
+        .update(batchSend)
+        .set({
+          status: "processing",
+          lastChunkAt: new Date(),
+          errorDetails: nextDetails,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(batchSend.id, batch.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        );
+
+      await enqueueJob({
+        batchId: batch.id,
+        organizationId: authContext.organizationId,
+        awsAccountId: batch.awsAccountId,
+        channel: batch.channel,
+        chunkIndex: nextIndex,
+        cursor,
+      });
+
+      return { resumed: true, fromChunkIndex: nextIndex };
+    },
+    {
+      params: t.Object({
+        id: t.String({ description: "Batch ID to resume", maxLength: 36 }),
+      }),
+      body: t.Optional(
+        t.Object({
+          fromChunkIndex: t.Optional(
+            t.Number({
+              description:
+                "Operator override — restart from this chunkIndex with a fresh cursor. Omit to use the durable heartbeat.",
+              minimum: 0,
+            })
+          ),
+        })
+      ),
+      detail: {
+        tags: ["batch"],
+        summary: "Resume batch send",
+        description:
+          "Resumes a 'processing' or 'failed' email batch from the last successfully completed chunk. Writes a resume entry to errorDetails and enqueues the next chunk.",
+      },
+    }
   );

@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -164,6 +164,18 @@ export const batchSend = pgTable(
     errorDetails: json("error_details").$type<Record<string, unknown>>(),
 
     // ═══════════════════════════════════════════════════════════════════════
+    // RESUME / HEARTBEAT POINTER
+    // Written by the worker after each successful chunk. Read by the DLQ
+    // consumer and the manual resume endpoint to find where to pick up.
+    // ═══════════════════════════════════════════════════════════════════════
+    lastChunkAt: timestamp("last_chunk_at"),
+    lastChunkIndex: integer("last_chunk_index"),
+    lastCursor: json("last_cursor").$type<{
+      createdAt: string;
+      id: string;
+    } | null>(),
+
+    // ═══════════════════════════════════════════════════════════════════════
     // TIMING
     // ═══════════════════════════════════════════════════════════════════════
     scheduledFor: timestamp("scheduled_for"),
@@ -319,6 +331,13 @@ export const messageSend = pgTable(
     uniqueIndex("message_send_message_id_idx").on(table.messageId),
     index("message_send_source_type_idx").on(table.sourceType),
     index("message_send_created_at_idx").on(table.createdAt),
+    // Dedup guard for SQS retries and DLQ replays. Partial on contactId because
+    // transactional sends (workflows, cold emails) have no contactId.
+    // Created in production via packages/db/scripts/create-broadcast-resume-indexes.ts
+    // (CONCURRENTLY) — schema declared here as source of truth.
+    uniqueIndex("message_send_dedup_idx")
+      .on(table.batchSendId, table.contactId)
+      .where(sql`contact_id IS NOT NULL`),
   ]
 );
 
