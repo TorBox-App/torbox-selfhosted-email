@@ -232,15 +232,16 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
    */
   .get(
     "/:token",
-    async ({ params, set }) => {
+    async ({ params, request }) => {
       const { token } = params;
+      const requestId = request.headers.get("x-request-id") ?? undefined;
 
       // 1. Verify the token
       const payload = await verifyUnsubscribeToken(token);
       if (!payload) {
-        set.status = 400;
-        set.headers["content-type"] = "text/html; charset=utf-8";
-        return `
+        return htmlResponse(
+          400,
+          `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -258,7 +259,9 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
   <p>This unsubscribe link is no longer valid. It may have expired or already been used.</p>
   <p>If you continue to receive unwanted emails, please contact support.</p>
 </body>
-</html>`;
+</html>`,
+          requestId
+        );
       }
 
       const { cid: contactId, oid: organizationId, tid: topicId } = payload;
@@ -280,9 +283,9 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
         .limit(1);
 
       if (!existingContact) {
-        set.status = 404;
-        set.headers["content-type"] = "text/html; charset=utf-8";
-        return `
+        return htmlResponse(
+          404,
+          `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -299,7 +302,9 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
   <h1>Contact Not Found</h1>
   <p>We couldn't find your subscription. You may have already been unsubscribed.</p>
 </body>
-</html>`;
+</html>`,
+          requestId
+        );
       }
 
       // 3. Get topic name if topic-specific
@@ -316,12 +321,13 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
       }
 
       // 4. Return HTML confirmation page with form
-      set.headers["content-type"] = "text/html; charset=utf-8";
       const maskedEmail = existingContact.email
         ? maskEmail(existingContact.email)
         : "your email";
 
-      return `
+      return htmlResponse(
+        200,
+        `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -370,25 +376,53 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
     });
   </script>
 </body>
-</html>`;
+</html>`,
+        requestId
+      );
     },
     {
       params: t.Object({
         token: t.String({ description: "Unsubscribe token", maxLength: 500 }),
       }),
-      response: {
-        200: t.String({ description: "HTML confirmation page" }),
-        400: t.String({ description: "HTML error page" }),
-        404: t.String({ description: "HTML not found page" }),
-      },
       detail: {
         tags: ["unsubscribe"],
         summary: "Unsubscribe confirmation page",
         description:
           "Shows a confirmation page for users who click the unsubscribe link in emails. Displays a form to confirm the unsubscribe action.",
+        responses: {
+          200: {
+            description: "HTML confirmation page",
+            content: { "text/html": { schema: { type: "string" } } },
+          },
+          400: {
+            description: "HTML error page (invalid or expired token)",
+            content: { "text/html": { schema: { type: "string" } } },
+          },
+          404: {
+            description: "HTML error page (contact not found)",
+            content: { "text/html": { schema: { type: "string" } } },
+          },
+        },
       },
     }
   );
+
+// Raw Response — Elysia's string encoder forces text/plain regardless of set.headers.
+function htmlResponse(
+  status: number,
+  html: string,
+  requestId?: string
+): Response {
+  const headers: Record<string, string> = {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+  };
+  if (requestId) {
+    headers["x-request-id"] = requestId;
+  }
+  return new Response(html, { status, headers });
+}
 
 /**
  * Escape HTML special characters to prevent XSS
