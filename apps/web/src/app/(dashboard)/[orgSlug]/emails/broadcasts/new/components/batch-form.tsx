@@ -69,7 +69,10 @@ import {
   createBatchSend,
   getRecipientCount,
   getSampleContacts,
+  promoteDraftToSend,
   type RecipientFilter,
+  saveDraftBatchSend,
+  updateDraftBatchSend,
 } from "@/actions/batch";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { SendConfirmDialog } from "@/components/send-confirm-dialog";
@@ -80,7 +83,12 @@ import { getMessageUsageQueryKey } from "@/hooks/use-message-usage";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
 import { useRequireAws } from "@/hooks/use-require-aws";
 import { useTemplates } from "@/hooks/use-template-queries";
-import type { SampleContact, VariableMapping } from "@/lib/batch";
+import type {
+  BatchSendWithMeta,
+  CreateDraftBatchInput,
+  SampleContact,
+  VariableMapping,
+} from "@/lib/batch";
 import { cn } from "@/lib/utils";
 import { EmailPreviewCarousel } from "./email-preview-carousel";
 import { VariableMapper } from "./variable-mapper";
@@ -117,6 +125,8 @@ type OrgDefaults = {
   defaultReplyTo: string | null;
 } | null;
 
+type BatchFormMode = "create" | "edit";
+
 type BatchFormProps = {
   awsAccounts: AwsAccount[];
   initialVerifiedDomains: VerifiedIdentity[];
@@ -129,7 +139,81 @@ type BatchFormProps = {
   templates: Template[];
   topics: Topic[];
   topicsEnabled: boolean;
+  // Draft-edit retrofit — all optional so the create-new flow is unchanged.
+  mode?: BatchFormMode;
+  draftId?: string;
+  initialValues?: Partial<CampaignData>;
 };
+
+/**
+ * Map a loaded batch row → the CampaignData shape this form uses.
+ * Used by the edit page to pre-fill the wizard from a draft row.
+ *
+ * - `from` splits into `fromPrefix` (left of `@`) and `fromDomain` (right).
+ * - `templateId` null → `contentType='html'`; otherwise `'template'`.
+ * - Scheduling is status-neutral here: drafts ship without carrying the schedule
+ *   forward, so we always start with "send now" and let the user re-pick.
+ */
+export function mapBatchToCampaignData(
+  batch: BatchSendWithMeta
+): Partial<CampaignData> {
+  const result: Partial<CampaignData> = {
+    contentType: batch.templateId ? "template" : "html",
+    // Drafts don't carry scheduling forward — always start at "send now".
+    scheduleType: "now",
+  };
+
+  // Only set fields that exist on the batch. Empty/null values are left off
+  // so the caller's defaults (org from, first AWS account) stay in effect.
+  if (batch.name) result.name = batch.name;
+  if (batch.subject) result.subject = batch.subject;
+  if (batch.previewText) result.previewText = batch.previewText;
+  if (batch.fromName) result.fromName = batch.fromName;
+  if (batch.replyTo) result.replyTo = batch.replyTo;
+  if (batch.templateId) result.templateId = batch.templateId;
+  if (batch.awsAccount?.id) result.awsAccountId = batch.awsAccount.id;
+
+  if (batch.from?.includes("@")) {
+    const [prefix, domain] = batch.from.split("@");
+    if (prefix) result.fromPrefix = prefix;
+    if (domain) result.fromDomain = domain;
+  }
+
+  return result;
+}
+
+/**
+ * Build the server-action input payload from the wizard's CampaignData.
+ * Shared by save-draft (create or update) and promote-from-draft paths.
+ */
+function mapCampaignDataToActionInput(
+  data: CampaignData,
+  fromAddress: string
+): CreateDraftBatchInput {
+  return {
+    name: data.name || undefined,
+    subject: data.subject || undefined,
+    previewText: data.previewText || undefined,
+    from: fromAddress || undefined,
+    fromName: data.fromName || undefined,
+    replyTo: data.replyTo || undefined,
+    contentType: data.contentType,
+    templateId:
+      data.contentType === "template"
+        ? data.templateId || undefined
+        : undefined,
+    htmlContent:
+      data.contentType === "html" ? data.htmlContent || undefined : undefined,
+    variableMappings:
+      data.variableMappings.length > 0 ? data.variableMappings : undefined,
+    awsAccountId: data.awsAccountId || undefined,
+    recipientFilter: {
+      audienceType: data.audienceType,
+      topicId: data.audienceType === "topic" ? data.topicId : undefined,
+      segmentId: data.audienceType === "segment" ? data.segmentId : undefined,
+    },
+  };
+}
 
 type Step = "setup" | "content" | "audience" | "review";
 
@@ -171,9 +255,13 @@ export function BatchForm({
   templates,
   topics,
   topicsEnabled,
+  mode = "create",
+  draftId,
+  initialValues,
 }: BatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSavingDraft, startSaveDraftTransition] = useTransition();
   const {
     requireAws,
     dialogOpen: awsDialogOpen,
@@ -219,7 +307,7 @@ export function BatchForm({
         ? orgDefaults.defaultAwsAccountId
         : awsAccounts[0]?.id || "";
 
-    return {
+    const defaults: CampaignData = {
       name: "",
       subject: "",
       previewText: "",
@@ -239,6 +327,10 @@ export function BatchForm({
       scheduledDate: undefined,
       scheduledTime: "09:00",
     };
+
+    // Merge initialValues on top of defaults (used by /edit page when loading
+    // a draft). Only overrides keys the caller actually supplied.
+    return { ...defaults, ...initialValues };
   });
 
   // Fetch domains when AWS account changes
@@ -361,6 +453,46 @@ export function BatchForm({
     }
   };
 
+  const handleSaveDraft = () => {
+    // Drafts may be empty skeletons. No validation gate here — the server
+    // accepts partially-filled drafts and the user can come back later.
+    const fromAddress = getFromAddress();
+    const payload = mapCampaignDataToActionInput(campaignData, fromAddress);
+
+    startSaveDraftTransition(async () => {
+      try {
+        if (mode === "edit" && draftId) {
+          const result = await updateDraftBatchSend(
+            draftId,
+            organizationId,
+            payload
+          );
+          if (result.success) {
+            toast.success("Draft saved");
+            router.refresh();
+          } else {
+            toast.error("Failed to save draft", { description: result.error });
+          }
+          return;
+        }
+
+        const result = await saveDraftBatchSend(organizationId, payload);
+        if (result.success) {
+          toast.success("Draft saved");
+          // On first save, navigate to the edit URL so subsequent saves
+          // update in place (no duplicate rows).
+          router.push(`/${orgSlug}/emails/broadcasts/${result.batch.id}/edit`);
+        } else {
+          toast.error("Failed to save draft", { description: result.error });
+        }
+      } catch (error) {
+        toast.error("Failed to save draft", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    });
+  };
+
   const handleSend = () => {
     if (!requireAws("send")) {
       return;
@@ -421,7 +553,7 @@ export function BatchForm({
           scheduledFor.setHours(hours, minutes, 0, 0);
         }
 
-        const result = await createBatchSend(organizationId, {
+        const payload = {
           name: campaignData.name || undefined,
           subject: campaignData.subject || undefined,
           previewText: campaignData.previewText || undefined,
@@ -444,7 +576,15 @@ export function BatchForm({
           awsAccountId: campaignData.awsAccountId,
           recipientFilter: getCurrentFilter(),
           scheduledFor,
-        });
+        };
+
+        // Promote-from-draft vs direct-create. Both paths return the same
+        // { success, batch? | error } shape so the rest of this handler
+        // doesn't branch further.
+        const result =
+          mode === "edit" && draftId
+            ? await promoteDraftToSend(draftId, organizationId, payload)
+            : await createBatchSend(organizationId, payload);
         if (result.success) {
           const isScheduled = result.batch.status === "scheduled";
 
@@ -518,9 +658,13 @@ export function BatchForm({
           </Link>
         </Button>
         <div>
-          <h1 className="font-bold text-2xl tracking-tight">New Broadcast</h1>
+          <h1 className="font-bold text-2xl tracking-tight">
+            {mode === "edit" ? "Edit Draft" : "New Broadcast"}
+          </h1>
           <p className="text-muted-foreground">
-            Send an email to your contacts
+            {mode === "edit"
+              ? "Finish your draft, then send or schedule"
+              : "Send an email to your contacts"}
           </p>
         </div>
       </div>
@@ -635,26 +779,38 @@ export function BatchForm({
 
       {/* Footer Navigation */}
       <div className="border-t pt-6">
-        <div className="mx-auto flex max-w-2xl justify-between">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
           <Button
             disabled={currentStepIndex === 0}
             onClick={handleBack}
+            type="button"
             variant="outline"
           >
             Back
           </Button>
-          {currentStep !== "review" && (
+          <div className="flex items-center gap-2">
             <Button
-              disabled={
-                (currentStep === "setup" && !isSetupValid) ||
-                (currentStep === "content" && !isContentValid) ||
-                (currentStep === "audience" && !isAudienceValid)
-              }
-              onClick={handleNext}
+              disabled={isSavingDraft || isPending}
+              onClick={handleSaveDraft}
+              type="button"
+              variant="outline"
             >
-              Continue
+              {isSavingDraft ? "Saving..." : "Save as draft"}
             </Button>
-          )}
+            {currentStep !== "review" && (
+              <Button
+                disabled={
+                  (currentStep === "setup" && !isSetupValid) ||
+                  (currentStep === "content" && !isContentValid) ||
+                  (currentStep === "audience" && !isAudienceValid)
+                }
+                onClick={handleNext}
+                type="button"
+              >
+                Continue
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

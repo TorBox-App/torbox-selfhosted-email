@@ -95,7 +95,7 @@ vi.mock("@wraps/db", () => ({
   awsAccount: { organizationId: "organizationId", isVerified: "isVerified" },
   contact: { organizationId: "organizationId" },
   template: { organizationId: "organizationId" },
-  batchSend: { organizationId: "organizationId" },
+  batchSend: { organizationId: "organizationId", status: "status" },
   apiKey: { organizationId: "organizationId" },
   messageSend: { organizationId: "organizationId", status: "status" },
   invitation: { organizationId: "organizationId", status: "status" },
@@ -132,6 +132,7 @@ vi.mock("drizzle-orm", () => ({
   count: vi.fn(),
   eq: vi.fn(),
   and: vi.fn(),
+  ne: vi.fn(),
 }));
 
 // Import AFTER mocks

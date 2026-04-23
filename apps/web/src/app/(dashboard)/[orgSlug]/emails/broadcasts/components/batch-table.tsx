@@ -41,13 +41,16 @@ import {
   CalendarClock,
   CheckCircle,
   Clock,
+  Copy,
   Download,
   Loader2,
   Mail,
   MessageSquare,
   MoreHorizontal,
+  Pencil,
   Plus,
   Search,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -61,7 +64,11 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
-import { cancelBatchSend } from "@/actions/batch";
+import {
+  cancelBatchSend,
+  deleteDraftBatchSend,
+  duplicateBatchSend,
+} from "@/actions/batch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
@@ -126,6 +133,30 @@ export function BatchTable({
       if (result.success) {
         toast.success("Broadcast cancelled");
         router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const handleDeleteDraft = async (batchId: string) => {
+    startTransition(async () => {
+      const result = await deleteDraftBatchSend(batchId, organizationId);
+      if (result.success) {
+        toast.success("Draft deleted");
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const handleDuplicate = async (batchId: string) => {
+    startTransition(async () => {
+      const result = await duplicateBatchSend(batchId, organizationId);
+      if (result.success) {
+        toast.success("Broadcast duplicated");
+        router.push(`/${orgSlug}/emails/broadcasts/${result.batch.id}/edit`);
       } else {
         toast.error(result.error);
       }
@@ -365,6 +396,8 @@ export function BatchTable({
         id: "actions",
         cell: ({ row }: { row: { original: BatchSendWithMeta } }) => {
           const batch = row.original;
+          const isDraft = batch.status === "draft";
+          const canEditDraft = canManage && isDraft;
           const canCancel =
             canManage &&
             (batch.status === "scheduled" ||
@@ -380,13 +413,51 @@ export function BatchTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    router.push(`/${orgSlug}/emails/broadcasts/${batch.id}`)
-                  }
-                >
-                  View details
-                </DropdownMenuItem>
+                {isDraft ? (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      router.push(
+                        `/${orgSlug}/emails/broadcasts/${batch.id}/edit`
+                      )
+                    }
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Continue editing
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      router.push(`/${orgSlug}/emails/broadcasts/${batch.id}`)
+                    }
+                  >
+                    View details
+                  </DropdownMenuItem>
+                )}
+                {canManage && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={isPending}
+                      onClick={() => handleDuplicate(batch.id)}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Duplicate
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {canEditDraft && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      disabled={isPending}
+                      onClick={() => handleDeleteDraft(batch.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete draft
+                    </DropdownMenuItem>
+                  </>
+                )}
                 {canCancel && (
                   <>
                     <DropdownMenuSeparator />
@@ -405,7 +476,15 @@ export function BatchTable({
         },
       },
     ],
-    [canManage, isPending, orgSlug, router, handleCancel]
+    [
+      canManage,
+      isPending,
+      orgSlug,
+      router,
+      handleCancel,
+      handleDeleteDraft,
+      handleDuplicate,
+    ]
   );
 
   const table = useReactTable({
@@ -497,7 +576,11 @@ export function BatchTable({
             <TooltipContent>Export as CSV</TooltipContent>
           </Tooltip>
           {canManage && (
-            <Button asChild className="rounded-l-none focus:z-10" size="sm">
+            <Button
+              asChild
+              className="rounded-l-none focus:z-10"
+              size="default"
+            >
               <Link href={`/${orgSlug}/emails/broadcasts/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Broadcast
@@ -532,11 +615,13 @@ export function BatchTable({
                 <TableRow
                   className="cursor-pointer hover:bg-muted/50"
                   key={row.id}
-                  onClick={() =>
-                    router.push(
-                      `/${orgSlug}/emails/broadcasts/${row.original.id}`
-                    )
-                  }
+                  onClick={() => {
+                    const href =
+                      row.original.status === "draft"
+                        ? `/${orgSlug}/emails/broadcasts/${row.original.id}/edit`
+                        : `/${orgSlug}/emails/broadcasts/${row.original.id}`;
+                    router.push(href);
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

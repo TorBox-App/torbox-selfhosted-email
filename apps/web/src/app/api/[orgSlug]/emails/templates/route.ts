@@ -1,7 +1,7 @@
 import { auth } from "@wraps/auth";
 import type { WorkflowStep } from "@wraps/db";
 import { batchSend, db, template, workflow } from "@wraps/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { trackTemplateCreated } from "@/lib/activation-tracking";
@@ -81,7 +81,12 @@ export async function GET(request: Request, context: RouteContext) {
         count: sql<number>`count(*)::int`,
       })
       .from(batchSend)
-      .where(eq(batchSend.organizationId, orgWithMembership.id))
+      .where(
+        and(
+          eq(batchSend.organizationId, orgWithMembership.id),
+          ne(batchSend.status, "draft")
+        )
+      )
       .groupBy(batchSend.emailTemplateId);
 
     const broadcastCountMap = new Map(

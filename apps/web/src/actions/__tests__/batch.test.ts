@@ -1,0 +1,975 @@
+import {
+  awsAccount,
+  batchSend,
+  contact,
+  db,
+  member,
+  organization,
+  organizationExtension,
+  subscription,
+  template,
+  user,
+} from "@wraps/db";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { publishTemplateToSES } from "@/actions/templates";
+import { checkFeatureAccess } from "@/lib/plan-limits";
+import {
+  deleteDraftBatchSend,
+  duplicateBatchSend,
+  promoteDraftToSend,
+  saveDraftBatchSend,
+  updateDraftBatchSend,
+} from "../batch";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test fixtures
+// ─────────────────────────────────────────────────────────────────────────────
+
+const testUser = {
+  id: "test-batch-drafts-user-1",
+  email: "batch-drafts-owner@example.com",
+  name: "Batch Drafts Owner",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testMemberUser = {
+  id: "test-batch-drafts-member-user-1",
+  email: "batch-drafts-member@example.com",
+  name: "Batch Drafts Member",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrganization = {
+  id: "test-batch-drafts-org-1",
+  name: "Batch Drafts Test Org",
+  slug: "batch-drafts-test-org",
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const testSecondaryOrganization = {
+  id: "test-batch-drafts-org-2",
+  name: "Batch Drafts Test Org 2",
+  slug: "batch-drafts-test-org-2",
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const testOwnerMember = {
+  id: "test-batch-drafts-owner-member-1",
+  organizationId: testOrganization.id,
+  userId: testUser.id,
+  role: "owner" as const,
+  createdAt: new Date(),
+};
+
+const testSecondaryOwnerMember = {
+  id: "test-batch-drafts-owner-member-2",
+  organizationId: testSecondaryOrganization.id,
+  userId: testUser.id,
+  role: "owner" as const,
+  createdAt: new Date(),
+};
+
+const testRegularMember = {
+  id: "test-batch-drafts-regular-member-1",
+  organizationId: testOrganization.id,
+  userId: testMemberUser.id,
+  role: "member" as const,
+  createdAt: new Date(),
+};
+
+const testAwsAccount = {
+  id: "test-batch-drafts-aws-1",
+  organizationId: testOrganization.id,
+  accountId: "123456789012",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::123456789012:role/test-role",
+  externalId: "test-batch-drafts-ext-id-unique",
+  name: "Test AWS Account",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const testTemplate = {
+  id: "test-batch-drafts-template-1",
+  organizationId: testOrganization.id,
+  name: "Broadcast Template",
+  subject: "Subject from template",
+  content: {},
+  status: "PUBLISHED" as const,
+  type: "EMAIL" as const,
+  sesTemplateName: "wraps-org-test-batch-drafts-template-1",
+  publishedAt: new Date("2026-01-01"),
+  createdAt: new Date(),
+  updatedAt: new Date("2025-12-01"), // older than publishedAt so no re-publish triggers
+  createdBy: testUser.id,
+};
+
+const testContact = {
+  id: "test-batch-drafts-contact-1",
+  organizationId: testOrganization.id,
+  email: "active@example.com",
+  emailHash: "batch-drafts-contact-hash-1",
+  emailStatus: "active" as const,
+  status: "active",
+  properties: {},
+  emailsSent: 0,
+  emailsOpened: 0,
+  emailsClicked: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// Mock boundaries — system edges only. DB is real.
+
+let currentMockUserId = testUser.id;
+
+vi.mock("next/headers", () => ({
+  headers: () => new Headers(),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
+vi.mock("@wraps/auth", () => ({
+  auth: {
+    api: {
+      getSession: vi.fn(async () => ({
+        user: {
+          id: currentMockUserId,
+          email:
+            currentMockUserId === testUser.id
+              ? testUser.email
+              : testMemberUser.email,
+          name:
+            currentMockUserId === testUser.id
+              ? testUser.name
+              : testMemberUser.name,
+        },
+        session: {
+          id: "session-123",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          userId: currentMockUserId,
+          expiresAt: new Date(Date.now() + 86_400_000),
+          token: "test-token",
+        },
+      })),
+    },
+  },
+}));
+
+// plan-limits: default to allow. Individual tests override via mocked import.
+vi.mock("@/lib/plan-limits", () => ({
+  checkFeatureAccess: vi.fn(async () => ({ allowed: true })),
+}));
+
+// templates action — spy on publishTemplateToSES
+vi.mock("@/actions/templates", () => ({
+  publishTemplateToSES: vi.fn(async () => ({
+    success: true,
+    sesTemplateName: "wraps-org-test-batch-drafts-template-1",
+  })),
+}));
+
+beforeAll(async () => {
+  await db
+    .insert(user)
+    .values(testUser)
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+  await db
+    .insert(user)
+    .values(testMemberUser)
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+  await db
+    .insert(organization)
+    .values(testOrganization)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrganization.name },
+    });
+  await db
+    .insert(organization)
+    .values(testSecondaryOrganization)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testSecondaryOrganization.name },
+    });
+  await db
+    .insert(organizationExtension)
+    .values({ organizationId: testOrganization.id })
+    .onConflictDoUpdate({
+      target: organizationExtension.organizationId,
+      set: { updatedAt: new Date() },
+    });
+  await db
+    .insert(subscription)
+    .values({
+      id: `sub_test_batch_drafts_${testOrganization.id}`,
+      plan: "growth",
+      referenceId: testOrganization.id,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: subscription.id,
+      set: { plan: "growth", status: "active" },
+    });
+  await db
+    .insert(member)
+    .values(testOwnerMember)
+    .onConflictDoUpdate({
+      target: member.id,
+      set: { role: testOwnerMember.role },
+    });
+  await db
+    .insert(member)
+    .values(testSecondaryOwnerMember)
+    .onConflictDoUpdate({
+      target: member.id,
+      set: { role: testSecondaryOwnerMember.role },
+    });
+  await db
+    .insert(member)
+    .values(testRegularMember)
+    .onConflictDoUpdate({
+      target: member.id,
+      set: { role: testRegularMember.role },
+    });
+  await db
+    .insert(awsAccount)
+    .values(testAwsAccount)
+    .onConflictDoUpdate({
+      target: awsAccount.id,
+      set: { name: testAwsAccount.name },
+    });
+  await db
+    .insert(template)
+    .values(testTemplate)
+    .onConflictDoUpdate({
+      target: template.id,
+      set: { name: testTemplate.name },
+    });
+  await db
+    .insert(contact)
+    .values(testContact)
+    .onConflictDoUpdate({
+      target: contact.id,
+      set: { updatedAt: new Date() },
+    });
+});
+
+beforeEach(async () => {
+  currentMockUserId = testUser.id;
+  await db
+    .delete(batchSend)
+    .where(eq(batchSend.organizationId, testOrganization.id));
+  await db
+    .delete(batchSend)
+    .where(eq(batchSend.organizationId, testSecondaryOrganization.id));
+  vi.clearAllMocks();
+});
+
+afterAll(async () => {
+  await db
+    .delete(batchSend)
+    .where(eq(batchSend.organizationId, testOrganization.id));
+  await db
+    .delete(batchSend)
+    .where(eq(batchSend.organizationId, testSecondaryOrganization.id));
+  await db.delete(contact).where(eq(contact.id, testContact.id));
+  await db.delete(template).where(eq(template.id, testTemplate.id));
+  await db.delete(awsAccount).where(eq(awsAccount.id, testAwsAccount.id));
+  await db.delete(member).where(eq(member.id, testOwnerMember.id));
+  await db.delete(member).where(eq(member.id, testSecondaryOwnerMember.id));
+  await db.delete(member).where(eq(member.id, testRegularMember.id));
+  await db
+    .delete(subscription)
+    .where(eq(subscription.id, `sub_test_batch_drafts_${testOrganization.id}`));
+  await db
+    .delete(organizationExtension)
+    .where(eq(organizationExtension.organizationId, testOrganization.id));
+  await db.delete(organization).where(eq(organization.id, testOrganization.id));
+  await db
+    .delete(organization)
+    .where(eq(organization.id, testSecondaryOrganization.id));
+  await db.delete(user).where(eq(user.id, testUser.id));
+  await db.delete(user).where(eq(user.id, testMemberUser.id));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit 1 (tracer): saveDraftBatchSend inserts row with status='draft'
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("saveDraftBatchSend", () => {
+  it("inserts a row with status='draft', organizationId set, and createdBy = session user", async () => {
+    const result = await saveDraftBatchSend(testOrganization.id, {});
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const row = await db.query.batchSend.findFirst({
+      where: and(
+        eq(batchSend.id, result.batch.id),
+        eq(batchSend.organizationId, testOrganization.id)
+      ),
+    });
+
+    expect(row).toBeDefined();
+    expect(row?.status).toBe("draft");
+    expect(row?.organizationId).toBe(testOrganization.id);
+    expect(row?.createdBy).toBe(testUser.id);
+  });
+
+  it("rejects a member-role caller", async () => {
+    currentMockUserId = testMemberUser.id;
+
+    const result = await saveDraftBatchSend(testOrganization.id, {});
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/owners and admins/i);
+
+    const rowsAfter = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    expect(rowsAfter[0]?.count ?? 0).toBe(0);
+  });
+
+  it("rejects when checkFeatureAccess('batch') denies", async () => {
+    vi.mocked(checkFeatureAccess).mockResolvedValueOnce({
+      allowed: false,
+      requiredPlan: "starter",
+      message: "Upgrade to send broadcasts",
+    });
+
+    const result = await saveDraftBatchSend(testOrganization.id, {});
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/upgrade|not available/i);
+
+    const rowsAfter = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    expect(rowsAfter[0]?.count ?? 0).toBe(0);
+  });
+
+  it("with template+htmlContent does NOT call publishTemplateToSES", async () => {
+    const result = await saveDraftBatchSend(testOrganization.id, {
+      templateId: testTemplate.id,
+      htmlContent: "<p>hi</p>",
+    });
+
+    expect(result.success).toBe(true);
+    expect(vi.mocked(publishTemplateToSES)).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateDraftBatchSend", () => {
+  it("updates subject+from on an existing draft; other fields unchanged", async () => {
+    const created = await saveDraftBatchSend(testOrganization.id, {
+      subject: "Original subject",
+      from: "old@example.com",
+      previewText: "keep-me",
+    });
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+
+    const result = await updateDraftBatchSend(
+      created.batch.id,
+      testOrganization.id,
+      { subject: "New subject", from: "new@example.com" }
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.batch.subject).toBe("New subject");
+    expect(result.batch.from).toBe("new@example.com");
+    expect(result.batch.previewText).toBe("keep-me");
+    expect(result.batch.status).toBe("draft");
+  });
+
+  it("blocks cross-org IDOR — draft in org B unreachable via org A's session", async () => {
+    // Seed a draft in the secondary org directly in DB
+    const [otherOrgDraft] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testSecondaryOrganization.id,
+        status: "draft",
+        channel: "email",
+        subject: "Secret draft",
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(otherOrgDraft).toBeDefined();
+    if (!otherOrgDraft) return;
+
+    // Call as org A session (current mock user is still testUser) but pass org A's id
+    const result = await updateDraftBatchSend(
+      otherOrgDraft.id,
+      testOrganization.id,
+      { subject: "Attacker subject" }
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/not found/i);
+
+    // Secret draft still unchanged
+    const after = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, otherOrgDraft.id),
+    });
+    expect(after?.subject).toBe("Secret draft");
+  });
+
+  it("refuses to update a non-draft row; row unchanged", async () => {
+    // Insert a 'queued' row directly (bypassing saveDraftBatchSend so status='queued')
+    const [queuedRow] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testOrganization.id,
+        status: "queued",
+        channel: "email",
+        subject: "Locked subject",
+        from: "locked@example.com",
+        awsAccountId: testAwsAccount.id,
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(queuedRow).toBeDefined();
+    if (!queuedRow) return;
+
+    const before = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, queuedRow.id),
+    });
+
+    const result = await updateDraftBatchSend(
+      queuedRow.id,
+      testOrganization.id,
+      { subject: "Should not apply" }
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/queued|draft/i);
+
+    const after = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, queuedRow.id),
+    });
+    expect(after?.subject).toBe(before?.subject);
+    expect(after?.from).toBe(before?.from);
+    expect(after?.status).toBe("queued");
+  });
+});
+
+describe("promoteDraftToSend", () => {
+  it("happy path: publishes template, POSTs to /v1/batch/:id/send, flips status to 'queued', row count unchanged", async () => {
+    // Ensure NEXT_PUBLIC_API_URL is set for this test
+    const origApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+
+    // Make template need publish: null sesTemplateName
+    await db
+      .update(template)
+      .set({ sesTemplateName: null, publishedAt: null })
+      .where(eq(template.id, testTemplate.id));
+
+    let fetchSpy: ReturnType<typeof vi.spyOn> | null = null;
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
+        templateId: testTemplate.id,
+        from: "promote@example.com",
+        subject: "Promote me",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      // Stub fetch: intercept only our API POST; pass through everything
+      // else (Neon serverless DB uses fetch internally).
+      const realFetch = globalThis.fetch.bind(globalThis);
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(async (...args: Parameters<typeof fetch>) => {
+          const [url] = args;
+          const asString = typeof url === "string" ? url : url.toString();
+          if (asString.includes("/v1/batch/") && asString.endsWith("/send")) {
+            const match = asString.match(/\/v1\/batch\/([^/]+)\/send$/);
+            if (match) {
+              await db
+                .update(batchSend)
+                .set({ status: "queued", totalRecipients: 1 })
+                .where(
+                  and(
+                    eq(batchSend.id, match[1]!),
+                    eq(batchSend.organizationId, testOrganization.id),
+                    eq(batchSend.status, "draft")
+                  )
+                );
+            }
+            return new Response(
+              JSON.stringify({
+                id: match?.[1] ?? "",
+                status: "queued",
+                channel: "email",
+                totalRecipients: 1,
+                createdAt: new Date().toISOString(),
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          return realFetch(...args);
+        });
+
+      // Row count snapshot BEFORE
+      const [before] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      const beforeCount = before?.count ?? 0;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      // publishTemplateToSES invoked
+      expect(vi.mocked(publishTemplateToSES)).toHaveBeenCalledWith(
+        testTemplate.id,
+        testOrganization.id
+      );
+
+      // fetch invoked with the promote URL
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `http://localhost:3001/v1/batch/${draft.batch.id}/send`,
+        expect.objectContaining({ method: "POST" })
+      );
+
+      // Row is now queued
+      expect(result.batch.status).toBe("queued");
+
+      // Row count unchanged — no orphan INSERT
+      const [after] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      const afterCount = after?.count ?? 0;
+      expect(afterCount).toBe(beforeCount);
+    } finally {
+      fetchSpy?.mockRestore();
+      if (origApiUrl === undefined) {
+        process.env.NEXT_PUBLIC_API_URL = undefined;
+      } else {
+        process.env.NEXT_PUBLIC_API_URL = origApiUrl;
+      }
+      // Restore template
+      await db
+        .update(template)
+        .set({
+          sesTemplateName: testTemplate.sesTemplateName,
+          publishedAt: testTemplate.publishedAt,
+        })
+        .where(eq(template.id, testTemplate.id));
+    }
+  });
+
+  it("blocks cross-org IDOR — cannot promote a draft from another org", async () => {
+    const [otherOrgDraft] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testSecondaryOrganization.id,
+        status: "draft",
+        channel: "email",
+        awsAccountId: testAwsAccount.id,
+        subject: "Secret promote target",
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(otherOrgDraft).toBeDefined();
+    if (!otherOrgDraft) return;
+
+    const result = await promoteDraftToSend(
+      otherOrgDraft.id,
+      testOrganization.id,
+      {}
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/not found/i);
+
+    // Row status unchanged
+    const after = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, otherOrgDraft.id),
+    });
+    expect(after?.status).toBe("draft");
+  });
+
+  it("returns 'no contacts' error when recipient count is 0; row status unchanged", async () => {
+    // Delete the active contact so the recipient count returns 0.
+    await db.delete(contact).where(eq(contact.id, testContact.id));
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
+        from: "from@example.com",
+        subject: "Zero recipients test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toMatch(/no active email contacts|no contacts/i);
+
+      const after = await db.query.batchSend.findFirst({
+        where: eq(batchSend.id, draft.batch.id),
+      });
+      expect(after?.status).toBe("draft");
+    } finally {
+      // Restore the contact for subsequent tests
+      await db
+        .insert(contact)
+        .values(testContact)
+        .onConflictDoUpdate({
+          target: contact.id,
+          set: { updatedAt: new Date() },
+        });
+    }
+  });
+});
+
+describe("deleteDraftBatchSend", () => {
+  it("hard-deletes a draft; refuses queued; org-scoped", async () => {
+    // Seed a draft + a queued row in the same org
+    const draft = await saveDraftBatchSend(testOrganization.id, {
+      subject: "Delete me",
+    });
+    expect(draft.success).toBe(true);
+    if (!draft.success) return;
+
+    const [queuedRow] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testOrganization.id,
+        status: "queued",
+        channel: "email",
+        subject: "Do not delete",
+        awsAccountId: testAwsAccount.id,
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(queuedRow).toBeDefined();
+    if (!queuedRow) return;
+
+    // Count before
+    const [before] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    expect(before?.count).toBe(2);
+
+    // Delete draft → succeeds
+    const resultDraft = await deleteDraftBatchSend(
+      draft.batch.id,
+      testOrganization.id
+    );
+    expect(resultDraft.success).toBe(true);
+
+    const draftAfter = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, draft.batch.id),
+    });
+    expect(draftAfter).toBeUndefined();
+
+    // Delete queued → refuses, row still there
+    const resultQueued = await deleteDraftBatchSend(
+      queuedRow.id,
+      testOrganization.id
+    );
+    expect(resultQueued.success).toBe(false);
+
+    const queuedAfter = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, queuedRow.id),
+    });
+    expect(queuedAfter?.status).toBe("queued");
+
+    // Count after: 2 - 1 (draft deleted) = 1 (queued still there)
+    const [after] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    expect(after?.count).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// duplicateBatchSend: clone a broadcast's config as a new draft.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("duplicateBatchSend", () => {
+  it("on a completed source, creates a new row with status='draft', name='<source.name> (copy)', createdBy = session user", async () => {
+    // Seed a completed source directly so the source is not a draft.
+    const [source] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testOrganization.id,
+        status: "completed",
+        channel: "email",
+        name: "Q1 Launch",
+        subject: "Hello",
+        from: "hi@example.com",
+        awsAccountId: testAwsAccount.id,
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(source).toBeDefined();
+    if (!source) return;
+
+    const result = await duplicateBatchSend(source.id, testOrganization.id);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // New row is distinct from source
+    expect(result.batch.id).not.toBe(source.id);
+    expect(result.batch.status).toBe("draft");
+    expect(result.batch.name).toBe("Q1 Launch (copy)");
+
+    const row = await db.query.batchSend.findFirst({
+      where: and(
+        eq(batchSend.id, result.batch.id),
+        eq(batchSend.organizationId, testOrganization.id)
+      ),
+    });
+    expect(row).toBeDefined();
+    expect(row?.status).toBe("draft");
+    expect(row?.organizationId).toBe(testOrganization.id);
+    expect(row?.createdBy).toBe(testUser.id);
+    expect(row?.name).toBe("Q1 Launch (copy)");
+  });
+
+  it("copies all content fields exactly from source", async () => {
+    const sourceMappings = [
+      {
+        variableName: "coupon",
+        source: { type: "static" as const, value: "WELCOME10" },
+      },
+    ];
+
+    const [source] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testOrganization.id,
+        status: "completed",
+        channel: "email",
+        name: "Launch email",
+        subject: "Hi there",
+        previewText: "A fresh start",
+        from: "founder@example.com",
+        fromName: "Founder",
+        replyTo: "reply@example.com",
+        emailTemplateId: testTemplate.id,
+        htmlContent: "<p>Hello</p>",
+        textContent: "Hello",
+        variableMappings: sourceMappings,
+        audienceType: "topic",
+        topicId: "topic-123",
+        segmentId: "segment-456",
+        awsAccountId: testAwsAccount.id,
+        body: "SMS body text",
+        senderId: "sender-999",
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(source).toBeDefined();
+    if (!source) return;
+
+    const result = await duplicateBatchSend(source.id, testOrganization.id);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const row = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, result.batch.id),
+    });
+    expect(row).toBeDefined();
+    if (!row) return;
+
+    // Content fields copied verbatim
+    expect(row.channel).toBe(source.channel);
+    expect(row.subject).toBe(source.subject);
+    expect(row.previewText).toBe(source.previewText);
+    expect(row.from).toBe(source.from);
+    expect(row.fromName).toBe(source.fromName);
+    expect(row.replyTo).toBe(source.replyTo);
+    expect(row.emailTemplateId).toBe(source.emailTemplateId);
+    expect(row.htmlContent).toBe(source.htmlContent);
+    expect(row.textContent).toBe(source.textContent);
+    expect(row.variableMappings).toEqual(source.variableMappings);
+    expect(row.audienceType).toBe(source.audienceType);
+    expect(row.topicId).toBe(source.topicId);
+    expect(row.segmentId).toBe(source.segmentId);
+    expect(row.awsAccountId).toBe(source.awsAccountId);
+    expect(row.body).toBe(source.body);
+    expect(row.senderId).toBe(source.senderId);
+  });
+
+  it("does NOT copy runtime state: counters reset to 0, timestamps/errors null", async () => {
+    // Seed a source that has done a full send — counters populated, timestamps
+    // set, errors present. The duplicate must NOT carry any of that over.
+    const [source] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testOrganization.id,
+        status: "completed",
+        channel: "email",
+        name: "Finished broadcast",
+        subject: "Hi",
+        from: "hi@example.com",
+        awsAccountId: testAwsAccount.id,
+        totalRecipients: 100,
+        processedRecipients: 100,
+        sent: 95,
+        delivered: 90,
+        failed: 5,
+        opened: 40,
+        clicked: 10,
+        bounced: 3,
+        complained: 1,
+        suppressed: 2,
+        smsSegments: 0,
+        smsOptedOut: 0,
+        errorMessage: "partial failure",
+        errorDetails: { reason: "rate limit" },
+        scheduledFor: new Date("2026-01-01"),
+        startedAt: new Date("2026-01-02"),
+        completedAt: new Date("2026-01-03"),
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(source).toBeDefined();
+    if (!source) return;
+
+    const result = await duplicateBatchSend(source.id, testOrganization.id);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const row = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, result.batch.id),
+    });
+    expect(row).toBeDefined();
+    if (!row) return;
+
+    // All counters reset to 0
+    expect(row.totalRecipients).toBe(0);
+    expect(row.processedRecipients).toBe(0);
+    expect(row.sent).toBe(0);
+    expect(row.delivered).toBe(0);
+    expect(row.failed).toBe(0);
+    expect(row.opened).toBe(0);
+    expect(row.clicked).toBe(0);
+    expect(row.bounced).toBe(0);
+    expect(row.complained).toBe(0);
+    expect(row.suppressed).toBe(0);
+    expect(row.smsSegments).toBe(0);
+    expect(row.smsOptedOut).toBe(0);
+
+    // Timestamps and errors null
+    expect(row.scheduledFor).toBeNull();
+    expect(row.startedAt).toBeNull();
+    expect(row.completedAt).toBeNull();
+    expect(row.errorMessage).toBeNull();
+    expect(row.errorDetails).toBeNull();
+  });
+
+  it("blocks cross-org IDOR — source in org B unreachable with org A's id; no row inserted in org A", async () => {
+    // Seed a broadcast in the secondary org
+    const [otherOrgBatch] = await db
+      .insert(batchSend)
+      .values({
+        organizationId: testSecondaryOrganization.id,
+        status: "completed",
+        channel: "email",
+        name: "Secret broadcast",
+        subject: "Confidential",
+        from: "leak@example.com",
+        createdBy: testUser.id,
+      })
+      .returning();
+    expect(otherOrgBatch).toBeDefined();
+    if (!otherOrgBatch) return;
+
+    // Row count in org A before — should be 0
+    const [before] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    const beforeCount = before?.count ?? 0;
+
+    // Attempt to duplicate the org-B broadcast using org A's id
+    const result = await duplicateBatchSend(
+      otherOrgBatch.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/not found/i);
+
+    // No row was inserted in org A
+    const [after] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, testOrganization.id));
+    const afterCount = after?.count ?? 0;
+    expect(afterCount).toBe(beforeCount);
+
+    // Source in org B is still intact
+    const stillThere = await db.query.batchSend.findFirst({
+      where: eq(batchSend.id, otherOrgBatch.id),
+    });
+    expect(stillThere?.name).toBe("Secret broadcast");
+    expect(stillThere?.organizationId).toBe(testSecondaryOrganization.id);
+  });
+});

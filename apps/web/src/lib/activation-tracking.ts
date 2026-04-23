@@ -11,7 +11,7 @@ import {
   workflow,
 } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { logger } from "./logger";
 import { getPostHogClient } from "./posthog-server";
 
@@ -203,7 +203,12 @@ async function countBatchSends(organizationId: string): Promise<number> {
   const [r] = await db
     .select({ count: count() })
     .from(batchSend)
-    .where(eq(batchSend.organizationId, organizationId));
+    .where(
+      and(
+        eq(batchSend.organizationId, organizationId),
+        ne(batchSend.status, "draft")
+      )
+    );
   return r?.count ?? 0;
 }
 

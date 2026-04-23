@@ -6,7 +6,7 @@ import {
   template,
   workflow,
 } from "@wraps/db";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 
 export type AccountFeatures = {
@@ -150,7 +150,8 @@ async function checkHasBroadcasts(organizationId: string): Promise<boolean> {
     .where(
       and(
         eq(batchSend.organizationId, organizationId),
-        eq(batchSend.channel, "email")
+        eq(batchSend.channel, "email"),
+        ne(batchSend.status, "draft")
       )
     );
   return (result?.count ?? 0) > 0;

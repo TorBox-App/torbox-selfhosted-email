@@ -148,6 +148,17 @@ export type CreateBatchInput = {
   scheduledFor?: Date;
 };
 
+// Draft batch inputs: everything optional — drafts can be empty skeletons.
+// awsAccountId is optional on drafts (users may save before picking an account),
+// but is required at promote time.
+export type CreateDraftBatchInput = Partial<
+  Omit<CreateBatchInput, "awsAccountId">
+> & {
+  awsAccountId?: string;
+};
+
+export type UpdateDraftBatchInput = CreateDraftBatchInput;
+
 // Result types
 export type CreateBatchResult =
   | {
@@ -188,6 +199,28 @@ export type CancelBatchResult =
       success: false;
       error: string;
     };
+
+// Draft lifecycle result types (all share the same `{ success, batch? | error }`
+// shape so call sites can branch uniformly on `result.success`).
+export type SaveDraftBatchResult =
+  | { success: true; batch: BatchSendWithMeta }
+  | { success: false; error: string };
+
+export type UpdateDraftBatchResult =
+  | { success: true; batch: BatchSendWithMeta }
+  | { success: false; error: string };
+
+export type PromoteDraftBatchResult =
+  | { success: true; batch: BatchSendWithMeta }
+  | { success: false; error: string };
+
+export type DeleteDraftBatchResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export type DuplicateBatchResult =
+  | { success: true; batch: BatchSendWithMeta }
+  | { success: false; error: string };
 
 // Sample contact for audience preview
 export type SampleContact = {

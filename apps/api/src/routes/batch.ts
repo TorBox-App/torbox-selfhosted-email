@@ -317,6 +317,189 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       },
     }
   )
+  .post(
+    "/:id/send",
+    async (ctx) => {
+      const { body, params, set } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Load the batch scoped by (id, orgId) — without status filter so we can
+      // distinguish 404 (no row in org) from 400 (row exists but not draft).
+      const [existing] = await db
+        .select()
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, params.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        set.status = 404;
+        throw new Error("Batch not found");
+      }
+
+      if (existing.status !== "draft") {
+        set.status = 400;
+        throw new Error(
+          `Cannot promote batch in '${existing.status}' status. Only drafts can be promoted.`
+        );
+      }
+
+      // Validate awsAccountId belongs to the authenticated org
+      const [account] = await db
+        .select({ id: awsAccount.id })
+        .from(awsAccount)
+        .where(
+          and(
+            eq(awsAccount.id, body.awsAccountId),
+            eq(awsAccount.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!account) {
+        set.status = 403;
+        throw new Error("AWS account does not belong to this organization");
+      }
+
+      // Determine if this is a scheduled send
+      const scheduledFor = body.scheduledFor
+        ? new Date(body.scheduledFor)
+        : undefined;
+      const isScheduled = Boolean(scheduledFor && scheduledFor > new Date());
+
+      // Promote in-place: update the draft row, status-gated for concurrency.
+      const channel = body.channel ?? existing.channel ?? "email";
+      const promoted = await db
+        .update(batchSend)
+        .set({
+          awsAccountId: body.awsAccountId,
+          channel,
+          name: body.name ?? existing.name,
+          status: isScheduled ? "scheduled" : "queued",
+          audienceType: body.audienceType ?? existing.audienceType,
+          topicId: body.topicId ?? existing.topicId,
+          segmentId: body.segmentId ?? existing.segmentId,
+          subject: body.subject ?? existing.subject,
+          previewText: body.previewText ?? existing.previewText,
+          from: body.from ?? existing.from,
+          fromName: body.fromName ?? existing.fromName,
+          replyTo: body.replyTo ?? existing.replyTo,
+          emailTemplateId: body.templateId ?? existing.emailTemplateId,
+          htmlContent: body.htmlContent ?? existing.htmlContent,
+          variableMappings: body.variableMappings ?? existing.variableMappings,
+          body: body.body ?? existing.body,
+          senderId: body.senderId ?? existing.senderId,
+          scheduledFor: scheduledFor ?? null,
+          totalRecipients: body.totalRecipients,
+          createdBy: authContext.userId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(batchSend.id, params.id),
+            eq(batchSend.organizationId, authContext.organizationId),
+            eq(batchSend.status, "draft")
+          )
+        )
+        .returning();
+
+      if (promoted.length !== 1) {
+        // Concurrent promote (or row disappeared) — fail loudly, no side effects.
+        set.status = 409;
+        throw new Error(
+          `Expected to promote exactly 1 draft row, updated ${promoted.length}`
+        );
+      }
+
+      const [batch] = promoted;
+
+      if (isScheduled && scheduledFor) {
+        await createBroadcastSchedule({
+          batchId: batch.id,
+          organizationId: authContext.organizationId,
+          awsAccountId: body.awsAccountId,
+          scheduledFor,
+          channel: channel as "email" | "sms",
+        });
+      } else {
+        await enqueueJob({
+          batchId: batch.id,
+          organizationId: authContext.organizationId,
+          awsAccountId: body.awsAccountId,
+          channel: batch.channel,
+          chunkIndex: 0,
+        });
+      }
+
+      set.status = 201;
+      return {
+        id: batch.id,
+        status: batch.status,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String({
+          description: "Draft batch ID to promote",
+          maxLength: 36,
+        }),
+      }),
+      body: t.Object({
+        channel: t.Optional(t.Union([t.Literal("email"), t.Literal("sms")])),
+        name: t.Optional(t.String({ maxLength: 255 })),
+        audienceType: t.Optional(
+          t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")])
+        ),
+        topicId: t.Optional(t.String({ maxLength: 36 })),
+        segmentId: t.Optional(t.String({ maxLength: 36 })),
+        subject: t.Optional(t.String({ maxLength: 998 })),
+        previewText: t.Optional(t.String({ maxLength: 500 })),
+        from: t.Optional(t.String({ maxLength: 255 })),
+        fromName: t.Optional(t.String({ maxLength: 100 })),
+        replyTo: t.Optional(t.String({ maxLength: 255 })),
+        templateId: t.Optional(t.String({ maxLength: 36 })),
+        htmlContent: t.Optional(t.String()),
+        variableMappings: t.Optional(
+          t.Array(
+            t.Object({
+              variableName: t.String(),
+              source: t.Union([
+                t.Object({
+                  type: t.Literal("static"),
+                  value: t.String(),
+                }),
+                t.Object({
+                  type: t.Literal("contact"),
+                  field: t.String(),
+                }),
+              ]),
+            })
+          )
+        ),
+        body: t.Optional(t.String({ maxLength: 1600 })),
+        senderId: t.Optional(t.String({ maxLength: 20 })),
+        scheduledFor: t.Optional(t.String({ format: "date-time" })),
+        awsAccountId: t.String({ maxLength: 36 }),
+        totalRecipients: t.Number(),
+      }),
+      response: {
+        201: t.Object({
+          id: t.String(),
+          status: t.String(),
+        }),
+      },
+      detail: {
+        tags: ["batch"],
+        summary: "Promote draft batch send",
+        description:
+          "Promotes an existing draft batch_send to an active send (queued or scheduled).",
+      },
+    }
+  )
   .delete(
     "/:id",
     async (ctx) => {

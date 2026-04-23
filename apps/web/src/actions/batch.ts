@@ -32,12 +32,19 @@ import type {
   Channel,
   CreateBatchInput,
   CreateBatchResult,
+  CreateDraftBatchInput,
+  DeleteDraftBatchResult,
+  DuplicateBatchResult,
   ExtractedVariable,
   GetBatchResult,
   GetSampleContactsResult,
   ListBatchesResult,
+  PromoteDraftBatchResult,
   RecipientFilter,
   SampleContact,
+  SaveDraftBatchResult,
+  UpdateDraftBatchInput,
+  UpdateDraftBatchResult,
 } from "@/lib/batch";
 import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -274,7 +281,155 @@ export async function getBatchSend(
 }
 
 /**
- * Create a new batch send by calling the API
+ * Shared pre-send validation.
+ *
+ * Runs all the checks + side effects that both direct-send (createBatchSend)
+ * and promote-from-draft (promoteDraftToSend) must perform:
+ * - plan feature access ("batch", plus "campaigns" if scheduled)
+ * - AWS account ownership
+ * - template existence + auto-publish to SES if needed
+ * - eligible recipient count (real-time, audience drift safe)
+ *
+ * Returns a discriminated union so callers can destructure without casts.
+ * Keeps shared brains deep behind a small interface.
+ */
+type PrepareSendData = {
+  awsAccountId: string;
+  channel?: Channel;
+  templateId?: string;
+  recipientFilter?: RecipientFilter;
+  scheduledFor?: Date;
+};
+
+type PrepareSendResult =
+  | { ok: true; recipientCount: number }
+  | { ok: false; error: string };
+
+async function validateAndPrepareSend(
+  organizationId: string,
+  data: PrepareSendData
+): Promise<PrepareSendResult> {
+  // Check if batch sending is available for this plan
+  const featureCheck = await checkFeatureAccess(organizationId, "batch");
+  if (!featureCheck.allowed) {
+    return {
+      ok: false,
+      error:
+        featureCheck.message ?? "Batch sending is not available on your plan.",
+    };
+  }
+
+  // Check if scheduling is available (requires campaigns feature - Starter+)
+  if (data.scheduledFor) {
+    const schedulingCheck = await checkFeatureAccess(
+      organizationId,
+      "campaigns"
+    );
+    if (!schedulingCheck.allowed) {
+      return {
+        ok: false,
+        error:
+          schedulingCheck.message ??
+          "Scheduling broadcasts requires a paid plan.",
+      };
+    }
+  }
+
+  // Validate AWS account exists and belongs to org
+  const awsAccountRow = await db.query.awsAccount.findFirst({
+    where: (a, { and: a_and, eq: a_eq }) =>
+      a_and(
+        a_eq(a.id, data.awsAccountId),
+        a_eq(a.organizationId, organizationId)
+      ),
+  });
+
+  if (!awsAccountRow) {
+    return { ok: false, error: "AWS account not found" };
+  }
+
+  // Validate template if provided and auto-publish if needed
+  if (data.templateId) {
+    const tmpl = await db.query.template.findFirst({
+      where: (t, { and: t_and, eq: t_eq }) =>
+        t_and(
+          t_eq(t.id, data.templateId as string),
+          t_eq(t.organizationId, organizationId)
+        ),
+      columns: {
+        id: true,
+        sesTemplateName: true,
+        subject: true,
+        updatedAt: true,
+        publishedAt: true,
+      },
+    });
+
+    if (!tmpl) {
+      return { ok: false, error: "Template not found" };
+    }
+
+    // Re-publish only if:
+    // 1. Never pushed to SES (no sesTemplateName)
+    // 2. Edited after last publish (dashboard edits update updatedAt)
+    const needsPublish =
+      !tmpl.sesTemplateName ||
+      (tmpl.updatedAt &&
+        (!tmpl.publishedAt || tmpl.updatedAt > tmpl.publishedAt));
+
+    if (needsPublish) {
+      const publishResult = await publishTemplateToSES(
+        data.templateId,
+        organizationId
+      );
+
+      if (!publishResult.success) {
+        return {
+          ok: false,
+          error: `Failed to publish template: ${publishResult.error}`,
+        };
+      }
+    }
+  }
+
+  // Count eligible recipients based on filter
+  const recipientCount = await countRecipients(
+    organizationId,
+    data.channel ?? "email",
+    data.recipientFilter
+  );
+
+  if (recipientCount === 0) {
+    return {
+      ok: false,
+      error:
+        data.channel === "sms"
+          ? "No contacts with SMS consent found"
+          : "No active email contacts found",
+    };
+  }
+
+  return { ok: true, recipientCount };
+}
+
+/**
+ * Shared post-enqueue activation tracker.
+ *
+ * Called from BOTH createBatchSend (direct-send path) and promoteDraftToSend
+ * (draft→send path) after the API POST succeeds. Keeps the broadcast_created
+ * event tied to "first enqueue succeeded" regardless of path.
+ */
+function trackBroadcastSent(
+  userEmail: string,
+  organizationId: string,
+  properties: { channel: Channel; recipientCount: number }
+): void {
+  // Fire-and-forget to mirror existing createBatchSend semantics.
+  trackBroadcastCreated(userEmail, organizationId, properties);
+}
+
+/**
+ * Create a new batch send by calling the API (direct-send path).
  */
 export async function createBatchSend(
   organizationId: string,
@@ -297,102 +452,19 @@ export async function createBatchSend(
       };
     }
 
-    // Check if batch sending is available for this plan
-    const featureCheck = await checkFeatureAccess(organizationId, "batch");
-    if (!featureCheck.allowed) {
-      return {
-        success: false,
-        error:
-          featureCheck.message ??
-          "Batch sending is not available on your plan.",
-      };
-    }
-
-    // Check if scheduling is available (requires campaigns feature - Starter+)
-    if (data.scheduledFor) {
-      const schedulingCheck = await checkFeatureAccess(
-        organizationId,
-        "campaigns"
-      );
-      if (!schedulingCheck.allowed) {
-        return {
-          success: false,
-          error:
-            schedulingCheck.message ??
-            "Scheduling broadcasts requires a paid plan.",
-        };
-      }
-    }
-
-    // Validate AWS account exists and belongs to org
-    const awsAccount = await db.query.awsAccount.findFirst({
-      where: (a, { and, eq }) =>
-        and(eq(a.id, data.awsAccountId), eq(a.organizationId, organizationId)),
+    const prep = await validateAndPrepareSend(organizationId, {
+      awsAccountId: data.awsAccountId,
+      channel: data.channel,
+      templateId: data.templateId,
+      recipientFilter: data.recipientFilter,
+      scheduledFor: data.scheduledFor,
     });
 
-    if (!awsAccount) {
-      return { success: false, error: "AWS account not found" };
+    if (!prep.ok) {
+      return { success: false, error: prep.error };
     }
 
-    // Validate template if provided and auto-publish if needed
-    if (data.templateId) {
-      const tmpl = await db.query.template.findFirst({
-        where: (t, { and, eq }) =>
-          and(eq(t.id, data.templateId!), eq(t.organizationId, organizationId)),
-        columns: {
-          id: true,
-          sesTemplateName: true,
-          subject: true,
-          updatedAt: true,
-          publishedAt: true,
-        },
-      });
-
-      if (!tmpl) {
-        return { success: false, error: "Template not found" };
-      }
-
-      // Re-publish only if:
-      // 1. Never pushed to SES (no sesTemplateName)
-      // 2. Edited after last publish (dashboard edits update updatedAt)
-      // CLI-pushed templates have sesTemplateName but null publishedAt —
-      // dashboard edits to those will re-publish since publishedAt is null.
-      const needsPublish =
-        !tmpl.sesTemplateName ||
-        (tmpl.updatedAt &&
-          (!tmpl.publishedAt || tmpl.updatedAt > tmpl.publishedAt));
-
-      if (needsPublish) {
-        const publishResult = await publishTemplateToSES(
-          data.templateId,
-          organizationId
-        );
-
-        if (!publishResult.success) {
-          return {
-            success: false,
-            error: `Failed to publish template: ${publishResult.error}`,
-          };
-        }
-      }
-    }
-
-    // Count eligible recipients based on filter
-    const recipientCount = await countRecipients(
-      organizationId,
-      data.channel ?? "email",
-      data.recipientFilter
-    );
-
-    if (recipientCount === 0) {
-      return {
-        success: false,
-        error:
-          data.channel === "sms"
-            ? "No contacts with SMS consent found"
-            : "No active email contacts found",
-      };
-    }
+    const { recipientCount } = prep;
 
     // Get session from Better Auth
     const session = await auth.api.getSession({
@@ -461,8 +533,8 @@ export async function createBatchSend(
 
     revalidatePath("/[orgSlug]/emails/broadcasts", "page");
 
-    // Track activation event (fire-and-forget)
-    trackBroadcastCreated(access.userEmail, organizationId, {
+    // Track activation event (fire-and-forget) — shared with promote path.
+    trackBroadcastSent(access.userEmail, organizationId, {
       channel: data.channel ?? "email",
       recipientCount,
     });
@@ -474,6 +546,599 @@ export async function createBatchSend(
     });
     log.error({ err: serializeError(error) }, "Failed to create batch send");
     return { success: false, error: "Failed to create batch send" };
+  }
+}
+
+/**
+ * Save a broadcast as a draft.
+ *
+ * Unlike createBatchSend, this:
+ * - Accepts fully-optional fields (empty drafts are allowed)
+ * - Does NOT call publishTemplateToSES, countRecipients, or the API
+ * - Inserts a row with status='draft' and returns it
+ *
+ * The row will be filled out later via updateDraftBatchSend and ultimately
+ * sent via promoteDraftToSend.
+ */
+export async function saveDraftBatchSend(
+  organizationId: string,
+  data: CreateDraftBatchInput
+): Promise<SaveDraftBatchResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can save broadcasts",
+      };
+    }
+
+    const featureCheck = await checkFeatureAccess(organizationId, "batch");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Batch sending is not available on your plan.",
+      };
+    }
+
+    const [newBatch] = await db
+      .insert(batchSend)
+      .values({
+        organizationId,
+        status: "draft",
+        channel: data.channel ?? "email",
+        name: data.name ?? null,
+        subject: data.subject ?? null,
+        previewText: data.previewText ?? null,
+        from: data.from ?? null,
+        fromName: data.fromName ?? null,
+        replyTo: data.replyTo ?? null,
+        emailTemplateId: data.templateId ?? null,
+        htmlContent: data.htmlContent ?? null,
+        variableMappings: data.variableMappings ?? null,
+        body: data.body ?? null,
+        senderId: data.senderId ?? null,
+        audienceType: data.recipientFilter?.audienceType ?? "all",
+        topicId: data.recipientFilter?.topicId ?? null,
+        segmentId: data.recipientFilter?.segmentId ?? null,
+        awsAccountId: data.awsAccountId ?? null,
+        scheduledFor: data.scheduledFor ?? null,
+        createdBy: access.userId,
+      })
+      .returning();
+
+    if (!newBatch) {
+      return { success: false, error: "Failed to save draft" };
+    }
+
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+
+    return loadBatchWithMeta(newBatch.id, organizationId);
+  } catch (error) {
+    const log = createActionLogger("saveDraftBatchSend", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to save draft batch");
+    return { success: false, error: "Failed to save draft" };
+  }
+}
+
+/**
+ * Internal helper: load a batch by (id, orgId) and return it shaped as
+ * BatchSendWithMeta. Does NOT validate UUIDs — assumes the caller already
+ * verified org access and supplied DB-sourced ids.
+ */
+async function loadBatchWithMeta(
+  batchId: string,
+  organizationId: string
+): Promise<GetBatchResult> {
+  const b = await db.query.batchSend.findFirst({
+    where: and(
+      eq(batchSend.id, batchId),
+      eq(batchSend.organizationId, organizationId)
+    ),
+    with: {
+      createdByUser: {
+        columns: { id: true, name: true, email: true },
+      },
+      awsAccount: {
+        columns: { id: true, name: true, region: true },
+      },
+      emailTemplate: {
+        columns: { id: true, name: true },
+      },
+    },
+  });
+
+  if (!b) {
+    return { success: false, error: "Batch send not found" };
+  }
+
+  return {
+    success: true,
+    batch: {
+      id: b.id,
+      name: b.name,
+      channel: b.channel as Channel,
+      status: b.status as BatchStatus,
+      subject: b.subject,
+      previewText: b.previewText,
+      from: b.from,
+      fromName: b.fromName,
+      replyTo: b.replyTo,
+      templateId: b.emailTemplateId,
+      templateName: b.emailTemplate?.name,
+      totalRecipients: b.totalRecipients,
+      processedRecipients: b.processedRecipients,
+      sent: b.sent,
+      delivered: b.delivered,
+      failed: b.failed,
+      opened: b.opened,
+      clicked: b.clicked,
+      bounced: b.bounced,
+      complained: b.complained,
+      errorMessage: b.errorMessage,
+      scheduledFor: b.scheduledFor,
+      startedAt: b.startedAt,
+      completedAt: b.completedAt,
+      createdAt: b.createdAt,
+      createdBy: b.createdByUser,
+      awsAccount: b.awsAccount,
+    },
+  };
+}
+
+/**
+ * Update an existing draft broadcast. Fails if the row is not a draft.
+ *
+ * Uses a partial update with `if (data.x !== undefined)` guards so callers
+ * can update one field at a time without clobbering the rest. Status is
+ * double-guarded in the WHERE clause (belt + suspenders) so even if a caller
+ * somehow bypassed the existence check, a non-draft row would not update.
+ */
+export async function updateDraftBatchSend(
+  batchId: string,
+  organizationId: string,
+  data: UpdateDraftBatchInput
+): Promise<UpdateDraftBatchResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can edit broadcasts",
+      };
+    }
+
+    const existing = await db.query.batchSend.findFirst({
+      where: and(
+        eq(batchSend.id, batchId),
+        eq(batchSend.organizationId, organizationId)
+      ),
+      columns: { id: true, status: true },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Draft not found" };
+    }
+
+    if (existing.status !== "draft") {
+      return {
+        success: false,
+        error: `Cannot edit: broadcast is already ${existing.status}`,
+      };
+    }
+
+    const updateData: Partial<typeof batchSend.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+
+    if (data.channel !== undefined) updateData.channel = data.channel;
+    if (data.name !== undefined) updateData.name = data.name ?? null;
+    if (data.subject !== undefined) updateData.subject = data.subject ?? null;
+    if (data.previewText !== undefined)
+      updateData.previewText = data.previewText ?? null;
+    if (data.from !== undefined) updateData.from = data.from ?? null;
+    if (data.fromName !== undefined)
+      updateData.fromName = data.fromName ?? null;
+    if (data.replyTo !== undefined) updateData.replyTo = data.replyTo ?? null;
+    if (data.templateId !== undefined)
+      updateData.emailTemplateId = data.templateId ?? null;
+    if (data.htmlContent !== undefined)
+      updateData.htmlContent = data.htmlContent ?? null;
+    if (data.variableMappings !== undefined)
+      updateData.variableMappings = data.variableMappings ?? null;
+    if (data.body !== undefined) updateData.body = data.body ?? null;
+    if (data.senderId !== undefined)
+      updateData.senderId = data.senderId ?? null;
+    if (data.awsAccountId !== undefined)
+      updateData.awsAccountId = data.awsAccountId ?? null;
+    if (data.scheduledFor !== undefined)
+      updateData.scheduledFor = data.scheduledFor ?? null;
+    if (data.recipientFilter !== undefined) {
+      updateData.audienceType = data.recipientFilter.audienceType;
+      updateData.topicId = data.recipientFilter.topicId ?? null;
+      updateData.segmentId = data.recipientFilter.segmentId ?? null;
+    }
+
+    await db
+      .update(batchSend)
+      .set(updateData)
+      .where(
+        and(
+          eq(batchSend.id, batchId),
+          eq(batchSend.organizationId, organizationId),
+          eq(batchSend.status, "draft")
+        )
+      );
+
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
+
+    return loadBatchWithMeta(batchId, organizationId);
+  } catch (error) {
+    const log = createActionLogger("updateDraftBatchSend", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), batchId },
+      "Failed to update draft batch"
+    );
+    return { success: false, error: "Failed to update draft" };
+  }
+}
+
+/**
+ * Promote a draft broadcast to a real send.
+ *
+ * Runs the full send-path validation (AWS account, template publish, recipient
+ * count), then POSTs to `/v1/batch/:id/send`. The API endpoint updates the
+ * row in place — no INSERT — so the row count is unchanged before/after.
+ *
+ * Data supplied here is MERGED over the existing draft fields so the caller
+ * can make last-minute edits at promote time without a separate update call.
+ */
+export async function promoteDraftToSend(
+  batchId: string,
+  organizationId: string,
+  data: UpdateDraftBatchInput & { scheduledFor?: Date }
+): Promise<PromoteDraftBatchResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can send broadcasts",
+      };
+    }
+
+    // Load the draft, scoped by org + status
+    const existing = await db.query.batchSend.findFirst({
+      where: and(
+        eq(batchSend.id, batchId),
+        eq(batchSend.organizationId, organizationId),
+        eq(batchSend.status, "draft")
+      ),
+    });
+
+    if (!existing) {
+      return { success: false, error: "Draft not found" };
+    }
+
+    // Merge supplied data over existing fields. Explicit-undefined-preserves-existing.
+    const merged = {
+      awsAccountId: data.awsAccountId ?? existing.awsAccountId ?? undefined,
+      channel: (data.channel ?? existing.channel) as Channel,
+      name: data.name ?? existing.name ?? undefined,
+      subject: data.subject ?? existing.subject ?? undefined,
+      previewText: data.previewText ?? existing.previewText ?? undefined,
+      from: data.from ?? existing.from ?? undefined,
+      fromName: data.fromName ?? existing.fromName ?? undefined,
+      replyTo: data.replyTo ?? existing.replyTo ?? undefined,
+      templateId: data.templateId ?? existing.emailTemplateId ?? undefined,
+      htmlContent: data.htmlContent ?? existing.htmlContent ?? undefined,
+      variableMappings:
+        data.variableMappings ?? existing.variableMappings ?? undefined,
+      body: data.body ?? existing.body ?? undefined,
+      senderId: data.senderId ?? existing.senderId ?? undefined,
+      recipientFilter:
+        data.recipientFilter ??
+        ({
+          audienceType: (existing.audienceType ?? "all") as
+            | "all"
+            | "topic"
+            | "segment",
+          topicId: existing.topicId ?? undefined,
+          segmentId: existing.segmentId ?? undefined,
+        } as RecipientFilter),
+      scheduledFor: data.scheduledFor ?? existing.scheduledFor ?? undefined,
+    };
+
+    if (!merged.awsAccountId) {
+      return {
+        success: false,
+        error: "AWS account is required before sending",
+      };
+    }
+
+    const prep = await validateAndPrepareSend(organizationId, {
+      awsAccountId: merged.awsAccountId,
+      channel: merged.channel,
+      templateId: merged.templateId,
+      recipientFilter: merged.recipientFilter,
+      scheduledFor: merged.scheduledFor,
+    });
+
+    if (!prep.ok) {
+      return { success: false, error: prep.error };
+    }
+
+    const { recipientCount } = prep;
+
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return { success: false, error: "Session not found" };
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      return { success: false, error: "API URL not configured" };
+    }
+
+    const response = await fetch(`${apiUrl}/v1/batch/${batchId}/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.session.token}`,
+        "X-Organization-Id": organizationId,
+      },
+      body: JSON.stringify({
+        channel: merged.channel,
+        name: merged.name,
+        audienceType: merged.recipientFilter.audienceType,
+        topicId: merged.recipientFilter.topicId,
+        segmentId: merged.recipientFilter.segmentId,
+        subject: merged.subject,
+        previewText: merged.previewText,
+        from: merged.from,
+        fromName: merged.fromName,
+        replyTo: merged.replyTo,
+        templateId: merged.templateId,
+        htmlContent: merged.htmlContent,
+        variableMappings: merged.variableMappings,
+        body: merged.body,
+        senderId: merged.senderId,
+        scheduledFor: merged.scheduledFor
+          ? merged.scheduledFor.toISOString()
+          : undefined,
+        awsAccountId: merged.awsAccountId,
+        totalRecipients: recipientCount,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText) as {
+          error?: string;
+          debug?: unknown;
+        };
+        return {
+          success: false,
+          error: errorData.error || "Failed to send broadcast",
+        };
+      } catch {
+        return {
+          success: false,
+          error: errorText || "Failed to send broadcast",
+        };
+      }
+    }
+
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
+
+    // Track activation event — shared helper keeps this identical to
+    // createBatchSend's direct-send path.
+    trackBroadcastSent(access.userEmail, organizationId, {
+      channel: merged.channel,
+      recipientCount,
+    });
+
+    return loadBatchWithMeta(batchId, organizationId);
+  } catch (error) {
+    const log = createActionLogger("promoteDraftToSend", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), batchId },
+      "Failed to promote draft"
+    );
+    return { success: false, error: "Failed to send broadcast" };
+  }
+}
+
+/**
+ * Hard-delete a draft broadcast. Scoped by org, only deletes rows with
+ * status='draft'. No-op (error) for any other status — this prevents using
+ * delete as a back-door cancel for queued/scheduled sends.
+ *
+ * No messageSend rows to orphan because drafts never send.
+ */
+export async function deleteDraftBatchSend(
+  batchId: string,
+  organizationId: string
+): Promise<DeleteDraftBatchResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can delete drafts",
+      };
+    }
+
+    const deleted = await db
+      .delete(batchSend)
+      .where(
+        and(
+          eq(batchSend.id, batchId),
+          eq(batchSend.organizationId, organizationId),
+          eq(batchSend.status, "draft")
+        )
+      )
+      .returning({ id: batchSend.id });
+
+    if (deleted.length === 0) {
+      return {
+        success: false,
+        error: "Draft not found or already sent",
+      };
+    }
+
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+
+    return { success: true };
+  } catch (error) {
+    const log = createActionLogger("deleteDraftBatchSend", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), batchId },
+      "Failed to delete draft batch"
+    );
+    return { success: false, error: "Failed to delete draft" };
+  }
+}
+
+/**
+ * Duplicate a broadcast: clone its config as a new draft row.
+ *
+ * Source can be any status — duplicate is a config copy, the source row is
+ * untouched. Copies every content field (subject, from, template, audience,
+ * AWS account, etc.) but resets all runtime state (counters=0, timing/errors
+ * null). Name becomes "<source.name> (copy)", or "Untitled broadcast (copy)"
+ * if the source has no name.
+ *
+ * Scoped by (sourceBatchId, organizationId) — cross-org attempts return
+ * "Broadcast not found".
+ */
+export async function duplicateBatchSend(
+  sourceBatchId: string,
+  organizationId: string
+): Promise<DuplicateBatchResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can duplicate broadcasts",
+      };
+    }
+
+    const featureCheck = await checkFeatureAccess(organizationId, "batch");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Batch sending is not available on your plan.",
+      };
+    }
+
+    const source = await db.query.batchSend.findFirst({
+      where: and(
+        eq(batchSend.id, sourceBatchId),
+        eq(batchSend.organizationId, organizationId)
+      ),
+    });
+
+    if (!source) {
+      return { success: false, error: "Broadcast not found" };
+    }
+
+    const [newBatch] = await db
+      .insert(batchSend)
+      .values({
+        organizationId,
+        status: "draft",
+        channel: source.channel,
+        name: `${source.name ?? "Untitled broadcast"} (copy)`,
+        subject: source.subject,
+        previewText: source.previewText,
+        from: source.from,
+        fromName: source.fromName,
+        replyTo: source.replyTo,
+        emailTemplateId: source.emailTemplateId,
+        htmlContent: source.htmlContent,
+        textContent: source.textContent,
+        variableMappings: source.variableMappings,
+        body: source.body,
+        senderId: source.senderId,
+        audienceType: source.audienceType ?? "all",
+        topicId: source.topicId,
+        segmentId: source.segmentId,
+        awsAccountId: source.awsAccountId,
+        createdBy: access.userId,
+      })
+      .returning();
+
+    if (!newBatch) {
+      return { success: false, error: "Failed to duplicate broadcast" };
+    }
+
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+
+    return loadBatchWithMeta(newBatch.id, organizationId);
+  } catch (error) {
+    const log = createActionLogger("duplicateBatchSend", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), sourceBatchId },
+      "Failed to duplicate broadcast"
+    );
+    return { success: false, error: "Failed to duplicate broadcast" };
   }
 }
 

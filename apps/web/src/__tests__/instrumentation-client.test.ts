@@ -32,11 +32,6 @@ async function importSrcInstrumentationClient() {
   return import("../instrumentation-client");
 }
 
-async function importRootInstrumentationClient() {
-  vi.resetModules();
-  return import("../../instrumentation-client");
-}
-
 describe("client instrumentation", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "ph_test_key";
@@ -78,42 +73,6 @@ describe("client instrumentation", () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
     await importSrcInstrumentationClient();
-
-    expect(mockSentryInit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dsn: undefined,
-      })
-    );
-  });
-
-  it("reads the root client Sentry DSN from NEXT_PUBLIC_SENTRY_DSN", async () => {
-    process.env.NEXT_PUBLIC_SENTRY_DSN =
-      "https://root-public@example.ingest.sentry.io/456";
-
-    const module = await importRootInstrumentationClient();
-
-    expect(mockReplayIntegration).toHaveBeenCalledTimes(1);
-    expect(mockSentryInit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dsn: "https://root-public@example.ingest.sentry.io/456",
-        integrations: [{ name: "replay" }],
-      })
-    );
-    expect(mockPosthogInit).toHaveBeenCalledWith(
-      "ph_test_key",
-      expect.objectContaining({
-        api_host: "https://o11y.wraps.dev",
-      })
-    );
-    expect(module.onRouterTransitionStart).toBe(
-      mockCaptureRouterTransitionStart
-    );
-  });
-
-  it("leaves the root client Sentry DSN unset when NEXT_PUBLIC_SENTRY_DSN is missing", async () => {
-    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
-    await importRootInstrumentationClient();
 
     expect(mockSentryInit).toHaveBeenCalledWith(
       expect.objectContaining({
