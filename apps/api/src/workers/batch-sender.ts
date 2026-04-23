@@ -354,6 +354,13 @@ async function processJob(job: BatchJob): Promise<void> {
 
   const fromDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
 
+  // For topic-audienced batches, scope the one-click unsubscribe to that topic
+  // so recipients are only removed from that list — not all org topics.
+  // "all" and "segment" audiences fall back to global unsubscribe since no
+  // single topic represents the send.
+  const unsubscribeTopicId =
+    batch.audienceType === "topic" ? (batch.topicId ?? undefined) : undefined;
+
   // Use bulk sending for SES templates, individual sends for raw HTML
   if (sesTemplateName) {
     // SES bulk email limit is 50 recipients per API call
@@ -373,7 +380,8 @@ async function processJob(job: BatchJob): Promise<void> {
           if (isMarketing) {
             const unsubscribeToken = await generateUnsubscribeToken(
               recipient.id,
-              organizationId
+              organizationId,
+              unsubscribeTopicId
             );
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
             preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
@@ -677,7 +685,8 @@ async function processJob(job: BatchJob): Promise<void> {
           if (isMarketing) {
             const unsubscribeToken = await generateUnsubscribeToken(
               recipient.id,
-              organizationId
+              organizationId,
+              unsubscribeTopicId
             );
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
           }
