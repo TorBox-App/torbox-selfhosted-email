@@ -60,6 +60,10 @@ export default async function SendPage({
   const batches = batchesResult.success ? batchesResult.batches : [];
 
   if (batches.length === 0) {
+    const canManage =
+      orgWithMembership.userRole === "owner" ||
+      orgWithMembership.userRole === "admin";
+
     return (
       <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
         <Empty className="max-w-2xl border">
@@ -69,29 +73,20 @@ export default async function SendPage({
             </EmptyMedia>
             <EmptyTitle>Broadcasts</EmptyTitle>
             <EmptyDescription>
-              Send targeted email campaigns to your contacts. Build with the
-              template editor, select your audience, and send — all at AWS
-              pricing.
+              {canManage
+                ? "Send targeted email campaigns to your contacts. Pick a template, choose an audience, and send — all at AWS pricing."
+                : "No broadcasts yet. Ask an owner or admin to create one."}
             </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent>
-            <div className="flex gap-2">
+          {canManage ? (
+            <EmptyContent>
               <Button asChild>
-                <Link href={`/${orgSlug}/emails/templates/new`}>
-                  Create your first template
+                <Link href={`/${orgSlug}/emails/broadcasts/new`}>
+                  Create a broadcast
                 </Link>
               </Button>
-              <Button asChild variant="ghost">
-                <a
-                  href="https://wraps.dev/docs/guides/templates"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Learn about broadcasts
-                </a>
-              </Button>
-            </div>
-          </EmptyContent>
+            </EmptyContent>
+          ) : null}
         </Empty>
       </div>
     );
