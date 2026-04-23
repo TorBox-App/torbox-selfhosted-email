@@ -412,8 +412,8 @@ export default function TemplatesQuickstartPageContent() {
           <code className="rounded bg-muted px-1.5 py-0.5">
             {"{{unsubscribeUrl}}"}
           </code>{" "}
-          placeholder in the template pushed to SES. What fills that
-          placeholder at send time depends on how you send:
+          placeholder in the template pushed to SES. What fills that placeholder
+          at send time depends on how you send:
         </p>
 
         <div className="mb-6 grid gap-4 md:grid-cols-2">

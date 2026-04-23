@@ -41,7 +41,7 @@ function NeedHelpBlock() {
         , join our{" "}
         <a
           className="underline hover:text-foreground"
-          href="https://discord.gg/wraps"
+          href="https://discord.gg/pdgAa6xAWF"
           rel="noopener noreferrer"
           target="_blank"
         >

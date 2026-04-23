@@ -37,7 +37,7 @@ export function HelpCard() {
             variant="outline"
           >
             <a
-              href="https://discord.gg/wraps"
+              href="https://discord.gg/pdgAa6xAWF"
               rel="noopener noreferrer"
               target="_blank"
             >

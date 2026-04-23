@@ -58,7 +58,7 @@ const ContactSection = memo(function ContactSection() {
                   variant="outline"
                 >
                   <a
-                    href="https://discord.gg/ybwvXq5d"
+                    href="https://discord.gg/pdgAa6xAWF"
                     rel="noopener noreferrer"
                     target="_blank"
                   >
