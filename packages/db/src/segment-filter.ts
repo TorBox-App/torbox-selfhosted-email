@@ -94,13 +94,13 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
       case "endsWith":
         return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}`}`;
       case "greaterThan":
-        return sql`(properties->>${propertyKey})::numeric > ${value}::numeric`;
+        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) > ${value}`;
       case "lessThan":
-        return sql`(properties->>${propertyKey})::numeric < ${value}::numeric`;
+        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) < ${value}`;
       case "greaterThanOrEqual":
-        return sql`(properties->>${propertyKey})::numeric >= ${value}::numeric`;
+        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) >= ${value}`;
       case "lessThanOrEqual":
-        return sql`(properties->>${propertyKey})::numeric <= ${value}::numeric`;
+        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) <= ${value}`;
       case "exists":
         return sql`properties ? ${propertyKey}`;
       case "notExists":

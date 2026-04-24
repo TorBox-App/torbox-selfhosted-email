@@ -233,6 +233,10 @@ export const FILTER_FIELDS: FilterFieldDefinition[] = [
       "notContains",
       "exists",
       "notExists",
+      "greaterThan",
+      "lessThan",
+      "greaterThanOrEqual",
+      "lessThanOrEqual",
     ],
   },
 ];

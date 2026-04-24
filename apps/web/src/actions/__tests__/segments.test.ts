@@ -550,6 +550,133 @@ describe("Segments Server Actions", () => {
 
       expect(result.success).toBe(false);
     });
+
+    it("greaterThan on a mixed-type property does not throw and returns only numeric-matching contacts", async () => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values([
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "high-spend@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("high-spend@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { monthly_spend: "500" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "low-spend@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("low-spend@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { monthly_spend: "50" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "string-plan@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("string-plan@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { monthly_spend: "enterprise" },
+        },
+      ]);
+
+      const result = await previewSegment(testOrganization.id, {
+        logic: "AND",
+        groups: [
+          {
+            filters: [
+              {
+                field: "properties.monthly_spend",
+                operator: "greaterThan",
+                value: 100,
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.count).toBe(1);
+        expect(result.sampleEmails).toEqual(["high-spend@example.com"]);
+      }
+    });
+
+    it("lessThan on a fully-numeric property returns the correct count", async () => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values([
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "score-10@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("score-10@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { score: "10" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "score-50@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("score-50@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { score: "50" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "score-100@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("score-100@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { score: "100" },
+        },
+      ]);
+
+      const result = await previewSegment(testOrganization.id, {
+        logic: "AND",
+        groups: [
+          {
+            filters: [
+              {
+                field: "properties.score",
+                operator: "lessThan",
+                value: 60,
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.count).toBe(2);
+        expect(result.sampleEmails).toEqual(
+          expect.arrayContaining([
+            "score-10@example.com",
+            "score-50@example.com",
+          ])
+        );
+        expect(result.sampleEmails).toHaveLength(2);
+        expect(result.sampleEmails).not.toContain("score-100@example.com");
+      }
+    });
   });
 
   describe("segment member count computation", () => {

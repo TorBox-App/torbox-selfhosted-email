@@ -24,6 +24,13 @@ import {
 } from "@/lib/segments";
 import type { TopicWithMeta } from "@/lib/topics";
 
+const NUMERIC_OPERATORS = new Set([
+  "greaterThan",
+  "lessThan",
+  "greaterThanOrEqual",
+  "lessThanOrEqual",
+]);
+
 type SegmentBuilderProps = {
   condition: FilterCondition;
   onChange: (condition: FilterCondition) => void;
@@ -484,12 +491,28 @@ function FilterRow({
               value={currentPropertyKey}
             />
           )}
-          <Input
-            className="flex-1"
-            onChange={(e) => handleValueChange(e.target.value)}
-            placeholder="value"
-            value={(filter.value as string) || ""}
-          />
+          {NUMERIC_OPERATORS.has(filter.operator) ? (
+            <Input
+              className="flex-1"
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                handleValueChange(
+                  e.target.value === "" || !Number.isFinite(n) ? undefined : n
+                );
+              }}
+              placeholder="0"
+              step="any"
+              type="number"
+              value={filter.value?.toString() || ""}
+            />
+          ) : (
+            <Input
+              className="flex-1"
+              onChange={(e) => handleValueChange(e.target.value)}
+              placeholder="value"
+              value={(filter.value as string) || ""}
+            />
+          )}
         </div>
       );
     }
