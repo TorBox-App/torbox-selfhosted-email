@@ -7,7 +7,9 @@ type AnalyticsRefreshButtonProps = {
   orgSlug: string;
 };
 
-export function AnalyticsRefreshButton({ orgSlug }: AnalyticsRefreshButtonProps) {
+export function AnalyticsRefreshButton({
+  orgSlug,
+}: AnalyticsRefreshButtonProps) {
   const queryClient = useQueryClient();
 
   function handleRefresh() {

@@ -292,7 +292,7 @@ function DeviceFlow() {
               </div>
             </div>
             <Button disabled={isSubmitting || !orgName} type="submit">
-              {isSubmitting ? "Creating\u2026" : "Create Organization"}
+              {isSubmitting ? "Creating..." : "Create Organization"}
             </Button>
           </form>
         </CardContent>
@@ -329,7 +329,7 @@ function DeviceFlow() {
               disabled={isSubmitting}
               onClick={handleApprove}
             >
-              {isSubmitting ? "Approving\u2026" : "Approve"}
+              {isSubmitting ? "Approving..." : "Approve"}
             </Button>
             <Button
               disabled={isSubmitting}
@@ -372,7 +372,7 @@ function DeviceFlow() {
             disabled={isSubmitting || getRawCode(code).length !== 8}
             type="submit"
           >
-            {isSubmitting ? "Verifying\u2026" : "Continue"}
+            {isSubmitting ? "Verifying..." : "Continue"}
           </Button>
         </form>
       </CardContent>

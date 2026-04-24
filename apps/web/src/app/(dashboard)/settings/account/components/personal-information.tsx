@@ -243,7 +243,7 @@ export function PersonalInformation() {
               loading={isAccountPending}
               type="submit"
             >
-              {isAccountPending ? "Saving\u2026" : "Save Changes"}
+              {isAccountPending ? "Saving..." : "Save Changes"}
             </Button>
             <Button
               className="cursor-pointer"

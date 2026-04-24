@@ -69,7 +69,7 @@ export function CancelButton({
               handleCancel();
             }}
           >
-            {isPending ? "Cancelling\u2026" : "Cancel execution"}
+            {isPending ? "Cancelling..." : "Cancel execution"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -466,7 +466,7 @@ export function TwoFactorAuth() {
               disabled={isLoading}
               onClick={() => promptForPassword("disable")}
             >
-              {isLoading ? "Loading\u2026" : "Continue"}
+              {isLoading ? "Loading..." : "Continue"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

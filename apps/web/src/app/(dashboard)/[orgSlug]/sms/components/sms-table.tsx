@@ -232,11 +232,17 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                   aria-label="Refresh"
                   className="rounded-l-none focus:z-10"
                   disabled={isPending}
-                  onClick={() => startTransition(() => { router.refresh(); })}
+                  onClick={() =>
+                    startTransition(() => {
+                      router.refresh();
+                    })
+                  }
                   size="icon"
                   variant="outline"
                 >
-                  <RefreshCw className={isPending ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+                  <RefreshCw
+                    className={isPending ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+                  />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Refresh</TooltipContent>

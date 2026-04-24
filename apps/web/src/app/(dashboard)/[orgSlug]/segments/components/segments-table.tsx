@@ -357,7 +357,7 @@ export function SegmentsTable({
               onClick={handleDeleteSegment}
               variant="destructive"
             >
-              {isPending ? "Deleting\u2026" : "Delete"}
+              {isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

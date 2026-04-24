@@ -111,7 +111,7 @@ export function CodeTemplateToolbar({
 
   const status = template.status ?? "DRAFT";
   const displaySubject = subject || "No subject";
-  const displayPreviewText = previewText || "Add preview text\u2026";
+  const displayPreviewText = previewText || "Add preview text...";
 
   return (
     <TooltipProvider>

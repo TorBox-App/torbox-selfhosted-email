@@ -85,7 +85,9 @@ export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
       <div className="px-4 lg:px-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
-            <h1 className="font-bold text-2xl tracking-tight">Email Analytics</h1>
+            <h1 className="font-bold text-2xl tracking-tight">
+              Email Analytics
+            </h1>
             <p className="text-muted-foreground">
               Deep insights into your email performance and engagement
             </p>

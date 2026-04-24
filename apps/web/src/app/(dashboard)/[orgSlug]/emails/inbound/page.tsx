@@ -195,7 +195,10 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
     <>
       {/* Inbound Analytics */}
       <div className="px-4 lg:px-6">
-        <InboundAnalytics emails={emails} organizationId={orgWithMembership.id} />
+        <InboundAnalytics
+          emails={emails}
+          organizationId={orgWithMembership.id}
+        />
       </div>
 
       <div className="@container/main px-4 lg:px-6">

@@ -217,7 +217,7 @@ export default function UpgradePage() {
               onClick={handleContinueWithFree}
               variant="ghost"
             >
-              {isFreeLoading ? "Activating\u2026" : "Continue with Free"}
+              {isFreeLoading ? "Activating..." : "Continue with Free"}
             </Button>
             <Button
               className="w-full sm:w-auto"
@@ -225,9 +225,7 @@ export default function UpgradePage() {
               onClick={handleSubscribe}
               size="lg"
             >
-              {isLoading
-                ? "Starting checkout\u2026"
-                : `Subscribe to ${plan.name}`}
+              {isLoading ? "Starting checkout..." : `Subscribe to ${plan.name}`}
             </Button>
           </CardFooter>
         </Card>

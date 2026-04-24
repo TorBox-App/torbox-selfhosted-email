@@ -115,7 +115,7 @@ export function CreateWorkflowDialog({
               Cancel
             </Button>
             <Button disabled={isPending || !name.trim()} type="submit">
-              {isPending ? "Creating\u2026" : "Create"}
+              {isPending ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>
         </form>

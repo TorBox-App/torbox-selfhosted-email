@@ -112,7 +112,7 @@ export function MobileRescueGate({
               size="lg"
             >
               <MailIcon className="mr-2 h-4 w-4" />
-              {sending ? "Sending\u2026" : "Send me the link"}
+              {sending ? "Sending..." : "Send me the link"}
             </Button>
           )}
 

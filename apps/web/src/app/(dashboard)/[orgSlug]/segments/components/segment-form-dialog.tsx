@@ -159,7 +159,7 @@ export function SegmentFormDialog({
               <Textarea
                 id="description"
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe what this segment represents\u2026"
+                placeholder="Describe what this segment represents..."
                 rows={2}
                 value={description}
               />
@@ -250,8 +250,8 @@ export function SegmentFormDialog({
           <Button disabled={isPending} onClick={handleSubmit}>
             {isPending
               ? mode === "create"
-                ? "Creating\u2026"
-                : "Saving\u2026"
+                ? "Creating..."
+                : "Saving..."
               : mode === "create"
                 ? "Create Segment"
                 : "Save Changes"}

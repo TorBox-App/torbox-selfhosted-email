@@ -947,7 +947,7 @@ export function ContactsTable({
               onClick={handleDeleteContact}
               variant="destructive"
             >
-              {isPending ? "Deleting\u2026" : "Delete"}
+              {isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1015,7 +1015,7 @@ export function ContactsTable({
               disabled={isPending || !selectedTopicId}
               onClick={handleBulkSubscribe}
             >
-              {isPending ? "Subscribing\u2026" : "Subscribe"}
+              {isPending ? "Subscribing..." : "Subscribe"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1069,7 +1069,7 @@ export function ContactsTable({
               onClick={handleBulkUnsubscribe}
               variant="destructive"
             >
-              {isPending ? "Unsubscribing\u2026" : "Unsubscribe"}
+              {isPending ? "Unsubscribing..." : "Unsubscribe"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1110,7 +1110,7 @@ export function ContactsTable({
               onClick={handleBulkDelete}
               variant="destructive"
             >
-              {isPending ? "Deleting\u2026" : "Delete"}
+              {isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

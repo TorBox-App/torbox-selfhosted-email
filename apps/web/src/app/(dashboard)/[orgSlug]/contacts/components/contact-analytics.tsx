@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@wraps/ui/components/ui/select";
 import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -32,7 +33,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRouter } from "next/navigation";
 
 const chartConfig = {
   count: {
@@ -159,7 +159,10 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
-          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
+          <RefreshButton
+            className="@[767px]/card:hidden"
+            onRefresh={handleRefresh}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

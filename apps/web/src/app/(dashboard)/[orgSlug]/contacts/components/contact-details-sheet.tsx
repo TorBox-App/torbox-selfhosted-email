@@ -385,7 +385,7 @@ export function ContactDetailsSheet({
                     onClick={handleSave}
                     size="sm"
                   >
-                    {isPending ? "Saving\u2026" : "Save"}
+                    {isPending ? "Saving..." : "Save"}
                   </Button>
                 </>
               )}

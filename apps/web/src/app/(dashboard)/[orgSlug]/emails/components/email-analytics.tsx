@@ -103,7 +103,9 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
   async function handleRefresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["emails", orgSlug] }),
-      queryClient.invalidateQueries({ queryKey: ["analytics", "email-chart", orgSlug] }),
+      queryClient.invalidateQueries({
+        queryKey: ["analytics", "email-chart", orgSlug],
+      }),
     ]);
   }
 
@@ -174,7 +176,10 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
-          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
+          <RefreshButton
+            className="@[767px]/card:hidden"
+            onRefresh={handleRefresh}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

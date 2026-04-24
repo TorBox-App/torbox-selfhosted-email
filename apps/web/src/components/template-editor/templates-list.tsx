@@ -693,13 +693,17 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
               disabled={isPending}
               onClick={() => {
                 startTransition(async () => {
-                  await queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+                  await queryClient.invalidateQueries({
+                    queryKey: templateKeys.lists(),
+                  });
                 });
               }}
               size="sm"
               variant="outline"
             >
-              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-4 w-4", isPending && "animate-spin")}
+              />
             </Button>
             <Button asChild size="sm">
               <Link href={`/${orgSlug}/emails/templates/new`}>

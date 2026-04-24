@@ -281,7 +281,7 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
             disabled={!smsName.trim() || createTemplate.isPending}
             onClick={handleSmsCreate}
           >
-            {createTemplate.isPending ? "Creating\u2026" : "Create Template"}
+            {createTemplate.isPending ? "Creating..." : "Create Template"}
           </Button>
         </div>
       )}

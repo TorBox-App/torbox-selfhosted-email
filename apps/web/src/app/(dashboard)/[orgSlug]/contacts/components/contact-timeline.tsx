@@ -400,7 +400,7 @@ function TimelineEventRow({
                   .slice(0, 2)
                   .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
                   .join(", ")}
-                {Object.keys(event.eventData).length > 2 && "\u2026"}
+                {Object.keys(event.eventData).length > 2 && "..."}
               </span>
             </div>
           )}
@@ -541,7 +541,7 @@ export function ContactTimeline({
           size="sm"
           variant="ghost"
         >
-          {isPending ? "Loading\u2026" : "Load more"}
+          {isPending ? "Loading..." : "Load more"}
         </Button>
       )}
     </div>

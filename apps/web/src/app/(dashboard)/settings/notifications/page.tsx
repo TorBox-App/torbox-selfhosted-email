@@ -693,7 +693,7 @@ export default function NotificationSettings() {
                 disabled={!canSubmit}
                 type="submit"
               >
-                {isSubmitting ? "Saving\u2026" : "Save Preferences"}
+                {isSubmitting ? "Saving..." : "Save Preferences"}
               </Button>
             )}
           </form.Subscribe>

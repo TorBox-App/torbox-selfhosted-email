@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@wraps/ui/components/ui/select";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   Area,
@@ -38,7 +39,6 @@ import { revalidateInboundEmails } from "@/actions/inbound";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRouter } from "next/navigation";
 import type { InboundEmailListItem } from "../types";
 
 const areaChartConfig = {
@@ -99,7 +99,10 @@ type InboundAnalyticsProps = {
   organizationId: string;
 };
 
-export function InboundAnalytics({ emails, organizationId }: InboundAnalyticsProps) {
+export function InboundAnalytics({
+  emails,
+  organizationId,
+}: InboundAnalyticsProps) {
   const isMobile = useIsMobile();
   const router = useRouter();
   const [timeRange, setTimeRange] = React.useState("30d");
@@ -250,7 +253,10 @@ export function InboundAnalytics({ emails, organizationId }: InboundAnalyticsPro
               </SelectItem>
             </SelectContent>
           </Select>
-          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
+          <RefreshButton
+            className="@[767px]/card:hidden"
+            onRefresh={handleRefresh}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

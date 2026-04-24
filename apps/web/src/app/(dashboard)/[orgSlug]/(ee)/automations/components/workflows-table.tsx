@@ -487,11 +487,17 @@ export function WorkflowsTable({
             <Button
               aria-label="Refresh"
               disabled={isPending}
-              onClick={() => startTransition(() => { router.refresh(); })}
+              onClick={() =>
+                startTransition(() => {
+                  router.refresh();
+                })
+              }
               size="sm"
               variant="outline"
             >
-              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-4 w-4", isPending && "animate-spin")}
+              />
             </Button>
             {canManage && (
               <Button onClick={() => setCreateDialogOpen(true)} size="sm">

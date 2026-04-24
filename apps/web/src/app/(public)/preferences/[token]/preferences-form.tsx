@@ -320,7 +320,7 @@ export function PreferencesForm({
                         type="button"
                       >
                         {isResending
-                          ? "Sending\u2026"
+                          ? "Sending..."
                           : "Resend confirmation email"}
                       </button>
                     </div>
@@ -398,7 +398,7 @@ export function PreferencesForm({
             style={{ backgroundColor: brandColor }}
             type="button"
           >
-            {isPending ? "Saving\u2026" : "Save Preferences"}
+            {isPending ? "Saving..." : "Save Preferences"}
           </button>
         )}
 
