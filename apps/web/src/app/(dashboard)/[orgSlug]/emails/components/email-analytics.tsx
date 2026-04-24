@@ -100,9 +100,11 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
   const days = timeRange === "30d" ? 30 : 7;
   const { data, isLoading } = useEmailChartData(orgSlug, days);
 
-  function handleRefresh() {
-    queryClient.invalidateQueries({ queryKey: ["emails", orgSlug] });
-    queryClient.invalidateQueries({ queryKey: ["analytics", "email-chart", orgSlug] });
+  async function handleRefresh() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["emails", orgSlug] }),
+      queryClient.invalidateQueries({ queryKey: ["analytics", "email-chart", orgSlug] }),
+    ]);
   }
 
   const overview = data?.overview;

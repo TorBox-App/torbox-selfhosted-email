@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { EmailType, Template } from "@wraps/db";
 import { Badge } from "@wraps/ui/components/ui/badge";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
@@ -686,13 +687,13 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-2">
+          <ButtonGroup>
             <Button
               aria-label="Refresh"
               disabled={isPending}
               onClick={() => {
-                startTransition(() => {
-                  queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+                startTransition(async () => {
+                  await queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
                 });
               }}
               size="sm"
@@ -700,13 +701,13 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
             >
               <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
             </Button>
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href={`/${orgSlug}/emails/templates/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Template
               </Link>
             </Button>
-          </div>
+          </ButtonGroup>
         </div>
 
         {/* Templates Table */}

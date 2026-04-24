@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/empty";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkHasAwsAccounts } from "@/lib/setup-status";
+import { SMSAnalyticsRefreshButton } from "./components/sms-analytics-refresh-button";
 import { SMSDeliverabilityChart } from "./components/sms-deliverability-chart";
 import { SMSOverview } from "./components/sms-overview";
 import { SMSPhoneNumbers } from "./components/sms-phone-numbers";
@@ -81,11 +82,14 @@ export default async function SMSAnalyticsPage({
     <>
       {/* Page Title and Description */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">SMS Analytics</h1>
-          <p className="text-muted-foreground">
-            Monitor your SMS messaging performance and delivery metrics
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-bold text-2xl tracking-tight">SMS Analytics</h1>
+            <p className="text-muted-foreground">
+              Monitor your SMS messaging performance and delivery metrics
+            </p>
+          </div>
+          <SMSAnalyticsRefreshButton />
         </div>
       </div>
 

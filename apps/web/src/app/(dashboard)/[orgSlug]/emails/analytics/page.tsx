@@ -14,6 +14,7 @@ import {
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkHasAwsAccounts } from "@/lib/setup-status";
 import { AnalyticsOverview } from "./components/analytics-overview";
+import { AnalyticsRefreshButton } from "./components/analytics-refresh-button";
 import { BounceTypeChart } from "./components/bounce-type-chart";
 import { ComplaintChart } from "./components/complaint-chart";
 import { DeliverabilityChart } from "./components/deliverability-chart";
@@ -82,11 +83,14 @@ export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
     <>
       {/* Page Title and Description */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">Email Analytics</h1>
-          <p className="text-muted-foreground">
-            Deep insights into your email performance and engagement
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-bold text-2xl tracking-tight">Email Analytics</h1>
+            <p className="text-muted-foreground">
+              Deep insights into your email performance and engagement
+            </p>
+          </div>
+          <AnalyticsRefreshButton orgSlug={orgSlug} />
         </div>
       </div>
 

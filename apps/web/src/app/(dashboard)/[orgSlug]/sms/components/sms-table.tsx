@@ -33,9 +33,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@wraps/ui/components/ui/tooltip";
-import { Download, Loader2, Search } from "lucide-react";
+import { Download, Loader2, RefreshCw, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ type SMSTableProps = {
 
 export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
     { id: "sentAt", desc: true },
   ]);
@@ -186,7 +187,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="rounded-l-none focus:z-10"
+                  className="rounded-none border-r-0 focus:z-10"
                   disabled={isExporting}
                   onClick={() => {
                     setIsExporting(true);
@@ -224,6 +225,21 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Export as CSV</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="Refresh"
+                  className="rounded-l-none focus:z-10"
+                  disabled={isPending}
+                  onClick={() => startTransition(() => { router.refresh(); })}
+                  size="icon"
+                  variant="outline"
+                >
+                  <RefreshCw className={isPending ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
             </Tooltip>
           </div>
         </div>

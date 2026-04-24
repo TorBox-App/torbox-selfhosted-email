@@ -9,10 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@wraps/ui/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { EventUsageBanner } from "@/components/event-usage-banner";
 import { EventUsageCard } from "@/components/event-usage-card";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { getHistoryRetentionDays, getPlan } from "@/lib/plans";
 import { useProductsStore } from "@/stores/products-store";
 import type { RecentItem, SetupStatus } from "../page";
@@ -67,6 +69,11 @@ export function OverviewDashboard({
   });
 
   const days = parseDays(timeRange);
+  const queryClient = useQueryClient();
+
+  function handleRefresh() {
+    return queryClient.invalidateQueries({ queryKey: ["analytics"] });
+  }
 
   return (
     <>
@@ -86,6 +93,7 @@ export function OverviewDashboard({
                 {opt.label}
               </Button>
             ))}
+            <RefreshButton onRefresh={handleRefresh} />
           </ButtonGroup>
           <Select
             onValueChange={(v) => setTimeRange(v as TimeRange)}
@@ -110,6 +118,7 @@ export function OverviewDashboard({
               ))}
             </SelectContent>
           </Select>
+          <RefreshButton className="sm:hidden" onRefresh={handleRefresh} />
         </div>
         <HealthStatus days={days} orgSlug={orgSlug} />
         <InsightsSection
