@@ -430,6 +430,53 @@ describe("Contacts API Integration", () => {
       expect(body.preferredChannel).toBe("email");
     });
 
+    it("resolves contact by email as the :id param", async () => {
+      const [newContact] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "get-by-email@example.com",
+          emailHash: "hash-get-by-email",
+          emailStatus: "active",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/get-by-email@example.com")
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.id).toBe(newContact.id);
+      expect(body.email).toBe("get-by-email@example.com");
+    });
+
+    it("resolves contact by externalId as the :id param", async () => {
+      const [newContact] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "get-by-extid@example.com",
+          emailHash: "hash-get-by-extid",
+          externalId: "user_get_abc123",
+          emailStatus: "active",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/user_get_abc123")
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.id).toBe(newContact.id);
+      expect(body.externalId).toBe("user_get_abc123");
+    });
+
     it("returns 404 for non-existent contact", async () => {
       const app = createTestApp();
       const response = await app.handle(
@@ -706,6 +753,59 @@ describe("Contacts API Integration", () => {
         .from(contactTopic)
         .where(eq(contactTopic.contactId, body.id));
       expect(subscriptions).toHaveLength(0);
+    });
+
+    it("creates contact with externalId and returns it in response", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "ext-id@example.com",
+            externalId: "usr_abc123",
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.externalId).toBe("usr_abc123");
+
+      const [dbContact] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, body.id));
+      expect(dbContact.externalId).toBe("usr_abc123");
+    });
+
+    it("returns 409 when externalId is already taken by same org", async () => {
+      const app = createTestApp();
+      await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "first-extid@example.com",
+            externalId: "usr_duplicate",
+          }),
+        })
+      );
+
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "second-extid@example.com",
+            externalId: "usr_duplicate",
+          }),
+        })
+      );
+
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.error).toContain("externalId");
     });
 
     it("returns 409 for duplicate email", async () => {
@@ -1062,6 +1162,34 @@ describe("Contacts API Integration", () => {
       );
 
       expect(response.status).toBe(422);
+    });
+
+    it("accepts externalId as the :id parameter", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "patch-by-extid@example.com",
+          emailHash: "hash-patch-by-extid",
+          externalId: "usr_patch_xyz",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/usr_patch_xyz", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName: "PatchedByExtId" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.firstName).toBe("PatchedByExtId");
+      expect(body.id).toBe(existing.id);
+      expect(body.externalId).toBe("usr_patch_xyz");
     });
 
     it("accepts email as the :id parameter", async () => {
@@ -1594,6 +1722,60 @@ describe("Contacts API Integration", () => {
       expect(response.status).toBe(200);
 
       // Verify deleted from database
+      const [deleted] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(deleted).toBeUndefined();
+    });
+
+    it("deletes contact by email as the :id parameter", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "delete-by-email@example.com",
+          emailHash: "hash-delete-by-email",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(
+          "http://localhost/v1/contacts/delete-by-email@example.com",
+          { method: "DELETE" }
+        )
+      );
+
+      expect(response.status).toBe(200);
+      const [deleted] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(deleted).toBeUndefined();
+    });
+
+    it("deletes contact by externalId as the :id parameter", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "delete-by-extid@example.com",
+          emailHash: "hash-delete-by-extid",
+          externalId: "usr_delete_xyz",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/usr_delete_xyz", {
+          method: "DELETE",
+        })
+      );
+
+      expect(response.status).toBe(200);
       const [deleted] = await db
         .select()
         .from(contact)

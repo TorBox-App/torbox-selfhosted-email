@@ -98,6 +98,7 @@ const testContact = {
   organizationId: testOrg.id,
   email: `${TEST_PREFIX}-c1@example.com`,
   emailHash: `${TEST_PREFIX}-hash-1`,
+  externalId: `${TEST_PREFIX}-ext-1`,
   firstName: "Alice",
   lastName: "Test",
   emailStatus: "active" as const,
@@ -390,6 +391,38 @@ describe("POST /v1/events (single)", () => {
         organizationId: testOrg.id,
       })
     );
+  });
+
+  it("resolves contact by contactExternalId", async () => {
+    const res = await postEvent(app, {
+      name: "signup.completed",
+      contactExternalId: testContact.externalId,
+      properties: { plan: "pro" },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+
+    const events = await db
+      .select()
+      .from(contactEvent)
+      .where(eq(contactEvent.organizationId, testOrg.id));
+    expect(events).toHaveLength(1);
+    expect(events[0].contactId).toBe(testContact.id);
+    expect(events[0].eventName).toBe("signup.completed");
+  });
+
+  it("returns 400 when contactExternalId belongs to a different org", async () => {
+    const res = await postEvent(app, {
+      name: "page.viewed",
+      contactExternalId: "nonexistent-ext-id",
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("Contact not found");
   });
 
   it("returns 422 for invalid body (missing required 'name')", async () => {

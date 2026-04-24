@@ -20,6 +20,7 @@ vi.mock("@wraps/db", () => ({
   contact: {
     id: "id",
     organizationId: "organization_id",
+    externalId: "external_id",
     email: "email",
     emailHash: "email_hash",
     phone: "phone",
@@ -140,6 +141,7 @@ describe("Contact email format validation (BUG-012)", () => {
       const mockContact = {
         id: "new-contact-id",
         organizationId: "org-123",
+        externalId: null,
         email: "valid@example.com",
         emailHash: "abc123",
         phone: null,

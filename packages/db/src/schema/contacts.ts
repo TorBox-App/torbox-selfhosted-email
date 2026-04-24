@@ -112,6 +112,9 @@ export const contact = pgTable(
       .default({})
       .notNull(),
 
+    // External reference (caller-supplied stable identifier)
+    externalId: text("external_id"),
+
     // Engagement tracking
     lastActivityAt: timestamp("last_activity_at"),
 
@@ -159,6 +162,11 @@ export const contact = pgTable(
       table.organizationId,
       table.smsStatus
     ),
+
+    // External ID index (unique per org, sparse)
+    uniqueOrgExternalId: uniqueIndex("contact_unique_org_external_id_idx")
+      .on(table.organizationId, table.externalId)
+      .where(sql`external_id IS NOT NULL`),
 
     // Legacy status index (deprecated)
     statusIdx: index("contact_status_idx").on(

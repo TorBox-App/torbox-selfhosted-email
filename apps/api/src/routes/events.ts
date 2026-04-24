@@ -76,13 +76,14 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       const {
         name,
         contactId,
+        contactExternalId,
         contactEmail,
         contactName,
         createIfMissing,
         properties,
       } = body;
 
-      // Find the contact
+      // Find the contact — priority: contactId > contactExternalId > contactEmail
       let contactRecord: typeof contact.$inferSelect | undefined;
       let contactCreated = false;
 
@@ -93,6 +94,18 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
           .where(
             and(
               eq(contact.id, contactId),
+              eq(contact.organizationId, auth.organizationId)
+            )
+          )
+          .limit(1);
+        contactRecord = c;
+      } else if (contactExternalId) {
+        const [c] = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              eq(contact.externalId, contactExternalId),
               eq(contact.organizationId, auth.organizationId)
             )
           )
@@ -247,6 +260,12 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         contactId: t.Optional(
           t.String({ description: "Contact ID", maxLength: 36 })
         ),
+        contactExternalId: t.Optional(
+          t.String({
+            description: "Contact externalId (alternative to contactId)",
+            maxLength: 255,
+          })
+        ),
         contactEmail: t.Optional(
           t.String({
             description: "Contact email (alternative to contactId)",
@@ -320,10 +339,14 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         return { success: true, ...results };
       }
 
-      // Phase 1: Batch contact resolution (up to 2 queries)
+      // Phase 1: Batch contact resolution (up to 3 queries)
+      // Priority per event: contactId > contactExternalId > contactEmail
       const contactIdEvents = events.filter((e) => e.contactId);
+      const contactExternalIdEvents = events.filter(
+        (e) => !e.contactId && e.contactExternalId
+      );
       const contactEmailEvents = events.filter(
-        (e) => !e.contactId && e.contactEmail
+        (e) => !(e.contactId || e.contactExternalId) && e.contactEmail
       );
 
       const contactMap = new Map<string, typeof contact.$inferSelect>();
@@ -343,6 +366,26 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
           );
         for (const c of contactsById) {
           contactMap.set(c.id, c);
+        }
+      }
+
+      if (contactExternalIdEvents.length > 0) {
+        const uniqueExternalIds = [
+          ...new Set(contactExternalIdEvents.map((e) => e.contactExternalId!)),
+        ];
+        const contactsByExternalId = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              inArray(contact.externalId, uniqueExternalIds),
+              eq(contact.organizationId, auth.organizationId)
+            )
+          );
+        for (const c of contactsByExternalId) {
+          if (c.externalId) {
+            contactMap.set(c.externalId, c);
+          }
         }
       }
 
@@ -378,9 +421,11 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       for (const event of events) {
         const contactRecord = event.contactId
           ? contactMap.get(event.contactId)
-          : event.contactEmail
-            ? contactMap.get(event.contactEmail)
-            : undefined;
+          : event.contactExternalId
+            ? contactMap.get(event.contactExternalId)
+            : event.contactEmail
+              ? contactMap.get(event.contactEmail)
+              : undefined;
 
         if (!contactRecord) {
           results.errors.push(`Contact not found for event ${event.name}`);
@@ -533,6 +578,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
           t.Object({
             name: t.String({ maxLength: 255 }),
             contactId: t.Optional(t.String({ maxLength: 36 })),
+            contactExternalId: t.Optional(t.String({ maxLength: 255 })),
             contactEmail: t.Optional(t.String({ maxLength: 255 })),
             properties: t.Optional(
               t.Object({}, { additionalProperties: true })

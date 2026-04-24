@@ -90,6 +90,7 @@ const testContact1 = {
   id: `${TEST_PREFIX}-contact-1`,
   organizationId: testOrg.id,
   email: `${TEST_PREFIX}-c1@example.com`,
+  externalId: `${TEST_PREFIX}-ext-1`,
   firstName: "Alice",
   lastName: "Test",
   status: "active" as const,
@@ -139,6 +140,7 @@ function postBatch(
   events: Array<{
     name: string;
     contactId?: string;
+    contactExternalId?: string;
     contactEmail?: string;
     properties?: Record<string, unknown>;
   }>
@@ -299,6 +301,33 @@ describe("POST /v1/events/batch", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].contactId).toBe(testContact1.id);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Contact resolution by externalId
+  // ---------------------------------------------------------------------------
+
+  it("resolves contacts by contactExternalId", async () => {
+    const res = await postBatch(app, [
+      {
+        name: "purchase.started",
+        contactExternalId: testContact1.externalId,
+        properties: { item: "pro" },
+      },
+    ]);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.processed).toBe(1);
+
+    const events = await db
+      .select()
+      .from(contactEvent)
+      .where(eq(contactEvent.organizationId, testOrg.id));
+    expect(events).toHaveLength(1);
+    expect(events[0].contactId).toBe(testContact1.id);
+    expect(events[0].eventName).toBe("purchase.started");
   });
 
   // ---------------------------------------------------------------------------

@@ -44,6 +44,9 @@ const propertiesSchema = t.Optional(
 // Contact response schema
 const contactResponseSchema = t.Object({
   id: t.String({ description: "Contact ID" }),
+  externalId: t.Union([t.String(), t.Null()], {
+    description: "Caller-supplied external ID",
+  }),
   email: t.Union([t.String(), t.Null()], { description: "Email address" }),
   phone: t.Union([t.String(), t.Null()], { description: "Phone number" }),
   firstName: t.Union([t.String(), t.Null()], { description: "First name" }),
@@ -76,6 +79,12 @@ const contactResponseSchema = t.Object({
 });
 
 const createContactSchema = t.Object({
+  externalId: t.Optional(
+    t.String({
+      description: "Caller-supplied external ID (e.g. your own user ID)",
+      maxLength: 255,
+    })
+  ),
   email: t.Optional(
     t.String({ description: "Email address", maxLength: 255, format: "email" })
   ),
@@ -240,6 +249,15 @@ function hashValue(value: string): string {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function detectContactIdType(id: string): "uuid" | "email" | "externalId" {
+  if (id.includes("@")) return "email";
+  if (UUID_RE.test(id)) return "uuid";
+  return "externalId";
+}
+
 // Resolve topic slugs to IDs for the given organization
 export async function resolveTopicSlugs(
   slugs: string[],
@@ -313,6 +331,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const contacts = await db
         .select({
           id: contact.id,
+          externalId: contact.externalId,
           email: contact.email,
           phone: contact.phone,
           firstName: contact.firstName,
@@ -376,12 +395,20 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
+      const idType = detectContactIdType(params.id);
+      const idCondition =
+        idType === "email"
+          ? eq(contact.email, params.id)
+          : idType === "uuid"
+            ? eq(contact.id, params.id)
+            : eq(contact.externalId, params.id);
+
       const [result] = await db
         .select()
         .from(contact)
         .where(
           and(
-            eq(contact.id, params.id),
+            idCondition,
             eq(contact.organizationId, authContext.organizationId)
           )
         )
@@ -402,10 +429,11 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         })
         .from(contactTopic)
         .innerJoin(topic, eq(topic.id, contactTopic.topicId))
-        .where(eq(contactTopic.contactId, params.id));
+        .where(eq(contactTopic.contactId, result.id));
 
       return {
         id: result.id,
+        externalId: result.externalId,
         email: result.email,
         phone: result.phone,
         firstName: result.firstName,
@@ -431,7 +459,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     },
     {
       params: t.Object({
-        id: t.String({ description: "Contact ID", maxLength: 36 }),
+        id: t.String({
+          description: "Contact UUID, email, or externalId",
+          maxLength: 255,
+        }),
       }),
       response: {
         200: t.Object({
@@ -465,6 +496,25 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       if (!(body.email || body.phone)) {
         ctx.set.status = 400;
         return { error: "Email or phone is required" };
+      }
+
+      // Check for duplicate externalId
+      if (body.externalId) {
+        const existing = await db
+          .select({ id: contact.id })
+          .from(contact)
+          .where(
+            and(
+              eq(contact.organizationId, authContext.organizationId),
+              eq(contact.externalId, body.externalId)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          ctx.set.status = 409;
+          return { error: "Contact with this externalId already exists" };
+        }
       }
 
       // Check for duplicates
@@ -513,6 +563,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         .insert(contact)
         .values({
           organizationId: authContext.organizationId,
+          externalId: body.externalId ?? null,
           email: body.email,
           emailHash: body.email ? hashValue(body.email) : null,
           emailStatus: body.emailStatus ?? (body.email ? "active" : null),
@@ -682,6 +733,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       ctx.set.status = 201;
       return {
         id: newContact.id,
+        externalId: newContact.externalId,
         email: newContact.email,
         phone: newContact.phone,
         firstName: newContact.firstName,
@@ -730,15 +782,21 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params, body } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      // Resolve contact: accept UUID or email as the :id parameter.
-      // UUIDs never contain "@", so this is a safe heuristic.
-      const isEmail = params.id.includes("@");
+      // Resolve contact: accept UUID, email, or externalId as the :id parameter.
+      const idType = detectContactIdType(params.id);
+      const idCondition =
+        idType === "email"
+          ? eq(contact.email, params.id)
+          : idType === "uuid"
+            ? eq(contact.id, params.id)
+            : eq(contact.externalId, params.id);
+
       const [existing] = await db
         .select({ id: contact.id })
         .from(contact)
         .where(
           and(
-            isEmail ? eq(contact.email, params.id) : eq(contact.id, params.id),
+            idCondition,
             eq(contact.organizationId, authContext.organizationId)
           )
         )
@@ -1112,6 +1170,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       return {
         id: updated.id,
+        externalId: updated.externalId,
         email: updated.email,
         phone: updated.phone,
         firstName: updated.firstName,
@@ -1134,7 +1193,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     },
     {
       params: t.Object({
-        id: t.String({ description: "Contact ID", maxLength: 36 }),
+        id: t.String({
+          description: "Contact UUID, email, or externalId",
+          maxLength: 255,
+        }),
       }),
       body: updateContactSchema,
       response: {
@@ -1162,26 +1224,48 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      const result = await db
-        .delete(contact)
+      // Resolve to UUID first so we can delete by id (org-scoped defense-in-depth)
+      const idType = detectContactIdType(params.id);
+      const idCondition =
+        idType === "email"
+          ? eq(contact.email, params.id)
+          : idType === "uuid"
+            ? eq(contact.id, params.id)
+            : eq(contact.externalId, params.id);
+
+      const [resolved] = await db
+        .select({ id: contact.id })
+        .from(contact)
         .where(
           and(
-            eq(contact.id, params.id),
+            idCondition,
             eq(contact.organizationId, authContext.organizationId)
           )
         )
-        .returning({ id: contact.id });
+        .limit(1);
 
-      if (result.length === 0) {
+      if (!resolved) {
         ctx.set.status = 404;
         return { error: "Contact not found" };
       }
+
+      await db
+        .delete(contact)
+        .where(
+          and(
+            eq(contact.id, resolved.id),
+            eq(contact.organizationId, authContext.organizationId)
+          )
+        );
 
       return { success: true };
     },
     {
       params: t.Object({
-        id: t.String({ description: "Contact ID", maxLength: 36 }),
+        id: t.String({
+          description: "Contact UUID, email, or externalId",
+          maxLength: 255,
+        }),
       }),
       response: {
         200: t.Object({
