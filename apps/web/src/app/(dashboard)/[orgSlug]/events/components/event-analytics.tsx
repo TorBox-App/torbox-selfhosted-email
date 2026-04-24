@@ -40,7 +40,9 @@ import {
   getEventAnalytics,
 } from "@/actions/events";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRouter } from "next/navigation";
 
 const areaChartConfig = {
   count: {
@@ -87,7 +89,9 @@ type EventAnalyticsProps = {
 
 export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [timeRange, setTimeRange] = React.useState("30d");
+  const [refreshKey, setRefreshKey] = React.useState(0);
   const [analytics, setAnalytics] = React.useState<EventAnalyticsData | null>(
     null
   );
@@ -115,7 +119,12 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
       setIsLoading(false);
     }
     fetchAnalytics();
-  }, [organizationId, timeRange]);
+  }, [organizationId, timeRange, refreshKey]);
+
+  function handleRefresh() {
+    setRefreshKey((k) => k + 1);
+    router.refresh();
+  }
 
   const dailyData = analytics?.dailyEvents || [];
   const topEventsData = analytics?.topEventNames || [];
@@ -163,6 +172,7 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
             >
               7 days
             </Button>
+            <RefreshButton onRefresh={handleRefresh} />
           </ButtonGroup>
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
@@ -181,6 +191,7 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

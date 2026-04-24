@@ -48,6 +48,7 @@ import {
   Pencil,
   Play,
   Plus,
+  RefreshCw,
   Search,
   Trash2,
   Workflow,
@@ -73,6 +74,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
+import { cn } from "@/lib/utils";
 import {
   getStepCount,
   getTriggerDescription,
@@ -482,6 +484,15 @@ export function WorkflowsTable({
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              aria-label="Refresh"
+              disabled={isPending}
+              onClick={() => startTransition(() => { router.refresh(); })}
+              size="sm"
+              variant="outline"
+            >
+              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+            </Button>
             {canManage && (
               <Button onClick={() => setCreateDialogOpen(true)} size="sm">
                 <Plus className="mr-2 h-4 w-4" />

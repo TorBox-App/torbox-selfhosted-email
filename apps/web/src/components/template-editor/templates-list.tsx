@@ -61,6 +61,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Send,
   Tags,
@@ -684,13 +685,28 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
             )}
           </div>
 
-          {/* Create button */}
-          <Button asChild>
-            <Link href={`/${orgSlug}/emails/templates/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Link>
-          </Button>
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              aria-label="Refresh"
+              disabled={isPending}
+              onClick={() => {
+                startTransition(() => {
+                  queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+                });
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+            </Button>
+            <Button asChild>
+              <Link href={`/${orgSlug}/emails/templates/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Templates Table */}

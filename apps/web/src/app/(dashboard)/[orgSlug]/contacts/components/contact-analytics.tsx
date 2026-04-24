@@ -30,7 +30,9 @@ import {
   getContactAnalytics,
 } from "@/actions/contacts-analytics";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRouter } from "next/navigation";
 
 const chartConfig = {
   count: {
@@ -69,7 +71,9 @@ type ContactAnalyticsProps = {
 
 export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [timeRange, setTimeRange] = React.useState("30d");
+  const [refreshKey, setRefreshKey] = React.useState(0);
   const [analytics, setAnalytics] = React.useState<ContactAnalyticsData | null>(
     null
   );
@@ -97,7 +101,12 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
       setIsLoading(false);
     }
     fetchAnalytics();
-  }, [organizationId, timeRange]);
+  }, [organizationId, timeRange, refreshKey]);
+
+  function handleRefresh() {
+    setRefreshKey((k) => k + 1);
+    router.refresh();
+  }
 
   const chartData = analytics?.dailyGrowth || [];
 
@@ -131,6 +140,7 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
             >
               7 days
             </Button>
+            <RefreshButton onRefresh={handleRefresh} />
           </ButtonGroup>
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
@@ -149,6 +159,7 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

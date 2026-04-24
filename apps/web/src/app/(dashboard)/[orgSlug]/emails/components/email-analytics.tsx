@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import {
   Card,
@@ -27,6 +28,7 @@ import { Skeleton } from "@wraps/ui/components/ui/skeleton";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmailChartData } from "../analytics/hooks/use-analytics";
 
@@ -87,6 +89,7 @@ type EmailAnalyticsProps = {
 export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("30d");
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     if (isMobile) {
@@ -96,6 +99,11 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
 
   const days = timeRange === "30d" ? 30 : 7;
   const { data, isLoading } = useEmailChartData(orgSlug, days);
+
+  function handleRefresh() {
+    queryClient.invalidateQueries({ queryKey: ["emails", orgSlug] });
+    queryClient.invalidateQueries({ queryKey: ["analytics", "email-chart", orgSlug] });
+  }
 
   const overview = data?.overview;
 
@@ -145,6 +153,7 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
             >
               7 days
             </Button>
+            <RefreshButton onRefresh={handleRefresh} />
           </ButtonGroup>
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
@@ -163,6 +172,7 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">

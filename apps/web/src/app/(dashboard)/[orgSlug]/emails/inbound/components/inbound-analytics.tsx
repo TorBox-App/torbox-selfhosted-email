@@ -34,8 +34,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { revalidateInboundEmails } from "@/actions/inbound";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRouter } from "next/navigation";
 import type { InboundEmailListItem } from "../types";
 
 const areaChartConfig = {
@@ -93,10 +96,12 @@ function extractEmail(toField: string): string {
 
 type InboundAnalyticsProps = {
   emails: InboundEmailListItem[];
+  organizationId: string;
 };
 
-export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
+export function InboundAnalytics({ emails, organizationId }: InboundAnalyticsProps) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [timeRange, setTimeRange] = React.useState("30d");
 
   React.useEffect(() => {
@@ -191,6 +196,11 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
     0
   );
 
+  async function handleRefresh() {
+    await revalidateInboundEmails(organizationId);
+    router.refresh();
+  }
+
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -221,6 +231,7 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
             >
               7 days
             </Button>
+            <RefreshButton onRefresh={handleRefresh} />
           </ButtonGroup>
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
@@ -239,6 +250,7 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+          <RefreshButton className="@[767px]/card:hidden" onRefresh={handleRefresh} />
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">
