@@ -1,5 +1,5 @@
 import { parseArgs as nodeParseArgs } from "node:util";
-import { isValidDomain } from "@wraps/email-check";
+import { isValidDomain } from "@wraps.dev/email-check";
 
 export type ParsedArgs = {
   command: "check" | "spf" | "help" | "version";

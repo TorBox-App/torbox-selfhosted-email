@@ -14,7 +14,7 @@ export default defineConfig({
   noExternal: [/(.*)/], // Bundle everything for zero runtime deps
   esbuildOptions(options) {
     options.alias = {
-      "@wraps/email-check": "../email-check/src/index.ts",
+      "@wraps.dev/email-check": "../email-check/src/index.ts",
     };
   },
   banner: {

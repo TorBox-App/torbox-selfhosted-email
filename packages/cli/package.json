@@ -105,7 +105,7 @@
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "catalog:",
     "@wraps/core": "workspace:*",
-    "@wraps/email-check": "workspace:*",
+    "@wraps.dev/email-check": "workspace:*",
     "aws-sdk-client-mock": "4.1.0",
     "aws-sdk-client-mock-vitest": "7.0.1",
     "tsup": "catalog:",

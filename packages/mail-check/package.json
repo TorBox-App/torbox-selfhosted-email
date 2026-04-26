@@ -30,7 +30,7 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
-    "@wraps/email-check": "workspace:*",
+    "@wraps.dev/email-check": "workspace:*",
     "@types/node": "catalog:",
     "picocolors": "^1.1.1",
     "tsup": "catalog:",

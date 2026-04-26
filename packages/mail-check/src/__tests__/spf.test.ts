@@ -1,4 +1,4 @@
-import type { SpfResult } from "@wraps/email-check";
+import type { SpfResult } from "@wraps.dev/email-check";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let output: string[];
@@ -59,7 +59,7 @@ function mockSpfResult(overrides: Partial<SpfResult> = {}): SpfResult {
 
 describe("runSpfCheck", () => {
   it("displays SPF record and lookup count for valid domain", async () => {
-    const emailCheck = await import("@wraps/email-check");
+    const emailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(emailCheck, "checkSpf").mockResolvedValue(mockSpfResult());
     const mockExit = vi
       .spyOn(process, "exit")
@@ -74,7 +74,7 @@ describe("runSpfCheck", () => {
   });
 
   it("shows lookup tree when lookups > 0", async () => {
-    const emailCheck = await import("@wraps/email-check");
+    const emailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(emailCheck, "checkSpf").mockResolvedValue(mockSpfResult());
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
@@ -87,7 +87,7 @@ describe("runSpfCheck", () => {
   });
 
   it("detects and displays provider names from SPF includes", async () => {
-    const emailCheck = await import("@wraps/email-check");
+    const emailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(emailCheck, "checkSpf").mockResolvedValue(mockSpfResult());
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
@@ -100,7 +100,7 @@ describe("runSpfCheck", () => {
   });
 
   it("with --json outputs valid JSON with SPF result", async () => {
-    const emailCheck = await import("@wraps/email-check");
+    const emailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(emailCheck, "checkSpf").mockResolvedValue(mockSpfResult());
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
@@ -115,7 +115,7 @@ describe("runSpfCheck", () => {
   });
 
   it("shows 'No SPF record found' for domain without SPF", async () => {
-    const emailCheck = await import("@wraps/email-check");
+    const emailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(emailCheck, "checkSpf").mockResolvedValue(
       mockSpfResult({
         exists: false,

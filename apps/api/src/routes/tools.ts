@@ -3,7 +3,7 @@
  * Free email deliverability tools - no authentication required
  */
 
-import { type EmailCheckResult, runEmailCheck } from "@wraps/email-check";
+import { type EmailCheckResult, runEmailCheck } from "@wraps.dev/email-check";
 import { Elysia, t } from "elysia";
 
 import { publicRateLimitMiddleware } from "../middleware/public-rate-limit";

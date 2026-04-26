@@ -104,8 +104,8 @@ function createMockResult(
   };
 }
 
-// Mock @wraps/email-check
-vi.mock("@wraps/email-check", () => ({
+// Mock @wraps.dev/email-check
+vi.mock("@wraps.dev/email-check", () => ({
   runEmailCheck: vi.fn(),
   formatSpfLookupTree: vi.fn().mockReturnValue("SPF tree"),
   getExitCode: vi.fn((grade: string) => {
@@ -459,7 +459,7 @@ describe("Email Check Command", () => {
 
   describe("domain input", () => {
     it("should use domain from options when provided", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com" });
@@ -474,7 +474,7 @@ describe("Email Check Command", () => {
       const clack = await import("@clack/prompts");
       vi.mocked(clack.text).mockResolvedValue("prompted.com" as never);
 
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ domain: "prompted.com" })
       );
@@ -507,7 +507,7 @@ describe("Email Check Command", () => {
 
   describe("output modes", () => {
     it("should output JSON when --json flag is set", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       const mockResult = createMockResult({ domain: "json-test.com" });
       vi.mocked(runEmailCheck).mockResolvedValue(mockResult);
 
@@ -525,7 +525,7 @@ describe("Email Check Command", () => {
     });
 
     it("should show spinner for non-JSON output", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com" });
@@ -537,7 +537,7 @@ describe("Email Check Command", () => {
     });
 
     it("should not show spinner for JSON output", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       setJsonMode(true);
@@ -550,7 +550,7 @@ describe("Email Check Command", () => {
 
   describe("check options", () => {
     it("should pass quick option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", quick: true });
@@ -562,7 +562,7 @@ describe("Email Check Command", () => {
     });
 
     it("should pass verbose option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", verbose: true });
@@ -574,7 +574,7 @@ describe("Email Check Command", () => {
     });
 
     it("should pass dkimSelector option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", dkimSelector: "custom-selector" });
@@ -586,7 +586,7 @@ describe("Email Check Command", () => {
     });
 
     it("should pass skipBlacklists option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", skipBlacklists: true });
@@ -598,7 +598,7 @@ describe("Email Check Command", () => {
     });
 
     it("should pass skipTls option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", skipTls: true });
@@ -610,7 +610,7 @@ describe("Email Check Command", () => {
     });
 
     it("should pass timeout option to runEmailCheck", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", timeout: 5000 });
@@ -624,7 +624,7 @@ describe("Email Check Command", () => {
 
   describe("exit codes", () => {
     it("should exit with 0 for grade A", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "A", finalScore: 95 })
       );
@@ -636,7 +636,7 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 0 for grade B", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "B", finalScore: 85 })
       );
@@ -648,7 +648,7 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 1 for grade C", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "C", finalScore: 70 })
       );
@@ -660,7 +660,7 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 2 for grade D", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "D", finalScore: 50 })
       );
@@ -672,7 +672,7 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 3 for grade F", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "F", finalScore: 30 })
       );
@@ -686,7 +686,7 @@ describe("Email Check Command", () => {
 
   describe("error handling", () => {
     it("should handle runEmailCheck errors gracefully", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockRejectedValue(
         new Error("DNS lookup failed")
       );
@@ -698,7 +698,7 @@ describe("Email Check Command", () => {
     });
 
     it("should output error as JSON when --json flag is set", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockRejectedValue(new Error("Network error"));
 
       setJsonMode(true);
@@ -716,7 +716,7 @@ describe("Email Check Command", () => {
     });
 
     it("should log error with clack for non-JSON output", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockRejectedValue(
         new Error("Check failed error")
       );
@@ -742,7 +742,7 @@ describe("Email Check Command", () => {
         },
       });
 
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com" });
@@ -761,7 +761,7 @@ describe("Email Check Command", () => {
         { accountId: "123", region: "us-east-1" },
       ] as never);
 
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       // When dkimSelector is provided, SES tokens should not be fetched
@@ -785,7 +785,7 @@ describe("Email Check Command", () => {
         .on(GetEmailIdentityCommand)
         .rejects(new Error("Access denied"));
 
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       // Should still work, just without SES tokens
@@ -803,7 +803,7 @@ describe("Email Check Command", () => {
       const { listConnections } = await import("../../utils/shared/metadata");
       vi.mocked(listConnections).mockResolvedValue([]);
 
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com" });
@@ -817,7 +817,7 @@ describe("Email Check Command", () => {
 
   describe("telemetry", () => {
     it("should track successful check with grade", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "A", finalScore: 95 })
       );
@@ -836,7 +836,7 @@ describe("Email Check Command", () => {
     });
 
     it("should track failed check with error", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockRejectedValue(new Error("DNS error"));
 
       const { trackCommand } = await import("../../telemetry/events");
@@ -855,7 +855,7 @@ describe("Email Check Command", () => {
 
   describe("display output", () => {
     it("should display SPF with softfail warning", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("spf-softfail") as never
       );
@@ -867,7 +867,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display missing SPF", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("spf-missing") as never
       );
@@ -878,7 +878,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display SPF lookup tree in verbose mode", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("spf-with-tree") as never
       );
@@ -889,7 +889,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display missing DKIM with warnings", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dkim-missing") as never
       );
@@ -900,7 +900,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display revoked DKIM", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dkim-revoked") as never
       );
@@ -911,7 +911,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display multiple DKIM selectors (more than 3)", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dkim-multiple") as never
       );
@@ -922,7 +922,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display missing DMARC", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dmarc-missing") as never
       );
@@ -933,7 +933,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display invalid DMARC with errors", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dmarc-invalid") as never
       );
@@ -944,7 +944,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display missing MX records", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mx-missing") as never
       );
@@ -955,7 +955,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display MX with some not resolving", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mx-not-resolving") as never
       );
@@ -966,7 +966,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display MX TLS checked with support", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mxtls-checked") as never
       );
@@ -977,7 +977,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display MX TLS with missing STARTTLS", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mxtls-no-starttls") as never
       );
@@ -988,7 +988,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display MX TLS with timeout (port 25 blocked)", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mxtls-timeout") as never
       );
@@ -999,7 +999,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display MX TLS not checked", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("mxtls-not-checked") as never
       );
@@ -1010,7 +1010,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display missing reverse DNS", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("reversedns-missing") as never
       );
@@ -1021,7 +1021,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display partial reverse DNS", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("reversedns-partial") as never
       );
@@ -1032,7 +1032,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display full IPv6 support", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("ipv6-full") as never
       );
@@ -1043,7 +1043,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display partial IPv6 support", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("ipv6-partial") as never
       );
@@ -1054,7 +1054,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display blacklist listings", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("blacklisted") as never
       );
@@ -1065,7 +1065,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display security features (DNSSEC, CAA, MTA-STS, TLS-RPT)", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("security-features") as never
       );
@@ -1076,7 +1076,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display broken DNSSEC and testing MTA-STS mode", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("dnssec-broken") as never
       );
@@ -1087,7 +1087,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display new domain age with warning", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("domain-age-new") as never
       );
@@ -1098,7 +1098,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display old domain age", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("domain-age-old") as never
       );
@@ -1109,7 +1109,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display deductions with fix suggestions", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("with-deductions") as never
       );
@@ -1121,7 +1121,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display Grade B message", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("grade-b") as never
       );
@@ -1132,7 +1132,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display Grade C message with help suggestion", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps/email-check");
+      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("grade-c") as never
       );
@@ -1144,7 +1144,7 @@ describe("Email Check Command", () => {
     });
 
     it("should display quick mode indicator", async () => {
-      const { runEmailCheck } = await import("@wraps/email-check");
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
       await check({ domain: "test.com", quick: true });

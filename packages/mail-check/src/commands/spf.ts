@@ -1,4 +1,4 @@
-import { checkSpf, formatSpfLookupTree } from "@wraps/email-check";
+import { checkSpf, formatSpfLookupTree } from "@wraps.dev/email-check";
 import pc from "picocolors";
 import type { ParsedArgs } from "../parse-args.js";
 import { createSpinner, printJson } from "../utils.js";

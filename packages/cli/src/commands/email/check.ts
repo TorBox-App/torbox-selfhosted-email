@@ -10,7 +10,7 @@ import {
   formatSpfLookupTree,
   getExitCode,
   runEmailCheck,
-} from "@wraps/email-check";
+} from "@wraps.dev/email-check";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import {

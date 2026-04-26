@@ -1,4 +1,4 @@
-import type { EmailCheckResult } from "@wraps/email-check";
+import type { EmailCheckResult } from "@wraps.dev/email-check";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Capture console.log output
@@ -219,7 +219,7 @@ describe("displayResults", () => {
 
 describe("runCheck", () => {
   it("with --json flag outputs valid JSON to stdout", async () => {
-    const mockEmailCheck = await import("@wraps/email-check");
+    const mockEmailCheck = await import("@wraps.dev/email-check");
     vi.spyOn(mockEmailCheck, "runEmailCheck").mockResolvedValue(mockResult());
     const mockExit = vi
       .spyOn(process, "exit")
@@ -236,7 +236,7 @@ describe("runCheck", () => {
   });
 
   it("exits with code 0 for A/B, 1 for C/D, 2 for F", async () => {
-    const mockEmailCheck = await import("@wraps/email-check");
+    const mockEmailCheck = await import("@wraps.dev/email-check");
     const mockExit = vi
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);

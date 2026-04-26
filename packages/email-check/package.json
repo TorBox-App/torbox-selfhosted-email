@@ -1,20 +1,62 @@
 {
-  "name": "@wraps/email-check",
-  "version": "1.0.0",
-  "description": "Email deliverability audit library for Wraps CLI",
+  "name": "@wraps.dev/email-check",
+  "version": "1.0.1",
+  "description": "Email deliverability auditing library. Checks SPF, DKIM, DMARC, MX, blacklists, TLS, and domain age. Zero dependencies — pure Node.js built-ins.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "email",
+    "deliverability",
+    "spf",
+    "dkim",
+    "dmarc",
+    "mx",
+    "dns",
+    "blacklist",
+    "email-check",
+    "email-validation",
+    "email-audit",
+    "tls",
+    "rdap",
+    "domain-age",
+    "typescript",
+    "wraps"
+  ],
+  "author": "Wraps",
+  "license": "MIT",
+  "homepage": "https://wraps.dev",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps.git",
+    "directory": "packages/email-check"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {},
   "devDependencies": {

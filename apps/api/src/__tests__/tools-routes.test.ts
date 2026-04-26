@@ -1,4 +1,4 @@
-import type { EmailCheckResult } from "@wraps/email-check";
+import type { EmailCheckResult } from "@wraps.dev/email-check";
 import { Elysia } from "elysia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,7 +27,7 @@ vi.mock("@aws-sdk/client-dynamodb", () => {
   };
 });
 
-vi.mock("@wraps/email-check", () => ({
+vi.mock("@wraps.dev/email-check", () => ({
   runEmailCheck: mockRunEmailCheck,
 }));
 
