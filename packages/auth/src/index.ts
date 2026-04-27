@@ -4,6 +4,8 @@ import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
 import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
+import * as scimSchema from "@wraps/db/schema/scim-provider";
+import * as ssoSchema from "@wraps/db/schema/sso-provider";
 import { getWrapsClient } from "@wraps/email";
 import { createPlatformClient } from "@wraps.dev/client";
 import { WrapsSMS } from "@wraps.dev/sms";
@@ -442,7 +444,7 @@ export const auth = betterAuth<BetterAuthOptions>({
   baseURL: process.env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema,
+    schema: { ...schema, ...ssoSchema, ...scimSchema },
   }),
   user: {
     deleteUser: {
