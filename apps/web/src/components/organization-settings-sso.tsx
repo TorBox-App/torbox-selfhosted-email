@@ -391,6 +391,39 @@ export function OrganizationSettingsSso({
                   />
                 </div>
               </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Sign-in Redirect URI</p>
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
+                  <span className={`flex-1 break-all ${!domain ? "text-muted-foreground" : ""}`}>
+                    {domain
+                      ? `https://app.wraps.dev/api/auth/sso/callback/${domain}`
+                      : "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
+                  </span>
+                  {domain && (
+                    <Button
+                      aria-label="Copy sign-in redirect URI"
+                      onClick={() =>
+                        handleCopy(
+                          `https://app.wraps.dev/api/auth/sso/callback/${domain}`,
+                          "redirect-uri"
+                        )
+                      }
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {copiedKey === "redirect-uri" ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Add this as the sign-in redirect URI in your identity provider
+                </p>
+              </div>
               {canEdit && (
                 <Button
                   disabled={
