@@ -156,21 +156,37 @@ describe("SSO Actions", () => {
   });
 
   describe("requestDomainVerification", () => {
-    it("returns token and expiresAt for admin", async () => {
+    it("maps domainVerificationToken from API response to token in result", async () => {
       mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
       mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
       const mockToken = "dns-verify-token-abc123";
-      const mockExpiresAt = new Date(Date.now() + 3600000).toISOString();
+      // API returns { domainVerificationToken }, NOT { token } — guard against regressions
       mockRequestDomainVerification.mockResolvedValue({
-        token: mockToken,
-        expiresAt: mockExpiresAt,
+        domainVerificationToken: mockToken,
       });
       const result = await requestDomainVerification(TEST_ORG_ID, "provider-1");
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.token).toBe(mockToken);
-        expect(result.expiresAt).toBe(mockExpiresAt);
+        // expiresAt computed locally as 7 days from now
+        const expiresAt = new Date(result.expiresAt);
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        expect(expiresAt.getTime()).toBeGreaterThan(Date.now() + sevenDays - 5000);
+        expect(expiresAt.getTime()).toBeLessThan(Date.now() + sevenDays + 5000);
       }
+    });
+
+    it("returns error when unauthorized", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(null);
+      const result = await requestDomainVerification(TEST_ORG_ID, "provider-1");
+      expect(result).toEqual({ success: false, error: "Unauthorized" });
+    });
+
+    it("returns error when provider not found in org", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      mockFindFirst.mockResolvedValue(null);
+      const result = await requestDomainVerification(TEST_ORG_ID, "other-provider");
+      expect(result).toEqual({ success: false, error: "Provider not found" });
     });
   });
 
