@@ -10,6 +10,7 @@ import {
 import {
   Check,
   Copy,
+  ExternalLink,
   KeyRound,
   Loader2,
   ShieldCheck,
@@ -49,17 +50,14 @@ export function OrganizationSettingsSso({
   const canEdit = ["owner", "admin"].includes(userRole);
   const [isPending, startTransition] = useTransition();
 
-  // Setup form state
   const [issuer, setIssuer] = useState(existingProvider?.issuer ?? "");
   const [domain, setDomain] = useState(existingProvider?.domain ?? "");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
 
-  // SCIM token state
   const [scimToken, setScimToken] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Verification token state
   const [verificationToken, setVerificationToken] = useState<string | null>(
     null
   );
@@ -139,8 +137,7 @@ export function OrganizationSettingsSso({
 
       toast.promise(promise, {
         loading: "Requesting domain verification...",
-        success:
-          "Verification token generated — add the TXT record to your DNS",
+        success: "Verification token generated",
         error: (err) => err.message,
       });
     });
@@ -187,9 +184,16 @@ export function OrganizationSettingsSso({
     });
   }
 
+  const redirectUri = domain
+    ? `https://app.wraps.dev/api/auth/sso/callback/${domain}`
+    : null;
+
+  const dnsTxtHostname = existingProvider
+    ? `_better-auth-token-${existingProvider.providerId}`
+    : null;
+
   return (
     <div className="space-y-6">
-      {/* SSO Configuration */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -245,41 +249,73 @@ export function OrganizationSettingsSso({
             ) : (
               /* Domain verification */
               <div className="space-y-4">
-                <div className="rounded-lg bg-muted p-4 text-sm">
-                  <p className="font-medium">Verify domain ownership</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Add a DNS TXT record to{" "}
-                    <strong>{existingProvider.domain}</strong> to prove you own
-                    it before SSO is activated.
+                <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-3">
+                  <p className="font-medium">Step 2 of 2 — Verify domain ownership</p>
+                  <p className="text-muted-foreground">
+                    Add a DNS TXT record to prove you own{" "}
+                    <strong>{existingProvider.domain}</strong>. SSO activates
+                    automatically once verified.
                   </p>
+                  <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
+                    <li>Click <strong>Get Verification Token</strong> below</li>
+                    <li>Add the TXT record to your DNS provider</li>
+                    <li>Click <strong>Verify Domain</strong> — DNS can take up to 24 hours to propagate</li>
+                  </ol>
                 </div>
+
                 {verificationToken && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">
-                      DNS TXT record to add:
-                    </p>
-                    <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
-                      <span className="flex-1 break-all">
-                        {verificationToken}
-                      </span>
-                      <Button
-                        aria-label="Copy DNS TXT record"
-                        onClick={() =>
-                          handleCopy(verificationToken, "dns-token")
-                        }
-                        size="icon"
-                        variant="ghost"
-                      >
-                        {copiedKey === "dns-token" ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Record type</p>
+                      <div className="rounded-lg border bg-muted/50 px-3 py-2 font-mono text-sm">
+                        TXT
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Hostname / Name</p>
+                      <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
+                        <span className="flex-1 break-all">{dnsTxtHostname}</span>
+                        <Button
+                          aria-label="Copy DNS hostname"
+                          onClick={() =>
+                            handleCopy(dnsTxtHostname ?? "", "dns-hostname")
+                          }
+                          size="icon"
+                          variant="ghost"
+                        >
+                          {copiedKey === "dns-hostname" ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Value</p>
+                      <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
+                        <span className="flex-1 break-all">
+                          {verificationToken}
+                        </span>
+                        <Button
+                          aria-label="Copy DNS TXT value"
+                          onClick={() =>
+                            handleCopy(verificationToken, "dns-token")
+                          }
+                          size="icon"
+                          variant="ghost"
+                        >
+                          {copiedKey === "dns-token" ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                     {verificationExpiresAt && (
                       <p className="text-muted-foreground text-xs">
-                        Expires{" "}
+                        Token expires{" "}
                         {new Date(verificationExpiresAt).toLocaleDateString(
                           "en-US",
                           {
@@ -292,6 +328,7 @@ export function OrganizationSettingsSso({
                     )}
                   </div>
                 )}
+
                 <div className="flex flex-wrap gap-2">
                   {canEdit && (
                     <Button
@@ -330,7 +367,34 @@ export function OrganizationSettingsSso({
             )
           ) : (
             /* Setup form */
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* IdP setup guide */}
+              <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-3">
+                <p className="font-medium">Step 1 of 2 — Configure your identity provider</p>
+                <p className="text-muted-foreground">
+                  Create a new OIDC app in your IdP (Okta, Azure AD, Google Workspace, etc.) with these settings before filling in the form below.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Application type</p>
+                    <p className="text-muted-foreground">Web Application</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Grant type</p>
+                    <p className="text-muted-foreground">Authorization Code</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Required scopes</p>
+                    <p className="text-muted-foreground font-mono">openid, email, profile</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Sign-in redirect URI</p>
+                    <p className="text-muted-foreground">See field below ↓</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form fields */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-sm font-medium" htmlFor="sso-domain">
@@ -358,6 +422,9 @@ export function OrganizationSettingsSso({
                     placeholder="https://dev-123456.okta.com"
                     value={issuer}
                   />
+                  <p className="text-muted-foreground text-xs">
+                    Found in your IdP under the app's OpenID Connect settings
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <label
@@ -391,23 +458,18 @@ export function OrganizationSettingsSso({
                   />
                 </div>
               </div>
+
+              {/* Redirect URI */}
               <div className="space-y-1">
                 <p className="text-sm font-medium">Sign-in Redirect URI</p>
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
                   <span className={`flex-1 break-all ${!domain ? "text-muted-foreground" : ""}`}>
-                    {domain
-                      ? `https://app.wraps.dev/api/auth/sso/callback/${domain}`
-                      : "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
+                    {redirectUri ?? "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
                   </span>
-                  {domain && (
+                  {redirectUri && (
                     <Button
                       aria-label="Copy sign-in redirect URI"
-                      onClick={() =>
-                        handleCopy(
-                          `https://app.wraps.dev/api/auth/sso/callback/${domain}`,
-                          "redirect-uri"
-                        )
-                      }
+                      onClick={() => handleCopy(redirectUri, "redirect-uri")}
                       size="icon"
                       type="button"
                       variant="ghost"
@@ -421,9 +483,10 @@ export function OrganizationSettingsSso({
                   )}
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Add this as the sign-in redirect URI in your identity provider
+                  Add this as the sign-in redirect URI in your identity provider. Updates as you type your domain above.
                 </p>
               </div>
+
               {canEdit && (
                 <Button
                   disabled={
@@ -441,7 +504,7 @@ export function OrganizationSettingsSso({
                       Saving...
                     </>
                   ) : (
-                    "Save SSO Configuration"
+                    "Save and continue"
                   )}
                 </Button>
               )}
@@ -464,6 +527,17 @@ export function OrganizationSettingsSso({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-2">
+              <p className="font-medium">Setup instructions</p>
+              <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
+                <li>In your IdP, enable SCIM provisioning on this app</li>
+                <li>Set the SCIM connector base URL to the value below</li>
+                <li>Set the authentication method to <strong>HTTP Header</strong></li>
+                <li>Generate a SCIM token below and paste it as the bearer token</li>
+                <li>Enable <strong>Create</strong>, <strong>Update</strong>, and <strong>Deactivate</strong> for users</li>
+              </ol>
+            </div>
+
             <div className="space-y-1">
               <p className="text-sm font-medium">SCIM Base URL</p>
               <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
