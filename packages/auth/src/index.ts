@@ -463,7 +463,16 @@ export const auth = betterAuth<BetterAuthOptions>({
       maxAge: 5 * 60, // 5 minutes — avoids DB query on every getSession call
     },
   },
-  trustedOrigins: [process.env.CORS_ORIGIN].filter((v): v is string => !!v),
+  trustedOrigins: async (request) => {
+    const base = [process.env.CORS_ORIGIN].filter((v): v is string => !!v);
+    // SSO registration and callback paths need to reach external IdP discovery
+    // endpoints (e.g. *.okta.com, login.microsoftonline.com). Scope the
+    // expanded trust to SSO paths only so CSRF protection is unchanged elsewhere.
+    if (!request || request.url.includes("/sso/")) {
+      return [...base, "https://*"];
+    }
+    return base;
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
