@@ -24,7 +24,7 @@ type SsoScimApi = {
   requestDomainVerification(opts: {
     body: { providerId: string };
     headers: Headers;
-  }): Promise<{ token: string; expiresAt: string }>;
+  }): Promise<{ domainVerificationToken: string }>;
   verifyDomain(opts: {
     body: { providerId: string };
     headers: Headers;
@@ -157,7 +157,8 @@ export async function requestDomainVerification(
     });
 
     revalidatePath(`/${access.orgSlug}/settings/sso`);
-    return { success: true, token: result.token, expiresAt: result.expiresAt };
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    return { success: true, token: result.domainVerificationToken, expiresAt };
   } catch (error) {
     const log = createActionLogger("requestDomainVerification", {
       orgSlug: orgId,

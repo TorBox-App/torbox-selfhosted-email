@@ -306,12 +306,12 @@ export function OrganizationSettingsSso({
                       <p className="text-sm font-medium">Value</p>
                       <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
                         <span className="flex-1 break-all">
-                          {verificationToken}
+                          {dnsTxtHostname}={verificationToken}
                         </span>
                         <Button
                           aria-label="Copy DNS TXT value"
                           onClick={() =>
-                            handleCopy(verificationToken, "dns-token")
+                            handleCopy(`${dnsTxtHostname}=${verificationToken}`, "dns-token")
                           }
                           size="icon"
                           variant="ghost"
