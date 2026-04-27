@@ -76,7 +76,7 @@ jobs:
       - name: Build workspace deps
         run: |
           pnpm --filter @wraps/db build
-          pnpm --filter @wraps/email-check build
+          pnpm --filter "@wraps.dev/email-check" build
 
       - name: Run API tests
         run: pnpm --filter @wraps/api test
