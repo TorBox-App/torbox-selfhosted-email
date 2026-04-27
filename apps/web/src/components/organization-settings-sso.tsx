@@ -228,13 +228,21 @@ export function OrganizationSettingsSso({
             existingProvider.domainVerified ? (
               /* Active SSO */
               <div className="space-y-4">
-                <div className="rounded-lg bg-muted p-4 text-sm">
+                <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
                   <p className="font-medium text-green-700 dark:text-green-400">
                     SSO is active for {existingProvider.domain}
                   </p>
-                  <p className="mt-1 text-muted-foreground">
+                  <p className="text-muted-foreground">
                     Issuer: {existingProvider.issuer}
                   </p>
+                </div>
+                <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
+                  <p className="font-medium">How your team signs in</p>
+                  <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
+                    <li>Go to <strong>app.wraps.dev</strong></li>
+                    <li>Enter their <strong>@{existingProvider.domain}</strong> email address</li>
+                    <li>Click <strong>Sign in with SSO</strong></li>
+                  </ol>
                 </div>
                 {canEdit && (
                   <Button
@@ -259,7 +267,7 @@ export function OrganizationSettingsSso({
                   <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
                     <li>Click <strong>Get Verification Token</strong> below</li>
                     <li>Add the TXT record to your DNS provider</li>
-                    <li>Click <strong>Verify Domain</strong> — DNS can take up to 24 hours to propagate</li>
+                    <li>Click <strong>Verify Domain</strong> — DNS can take a few minutes to propagate</li>
                   </ol>
                 </div>
 
@@ -290,6 +298,9 @@ export function OrganizationSettingsSso({
                           )}
                         </Button>
                       </div>
+                      <p className="text-muted-foreground text-xs">
+                        Some DNS providers auto-append your domain — enter only the part shown above.
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium">Value</p>
@@ -344,8 +355,8 @@ export function OrganizationSettingsSso({
                         : "Get Verification Token"}
                     </Button>
                   )}
-                  {canEdit && verificationToken && (
-                    <Button disabled={isPending} onClick={handleVerify}>
+                  {canEdit && (
+                    <Button disabled={isPending || !verificationToken} onClick={handleVerify}>
                       {isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : null}
@@ -419,11 +430,11 @@ export function OrganizationSettingsSso({
                     disabled={!canEdit || isPending}
                     id="sso-issuer"
                     onChange={(e) => setIssuer(e.target.value)}
-                    placeholder="https://dev-123456.okta.com"
+                    placeholder="https://your-org.okta.com/oauth2/default"
                     value={issuer}
                   />
                   <p className="text-muted-foreground text-xs">
-                    Found in your IdP under the app's OpenID Connect settings
+                    Okta: Settings → Authorization Servers → Issuer URI (usually ends in <code>/oauth2/default</code>). Azure AD: the tenant issuer from App registrations.
                   </p>
                 </div>
                 <div className="space-y-1">
