@@ -42,7 +42,8 @@ export type PlanFeature =
   | "events" // Scale+: Behavioral tracking
   | "advancedSegments" // Scale+: Behavioral segments
   | "customRetention" // Enterprise+: Custom data retention
-  | "prioritySLA"; // Enterprise+: Priority support SLA
+  | "prioritySLA" // Enterprise+: Priority support SLA
+  | "sso"; // Scale+: SSO + SCIM provisioning
 
 export type RateLimits = {
   dailyRequests: number; // -1 = unlimited
@@ -129,6 +130,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       advancedSegments: false,
       customRetention: false,
       prioritySLA: false,
+      sso: false,
     },
 
     // Rate Limits
@@ -185,6 +187,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       advancedSegments: false, // Behavioral segments (Scale+)
       customRetention: false,
       prioritySLA: false,
+      sso: false,
     },
 
     // Rate Limits
@@ -242,6 +245,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       advancedSegments: false, // Behavioral segments (Scale+)
       customRetention: false,
       prioritySLA: false,
+      sso: false,
     },
 
     // Rate Limits
@@ -299,6 +303,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       advancedSegments: true, // Behavioral segments
       customRetention: false,
       prioritySLA: true, // Priority support SLA
+      sso: true, // SSO + SCIM provisioning
     },
 
     // Rate Limits

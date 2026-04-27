@@ -1,4 +1,6 @@
 import { passkey } from "@better-auth/passkey";
+import { scim } from "@better-auth/scim";
+import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
 import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
@@ -539,6 +541,24 @@ export const auth = betterAuth<BetterAuthOptions>({
       issuer: "Wraps",
     }),
     organization(),
+    sso({
+      domainVerification: { enabled: true },
+      organizationProvisioning: { disabled: false, defaultRole: "member" },
+      provisionUser: async ({ user, userInfo }) => {
+        if (userInfo.given_name || userInfo.family_name) {
+          await db
+            .update(schema.user)
+            .set({
+              name:
+                [userInfo.given_name, userInfo.family_name]
+                  .filter(Boolean)
+                  .join(" ") || user.name,
+            })
+            .where(eq(schema.user.id, user.id));
+        }
+      },
+    }),
+    scim({}),
     bearer(),
     deviceAuthorization({
       verificationUri: "/device",
@@ -632,6 +652,15 @@ export const auth = betterAuth<BetterAuthOptions>({
             ]);
           } catch (error) {
             console.error("Error in user create tracking hook:", error);
+          }
+        },
+      },
+      update: {
+        after: async (user) => {
+          if ((user as { active?: boolean }).active === false) {
+            await db
+              .delete(schema.session)
+              .where(eq(schema.session.userId, user.id));
           }
         },
       },

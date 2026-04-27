@@ -372,6 +372,20 @@
       "when": 1777000020087,
       "tag": "0052_redundant_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1777222887885,
+      "tag": "0053_soft_carnage",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1777243125784,
+      "tag": "0054_blushing_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

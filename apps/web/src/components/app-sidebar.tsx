@@ -158,6 +158,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: `/${orgSlug}/settings/members`,
           },
           {
+            title: "SSO",
+            url: `/${orgSlug}/settings/sso`,
+          },
+          {
             title: "Billing",
             url: `/${orgSlug}/settings/billing`,
           },

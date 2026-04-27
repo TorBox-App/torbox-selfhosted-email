@@ -41,8 +41,7 @@ export default function SignUpForm({
   const isAuthInProgress = isRedirecting || isGoogleLoading || isGitHubLoading;
 
   const isSpecialRedirect =
-    redirectTo.startsWith("/invitations/") ||
-    redirectTo.startsWith("/device");
+    redirectTo.startsWith("/invitations/") || redirectTo.startsWith("/device");
 
   // Compute callback URL for OAuth - use special redirect or onboarding
   const callbackUrl = useMemo(() => {

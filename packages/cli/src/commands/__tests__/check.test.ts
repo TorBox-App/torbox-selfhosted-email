@@ -624,7 +624,9 @@ describe("Email Check Command", () => {
 
   describe("exit codes", () => {
     it("should exit with 0 for grade A", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "A", finalScore: 95 })
       );
@@ -636,7 +638,9 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 0 for grade B", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "B", finalScore: 85 })
       );
@@ -648,7 +652,9 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 1 for grade C", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "C", finalScore: 70 })
       );
@@ -660,7 +666,9 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 2 for grade D", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "D", finalScore: 50 })
       );
@@ -672,7 +680,9 @@ describe("Email Check Command", () => {
     });
 
     it("should exit with 3 for grade F", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createMockResult({ grade: "F", finalScore: 30 })
       );
@@ -1109,7 +1119,9 @@ describe("Email Check Command", () => {
     });
 
     it("should display deductions with fix suggestions", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("with-deductions") as never
       );
@@ -1132,7 +1144,9 @@ describe("Email Check Command", () => {
     });
 
     it("should display Grade C message with help suggestion", async () => {
-      const { runEmailCheck, getExitCode } = await import("@wraps.dev/email-check");
+      const { runEmailCheck, getExitCode } = await import(
+        "@wraps.dev/email-check"
+      );
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("grade-c") as never
       );

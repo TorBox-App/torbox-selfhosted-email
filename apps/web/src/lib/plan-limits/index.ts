@@ -183,6 +183,7 @@ export async function checkFeatureAccess(
     advancedSegments: "Advanced segments",
     customRetention: "Custom retention",
     prioritySLA: "Priority SLA",
+    sso: "SSO & SCIM provisioning",
   };
 
   return {

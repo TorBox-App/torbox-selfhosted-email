@@ -1,0 +1,1 @@
+ALTER TABLE "scim_provider" ALTER COLUMN "organization_id" SET NOT NULL;

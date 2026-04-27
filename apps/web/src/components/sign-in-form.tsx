@@ -41,9 +41,14 @@ export default function SignInForm({
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+  const [isSsoLoading, setIsSsoLoading] = useState(false);
 
   const isAuthInProgress =
-    isRedirecting || isPasskeyLoading || isGoogleLoading || isGitHubLoading;
+    isRedirecting ||
+    isPasskeyLoading ||
+    isGoogleLoading ||
+    isGitHubLoading ||
+    isSsoLoading;
 
   // Get the last used login method
   const lastMethod = authClient.getLastUsedLoginMethod();
@@ -488,6 +493,46 @@ export default function SignInForm({
                     Last used
                   </Badge>
                 )}
+              </Button>
+
+              <Button
+                className="w-full"
+                disabled={isAuthInProgress}
+                loading={isSsoLoading}
+                onClick={async () => {
+                  const email = form.state.values.email;
+                  if (!email) {
+                    toast.error("Please enter your email address first.");
+                    return;
+                  }
+                  setIsSsoLoading(true);
+                  try {
+                    const result = await authClient.signIn.sso({
+                      email,
+                      callbackURL: redirectTo,
+                    });
+                    if (result?.error) {
+                      toast.error(
+                        result.error.message ||
+                          "No SSO provider configured for that email domain."
+                      );
+                      return;
+                    }
+                    setIsRedirecting(true);
+                  } catch (error: unknown) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to sign in with SSO"
+                    );
+                  } finally {
+                    setIsSsoLoading(false);
+                  }
+                }}
+                type="button"
+                variant="outline"
+              >
+                Sign in with SSO
               </Button>
 
               <div className="text-center text-sm">

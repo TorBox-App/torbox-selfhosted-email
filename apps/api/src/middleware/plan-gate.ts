@@ -8,7 +8,7 @@ import { Elysia } from "elysia";
 import type { AuthContext } from "./auth";
 
 // Feature to minimum plan mapping (aligned with apps/web/src/lib/plans.ts)
-const FEATURE_PLANS = {
+export const FEATURE_PLANS = {
   batch: "starter", // Starter+
   topics: "starter", // Starter+
   segments: "starter", // Starter+
@@ -18,6 +18,7 @@ const FEATURE_PLANS = {
   advancedSegments: "scale", // Scale+
   customRetention: "scale", // Scale+
   prioritySLA: "scale", // Scale+
+  sso: "scale", // Scale+
 } as const;
 
 type Feature = keyof typeof FEATURE_PLANS;

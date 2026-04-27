@@ -1,4 +1,6 @@
 import { passkeyClient } from "@better-auth/passkey/client";
+import { scimClient } from "@better-auth/scim/client";
+import { ssoClient } from "@better-auth/sso/client";
 import { stripeClient } from "@better-auth/stripe/client";
 import {
   deviceAuthorizationClient,
@@ -19,6 +21,8 @@ export const authClient = createAuthClient({
     stripeClient({
       subscription: true,
     }),
+    ssoClient({ domainVerification: { enabled: true } }),
+    scimClient(),
   ],
 });
 
