@@ -2,7 +2,6 @@ import { db } from "@wraps/db";
 import { messageUsageMonthly } from "@wraps/db/schema/usage";
 import { and, eq, sql } from "drizzle-orm";
 import { getOrganizationPlanId } from "@/lib/organization";
-import { getMessageLimit, getMessageUsageThreshold } from "@/lib/plans";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PERIOD KEY HELPERS
@@ -45,8 +44,9 @@ export async function getMessageUsageCount(
 }
 
 /**
- * Check if organization can send messages.
- * Returns detailed usage info including threshold status.
+ * Get email delivery count for an organization — analytics only.
+ * Email sends are never plan-gated (users pay AWS directly).
+ * Plan limits apply only to behavioral events (event_usage_monthly).
  */
 export async function checkMessageUsageLimit(organizationId: string): Promise<{
   allowed: boolean;
@@ -61,23 +61,13 @@ export async function checkMessageUsageLimit(organizationId: string): Promise<{
     getMessageUsageCount(organizationId),
   ]);
 
-  const limit = getMessageLimit(planId);
-  const threshold = getMessageUsageThreshold(planId, currentUsage);
-
-  // Allow if unlimited (-1) or below 125% (25% grace period)
-  const allowed = limit === -1 || currentUsage < limit * 1.25;
-
-  // Calculate percent used (0 if unlimited)
-  const percentUsed =
-    limit === -1 ? 0 : Math.round((currentUsage / limit) * 100);
-
   return {
-    allowed,
+    allowed: true,
     current: currentUsage,
-    limit,
+    limit: -1,
     planId,
-    percentUsed,
-    threshold,
+    percentUsed: 0,
+    threshold: "normal",
   };
 }
 
@@ -229,20 +219,15 @@ export async function getMessageUsageSummary(
     }),
   ]);
 
-  const limit = getMessageLimit(planId);
   const messageCount = usage?.messageCount ?? 0;
-  const percentUsed =
-    limit === -1 ? 0 : Math.round((messageCount / limit) * 100);
-  const threshold = getMessageUsageThreshold(planId, messageCount);
-  const remaining = limit === -1 ? -1 : Math.max(0, limit - messageCount);
 
   return {
     periodKey: period,
     messageCount,
-    limit,
+    limit: -1,
     planId,
-    percentUsed,
-    threshold,
-    remaining,
+    percentUsed: 0,
+    threshold: "normal",
+    remaining: -1,
   };
 }

@@ -15,20 +15,13 @@ type RouteContext = {
 };
 
 /**
- * GET /api/[orgSlug]/messages/usage - Get current message usage status
+ * GET /api/[orgSlug]/messages/usage - Get email/SMS delivery count (analytics only)
  *
- * Message usage is tracked per calendar month and resets on the 1st.
+ * Email and SMS sends are NOT plan-gated — users pay AWS directly.
+ * This endpoint returns delivery counts for display purposes only.
+ * Plan limits apply only to behavioral events (/api/[orgSlug]/events/usage).
  *
- * Message limits (2026 pricing model):
- * - Free: 1,000 messages/month
- * - Starter: 10,000 messages/month
- * - Growth: 50,000 messages/month
- * - Scale: 250,000 messages/month
- *
- * Thresholds:
- * - 80%: warning
- * - 100%: critical (banner + email)
- * - 125%: exceeded (hard block)
+ * Count resets on the 1st of each calendar month.
  */
 export async function GET(_request: Request, context: RouteContext) {
   try {

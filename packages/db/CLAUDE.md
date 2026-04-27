@@ -168,6 +168,27 @@ import { eq, and, desc } from "@wraps/db";  // Re-exported drizzle operators
 
 Connection uses `@neondatabase/serverless` with `poolQueryViaFetch = true` (serverless-optimized).
 
+## ⚠️ Production vs Dev Database
+
+Two separate Neon databases exist:
+- **`apps/web/.env.local`** → DEV (`ep-autumn-block-*`) — test data only
+- **`apps/web/.env.production.local`** → PRODUCTION (`ep-damp-heart-*`) — real customer data
+
+To connect to **production**:
+
+```bash
+# Export the production DATABASE_URL
+eval "$(scripts/db-prod-url.sh)"
+
+# Confirm you're on prod (endpoint should contain ep-damp-heart)
+echo $DATABASE_URL | grep -o 'ep-[^-]*-[^.]*'
+
+# Then query with psql
+psql "$DATABASE_URL"
+```
+
+**When asked to analyze data or run queries, always use the production database unless explicitly told to use dev.**
+
 ## Migration Workflow
 
 ```bash
