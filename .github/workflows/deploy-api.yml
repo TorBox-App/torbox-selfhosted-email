@@ -55,7 +55,7 @@ jobs:
           pnpm --filter @wraps/db build
           pnpm --filter @wraps/auth build
           pnpm --filter @wraps/email build
-          pnpm --filter @wraps/email-check build
+          pnpm --filter "@wraps.dev/email-check" build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

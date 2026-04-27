@@ -50,6 +50,9 @@ const mockSegments: Array<{
 
 vi.mock("@wraps/db", () => ({
   db: {
+    insert: vi.fn().mockImplementation(() => ({
+      values: vi.fn().mockImplementation(() => Promise.resolve()),
+    })),
     select: vi.fn().mockImplementation(() => ({
       from: vi.fn().mockImplementation((_table) => ({
         where: vi.fn().mockImplementation(() => {
