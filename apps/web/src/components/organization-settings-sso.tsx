@@ -10,7 +10,6 @@ import {
 import {
   Check,
   Copy,
-  ExternalLink,
   KeyRound,
   Loader2,
   ShieldCheck,
@@ -24,6 +23,7 @@ import {
   requestDomainVerification,
   saveSsoProvider,
   verifyDomain,
+  verifyDomainViaSES,
 } from "@/actions/sso";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,8 @@ type Props = {
     domainVerified: boolean;
   } | null;
   existingScimProvider: { id: string } | null;
+  initialVerificationToken: string | null;
+  initialVerificationExpiresAt: string | null;
 };
 
 export function OrganizationSettingsSso({
@@ -46,6 +48,8 @@ export function OrganizationSettingsSso({
   userRole,
   existingProvider,
   existingScimProvider,
+  initialVerificationToken,
+  initialVerificationExpiresAt,
 }: Props) {
   const canEdit = ["owner", "admin"].includes(userRole);
   const [isPending, startTransition] = useTransition();
@@ -59,11 +63,11 @@ export function OrganizationSettingsSso({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [verificationToken, setVerificationToken] = useState<string | null>(
-    null
+    initialVerificationToken
   );
   const [verificationExpiresAt, setVerificationExpiresAt] = useState<
     string | null
-  >(null);
+  >(initialVerificationExpiresAt);
 
   const scimBaseUrl = "https://app.wraps.dev/api/auth/scim/v2";
 
@@ -163,6 +167,26 @@ export function OrganizationSettingsSso({
     });
   }
 
+  function handleVerifyViaSES() {
+    if (!existingProvider) return;
+
+    startTransition(() => {
+      const promise = verifyDomainViaSES(
+        organization.id,
+        existingProvider.providerId
+      ).then((result) => {
+        if (!result.success) throw new Error(result.error);
+        return result;
+      });
+
+      toast.promise(promise, {
+        loading: "Checking SES verification...",
+        success: "Domain verified via SES — SSO is now active",
+        error: (err) => err.message,
+      });
+    });
+  }
+
   function handleGenerateScimToken() {
     if (!existingProvider) return;
 
@@ -239,9 +263,16 @@ export function OrganizationSettingsSso({
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
                   <p className="font-medium">How your team signs in</p>
                   <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
-                    <li>Go to <strong>app.wraps.dev</strong></li>
-                    <li>Enter their <strong>@{existingProvider.domain}</strong> email address</li>
-                    <li>Click <strong>Sign in with SSO</strong></li>
+                    <li>
+                      Go to <strong>app.wraps.dev</strong>
+                    </li>
+                    <li>
+                      Enter their <strong>@{existingProvider.domain}</strong>{" "}
+                      email address
+                    </li>
+                    <li>
+                      Click <strong>Sign in with SSO</strong>
+                    </li>
                   </ol>
                 </div>
                 {canEdit && (
@@ -258,16 +289,23 @@ export function OrganizationSettingsSso({
               /* Domain verification */
               <div className="space-y-4">
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-3">
-                  <p className="font-medium">Step 2 of 2 — Verify domain ownership</p>
+                  <p className="font-medium">
+                    Step 2 of 2 — Verify domain ownership
+                  </p>
                   <p className="text-muted-foreground">
                     Add a DNS TXT record to prove you own{" "}
                     <strong>{existingProvider.domain}</strong>. SSO activates
                     automatically once verified.
                   </p>
                   <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
-                    <li>Click <strong>Get Verification Token</strong> below</li>
+                    <li>
+                      Click <strong>Get Verification Token</strong> below
+                    </li>
                     <li>Add the TXT record to your DNS provider</li>
-                    <li>Click <strong>Verify Domain</strong> — DNS can take a few minutes to propagate</li>
+                    <li>
+                      Click <strong>Verify Domain</strong> — DNS can take a few
+                      minutes to propagate
+                    </li>
                   </ol>
                 </div>
 
@@ -282,7 +320,9 @@ export function OrganizationSettingsSso({
                     <div className="space-y-1">
                       <p className="text-sm font-medium">Hostname / Name</p>
                       <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
-                        <span className="flex-1 break-all">{dnsTxtHostname}</span>
+                        <span className="flex-1 break-all">
+                          {dnsTxtHostname}
+                        </span>
                         <Button
                           aria-label="Copy DNS hostname"
                           onClick={() =>
@@ -299,7 +339,8 @@ export function OrganizationSettingsSso({
                         </Button>
                       </div>
                       <p className="text-muted-foreground text-xs">
-                        Some DNS providers auto-append your domain — enter only the part shown above.
+                        Some DNS providers auto-append your domain — enter only
+                        the part shown above.
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -311,7 +352,10 @@ export function OrganizationSettingsSso({
                         <Button
                           aria-label="Copy DNS TXT value"
                           onClick={() =>
-                            handleCopy(`${dnsTxtHostname}=${verificationToken}`, "dns-token")
+                            handleCopy(
+                              `${dnsTxtHostname}=${verificationToken}`,
+                              "dns-token"
+                            )
                           }
                           size="icon"
                           variant="ghost"
@@ -356,7 +400,10 @@ export function OrganizationSettingsSso({
                     </Button>
                   )}
                   {canEdit && (
-                    <Button disabled={isPending || !verificationToken} onClick={handleVerify}>
+                    <Button
+                      disabled={isPending || !verificationToken}
+                      onClick={handleVerify}
+                    >
                       {isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : null}
@@ -374,6 +421,26 @@ export function OrganizationSettingsSso({
                     </Button>
                   )}
                 </div>
+
+                {canEdit && (
+                  <div className="border-t pt-4 space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Already use Wraps email for{" "}
+                      <strong>{existingProvider.domain}</strong>? Skip the TXT
+                      record — verify via your connected AWS account instead.
+                    </p>
+                    <Button
+                      disabled={isPending}
+                      onClick={handleVerifyViaSES}
+                      variant="outline"
+                    >
+                      {isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Verify via AWS SES
+                    </Button>
+                  </div>
+                )}
               </div>
             )
           ) : (
@@ -381,13 +448,19 @@ export function OrganizationSettingsSso({
             <div className="space-y-6">
               {/* IdP setup guide */}
               <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-3">
-                <p className="font-medium">Step 1 of 2 — Configure your identity provider</p>
+                <p className="font-medium">
+                  Step 1 of 2 — Configure your identity provider
+                </p>
                 <p className="text-muted-foreground">
-                  Create a new OIDC app in your IdP (Okta, Azure AD, Google Workspace, etc.) with these settings before filling in the form below.
+                  Create a new OIDC app in your IdP (Okta, Azure AD, Google
+                  Workspace, etc.) with these settings before filling in the
+                  form below.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground">Application type</p>
+                    <p className="font-medium text-foreground">
+                      Application type
+                    </p>
                     <p className="text-muted-foreground">Web Application</p>
                   </div>
                   <div className="space-y-1">
@@ -395,11 +468,17 @@ export function OrganizationSettingsSso({
                     <p className="text-muted-foreground">Authorization Code</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground">Required scopes</p>
-                    <p className="text-muted-foreground font-mono">openid, email, profile</p>
+                    <p className="font-medium text-foreground">
+                      Required scopes
+                    </p>
+                    <p className="text-muted-foreground font-mono">
+                      openid, email, profile
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground">Sign-in redirect URI</p>
+                    <p className="font-medium text-foreground">
+                      Sign-in redirect URI
+                    </p>
                     <p className="text-muted-foreground">See field below ↓</p>
                   </div>
                 </div>
@@ -434,7 +513,9 @@ export function OrganizationSettingsSso({
                     value={issuer}
                   />
                   <p className="text-muted-foreground text-xs">
-                    Okta: Settings → Authorization Servers → Issuer URI (usually ends in <code>/oauth2/default</code>). Azure AD: the tenant issuer from App registrations.
+                    Okta: Settings → Authorization Servers → Issuer URI (usually
+                    ends in <code>/oauth2/default</code>). Azure AD: the tenant
+                    issuer from App registrations.
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -474,8 +555,11 @@ export function OrganizationSettingsSso({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Sign-in Redirect URI</p>
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 font-mono text-sm">
-                  <span className={`flex-1 break-all ${!domain ? "text-muted-foreground" : ""}`}>
-                    {redirectUri ?? "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
+                  <span
+                    className={`flex-1 break-all ${domain ? "" : "text-muted-foreground"}`}
+                  >
+                    {redirectUri ??
+                      "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
                   </span>
                   {redirectUri && (
                     <Button
@@ -494,7 +578,8 @@ export function OrganizationSettingsSso({
                   )}
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Add this as the sign-in redirect URI in your identity provider. Updates as you type your domain above.
+                  Add this as the sign-in redirect URI in your identity
+                  provider. Updates as you type your domain above.
                 </p>
               </div>
 
@@ -543,9 +628,16 @@ export function OrganizationSettingsSso({
               <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
                 <li>In your IdP, enable SCIM provisioning on this app</li>
                 <li>Set the SCIM connector base URL to the value below</li>
-                <li>Set the authentication method to <strong>HTTP Header</strong></li>
-                <li>Generate a SCIM token below and paste it as the bearer token</li>
-                <li>Enable <strong>Create</strong>, <strong>Update</strong>, and <strong>Deactivate</strong> for users</li>
+                <li>
+                  Set the authentication method to <strong>HTTP Header</strong>
+                </li>
+                <li>
+                  Generate a SCIM token below and paste it as the bearer token
+                </li>
+                <li>
+                  Enable <strong>Create</strong>, <strong>Update</strong>, and{" "}
+                  <strong>Deactivate</strong> for users
+                </li>
               </ol>
             </div>
 

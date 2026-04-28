@@ -1,6 +1,7 @@
 import { auth } from "@wraps/auth";
 import { db, eq, scimProvider, ssoProvider } from "@wraps/db";
 import { redirect } from "next/navigation";
+import { getExistingVerificationToken } from "@/actions/sso";
 import { FeatureGate } from "@/components/feature-gate";
 import { OrganizationSettingsSso } from "@/components/organization-settings-sso";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -90,6 +91,14 @@ export default async function SsoPage({ params }: SsoPageProps) {
     }),
   ]);
 
+  const pendingVerificationToken =
+    ssoProviderRecord && !ssoProviderRecord.domainVerified
+      ? await getExistingVerificationToken(
+          orgWithMembership.id,
+          ssoProviderRecord.providerId
+        )
+      : null;
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       <div>
@@ -102,6 +111,10 @@ export default async function SsoPage({ params }: SsoPageProps) {
       <OrganizationSettingsSso
         existingProvider={ssoProviderRecord ?? null}
         existingScimProvider={existingScimProvider ?? null}
+        initialVerificationExpiresAt={
+          pendingVerificationToken?.expiresAt ?? null
+        }
+        initialVerificationToken={pendingVerificationToken?.token ?? null}
         organization={{
           id: orgWithMembership.id,
           name: orgWithMembership.name,
