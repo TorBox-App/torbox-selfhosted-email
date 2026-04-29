@@ -231,13 +231,26 @@ export async function createMailManagerArchive(
     });
   });
 
+  if (!configSetName) {
+    throw new Error(
+      "Failed to resolve SES configuration set name from Pulumi output"
+    );
+  }
+
   const putArchivingOptionsCommand =
     new PutConfigurationSetArchivingOptionsCommand({
       ConfigurationSetName: configSetName,
       ArchiveArn: archiveArn,
     });
 
-  await sesClient.send(putArchivingOptionsCommand);
+  try {
+    await sesClient.send(putArchivingOptionsCommand);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to link Mail Manager archive to SES config set '${configSetName}' in ${region}: ${detail}`
+    );
+  }
 
   if (!(archiveId && archiveArn)) {
     throw new Error("Failed to get archive ID or ARN");
