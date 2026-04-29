@@ -1,11 +1,12 @@
 import { auth } from "@wraps/auth";
 import { db, ssoProvider } from "@wraps/db";
 import { eq } from "drizzle-orm";
+import { logger, serializeError } from "@/lib/logger";
 import { NextResponse } from "next/server";
 
 type SsoInitiateApi = {
   signInSSO(opts: {
-    body: { issuer: string; callbackURL: string; loginHint?: string };
+    body: { providerId: string; callbackURL: string; loginHint?: string };
   }): Promise<{ url: string; redirect: boolean } | null>;
 };
 
@@ -41,16 +42,20 @@ export async function GET(req: Request) {
   const callbackURL =
     targetLinkUri && isSafeRedirectUri(targetLinkUri) ? targetLinkUri : "/";
 
-  const result = await (auth.api as unknown as SsoInitiateApi).signInSSO({
-    body: {
-      issuer: iss,
-      callbackURL,
-      ...(loginHint ? { loginHint } : {}),
-    },
-  });
+  try {
+    const result = await (auth.api as unknown as SsoInitiateApi).signInSSO({
+      body: {
+        providerId: provider.providerId,
+        callbackURL,
+        ...(loginHint ? { loginHint } : {}),
+      },
+    });
 
-  if (result?.url) {
-    return NextResponse.redirect(result.url);
+    if (result?.url) {
+      return NextResponse.redirect(result.url);
+    }
+  } catch (error) {
+    logger.error({ err: serializeError(error), iss }, "SSO initiate failed");
   }
 
   return NextResponse.redirect(new URL("/sign-in", req.url));
