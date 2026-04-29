@@ -171,7 +171,9 @@ describe("SSO Actions", () => {
         // expiresAt computed locally as 7 days from now
         const expiresAt = new Date(result.expiresAt);
         const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        expect(expiresAt.getTime()).toBeGreaterThan(Date.now() + sevenDays - 5000);
+        expect(expiresAt.getTime()).toBeGreaterThan(
+          Date.now() + sevenDays - 5000
+        );
         expect(expiresAt.getTime()).toBeLessThan(Date.now() + sevenDays + 5000);
       }
     });
@@ -185,7 +187,10 @@ describe("SSO Actions", () => {
     it("returns error when provider not found in org", async () => {
       mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
       mockFindFirst.mockResolvedValue(null);
-      const result = await requestDomainVerification(TEST_ORG_ID, "other-provider");
+      const result = await requestDomainVerification(
+        TEST_ORG_ID,
+        "other-provider"
+      );
       expect(result).toEqual({ success: false, error: "Provider not found" });
     });
   });
