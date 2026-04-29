@@ -90,7 +90,7 @@ jobs:
       - name: Build dependencies
         run: |
           pnpm --filter @wraps/core build
-          pnpm --filter @wraps/email-check build
+          pnpm --filter @wraps.dev/email-check build
 
       - name: Build package
         run: pnpm --filter ${{ needs.parse.outputs.filter }} build
@@ -163,7 +163,7 @@ jobs:
       - name: Build dependencies
         run: |
           pnpm --filter @wraps/core build
-          pnpm --filter @wraps/email-check build
+          pnpm --filter @wraps.dev/email-check build
 
       - run: pnpm --filter @wraps.dev/cli build
 
@@ -197,7 +197,7 @@ jobs:
       - name: Build dependencies
         run: |
           pnpm --filter @wraps/core build
-          pnpm --filter @wraps/email-check build
+          pnpm --filter @wraps.dev/email-check build
 
       - name: Build CLI
         run: pnpm --filter @wraps.dev/cli build
