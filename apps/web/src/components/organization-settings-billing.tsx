@@ -61,7 +61,8 @@ export function OrganizationSettingsBilling({
   const [upgradeBillingInterval, setUpgradeBillingInterval] =
     useState<BillingInterval>("monthly");
 
-  const canManageBilling = userRole === "owner" || userRole === "admin";
+  const canManageBilling =
+    userRole === "owner" || userRole === "admin" || userRole === "billing";
 
   // Get subscription for this organization using our server action
   // This fetches directly from DB to include custom fields like `annual`
