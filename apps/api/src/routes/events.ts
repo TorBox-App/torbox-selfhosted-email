@@ -15,14 +15,23 @@
 
 import { createHash } from "node:crypto";
 import {
-  contact,
-  contactEvent,
-  db,
-  eq,
-  workflow,
-  workflowExecution,
+  type contact,
+  findContactByEmailHash,
+  findContactByEmailInOrg,
+  findContactByExternalIdInOrg,
+  findContactById,
+  findContactsByEmailsInOrg,
+  findContactsByExternalIdsInOrg,
+  findContactsByIdsInOrg,
+  findEventWorkflows,
+  findEventWorkflowsBatch,
+  findWaitingExecutions,
+  findWaitingExecutionsBatch,
+  insertContact,
+  insertContactEvent,
+  insertContactEventsBatch,
+  touchContactLastActivity,
 } from "@wraps/db";
-import { and, inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 
 // Hash email for deduplication
@@ -65,7 +74,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
    *
    * POST /v1/events
    *
-   * Stores the event, triggers any workflows listening for this event,
+   * Stores the event, triggers any matching workflows,
    * and resumes executions waiting for this event.
    */
   .post(
@@ -88,76 +97,49 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       let contactCreated = false;
 
       if (contactId) {
-        const [c] = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              eq(contact.id, contactId),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          )
-          .limit(1);
-        contactRecord = c;
+        contactRecord =
+          (await findContactById(contactId, auth.organizationId)) ?? undefined;
       } else if (contactExternalId) {
-        const [c] = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              eq(contact.externalId, contactExternalId),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          )
-          .limit(1);
-        contactRecord = c;
+        contactRecord =
+          (await findContactByExternalIdInOrg(
+            contactExternalId,
+            auth.organizationId
+          )) ?? undefined;
       } else if (contactEmail) {
-        const [c] = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              eq(contact.email, contactEmail),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          )
-          .limit(1);
-        contactRecord = c;
+        contactRecord =
+          (await findContactByEmailInOrg(contactEmail, auth.organizationId)) ??
+          undefined;
       }
 
       // Auto-create contact if missing and flag is set
       if (!contactRecord && createIfMissing && contactEmail) {
         const normalizedEmail = contactEmail.toLowerCase().trim();
         const emailHash = hashEmail(normalizedEmail);
-        const [newContact] = await db
-          .insert(contact)
-          .values({
-            organizationId: auth.organizationId,
-            email: normalizedEmail,
-            emailHash,
-            emailStatus: "active",
-            firstName: contactName || null,
-            properties: {},
-          })
-          .onConflictDoNothing()
-          .returning();
+        const newContact = await insertContact({
+          organizationId: auth.organizationId,
+          email: normalizedEmail,
+          emailHash,
+          emailStatus: "active",
+          firstName: contactName || null,
+          properties: {},
+        });
 
         if (newContact) {
           contactRecord = newContact;
           contactCreated = true;
         } else {
           // Concurrent insert won the race — fetch the existing contact
-          const [existing] = await db
-            .select()
-            .from(contact)
-            .where(
-              and(
-                eq(contact.emailHash, emailHash),
-                eq(contact.organizationId, auth.organizationId)
-              )
-            )
-            .limit(1);
-          contactRecord = existing;
+          const existing = await findContactByEmailHash(
+            emailHash,
+            auth.organizationId
+          );
+          if (existing) {
+            const full = await findContactById(
+              existing.id,
+              auth.organizationId
+            );
+            contactRecord = full ?? undefined;
+          }
         }
       }
 
@@ -174,8 +156,8 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         executionsResumed: 0,
       };
 
-      // 1. Store the event in contactEvent table with 2-year TTL
-      await db.insert(contactEvent).values({
+      // 1. Store the event with 2-year TTL
+      await insertContactEvent({
         contactId: contactRecord.id,
         organizationId: auth.organizationId,
         eventName: name,
@@ -187,17 +169,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       await incrementEventUsage(auth.organizationId);
 
       // 3. Find and trigger matching workflows
-      const matchingWorkflows = await db
-        .select()
-        .from(workflow)
-        .where(
-          and(
-            eq(workflow.organizationId, auth.organizationId),
-            eq(workflow.status, "enabled"),
-            eq(workflow.triggerType, "event"),
-            sql`${workflow.triggerConfig}->>'eventName' = ${name}`
-          )
-        );
+      const matchingWorkflows = await findEventWorkflows(
+        auth.organizationId,
+        name
+      );
 
       for (const wf of matchingWorkflows) {
         await enqueueWorkflowStep({
@@ -211,17 +186,11 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       }
 
       // 4. Resume executions waiting for this event
-      const waitingExecutions = await db
-        .select()
-        .from(workflowExecution)
-        .where(
-          and(
-            eq(workflowExecution.organizationId, auth.organizationId),
-            eq(workflowExecution.contactId, contactRecord.id),
-            eq(workflowExecution.status, "waiting"),
-            eq(workflowExecution.waitingForEvent, name)
-          )
-        );
+      const waitingExecutions = await findWaitingExecutions(
+        auth.organizationId,
+        contactRecord.id,
+        name
+      );
 
       for (const execution of waitingExecutions) {
         // Cancel timeout scheduler
@@ -240,10 +209,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       }
 
       // Update contact last activity
-      await db
-        .update(contact)
-        .set({ lastActivityAt: new Date() })
-        .where(eq(contact.id, contactRecord.id));
+      await touchContactLastActivity(contactRecord.id, auth.organizationId);
 
       return {
         success: true,
@@ -355,15 +321,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         const uniqueIds = [
           ...new Set(contactIdEvents.map((e) => e.contactId!)),
         ];
-        const contactsById = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              inArray(contact.id, uniqueIds),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          );
+        const contactsById = await findContactsByIdsInOrg(
+          auth.organizationId,
+          uniqueIds
+        );
         for (const c of contactsById) {
           contactMap.set(c.id, c);
         }
@@ -373,15 +334,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         const uniqueExternalIds = [
           ...new Set(contactExternalIdEvents.map((e) => e.contactExternalId!)),
         ];
-        const contactsByExternalId = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              inArray(contact.externalId, uniqueExternalIds),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          );
+        const contactsByExternalId = await findContactsByExternalIdsInOrg(
+          auth.organizationId,
+          uniqueExternalIds
+        );
         for (const c of contactsByExternalId) {
           if (c.externalId) {
             contactMap.set(c.externalId, c);
@@ -393,15 +349,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         const uniqueEmails = [
           ...new Set(contactEmailEvents.map((e) => e.contactEmail!)),
         ];
-        const contactsByEmail = await db
-          .select()
-          .from(contact)
-          .where(
-            and(
-              inArray(contact.email, uniqueEmails),
-              eq(contact.organizationId, auth.organizationId)
-            )
-          );
+        const contactsByEmail = await findContactsByEmailsInOrg(
+          auth.organizationId,
+          uniqueEmails
+        );
         for (const c of contactsByEmail) {
           if (c.email) {
             contactMap.set(c.email, c);
@@ -445,7 +396,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
 
       // Phase 2: Batch event insert (1 query)
       const expiresAt = getEventTTLExpiration();
-      await db.insert(contactEvent).values(
+      await insertContactEventsBatch(
         resolvedEvents.map((e) => ({
           contactId: e.contactRecord.id,
           organizationId: auth.organizationId,
@@ -459,23 +410,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
 
       // Phase 3: Batch workflow matching (1 query)
       const uniqueEventNames = [...new Set(resolvedEvents.map((e) => e.name))];
-      const matchingWorkflows = await db
-        .select({
-          id: workflow.id,
-          triggerConfig: workflow.triggerConfig,
-        })
-        .from(workflow)
-        .where(
-          and(
-            eq(workflow.organizationId, auth.organizationId),
-            eq(workflow.status, "enabled"),
-            eq(workflow.triggerType, "event"),
-            inArray(
-              sql`${workflow.triggerConfig}->>'eventName'`,
-              uniqueEventNames
-            )
-          )
-        );
+      const matchingWorkflows = await findEventWorkflowsBatch(
+        auth.organizationId,
+        uniqueEventNames
+      );
 
       // Index workflows by event name
       const workflowsByEvent = new Map<
@@ -497,17 +435,11 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       const uniqueContactIds = [
         ...new Set(resolvedEvents.map((e) => e.contactRecord.id)),
       ];
-      const waitingExecutions = await db
-        .select()
-        .from(workflowExecution)
-        .where(
-          and(
-            eq(workflowExecution.organizationId, auth.organizationId),
-            inArray(workflowExecution.contactId, uniqueContactIds),
-            eq(workflowExecution.status, "waiting"),
-            inArray(workflowExecution.waitingForEvent, uniqueEventNames)
-          )
-        );
+      const waitingExecutions = await findWaitingExecutionsBatch(
+        auth.organizationId,
+        uniqueContactIds,
+        uniqueEventNames
+      );
 
       // Index waiting executions by contactId+eventName
       const waitingByKey = new Map<

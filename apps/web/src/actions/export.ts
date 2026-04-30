@@ -2,10 +2,11 @@
 
 import {
   contact,
-  contactEvent,
   contactTopic,
   db,
+  type EventFilters,
   escapeIlike,
+  exportContactEvents,
 } from "@wraps/db";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import type {
@@ -16,7 +17,6 @@ import type {
   SmsStatus,
 } from "@/lib/contacts";
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
-import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -180,30 +180,11 @@ export async function exportAllEvents(
     const permError = checkPermission(access.role, "events", ["export"]);
     if (permError) return permError;
 
-    const conditions = buildEventsFilterConditions(organizationId, options);
-
-    const events = await db
-      .select({
-        id: contactEvent.id,
-        eventName: contactEvent.eventName,
-        eventData: contactEvent.eventData,
-        createdAt: contactEvent.createdAt,
-        contactId: contactEvent.contactId,
-        contactEmail: contact.email,
-        contactFirstName: contact.firstName,
-        contactLastName: contact.lastName,
-      })
-      .from(contactEvent)
-      .innerJoin(
-        contact,
-        and(
-          eq(contactEvent.contactId, contact.id),
-          eq(contact.organizationId, organizationId)
-        )
-      )
-      .where(and(...conditions))
-      .orderBy(desc(contactEvent.createdAt))
-      .limit(MAX_EXPORT_ROWS);
+    const events = await exportContactEvents(
+      organizationId,
+      options as EventFilters,
+      MAX_EXPORT_ROWS
+    );
 
     return {
       success: true,

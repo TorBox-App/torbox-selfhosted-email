@@ -1,7 +1,16 @@
 "use server";
 
-import { contact, contactEvent, db } from "@wraps/db";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import {
+  countActiveContactsWithEvents,
+  countAllContactEvents,
+  countContactEventsInPeriod,
+  type EventFilters,
+  getContactEvent,
+  getDailyContactEventCounts,
+  getTopContactEventNames,
+  listContactEvents,
+  listDistinctEventNames,
+} from "@wraps/db";
 import type {
   EventWithContact,
   GetEventNamesResult,
@@ -9,7 +18,6 @@ import type {
   ListEventsOptions,
   ListEventsResult,
 } from "@/lib/events";
-import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -23,9 +31,6 @@ export type {
   ListEventsResult,
 } from "@/lib/events";
 
-/**
- * List events for an organization with pagination and search
- */
 export async function listEvents(
   organizationId: string,
   options: ListEventsOptions = {}
@@ -41,53 +46,12 @@ export async function listEvents(
     const permError = checkPermission(access.role, "contacts", ["read"]);
     if (permError) return permError;
 
-    const { page = 1, pageSize = 50 } = options;
-    const offset = (page - 1) * pageSize;
-
-    // Build where conditions using the utility function
-    const conditions = buildEventsFilterConditions(organizationId, options);
-
-    // Get total count with join
-    // Join requires both contactId match AND contact belongs to same org (defense in depth)
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(contactEvent)
-      .innerJoin(
-        contact,
-        and(
-          eq(contactEvent.contactId, contact.id),
-          eq(contact.organizationId, organizationId)
-        )
-      )
-      .where(and(...conditions));
-
-    const total = totalResult?.count ?? 0;
-
-    // Get events with pagination
-    // Join requires both contactId match AND contact belongs to same org (defense in depth)
-    const events = await db
-      .select({
-        id: contactEvent.id,
-        eventName: contactEvent.eventName,
-        eventData: contactEvent.eventData,
-        createdAt: contactEvent.createdAt,
-        contactId: contactEvent.contactId,
-        contactEmail: contact.email,
-        contactFirstName: contact.firstName,
-        contactLastName: contact.lastName,
-      })
-      .from(contactEvent)
-      .innerJoin(
-        contact,
-        and(
-          eq(contactEvent.contactId, contact.id),
-          eq(contact.organizationId, organizationId)
-        )
-      )
-      .where(and(...conditions))
-      .orderBy(desc(contactEvent.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+    const { page = 1, pageSize = 50, ...filters } = options;
+    const { events, total } = await listContactEvents(
+      organizationId,
+      filters as EventFilters,
+      { page, pageSize }
+    );
 
     return {
       success: true,
@@ -103,9 +67,6 @@ export async function listEvents(
   }
 }
 
-/**
- * Get a single event by ID
- */
 export async function getEvent(
   eventId: string,
   organizationId: string
@@ -121,33 +82,7 @@ export async function getEvent(
     const permError = checkPermission(access.role, "contacts", ["read"]);
     if (permError) return permError;
 
-    // Join requires both contactId match AND contact belongs to same org (defense in depth)
-    const [event] = await db
-      .select({
-        id: contactEvent.id,
-        eventName: contactEvent.eventName,
-        eventData: contactEvent.eventData,
-        createdAt: contactEvent.createdAt,
-        contactId: contactEvent.contactId,
-        contactEmail: contact.email,
-        contactFirstName: contact.firstName,
-        contactLastName: contact.lastName,
-      })
-      .from(contactEvent)
-      .innerJoin(
-        contact,
-        and(
-          eq(contactEvent.contactId, contact.id),
-          eq(contact.organizationId, organizationId)
-        )
-      )
-      .where(
-        and(
-          eq(contactEvent.id, eventId),
-          eq(contactEvent.organizationId, organizationId)
-        )
-      )
-      .limit(1);
+    const event = await getContactEvent(eventId, organizationId);
 
     if (!event) {
       return { success: false, error: "Event not found" };
@@ -164,9 +99,6 @@ export async function getEvent(
   }
 }
 
-/**
- * Get unique event names for an organization (for dropdown filter)
- */
 export async function getEventNames(
   organizationId: string
 ): Promise<GetEventNamesResult> {
@@ -181,16 +113,9 @@ export async function getEventNames(
     const permError = checkPermission(access.role, "contacts", ["read"]);
     if (permError) return permError;
 
-    const results = await db
-      .selectDistinct({ eventName: contactEvent.eventName })
-      .from(contactEvent)
-      .where(eq(contactEvent.organizationId, organizationId))
-      .orderBy(contactEvent.eventName);
+    const eventNames = await listDistinctEventNames(organizationId);
 
-    return {
-      success: true,
-      eventNames: results.map((r) => r.eventName),
-    };
+    return { success: true, eventNames };
   } catch (error) {
     const log = createActionLogger("getEventNames", {
       orgSlug: organizationId,
@@ -217,9 +142,6 @@ export type GetEventAnalyticsResult =
   | { success: true; analytics: EventAnalytics }
   | { success: false; error: string };
 
-/**
- * Get event analytics for an organization
- */
 export async function getEventAnalytics(
   organizationId: string,
   days: 7 | 30 = 30,
@@ -253,82 +175,29 @@ export async function getEventAnalytics(
       .toISOString()
       .split("T")[0];
 
-    // SQL helper: convert stored UTC timestamp to user's timezone
-    // Use sql.raw for the timezone literal so all references produce identical
-    // SQL expressions — parameterized values get unique indices ($1, $3, $5...)
-    // which PostgreSQL treats as distinct in GROUP BY.
-    // Timezone is validated above via Intl.DateTimeFormat so this is injection-safe.
-    const tzLiteral = sql.raw(`'${tz}'`);
-    const createdAtLocal = sql`${contactEvent.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}`;
+    const [
+      totalEvents,
+      eventsThisPeriod,
+      activeContacts,
+      dailyEventsData,
+      topEventNamesData,
+    ] = await Promise.all([
+      countAllContactEvents(organizationId),
+      countContactEventsInPeriod(organizationId, startStr, tz),
+      countActiveContactsWithEvents(organizationId, startStr, tz),
+      getDailyContactEventCounts(organizationId, startStr, tz),
+      getTopContactEventNames(organizationId, startStr, tz, 5),
+    ]);
 
-    // Get total events (all time)
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(contactEvent)
-      .where(eq(contactEvent.organizationId, organizationId));
-
-    const totalEvents = totalResult?.count ?? 0;
-
-    // Get events in this period
-    const [periodEventsResult] = await db
-      .select({ count: count() })
-      .from(contactEvent)
-      .where(
-        and(
-          eq(contactEvent.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      );
-
-    const eventsThisPeriod = periodEventsResult?.count ?? 0;
-
-    // Get distinct contacts with events in this period
-    const [activeContactsResult] = await db
-      .select({
-        count: sql<number>`COUNT(DISTINCT ${contactEvent.contactId})`,
-      })
-      .from(contactEvent)
-      .where(
-        and(
-          eq(contactEvent.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      );
-
-    const activeContacts = Number(activeContactsResult?.count ?? 0);
-
-    // Calculate average events per contact
     const avgEventsPerContact =
       activeContacts > 0
         ? Math.round((eventsThisPeriod / activeContacts) * 10) / 10
         : 0;
 
-    // Get daily events data for chart, grouped by user's local date
-    const dailyEventsData = await db
-      .select({
-        date: sql<string>`DATE(${createdAtLocal})::text`,
-        count: count(),
-      })
-      .from(contactEvent)
-      .where(
-        and(
-          eq(contactEvent.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      )
-      .groupBy(sql`DATE(${createdAtLocal})`)
-      .orderBy(sql`DATE(${createdAtLocal})`);
-
     // Fill in missing dates with 0 counts
     const dailyEvents: Array<{ date: string; count: number }> = [];
-    const dateMap = new Map(
-      dailyEventsData.map((d) => [
-        String(d.date).split("T")[0],
-        Number(d.count),
-      ])
-    );
+    const dateMap = new Map(dailyEventsData.map((d) => [d.date, d.count]));
 
-    // Walk from startStr to todayStr (both in user's timezone)
     const [sy, sm, sd] = startStr.split("-").map(Number);
     const cursor = new Date(Date.UTC(sy, sm - 1, sd));
     const [ey, em, ed] = todayStr.split("-").map(Number);
@@ -343,28 +212,6 @@ export async function getEventAnalytics(
       cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
-    // Get top 5 event names by count in this period
-    const topEventNamesData = await db
-      .select({
-        name: contactEvent.eventName,
-        count: count(),
-      })
-      .from(contactEvent)
-      .where(
-        and(
-          eq(contactEvent.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      )
-      .groupBy(contactEvent.eventName)
-      .orderBy(desc(count()))
-      .limit(5);
-
-    const topEventNames = topEventNamesData.map((e) => ({
-      name: e.name,
-      count: Number(e.count),
-    }));
-
     return {
       success: true,
       analytics: {
@@ -373,7 +220,7 @@ export async function getEventAnalytics(
         activeContacts,
         avgEventsPerContact,
         dailyEvents,
-        topEventNames,
+        topEventNames: topEventNamesData,
       },
     };
   } catch (error) {
