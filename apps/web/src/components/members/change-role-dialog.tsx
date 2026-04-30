@@ -104,7 +104,7 @@ export function ChangeRoleDialog({
               {newRole === "admin" &&
                 "Admins can manage members and settings but cannot delete the organization"}
               {newRole === "member" &&
-                "Members have read-only access to the organization"}
+                "Full content access — contacts, templates, broadcasts, and workflows. No admin operations."}
               {PRESET_ROLES.find((r) => r.name === newRole)?.description}
             </p>
           </div>

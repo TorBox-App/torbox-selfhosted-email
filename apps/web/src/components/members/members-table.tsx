@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,16 @@ import {
   TableRow,
 } from "@wraps/ui/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
-import { MoreVertical, Shield, Trash2, UserCog, Users } from "lucide-react";
+import {
+  CreditCard,
+  Eye,
+  Megaphone,
+  MoreVertical,
+  Shield,
+  Trash2,
+  UserCog,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { MemberWithUser } from "@/actions/members";
@@ -67,27 +77,28 @@ export function MembersTable({
 
   const canManageMembers = userRole === "owner" || userRole === "admin";
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "owner":
-        return "default";
-      case "admin":
-        return "secondary";
-      default:
-        return "outline";
-    }
+  const roleConfig: Record<
+    string,
+    { icon: React.ReactNode; variant: "default" | "secondary" | "outline" }
+  > = {
+    owner: { icon: <Shield className="mr-1 h-3 w-3" />, variant: "default" },
+    admin: { icon: <UserCog className="mr-1 h-3 w-3" />, variant: "secondary" },
+    member: { icon: <Users className="mr-1 h-3 w-3" />, variant: "outline" },
+    marketing: {
+      icon: <Megaphone className="mr-1 h-3 w-3" />,
+      variant: "outline",
+    },
+    "read-only": { icon: <Eye className="mr-1 h-3 w-3" />, variant: "outline" },
+    billing: {
+      icon: <CreditCard className="mr-1 h-3 w-3" />,
+      variant: "outline",
+    },
   };
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "owner":
-        return <Shield className="mr-1 h-3 w-3" />;
-      case "admin":
-        return <UserCog className="mr-1 h-3 w-3" />;
-      default:
-        return <Users className="mr-1 h-3 w-3" />;
-    }
-  };
+  const getRoleLabel = (role: string) =>
+    role === "read-only"
+      ? "Read Only"
+      : role.charAt(0).toUpperCase() + role.slice(1);
 
   const handleRemoveMember = async () => {
     if (!memberToRemove) {
@@ -159,10 +170,12 @@ export function MembersTable({
               <TableCell>
                 <Badge
                   className="flex w-fit items-center"
-                  variant={getRoleBadgeVariant(member.role)}
+                  variant={
+                    (roleConfig[member.role] ?? roleConfig.member).variant
+                  }
                 >
-                  {getRoleIcon(member.role)}
-                  {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                  {(roleConfig[member.role] ?? roleConfig.member).icon}
+                  {getRoleLabel(member.role)}
                 </Badge>
               </TableCell>
               <TableCell className="text-muted-foreground text-sm">
