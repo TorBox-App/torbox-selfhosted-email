@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCreateTemplate } from "@/hooks/use-template-queries";
@@ -87,8 +88,9 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
       });
 
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
-    } catch {
+    } catch (err) {
       setLoadingTemplateId(null);
+      toast.error(err instanceof Error ? err.message : "Failed to create template");
     }
   };
 
@@ -109,8 +111,9 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
       });
 
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
-    } catch {
+    } catch (err) {
       setLoadingTemplateId(null);
+      toast.error(err instanceof Error ? err.message : "Failed to create template");
     }
   };
 
@@ -134,8 +137,8 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
       });
 
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
-    } catch {
-      // error handled by mutation
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create template");
     }
   };
 
