@@ -17,7 +17,7 @@ import {
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { errors, extractPulumiErrorSummary, redactSensitiveValues } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -2000,8 +2000,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       throw errors.stackLocked();
     }
 
-    trackError("UPGRADE_FAILED", "email:upgrade", { step: "deploy" });
-    throw new Error(`Pulumi upgrade failed: ${msg}`);
+    trackError("UPGRADE_FAILED", "email:upgrade", {
+      step: "deploy",
+      error_detail: redactSensitiveValues(msg).slice(0, 3000),
+    });
+    throw new Error(`Pulumi upgrade failed: ${extractPulumiErrorSummary(msg)}`);
   }
 
   // 13. Create DNS records using stored provider (or detect if not stored)

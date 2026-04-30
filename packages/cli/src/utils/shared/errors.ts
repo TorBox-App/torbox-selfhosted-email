@@ -271,6 +271,64 @@ export function sanitizeErrorMessage(error: unknown): string {
 }
 
 /**
+ * Extract the meaningful error lines from Pulumi's verbose command output.
+ *
+ * Pulumi's CommandResult.toString() dumps code + full stdout + stderr which
+ * can be hundreds of lines. This finds the lines that actually describe the
+ * failure so the user sees a useful message rather than a truncated wall of
+ * resource-update noise.
+ */
+export function extractPulumiErrorSummary(pulumiOutput: string): string {
+  const lines = pulumiOutput.split("\n");
+
+  // Collect lines that look like actual errors (not deprecation warnings)
+  const errorLines: string[] = [];
+  let inErrorBlock = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // "error: one or more errors occurred:" signals the start of the error block
+    if (trimmed.match(/^error:\s+\d+ error/i) || trimmed.match(/^error: one or more/i)) {
+      inErrorBlock = true;
+    }
+
+    if (inErrorBlock) {
+      // Stop at the trailing metadata lines
+      if (trimmed.startsWith("err?:") || trimmed.startsWith("code:") || trimmed.startsWith("stdout:")) {
+        break;
+      }
+      if (trimmed) {
+        errorLines.push(trimmed);
+      }
+      continue;
+    }
+
+    // Pick up individual "Failed to …" or "error:" lines outside the block
+    if (
+      (trimmed.startsWith("error:") && !trimmed.includes("verification warning") && !trimmed.includes("is deprecated")) ||
+      trimmed.startsWith("Error:") ||
+      trimmed.startsWith("Failed to ") ||
+      trimmed.startsWith("panic:")
+    ) {
+      errorLines.push(trimmed);
+    }
+  }
+
+  if (errorLines.length > 0) {
+    const summary = errorLines.slice(0, 15).join("\n");
+    return redactSensitiveValues(summary);
+  }
+
+  // Fallback: redact + truncate (more generous than before)
+  const redacted = redactSensitiveValues(pulumiOutput);
+  if (redacted.length > 1500) {
+    return `${redacted.slice(0, 1500)}...`;
+  }
+  return redacted;
+}
+
+/**
  * Global error handler for CLI errors
  * Formats and displays errors with suggestions and docs
  * Tracks ALL errors to telemetry (with sanitized context)
