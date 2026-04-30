@@ -50,7 +50,7 @@ type SegmentsTableProps = {
   organizationId: string;
   propertyKeys: string[];
   topics: TopicWithMeta[];
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function SegmentsTable({

@@ -52,7 +52,7 @@ type OrganizationSettingsAwsAccountsProps = {
     id: string;
     name: string;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   planId?: PlanId | string;
 };
 

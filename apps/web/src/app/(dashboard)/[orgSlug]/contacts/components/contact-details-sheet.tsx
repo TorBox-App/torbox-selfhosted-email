@@ -75,7 +75,7 @@ type ContactDetailsSheetProps = {
   orgSlug: string;
   proFeaturesEnabled?: boolean;
   topics: TopicWithMeta[];
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function ContactDetailsSheet({

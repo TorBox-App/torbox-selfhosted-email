@@ -13,6 +13,7 @@ import {
   type ListTopicsResult,
   type UpdateTopicResult,
 } from "@/lib/topics";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
@@ -39,6 +40,8 @@ export async function listTopics(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "topics", ["read"]);
+    if (permError) return permError;
 
     const topics = await db.query.topic.findMany({
       where: (t, { eq }) => eq(t.organizationId, organizationId),
@@ -112,6 +115,8 @@ export async function getTopic(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "topics", ["read"]);
+    if (permError) return permError;
 
     const t = await db.query.topic.findFirst({
       where: (topic, { and, eq }) =>
@@ -186,13 +191,8 @@ export async function createTopic(
       };
     }
 
-    // Only owners and admins can create topics
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can create topics",
-      };
-    }
+    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
+    if (topicWriteError) return topicWriteError;
 
     // Check if topics feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "topics");
@@ -246,7 +246,7 @@ export async function createTopic(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/topics", "page");
+    revalidatePath(`/${access.orgSlug}/topics`, "page");
 
     // Return the created topic
     return await getTopic(newTopic.id, organizationId);
@@ -280,13 +280,8 @@ export async function updateTopic(
       };
     }
 
-    // Only owners and admins can update topics
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can update topics",
-      };
-    }
+    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
+    if (topicWriteError) return topicWriteError;
 
     // Verify topic exists
     const existing = await db.query.topic.findFirst({
@@ -357,7 +352,7 @@ export async function updateTopic(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/topics", "page");
+    revalidatePath(`/${access.orgSlug}/topics`, "page");
 
     // Return updated topic
     return await getTopic(topicId, organizationId);
@@ -387,13 +382,8 @@ export async function deleteTopic(
       };
     }
 
-    // Only owners and admins can delete topics
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can delete topics",
-      };
-    }
+    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
+    if (topicWriteError) return topicWriteError;
 
     // Verify topic exists
     const existing = await db.query.topic.findFirst({
@@ -413,7 +403,7 @@ export async function deleteTopic(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/topics", "page");
+    revalidatePath(`/${access.orgSlug}/topics`, "page");
 
     return { success: true };
   } catch (error) {
@@ -459,6 +449,8 @@ export async function getTopicSubscribers(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "topics", ["read"]);
+    if (permError) return permError;
 
     const { page = 1, pageSize = 50, status } = options;
     const offset = (page - 1) * pageSize;

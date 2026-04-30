@@ -426,11 +426,13 @@ function ScanFeaturesAction({
 
 type WebhookSecretFormProps = {
   awsAccountId: string;
+  organizationId: string;
   isConnected: boolean;
 };
 
 function WebhookSecretForm({
   awsAccountId,
+  organizationId,
   isConnected,
 }: WebhookSecretFormProps) {
   const router = useRouter();
@@ -451,7 +453,8 @@ function WebhookSecretForm({
       setResult(null);
       const response = await saveWebhookSecretAction(
         awsAccountId,
-        webhookSecret
+        webhookSecret,
+        organizationId
       );
 
       if (response.success) {
@@ -1118,6 +1121,7 @@ export function GettingStartedDashboard({
                     <WebhookSecretForm
                       awsAccountId={awsAccount.id}
                       isConnected={hasPlatformConnection}
+                      organizationId={organizationId}
                     />
                   ) : (
                     <CliCommandGuide

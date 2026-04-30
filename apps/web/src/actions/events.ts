@@ -11,6 +11,7 @@ import type {
 } from "@/lib/events";
 import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
@@ -37,6 +38,8 @@ export async function listEvents(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const { page = 1, pageSize = 50 } = options;
     const offset = (page - 1) * pageSize;
@@ -115,6 +118,8 @@ export async function getEvent(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     // Join requires both contactId match AND contact belongs to same org (defense in depth)
     const [event] = await db
@@ -173,6 +178,8 @@ export async function getEventNames(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const results = await db
       .selectDistinct({ eventName: contactEvent.eventName })
@@ -226,6 +233,8 @@ export async function getEventAnalytics(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const now = new Date();
 

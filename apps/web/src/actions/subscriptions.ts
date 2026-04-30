@@ -1,9 +1,11 @@
 "use server";
 
-import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
-import { subscription } from "@wraps/db/schema/auth";
-import { eq } from "drizzle-orm";
+import {
+  createFreeSubscription as dbCreateFreeSubscription,
+  getActiveSubscription,
+} from "@wraps/db";
+import { checkPermission } from "./shared/permissions";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type SubscriptionData = {
   id: string;
@@ -27,10 +29,6 @@ export type GetSubscriptionResult =
       error: string;
     };
 
-/**
- * Get subscription for an organization.
- * This fetches directly from our DB to include custom fields like `annual`.
- */
 export type CreateFreeSubscriptionResult =
   | {
       success: true;
@@ -49,99 +47,24 @@ export async function createFreeSubscription(
   organizationId: string
 ): Promise<CreateFreeSubscriptionResult> {
   try {
-    // 1. Get session
-    const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
-    });
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) return { success: false, error: "No access" };
 
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in to create a subscription",
-      };
-    }
+    const permError = checkPermission(access.role, "billing", ["write"]);
+    if (permError) return permError;
 
-    // 2. Verify user is a member of the organization
-    const membership = await db.query.member.findFirst({
-      where: (members, { and, eq: eqOp }) =>
-        and(
-          eqOp(members.userId, session.user.id),
-          eqOp(members.organizationId, organizationId)
-        ),
-    });
-
-    if (!membership) {
-      return {
-        success: false,
-        error: "You are not a member of this organization",
-      };
-    }
-
-    // 3. Check if subscription already exists
-    const existingSub = await db.query.subscription.findFirst({
-      where: eq(subscription.referenceId, organizationId),
-    });
-
+    const existingSub = await getActiveSubscription(organizationId);
     if (existingSub) {
-      // Already has a subscription, return it
-      return {
-        success: true,
-        subscription: {
-          id: existingSub.id,
-          plan: existingSub.plan,
-          status: existingSub.status,
-          annual: existingSub.annual,
-          periodStart: existingSub.periodStart,
-          periodEnd: existingSub.periodEnd,
-          cancelAtPeriodEnd: existingSub.cancelAtPeriodEnd,
-          trialStart: existingSub.trialStart,
-          trialEnd: existingSub.trialEnd,
-        },
-      };
+      return { success: true, subscription: toSubscriptionData(existingSub) };
     }
 
-    // 4. Create free subscription
-    const subscriptionId = crypto.randomUUID();
-    const now = new Date();
-
-    await db.insert(subscription).values({
-      id: subscriptionId,
-      plan: "free",
-      referenceId: organizationId,
-      status: "active",
-      // No Stripe fields for free plan
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      // No billing period for free plan
-      periodStart: null,
-      periodEnd: null,
-      cancelAtPeriodEnd: false,
-      seats: 1,
-      annual: false,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    return {
-      success: true,
-      subscription: {
-        id: subscriptionId,
-        plan: "free",
-        status: "active",
-        annual: false,
-        periodStart: null,
-        periodEnd: null,
-        cancelAtPeriodEnd: false,
-        trialStart: null,
-        trialEnd: null,
-      },
-    };
+    const created = await dbCreateFreeSubscription(
+      organizationId,
+      access.userId
+    );
+    return { success: true, subscription: toSubscriptionData(created) };
   } catch (error) {
-    console.error("Error creating free subscription:", error);
-    return {
-      success: false,
-      error: "Failed to create subscription",
-    };
+    return { success: false, error: "Failed to create subscription" };
   }
 }
 
@@ -149,65 +72,42 @@ export async function getOrganizationSubscription(
   organizationId: string
 ): Promise<GetSubscriptionResult> {
   try {
-    // 1. Get session
-    const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
-    });
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) return { success: false, error: "No access" };
 
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in to view subscription",
-      };
-    }
+    const permError = checkPermission(access.role, "billing", ["read"]);
+    if (permError) return permError;
 
-    // 2. Verify user is a member of the organization
-    const membership = await db.query.member.findFirst({
-      where: (members, { and, eq: eqOp }) =>
-        and(
-          eqOp(members.userId, session.user.id),
-          eqOp(members.organizationId, organizationId)
-        ),
-    });
-
-    if (!membership) {
-      return {
-        success: false,
-        error: "You are not a member of this organization",
-      };
-    }
-
-    // 3. Fetch subscription from DB
-    const sub = await db.query.subscription.findFirst({
-      where: eq(subscription.referenceId, organizationId),
-    });
-
-    if (!sub) {
-      return {
-        success: true,
-        subscription: null,
-      };
-    }
-
+    const sub = await getActiveSubscription(organizationId);
     return {
       success: true,
-      subscription: {
-        id: sub.id,
-        plan: sub.plan,
-        status: sub.status,
-        annual: sub.annual,
-        periodStart: sub.periodStart,
-        periodEnd: sub.periodEnd,
-        cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-        trialStart: sub.trialStart,
-        trialEnd: sub.trialEnd,
-      },
+      subscription: sub ? toSubscriptionData(sub) : null,
     };
   } catch (error) {
-    console.error("Error fetching subscription:", error);
-    return {
-      success: false,
-      error: "Failed to fetch subscription",
-    };
+    return { success: false, error: "Failed to fetch subscription" };
   }
+}
+
+function toSubscriptionData(sub: {
+  id: string;
+  plan: string;
+  status: string;
+  annual: boolean | null;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  cancelAtPeriodEnd: boolean | null;
+  trialStart: Date | null;
+  trialEnd: Date | null;
+}): SubscriptionData {
+  return {
+    id: sub.id,
+    plan: sub.plan,
+    status: sub.status,
+    annual: sub.annual,
+    periodStart: sub.periodStart,
+    periodEnd: sub.periodEnd,
+    cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+    trialStart: sub.trialStart,
+    trialEnd: sub.trialEnd,
+  };
 }

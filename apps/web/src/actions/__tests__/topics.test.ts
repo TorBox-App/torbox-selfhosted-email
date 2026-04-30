@@ -74,7 +74,7 @@ const testRegularMember = {
   id: "test-topics-regular-member-1",
   organizationId: testOrganization.id,
   userId: testMemberUser.id,
-  role: "member" as const,
+  role: "billing" as const,
   createdAt: new Date(),
 };
 
@@ -299,7 +299,7 @@ describe("Topics Server Actions", () => {
       }
     });
 
-    it("should reject creation by regular member", async () => {
+    it("should reject creation by billing-role user (no content access)", async () => {
       currentMockUserId = testMemberUser.id;
 
       const result = await createTopic(testOrganization.id, {
@@ -308,7 +308,7 @@ describe("Topics Server Actions", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toContain("Only owners and admins");
+        expect(result.error).toContain("permission");
       }
     });
   });
@@ -345,9 +345,7 @@ describe("Topics Server Actions", () => {
       }
     });
 
-    it("should allow regular members to view topics", async () => {
-      currentMockUserId = testMemberUser.id;
-
+    it("should return topics for authenticated org members", async () => {
       const result = await listTopics(testOrganization.id);
 
       expect(result.success).toBe(true);
@@ -474,7 +472,7 @@ describe("Topics Server Actions", () => {
       }
     });
 
-    it("should reject update by regular member", async () => {
+    it("should reject update by billing-role user (no content access)", async () => {
       const createResult = await createTopic(testOrganization.id, {
         name: "Protected Topic",
       });
@@ -493,7 +491,7 @@ describe("Topics Server Actions", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toContain("Only owners and admins");
+        expect(result.error).toContain("permission");
       }
     });
   });
@@ -570,7 +568,7 @@ describe("Topics Server Actions", () => {
       await db.delete(contact).where(eq(contact.id, "test-cascade-contact"));
     });
 
-    it("should reject deletion by regular member", async () => {
+    it("should reject deletion by billing-role user (no content access)", async () => {
       const createResult = await createTopic(testOrganization.id, {
         name: "Protected Topic",
       });
@@ -588,7 +586,7 @@ describe("Topics Server Actions", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toContain("Only owners and admins");
+        expect(result.error).toContain("permission");
       }
     });
 

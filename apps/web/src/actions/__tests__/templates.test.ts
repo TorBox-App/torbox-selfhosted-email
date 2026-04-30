@@ -70,7 +70,7 @@ const testMemberRegular = {
   id: "test-templates-bulk-member-regular",
   organizationId: testOrganization.id,
   userId: testUserMember.id,
-  role: "member" as const,
+  role: "billing" as const,
   createdAt: new Date(),
 };
 
@@ -295,10 +295,10 @@ describe("Template Bulk Actions", () => {
       }
     });
 
-    it("should require owner or admin role", async () => {
+    it("should deny billing-role user (no content access)", async () => {
       const id1 = await createTestTemplate({ name: "Cannot Delete" });
 
-      // Switch to regular member
+      // Switch to billing user (no content access)
       currentUserId = testUserMember.id;
       currentUserEmail = testUserMember.email;
 
@@ -306,9 +306,7 @@ describe("Template Bulk Actions", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe(
-          "Only owners and admins can delete templates"
-        );
+        expect(result.error).toContain("permission");
       }
 
       // Verify template still exists

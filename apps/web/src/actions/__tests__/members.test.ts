@@ -325,6 +325,152 @@ describe("inviteMember — email validation", () => {
   });
 });
 
+// ─── Preset Roles: updateMemberRole ────────────────────────────────────────
+
+describe("updateMemberRole — preset roles", () => {
+  const userC = {
+    id: "preset-test-user-c",
+    email: "preset-user-c@example.com",
+    name: "Preset User C",
+    emailVerified: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    image: null,
+    twoFactorEnabled: false,
+    stripeCustomerId: null,
+  };
+
+  const memberC = {
+    id: "preset-test-member-c",
+    organizationId: orgA.id,
+    userId: userC.id,
+    role: "member" as const,
+    createdAt: new Date(),
+  };
+
+  beforeAll(async () => {
+    await db
+      .insert(user)
+      .values(userC)
+      .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+    await db
+      .insert(member)
+      .values(memberC)
+      .onConflictDoUpdate({ target: member.id, set: { role: memberC.role } });
+  });
+
+  afterAll(async () => {
+    await db.delete(member).where(eq(member.id, memberC.id));
+    await db.delete(user).where(eq(user.id, userC.id));
+  });
+
+  it("rejects an unrecognized role string", async () => {
+    const result = await updateMemberRole(
+      memberC.id,
+      "completelyfake",
+      orgA.id
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/invalid role/i);
+    }
+  });
+
+  it("stores 'marketing' as a valid preset role", async () => {
+    const result = await updateMemberRole(memberC.id, "marketing", orgA.id);
+    expect(result.success).toBe(true);
+    const updated = await db.query.member.findFirst({
+      where: (m, { eq: eqOp }) => eqOp(m.id, memberC.id),
+    });
+    expect(updated?.role).toBe("marketing");
+  });
+
+  it("stores 'read-only' as a valid preset role", async () => {
+    const result = await updateMemberRole(memberC.id, "read-only", orgA.id);
+    expect(result.success).toBe(true);
+    const updated = await db.query.member.findFirst({
+      where: (m, { eq: eqOp }) => eqOp(m.id, memberC.id),
+    });
+    expect(updated?.role).toBe("read-only");
+  });
+});
+
+// ─── Preset Roles: inviteMember ─────────────────────────────────────────────
+
+describe("inviteMember — preset roles", () => {
+  it("rejects 'owner' as an invitable role", async () => {
+    const result = await inviteMember(
+      "owner-invite@example.com",
+      "owner",
+      orgA.id
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(
+        /owner role cannot be assigned via invitation/i
+      );
+    }
+  });
+
+  it("accepts 'marketing' as a valid invite role", async () => {
+    mockSendInvitationEmail.mockClear();
+    const result = await inviteMember(
+      "marketing-invite@example.com",
+      "marketing",
+      orgA.id
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const inv = await db.query.invitation.findFirst({
+        where: (i, { eq: eqOp }) => eqOp(i.id, result.invitationId),
+      });
+      expect(inv?.role).toBe("marketing");
+      expect(inv?.email).toBe("marketing-invite@example.com");
+    }
+  });
+
+  afterAll(async () => {
+    await db
+      .delete(invitation)
+      .where(eq(invitation.email, "marketing-invite@example.com"));
+  });
+});
+
+// ─── verifyOrgAccess null path ──────────────────────────────────────────────
+// These tests ensure every function returns { success: false, error: "No access" }
+// when the caller has no membership in the target org (verifyOrgAccess returns null).
+
+describe("inviteMember — non-member org returns No access", () => {
+  it("returns { success: false, error: 'No access' } for an org the user is not a member of", async () => {
+    // userA is authenticated (mock returns userA's session) but has no membership
+    // in "nonexistent-org-id" — verifyOrgAccess will return null.
+    const result = await inviteMember(
+      "valid@example.com",
+      "member",
+      "nonexistent-org-id"
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe("No access");
+    }
+  });
+});
+
+describe("updateMemberRole — non-member org returns No access", () => {
+  it("returns { success: false, error: 'No access' } for an org the user is not a member of", async () => {
+    // userA is authenticated but not a member of "nonexistent-org-id"
+    const result = await updateMemberRole(
+      memberB.id,
+      "admin",
+      "nonexistent-org-id"
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe("No access");
+    }
+  });
+});
+
 // ─── Enriched invite email ──────────────────────────────────────────────────
 
 describe("inviteMember — enriched invite email", () => {

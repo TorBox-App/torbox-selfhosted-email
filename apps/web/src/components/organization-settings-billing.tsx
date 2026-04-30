@@ -49,7 +49,7 @@ type OrganizationSettingsBillingProps = {
     name: string;
     slug: string | null;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function OrganizationSettingsBilling({

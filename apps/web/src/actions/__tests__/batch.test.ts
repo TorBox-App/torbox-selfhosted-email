@@ -96,7 +96,7 @@ const testRegularMember = {
   id: "test-batch-drafts-regular-member-1",
   organizationId: testOrganization.id,
   userId: testMemberUser.id,
-  role: "member" as const,
+  role: "billing" as const,
   createdAt: new Date(),
 };
 
@@ -346,14 +346,14 @@ describe("saveDraftBatchSend", () => {
     expect(row?.createdBy).toBe(testUser.id);
   });
 
-  it("rejects a member-role caller", async () => {
+  it("rejects a billing-role caller (no broadcast access)", async () => {
     currentMockUserId = testMemberUser.id;
 
     const result = await saveDraftBatchSend(testOrganization.id, {});
 
     expect(result.success).toBe(false);
     if (result.success) return;
-    expect(result.error).toMatch(/owners and admins/i);
+    expect(result.error).toContain("permission");
 
     const rowsAfter = await db
       .select({ count: sql<number>`count(*)::int` })

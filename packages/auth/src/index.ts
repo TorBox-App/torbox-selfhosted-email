@@ -23,6 +23,7 @@ import {
 import { desc } from "drizzle-orm";
 import { PostHog } from "posthog-node";
 import Stripe from "stripe";
+import { ac, roles } from "./access";
 import { onStripeEvent } from "./stripe-webhooks";
 
 // --- Attribution tracking ---
@@ -549,7 +550,7 @@ export const auth = betterAuth<BetterAuthOptions>({
     twoFactor({
       issuer: "Wraps",
     }),
-    organization(),
+    organization({ ac, roles }),
     sso({
       domainVerification: { enabled: true },
       organizationProvisioning: { disabled: false, defaultRole: "member" },

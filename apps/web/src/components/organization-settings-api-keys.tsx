@@ -73,7 +73,7 @@ type OrganizationSettingsApiKeysProps = {
     id: string;
     name: string;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 // Permission categories for display

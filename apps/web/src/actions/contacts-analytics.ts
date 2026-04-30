@@ -11,6 +11,7 @@ import {
 } from "@wraps/db";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -77,6 +78,8 @@ export async function getContactTimeline(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const { limit = 20, offset = 0 } = options;
     const events: TimelineEvent[] = [];
@@ -309,6 +312,8 @@ export async function getContactAnalytics(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const now = new Date();
 

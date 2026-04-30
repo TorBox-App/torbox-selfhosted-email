@@ -7,6 +7,7 @@ import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
 import { hashEmail } from "./shared/hash";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 /**
@@ -29,6 +30,8 @@ export async function bulkCreateContactsFromEmails(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["write"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     if (emails.length === 0) {
@@ -149,6 +152,8 @@ export async function checkExistingContacts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     if (emails.length === 0) {
       return { success: true, existing: {} };
@@ -212,13 +217,8 @@ export async function bulkDeleteContacts(
     }
     orgSlug = access.orgSlug;
 
-    // Only owners and admins can bulk delete
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can delete contacts",
-      };
-    }
+    const permError = checkPermission(access.role, "contacts", ["delete"]);
+    if (permError) return permError;
 
     if (contactIds.length === 0) {
       return { success: false, error: "No contacts selected" };

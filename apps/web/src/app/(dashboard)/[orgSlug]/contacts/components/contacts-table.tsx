@@ -109,7 +109,7 @@ type ContactsTableProps = {
   proFeaturesEnabled?: boolean;
   topics: TopicWithMeta[];
   total: number;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function ContactsTable({

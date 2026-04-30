@@ -76,7 +76,7 @@ describe("GET /api/sso/initiate", () => {
     expect(response.headers.get("location")).toBe(OKTA_AUTH_URL);
     expect(mockSignInSSO).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.objectContaining({ issuer: TEST_ISSUER }),
+        body: expect.objectContaining({ providerId: TEST_PROVIDER_ID }),
       })
     );
   });

@@ -57,7 +57,7 @@ type OrganizationSettingsBrandKitsProps = {
     slug: string | null;
     logo: string | null;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 type BrandKitFormData = {

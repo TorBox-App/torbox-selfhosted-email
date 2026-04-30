@@ -17,6 +17,8 @@ export { and, desc, eq, or, sql as sqlExpr } from "drizzle-orm";
 export function escapeIlike(value: string): string {
   return value.replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
+// Re-export repositories
+export * from "./repositories";
 // Re-export all schemas for use elsewhere
 export * from "./schema";
 // Re-export segment evaluator (SQL-based)

@@ -18,6 +18,7 @@ import type {
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
 import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 const MAX_EXPORT_ROWS = 50_000;
@@ -41,6 +42,8 @@ export async function exportAllContacts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["export"]);
+    if (permError) return permError;
 
     const { search, emailStatus, topicId } = options;
 
@@ -174,6 +177,8 @@ export async function exportAllEvents(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "events", ["export"]);
+    if (permError) return permError;
 
     const conditions = buildEventsFilterConditions(organizationId, options);
 

@@ -45,7 +45,7 @@ type TopicsTableProps = {
   orgSlug: string;
   organizationId: string;
   topics: TopicWithMeta[];
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function TopicsTable({

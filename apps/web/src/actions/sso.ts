@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkPermission } from "./shared/permissions";
 
 type SsoScimApi = {
   registerSSOProvider(opts: {
@@ -67,9 +68,8 @@ export async function saveSsoProvider(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
-    if (!["owner", "admin"].includes(access.role)) {
-      return { success: false, error: "Only admins can configure SSO" };
-    }
+    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
+    if (ssoWriteError) return ssoWriteError;
 
     const hdrs = await import("next/headers").then((m) => m.headers());
     await ssoApi.registerSSOProvider({
@@ -110,9 +110,8 @@ export async function deleteSsoProvider(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
-    if (!["owner", "admin"].includes(access.role)) {
-      return { success: false, error: "Only admins can delete SSO provider" };
-    }
+    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
+    if (ssoWriteError) return ssoWriteError;
 
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
@@ -149,6 +148,8 @@ export async function requestDomainVerification(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
+    const permError = checkPermission(access.role, "sso", ["write"]);
+    if (permError) return permError;
 
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
@@ -193,6 +194,8 @@ export async function verifyDomain(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
+    const permError = checkPermission(access.role, "sso", ["write"]);
+    if (permError) return permError;
 
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
@@ -226,6 +229,7 @@ export async function getExistingVerificationToken(
 ): Promise<GetExistingVerificationTokenResult> {
   const access = await verifyOrgAccess(orgId);
   if (!access) return null;
+  if (checkPermission(access.role, "sso", ["write"])) return null;
   if (!(await requireProviderOwnership(orgId, providerId))) return null;
 
   const identifier = `_better-auth-token-${providerId}`;
@@ -251,6 +255,8 @@ export async function verifyDomainViaSES(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
+    const permError = checkPermission(access.role, "sso", ["write"]);
+    if (permError) return permError;
 
     const provider = await requireProviderOwnership(orgId, providerId);
     if (!provider) return { success: false, error: "Provider not found" };
@@ -336,9 +342,8 @@ export async function generateScimToken(
   try {
     const access = await verifyOrgAccess(orgId);
     if (!access) return { success: false, error: "Unauthorized" };
-    if (!["owner", "admin"].includes(access.role)) {
-      return { success: false, error: "Only admins can generate SCIM tokens" };
-    }
+    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
+    if (ssoWriteError) return ssoWriteError;
 
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };

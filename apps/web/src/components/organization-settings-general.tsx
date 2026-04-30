@@ -43,7 +43,7 @@ type OrganizationSettingsGeneralProps = {
     slug: string | null;
     logo: string | null;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function OrganizationSettingsGeneral({

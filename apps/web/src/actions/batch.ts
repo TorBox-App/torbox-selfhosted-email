@@ -50,6 +50,7 @@ import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 import { publishTemplateToSES } from "./templates";
 
@@ -88,6 +89,8 @@ export async function listBatchSends(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const { page = 1, pageSize = 20, status, channel } = options;
     const offset = (page - 1) * pageSize;
@@ -204,6 +207,8 @@ export async function getBatchSend(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const b = await db.query.batchSend.findFirst({
       where: (batch, { and, eq }) =>
@@ -444,13 +449,8 @@ export async function createBatchSend(
       };
     }
 
-    // Only owners and admins can create batch sends
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can send emails",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["send"]);
+    if (permError) return permError;
 
     const prep = await validateAndPrepareSend(organizationId, {
       awsAccountId: data.awsAccountId,
@@ -531,7 +531,7 @@ export async function createBatchSend(
 
     const result = (await response.json()) as { id: string };
 
-    revalidatePath("/[orgSlug]/emails/broadcasts", "page");
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
 
     // Track activation event (fire-and-forget) — shared with promote path.
     trackBroadcastSent(access.userEmail, organizationId, {
@@ -573,12 +573,8 @@ export async function saveDraftBatchSend(
       };
     }
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can save broadcasts",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["write"]);
+    if (permError) return permError;
 
     const featureCheck = await checkFeatureAccess(organizationId, "batch");
     if (!featureCheck.allowed) {
@@ -719,12 +715,8 @@ export async function updateDraftBatchSend(
       };
     }
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can edit broadcasts",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["write"]);
+    if (permError) return permError;
 
     const existing = await db.query.batchSend.findFirst({
       where: and(
@@ -828,12 +820,8 @@ export async function promoteDraftToSend(
       };
     }
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can send broadcasts",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["send"]);
+    if (permError) return permError;
 
     // Load the draft, scoped by org + status
     const existing = await db.query.batchSend.findFirst({
@@ -1004,12 +992,8 @@ export async function deleteDraftBatchSend(
       };
     }
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can delete drafts",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["write"]);
+    if (permError) return permError;
 
     const deleted = await db
       .delete(batchSend)
@@ -1069,12 +1053,8 @@ export async function duplicateBatchSend(
       };
     }
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can duplicate broadcasts",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["write"]);
+    if (permError) return permError;
 
     const featureCheck = await checkFeatureAccess(organizationId, "batch");
     if (!featureCheck.allowed) {
@@ -1172,13 +1152,8 @@ export async function cancelBatchSend(
       };
     }
 
-    // Only owners and admins can cancel batch sends
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can cancel batch sends",
-      };
-    }
+    const permError = checkPermission(access.role, "broadcasts", ["write"]);
+    if (permError) return permError;
 
     // Verify batch exists and belongs to this organization before making API call
     // This prevents SSRF by ensuring we only use validated IDs from the database
@@ -1240,8 +1215,8 @@ export async function cancelBatchSend(
       }
     }
 
-    revalidatePath("/[orgSlug]/emails/broadcasts", "page");
-    revalidatePath(`/[orgSlug]/emails/broadcasts/${batchId}`, "page");
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
 
     return { success: true };
   } catch (error) {
@@ -1472,6 +1447,8 @@ export async function getRecipientCount(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const count = await countRecipients(organizationId, channel, filter);
     return { success: true, count };
@@ -1502,6 +1479,8 @@ export async function getSampleContacts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     // Base conditions for channel
     const baseConditions: SQL[] = [eq(contact.organizationId, organizationId)];
@@ -1608,6 +1587,8 @@ export async function listTemplatesForBatch(organizationId: string): Promise<
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const templates = await db.query.template.findMany({
       where: (t, { and, eq }) =>
@@ -1652,6 +1633,8 @@ export async function listTopicsForBatch(organizationId: string): Promise<
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const topics = await db.query.topic.findMany({
       where: (t, { eq }) => eq(t.organizationId, organizationId),
@@ -1722,6 +1705,8 @@ export async function listSegmentsForBatch(organizationId: string): Promise<
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const segments = await db.query.segment.findMany({
       where: (s, { eq }) => eq(s.organizationId, organizationId),
@@ -1780,6 +1765,8 @@ export async function extractTemplateVariables(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     // Fetch the template
     const templateData = await db.query.template.findFirst({
@@ -1965,6 +1952,8 @@ export async function getTemplateContent(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
 
     const templateData = await db.query.template.findFirst({
       where: (t, { and, eq }) =>

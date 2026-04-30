@@ -21,7 +21,7 @@ type OrganizationSettingsTabsProps = {
     slug: string | null;
     logo: string | null;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   planId?: string;
 };
 

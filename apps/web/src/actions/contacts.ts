@@ -18,6 +18,7 @@ import type {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { hashEmail, hashPhone } from "./shared/hash";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
@@ -64,6 +65,8 @@ export async function listContacts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const {
       page = 1,
@@ -221,6 +224,8 @@ export async function getContact(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const c = await db.query.contact.findFirst({
       where: (contact, { and, eq }) =>
@@ -347,6 +352,8 @@ export async function createContact(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["write"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     // Check contact limit
@@ -531,6 +538,8 @@ export async function updateContact(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["write"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     // Verify contact exists
@@ -757,6 +766,8 @@ export async function deleteContact(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["delete"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     // Verify contact exists

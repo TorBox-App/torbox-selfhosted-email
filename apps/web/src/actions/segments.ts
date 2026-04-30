@@ -15,6 +15,7 @@ import {
   type UpdateSegmentResult,
   validateCondition,
 } from "@/lib/segments";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
@@ -42,6 +43,8 @@ export async function listSegments(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "segments", ["read"]);
+    if (permError) return permError;
 
     const segments = await db
       .select()
@@ -86,6 +89,8 @@ export async function getSegment(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "segments", ["read"]);
+    if (permError) return permError;
 
     const [s] = await db
       .select()
@@ -148,13 +153,8 @@ export async function createSegment(
       };
     }
 
-    // Only owners and admins can create segments
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can create segments",
-      };
-    }
+    const segWriteError = checkPermission(access.role, "segments", ["write"]);
+    if (segWriteError) return segWriteError;
 
     // Check if segments feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "segments");
@@ -208,7 +208,7 @@ export async function createSegment(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/segments", "page");
+    revalidatePath(`/${access.orgSlug}/segments`, "page");
 
     // Return the created segment
     return await getSegment(newSegment.id, organizationId);
@@ -243,13 +243,8 @@ export async function updateSegment(
       };
     }
 
-    // Only owners and admins can update segments
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can update segments",
-      };
-    }
+    const segWriteError = checkPermission(access.role, "segments", ["write"]);
+    if (segWriteError) return segWriteError;
 
     // Verify segment exists
     const [existing] = await db
@@ -318,7 +313,7 @@ export async function updateSegment(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/segments", "page");
+    revalidatePath(`/${access.orgSlug}/segments`, "page");
 
     // Return updated segment
     return await getSegment(segmentId, organizationId);
@@ -350,13 +345,8 @@ export async function deleteSegment(
       };
     }
 
-    // Only owners and admins can delete segments
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can delete segments",
-      };
-    }
+    const segWriteError = checkPermission(access.role, "segments", ["write"]);
+    if (segWriteError) return segWriteError;
 
     // Verify segment exists
     const [existing] = await db
@@ -385,7 +375,7 @@ export async function deleteSegment(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/segments", "page");
+    revalidatePath(`/${access.orgSlug}/segments`, "page");
 
     return { success: true };
   } catch (error) {
@@ -415,6 +405,8 @@ export async function previewSegment(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "segments", ["read"]);
+    if (permError) return permError;
 
     // Validate condition
     const conditionError = validateCondition(condition);
@@ -477,6 +469,8 @@ export async function getPropertyKeys(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "segments", ["read"]);
+    if (permError) return permError;
 
     const rows = await db.execute<{ key: string }>(
       sql`SELECT DISTINCT json_object_keys(${contact.properties}) AS key
@@ -511,6 +505,8 @@ export async function recomputeSegmentCounts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "segments", ["read"]);
+    if (permError) return permError;
 
     // Get all segments for org
     const segments = await db
@@ -539,7 +535,7 @@ export async function recomputeSegmentCounts(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/segments", "page");
+    revalidatePath(`/${access.orgSlug}/segments`, "page");
 
     return { success: true };
   } catch (error) {

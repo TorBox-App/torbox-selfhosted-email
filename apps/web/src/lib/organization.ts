@@ -53,7 +53,7 @@ export const getOrganizationWithMembership = cache(
 
     return {
       ...org,
-      userRole: membership.role as "owner" | "admin" | "member",
+      userRole: membership.role,
     };
   }
 );
@@ -108,7 +108,7 @@ export const getOrganizationWithDashboardData = cache(
 
     return {
       ...org,
-      userRole: membership.role as "owner" | "admin" | "member",
+      userRole: membership.role,
       extension: org.extension,
       activeSubscription: org.subscriptions[0] ?? null,
       awsAccounts: org.awsAccounts,

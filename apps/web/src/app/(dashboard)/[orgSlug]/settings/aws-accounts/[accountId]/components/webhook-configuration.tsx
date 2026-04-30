@@ -57,7 +57,11 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
     setError(null);
     setSuccess(null);
 
-    const result = await saveWebhookSecretAction(account.id, webhookSecret);
+    const result = await saveWebhookSecretAction(
+      account.id,
+      webhookSecret,
+      account.organizationId
+    );
 
     setIsLoading(false);
 
@@ -74,7 +78,10 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
     setError(null);
     setSuccess(null);
 
-    const result = await removeWebhookSecretAction(account.id);
+    const result = await removeWebhookSecretAction(
+      account.id,
+      account.organizationId
+    );
 
     setIsLoading(false);
 

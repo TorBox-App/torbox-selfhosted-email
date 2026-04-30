@@ -37,9 +37,12 @@ import {
   SelectValue,
 } from "@wraps/ui/components/ui/select";
 import {
+  CreditCard,
   Crown,
+  Eye,
   Loader2,
   Mail,
+  Megaphone,
   MoreVertical,
   Shield,
   UserPlus,
@@ -59,15 +62,29 @@ import {
 } from "@/actions/members";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PRESET_ROLES } from "@/lib/preset-roles";
 
 type OrganizationSettingsMembersProps = {
   organization: {
     id: string;
     name: string;
   };
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   initialMembers?: MemberWithUser[];
   initialInvitations?: PendingInvitation[];
+};
+
+const roleDescriptions: Record<string, string> = {
+  owner:
+    "Full access to all organization settings, billing, and can delete the organization.",
+  admin:
+    "Can manage members, settings, and AWS accounts. Cannot delete the organization.",
+  member:
+    "Full content access — contacts, templates, broadcasts, and workflows. No admin operations.",
+  marketing:
+    "Content write access and broadcasts. Read-only on workflows, segments, and topics.",
+  "read-only": "View everything, export contacts. No write operations.",
+  billing: "Billing management and read-only org settings. No content access.",
 };
 
 const roleConfig = {
@@ -89,6 +106,24 @@ const roleConfig = {
     bgColor: "bg-gray-100 dark:bg-gray-900",
     label: "Member",
   },
+  marketing: {
+    icon: Megaphone,
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-100 dark:bg-orange-900",
+    label: "Marketing",
+  },
+  "read-only": {
+    icon: Eye,
+    color: "text-gray-500 dark:text-gray-400",
+    bgColor: "bg-gray-100 dark:bg-gray-900",
+    label: "Read Only",
+  },
+  billing: {
+    icon: CreditCard,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900",
+    label: "Billing",
+  },
 };
 
 export function OrganizationSettingsMembers({
@@ -100,8 +135,16 @@ export function OrganizationSettingsMembers({
   const [isPending, startTransition] = useTransition();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviteRole, setInviteRole] = useState<string>("member");
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [changeRoleMember, setChangeRoleMember] =
+    useState<MemberWithUser | null>(null);
+  const [changeRoleValue, setChangeRoleValue] = useState<string>("");
+
+  const availableRoles =
+    userRole === "owner"
+      ? ["owner", "admin", "member", ...PRESET_ROLES.map((r) => r.name)]
+      : ["admin", "member", ...PRESET_ROLES.map((r) => r.name)];
 
   // Client-side state for when data isn't provided via props
   const [members, setMembers] = useState<MemberWithUser[]>(
@@ -208,30 +251,6 @@ export function OrganizationSettingsMembers({
     });
   }
 
-  async function handleUpdateRole(
-    memberId: string,
-    newRole: "owner" | "admin" | "member"
-  ) {
-    startTransition(() => {
-      updateOptimisticMembers({ type: "updateRole", memberId, newRole });
-
-      const promise = updateMemberRole(memberId, newRole, organization.id).then(
-        (result) => {
-          if (!result.success) {
-            throw new Error(result.error);
-          }
-          return result;
-        }
-      );
-
-      toast.promise(promise, {
-        loading: "Updating role...",
-        success: "Member role updated",
-        error: (err) => err.message,
-      });
-    });
-  }
-
   async function handleRemoveMember(memberId: string) {
     if (!confirm("Are you sure you want to remove this member?")) {
       return;
@@ -276,6 +295,36 @@ export function OrganizationSettingsMembers({
     });
   }
 
+  function handleOpenChangeRole(member: MemberWithUser) {
+    setChangeRoleMember(member);
+    setChangeRoleValue(member.role);
+  }
+
+  function handleChangeRoleSubmit() {
+    if (!changeRoleMember || changeRoleValue === changeRoleMember.role) {
+      toast.error("Please select a different role");
+      return;
+    }
+    const memberId = changeRoleMember.id;
+    const newRole = changeRoleValue;
+    setChangeRoleMember(null);
+
+    startTransition(() => {
+      updateOptimisticMembers({ type: "updateRole", memberId, newRole });
+      const promise = updateMemberRole(memberId, newRole, organization.id).then(
+        (result) => {
+          if (!result.success) throw new Error(result.error);
+          return result;
+        }
+      );
+      toast.promise(promise, {
+        loading: "Updating role...",
+        success: "Member role updated",
+        error: (err) => err.message,
+      });
+    });
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -285,7 +334,7 @@ export function OrganizationSettingsMembers({
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Invite Dialog */}
       <Dialog onOpenChange={setInviteDialogOpen} open={inviteDialogOpen}>
         <DialogContent>
@@ -308,20 +357,25 @@ export function OrganizationSettingsMembers({
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select
-                onValueChange={(value) =>
-                  setInviteRole(value as "admin" | "member")
-                }
-                value={inviteRole}
-              >
+              <Select onValueChange={setInviteRole} value={inviteRole}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="member">Member</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  {PRESET_ROLES.map((role) => (
+                    <SelectItem key={role.name} value={role.name}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {roleDescriptions[inviteRole] && (
+                <p className="text-muted-foreground text-xs">
+                  {roleDescriptions[inviteRole]}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -346,227 +400,272 @@ export function OrganizationSettingsMembers({
         </DialogContent>
       </Dialog>
 
-      {/* Members Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                Manage who has access to your organization.
-              </CardDescription>
-            </div>
-            {canEdit && (
-              <Button onClick={() => setInviteDialogOpen(true)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Invite Member
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {optimisticMembers.map((member) => {
-              const roleInfo =
-                roleConfig[member.role as keyof typeof roleConfig];
-              const RoleIcon = roleInfo.icon;
-
-              return (
-                <div
-                  className="flex items-center justify-between rounded-lg border p-4"
-                  key={member.id}
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        alt={member.user.name}
-                        src={member.user.image || ""}
-                      />
-                      <AvatarFallback>
-                        {getInitials(member.user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold">{member.user.name}</h4>
-                        <Badge className={roleInfo.bgColor} variant="secondary">
-                          <RoleIcon
-                            className={`mr-1 h-3 w-3 ${roleInfo.color}`}
-                          />
-                          <span className={roleInfo.color}>
-                            {roleInfo.label}
-                          </span>
-                        </Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        {member.user.email}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Joined{" "}
-                        {new Date(member.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  {canEdit && member.role !== "owner" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-label="More actions"
-                          disabled={isPending}
-                          size="icon"
-                          variant="ghost"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleUpdateRole(
-                              member.id,
-                              member.role === "admin" ? "member" : "admin"
-                            )
-                          }
-                        >
-                          Change to{" "}
-                          {member.role === "admin" ? "Member" : "Admin"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleRemoveMember(member.id)}
-                        >
-                          Remove Member
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        {/* Left column — members + invitations */}
+        <div className="min-w-0 flex-1 space-y-6">
+          {/* Members Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>
+                    Manage who has access to your organization.
+                  </CardDescription>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pending Invitations */}
-      {canEdit && optimisticInvitations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Invitations</CardTitle>
-            <CardDescription>
-              Invitations that haven't been accepted yet.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {optimisticInvitations.map((invitation) => (
-                <div
-                  className="flex items-center justify-between rounded-lg border border-dashed p-4"
-                  key={invitation.id}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold">{invitation.email}</h4>
-                        <Badge variant="outline">{invitation.role}</Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        Invited by {invitation.inviter.name}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Expires{" "}
-                        {new Date(invitation.expiresAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    aria-label="Cancel invitation"
-                    disabled={isPending}
-                    onClick={() => handleCancelInvitation(invitation.id)}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <X className="h-4 w-4" />
+                {canEdit && (
+                  <Button onClick={() => setInviteDialogOpen(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite Member
                   </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {optimisticMembers.map((member) => {
+                  const roleInfo =
+                    roleConfig[member.role as keyof typeof roleConfig] ??
+                    roleConfig.member;
+                  const RoleIcon = roleInfo.icon;
 
-      {/* Roles & Permissions Guide */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Roles & Permissions</CardTitle>
-          <CardDescription>
-            Understanding member roles and their permissions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${roleConfig.owner.bgColor}`}
+                  return (
+                    <div
+                      className="flex items-center justify-between rounded-lg border p-4"
+                      key={member.id}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage
+                            alt={member.user.name}
+                            src={member.user.image || ""}
+                          />
+                          <AvatarFallback>
+                            {getInitials(member.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">
+                              {member.user.name}
+                            </h4>
+                            <Badge
+                              className={roleInfo.bgColor}
+                              variant="secondary"
+                            >
+                              <RoleIcon
+                                className={`mr-1 h-3 w-3 ${roleInfo.color}`}
+                              />
+                              <span className={roleInfo.color}>
+                                {roleInfo.label}
+                              </span>
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground text-sm">
+                            {member.user.email}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Joined{" "}
+                            {new Date(member.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      {canEdit && member.role !== "owner" && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              aria-label="More actions"
+                              disabled={isPending}
+                              size="icon"
+                              variant="ghost"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleOpenChangeRole(member)}
+                            >
+                              Change Role
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleRemoveMember(member.id)}
+                            >
+                              Remove Member
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pending Invitations */}
+          {canEdit && optimisticInvitations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Invitations</CardTitle>
+                <CardDescription>
+                  Invitations that haven't been accepted yet.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {optimisticInvitations.map((invitation) => (
+                    <div
+                      className="flex items-center justify-between rounded-lg border border-dashed p-4"
+                      key={invitation.id}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                          <Mail className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">
+                              {invitation.email}
+                            </h4>
+                            <Badge variant="outline">{invitation.role}</Badge>
+                          </div>
+                          <p className="text-muted-foreground text-sm">
+                            Invited by {invitation.inviter.name}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Expires{" "}
+                            {new Date(invitation.expiresAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        aria-label="Cancel invitation"
+                        disabled={isPending}
+                        onClick={() => handleCancelInvitation(invitation.id)}
+                        size="icon"
+                        variant="ghost"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        {/* end left column */}
+
+        {/* Right column — roles reference (sticky) */}
+        <div className="w-full lg:w-80 lg:shrink-0">
+          <Card className="lg:sticky lg:top-6">
+            <CardHeader>
+              <CardTitle>Roles & Permissions</CardTitle>
+              <CardDescription>
+                Understanding member roles and their permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {(Object.keys(roleConfig) as (keyof typeof roleConfig)[]).map(
+                  (role) => {
+                    const config = roleConfig[role];
+                    const Icon = config.icon;
+                    return (
+                      <div className="flex items-start gap-3" key={role}>
+                        <div
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${config.bgColor}`}
+                        >
+                          <Icon className={`h-4 w-4 ${config.color}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">
+                            {config.label}
+                          </h4>
+                          <p className="text-muted-foreground text-xs">
+                            {roleDescriptions[role]}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      {/* end 2-col grid */}
+
+      {/* Change Role Dialog */}
+      <Dialog
+        onOpenChange={(open) => !open && setChangeRoleMember(null)}
+        open={!!changeRoleMember}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>
+              Update the role for {changeRoleMember?.user.name} (
+              {changeRoleMember?.user.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="change-role">Role</Label>
+              <Select
+                onValueChange={setChangeRoleValue}
+                value={changeRoleValue}
               >
-                <Crown className={`h-4 w-4 ${roleConfig.owner.color}`} />
-              </div>
-              <div>
-                <h4 className="font-medium">Owner</h4>
-                <p className="text-muted-foreground text-sm">
-                  Full access to all organization settings, billing, and can
-                  delete the organization.
+                <SelectTrigger id="change-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map((role) => {
+                    const config = roleConfig[role as keyof typeof roleConfig];
+                    const label =
+                      config?.label ??
+                      role.charAt(0).toUpperCase() + role.slice(1);
+                    return (
+                      <SelectItem key={role} value={role}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {roleDescriptions[changeRoleValue] && (
+                <p className="text-muted-foreground text-xs">
+                  {roleDescriptions[changeRoleValue]}
                 </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${roleConfig.admin.bgColor}`}
-              >
-                <Shield className={`h-4 w-4 ${roleConfig.admin.color}`} />
-              </div>
-              <div>
-                <h4 className="font-medium">Admin</h4>
-                <p className="text-muted-foreground text-sm">
-                  Can manage organization settings, members, and AWS accounts.
-                  Cannot delete the organization.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${roleConfig.member.bgColor}`}
-              >
-                <Users className={`h-4 w-4 ${roleConfig.member.color}`} />
-              </div>
-              <div>
-                <h4 className="font-medium">Member</h4>
-                <p className="text-muted-foreground text-sm">
-                  Can view organization data and use connected AWS resources.
-                  Cannot modify settings.
-                </p>
-              </div>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button onClick={() => setChangeRoleMember(null)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={handleChangeRoleSubmit}>Update Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

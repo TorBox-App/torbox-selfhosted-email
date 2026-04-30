@@ -1,8 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db, ssoProvider } from "@wraps/db";
 import { eq } from "drizzle-orm";
-import { logger, serializeError } from "@/lib/logger";
 import { NextResponse } from "next/server";
+import { logger, serializeError } from "@/lib/logger";
 
 type SsoInitiateApi = {
   signInSSO(opts: {

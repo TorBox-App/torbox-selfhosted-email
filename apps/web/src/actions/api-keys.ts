@@ -19,6 +19,7 @@ import {
   type UpdateApiKeyResult,
 } from "@/lib/api-keys";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkPermission } from "./shared/permissions";
 
 // Re-export types for convenience (types can be re-exported from server files)
 export type {
@@ -96,6 +97,9 @@ export async function listApiKeys(
       };
     }
 
+    const permError = checkPermission(membership.role, "apiKeys", ["read"]);
+    if (permError) return permError;
+
     // Fetch all API keys for this organization
     const keys = await db.query.apiKey.findMany({
       where: (k, { eq }) => eq(k.organizationId, organizationId),
@@ -159,14 +163,19 @@ export async function createApiKey(
           eq(m.organizationId, organizationId),
           eq(m.userId, session.user.id)
         ),
+      with: { organization: { columns: { slug: true } } },
     });
 
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+    if (!membership) {
       return {
         success: false,
-        error: "Only owners and admins can create API keys",
+        error: "You don't have access to this organization",
       };
     }
+    const apiKeyWriteError = checkPermission(membership.role, "apiKeys", [
+      "write",
+    ]);
+    if (apiKeyWriteError) return apiKeyWriteError;
 
     // Validate name
     if (!options.name || options.name.trim().length < 1) {
@@ -216,7 +225,7 @@ export async function createApiKey(
     }
 
     // Revalidate settings page
-    revalidatePath("/[orgSlug]/settings", "page");
+    revalidatePath(`/${membership.organization.slug}/settings`, "page");
 
     // Track activation event
     await trackApiKeyCreated(session.user.email, organizationId);
@@ -274,14 +283,19 @@ export async function updateApiKey(
           eq(m.organizationId, organizationId),
           eq(m.userId, session.user.id)
         ),
+      with: { organization: { columns: { slug: true } } },
     });
 
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+    if (!membership) {
       return {
         success: false,
-        error: "Only owners and admins can update API keys",
+        error: "You don't have access to this organization",
       };
     }
+    const apiKeyWriteError = checkPermission(membership.role, "apiKeys", [
+      "write",
+    ]);
+    if (apiKeyWriteError) return apiKeyWriteError;
 
     // Verify API key belongs to this organization
     const existingKey = await db.query.apiKey.findFirst({
@@ -329,7 +343,7 @@ export async function updateApiKey(
     }
 
     // Revalidate settings page
-    revalidatePath("/[orgSlug]/settings", "page");
+    revalidatePath(`/${membership.organization.slug}/settings`, "page");
 
     return {
       success: true,
@@ -377,14 +391,19 @@ export async function deleteApiKey(
           eq(m.organizationId, organizationId),
           eq(m.userId, session.user.id)
         ),
+      with: { organization: { columns: { slug: true } } },
     });
 
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+    if (!membership) {
       return {
         success: false,
-        error: "Only owners and admins can delete API keys",
+        error: "You don't have access to this organization",
       };
     }
+    const apiKeyWriteError = checkPermission(membership.role, "apiKeys", [
+      "write",
+    ]);
+    if (apiKeyWriteError) return apiKeyWriteError;
 
     // Verify API key belongs to this organization
     const existingKey = await db.query.apiKey.findFirst({
@@ -404,7 +423,7 @@ export async function deleteApiKey(
       );
 
     // Revalidate settings page
-    revalidatePath("/[orgSlug]/settings", "page");
+    revalidatePath(`/${membership.organization.slug}/settings`, "page");
 
     return { success: true };
   } catch (error) {

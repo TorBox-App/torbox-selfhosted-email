@@ -45,7 +45,7 @@ type MembersTableProps = {
   members: MemberWithUser[];
   organizationId: string;
   organizationSlug: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   onMemberUpdated: () => void;
 };
 

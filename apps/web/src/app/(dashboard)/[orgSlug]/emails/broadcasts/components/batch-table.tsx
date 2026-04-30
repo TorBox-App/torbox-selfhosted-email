@@ -85,7 +85,7 @@ type BatchTableProps = {
   batches: BatchSendWithMeta[];
   organizationId: string;
   orgSlug: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function BatchTable({

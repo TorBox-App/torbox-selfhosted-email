@@ -4,6 +4,7 @@ import { contactTopic, db } from "@wraps/db";
 import { and, eq, or } from "drizzle-orm";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { revalidateContacts } from "./contacts";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 /**
@@ -23,6 +24,8 @@ export async function subscribeContactToTopics(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["write"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     // Verify contact exists
@@ -125,12 +128,10 @@ export async function bulkSubscribeContactsToTopics(
     }
     orgSlug = access.orgSlug;
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can bulk subscribe contacts",
-      };
-    }
+    const bulkSubPermError = checkPermission(access.role, "contacts", [
+      "write",
+    ]);
+    if (bulkSubPermError) return bulkSubPermError;
 
     let subscribed = 0;
 
@@ -228,12 +229,10 @@ export async function bulkUnsubscribeContactsFromTopics(
     }
     orgSlug = access.orgSlug;
 
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can bulk unsubscribe contacts",
-      };
-    }
+    const bulkUnsubPermError = checkPermission(access.role, "contacts", [
+      "write",
+    ]);
+    if (bulkUnsubPermError) return bulkUnsubPermError;
 
     // Count how many subscriptions exist before updating
     const existingSubscriptions = await db
@@ -297,6 +296,8 @@ export async function unsubscribeContactFromTopics(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["write"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     // Verify contact exists

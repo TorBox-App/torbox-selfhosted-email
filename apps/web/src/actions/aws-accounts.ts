@@ -37,6 +37,7 @@ import {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
+import { checkPermission } from "./shared/permissions";
 
 // Create server validator
 const serverValidate = createServerValidate({
@@ -123,6 +124,11 @@ export async function listAWSAccounts(
       };
     }
 
+    const permError = checkPermission(userMembership.role, "awsAccounts", [
+      "read",
+    ]);
+    if (permError) return permError;
+
     // Fetch all AWS accounts for this organization
     const accounts = await db.query.awsAccount.findMany({
       where: (a, { eq }) => eq(a.organizationId, organizationId),
@@ -196,9 +202,13 @@ export async function connectAWSAccountAction(
           eq(m.userId, session.user.id),
           eq(m.organizationId, validatedData.organizationId)
         ),
+      with: { organization: { columns: { slug: true } } },
     });
 
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+    if (!membership) {
+      return { error: "Insufficient permissions" };
+    }
+    if (checkPermission(membership.role, "awsAccounts", ["write"])) {
       return { error: "Insufficient permissions" };
     }
 
@@ -292,7 +302,7 @@ export async function connectAWSAccountAction(
     }
 
     // 8. Revalidate pages that display AWS accounts
-    revalidatePath(`/${validatedData.organizationId}/settings`, "page");
+    revalidatePath(`/${membership.organization.slug}/settings`, "page");
     revalidatePath("/");
 
     log.info(
@@ -401,17 +411,16 @@ export async function scanAWSAccountFeatures(
       },
     });
 
-    if (
-      !(
-        membership?.organization.slug &&
-        ["owner", "admin"].includes(membership.role)
-      )
-    ) {
+    if (!membership?.organization.slug) {
       return {
         success: false,
         error: "Insufficient permissions",
       };
     }
+    const awsWriteError = checkPermission(membership.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsWriteError) return awsWriteError;
 
     // 3. Get AWS account
     const account = await db.query.awsAccount.findFirst({
@@ -874,14 +883,19 @@ export async function deleteAWSAccount(
           eq(m.userId, session.user.id),
           eq(m.organizationId, organizationId)
         ),
+      with: { organization: { columns: { slug: true } } },
     });
 
-    if (!member || (member.role !== "owner" && member.role !== "admin")) {
+    if (!member) {
       return {
         success: false,
         error: "Only owners and admins can delete AWS accounts",
       };
     }
+    const awsWriteError = checkPermission(member.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsWriteError) return awsWriteError;
 
     // 3. Verify the account belongs to this organization
     const account = await db.query.awsAccount.findFirst({
@@ -904,7 +918,7 @@ export async function deleteAWSAccount(
       );
 
     // 5. Revalidate the settings page
-    revalidatePath("/[orgSlug]/settings", "page");
+    revalidatePath(`/${member.organization.slug}/settings`, "page");
 
     log.info("AWS account deleted");
     return { success: true };
@@ -928,7 +942,8 @@ export type SaveWebhookSecretResult =
  */
 export async function saveWebhookSecretAction(
   awsAccountId: string,
-  webhookSecret: string
+  webhookSecret: string,
+  organizationId: string
 ): Promise<SaveWebhookSecretResult> {
   const log = createActionLogger("saveWebhookSecret", {
     accountId: awsAccountId,
@@ -947,31 +962,37 @@ export async function saveWebhookSecretAction(
       };
     }
 
-    // Get the AWS account to check organization
+    // Verify membership first, then check account belongs to this org
+    const membership = await db.query.member.findFirst({
+      where: (m, { and: andOp, eq: eqOp }) =>
+        andOp(
+          eqOp(m.userId, session.user.id),
+          eqOp(m.organizationId, organizationId)
+        ),
+      with: { organization: { columns: { slug: true } } },
+    });
+
+    if (!membership) {
+      return {
+        success: false,
+        error: "You don't have permission to manage this AWS account",
+      };
+    }
+    const awsWriteError = checkPermission(membership.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsWriteError) return awsWriteError;
+
+    // Get the AWS account scoped to the caller's org (prevents cross-org enumeration)
     const account = await db.query.awsAccount.findFirst({
-      where: (a, { eq: eqOp }) => eqOp(a.id, awsAccountId),
+      where: (a, { and: andOp, eq: eqOp }) =>
+        andOp(eqOp(a.id, awsAccountId), eqOp(a.organizationId, organizationId)),
     });
 
     if (!account) {
       return {
         success: false,
         error: "AWS account not found",
-      };
-    }
-
-    // Check if user is owner/admin of the organization
-    const membership = await db.query.member.findFirst({
-      where: (m, { and: andOp, eq: eqOp }) =>
-        andOp(
-          eqOp(m.userId, session.user.id),
-          eqOp(m.organizationId, account.organizationId)
-        ),
-    });
-
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
-      return {
-        success: false,
-        error: "You don't have permission to manage this AWS account",
       };
     }
 
@@ -994,12 +1015,14 @@ export async function saveWebhookSecretAction(
       .where(
         and(
           eq(awsAccount.id, awsAccountId),
-          eq(awsAccount.organizationId, account.organizationId)
+          eq(awsAccount.organizationId, organizationId)
         )
       );
 
     // Revalidate the page
-    revalidatePath(`/settings/aws-accounts/${awsAccountId}`);
+    revalidatePath(
+      `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`
+    );
 
     log.info("Webhook secret saved");
     return {
@@ -1021,7 +1044,8 @@ export async function saveWebhookSecretAction(
  * This stops SES events from being sent to the Wraps dashboard
  */
 export async function removeWebhookSecretAction(
-  awsAccountId: string
+  awsAccountId: string,
+  organizationId: string
 ): Promise<SaveWebhookSecretResult> {
   const log = createActionLogger("removeWebhookSecret", {
     accountId: awsAccountId,
@@ -1040,31 +1064,37 @@ export async function removeWebhookSecretAction(
       };
     }
 
-    // Get the AWS account to check organization
+    // Verify membership first, then check account belongs to this org
+    const membership = await db.query.member.findFirst({
+      where: (m, { and: andOp, eq: eqOp }) =>
+        andOp(
+          eqOp(m.userId, session.user.id),
+          eqOp(m.organizationId, organizationId)
+        ),
+      with: { organization: { columns: { slug: true } } },
+    });
+
+    if (!membership) {
+      return {
+        success: false,
+        error: "You don't have permission to manage this AWS account",
+      };
+    }
+    const awsWriteError = checkPermission(membership.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsWriteError) return awsWriteError;
+
+    // Get the AWS account scoped to the caller's org (prevents cross-org enumeration)
     const account = await db.query.awsAccount.findFirst({
-      where: (a, { eq: eqOp }) => eqOp(a.id, awsAccountId),
+      where: (a, { and: andOp, eq: eqOp }) =>
+        andOp(eqOp(a.id, awsAccountId), eqOp(a.organizationId, organizationId)),
     });
 
     if (!account) {
       return {
         success: false,
         error: "AWS account not found",
-      };
-    }
-
-    // Check if user is owner/admin of the organization
-    const membership = await db.query.member.findFirst({
-      where: (m, { and: andOp, eq: eqOp }) =>
-        andOp(
-          eqOp(m.userId, session.user.id),
-          eqOp(m.organizationId, account.organizationId)
-        ),
-    });
-
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
-      return {
-        success: false,
-        error: "You don't have permission to manage this AWS account",
       };
     }
 
@@ -1078,12 +1108,14 @@ export async function removeWebhookSecretAction(
       .where(
         and(
           eq(awsAccount.id, awsAccountId),
-          eq(awsAccount.organizationId, account.organizationId)
+          eq(awsAccount.organizationId, organizationId)
         )
       );
 
     // Revalidate the page
-    revalidatePath(`/settings/aws-accounts/${awsAccountId}`);
+    revalidatePath(
+      `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`
+    );
 
     log.info("Webhook secret removed");
     return {
@@ -1168,6 +1200,9 @@ export async function getVerifiedDomains(
         error: "You don't have access to this organization",
       };
     }
+
+    const permError = checkPermission(membership.role, "awsAccounts", ["read"]);
+    if (permError) return permError;
 
     // 3. Get AWS account
     const account = await db.query.awsAccount.findFirst({
@@ -1375,6 +1410,9 @@ export async function getSMSPhoneNumbers(
         error: "You don't have access to this organization",
       };
     }
+
+    const permError = checkPermission(membership.role, "awsAccounts", ["read"]);
+    if (permError) return permError;
 
     // 3. Get AWS account
     const account = await db.query.awsAccount.findFirst({

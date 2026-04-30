@@ -27,6 +27,7 @@ import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -271,6 +272,8 @@ export async function listWorkflows(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     const { page = 1, pageSize = 50, search, status } = options;
     const offset = (page - 1) * pageSize;
@@ -342,6 +345,8 @@ export async function getWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     const w = await db.query.workflow.findFirst({
       where: and(
@@ -394,6 +399,8 @@ export async function createWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -455,7 +462,7 @@ export async function createWorkflow(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
 
     // Track activation event
     await trackWorkflowCreated(access.userEmail, organizationId).catch(
@@ -515,6 +522,8 @@ export async function updateWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -689,8 +698,8 @@ export async function updateWorkflow(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
-    revalidatePath(`/[orgSlug]/automations/${workflowId}`, "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
   } catch (error) {
@@ -720,6 +729,8 @@ export async function deleteWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -782,7 +793,7 @@ export async function deleteWorkflow(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
 
     return { success: true };
   } catch (error) {
@@ -812,6 +823,8 @@ export async function enableWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1005,8 +1018,8 @@ export async function enableWorkflow(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
-    revalidatePath(`/[orgSlug]/automations/${workflowId}`, "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
   } catch (error) {
@@ -1036,6 +1049,8 @@ export async function disableWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1080,8 +1095,8 @@ export async function disableWorkflow(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
-    revalidatePath(`/[orgSlug]/automations/${workflowId}`, "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
   } catch (error) {
@@ -1111,6 +1126,8 @@ export async function duplicateWorkflow(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1198,7 +1215,7 @@ export async function duplicateWorkflow(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/automations", "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
 
     return await getWorkflow(newWorkflow.id, organizationId);
   } catch (error) {
@@ -1239,6 +1256,8 @@ export async function getWorkflowStats(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     // Verify workflow exists
     const existing = await db.query.workflow.findFirst({
@@ -1299,6 +1318,8 @@ export async function listWorkflowExecutions(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     const { page = 1, pageSize = 50, status } = options;
     const offset = (page - 1) * pageSize;
@@ -1375,6 +1396,8 @@ export async function getWorkflowExecution(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     const exec = await db.query.workflowExecution.findFirst({
       where: and(
@@ -1505,6 +1528,8 @@ export async function retryWorkflowExecution(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
@@ -1537,7 +1562,7 @@ export async function retryWorkflowExecution(
       return { success: false, error: result.error ?? "Retry failed" };
     }
 
-    revalidatePath("/[orgSlug]/automations", "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
 
     return { success: true };
   } catch (error) {
@@ -1571,6 +1596,8 @@ export async function cancelWorkflowExecution(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["write"]);
+    if (permError) return permError;
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
@@ -1603,7 +1630,7 @@ export async function cancelWorkflowExecution(
       return { success: false, error: result.error ?? "Cancel failed" };
     }
 
-    revalidatePath("/[orgSlug]/automations", "page");
+    revalidatePath(`/${access.orgSlug}/automations`, "page");
 
     return { success: true };
   } catch (error) {
@@ -1657,6 +1684,8 @@ export async function getWorkflowNodeStats(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "workflows", ["read"]);
+    if (permError) return permError;
 
     // Verify workflow ownership (prevents cross-org IDOR)
     const existing = await db.query.workflow.findFirst({

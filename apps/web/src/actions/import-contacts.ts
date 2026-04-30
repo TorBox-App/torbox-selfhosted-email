@@ -8,6 +8,7 @@ import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
 import { hashEmail, hashPhone } from "./shared/hash";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -68,6 +69,8 @@ export async function importContacts(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "contacts", ["import"]);
+    if (permError) return permError;
     orgSlug = access.orgSlug;
 
     if (data.contacts.length === 0) {

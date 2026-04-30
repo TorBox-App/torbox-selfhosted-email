@@ -88,7 +88,7 @@ type WorkflowsTableProps = {
   total: number;
   organizationId: string;
   orgSlug: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function WorkflowsTable({

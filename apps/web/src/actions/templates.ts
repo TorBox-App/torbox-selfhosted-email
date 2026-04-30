@@ -21,6 +21,7 @@ import {
   tiptapToReactEmail,
   toBrandKitColors,
 } from "@/lib/serializers/tiptap-to-react-email";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type PublishTemplateResult =
@@ -81,6 +82,8 @@ export async function publishTemplateToSES(
       error: "You don't have access to this organization",
     };
   }
+  const permError = checkPermission(access.role, "templates", ["write"]);
+  if (permError) return permError;
 
   const log = createActionLogger("publishTemplateToSES", {
     orgSlug: access.orgSlug,
@@ -294,13 +297,8 @@ export async function bulkDeleteTemplates(
       orgSlug: access.orgSlug,
     });
 
-    // Only owners and admins can bulk delete
-    if (!["owner", "admin"].includes(access.role)) {
-      return {
-        success: false,
-        error: "Only owners and admins can delete templates",
-      };
-    }
+    const permError = checkPermission(access.role, "templates", ["write"]);
+    if (permError) return permError;
 
     if (templateIds.length === 0) {
       return { success: false, error: "No templates selected" };
@@ -399,6 +397,8 @@ export async function bulkUpdateTemplateType(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "templates", ["write"]);
+    if (permError) return permError;
 
     if (templateIds.length === 0) {
       return { success: false, error: "No templates selected" };
@@ -458,6 +458,8 @@ export async function bulkUpdateTemplateStatus(
         error: "You don't have access to this organization",
       };
     }
+    const permError = checkPermission(access.role, "templates", ["write"]);
+    if (permError) return permError;
 
     if (templateIds.length === 0) {
       return {
@@ -600,6 +602,8 @@ export async function convertTiptapTemplate(
   if (!access) {
     return { success: false, error: "No access" };
   }
+  const permError = checkPermission(access.role, "templates", ["write"]);
+  if (permError) return permError;
 
   const log = createActionLogger("convertTiptapTemplate", {
     orgSlug: access.orgSlug,

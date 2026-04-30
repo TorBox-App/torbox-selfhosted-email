@@ -19,7 +19,7 @@ type OrganizationContextValue = {
   isLoading: boolean;
   setActiveOrganization: (orgSlug: string) => Promise<void>;
   organizations: InferSelectModel<typeof organization>[];
-  userRole: "owner" | "admin" | "member" | null;
+  userRole: string | null;
 };
 
 const OrganizationContext = createContext<OrganizationContextValue | undefined>(

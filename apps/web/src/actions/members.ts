@@ -1,14 +1,15 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import { awsAccount, contact, db, messageSend, template } from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { VALID_ROLES } from "@/lib/preset-roles";
+import { checkPermission } from "./shared/permissions";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type MemberWithUser = {
   id: string;
@@ -53,30 +54,9 @@ export async function listMembers(
   organizationId: string
 ): Promise<ListMembersResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in",
-      };
-    }
-
-    // Verify user is a member of this organization
-    const userMembership = await db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    });
-
-    if (!userMembership) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return { success: false, error: "No access" };
     }
 
     // Fetch all members with user info using join instead of with
@@ -167,43 +147,23 @@ export type UpdateMemberRoleResult =
  */
 export async function updateMemberRole(
   memberId: string,
-  newRole: "owner" | "admin" | "member",
+  newRole: string,
   organizationId: string
 ): Promise<UpdateMemberRoleResult> {
+  if (!VALID_ROLES.has(newRole)) {
+    return { success: false, error: "Invalid role" };
+  }
+
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in",
-      };
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return { success: false, error: "No access" };
     }
 
-    // Get the current user's membership
-    const userMembership = await db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    });
-
-    if (!userMembership) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    // Check permissions - only owners and admins can change roles
-    if (userMembership.role !== "owner" && userMembership.role !== "admin") {
-      return {
-        success: false,
-        error: "You don't have permission to change member roles",
-      };
-    }
+    const changeRoleError = checkPermission(access.role, "members", [
+      "changeRole",
+    ]);
+    if (changeRoleError) return changeRoleError;
 
     // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
@@ -222,7 +182,7 @@ export async function updateMemberRole(
 
     // Prevent non-owners from changing owner roles or making someone an owner
     if (
-      userMembership.role !== "owner" &&
+      access.role !== "owner" &&
       (targetMember.role === "owner" || newRole === "owner")
     ) {
       return {
@@ -232,7 +192,7 @@ export async function updateMemberRole(
     }
 
     // Prevent users from changing their own role
-    if (targetMember.userId === session.user.id) {
+    if (targetMember.userId === access.userId) {
       return {
         success: false,
         error: "You cannot change your own role",
@@ -247,14 +207,7 @@ export async function updateMemberRole(
         and(eq(member.id, memberId), eq(member.organizationId, organizationId))
       );
 
-    // Revalidate the members page
-    const org = await db.query.organization.findFirst({
-      where: (orgs, { eq: eqOp }) => eqOp(orgs.id, organizationId),
-    });
-
-    if (org?.slug) {
-      revalidatePath(`/${org.slug}/settings/members`);
-    }
+    revalidatePath(`/${access.orgSlug}/settings/members`);
 
     return {
       success: true,
@@ -291,47 +244,31 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  */
 export async function inviteMember(
   email: string,
-  role: "admin" | "member",
+  role: string,
   organizationId: string
 ): Promise<InviteMemberResult> {
+  if (!VALID_ROLES.has(role)) {
+    return { success: false, error: "Invalid role" };
+  }
+  if (role === "owner") {
+    return {
+      success: false,
+      error: "Owner role cannot be assigned via invitation",
+    };
+  }
+
   try {
     if (!(email && EMAIL_REGEX.test(email.trim()))) {
       return { success: false, error: "Invalid email address" };
     }
 
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in",
-      };
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return { success: false, error: "No access" };
     }
 
-    // Get the current user's membership
-    const userMembership = await db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    });
-
-    if (!userMembership) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    // Check permissions - only owners and admins can invite members
-    if (userMembership.role !== "owner" && userMembership.role !== "admin") {
-      return {
-        success: false,
-        error: "You don't have permission to invite members",
-      };
-    }
+    const inviteError = checkPermission(access.role, "members", ["invite"]);
+    if (inviteError) return inviteError;
 
     // Check if user is already a member
     const existingUser = await db.query.user.findFirst({
@@ -380,7 +317,7 @@ export async function inviteMember(
         role,
         status: "pending",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        inviterId: session.user.id,
+        inviterId: access.userId,
       })
       .returning();
 
@@ -448,7 +385,7 @@ export async function inviteMember(
         inviteLink: `${appUrl}/invitations/${newInvitation.id}/accept`,
         declineLink: `${appUrl}/invitations/${newInvitation.id}/decline`,
         organizationName: org.name,
-        inviterName: session.user.name,
+        inviterName: access.userName ?? access.userEmail,
         role,
         workspaceContext: {
           templateCount: templateResult[0]?.count ?? 0,
@@ -469,15 +406,12 @@ export async function inviteMember(
       // Continue even if email fails - the invitation is still created
     }
 
-    await trackTeammateInvited(session.user.id, organizationId, {
+    await trackTeammateInvited(access.userId, organizationId, {
       invitedEmail: email,
       role,
     });
 
-    // Revalidate the members page
-    if (org.slug) {
-      revalidatePath(`/${org.slug}/settings/members`);
-    }
+    revalidatePath(`/${access.orgSlug}/settings/members`);
 
     return {
       success: true,
@@ -513,39 +447,13 @@ export async function removeMember(
   organizationId: string
 ): Promise<RemoveMemberResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in",
-      };
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return { success: false, error: "No access" };
     }
 
-    // Get the current user's membership
-    const userMembership = await db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    });
-
-    if (!userMembership) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    // Check permissions - only owners and admins can remove members
-    if (userMembership.role !== "owner" && userMembership.role !== "admin") {
-      return {
-        success: false,
-        error: "You don't have permission to remove members",
-      };
-    }
+    const removeError = checkPermission(access.role, "members", ["remove"]);
+    if (removeError) return removeError;
 
     // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
@@ -563,7 +471,7 @@ export async function removeMember(
     }
 
     // Prevent non-owners from removing owners
-    if (userMembership.role !== "owner" && targetMember.role === "owner") {
+    if (access.role !== "owner" && targetMember.role === "owner") {
       return {
         success: false,
         error: "Only owners can remove other owners",
@@ -571,7 +479,7 @@ export async function removeMember(
     }
 
     // Prevent users from removing themselves
-    if (targetMember.userId === session.user.id) {
+    if (targetMember.userId === access.userId) {
       return {
         success: false,
         error: "You cannot remove yourself from the organization",
@@ -585,14 +493,7 @@ export async function removeMember(
         and(eq(member.id, memberId), eq(member.organizationId, organizationId))
       );
 
-    // Revalidate the members page
-    const org = await db.query.organization.findFirst({
-      where: (orgs, { eq: eqOp }) => eqOp(orgs.id, organizationId),
-    });
-
-    if (org?.slug) {
-      revalidatePath(`/${org.slug}/settings/members`);
-    }
+    revalidatePath(`/${access.orgSlug}/settings/members`);
 
     return {
       success: true,
@@ -627,39 +528,15 @@ export async function cancelInvitation(
   organizationId: string
 ): Promise<CancelInvitationResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in",
-      };
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return { success: false, error: "No access" };
     }
 
-    // Get the current user's membership
-    const userMembership = await db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id)
-      ),
-    });
-
-    if (!userMembership) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    // Check permissions - only owners and admins can cancel invitations
-    if (userMembership.role !== "owner" && userMembership.role !== "admin") {
-      return {
-        success: false,
-        error: "You don't have permission to cancel invitations",
-      };
-    }
+    const cancelInviteError = checkPermission(access.role, "members", [
+      "invite",
+    ]);
+    if (cancelInviteError) return cancelInviteError;
 
     // Verify invitation belongs to this org before deleting (prevent cross-org IDOR)
     const targetInvitation = await db.query.invitation.findFirst({
@@ -686,14 +563,7 @@ export async function cancelInvitation(
         )
       );
 
-    // Revalidate the members page
-    const org = await db.query.organization.findFirst({
-      where: (orgs, { eq: eqOp }) => eqOp(orgs.id, organizationId),
-    });
-
-    if (org?.slug) {
-      revalidatePath(`/${org.slug}/settings/members`);
-    }
+    revalidatePath(`/${access.orgSlug}/settings/members`);
 
     return {
       success: true,

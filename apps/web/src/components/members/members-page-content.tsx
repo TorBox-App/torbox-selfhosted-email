@@ -23,7 +23,7 @@ import { MembersTable } from "./members-table";
 type MembersPageContentProps = {
   organizationId: string;
   organizationSlug: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function MembersPageContent({

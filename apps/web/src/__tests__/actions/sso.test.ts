@@ -92,7 +92,7 @@ describe("SSO Actions", () => {
       });
       expect(result).toEqual({
         success: false,
-        error: "Only admins can configure SSO",
+        error: "You don't have permission to perform this action",
       });
     });
 
@@ -128,7 +128,7 @@ describe("SSO Actions", () => {
       const result = await deleteSsoProvider(TEST_ORG_ID, "provider-1");
       expect(result).toEqual({
         success: false,
-        error: "Only admins can delete SSO provider",
+        error: "You don't have permission to perform this action",
       });
     });
 
@@ -224,7 +224,7 @@ describe("SSO Actions", () => {
       const result = await generateScimToken(TEST_ORG_ID, "provider-1");
       expect(result).toEqual({
         success: false,
-        error: "Only admins can generate SCIM tokens",
+        error: "You don't have permission to perform this action",
       });
     });
 

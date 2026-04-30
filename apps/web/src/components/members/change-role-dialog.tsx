@@ -21,11 +21,12 @@ import { toast } from "sonner";
 import type { MemberWithUser } from "@/actions/members";
 import { updateMemberRole } from "@/actions/members";
 import { Button } from "@/components/ui/button";
+import { PRESET_ROLES } from "@/lib/preset-roles";
 
 type ChangeRoleDialogProps = {
   member: MemberWithUser;
   organizationId: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onRoleChanged: () => void;
@@ -39,9 +40,7 @@ export function ChangeRoleDialog({
   onOpenChange,
   onRoleChanged,
 }: ChangeRoleDialogProps) {
-  const [newRole, setNewRole] = useState<"owner" | "admin" | "member">(
-    member.role as "owner" | "admin" | "member"
-  );
+  const [newRole, setNewRole] = useState<string>(member.role);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSubmit = async () => {
@@ -64,10 +63,9 @@ export function ChangeRoleDialog({
     setIsUpdating(false);
   };
 
-  const availableRoles =
-    userRole === "owner"
-      ? (["owner", "admin", "member"] as const)
-      : (["admin", "member"] as const);
+  const builtInRoles =
+    userRole === "owner" ? ["owner", "admin", "member"] : ["admin", "member"];
+  const availableRoles = [...builtInRoles, ...PRESET_ROLES.map((r) => r.name)];
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
@@ -82,21 +80,22 @@ export function ChangeRoleDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
-            <Select
-              onValueChange={(value) =>
-                setNewRole(value as "owner" | "admin" | "member")
-              }
-              value={newRole}
-            >
+            <Select onValueChange={setNewRole} value={newRole}>
               <SelectTrigger id="role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {availableRoles.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                  </SelectItem>
-                ))}
+                {availableRoles.map((role) => {
+                  const preset = PRESET_ROLES.find((r) => r.name === role);
+                  const label = preset
+                    ? preset.label
+                    : role.charAt(0).toUpperCase() + role.slice(1);
+                  return (
+                    <SelectItem key={role} value={role}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">
@@ -106,6 +105,7 @@ export function ChangeRoleDialog({
                 "Admins can manage members and settings but cannot delete the organization"}
               {newRole === "member" &&
                 "Members have read-only access to the organization"}
+              {PRESET_ROLES.find((r) => r.name === newRole)?.description}
             </p>
           </div>
         </div>

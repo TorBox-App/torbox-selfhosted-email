@@ -46,7 +46,7 @@ type SenderDefaultsFormProps = {
   defaults: SenderDefaults | null;
   organizationId: string;
   orgSlug: string;
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
 };
 
 export function SenderDefaultsForm({

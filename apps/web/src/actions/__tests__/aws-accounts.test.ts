@@ -1,5 +1,6 @@
 import { awsAccount, db, member, organization, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import {
   afterAll,
   beforeAll,
@@ -835,7 +836,7 @@ describe("deleteAWSAccount", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toContain("Only owners and admins");
+      expect(result.error).toContain("permission");
     }
   });
 
@@ -880,6 +881,115 @@ describe("deleteAWSAccount", () => {
   });
 });
 
+// ─── IDOR: second org and account for cross-org tests ─────────────────────
+
+const orgB = {
+  id: "test-aws-org-b",
+  name: "AWS Test Org B",
+  slug: "aws-test-org-b",
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const orgBAccount = {
+  id: "test-aws-account-org-b",
+  organizationId: orgB.id,
+  name: "Org B AWS Account",
+  accountId: "555666777888",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::555666777888:role/WrapsRole",
+  externalId: "test-external-id-orgb",
+  isVerified: true,
+  lastVerifiedAt: new Date(),
+  createdBy: testUser.id,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  webhookSecret: "c".repeat(64),
+};
+
+describe("saveWebhookSecretAction — IDOR prevention", () => {
+  const validWebhookSecret = "d".repeat(64);
+
+  beforeAll(async () => {
+    await db
+      .insert(organization)
+      .values(orgB)
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: orgB.name },
+      });
+    await db
+      .insert(awsAccount)
+      .values(orgBAccount)
+      .onConflictDoUpdate({
+        target: awsAccount.id,
+        set: { updatedAt: new Date() },
+      });
+  });
+
+  afterAll(async () => {
+    await db.delete(awsAccount).where(eq(awsAccount.id, orgBAccount.id));
+    await db.delete(organization).where(eq(organization.id, orgB.id));
+  });
+
+  it("should return 'AWS account not found' when account belongs to a different org", async () => {
+    // Authenticated as userA (owner of testOrganization / org A).
+    // Attempt to save a webhook secret for orgBAccount using orgA's organizationId.
+    // The query scoped to orgA.id should find nothing — not a permission error,
+    // specifically "not found" because the account+org pair doesn't match.
+    const result = await saveWebhookSecretAction(
+      orgBAccount.id,
+      validWebhookSecret,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe("AWS account not found");
+    }
+  });
+});
+
+describe("removeWebhookSecretAction — IDOR prevention", () => {
+  beforeAll(async () => {
+    await db
+      .insert(organization)
+      .values(orgB)
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: orgB.name },
+      });
+    await db
+      .insert(awsAccount)
+      .values(orgBAccount)
+      .onConflictDoUpdate({
+        target: awsAccount.id,
+        set: { updatedAt: new Date() },
+      });
+  });
+
+  afterAll(async () => {
+    await db.delete(awsAccount).where(eq(awsAccount.id, orgBAccount.id));
+    await db.delete(organization).where(eq(organization.id, orgB.id));
+  });
+
+  it("should return 'AWS account not found' when account belongs to a different org", async () => {
+    // Authenticated as userA (owner of testOrganization / org A).
+    // Attempt to remove the webhook secret for orgBAccount using orgA's organizationId.
+    // The scoped query finds nothing — result is not-found, not a permission error.
+    const result = await removeWebhookSecretAction(
+      orgBAccount.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe("AWS account not found");
+    }
+  });
+});
+
 describe("saveWebhookSecretAction", () => {
   const validWebhookSecret = "a".repeat(64); // Valid 64-char hex string
 
@@ -896,7 +1006,8 @@ describe("saveWebhookSecretAction", () => {
 
     const result = await saveWebhookSecretAction(
       testAwsAccount.id,
-      validWebhookSecret
+      validWebhookSecret,
+      testOrganization.id
     );
 
     expect(result.success).toBe(false);
@@ -908,7 +1019,8 @@ describe("saveWebhookSecretAction", () => {
   it("should return error when account does not exist", async () => {
     const result = await saveWebhookSecretAction(
       "non-existent-account",
-      validWebhookSecret
+      validWebhookSecret,
+      testOrganization.id
     );
 
     expect(result.success).toBe(false);
@@ -922,7 +1034,8 @@ describe("saveWebhookSecretAction", () => {
 
     const result = await saveWebhookSecretAction(
       testAwsAccount.id,
-      validWebhookSecret
+      validWebhookSecret,
+      testOrganization.id
     );
 
     expect(result.success).toBe(false);
@@ -934,7 +1047,8 @@ describe("saveWebhookSecretAction", () => {
   it("should return error for invalid webhook secret format", async () => {
     const result = await saveWebhookSecretAction(
       testAwsAccount.id,
-      "invalid-secret"
+      "invalid-secret",
+      testOrganization.id
     );
 
     expect(result.success).toBe(false);
@@ -946,7 +1060,8 @@ describe("saveWebhookSecretAction", () => {
   it("should return error for webhook secret that is too short", async () => {
     const result = await saveWebhookSecretAction(
       testAwsAccount.id,
-      "abc123" // Too short
+      "abc123", // Too short
+      testOrganization.id
     );
 
     expect(result.success).toBe(false);
@@ -958,7 +1073,8 @@ describe("saveWebhookSecretAction", () => {
   it("should successfully save a valid webhook secret", async () => {
     const result = await saveWebhookSecretAction(
       testAwsAccount.id,
-      validWebhookSecret
+      validWebhookSecret,
+      testOrganization.id
     );
 
     expect(result.success).toBe(true);
@@ -971,6 +1087,21 @@ describe("saveWebhookSecretAction", () => {
       where: (a, { eq }) => eq(a.id, testAwsAccount.id),
     });
     expect(updated?.webhookSecret).toBe(validWebhookSecret);
+  });
+
+  it("revalidates the webhook configuration page using org slug", async () => {
+    const vi_revalidatePath = vi.mocked(revalidatePath);
+    vi_revalidatePath.mockClear();
+
+    await saveWebhookSecretAction(
+      testAwsAccount.id,
+      validWebhookSecret,
+      testOrganization.id
+    );
+
+    expect(vi_revalidatePath).toHaveBeenCalledWith(
+      `/${testOrganization.slug}/settings/aws-accounts/${testAwsAccount.id}`
+    );
   });
 });
 
@@ -986,7 +1117,10 @@ describe("removeWebhookSecretAction", () => {
   it("should return error when user is not authenticated", async () => {
     currentMockUserId = null;
 
-    const result = await removeWebhookSecretAction(testAwsAccount2.id);
+    const result = await removeWebhookSecretAction(
+      testAwsAccount2.id,
+      testOrganization.id
+    );
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -995,7 +1129,10 @@ describe("removeWebhookSecretAction", () => {
   });
 
   it("should return error when account does not exist", async () => {
-    const result = await removeWebhookSecretAction("non-existent-account");
+    const result = await removeWebhookSecretAction(
+      "non-existent-account",
+      testOrganization.id
+    );
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1006,7 +1143,10 @@ describe("removeWebhookSecretAction", () => {
   it("should return error when user is a regular member", async () => {
     currentMockUserId = testMemberUser.id;
 
-    const result = await removeWebhookSecretAction(testAwsAccount2.id);
+    const result = await removeWebhookSecretAction(
+      testAwsAccount2.id,
+      testOrganization.id
+    );
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1015,7 +1155,10 @@ describe("removeWebhookSecretAction", () => {
   });
 
   it("should successfully remove webhook secret as owner", async () => {
-    const result = await removeWebhookSecretAction(testAwsAccount2.id);
+    const result = await removeWebhookSecretAction(
+      testAwsAccount2.id,
+      testOrganization.id
+    );
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1036,8 +1179,20 @@ describe("removeWebhookSecretAction", () => {
       .set({ webhookSecret: null, updatedAt: new Date() })
       .where(eq(awsAccount.id, testAwsAccount2.id));
 
-    const result = await removeWebhookSecretAction(testAwsAccount2.id);
+    const result = await removeWebhookSecretAction(
+      testAwsAccount2.id,
+      testOrganization.id
+    );
 
     expect(result.success).toBe(true);
+  });
+
+  it("revalidates the webhook configuration page using org slug", async () => {
+    const vi_revalidatePath = vi.mocked(revalidatePath);
+    vi_revalidatePath.mockClear();
+    await removeWebhookSecretAction(testAwsAccount2.id, testOrganization.id);
+    expect(vi_revalidatePath).toHaveBeenCalledWith(
+      `/${testOrganization.slug}/settings/aws-accounts/${testAwsAccount2.id}`
+    );
   });
 });

@@ -14,6 +14,7 @@ import {
 import { and, eq, ilike, or } from "drizzle-orm";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
+import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type SearchEntityType =
@@ -52,6 +53,8 @@ export async function universalSearch(
     if (!access) {
       return { success: false, error: "Unauthorized" };
     }
+    const permError = checkPermission(access.role, "contacts", ["read"]);
+    if (permError) return permError;
 
     const { orgSlug } = access;
     const escaped = escapeIlike(query.trim());

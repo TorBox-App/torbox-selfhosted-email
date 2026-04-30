@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 export type OrgAccess = {
   userId: string;
   userEmail: string;
+  userName: string | null | undefined;
   role: string;
   orgSlug: string;
 };
@@ -41,6 +42,7 @@ export async function verifyOrgAccess(
   return {
     userId: session.user.id,
     userEmail: session.user.email,
+    userName: session.user.name,
     role: membership.role,
     orgSlug: membership.organization.slug,
   };

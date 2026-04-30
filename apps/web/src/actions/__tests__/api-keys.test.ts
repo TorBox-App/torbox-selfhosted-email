@@ -16,7 +16,12 @@ import {
   it,
   vi,
 } from "vitest";
-import { createApiKey, verifyApiKey } from "../api-keys";
+import {
+  createApiKey,
+  deleteApiKey,
+  listApiKeys,
+  verifyApiKey,
+} from "../api-keys";
 
 // --- Test fixtures ---
 
@@ -41,11 +46,31 @@ const testOrganization = {
   metadata: null,
 };
 
+const memberUser = {
+  id: "api-keys-test-member-user-1",
+  email: "api-keys-member@example.com",
+  name: "API Keys Member User",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
 const testMember = {
   id: "api-keys-test-member-1",
   organizationId: testOrganization.id,
   userId: testUser.id,
   role: "owner" as const,
+  createdAt: new Date(),
+};
+
+const memberMember = {
+  id: "api-keys-test-member-role-1",
+  organizationId: testOrganization.id,
+  userId: memberUser.id,
+  role: "member" as const,
   createdAt: new Date(),
 };
 
@@ -57,6 +82,8 @@ const testSubscription = {
   createdAt: new Date(),
   updatedAt: new Date(),
 };
+
+let currentMockUserId: string | null = testUser.id;
 
 // Mock next/headers
 vi.mock("next/headers", () => ({
@@ -72,17 +99,26 @@ vi.mock("next/cache", () => ({
 vi.mock("@wraps/auth", () => ({
   auth: {
     api: {
-      getSession: vi.fn(async () => ({
-        user: { id: testUser.id, email: testUser.email, name: testUser.name },
-        session: {
-          id: "session-123",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          userId: testUser.id,
-          expiresAt: new Date(Date.now() + 86_400_000),
-          token: "test-token",
-        },
-      })),
+      getSession: vi.fn(async () => {
+        if (!currentMockUserId) return null;
+        const users: Record<string, { email: string; name: string }> = {
+          [testUser.id]: { email: testUser.email, name: testUser.name },
+          [memberUser.id]: { email: memberUser.email, name: memberUser.name },
+        };
+        const u = users[currentMockUserId];
+        if (!u) return null;
+        return {
+          user: { id: currentMockUserId, email: u.email, name: u.name },
+          session: {
+            id: "session-123",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            userId: currentMockUserId,
+            expiresAt: new Date(Date.now() + 86_400_000),
+            token: "test-token",
+          },
+        };
+      }),
     },
   },
 }));
@@ -103,6 +139,10 @@ beforeAll(async () => {
     .insert(user)
     .values(testUser)
     .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+  await db
+    .insert(user)
+    .values(memberUser)
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
 
   await db
     .insert(organization)
@@ -119,6 +159,13 @@ beforeAll(async () => {
       target: member.id,
       set: { role: testMember.role },
     });
+  await db
+    .insert(member)
+    .values(memberMember)
+    .onConflictDoUpdate({
+      target: member.id,
+      set: { role: memberMember.role },
+    });
 
   await db
     .delete(subscription)
@@ -128,6 +175,7 @@ beforeAll(async () => {
 
 // Clean up API keys before each test
 beforeEach(async () => {
+  currentMockUserId = testUser.id;
   await db.delete(apiKey).where(eq(apiKey.organizationId, testOrganization.id));
   trackApiKeyCreatedMock.mockClear();
 });
@@ -135,11 +183,13 @@ beforeEach(async () => {
 // Clean up after all tests
 afterAll(async () => {
   await db.delete(apiKey).where(eq(apiKey.organizationId, testOrganization.id));
+  await db.delete(member).where(eq(member.id, memberMember.id));
   await db.delete(member).where(eq(member.id, testMember.id));
   await db
     .delete(subscription)
     .where(eq(subscription.referenceId, testOrganization.id));
   await db.delete(organization).where(eq(organization.id, testOrganization.id));
+  await db.delete(user).where(eq(user.id, memberUser.id));
   await db.delete(user).where(eq(user.id, testUser.id));
 });
 
@@ -251,5 +301,37 @@ describe("verifyApiKey", () => {
     // Instead, test the boundary: a key that doesn't match returns invalid
     const result = await verifyApiKey("wraps_live_nonexistentkey99");
     expect(result.valid).toBe(false);
+  });
+});
+
+describe("listApiKeys", () => {
+  it("member role can list API keys", async () => {
+    currentMockUserId = memberUser.id;
+    const result = await listApiKeys(testOrganization.id);
+    expect(result.success).toBe(true);
+  });
+
+  it("member role cannot create API keys", async () => {
+    currentMockUserId = memberUser.id;
+    const result = await createApiKey(testOrganization.id, { name: "Test" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain("permission");
+  });
+});
+
+describe("deleteApiKey", () => {
+  it("member role cannot delete API keys", async () => {
+    // Owner creates a key first
+    const created = await createApiKey(testOrganization.id, {
+      name: "To Delete",
+    });
+    expect(created.success).toBe(true);
+    if (!created.success) throw new Error("Expected success");
+
+    // Member tries to delete
+    currentMockUserId = memberUser.id;
+    const result = await deleteApiKey(created.apiKey.id, testOrganization.id);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain("permission");
   });
 });

@@ -19,7 +19,7 @@ type TopicsTabsProps = {
   orgSlug: string;
   organizationId: string;
   topics: TopicWithMeta[];
-  userRole: "owner" | "admin" | "member";
+  userRole: string;
   settings: TopicSettingsType | null;
   verifiedDomains: string[];
 };
