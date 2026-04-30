@@ -7,6 +7,7 @@ import { Mail, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCreateTemplate } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(1, "Template name is required").max(100),
@@ -63,7 +63,9 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
 
         router.push(`/${orgSlug}/emails/templates/${template.id}`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to create template");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to create template"
+        );
       }
     },
   });

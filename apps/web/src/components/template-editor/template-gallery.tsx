@@ -90,7 +90,9 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
     } catch (err) {
       setLoadingTemplateId(null);
-      toast.error(err instanceof Error ? err.message : "Failed to create template");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create template"
+      );
     }
   };
 
@@ -113,7 +115,9 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
     } catch (err) {
       setLoadingTemplateId(null);
-      toast.error(err instanceof Error ? err.message : "Failed to create template");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create template"
+      );
     }
   };
 
@@ -138,7 +142,9 @@ export function TemplateGallery({ orgSlug }: TemplateGalleryProps) {
 
       router.push(`/${orgSlug}/emails/templates/${template.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create template");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create template"
+      );
     }
   };
 

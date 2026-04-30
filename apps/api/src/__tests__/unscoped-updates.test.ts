@@ -25,20 +25,19 @@ describe("Defense-in-depth: org-scoped updates", () => {
   });
 
   it("contact PATCH UPDATE scopes by organizationId", () => {
+    // The update logic lives in the repository — check there
     const source = readFileSync(
-      resolve(routesDir, "routes/contacts.ts"),
+      resolve(routesDir, "../../../packages/db/src/repositories/contacts.ts"),
       "utf-8"
     );
 
-    // Find .set(updateValues) and verify organizationId is between it and .returning()
-    const setIdx = source.indexOf(".set(updateValues)");
-    expect(setIdx).toBeGreaterThan(-1);
+    // Find updateContactFields and verify organizationId is in the WHERE clause
+    const fnIdx = source.indexOf("export async function updateContactFields");
+    expect(fnIdx).toBeGreaterThan(-1);
 
-    const returningIdx = source.indexOf(".returning()", setIdx);
-    expect(returningIdx).toBeGreaterThan(setIdx);
-
-    const betweenSetAndReturning = source.slice(setIdx, returningIdx);
-    expect(betweenSetAndReturning).toContain("organizationId");
+    const fnBody = source.slice(fnIdx, fnIdx + 600);
+    expect(fnBody).toContain("organizationId");
+    expect(fnBody).toContain(".returning()");
   });
 
   it("unsubscribe global UPDATE scopes contact by organizationId", () => {

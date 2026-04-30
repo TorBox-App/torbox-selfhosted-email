@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createContact } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
-import type { ContactStatus } from "@/lib/contacts";
+import type { ContactStatus, EmailStatus, SmsStatus } from "@/lib/contacts";
 import type { TopicWithMeta } from "@/lib/topics";
 import { ContactFormDialog } from "./contact-form-dialog";
 import { ImportContactsDialog } from "./import-contacts-dialog";
@@ -45,25 +45,38 @@ export function ContactsEmptyState({
 
   const handleCreateContact = async (data: {
     email?: string;
+    phone?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    company?: string | null;
+    jobTitle?: string | null;
+    emailStatus?: EmailStatus;
+    smsStatus?: SmsStatus;
     status?: ContactStatus;
     properties?: Record<string, unknown>;
     topicIds?: string[];
   }) => {
-    if (!data.email) {
-      toast.error("Error", { description: "Email is required" });
+    if (!(data.email || data.phone)) {
+      toast.error("Error", { description: "Email or phone is required" });
       return;
     }
-    const email = data.email;
     startTransition(async () => {
       const result = await createContact(organizationId, {
-        email,
+        email: data.email,
+        phone: data.phone,
+        firstName: data.firstName ?? undefined,
+        lastName: data.lastName ?? undefined,
+        company: data.company ?? undefined,
+        jobTitle: data.jobTitle ?? undefined,
+        emailStatus: data.emailStatus,
+        smsStatus: data.smsStatus,
         status: data.status,
         properties: data.properties,
         topicIds: data.topicIds,
       });
       if (result.success) {
         toast.success("Contact created", {
-          description: `${email} has been added.`,
+          description: `${data.email ?? data.phone} has been added.`,
         });
         setCreateDialogOpen(false);
         router.refresh();

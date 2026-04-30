@@ -289,13 +289,20 @@ export function extractPulumiErrorSummary(pulumiOutput: string): string {
     const trimmed = line.trim();
 
     // "error: one or more errors occurred:" signals the start of the error block
-    if (trimmed.match(/^error:\s+\d+ error/i) || trimmed.match(/^error: one or more/i)) {
+    if (
+      trimmed.match(/^error:\s+\d+ error/i) ||
+      trimmed.match(/^error: one or more/i)
+    ) {
       inErrorBlock = true;
     }
 
     if (inErrorBlock) {
       // Stop at the trailing metadata lines
-      if (trimmed.startsWith("err?:") || trimmed.startsWith("code:") || trimmed.startsWith("stdout:")) {
+      if (
+        trimmed.startsWith("err?:") ||
+        trimmed.startsWith("code:") ||
+        trimmed.startsWith("stdout:")
+      ) {
         break;
       }
       if (trimmed) {
@@ -306,7 +313,9 @@ export function extractPulumiErrorSummary(pulumiOutput: string): string {
 
     // Pick up individual "Failed to …" or "error:" lines outside the block
     if (
-      (trimmed.startsWith("error:") && !trimmed.includes("verification warning") && !trimmed.includes("is deprecated")) ||
+      (trimmed.startsWith("error:") &&
+        !trimmed.includes("verification warning") &&
+        !trimmed.includes("is deprecated")) ||
       trimmed.startsWith("Error:") ||
       trimmed.startsWith("Failed to ") ||
       trimmed.startsWith("panic:")

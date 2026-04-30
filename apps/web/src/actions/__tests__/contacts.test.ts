@@ -271,6 +271,20 @@ describe("Contacts Server Actions", () => {
       }
     });
 
+    it("should persist firstName and lastName", async () => {
+      const result = await createContact(testOrganization.id, {
+        email: "name-test@example.com",
+        firstName: "John",
+        lastName: "Doe",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contact.firstName).toBe("John");
+        expect(result.contact.lastName).toBe("Doe");
+      }
+    });
+
     it("should normalize email to lowercase", async () => {
       const result = await createContact(testOrganization.id, {
         email: "UPPERCASE@EXAMPLE.COM",
@@ -279,6 +293,20 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.contact.email).toBe("uppercase@example.com");
+      }
+    });
+
+    it("should persist firstName and lastName fields", async () => {
+      const result = await createContact(testOrganization.id, {
+        email: "name-test@example.com",
+        firstName: "John",
+        lastName: "Doe",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contact.firstName).toBe("John");
+        expect(result.contact.lastName).toBe("Doe");
       }
     });
   });

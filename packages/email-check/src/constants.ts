@@ -303,7 +303,11 @@ export const DOMAIN_BLACKLISTS: BlacklistConfig[] = [
   { name: "0spam Domain", zone: "bl.0spam.org", priority: "medium" },
   { name: "ZapBL RHSBL", zone: "rhsbl.zapbl.net", priority: "low" },
   { name: "Swinog URI", zone: "uribl.swinog.ch", priority: "low" },
-  { name: "ScientificSpam RHSBL", zone: "rhsbl.scientificspam.net", priority: "medium" },
+  {
+    name: "ScientificSpam RHSBL",
+    zone: "rhsbl.scientificspam.net",
+    priority: "medium",
+  },
 ];
 
 /**

@@ -17,7 +17,11 @@ import {
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
-import { errors, extractPulumiErrorSummary, redactSensitiveValues } from "../../utils/shared/errors.js";
+import {
+  errors,
+  extractPulumiErrorSummary,
+  redactSensitiveValues,
+} from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,

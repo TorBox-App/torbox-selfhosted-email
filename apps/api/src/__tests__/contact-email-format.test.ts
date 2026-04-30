@@ -11,12 +11,6 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Mocks must be declared before any imports that use them
 vi.mock("@wraps/db", () => ({
-  db: {
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
   contact: {
     id: "id",
     organizationId: "organization_id",
@@ -58,12 +52,72 @@ vi.mock("@wraps/db", () => ({
     organizationId: "organization_id",
     doubleOptIn: "double_opt_in",
   },
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
-  and: vi.fn((...args) => ({ and: args })),
-  or: vi.fn((...args) => ({ or: args })),
-  inArray: vi.fn((a, b) => ({ inArray: [a, b] })),
-  desc: vi.fn((a) => ({ desc: a })),
-  sql: vi.fn((strings, ...values) => ({ sql: strings, values })),
+  eq: vi.fn((a: unknown, b: unknown) => ({ eq: [a, b] })),
+  and: vi.fn((...args: unknown[]) => ({ and: args })),
+  or: vi.fn((...args: unknown[]) => ({ or: args })),
+  inArray: vi.fn((a: unknown, b: unknown) => ({ inArray: [a, b] })),
+  desc: vi.fn((a: unknown) => ({ desc: a })),
+  sql: vi.fn((strings: unknown, ...values: unknown[]) => ({
+    sql: strings,
+    values,
+  })),
+  // repository functions
+  hashContactValue: vi.fn((v: string) => `hash-${v}`),
+  findContactByExternalId: vi.fn().mockResolvedValue(null),
+  findContactByEmailHash: vi.fn().mockResolvedValue(null),
+  findContactByPhoneHash: vi.fn().mockResolvedValue(null),
+  insertContact: vi.fn().mockResolvedValue({
+    id: "new-contact-id",
+    organizationId: "org-123",
+    externalId: null,
+    email: "valid@example.com",
+    emailHash: "abc123",
+    phone: null,
+    phoneHash: null,
+    firstName: null,
+    lastName: null,
+    company: null,
+    jobTitle: null,
+    emailStatus: "active",
+    smsStatus: null,
+    preferredChannel: null,
+    properties: {},
+    emailsSent: 0,
+    emailsOpened: 0,
+    emailsClicked: 0,
+    smsSent: 0,
+    smsClicked: 0,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+    createdBy: "user-123",
+  }),
+  resolveTopicSlugs: vi.fn().mockResolvedValue([]),
+  fetchTopicsForSubscription: vi.fn().mockResolvedValue([]),
+  insertContactTopics: vi.fn().mockResolvedValue(undefined),
+  fetchTopicNamesByIds: vi.fn().mockResolvedValue(new Map()),
+  resolveContactId: vi.fn().mockResolvedValue("contact-123"),
+  fetchContactSubscriptions: vi.fn().mockResolvedValue([]),
+  updateContactFields: vi.fn().mockResolvedValue({
+    id: "contact-123",
+    email: "valid@example.com",
+    emailStatus: "active",
+    smsStatus: null,
+    preferredChannel: null,
+    properties: {},
+    emailsSent: 0,
+    emailsOpened: 0,
+    emailsClicked: 0,
+    smsSent: 0,
+    smsClicked: 0,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  }),
+  listContacts: vi.fn().mockResolvedValue({ contacts: [], total: 0 }),
+  findContact: vi.fn().mockResolvedValue(null),
+  reactivateContactSubscriptions: vi.fn().mockResolvedValue(undefined),
+  setPendingContactSubscriptions: vi.fn().mockResolvedValue(undefined),
+  deleteContact: vi.fn().mockResolvedValue(undefined),
+  bulkDeleteContacts: vi.fn().mockResolvedValue(0),
 }));
 
 vi.mock("@wraps/email", () => ({
@@ -126,52 +180,6 @@ describe("Contact email format validation (BUG-012)", () => {
     });
 
     it("accepts a valid email format", async () => {
-      const { db } = await import("@wraps/db");
-      const mockDb = db as ReturnType<typeof vi.fn> & typeof db;
-
-      // Mock the duplicate check returning no existing contact
-      const mockFrom = vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([]),
-        }),
-      });
-      vi.mocked(mockDb.select).mockReturnValue({ from: mockFrom } as any);
-
-      // Mock the insert returning a new contact
-      const mockContact = {
-        id: "new-contact-id",
-        organizationId: "org-123",
-        externalId: null,
-        email: "valid@example.com",
-        emailHash: "abc123",
-        phone: null,
-        phoneHash: null,
-        firstName: null,
-        lastName: null,
-        company: null,
-        jobTitle: null,
-        emailStatus: "active",
-        smsStatus: null,
-        preferredChannel: null,
-        properties: {},
-        emailsSent: 0,
-        emailsOpened: 0,
-        emailsClicked: 0,
-        smsSent: 0,
-        smsClicked: 0,
-        createdAt: new Date("2024-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
-        createdBy: "user-123",
-      };
-      const mockInsert = {
-        values: vi.fn().mockReturnValue({
-          onConflictDoNothing: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockContact]),
-          }),
-        }),
-      };
-      vi.mocked(mockDb.insert).mockReturnValue(mockInsert as any);
-
       const response = await app.handle(
         new Request("http://localhost/v1/contacts", {
           method: "POST",

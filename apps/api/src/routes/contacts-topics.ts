@@ -4,7 +4,14 @@
  * PUT /v1/contacts/:id/topics - Replace all topic subscriptions
  */
 
-import { contact, contactTopic, db, eq, topic } from "@wraps/db";
+import {
+  contact,
+  contactTopic,
+  db,
+  eq,
+  resolveTopicSlugs,
+  topic,
+} from "@wraps/db";
 import { sendTopicConfirmationEmail } from "@wraps/email";
 import { and, inArray } from "drizzle-orm";
 import { t } from "elysia";
@@ -20,7 +27,6 @@ import {
   emitTopicSubscribed,
   emitTopicUnsubscribed,
 } from "../services/workflow-events";
-import { resolveTopicSlugs } from "./contacts";
 
 // Common response schemas
 const errorResponse = t.Object({

@@ -11,10 +11,29 @@
  * DELETE /v1/contacts - Bulk delete contacts
  */
 
-import { createHash } from "node:crypto";
-import { contact, contactTopic, db, eq, escapeIlike, topic } from "@wraps/db";
+import {
+  bulkDeleteContacts,
+  contact,
+  deleteContact,
+  fetchContactSubscriptions,
+  fetchTopicNamesByIds,
+  fetchTopicsForSubscription,
+  findContact,
+  findContactByEmailHash,
+  findContactByExternalId,
+  findContactByPhoneHash,
+  hashContactValue,
+  insertContact,
+  insertContactTopics,
+  listContacts,
+  reactivateContactSubscriptions,
+  resolveContactId,
+  resolveTopicSlugs,
+  setPendingContactSubscriptions,
+  updateContactFields,
+} from "@wraps/db";
 import { sendTopicConfirmationEmail } from "@wraps/email";
-import { and, desc, inArray, or, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../lib/logger";
@@ -36,7 +55,6 @@ const errorResponse = t.Object({
 });
 
 // OpenAPI 3.0 compatible arbitrary properties object
-// Uses additionalProperties instead of patternProperties
 const propertiesSchema = t.Optional(
   t.Object({}, { additionalProperties: true, description: "Custom properties" })
 );
@@ -244,39 +262,6 @@ const listContactsQuerySchema = t.Object({
   ),
 });
 
-// Helpers
-function hashValue(value: string): string {
-  return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
-}
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function detectContactIdType(id: string): "uuid" | "email" | "externalId" {
-  if (id.includes("@")) return "email";
-  if (UUID_RE.test(id)) return "uuid";
-  return "externalId";
-}
-
-// Resolve topic slugs to IDs for the given organization
-export async function resolveTopicSlugs(
-  slugs: string[],
-  organizationId: string
-): Promise<string[]> {
-  if (slugs.length === 0) {
-    return [];
-  }
-
-  const topics = await db
-    .select({ id: topic.id, slug: topic.slug })
-    .from(topic)
-    .where(
-      and(eq(topic.organizationId, organizationId), inArray(topic.slug, slugs))
-    );
-
-  return topics.map((t) => t.id);
-}
-
 export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
   // List contacts
   .get(
@@ -290,75 +275,37 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         Number.parseInt(query.pageSize || "50", 10),
         100
       );
-      const offset = (page - 1) * pageSize;
 
-      // Build conditions
-      const conditions = [
-        eq(contact.organizationId, authContext.organizationId),
-      ];
-
-      if (query.emailStatus) {
-        conditions.push(eq(contact.emailStatus, query.emailStatus));
-      }
-
-      if (query.smsStatus) {
-        conditions.push(eq(contact.smsStatus, query.smsStatus));
-      }
-
-      if (query.preferredChannel) {
-        conditions.push(eq(contact.preferredChannel, query.preferredChannel));
-      }
-
-      if (query.search) {
-        const search = `%${escapeIlike(query.search)}%`;
-        conditions.push(
-          or(
-            sql`${contact.email} ILIKE ${search}`,
-            sql`${contact.phone} ILIKE ${search}`
-          )!
-        );
-      }
-
-      // Get total count
-      const [countResult] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(contact)
-        .where(and(...conditions));
-
-      const total = countResult?.count ?? 0;
-
-      // Get contacts
-      const contacts = await db
-        .select({
-          id: contact.id,
-          externalId: contact.externalId,
-          email: contact.email,
-          phone: contact.phone,
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          company: contact.company,
-          jobTitle: contact.jobTitle,
-          emailStatus: contact.emailStatus,
-          smsStatus: contact.smsStatus,
-          preferredChannel: contact.preferredChannel,
-          properties: contact.properties,
-          emailsSent: contact.emailsSent,
-          emailsOpened: contact.emailsOpened,
-          emailsClicked: contact.emailsClicked,
-          smsSent: contact.smsSent,
-          smsClicked: contact.smsClicked,
-          createdAt: contact.createdAt,
-          updatedAt: contact.updatedAt,
-        })
-        .from(contact)
-        .where(and(...conditions))
-        .orderBy(desc(contact.createdAt))
-        .limit(pageSize)
-        .offset(offset);
+      const { contacts, total } = await listContacts(
+        authContext.organizationId,
+        {
+          emailStatus: query.emailStatus,
+          smsStatus: query.smsStatus,
+          preferredChannel: query.preferredChannel,
+          search: query.search,
+        },
+        { page, pageSize }
+      );
 
       return {
         contacts: contacts.map((c) => ({
-          ...c,
+          id: c.id,
+          externalId: c.externalId,
+          email: c.email,
+          phone: c.phone,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          company: c.company,
+          jobTitle: c.jobTitle,
+          emailStatus: c.emailStatus,
+          smsStatus: c.smsStatus,
+          preferredChannel: c.preferredChannel,
+          properties: c.properties,
+          emailsSent: c.emailsSent,
+          emailsOpened: c.emailsOpened,
+          emailsClicked: c.emailsClicked,
+          smsSent: c.smsSent,
+          smsClicked: c.smsClicked,
           createdAt: c.createdAt.toISOString(),
           updatedAt: c.updatedAt.toISOString(),
         })),
@@ -395,41 +342,12 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      const idType = detectContactIdType(params.id);
-      const idCondition =
-        idType === "email"
-          ? eq(contact.email, params.id)
-          : idType === "uuid"
-            ? eq(contact.id, params.id)
-            : eq(contact.externalId, params.id);
-
-      const [result] = await db
-        .select()
-        .from(contact)
-        .where(
-          and(
-            idCondition,
-            eq(contact.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const result = await findContact(params.id, authContext.organizationId);
 
       if (!result) {
         ctx.set.status = 404;
         return { error: "Contact not found" };
       }
-
-      // Get topics
-      const topics = await db
-        .select({
-          topicId: contactTopic.topicId,
-          topicName: topic.name,
-          status: contactTopic.status,
-          subscribedAt: contactTopic.subscribedAt,
-        })
-        .from(contactTopic)
-        .innerJoin(topic, eq(topic.id, contactTopic.topicId))
-        .where(eq(contactTopic.contactId, result.id));
 
       return {
         id: result.id,
@@ -451,7 +369,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         smsClicked: result.smsClicked,
         createdAt: result.createdAt.toISOString(),
         updatedAt: result.updatedAt.toISOString(),
-        topics: topics.map((t) => ({
+        topics: result.topics.map((t) => ({
           ...t,
           subscribedAt: t.subscribedAt?.toISOString() ?? null,
         })),
@@ -500,57 +418,35 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       // Check for duplicate externalId
       if (body.externalId) {
-        const existing = await db
-          .select({ id: contact.id })
-          .from(contact)
-          .where(
-            and(
-              eq(contact.organizationId, authContext.organizationId),
-              eq(contact.externalId, body.externalId)
-            )
-          )
-          .limit(1);
-
-        if (existing.length > 0) {
+        const existing = await findContactByExternalId(
+          body.externalId,
+          authContext.organizationId
+        );
+        if (existing) {
           ctx.set.status = 409;
           return { error: "Contact with this externalId already exists" };
         }
       }
 
-      // Check for duplicates
+      // Check for duplicate email
       if (body.email) {
-        const emailHash = hashValue(body.email);
-        const existing = await db
-          .select({ id: contact.id })
-          .from(contact)
-          .where(
-            and(
-              eq(contact.organizationId, authContext.organizationId),
-              eq(contact.emailHash, emailHash)
-            )
-          )
-          .limit(1);
-
-        if (existing.length > 0) {
+        const existing = await findContactByEmailHash(
+          hashContactValue(body.email),
+          authContext.organizationId
+        );
+        if (existing) {
           ctx.set.status = 409;
           return { error: "Contact with this email already exists" };
         }
       }
 
+      // Check for duplicate phone
       if (body.phone) {
-        const phoneHash = hashValue(body.phone);
-        const existing = await db
-          .select({ id: contact.id })
-          .from(contact)
-          .where(
-            and(
-              eq(contact.organizationId, authContext.organizationId),
-              eq(contact.phoneHash, phoneHash)
-            )
-          )
-          .limit(1);
-
-        if (existing.length > 0) {
+        const existing = await findContactByPhoneHash(
+          hashContactValue(body.phone),
+          authContext.organizationId
+        );
+        if (existing) {
           ctx.set.status = 409;
           return { error: "Contact with this phone already exists" };
         }
@@ -559,27 +455,23 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       // Create contact — onConflictDoNothing covers both unique constraints
       // (contact_unique_org_email_idx and contact_unique_org_phone_idx)
       // so concurrent requests that pass the SELECT checks above won't 500.
-      const [newContact] = await db
-        .insert(contact)
-        .values({
-          organizationId: authContext.organizationId,
-          externalId: body.externalId ?? null,
-          email: body.email,
-          emailHash: body.email ? hashValue(body.email) : null,
-          emailStatus: body.emailStatus ?? (body.email ? "active" : null),
-          phone: body.phone,
-          phoneHash: body.phone ? hashValue(body.phone) : null,
-          smsStatus: body.smsStatus ?? (body.phone ? "pending_consent" : null),
-          firstName: body.firstName ?? null,
-          lastName: body.lastName ?? null,
-          company: body.company ?? null,
-          jobTitle: body.jobTitle ?? null,
-          preferredChannel: body.preferredChannel ?? null,
-          properties: body.properties ?? {},
-          createdBy: authContext.userId,
-        })
-        .onConflictDoNothing()
-        .returning();
+      const newContact = await insertContact({
+        organizationId: authContext.organizationId,
+        externalId: body.externalId ?? null,
+        email: body.email,
+        emailHash: body.email ? hashContactValue(body.email) : null,
+        emailStatus: body.emailStatus ?? (body.email ? "active" : null),
+        phone: body.phone,
+        phoneHash: body.phone ? hashContactValue(body.phone) : null,
+        smsStatus: body.smsStatus ?? (body.phone ? "pending_consent" : null),
+        firstName: body.firstName ?? null,
+        lastName: body.lastName ?? null,
+        company: body.company ?? null,
+        jobTitle: body.jobTitle ?? null,
+        preferredChannel: body.preferredChannel ?? null,
+        properties: body.properties ?? {},
+        createdBy: authContext.userId,
+      });
 
       if (!newContact) {
         // Race condition: another request created this contact between our
@@ -604,35 +496,18 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       // Add to topics if specified
       const pendingTopics: string[] = [];
       if (topicIds.length > 0) {
-        // Get topic info to check for double opt-in
-        const topicInfos = await db
-          .select({
-            id: topic.id,
-            name: topic.name,
-            description: topic.description,
-            doubleOptIn: topic.doubleOptIn,
-          })
-          .from(topic)
-          .where(
-            and(
-              eq(topic.organizationId, authContext.organizationId),
-              inArray(topic.id, topicIds)
-            )
-          );
-
+        const topicInfos = await fetchTopicsForSubscription(
+          topicIds,
+          authContext.organizationId
+        );
         const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
-
-        // Create subscriptions with appropriate status
         const now = new Date();
-        await db.insert(contactTopic).values(
+
+        await insertContactTopics(
           topicIds.map((topicId) => {
             const topicInfo = topicMap.get(topicId);
             const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
-
-            if (requiresConfirmation) {
-              pendingTopics.push(topicId);
-            }
-
+            if (requiresConfirmation) pendingTopics.push(topicId);
             return {
               contactId: newContact.id,
               topicId,
@@ -644,8 +519,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         );
 
         // Send confirmation emails for double opt-in topics
-        const contactEmailForConfirmation = newContact.email;
-        if (pendingTopics.length > 0 && contactEmailForConfirmation) {
+        if (pendingTopics.length > 0 && newContact.email) {
+          const contactEmail = newContact.email;
           await Promise.all(
             pendingTopics.map(async (topicId) => {
               const topicInfo = topicMap.get(topicId);
@@ -653,7 +528,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                 try {
                   await sendTopicConfirmationEmail({
                     contactId: newContact.id,
-                    contactEmail: contactEmailForConfirmation,
+                    contactEmail,
                     topicId,
                     topicName: topicInfo.name,
                     topicDescription: topicInfo.description,
@@ -705,14 +580,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         const immediateTopics = topicIds.filter(
           (tid) => !pendingTopics.includes(tid)
         );
-        // Re-fetch topic names for the emission (topicMap was in inner scope)
-        const topicNamesForEmit = await db
-          .select({ id: topic.id, name: topic.name })
-          .from(topic)
-          .where(inArray(topic.id, immediateTopics));
-        const topicNameMap = new Map(
-          topicNamesForEmit.map((t) => [t.id, t.name])
-        );
+        const topicNameMap = await fetchTopicNamesByIds(immediateTopics);
 
         await Promise.all(
           immediateTopics.map((topicId) =>
@@ -782,33 +650,15 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params, body } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      // Resolve contact: accept UUID, email, or externalId as the :id parameter.
-      const idType = detectContactIdType(params.id);
-      const idCondition =
-        idType === "email"
-          ? eq(contact.email, params.id)
-          : idType === "uuid"
-            ? eq(contact.id, params.id)
-            : eq(contact.externalId, params.id);
+      const contactId = await resolveContactId(
+        params.id,
+        authContext.organizationId
+      );
 
-      const [existing] = await db
-        .select({ id: contact.id })
-        .from(contact)
-        .where(
-          and(
-            idCondition,
-            eq(contact.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
-
-      if (!existing) {
+      if (!contactId) {
         ctx.set.status = 404;
         return { error: "Contact not found" };
       }
-
-      // Use the resolved UUID for all subsequent operations
-      const contactId = existing.id;
 
       // Build update values
       const updateValues: Record<string, unknown> = {
@@ -817,63 +667,40 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       if (body.email !== undefined) {
         updateValues.email = body.email;
-        updateValues.emailHash = body.email ? hashValue(body.email) : null;
+        updateValues.emailHash = body.email
+          ? hashContactValue(body.email)
+          : null;
       }
-
       if (body.phone !== undefined) {
         updateValues.phone = body.phone;
-        updateValues.phoneHash = body.phone ? hashValue(body.phone) : null;
+        updateValues.phoneHash = body.phone
+          ? hashContactValue(body.phone)
+          : null;
       }
-
-      if (body.emailStatus !== undefined) {
+      if (body.emailStatus !== undefined)
         updateValues.emailStatus = body.emailStatus;
-      }
-
-      if (body.smsStatus !== undefined) {
-        updateValues.smsStatus = body.smsStatus;
-      }
-
+      if (body.smsStatus !== undefined) updateValues.smsStatus = body.smsStatus;
       if (body.properties !== undefined) {
         const patchProperties = JSON.stringify(body.properties);
         updateValues.properties = sql`(COALESCE(${contact.properties}::jsonb, '{}'::jsonb) || ${patchProperties}::jsonb)::json`;
       }
-
-      if (body.firstName !== undefined) {
-        updateValues.firstName = body.firstName;
-      }
-
-      if (body.lastName !== undefined) {
-        updateValues.lastName = body.lastName;
-      }
-
-      if (body.company !== undefined) {
-        updateValues.company = body.company;
-      }
-
-      if (body.jobTitle !== undefined) {
-        updateValues.jobTitle = body.jobTitle;
-      }
-
-      if (body.preferredChannel !== undefined) {
+      if (body.firstName !== undefined) updateValues.firstName = body.firstName;
+      if (body.lastName !== undefined) updateValues.lastName = body.lastName;
+      if (body.company !== undefined) updateValues.company = body.company;
+      if (body.jobTitle !== undefined) updateValues.jobTitle = body.jobTitle;
+      if (body.preferredChannel !== undefined)
         updateValues.preferredChannel = body.preferredChannel;
-      }
 
       // Update contact (scoped by org for defense-in-depth)
-      const [updated] = await db
-        .update(contact)
-        .set(updateValues)
-        .where(
-          and(
-            eq(contact.id, contactId),
-            eq(contact.organizationId, authContext.organizationId)
-          )
-        )
-        .returning();
+      const updated = await updateContactFields(
+        contactId,
+        authContext.organizationId,
+        updateValues
+      );
 
       // Add topic subscriptions if specified (PATCH adds, doesn't replace)
       const pendingTopics: string[] = [];
       if (body.topicIds !== undefined || body.topicSlugs !== undefined) {
-        // Resolve topic slugs to IDs if provided
         let topicIds = body.topicIds || [];
         if (body.topicSlugs && body.topicSlugs.length > 0) {
           const resolvedIds = await resolveTopicSlugs(
@@ -883,17 +710,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           topicIds = [...topicIds, ...resolvedIds];
         }
 
-        // Get existing subscriptions to check which topics are already subscribed
-        const existingSubscriptions = await db
-          .select({
-            topicId: contactTopic.topicId,
-            status: contactTopic.status,
-            confirmedAt: contactTopic.confirmedAt,
-          })
-          .from(contactTopic)
-          .where(eq(contactTopic.contactId, contactId));
+        const existingSubscriptions =
+          await fetchContactSubscriptions(contactId);
 
-        // Only consider actively subscribed topics as "existing"
         const activelySubscribedIds = new Set(
           existingSubscriptions
             .filter((s) => s.status === "subscribed")
@@ -908,9 +727,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             .map((s) => [s.topicId, s.confirmedAt])
         );
 
-        // Topics to add: not in database at all
         const newTopicIds = topicIds.filter((id) => !existingTopicIds.has(id));
-        // Topics to re-subscribe: in database but not actively subscribed
         const resubscribeTopicIds = topicIds.filter(
           (id) => existingTopicIds.has(id) && !activelySubscribedIds.has(id)
         );
@@ -918,22 +735,14 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         // Re-subscribe inactive topics (with DOI check)
         if (resubscribeTopicIds.length > 0) {
           const now = new Date();
-
-          // Get topic info to check for double opt-in
-          const topicInfosForResub = await db
-            .select({
-              id: topic.id,
-              name: topic.name,
-              description: topic.description,
-              doubleOptIn: topic.doubleOptIn,
-            })
-            .from(topic)
-            .where(inArray(topic.id, resubscribeTopicIds));
+          const topicInfosForResub = await fetchTopicsForSubscription(
+            resubscribeTopicIds,
+            authContext.organizationId
+          );
           const resubTopicMap = new Map(
             topicInfosForResub.map((t) => [t.id, t])
           );
 
-          // Separate topics by DOI requirement and confirmation status
           const directResubscribeIds: string[] = [];
           const pendingResubscribeIds: string[] = [];
 
@@ -950,116 +759,77 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             }
           }
 
-          // Update topics that can be directly resubscribed
-          if (directResubscribeIds.length > 0) {
-            await db
-              .update(contactTopic)
-              .set({
-                status: "subscribed",
-                subscribedAt: now,
-              })
-              .where(
-                and(
-                  eq(contactTopic.contactId, contactId),
-                  inArray(contactTopic.topicId, directResubscribeIds)
-                )
-              );
+          await reactivateContactSubscriptions(
+            contactId,
+            directResubscribeIds,
+            now
+          );
 
-            // Emit topic_subscribed events for directly re-subscribed topics
-            await Promise.all(
-              directResubscribeIds.map((topicId) =>
-                emitTopicSubscribed({
-                  contactId,
+          await Promise.all(
+            directResubscribeIds.map((topicId) =>
+              emitTopicSubscribed({
+                contactId,
+                organizationId: authContext.organizationId,
+                topicId,
+                topicName: resubTopicMap.get(topicId)?.name,
+              }).catch((err) => {
+                log.error("Failed to emit topic_subscribed event", err, {
                   organizationId: authContext.organizationId,
-                  topicId,
-                  topicName: resubTopicMap.get(topicId)?.name,
-                }).catch((err) => {
-                  log.error("Failed to emit topic_subscribed event", err, {
-                    organizationId: authContext.organizationId,
-                  });
-                })
-              )
-            );
-          }
-
-          // Update topics that require confirmation to pending status
-          if (pendingResubscribeIds.length > 0) {
-            await db
-              .update(contactTopic)
-              .set({
-                status: "pending",
-                subscribedAt: null,
+                });
               })
-              .where(
-                and(
-                  eq(contactTopic.contactId, contactId),
-                  inArray(contactTopic.topicId, pendingResubscribeIds)
-                )
-              );
+            )
+          );
 
-            // Send confirmation emails for pending re-subscriptions
-            const updatedEmailForConfirmation = updated.email;
-            if (updatedEmailForConfirmation) {
-              await Promise.all(
-                pendingResubscribeIds.map(async (topicId) => {
-                  const topicInfo = resubTopicMap.get(topicId);
-                  if (topicInfo) {
-                    try {
-                      await sendTopicConfirmationEmail({
-                        contactId,
-                        contactEmail: updatedEmailForConfirmation,
-                        topicId,
-                        topicName: topicInfo.name,
-                        topicDescription: topicInfo.description,
-                        organizationId: authContext.organizationId,
-                      });
-                    } catch (err) {
-                      log.error("Failed to send confirmation email", err, {
-                        topicId,
-                        organizationId: authContext.organizationId,
-                      });
-                    }
+          await setPendingContactSubscriptions(
+            contactId,
+            pendingResubscribeIds
+          );
+
+          if (pendingResubscribeIds.length > 0 && updated.email) {
+            const updatedEmail = updated.email;
+            await Promise.all(
+              pendingResubscribeIds.map(async (topicId) => {
+                const topicInfo = resubTopicMap.get(topicId);
+                if (topicInfo) {
+                  try {
+                    await sendTopicConfirmationEmail({
+                      contactId,
+                      contactEmail: updatedEmail,
+                      topicId,
+                      topicName: topicInfo.name,
+                      topicDescription: topicInfo.description,
+                      organizationId: authContext.organizationId,
+                    });
+                  } catch (err) {
+                    log.error("Failed to send confirmation email", err, {
+                      topicId,
+                      organizationId: authContext.organizationId,
+                    });
                   }
-                })
-              );
-            }
+                }
+              })
+            );
           }
         }
 
         // Add new subscriptions with double opt-in check
         if (newTopicIds.length > 0) {
-          // Get topic info to check for double opt-in
-          const topicInfos = await db
-            .select({
-              id: topic.id,
-              name: topic.name,
-              description: topic.description,
-              doubleOptIn: topic.doubleOptIn,
-            })
-            .from(topic)
-            .where(
-              and(
-                eq(topic.organizationId, authContext.organizationId),
-                inArray(topic.id, newTopicIds)
-              )
-            );
-
+          const topicInfos = await fetchTopicsForSubscription(
+            newTopicIds,
+            authContext.organizationId
+          );
           const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
           const now = new Date();
 
-          await db.insert(contactTopic).values(
+          await insertContactTopics(
             newTopicIds.map((topicId) => {
               const topicInfo = topicMap.get(topicId);
               const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
               const previouslyConfirmed = confirmedTopics.has(topicId);
-
-              // Skip confirmation if previously confirmed (re-subscription)
               const needsConfirmation =
                 requiresConfirmation && !previouslyConfirmed;
 
-              if (needsConfirmation) {
-                pendingTopics.push(topicId);
-              }
+              if (needsConfirmation) pendingTopics.push(topicId);
 
               return {
                 contactId,
@@ -1069,15 +839,14 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                 confirmedAt: needsConfirmation
                   ? null
                   : previouslyConfirmed
-                    ? confirmedTopics.get(topicId)
+                    ? (confirmedTopics.get(topicId) ?? now)
                     : now,
               };
             })
           );
 
-          // Send confirmation emails for newly pending topics
-          const updatedEmailForConfirmation = updated.email;
-          if (pendingTopics.length > 0 && updatedEmailForConfirmation) {
+          if (pendingTopics.length > 0 && updated.email) {
+            const updatedEmail = updated.email;
             await Promise.all(
               pendingTopics.map(async (topicId) => {
                 const topicInfo = topicMap.get(topicId);
@@ -1085,7 +854,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                   try {
                     await sendTopicConfirmationEmail({
                       contactId,
-                      contactEmail: updatedEmailForConfirmation,
+                      contactEmail: updatedEmail,
                       topicId,
                       topicName: topicInfo.name,
                       topicDescription: topicInfo.description,
@@ -1102,7 +871,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             );
           }
 
-          // Emit topic_subscribed events for newly subscribed topics (not pending)
           const immediateTopics = newTopicIds.filter(
             (tid) => !pendingTopics.includes(tid)
           );
@@ -1148,7 +916,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         });
       });
 
-      // Check segment entry triggers (contact may now match a segment)
       await checkSegmentEntry({
         contactId,
         organizationId: authContext.organizationId,
@@ -1158,7 +925,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         });
       });
 
-      // Check segment exit triggers (contact may no longer match a segment)
       await checkSegmentExit({
         contactId,
         organizationId: authContext.organizationId,
@@ -1224,39 +990,17 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      // Resolve to UUID first so we can delete by id (org-scoped defense-in-depth)
-      const idType = detectContactIdType(params.id);
-      const idCondition =
-        idType === "email"
-          ? eq(contact.email, params.id)
-          : idType === "uuid"
-            ? eq(contact.id, params.id)
-            : eq(contact.externalId, params.id);
+      const resolvedId = await resolveContactId(
+        params.id,
+        authContext.organizationId
+      );
 
-      const [resolved] = await db
-        .select({ id: contact.id })
-        .from(contact)
-        .where(
-          and(
-            idCondition,
-            eq(contact.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
-
-      if (!resolved) {
+      if (!resolvedId) {
         ctx.set.status = 404;
         return { error: "Contact not found" };
       }
 
-      await db
-        .delete(contact)
-        .where(
-          and(
-            eq(contact.id, resolved.id),
-            eq(contact.organizationId, authContext.organizationId)
-          )
-        );
+      await deleteContact(resolvedId, authContext.organizationId);
 
       return { success: true };
     },
@@ -1292,26 +1036,17 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         return { error: "No contact IDs provided" };
       }
 
-      // Limit bulk delete to 100 at a time
       if (body.ids.length > 100) {
         ctx.set.status = 400;
         return { error: "Maximum 100 contacts can be deleted at once" };
       }
 
-      const result = await db
-        .delete(contact)
-        .where(
-          and(
-            eq(contact.organizationId, authContext.organizationId),
-            inArray(contact.id, body.ids)
-          )
-        )
-        .returning({ id: contact.id });
+      const deleted = await bulkDeleteContacts(
+        body.ids,
+        authContext.organizationId
+      );
 
-      return {
-        success: true,
-        deleted: result.length,
-      };
+      return { success: true, deleted };
     },
     {
       body: t.Object({

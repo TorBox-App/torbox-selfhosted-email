@@ -4,10 +4,10 @@ import { batchSend, db, template, workflow } from "@wraps/db";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { checkPermission } from "@/actions/shared/permissions";
 import { trackTemplateCreated } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import { checkPermission } from "@/actions/shared/permissions";
 
 type RouteContext = {
   params: Promise<{

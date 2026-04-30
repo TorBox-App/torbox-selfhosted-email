@@ -45,15 +45,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Email",
         icon: Mail,
         items: [
-          ...(!isBillingOnly
-            ? [
+          ...(isBillingOnly
+            ? []
+            : [
                 { title: "Emails", url: `/${orgSlug}/emails` },
                 { title: "Inbound", url: `/${orgSlug}/emails/inbound` },
                 { title: "Broadcast", url: `/${orgSlug}/emails/broadcasts` },
                 { title: "Templates", url: `/${orgSlug}/emails/templates` },
                 { title: "Brand Kits", url: `/${orgSlug}/emails/brand-kits` },
-              ]
-            : []),
+              ]),
           { title: "Analytics", url: `/${orgSlug}/emails/analytics` },
         ],
       }
@@ -64,9 +64,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "SMS",
         icon: MessageSquare,
         items: [
-          ...(!isBillingOnly
-            ? [{ title: "Messages", url: `/${orgSlug}/sms` }]
-            : []),
+          ...(isBillingOnly
+            ? []
+            : [{ title: "Messages", url: `/${orgSlug}/sms` }]),
           { title: "Analytics", url: `/${orgSlug}/sms/analytics` },
         ],
       }

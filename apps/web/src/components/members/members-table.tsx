@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +43,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { MemberWithUser } from "@/actions/members";

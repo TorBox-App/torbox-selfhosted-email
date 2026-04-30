@@ -1,7 +1,11 @@
 "use server";
 
-import { contact, db } from "@wraps/db";
-import { and, eq, inArray } from "drizzle-orm";
+import {
+  bulkDeleteContacts as dbBulkDeleteContacts,
+  findContactByEmailHash,
+  findContactsByEmailHashes,
+  insertContact,
+} from "@wraps/db";
 import { trackContactsImported } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
@@ -81,14 +85,10 @@ export async function bulkCreateContactsFromEmails(
       const emailHashValue = hashEmail(email);
 
       // Check for duplicate
-      const existing = await db.query.contact.findFirst({
-        where: (c, { and, eq }) =>
-          and(
-            eq(c.organizationId, organizationId),
-            eq(c.emailHash, emailHashValue)
-          ),
-      });
-
+      const existing = await findContactByEmailHash(
+        emailHashValue,
+        organizationId
+      );
       if (existing) {
         skipped++;
         continue;
@@ -96,7 +96,7 @@ export async function bulkCreateContactsFromEmails(
 
       // Create contact
       try {
-        await db.insert(contact).values({
+        const result = await insertContact({
           organizationId,
           email,
           emailHash: emailHashValue,
@@ -106,7 +106,11 @@ export async function bulkCreateContactsFromEmails(
           confirmedAt: new Date(),
           createdBy: access.userId,
         });
-        created++;
+        if (result) {
+          created++;
+        } else {
+          skipped++;
+        }
       } catch (_err) {
         errors.push(`Failed to create contact for ${email}`);
       }
@@ -164,23 +168,16 @@ export async function checkExistingContacts(
     const emailHashes = normalizedEmails.map((e) => hashEmail(e));
 
     // Find existing contacts by email hash
-    const existingContacts = await db.query.contact.findMany({
-      where: (c, { and, eq, inArray }) =>
-        and(
-          eq(c.organizationId, organizationId),
-          inArray(c.emailHash, emailHashes)
-        ),
-      columns: {
-        id: true,
-        email: true,
-      },
-    });
+    const existingContacts = await findContactsByEmailHashes(
+      organizationId,
+      emailHashes
+    );
 
     // Build map of email -> contactId
     const existing: Record<string, string> = {};
-    for (const contact of existingContacts) {
-      if (contact.email) {
-        existing[contact.email.toLowerCase()] = contact.id;
+    for (const c of existingContacts) {
+      if (c.email) {
+        existing[c.email.toLowerCase()] = c.id;
       }
     }
 
@@ -225,14 +222,7 @@ export async function bulkDeleteContacts(
     }
 
     // Delete contacts (cascades to contact_topic)
-    const _result = await db
-      .delete(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          inArray(contact.id, contactIds)
-        )
-      );
+    await dbBulkDeleteContacts(contactIds, organizationId);
 
     // Revalidate
     revalidateContacts(orgSlug);

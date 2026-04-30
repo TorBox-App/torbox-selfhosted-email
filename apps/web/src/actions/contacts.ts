@@ -1,7 +1,18 @@
 "use server";
 
-import { contact, contactTopic, db, escapeIlike, topic } from "@wraps/db";
-import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import {
+  deleteContact as dbDeleteContact,
+  fetchTopicsForSubscription,
+  findContactByEmailHash,
+  findContactById,
+  findContactByPhoneHash,
+  findContactWithRelations,
+  type InsertContactData,
+  insertContact,
+  listContactsWithRelations,
+  subscribeContactToTopicsOnCreate,
+  updateContactFields,
+} from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { trackContactCreated } from "@/lib/activation-tracking";
 import type {
@@ -76,74 +87,13 @@ export async function listContacts(
       status,
       topicId,
     } = options;
-    const offset = (page - 1) * pageSize;
 
-    // Build where conditions
-    const conditions = [eq(contact.organizationId, organizationId)];
-
-    if (search) {
-      conditions.push(ilike(contact.email, `%${escapeIlike(search)}%`));
-    }
-
-    // Prefer emailStatus over legacy status
-    if (emailStatus) {
-      conditions.push(eq(contact.emailStatus, emailStatus));
-    } else if (status) {
-      // Legacy fallback
-      conditions.push(eq(contact.status, status));
-    }
-
-    // If filtering by topic, we need a subquery
-    let topicFilter;
-    if (topicId) {
-      const subscribedContactIds = db
-        .select({ contactId: contactTopic.contactId })
-        .from(contactTopic)
-        .where(
-          and(
-            eq(contactTopic.topicId, topicId),
-            eq(contactTopic.status, "subscribed")
-          )
-        );
-      topicFilter = sql`${contact.id} IN (${subscribedContactIds})`;
-    }
-
-    // Get total count
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(contact)
-      .where(
-        topicFilter ? and(...conditions, topicFilter) : and(...conditions)
-      );
-
-    const total = totalResult?.count ?? 0;
-
-    // Get contacts with pagination
-    const contacts = await db.query.contact.findMany({
-      where: topicFilter ? and(...conditions, topicFilter) : and(...conditions),
-      with: {
-        createdByUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        topics: {
-          with: {
-            topic: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [desc(contact.createdAt)],
-      limit: pageSize,
-      offset,
-    });
+    const { contacts, total } = await listContactsWithRelations(
+      organizationId,
+      { emailStatus, status, search },
+      { page, pageSize },
+      topicId
+    );
 
     return {
       success: true,
@@ -227,32 +177,7 @@ export async function getContact(
     const permError = checkPermission(access.role, "contacts", ["read"]);
     if (permError) return permError;
 
-    const c = await db.query.contact.findFirst({
-      where: (contact, { and, eq }) =>
-        and(
-          eq(contact.id, contactId),
-          eq(contact.organizationId, organizationId)
-        ),
-      with: {
-        createdByUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        topics: {
-          with: {
-            topic: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const c = await findContactWithRelations(contactId, organizationId);
 
     if (!c) {
       return { success: false, error: "Contact not found" };
@@ -394,14 +319,10 @@ export async function createContact(
 
     // Check for duplicate by email
     if (emailHashValue) {
-      const existingByEmail = await db.query.contact.findFirst({
-        where: (c, { and, eq }) =>
-          and(
-            eq(c.organizationId, organizationId),
-            eq(c.emailHash, emailHashValue)
-          ),
-      });
-
+      const existingByEmail = await findContactByEmailHash(
+        emailHashValue,
+        organizationId
+      );
       if (existingByEmail) {
         return {
           success: false,
@@ -412,14 +333,10 @@ export async function createContact(
 
     // Check for duplicate by phone
     if (phoneHashValue) {
-      const existingByPhone = await db.query.contact.findFirst({
-        where: (c, { and, eq }) =>
-          and(
-            eq(c.organizationId, organizationId),
-            eq(c.phoneHash, phoneHashValue)
-          ),
-      });
-
+      const existingByPhone = await findContactByPhoneHash(
+        phoneHashValue,
+        organizationId
+      );
       if (existingByPhone) {
         return {
           success: false,
@@ -437,34 +354,31 @@ export async function createContact(
       (emailStatus === "active" ? "active" : "pending_confirmation");
 
     // Create contact
-    const [newContact] = await db
-      .insert(contact)
-      .values({
-        organizationId,
-        // Email fields
-        email: email || null,
-        emailHash: emailHashValue,
-        emailStatus,
-        emailVerifiedAt: emailStatus === "active" ? new Date() : null,
-        // Phone fields
-        phone: phone || null,
-        phoneHash: phoneHashValue,
-        smsStatus,
-        smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
-        // Contact details
-        firstName: data.firstName || null,
-        lastName: data.lastName || null,
-        company: data.company || null,
-        jobTitle: data.jobTitle || null,
-        preferredChannel: data.preferredChannel ?? null,
-        // Shared
-        properties: data.properties || {},
-        createdBy: access.userId,
-        // Legacy fields
-        status: legacyStatus,
-        confirmedAt: legacyStatus === "active" ? new Date() : null,
-      })
-      .returning();
+    const newContact = await insertContact({
+      organizationId,
+      // Email fields
+      email: email || null,
+      emailHash: emailHashValue,
+      emailStatus,
+      emailVerifiedAt: emailStatus === "active" ? new Date() : null,
+      // Phone fields
+      phone: phone || null,
+      phoneHash: phoneHashValue,
+      smsStatus,
+      smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
+      // Contact details
+      firstName: data.firstName || null,
+      lastName: data.lastName || null,
+      company: data.company || null,
+      jobTitle: data.jobTitle || null,
+      preferredChannel: data.preferredChannel ?? null,
+      // Shared
+      properties: data.properties || {},
+      createdBy: access.userId,
+      // Legacy fields
+      status: legacyStatus,
+      confirmedAt: legacyStatus === "active" ? new Date() : null,
+    } as InsertContactData);
 
     if (!newContact) {
       return { success: false, error: "Failed to create contact" };
@@ -472,25 +386,12 @@ export async function createContact(
 
     // Subscribe to topics if provided, after verifying they belong to this org
     if (data.topicIds && data.topicIds.length > 0) {
-      const ownedTopics = await db
-        .select({ id: topic.id })
-        .from(topic)
-        .where(
-          and(
-            inArray(topic.id, data.topicIds),
-            eq(topic.organizationId, organizationId)
-          )
-        );
+      const ownedTopics = await fetchTopicsForSubscription(
+        data.topicIds,
+        organizationId
+      );
       const ownedTopicIds = ownedTopics.map((t) => t.id);
-      if (ownedTopicIds.length > 0) {
-        await db.insert(contactTopic).values(
-          ownedTopicIds.map((topicId) => ({
-            contactId: newContact.id,
-            topicId,
-            status: "subscribed",
-          }))
-        );
-      }
+      await subscribeContactToTopicsOnCreate(newContact.id, ownedTopicIds);
     }
 
     // Revalidate
@@ -543,17 +444,14 @@ export async function updateContact(
     orgSlug = access.orgSlug;
 
     // Verify contact exists
-    const existing = await db.query.contact.findFirst({
-      where: (c, { and, eq }) =>
-        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
-    });
+    const existing = await findContactById(contactId, organizationId);
 
     if (!existing) {
       return { success: false, error: "Contact not found" };
     }
 
     // Build update data
-    const updateData: Partial<typeof contact.$inferInsert> = {
+    const updateData: Partial<InsertContactData> = {
       updatedAt: new Date(),
     };
 
@@ -568,16 +466,11 @@ export async function updateContact(
         const emailHashValue = hashEmail(email);
 
         // Check for duplicate (excluding current contact)
-        const duplicate = await db.query.contact.findFirst({
-          where: (c, { and, eq, ne }) =>
-            and(
-              eq(c.organizationId, organizationId),
-              eq(c.emailHash, emailHashValue),
-              ne(c.id, contactId)
-            ),
-        });
-
-        if (duplicate) {
+        const duplicate = await findContactByEmailHash(
+          emailHashValue,
+          organizationId
+        );
+        if (duplicate && duplicate.id !== contactId) {
           return {
             success: false,
             error: "A contact with this email already exists",
@@ -611,16 +504,11 @@ export async function updateContact(
         const phoneHashValue = hashPhone(phone);
 
         // Check for duplicate (excluding current contact)
-        const duplicate = await db.query.contact.findFirst({
-          where: (c, { and, eq, ne }) =>
-            and(
-              eq(c.organizationId, organizationId),
-              eq(c.phoneHash, phoneHashValue),
-              ne(c.id, contactId)
-            ),
-        });
-
-        if (duplicate) {
+        const duplicate = await findContactByPhoneHash(
+          phoneHashValue,
+          organizationId
+        );
+        if (duplicate && duplicate.id !== contactId) {
           return {
             success: false,
             error: "A contact with this phone number already exists",
@@ -725,15 +613,11 @@ export async function updateContact(
     }
 
     // Update contact
-    await db
-      .update(contact)
-      .set(updateData)
-      .where(
-        and(
-          eq(contact.id, contactId),
-          eq(contact.organizationId, organizationId)
-        )
-      );
+    await updateContactFields(
+      contactId,
+      organizationId,
+      updateData as Partial<InsertContactData> & Record<string, unknown>
+    );
 
     // Revalidate
     revalidateContacts(orgSlug);
@@ -771,27 +655,14 @@ export async function deleteContact(
     orgSlug = access.orgSlug;
 
     // Verify contact exists
-    const existing = await db.query.contact.findFirst({
-      where: (c, { and, eq }) =>
-        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
-      with: {
-        topics: true,
-      },
-    });
+    const existing = await findContactById(contactId, organizationId);
 
     if (!existing) {
       return { success: false, error: "Contact not found" };
     }
 
     // Delete contact (cascades to contact_topic)
-    await db
-      .delete(contact)
-      .where(
-        and(
-          eq(contact.id, contactId),
-          eq(contact.organizationId, organizationId)
-        )
-      );
+    await dbDeleteContact(contactId, organizationId);
 
     // Revalidate
     revalidateContacts(orgSlug);
