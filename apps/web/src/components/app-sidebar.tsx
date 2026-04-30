@@ -32,102 +32,67 @@ import { useActiveOrganization } from "@/contexts/organization-context";
 import { useProductsStore } from "@/stores/products-store";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { activeOrganization } = useActiveOrganization();
+  const { activeOrganization, userRole } = useActiveOrganization();
   const params = useParams<{ orgSlug?: string }>();
   const orgSlug = activeOrganization?.slug ?? params.orgSlug ?? "";
   const productsStatus = useProductsStore((s) => s.status);
   const planFeatures = productsStatus?.planFeatures;
 
-  // Email navigation - always show full nav so evaluators see the complete product surface
+  const isBillingOnly = userRole === "billing";
+
   const emailNavGroup = orgSlug
     ? {
         title: "Email",
         icon: Mail,
         items: [
-          {
-            title: "Emails",
-            url: `/${orgSlug}/emails`,
-          },
-          {
-            title: "Inbound",
-            url: `/${orgSlug}/emails/inbound`,
-          },
-          {
-            title: "Broadcast",
-            url: `/${orgSlug}/emails/broadcasts`,
-          },
-          {
-            title: "Templates",
-            url: `/${orgSlug}/emails/templates`,
-          },
-          {
-            title: "Brand Kits",
-            url: `/${orgSlug}/emails/brand-kits`,
-          },
-          {
-            title: "Analytics",
-            url: `/${orgSlug}/emails/analytics`,
-          },
+          ...(!isBillingOnly
+            ? [
+                { title: "Emails", url: `/${orgSlug}/emails` },
+                { title: "Inbound", url: `/${orgSlug}/emails/inbound` },
+                { title: "Broadcast", url: `/${orgSlug}/emails/broadcasts` },
+                { title: "Templates", url: `/${orgSlug}/emails/templates` },
+                { title: "Brand Kits", url: `/${orgSlug}/emails/brand-kits` },
+              ]
+            : []),
+          { title: "Analytics", url: `/${orgSlug}/emails/analytics` },
         ],
       }
     : null;
 
-  // SMS navigation - always show full nav so evaluators see the complete product surface
   const smsNavGroup = orgSlug
     ? {
         title: "SMS",
         icon: MessageSquare,
         items: [
-          {
-            title: "Messages",
-            url: `/${orgSlug}/sms`,
-          },
-          {
-            title: "Analytics",
-            url: `/${orgSlug}/sms/analytics`,
-          },
+          ...(!isBillingOnly
+            ? [{ title: "Messages", url: `/${orgSlug}/sms` }]
+            : []),
+          { title: "Analytics", url: `/${orgSlug}/sms/analytics` },
         ],
       }
     : null;
 
-  // Audience navigation - always show full nav; page-level gates handle access control
-  const audienceNavGroup = orgSlug
-    ? {
-        title: "Audience",
-        icon: Users,
-        items: [
-          {
-            title: "Contacts",
-            url: `/${orgSlug}/contacts`,
-          },
-          {
-            title: "Events",
-            url: `/${orgSlug}/events`,
-          },
-          {
-            title: "Topics",
-            url: `/${orgSlug}/topics`,
-          },
-          {
-            title: "Segments",
-            url: `/${orgSlug}/segments`,
-          },
-        ],
-      }
-    : null;
+  const audienceNavGroup =
+    orgSlug && !isBillingOnly
+      ? {
+          title: "Audience",
+          icon: Users,
+          items: [
+            { title: "Contacts", url: `/${orgSlug}/contacts` },
+            { title: "Events", url: `/${orgSlug}/events` },
+            { title: "Topics", url: `/${orgSlug}/topics` },
+            { title: "Segments", url: `/${orgSlug}/segments` },
+          ],
+        }
+      : null;
 
   // Automations navigation - requires Scale+ plan
   const automationsNavGroup =
-    orgSlug && planFeatures?.workflows
+    orgSlug && !isBillingOnly && planFeatures?.workflows
       ? {
           title: "Automations",
           icon: Workflow,
-          items: [
-            {
-              title: "Workflows",
-              url: `/${orgSlug}/automations`,
-            },
-          ],
+          items: [{ title: "Workflows", url: `/${orgSlug}/automations` }],
         }
       : null;
 

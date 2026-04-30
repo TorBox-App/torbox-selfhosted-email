@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { trackTemplateCreated } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { checkPermission } from "@/actions/shared/permissions";
 
 type RouteContext = {
   params: Promise<{
@@ -174,6 +175,13 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const permError = checkPermission(orgWithMembership.userRole, "templates", [
+      "write",
+    ]);
+    if (permError) {
+      return NextResponse.json({ error: permError.error }, { status: 403 });
     }
 
     const {
