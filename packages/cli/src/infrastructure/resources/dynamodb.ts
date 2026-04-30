@@ -45,8 +45,10 @@ export async function createDynamoDBTables(
           globalSecondaryIndexes: [
             {
               name: "accountId-sentAt-index",
-              hashKey: "accountId",
-              rangeKey: "sentAt",
+              keySchemas: [
+                { attributeName: "accountId", keyType: "HASH" },
+                { attributeName: "sentAt", keyType: "RANGE" },
+              ],
               projectionType: "ALL",
             },
           ],
@@ -76,8 +78,10 @@ export async function createDynamoDBTables(
         globalSecondaryIndexes: [
           {
             name: "accountId-sentAt-index",
-            hashKey: "accountId",
-            rangeKey: "sentAt",
+            keySchemas: [
+              { attributeName: "accountId", keyType: "HASH" },
+              { attributeName: "sentAt", keyType: "RANGE" },
+            ],
             projectionType: "ALL",
           },
         ],
