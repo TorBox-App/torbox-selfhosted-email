@@ -12,7 +12,7 @@ import { Label } from "@wraps/ui/components/ui/label";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
@@ -170,8 +170,13 @@ export default function SignUpForm({
   });
 
   // Redirect already-authenticated users away from the signup page
+  useEffect(() => {
+    if (!isPending && session) {
+      router.replace(callbackUrl);
+    }
+  }, [isPending, session, router, callbackUrl]);
+
   if (!isPending && session) {
-    router.replace(callbackUrl);
     return <Loader />;
   }
 

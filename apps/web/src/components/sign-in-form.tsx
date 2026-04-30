@@ -13,7 +13,7 @@ import { Label } from "@wraps/ui/components/ui/label";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
@@ -146,8 +146,13 @@ export default function SignInForm({
   };
 
   // Redirect already-authenticated users away from the login page
+  useEffect(() => {
+    if (!isPending && session) {
+      router.replace(redirectTo);
+    }
+  }, [isPending, session, router, redirectTo]);
+
   if (!isPending && session) {
-    router.replace(redirectTo);
     return <Loader />;
   }
 
