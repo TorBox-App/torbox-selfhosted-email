@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCreateTemplate } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(1, "Template name is required").max(100),
@@ -45,22 +46,25 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      const template = await createTemplate.mutateAsync({
-        name: value.name,
-        description: value.description,
-        channel: selectedChannel,
-      });
+      try {
+        const template = await createTemplate.mutateAsync({
+          name: value.name,
+          description: value.description,
+          channel: selectedChannel,
+        });
 
-      // Capture template created event in PostHog
-      posthog.capture("template_created", {
-        template_id: template.id,
-        template_name: value.name,
-        has_description: !!value.description,
-        channel: selectedChannel,
-        organization_slug: orgSlug,
-      });
+        posthog.capture("template_created", {
+          template_id: template.id,
+          template_name: value.name,
+          has_description: !!value.description,
+          channel: selectedChannel,
+          organization_slug: orgSlug,
+        });
 
-      router.push(`/${orgSlug}/emails/templates/${template.id}`);
+        router.push(`/${orgSlug}/emails/templates/${template.id}`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to create template");
+      }
     },
   });
 

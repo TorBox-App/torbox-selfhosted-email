@@ -157,7 +157,8 @@ export function useCreateTemplate(orgSlug: string) {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("Failed to create template");
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error ?? "Failed to create template");
       }
       return response.json() as Promise<Template>;
     },
