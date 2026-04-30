@@ -17,6 +17,7 @@ export type ProductsStatus = {
   planId: PlanId;
   planFeatures: PlanFeatures;
   memberCount: number;
+  userRole: string;
 };
 
 type ProductsStore = {

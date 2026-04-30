@@ -73,6 +73,7 @@ export default async function OrganizationLayout({
       events: plan.features.events,
     },
     memberCount: orgData.memberCount,
+    userRole: orgData.userRole,
   };
 
   return (

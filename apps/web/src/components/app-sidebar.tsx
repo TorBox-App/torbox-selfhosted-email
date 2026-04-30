@@ -32,13 +32,13 @@ import { useActiveOrganization } from "@/contexts/organization-context";
 import { useProductsStore } from "@/stores/products-store";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { activeOrganization, userRole } = useActiveOrganization();
+  const { activeOrganization } = useActiveOrganization();
   const params = useParams<{ orgSlug?: string }>();
   const orgSlug = activeOrganization?.slug ?? params.orgSlug ?? "";
   const productsStatus = useProductsStore((s) => s.status);
   const planFeatures = productsStatus?.planFeatures;
 
-  const isBillingOnly = userRole === "billing";
+  const isBillingOnly = productsStatus?.userRole === "billing";
 
   const emailNavGroup = orgSlug
     ? {
