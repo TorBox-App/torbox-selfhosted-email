@@ -729,7 +729,7 @@ export async function deleteWorkflow(
         error: "You don't have access to this organization",
       };
     }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
+    const permError = checkPermission(access.role, "workflows", ["delete"]);
     if (permError) return permError;
 
     // Check if workflows feature is available for this plan

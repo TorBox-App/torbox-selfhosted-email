@@ -1,3 +1,5 @@
+import { roles } from "@wraps/auth/access";
+
 export const PRESET_ROLES = [
   {
     name: "marketing",
@@ -20,11 +22,4 @@ export const PRESET_ROLES = [
 
 export type PresetRoleName = (typeof PRESET_ROLES)[number]["name"];
 
-export const VALID_ROLES = new Set<string>([
-  "owner",
-  "admin",
-  "member",
-  "marketing",
-  "read-only",
-  "billing",
-]);
+export const VALID_ROLES = new Set<string>(Object.keys(roles));

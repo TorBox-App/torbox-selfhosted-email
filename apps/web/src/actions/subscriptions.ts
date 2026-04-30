@@ -50,9 +50,6 @@ export async function createFreeSubscription(
     const access = await verifyOrgAccess(organizationId);
     if (!access) return { success: false, error: "No access" };
 
-    const permError = checkPermission(access.role, "billing", ["write"]);
-    if (permError) return permError;
-
     const existingSub = await getActiveSubscription(organizationId);
     if (existingSub) {
       return { success: true, subscription: toSubscriptionData(existingSub) };

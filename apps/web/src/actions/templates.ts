@@ -297,7 +297,7 @@ export async function bulkDeleteTemplates(
       orgSlug: access.orgSlug,
     });
 
-    const permError = checkPermission(access.role, "templates", ["write"]);
+    const permError = checkPermission(access.role, "templates", ["delete"]);
     if (permError) return permError;
 
     if (templateIds.length === 0) {

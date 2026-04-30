@@ -345,7 +345,7 @@ export async function deleteSegment(
       };
     }
 
-    const segWriteError = checkPermission(access.role, "segments", ["write"]);
+    const segWriteError = checkPermission(access.role, "segments", ["delete"]);
     if (segWriteError) return segWriteError;
 
     // Verify segment exists

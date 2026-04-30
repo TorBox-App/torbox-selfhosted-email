@@ -235,11 +235,10 @@ describe("createFreeSubscription", () => {
     if (!result.success) expect(result.error).toBe("No access");
   });
 
-  it("returns error when member role lacks billing write permission", async () => {
+  it("allows member role to create a free subscription (no billing:write required)", async () => {
     mockUserId = memberUser.id;
     const result = await createFreeSubscription(testOrg.id);
-    expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toContain("permission");
+    expect(result.success).toBe(true);
   });
 
   it("creates a free subscription and returns it", async () => {

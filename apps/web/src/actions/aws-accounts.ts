@@ -208,9 +208,10 @@ export async function connectAWSAccountAction(
     if (!membership) {
       return { error: "Insufficient permissions" };
     }
-    if (checkPermission(membership.role, "awsAccounts", ["write"])) {
-      return { error: "Insufficient permissions" };
-    }
+    const awsConnectError = checkPermission(membership.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsConnectError) return { error: awsConnectError.error };
 
     // 4. Check AWS account limit based on subscription plan
     const activeSubscription = await db.query.subscription.findFirst({

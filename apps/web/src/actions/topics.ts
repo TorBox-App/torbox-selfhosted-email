@@ -382,7 +382,7 @@ export async function deleteTopic(
       };
     }
 
-    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
+    const topicWriteError = checkPermission(access.role, "topics", ["delete"]);
     if (topicWriteError) return topicWriteError;
 
     // Verify topic exists

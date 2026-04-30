@@ -20,6 +20,7 @@ import {
 } from "@/lib/api-keys";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience (types can be re-exported from server files)
 export type {
@@ -73,31 +74,15 @@ export async function listApiKeys(
   organizationId: string
 ): Promise<ListApiKeysResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    // Verify user is a member of this organization
-    const membership = await db.query.member.findFirst({
-      where: (m, { and, eq }) =>
-        and(
-          eq(m.organizationId, organizationId),
-          eq(m.userId, session.user.id)
-        ),
-    });
-
-    if (!membership) {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
       return {
         success: false,
         error: "You don't have access to this organization",
       };
     }
 
-    const permError = checkPermission(membership.role, "apiKeys", ["read"]);
+    const permError = checkPermission(access.role, "apiKeys", ["read"]);
     if (permError) return permError;
 
     // Fetch all API keys for this organization
