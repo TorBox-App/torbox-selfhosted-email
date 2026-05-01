@@ -8,98 +8,25 @@
 import { Elysia } from "elysia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Use vi.hoisted so these are available when vi.mock factories run (hoisted)
-const { mockSelectLimit, mockInsertReturning } = vi.hoisted(() => ({
-  mockSelectLimit: vi.fn(),
-  mockInsertReturning: vi.fn(),
+const {
+  mockFindAwsAccountForOrg,
+  mockCountBroadcastRecipients,
+  mockCreateBroadcast,
+  mockEnqueueJob,
+} = vi.hoisted(() => ({
+  mockFindAwsAccountForOrg: vi.fn(),
+  mockCountBroadcastRecipients: vi.fn(),
+  mockCreateBroadcast: vi.fn(),
+  mockEnqueueJob: vi.fn(async (_args: unknown) => {}),
 }));
 
-vi.mock("@wraps/db", () => {
-  // Drizzle queries can end with .where() (awaited directly) or .where().limit()
-  // This mock supports both by making where() return a thenable with a .limit() method
-  const makeWhereResult = () => ({
-    limit: mockSelectLimit,
-    // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock for Drizzle query chains
-    then(resolve: (v: unknown) => void, reject?: (e: unknown) => void) {
-      return Promise.resolve(mockSelectLimit()).then(resolve, reject);
-    },
-  });
-
-  return {
-    db: {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => makeWhereResult()),
-        })),
-      })),
-      insert: vi.fn(() => ({
-        values: vi.fn(() => ({
-          returning: mockInsertReturning,
-        })),
-      })),
-      update: vi.fn(() => ({
-        set: vi.fn(() => ({
-          where: vi.fn(),
-        })),
-      })),
-    },
-    batchSend: {
-      id: "id",
-      organizationId: "organization_id",
-      awsAccountId: "aws_account_id",
-      channel: "channel",
-      name: "name",
-      status: "status",
-      audienceType: "audience_type",
-      topicId: "topic_id",
-      segmentId: "segment_id",
-      subject: "subject",
-      previewText: "preview_text",
-      from: "from",
-      fromName: "from_name",
-      replyTo: "reply_to",
-      emailTemplateId: "email_template_id",
-      htmlContent: "html_content",
-      body: "body",
-      senderId: "sender_id",
-      scheduledFor: "scheduled_for",
-      totalRecipients: "total_recipients",
-      processedRecipients: "processed_recipients",
-      sent: "sent",
-      failed: "failed",
-      startedAt: "started_at",
-      completedAt: "completed_at",
-      createdAt: "created_at",
-      createdBy: "created_by",
-      updatedAt: "updated_at",
-    },
-    awsAccount: {
-      id: "id",
-      organizationId: "organization_id",
-    },
-    contact: {
-      id: "id",
-      organizationId: "organization_id",
-      email: "email",
-      emailStatus: "email_status",
-      phone: "phone",
-      smsStatus: "sms_status",
-    },
-    contactTopic: {
-      contactId: "contact_id",
-      topicId: "topic_id",
-      status: "status",
-    },
-    eq: vi.fn((a, b) => ({ eq: [a, b] })),
-    and: vi.fn((...args) => ({ and: args })),
-  };
-});
-
-vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...args) => ({ and: args })),
-  exists: vi.fn(),
-  isNotNull: vi.fn(),
-  sql: vi.fn(),
+vi.mock("@wraps/db", () => ({
+  findAwsAccountForOrg: mockFindAwsAccountForOrg,
+  countBroadcastRecipients: mockCountBroadcastRecipients,
+  createBroadcast: mockCreateBroadcast,
+  findBroadcast: vi.fn(),
+  promoteBroadcast: vi.fn(),
+  cancelBroadcast: vi.fn(),
 }));
 
 vi.mock("../middleware/auth", () => ({
@@ -125,7 +52,7 @@ vi.mock("../middleware/rate-limit", () => ({
 }));
 
 vi.mock("../services/queue", () => ({
-  enqueueJob: vi.fn(async () => {}),
+  enqueueJob: mockEnqueueJob,
 }));
 
 vi.mock("../services/scheduler", () => ({
@@ -142,25 +69,22 @@ function createApp() {
 
 describe("Batch IDOR Prevention", () => {
   beforeEach(() => {
-    mockSelectLimit.mockReset();
-    mockInsertReturning.mockReset();
+    mockFindAwsAccountForOrg.mockReset();
+    mockCountBroadcastRecipients.mockReset();
+    mockCreateBroadcast.mockReset();
+    mockEnqueueJob.mockReset();
   });
 
   it("allows batch send when awsAccountId belongs to the authenticated org", async () => {
-    // First select: AWS account ownership check → found
-    mockSelectLimit.mockResolvedValueOnce([{ id: "valid-aws-account" }]);
-    // Second select: recipient count query
-    mockSelectLimit.mockResolvedValueOnce([{ count: 50 }]);
-
-    mockInsertReturning.mockResolvedValueOnce([
-      {
-        id: "batch-new",
-        status: "queued",
-        channel: "email",
-        totalRecipients: 50,
-        createdAt: new Date("2024-01-01"),
-      },
-    ]);
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "valid-aws-account" });
+    mockCountBroadcastRecipients.mockResolvedValueOnce(50);
+    mockCreateBroadcast.mockResolvedValueOnce({
+      id: "batch-new",
+      status: "queued",
+      channel: "email",
+      totalRecipients: 50,
+      createdAt: new Date("2024-01-01"),
+    });
 
     const app = createApp();
 
@@ -182,11 +106,21 @@ describe("Batch IDOR Prevention", () => {
     const body = await response.json();
     expect(body.id).toBe("batch-new");
     expect(body.status).toBe("queued");
+
+    // Verify the job was enqueued with the correct ids — not just that it was called
+    expect(mockEnqueueJob).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        batchId: "batch-new",
+        organizationId: "org-123",
+        awsAccountId: "valid-aws-account",
+        channel: "email",
+      })
+    );
   });
 
   it("rejects batch send when awsAccountId does not belong to the authenticated org", async () => {
-    // AWS account ownership check → not found
-    mockSelectLimit.mockResolvedValueOnce([]);
+    mockFindAwsAccountForOrg.mockResolvedValueOnce(null);
 
     const app = createApp();
 
@@ -206,6 +140,10 @@ describe("Batch IDOR Prevention", () => {
     expect(response.status).toBe(403);
 
     const body = await response.json();
-    expect(body.error).toBeDefined();
+    expect(body.error).toBe("AWS account does not belong to this organization");
+
+    // Prove the DB was never written to and nothing was queued
+    expect(mockCreateBroadcast).not.toHaveBeenCalled();
+    expect(mockEnqueueJob).not.toHaveBeenCalled();
   });
 });

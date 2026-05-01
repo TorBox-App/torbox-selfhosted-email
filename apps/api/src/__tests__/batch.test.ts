@@ -1,451 +1,280 @@
+/**
+ * POST /v1/batch — Batch Creation
+ *
+ * Tests unique POST /v1/batch behaviors not covered elsewhere:
+ *   - Scheduled vs immediate send routing
+ *   - Recipient count: auto-count vs pre-counted
+ *   - Response shape
+ *
+ * IDOR prevention is in batch-idor.test.ts.
+ * GET/DELETE is in batch-get-cancel.test.ts.
+ * Draft promote (POST /:id/send) is in batch-promote.test.ts.
+ */
+
 import { Elysia } from "elysia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the database
-vi.mock("@wraps/db", () => ({
-  db: {
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-  },
-  batchSend: {
-    id: "id",
-    organizationId: "organization_id",
-    awsAccountId: "aws_account_id",
-    channel: "channel",
-    name: "name",
-    status: "status",
-    subject: "subject",
-    previewText: "preview_text",
-    from: "from",
-    fromName: "from_name",
-    replyTo: "reply_to",
-    emailTemplateId: "email_template_id",
-    body: "body",
-    senderId: "sender_id",
-    scheduledFor: "scheduled_for",
-    totalRecipients: "total_recipients",
-    processedRecipients: "processed_recipients",
-    sent: "sent",
-    failed: "failed",
-    startedAt: "started_at",
-    completedAt: "completed_at",
-    createdAt: "created_at",
-    createdBy: "created_by",
-  },
-  contact: {
-    id: "id",
-    organizationId: "organization_id",
-    email: "email",
-    emailStatus: "email_status",
-    phone: "phone",
-    smsStatus: "sms_status",
-  },
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
+const {
+  mockFindAwsAccountForOrg,
+  mockCountBroadcastRecipients,
+  mockCreateBroadcast,
+  mockEnqueueJob,
+  mockCreateBroadcastSchedule,
+} = vi.hoisted(() => ({
+  mockFindAwsAccountForOrg: vi.fn(),
+  mockCountBroadcastRecipients: vi.fn(),
+  mockCreateBroadcast: vi.fn(),
+  mockEnqueueJob: vi.fn(async (_args: unknown) => {}),
+  mockCreateBroadcastSchedule: vi.fn(async (_args: unknown) => {}),
 }));
 
-// Mock auth context
-const mockAuthContext = {
-  apiKeyId: "key-123",
-  organizationId: "org-123",
-  userId: "user-123",
-  planId: "pro", // Growth plan has batch access
-};
+vi.mock("@wraps/db", () => ({
+  findAwsAccountForOrg: mockFindAwsAccountForOrg,
+  countBroadcastRecipients: mockCountBroadcastRecipients,
+  createBroadcast: mockCreateBroadcast,
+  findBroadcast: vi.fn(),
+  promoteBroadcast: vi.fn(),
+  cancelBroadcast: vi.fn(),
+}));
 
-// Mock batch data
-const mockBatch: {
-  id: string;
-  organizationId: string;
-  awsAccountId: string;
-  channel: string;
-  name: string;
-  status: string;
-  subject: string;
-  previewText: string;
-  from: string;
-  fromName: string;
-  replyTo: string | null;
-  emailTemplateId: string | null;
-  totalRecipients: number;
-  processedRecipients: number;
-  sent: number;
-  failed: number;
-  startedAt: Date | null;
-  completedAt: Date | null;
-  createdAt: Date;
-} = {
-  id: "batch-123",
+vi.mock("../middleware/auth", () => ({
+  createAuthenticatedRoutes: vi.fn((prefix: string) =>
+    new Elysia({ prefix }).derive(() => ({
+      auth: {
+        apiKeyId: "key-123",
+        organizationId: "org-123",
+        userId: "user-123",
+        planId: "pro",
+      },
+      authError: null,
+    }))
+  ),
+}));
+
+vi.mock("../middleware/plan-gate", () => ({
+  planGateMiddleware: vi.fn(() => new Elysia()),
+}));
+
+vi.mock("../middleware/rate-limit", () => ({
+  rateLimitMiddleware: new Elysia(),
+}));
+
+vi.mock("../services/queue", () => ({
+  enqueueJob: mockEnqueueJob,
+}));
+
+vi.mock("../services/scheduler", () => ({
+  createBroadcastSchedule: mockCreateBroadcastSchedule,
+  deleteBroadcastSchedule: vi.fn(async () => {}),
+}));
+
+const { batchRoutes } = await import("../routes/batch");
+
+function createApp() {
+  return new Elysia().use(batchRoutes);
+}
+
+const baseCreatedBatch = {
+  id: "batch-new",
   organizationId: "org-123",
-  awsAccountId: "aws-123",
-  channel: "email",
-  name: "Test Batch",
-  status: "queued",
-  subject: "Hello World",
-  previewText: "This is a test",
-  from: "test@example.com",
-  fromName: "Test Sender",
+  awsAccountId: "aws-acc-1",
+  channel: "email" as const,
+  name: "Test Campaign",
+  status: "queued" as const,
+  audienceType: "all",
+  topicId: null,
+  segmentId: null,
+  subject: "Hello",
+  previewText: null,
+  from: "hello@example.com",
+  fromName: null,
   replyTo: null,
   emailTemplateId: null,
-  totalRecipients: 100,
+  htmlContent: null,
+  body: null,
+  senderId: null,
+  scheduledFor: null,
+  totalRecipients: 50,
   processedRecipients: 0,
   sent: 0,
   failed: 0,
   startedAt: null,
   completedAt: null,
-  createdAt: new Date("2024-01-01T00:00:00.000Z"),
+  createdAt: new Date("2026-04-23T00:00:00.000Z"),
+  createdBy: "user-123",
+  updatedAt: new Date("2026-04-23T00:00:00.000Z"),
 };
 
-const mockCompletedBatch = {
-  ...mockBatch,
-  id: "batch-456",
-  status: "completed",
-  processedRecipients: 100,
-  sent: 95,
-  failed: 5,
-  startedAt: new Date("2024-01-01T00:01:00.000Z"),
-  completedAt: new Date("2024-01-01T00:05:00.000Z"),
-};
-
-// Track what was passed to the batch creation
-let lastCreatedBatchBody: Record<string, unknown> | null = null;
-
-// Create a test app with mocked middleware
-function createTestApp() {
-  lastCreatedBatchBody = null;
-  return new Elysia()
-    .derive(() => ({ auth: mockAuthContext }))
-    .post("/v1/batch", async (ctx) => {
-      const body = await ctx.request.json();
-      lastCreatedBatchBody = body;
-
-      // Validate required field
-      if (!body.awsAccountId) {
-        ctx.set.status = 400;
-        return { error: "awsAccountId is required" };
-      }
-
-      // Simulate batch creation
-      const channel = body.channel ?? "email";
-      const recipientCount = channel === "email" ? 100 : 50;
-
-      ctx.set.status = 201;
-      return {
-        id: "new-batch-id",
-        status: "queued",
-        channel,
-        totalRecipients: recipientCount,
-        createdAt: "2024-01-01T00:00:00.000Z",
-      };
-    })
-    .get("/v1/batch/:id", (ctx) => {
-      const { params } = ctx;
-
-      // Simulate not found
-      if (params.id === "not-found") {
-        ctx.set.status = 404;
-        return { error: "Batch not found" };
-      }
-
-      // Simulate unauthorized (different org)
-      if (params.id === "other-org-batch") {
-        ctx.set.status = 403;
-        return { error: "Not authorized" };
-      }
-
-      // Return completed batch for specific ID
-      if (params.id === "batch-456") {
-        return {
-          id: mockCompletedBatch.id,
-          status: mockCompletedBatch.status,
-          channel: mockCompletedBatch.channel,
-          name: mockCompletedBatch.name,
-          totalRecipients: mockCompletedBatch.totalRecipients,
-          processedRecipients: mockCompletedBatch.processedRecipients,
-          sent: mockCompletedBatch.sent,
-          failed: mockCompletedBatch.failed,
-          startedAt: mockCompletedBatch.startedAt?.toISOString(),
-          completedAt: mockCompletedBatch.completedAt?.toISOString(),
-          createdAt: mockCompletedBatch.createdAt.toISOString(),
-        };
-      }
-
-      // Return queued batch
-      return {
-        id: mockBatch.id,
-        status: mockBatch.status,
-        channel: mockBatch.channel,
-        name: mockBatch.name,
-        totalRecipients: mockBatch.totalRecipients,
-        processedRecipients: mockBatch.processedRecipients,
-        sent: mockBatch.sent,
-        failed: mockBatch.failed,
-        startedAt: mockBatch.startedAt?.toISOString() ?? null,
-        completedAt: mockBatch.completedAt?.toISOString() ?? null,
-        createdAt: mockBatch.createdAt.toISOString(),
-      };
-    });
-}
-
-describe("Batch API", () => {
-  let app: ReturnType<typeof createTestApp>;
-
+describe("POST /v1/batch", () => {
   beforeEach(() => {
-    app = createTestApp();
+    mockFindAwsAccountForOrg.mockReset();
+    mockCountBroadcastRecipients.mockReset();
+    mockCreateBroadcast.mockReset();
+    mockEnqueueJob.mockReset();
+    mockCreateBroadcastSchedule.mockReset();
   });
 
-  describe("POST /v1/batch", () => {
-    it("creates an email batch send", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            channel: "email",
-            name: "Test Campaign",
-            subject: "Hello World",
-            from: "test@example.com",
-          }),
-        })
-      );
+  it("returns full response shape: id, status, channel, totalRecipients, createdAt", async () => {
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "aws-acc-1" });
+    mockCountBroadcastRecipients.mockResolvedValueOnce(50);
+    mockCreateBroadcast.mockResolvedValueOnce(baseCreatedBatch);
 
-      expect(response.status).toBe(201);
-
-      const body = await response.json();
-      expect(body.id).toBe("new-batch-id");
-      expect(body.status).toBe("queued");
-      expect(body.channel).toBe("email");
-      expect(body.totalRecipients).toBe(100);
-    });
-
-    it("creates an SMS batch send", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            channel: "sms",
-            name: "SMS Campaign",
-            body: "Hello from Wraps!",
-          }),
-        })
-      );
-
-      expect(response.status).toBe(201);
-
-      const body = await response.json();
-      expect(body.channel).toBe("sms");
-      expect(body.totalRecipients).toBe(50);
-    });
-
-    it("defaults to email channel", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            subject: "Test Email",
-          }),
-        })
-      );
-
-      expect(response.status).toBe(201);
-
-      const body = await response.json();
-      expect(body.channel).toBe("email");
-    });
-
-    it("requires awsAccountId", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            channel: "email",
-            subject: "Test",
-          }),
-        })
-      );
-
-      expect(response.status).toBe(400);
-
-      const body = await response.json();
-      expect(body.error).toBe("awsAccountId is required");
-    });
-
-    it("accepts optional email fields", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            channel: "email",
-            name: "Full Email Campaign",
-            subject: "Welcome!",
-            previewText: "You're going to love this",
-            from: "hello@example.com",
-            fromName: "The Team",
-            replyTo: "support@example.com",
-            templateId: "template-123",
-          }),
-        })
-      );
-
-      expect(response.status).toBe(201);
-
-      const body = await response.json();
-      expect(body.status).toBe("queued");
-    });
-
-    it("accepts variableMappings in batch creation", async () => {
-      const variableMappings = [
-        {
-          variableName: "dashboardUrl",
-          source: { type: "static", value: "https://app.example.com" },
-        },
-        {
-          variableName: "role",
-          source: { type: "contact", field: "jobTitle" },
-        },
-      ];
-
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            channel: "email",
-            subject: "Welcome!",
-            variableMappings,
-          }),
-        })
-      );
-
-      expect(response.status).toBe(201);
-      expect(lastCreatedBatchBody?.variableMappings).toEqual(variableMappings);
-    });
-
-    it("accepts scheduled send time", async () => {
-      const scheduledFor = new Date(
-        Date.now() + 24 * 60 * 60 * 1000
-      ).toISOString();
-
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            awsAccountId: "aws-123",
-            subject: "Scheduled Email",
-            scheduledFor,
-          }),
-        })
-      );
-
-      expect(response.status).toBe(201);
-    });
-  });
-
-  describe("GET /v1/batch/:id", () => {
-    it("returns batch status for queued batch", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch/batch-123")
-      );
-
-      expect(response.status).toBe(200);
-
-      const body = await response.json();
-      expect(body.id).toBe("batch-123");
-      expect(body.status).toBe("queued");
-      expect(body.channel).toBe("email");
-      expect(body.name).toBe("Test Batch");
-      expect(body.totalRecipients).toBe(100);
-      expect(body.processedRecipients).toBe(0);
-      expect(body.sent).toBe(0);
-      expect(body.failed).toBe(0);
-      expect(body.startedAt).toBeNull();
-      expect(body.completedAt).toBeNull();
-    });
-
-    it("returns batch status for completed batch", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch/batch-456")
-      );
-
-      expect(response.status).toBe(200);
-
-      const body = await response.json();
-      expect(body.id).toBe("batch-456");
-      expect(body.status).toBe("completed");
-      expect(body.totalRecipients).toBe(100);
-      expect(body.processedRecipients).toBe(100);
-      expect(body.sent).toBe(95);
-      expect(body.failed).toBe(5);
-      expect(body.startedAt).toBe("2024-01-01T00:01:00.000Z");
-      expect(body.completedAt).toBe("2024-01-01T00:05:00.000Z");
-    });
-
-    it("returns 404 for non-existent batch", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch/not-found")
-      );
-
-      expect(response.status).toBe(404);
-
-      const body = await response.json();
-      expect(body.error).toBe("Batch not found");
-    });
-
-    it("returns 403 for batch from different org", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/batch/other-org-batch")
-      );
-
-      expect(response.status).toBe(403);
-
-      const body = await response.json();
-      expect(body.error).toBe("Not authorized");
-    });
-  });
-});
-
-describe("Batch API - Edge Cases", () => {
-  let app: ReturnType<typeof createTestApp>;
-
-  beforeEach(() => {
-    app = createTestApp();
-  });
-
-  it("handles empty string for optional fields", async () => {
+    const app = createApp();
     const response = await app.handle(
       new Request("http://localhost/v1/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          awsAccountId: "aws-123",
-          name: "",
-          subject: "",
+          awsAccountId: "aws-acc-1",
+          channel: "email",
+          subject: "Hello",
+          from: "hello@example.com",
         }),
       })
-    );
-
-    expect(response.status).toBe(201);
-  });
-
-  it("handles batch with all stats at zero", async () => {
-    const response = await app.handle(
-      new Request("http://localhost/v1/batch/batch-123")
     );
 
     expect(response.status).toBe(200);
 
     const body = await response.json();
-    expect(body.processedRecipients).toBe(0);
-    expect(body.sent).toBe(0);
-    expect(body.failed).toBe(0);
+    expect(body.id).toBe("batch-new");
+    expect(body.status).toBe("queued");
+    expect(body.channel).toBe("email");
+    expect(body.totalRecipients).toBe(50);
+    expect(body.createdAt).toBe("2026-04-23T00:00:00.000Z");
+  });
+
+  it("counts recipients from DB when totalRecipients is not provided", async () => {
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "aws-acc-1" });
+    mockCountBroadcastRecipients.mockResolvedValueOnce(77);
+    mockCreateBroadcast.mockResolvedValueOnce({
+      ...baseCreatedBatch,
+      totalRecipients: 77,
+    });
+
+    const app = createApp();
+    await app.handle(
+      new Request("http://localhost/v1/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: "aws-acc-1",
+          channel: "email",
+          subject: "Hello",
+          from: "hello@example.com",
+        }),
+      })
+    );
+
+    expect(mockCountBroadcastRecipients).toHaveBeenCalledTimes(1);
+    expect(mockCountBroadcastRecipients).toHaveBeenCalledWith(
+      "org-123",
+      "email",
+      expect.objectContaining({ audienceType: undefined })
+    );
+  });
+
+  it("skips countBroadcastRecipients when totalRecipients is pre-counted in request", async () => {
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "aws-acc-1" });
+    mockCreateBroadcast.mockResolvedValueOnce({
+      ...baseCreatedBatch,
+      totalRecipients: 42,
+    });
+
+    const app = createApp();
+    const response = await app.handle(
+      new Request("http://localhost/v1/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: "aws-acc-1",
+          channel: "email",
+          subject: "Hello",
+          from: "hello@example.com",
+          totalRecipients: 42,
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockCountBroadcastRecipients).not.toHaveBeenCalled();
+
+    const body = await response.json();
+    expect(body.totalRecipients).toBe(42);
+  });
+
+  it("with scheduledFor in the future: creates EventBridge schedule and does NOT enqueue", async () => {
+    const scheduledFor = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "aws-acc-1" });
+    mockCountBroadcastRecipients.mockResolvedValueOnce(20);
+    mockCreateBroadcast.mockResolvedValueOnce({
+      ...baseCreatedBatch,
+      status: "scheduled",
+      scheduledFor,
+      totalRecipients: 20,
+    });
+
+    const app = createApp();
+    const response = await app.handle(
+      new Request("http://localhost/v1/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: "aws-acc-1",
+          channel: "email",
+          subject: "Hello",
+          from: "hello@example.com",
+          scheduledFor: scheduledFor.toISOString(),
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe("scheduled");
+
+    expect(mockCreateBroadcastSchedule).toHaveBeenCalledTimes(1);
+    expect(mockCreateBroadcastSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        batchId: "batch-new",
+        organizationId: "org-123",
+        awsAccountId: "aws-acc-1",
+        channel: "email",
+      })
+    );
+    expect(mockEnqueueJob).not.toHaveBeenCalled();
+  });
+
+  it("with immediate send: enqueues job with chunkIndex=0 and does NOT create EventBridge schedule", async () => {
+    mockFindAwsAccountForOrg.mockResolvedValueOnce({ id: "aws-acc-1" });
+    mockCountBroadcastRecipients.mockResolvedValueOnce(10);
+    mockCreateBroadcast.mockResolvedValueOnce(baseCreatedBatch);
+
+    const app = createApp();
+    await app.handle(
+      new Request("http://localhost/v1/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: "aws-acc-1",
+          channel: "email",
+          subject: "Hello",
+          from: "hello@example.com",
+        }),
+      })
+    );
+
+    expect(mockEnqueueJob).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        batchId: "batch-new",
+        organizationId: "org-123",
+        awsAccountId: "aws-acc-1",
+        channel: "email",
+        chunkIndex: 0,
+      })
+    );
+    expect(mockCreateBroadcastSchedule).not.toHaveBeenCalled();
   });
 });

@@ -6,14 +6,13 @@
  */
 
 import {
-  awsAccount,
-  batchSend,
-  contact,
-  contactTopic,
-  db,
-  eq,
+  cancelBroadcast,
+  countBroadcastRecipients,
+  createBroadcast,
+  findAwsAccountForOrg,
+  findBroadcast,
+  promoteBroadcast,
 } from "@wraps/db";
-import { and, exists, isNotNull, sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import {
@@ -139,16 +138,10 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       // Validate awsAccountId belongs to the authenticated organization
-      const [account] = await db
-        .select({ id: awsAccount.id })
-        .from(awsAccount)
-        .where(
-          and(
-            eq(awsAccount.id, body.awsAccountId),
-            eq(awsAccount.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const account = await findAwsAccountForOrg(
+        body.awsAccountId,
+        authContext.organizationId
+      );
 
       if (!account) {
         set.status = 403;
@@ -163,9 +156,9 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       }
 
       // Use pre-counted recipients if provided, otherwise count here
-      let recipientCount = body.totalRecipients;
-      if (!recipientCount) {
-        recipientCount = await getRecipientCount(
+      const recipientCount =
+        body.totalRecipients ??
+        (await countBroadcastRecipients(
           authContext.organizationId,
           body.channel ?? "email",
           {
@@ -173,8 +166,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
             topicId: body.topicId,
             segmentId: body.segmentId,
           }
-        );
-      }
+        ));
 
       // Determine if this is a scheduled send
       const scheduledFor = body.scheduledFor
@@ -182,42 +174,31 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         : undefined;
       const isScheduled = scheduledFor && scheduledFor > new Date();
 
-      // Create batch send record
-      const [batch] = await db
-        .insert(batchSend)
-        .values({
-          organizationId: authContext.organizationId,
-          awsAccountId: body.awsAccountId,
-          channel: body.channel ?? "email",
-          name: body.name ?? `Batch ${new Date().toISOString()}`,
-          status: isScheduled ? "scheduled" : "queued",
-          // Recipient targeting
-          audienceType: body.audienceType ?? "all",
-          topicId: body.topicId,
-          segmentId: body.segmentId,
-          // Email fields
-          subject: body.subject,
-          previewText: body.previewText,
-          from: body.from,
-          fromName: body.fromName,
-          replyTo: body.replyTo,
-          emailTemplateId: body.templateId,
-          htmlContent: body.htmlContent,
-          variableMappings: body.variableMappings,
-          // SMS fields (Phase 3)
-          body: body.body,
-          senderId: body.senderId,
-          // Scheduling
-          scheduledFor,
-          // Recipients
-          totalRecipients: recipientCount,
-          // Tracking
-          createdBy: authContext.userId,
-        })
-        .returning();
+      const batch = await createBroadcast({
+        organizationId: authContext.organizationId,
+        awsAccountId: body.awsAccountId,
+        channel: body.channel ?? "email",
+        name: body.name ?? `Batch ${new Date().toISOString()}`,
+        status: isScheduled ? "scheduled" : "queued",
+        audienceType: body.audienceType ?? "all",
+        topicId: body.topicId,
+        segmentId: body.segmentId,
+        subject: body.subject,
+        previewText: body.previewText,
+        from: body.from,
+        fromName: body.fromName,
+        replyTo: body.replyTo,
+        emailTemplateId: body.templateId,
+        htmlContent: body.htmlContent,
+        variableMappings: body.variableMappings,
+        body: body.body,
+        senderId: body.senderId,
+        scheduledFor,
+        totalRecipients: recipientCount,
+        createdBy: authContext.userId,
+      });
 
       if (isScheduled && scheduledFor) {
-        // Create EventBridge schedule for future execution
         await createBroadcastSchedule({
           batchId: batch.id,
           organizationId: authContext.organizationId,
@@ -226,7 +207,6 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
           channel: (body.channel ?? "email") as "email" | "sms",
         });
       } else {
-        // Send immediately - enqueue to SQS
         await enqueueJob({
           batchId: batch.id,
           organizationId: authContext.organizationId,
@@ -261,16 +241,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       const { params, set } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      const [batch] = await db
-        .select()
-        .from(batchSend)
-        .where(
-          and(
-            eq(batchSend.id, params.id),
-            eq(batchSend.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const batch = await findBroadcast(params.id, authContext.organizationId);
 
       if (!batch) {
         set.status = 404;
@@ -325,16 +296,10 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
 
       // Load the batch scoped by (id, orgId) — without status filter so we can
       // distinguish 404 (no row in org) from 400 (row exists but not draft).
-      const [existing] = await db
-        .select()
-        .from(batchSend)
-        .where(
-          and(
-            eq(batchSend.id, params.id),
-            eq(batchSend.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const existing = await findBroadcast(
+        params.id,
+        authContext.organizationId
+      );
 
       if (!existing) {
         set.status = 404;
@@ -349,16 +314,10 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       }
 
       // Validate awsAccountId belongs to the authenticated org
-      const [account] = await db
-        .select({ id: awsAccount.id })
-        .from(awsAccount)
-        .where(
-          and(
-            eq(awsAccount.id, body.awsAccountId),
-            eq(awsAccount.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const account = await findAwsAccountForOrg(
+        body.awsAccountId,
+        authContext.organizationId
+      );
 
       if (!account) {
         set.status = 403;
@@ -371,11 +330,13 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         : undefined;
       const isScheduled = Boolean(scheduledFor && scheduledFor > new Date());
 
-      // Promote in-place: update the draft row, status-gated for concurrency.
       const channel = body.channel ?? existing.channel ?? "email";
-      const promoted = await db
-        .update(batchSend)
-        .set({
+
+      // Promote in-place: update the draft row, status-gated for concurrency.
+      const batch = await promoteBroadcast(
+        params.id,
+        authContext.organizationId,
+        {
           awsAccountId: body.awsAccountId,
           channel,
           name: body.name ?? existing.name,
@@ -396,26 +357,14 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
           scheduledFor: scheduledFor ?? null,
           totalRecipients: body.totalRecipients,
           createdBy: authContext.userId,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(batchSend.id, params.id),
-            eq(batchSend.organizationId, authContext.organizationId),
-            eq(batchSend.status, "draft")
-          )
-        )
-        .returning();
+        }
+      );
 
-      if (promoted.length !== 1) {
+      if (!batch) {
         // Concurrent promote (or row disappeared) — fail loudly, no side effects.
         set.status = 409;
-        throw new Error(
-          `Expected to promote exactly 1 draft row, updated ${promoted.length}`
-        );
+        throw new Error("Expected to promote exactly 1 draft row, updated 0");
       }
-
-      const [batch] = promoted;
 
       if (isScheduled && scheduledFor) {
         await createBroadcastSchedule({
@@ -507,16 +456,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       // Find the batch (scoped by organization)
-      const [batch] = await db
-        .select()
-        .from(batchSend)
-        .where(
-          and(
-            eq(batchSend.id, params.id),
-            eq(batchSend.organizationId, authContext.organizationId)
-          )
-        )
-        .limit(1);
+      const batch = await findBroadcast(params.id, authContext.organizationId);
 
       if (!batch) {
         set.status = 404;
@@ -536,19 +476,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         await deleteBroadcastSchedule(batch.id);
       }
 
-      // Update status to cancelled (scoped by org for defense-in-depth)
-      await db
-        .update(batchSend)
-        .set({
-          status: "cancelled",
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(batchSend.id, batch.id),
-            eq(batchSend.organizationId, authContext.organizationId)
-          )
-        );
+      await cancelBroadcast(batch.id, authContext.organizationId);
 
       return { success: true, id: batch.id, status: "cancelled" };
     },
@@ -571,57 +499,3 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       },
     }
   );
-
-// Helper to count recipients for a batch
-async function getRecipientCount(
-  organizationId: string,
-  channel: string,
-  options?: {
-    audienceType?: string;
-    topicId?: string;
-    segmentId?: string;
-  }
-): Promise<number> {
-  const conditions: ReturnType<typeof eq>[] = [
-    eq(contact.organizationId, organizationId),
-  ];
-
-  if (channel === "email") {
-    conditions.push(isNotNull(contact.email));
-  } else if (channel === "sms") {
-    conditions.push(isNotNull(contact.phone));
-    conditions.push(eq(contact.smsStatus, "opted_in"));
-  } else {
-    return 0;
-  }
-
-  // Apply audience filtering
-  if (options?.audienceType === "topic" && options.topicId) {
-    const topicSubquery = db
-      .select({ contactId: contactTopic.contactId })
-      .from(contactTopic)
-      .where(
-        and(
-          eq(contactTopic.contactId, contact.id),
-          eq(contactTopic.topicId, options.topicId),
-          eq(contactTopic.status, "subscribed")
-        )
-      );
-    conditions.push(exists(topicSubquery) as unknown as ReturnType<typeof eq>);
-  }
-
-  const whereClause =
-    channel === "email"
-      ? and(
-          ...conditions,
-          sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`
-        )
-      : and(...conditions);
-
-  const [result] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(contact)
-    .where(whereClause);
-
-  return result?.count ?? 0;
-}

@@ -381,6 +381,17 @@ describe("processJob cursor passing", () => {
 
     // Should have called update to mark batch completed
     expect(db.update).toHaveBeenCalled();
+
+    // Verify status: "completed" was actually written, not just that update was called
+    const updateMock = db.update as ReturnType<typeof vi.fn>;
+    const setMock = updateMock.mock.results[0]?.value?.set as
+      | ReturnType<typeof vi.fn>
+      | undefined;
+    const completedSet = setMock?.mock.calls.find(
+      (callArgs: unknown[]) =>
+        (callArgs[0] as Record<string, unknown>)?.status === "completed"
+    );
+    expect(completedSet).toBeDefined();
   });
 
   it("stops at totalRecipients even when more contacts are now available", async () => {

@@ -305,6 +305,12 @@ describe("Batch sender idempotency", () => {
       | undefined;
     expect(entries).toHaveLength(1);
 
+    // Verify the correct contact was kept — contact-2 (bob), not contact-1 (alice)
+    const entry = entries?.[0] as
+      | { Destination?: { ToAddresses?: string[] } }
+      | undefined;
+    expect(entry?.Destination?.ToAddresses).toEqual(["bob@example.com"]);
+
     const progressUpdate = updateSetCalls.find(
       (call) => "processedRecipients" in call
     );

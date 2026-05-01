@@ -12,31 +12,73 @@ import { describe, expect, it } from "vitest";
 const routesDir = resolve(__dirname, "..");
 
 describe("Defense-in-depth: org-scoped updates", () => {
-  it("batch cancel UPDATE scopes by organizationId", () => {
-    const source = readFileSync(resolve(routesDir, "routes/batch.ts"), "utf-8");
+  it("batch cancel UPDATE scopes by organizationId in the WHERE clause", () => {
+    // Cancel logic lives in the repository — check there
+    const source = readFileSync(
+      resolve(routesDir, "../../../packages/db/src/repositories/broadcasts.ts"),
+      "utf-8"
+    );
 
-    // Find the cancel section and verify organizationId is in the WHERE
-    const cancelIdx = source.indexOf('"cancelled"');
-    expect(cancelIdx).toBeGreaterThan(-1);
+    const fnIdx = source.indexOf("export async function cancelBroadcast");
+    expect(fnIdx).toBeGreaterThan(-1);
 
-    // Get code between "cancelled" and the next return statement
-    const afterCancel = source.slice(cancelIdx, cancelIdx + 500);
-    expect(afterCancel).toContain(".organizationId");
+    // Find the .where( call within this function and verify organizationId
+    // appears inside it — not just anywhere in the function body (e.g. a parameter name)
+    const fnBody = source.slice(fnIdx, fnIdx + 600);
+    const whereStart = fnBody.indexOf(".where(");
+    expect(whereStart).toBeGreaterThan(-1);
+
+    // Find the matching closing paren for .where(
+    let depth = 0;
+    let whereEnd = whereStart + ".where(".length;
+    for (; whereEnd < fnBody.length; whereEnd++) {
+      if (fnBody[whereEnd] === "(") depth++;
+      else if (fnBody[whereEnd] === ")") {
+        if (depth === 0) {
+          whereEnd++;
+          break;
+        }
+        depth--;
+      }
+    }
+
+    const whereClause = fnBody.slice(whereStart, whereEnd);
+    expect(whereClause).toContain("organizationId");
+    // Also verify the status value is in the .set() — search the full body for that
+    expect(fnBody).toContain('"cancelled"');
   });
 
-  it("contact PATCH UPDATE scopes by organizationId", () => {
+  it("contact PATCH UPDATE scopes by organizationId in the WHERE clause", () => {
     // The update logic lives in the repository — check there
     const source = readFileSync(
       resolve(routesDir, "../../../packages/db/src/repositories/contacts.ts"),
       "utf-8"
     );
 
-    // Find updateContactFields and verify organizationId is in the WHERE clause
     const fnIdx = source.indexOf("export async function updateContactFields");
     expect(fnIdx).toBeGreaterThan(-1);
 
     const fnBody = source.slice(fnIdx, fnIdx + 600);
-    expect(fnBody).toContain("organizationId");
+
+    // Verify organizationId is in the .where() clause, not just the parameter list
+    const whereStart = fnBody.indexOf(".where(");
+    expect(whereStart).toBeGreaterThan(-1);
+
+    let depth = 0;
+    let whereEnd = whereStart + ".where(".length;
+    for (; whereEnd < fnBody.length; whereEnd++) {
+      if (fnBody[whereEnd] === "(") depth++;
+      else if (fnBody[whereEnd] === ")") {
+        if (depth === 0) {
+          whereEnd++;
+          break;
+        }
+        depth--;
+      }
+    }
+
+    const whereClause = fnBody.slice(whereStart, whereEnd);
+    expect(whereClause).toContain("organizationId");
     expect(fnBody).toContain(".returning()");
   });
 
