@@ -137,6 +137,9 @@ vi.mock("./variable-mappings", () => ({
     .mockImplementation((data: Record<string, string>) => data),
 }));
 
+process.env.BATCH_QUEUE_URL =
+  "https://sqs.us-east-1.amazonaws.com/123456789012/queue";
+
 const { handler } = await import("../workers/batch-sender");
 const { getCredentials } = await import("../services/credentials");
 

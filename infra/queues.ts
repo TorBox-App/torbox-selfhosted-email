@@ -65,6 +65,8 @@ batchQueue.subscribe(
           : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+      // Allow enqueuing the next chunk after processing current one
+      BATCH_QUEUE_URL: batchQueue.url,
       // PostHog for activation tracking
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
       // Wraps platform for activation event emission
@@ -78,6 +80,11 @@ batchQueue.subscribe(
       {
         actions: ["sts:AssumeRole"],
         resources: ["arn:aws:iam::*:role/wraps-*"],
+      },
+      // Allow enqueuing the next chunk back onto the batch queue
+      {
+        actions: ["sqs:SendMessage"],
+        resources: [batchQueue.arn],
       },
     ],
   },

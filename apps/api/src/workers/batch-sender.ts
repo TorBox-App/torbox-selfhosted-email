@@ -86,6 +86,11 @@ const dedupStatuses = new Set<string>([
 ] as const);
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
+  if (!QUEUE_URL) {
+    throw new Error(
+      "BATCH_QUEUE_URL not configured — check Lambda environment"
+    );
+  }
   try {
     for (const record of event.Records) {
       const job: BatchJob = JSON.parse(record.body);

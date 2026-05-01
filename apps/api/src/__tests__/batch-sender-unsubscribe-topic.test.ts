@@ -131,6 +131,9 @@ vi.mock("@wraps/db", async () => {
   };
 });
 
+process.env.BATCH_QUEUE_URL =
+  "https://sqs.us-east-1.amazonaws.com/123456789012/queue";
+
 const { handler } = await import("../workers/batch-sender");
 
 function makeBatch(overrides: Record<string, unknown> = {}) {
