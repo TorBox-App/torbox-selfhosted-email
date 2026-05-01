@@ -1,6 +1,7 @@
 import {
   Blocks,
   Bot,
+  Building2,
   Cloud,
   Compass,
   Gauge,
@@ -45,6 +46,50 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "Enterprise v1.0",
+    date: "April 2026",
+    icon: Building2,
+    iconColor:
+      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    title: "Okta SSO, SCIM 2.0 & Role-Based Access Control",
+    items: [
+      "Okta SSO with OIDC-based authentication and IdP-initiated sign-in",
+      "SCIM 2.0 provisioning — automatic user and group sync from your identity provider",
+      "Domain verification for SSO with DNS TXT record guidance and in-dashboard status",
+      <>
+        Sign-in redirect URI surfaced in setup form for seamless Okta app
+        configuration
+      </>,
+      "6-role permission model: Owner, Admin, Member, Developer, Viewer, and Billing",
+      "RBAC enforced across all dashboard actions and server-side mutations",
+      "Billing role isolates billing management from content operations",
+    ],
+  },
+  {
+    version: "Platform v0.17.0",
+    date: "April 2026",
+    icon: Sparkles,
+    iconColor:
+      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    title: "Broadcast Drafts, Contact externalId & Segment Improvements",
+    items: [
+      "Broadcast drafts — save work-in-progress broadcasts without sending",
+      "Duplicate any existing broadcast to create a new one from it",
+      <>
+        Contact <Code>externalId</Code> field for multi-identifier resolution —
+        link contacts by your own system IDs via SDK or API
+      </>,
+      "Numeric comparators (>, <, ≥, ≤) in segment builder for custom number properties",
+      "Refresh buttons on all list and analytics pages for on-demand data updates",
+      <>
+        <Code>@wraps.dev/email-check</Code> published to npm — run{" "}
+        <Code>npx @wraps.dev/email-check yourdomain.com</Code> under the Wraps
+        scope
+      </>,
+      "Email sends are analytics-only and not plan-gated",
+    ],
+  },
   {
     version: "CLI v2.19.0",
     date: "April 2026",
