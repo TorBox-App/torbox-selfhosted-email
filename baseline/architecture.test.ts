@@ -1181,3 +1181,165 @@ describe("cli router forwards region to all AWS commands", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Test 6: Init/Upgrade commands forward --yes and --preview
+// ─────────────────────────────────────────────────────────
+//
+// Interactive setup/upgrade commands must receive `yes: flags.yes` so callers
+// can suppress all confirmation prompts (non-interactive CI, scripting).
+// They must also receive `preview: flags.preview` so callers can do a dry-run
+// without deploying.  Commands whose option types don't support preview yet
+// belong in PREVIEW_NOT_SUPPORTED until the implementation catches up.
+//
+// To add a new init/upgrade command: include both flags in the router call.
+// To skip preview only: add the function name to PREVIEW_NOT_SUPPORTED.
+// ─────────────────────────────────────────────────────────
+
+describe("cli router forwards --yes and --preview to init/upgrade commands", () => {
+  test("all *Init and *Upgrade calls in cli.ts pass yes: flags.yes and preview: flags.preview", () => {
+    // API-backed or local scaffold commands — no interactive AWS prompts.
+    const YES_NOT_NEEDED = new Set([
+      "templatesInit",
+      "workflowsInit",
+      "workflowInit",
+    ]);
+
+    // Commands whose option types don't include preview? yet.
+    // Remove from this set when preview support is added to the implementation.
+    const PREVIEW_NOT_SUPPORTED = new Set([
+      "smsInit",
+      "smsUpgrade",
+      "replyInit",
+    ]);
+
+    const content = readFile("packages/cli/src/cli.ts");
+    const lines = content.split("\n");
+    const violations: string[] = [];
+    const callOpenRe = /^\s*await\s+(\w+)\s*\(\{/;
+
+    let i = 0;
+    while (i < lines.length) {
+      const openMatch = lines[i].match(callOpenRe);
+      if (openMatch) {
+        const fnName = openMatch[1];
+        const fnLower = fnName.toLowerCase();
+        const isInitUpgrade =
+          fnLower.endsWith("init") || fnLower.endsWith("upgrade");
+
+        const blockStart = i + 1;
+        const blockLines: string[] = [lines[i]];
+        let j = i + 1;
+        let depth = 1;
+        while (j < lines.length && depth > 0) {
+          const l = lines[j];
+          for (const ch of l) {
+            if (ch === "{") depth++;
+            else if (ch === "}") depth--;
+          }
+          blockLines.push(l);
+          j++;
+        }
+
+        if (isInitUpgrade) {
+          const block = blockLines.join("\n");
+          if (!YES_NOT_NEEDED.has(fnName) && !block.includes("yes: flags.yes")) {
+            violations.push(
+              `cli.ts:${blockStart} — ${fnName}() omits yes: flags.yes`
+            );
+          }
+          if (
+            !YES_NOT_NEEDED.has(fnName) &&
+            !PREVIEW_NOT_SUPPORTED.has(fnName) &&
+            !block.includes("preview: flags.preview")
+          ) {
+            violations.push(
+              `cli.ts:${blockStart} — ${fnName}() omits preview: flags.preview`
+            );
+          }
+        }
+
+        i = j;
+        continue;
+      }
+      i++;
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 7: Destroy commands forward --force and --preview
+// ─────────────────────────────────────────────────────────
+//
+// Destructive commands gate execution behind --force. If the router forgets
+// to forward it, the command falls back to its default (false) and either
+// always prompts interactively or rejects --force entirely.
+// Destroy commands with a preview? option also need preview: flags.preview
+// so callers can dry-run teardown.  Commands without preview support belong
+// in PREVIEW_NOT_SUPPORTED until the type and implementation catch up.
+//
+// To add a new destroy command: include force in the router call.
+// ─────────────────────────────────────────────────────────
+
+describe("cli router forwards --force and --preview to destroy commands", () => {
+  test("all *Destroy calls in cli.ts pass force: flags.force", () => {
+    // Destroy commands whose option types don't include preview? yet.
+    const PREVIEW_NOT_SUPPORTED = new Set([
+      "inboundDestroy",
+      "replyDestroy",
+    ]);
+
+    const content = readFile("packages/cli/src/cli.ts");
+    const lines = content.split("\n");
+    const violations: string[] = [];
+    const callOpenRe = /^\s*await\s+(\w+)\s*\(\{/;
+
+    let i = 0;
+    while (i < lines.length) {
+      const openMatch = lines[i].match(callOpenRe);
+      if (openMatch) {
+        const fnName = openMatch[1];
+        const isDestroy = fnName.toLowerCase().endsWith("destroy");
+
+        const blockStart = i + 1;
+        const blockLines: string[] = [lines[i]];
+        let j = i + 1;
+        let depth = 1;
+        while (j < lines.length && depth > 0) {
+          const l = lines[j];
+          for (const ch of l) {
+            if (ch === "{") depth++;
+            else if (ch === "}") depth--;
+          }
+          blockLines.push(l);
+          j++;
+        }
+
+        if (isDestroy) {
+          const block = blockLines.join("\n");
+          if (!block.includes("force: flags.force")) {
+            violations.push(
+              `cli.ts:${blockStart} — ${fnName}() omits force: flags.force`
+            );
+          }
+          if (
+            !PREVIEW_NOT_SUPPORTED.has(fnName) &&
+            !block.includes("preview: flags.preview")
+          ) {
+            violations.push(
+              `cli.ts:${blockStart} — ${fnName}() omits preview: flags.preview`
+            );
+          }
+        }
+
+        i = j;
+        continue;
+      }
+      i++;
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
