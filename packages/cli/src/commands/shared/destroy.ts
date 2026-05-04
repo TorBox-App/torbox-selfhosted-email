@@ -44,7 +44,7 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   }
 
   // 2. Get region
-  const region = await getAWSRegion();
+  const region = options.region || (await getAWSRegion());
 
   // 3. Load connection metadata to see what services are deployed
   const metadata = await loadConnectionMetadata(identity.accountId, region);

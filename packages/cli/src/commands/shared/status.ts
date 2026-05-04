@@ -18,7 +18,7 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 /**
  * Global Status command - Show overview of all deployed infrastructure
  */
-export async function status(_options: StatusOptions): Promise<void> {
+export async function status(options: StatusOptions): Promise<void> {
   await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
@@ -38,7 +38,7 @@ export async function status(_options: StatusOptions): Promise<void> {
   }
 
   // 2. Get region
-  const region = await getAWSRegion();
+  const region = options.region || (await getAWSRegion());
   if (!isJsonMode()) {
     progress.info(`Region: ${pc.cyan(region)}`);
   }

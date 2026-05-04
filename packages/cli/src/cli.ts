@@ -465,7 +465,7 @@ if (!primaryCommand) {
           });
           break;
         case "status":
-          await status({ account: flags.account });
+          await status({ account: flags.account, region: flags.region });
           break;
         case "console":
           await dashboard({ port: flags.port, noOpen: flags.noOpen });
@@ -1000,6 +1000,7 @@ async function run() {
         case "status":
           await smsStatus({
             account: flags.account,
+            region: flags.region,
             json: flags.json,
           });
           break;
@@ -1008,6 +1009,7 @@ async function run() {
           await smsTest({
             to: flags.to,
             message: flags.message,
+            region: flags.region,
             json: flags.json,
           });
           break;
@@ -1043,6 +1045,7 @@ async function run() {
             list: flags.list,
             delete: flags.delete,
             resend: flags.resend,
+            region: flags.region,
             json: flags.json,
           });
           break;
@@ -1298,6 +1301,7 @@ async function run() {
       case "status":
         await status({
           account: flags.account,
+          region: flags.region,
           json: flags.json,
         });
         break;
@@ -1313,6 +1317,7 @@ async function run() {
         await destroy({
           force: flags.force,
           preview: flags.preview,
+          region: flags.region,
           json: flags.json,
         });
         break;

@@ -49,7 +49,7 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
   );
 
   // 2. Get region
-  const region = await getAWSRegion();
+  const region = options.region || (await getAWSRegion());
 
   // 3. Check for existing metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);

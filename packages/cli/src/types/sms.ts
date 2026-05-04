@@ -210,6 +210,7 @@ export type SMSDestroyOptions = {
 export type SMSTestOptions = {
   to?: string;
   message?: string;
+  region?: string;
   json?: boolean;
 };
 
@@ -231,5 +232,6 @@ export type SMSVerifyNumberOptions = {
   list?: boolean;
   delete?: boolean;
   resend?: boolean;
+  region?: string;
   json?: boolean;
 };
