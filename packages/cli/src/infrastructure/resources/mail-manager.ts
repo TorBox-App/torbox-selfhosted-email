@@ -96,7 +96,9 @@ export async function createMailManagerArchive(
   //    Skip any in PENDING_DELETION — they can't be reused and will block
   //    creating a new archive with the same name.
   try {
-    const listResult = await mailManagerClient.send(new ListArchivesCommand({}));
+    const listResult = await mailManagerClient.send(
+      new ListArchivesCommand({})
+    );
     const existing = listResult.Archives?.find(
       (a) =>
         a.ArchiveState === ArchiveState.ACTIVE &&
@@ -105,15 +107,13 @@ export async function createMailManagerArchive(
     );
 
     if (existing?.ArchiveId) {
-      console.log(`Using existing Mail Manager archive: ${existing.ArchiveName}`);
       archiveId = existing.ArchiveId;
       const getResult = await mailManagerClient.send(
         new GetArchiveCommand({ ArchiveId: archiveId })
       );
       archiveArn = getResult.ArchiveArn;
     }
-  } catch (error) {
-    console.log("Error checking for existing archive:", error);
+  } catch {
     // Fall through to creation
   }
 
@@ -146,7 +146,6 @@ export async function createMailManagerArchive(
           );
         }
 
-        console.log(`Created new Mail Manager archive: ${archiveName}`);
         break;
       } catch (error) {
         if (
@@ -154,9 +153,6 @@ export async function createMailManagerArchive(
           error.name === "ConflictException" &&
           attempt < MAX_NAME_ATTEMPTS
         ) {
-          console.log(
-            `Archive '${archiveName}' is unavailable, trying '${baseArchiveName}-${attempt + 1}'...`
-          );
           continue;
         }
         throw error;

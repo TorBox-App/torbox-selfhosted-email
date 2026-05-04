@@ -1071,3 +1071,113 @@ describe("no region fallback in infrastructure", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Test 5: CLI router forwards region flag to all AWS commands
+// ─────────────────────────────────────────────────────────
+//
+// Commands that call AWS APIs depend on knowing which region to operate in.
+// The router (cli.ts) receives `flags.region` from the user but historically
+// forgot to forward it to several commands — they silently fell back to
+// us-east-1 or whatever getAWSRegion() resolved.
+//
+// This test scans cli.ts for multi-line `await command({` call blocks that
+// use any `flags.*` arg and checks that they include `region: flags.region`.
+// Commands in REGION_NOT_NEEDED are explicitly exempted (API-backed or local).
+//
+// To add a new command that doesn't need region: add its name to the set.
+// To add a new AWS command: it must include `region: flags.region`.
+// ─────────────────────────────────────────────────────────
+
+describe("cli router forwards region to all AWS commands", () => {
+  test("packages/cli/src/cli.ts passes region: flags.region to every AWS command call", () => {
+    // Commands that don't touch AWS directly — API-backed, local dev servers,
+    // or informational. Adding a new entry here is a conscious opt-out.
+    const REGION_NOT_NEEDED = new Set([
+      // Local dev / informational — no AWS calls
+      "dashboard",
+      "platformInfo",
+      "news",
+      "support",
+      "showHelp",
+      // Auth / account — AWS credentials but not region-specific
+      "authLogin",
+      "authStatusCmd",
+      "authLogout",
+      "awsSetup",
+      // Email DNS check — auto-discovers regions from existing connections
+      "check",
+      // Email reply — local decode, no AWS
+      "replyDecode",
+      // Domain management — uses Wraps API, not direct AWS
+      "listDomains",
+      "verifyDomain",
+      "getDkim",
+      "removeDomain",
+      // Templates / workflows — API-backed or local scaffold
+      "templatesInit",
+      "templatesPush",
+      "templatesPreview",
+      "workflowsInit",
+      "workflowsValidate",
+      "workflowsPush",
+      "workflowInit",
+      // IAM policy generator — outputs policy JSON, no AWS calls
+      "permissions",
+    ]);
+
+    const content = readFile("packages/cli/src/cli.ts");
+    const lines = content.split("\n");
+    const violations: string[] = [];
+
+    // Match the opening line of a multi-arg command call: `await fnName({`
+    const callOpenRe = /^\s*await\s+(\w+)\s*\(\{/;
+
+    let i = 0;
+    while (i < lines.length) {
+      const openMatch = lines[i].match(callOpenRe);
+      if (openMatch) {
+        const fnName = openMatch[1];
+        const blockStart = i + 1; // 1-indexed for reporting
+        // Collect the call block until the matching closing `});`
+        const blockLines: string[] = [lines[i]];
+        let j = i + 1;
+        let depth = 1;
+        while (j < lines.length && depth > 0) {
+          const l = lines[j];
+          for (const ch of l) {
+            if (ch === "{") depth++;
+            else if (ch === "}") depth--;
+          }
+          blockLines.push(l);
+          j++;
+        }
+
+        if (!REGION_NOT_NEEDED.has(fnName)) {
+          const block = blockLines.join("\n");
+
+          // Only flag blocks that actually use flags.* (single-arg or no-arg
+          // calls like `await foo()` are caught by the opening regex only when
+          // they use `({`, so this filters edge cases).
+          if (
+            block.includes("flags.") &&
+            !block.includes("region: flags.region") &&
+            // baseline:allow-no-region — for legitimate exceptions annotate
+            // the call site instead of broadening REGION_NOT_NEEDED
+            !block.includes("baseline:allow-no-region")
+          ) {
+            violations.push(
+              `cli.ts:${blockStart} — ${fnName}() uses flags.* but omits region: flags.region`
+            );
+          }
+        }
+
+        i = j; // skip past the block we just consumed
+        continue;
+      }
+      i++;
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
