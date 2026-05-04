@@ -453,6 +453,7 @@ if (!primaryCommand) {
             region: flags.region,
             preset: flags.preset,
             yes: flags.yes,
+            preview: flags.preview,
           });
           break;
         case "cdn-init":
@@ -661,6 +662,7 @@ async function run() {
               await inboundDestroy({
                 region: flags.region,
                 force: flags.force,
+                preview: flags.preview,
                 json: flags.json,
               });
               break;
@@ -731,6 +733,7 @@ async function run() {
                 domain: flags.domain,
                 all: flags.all,
                 yes: flags.yes,
+                preview: flags.preview,
                 json: flags.json,
               });
               break;
@@ -757,6 +760,7 @@ async function run() {
                 domain: flags.domain,
                 all: flags.all,
                 force: flags.force,
+                preview: flags.preview,
                 json: flags.json,
               });
               break;
@@ -993,6 +997,7 @@ async function run() {
             region: flags.region,
             preset: flags.preset,
             yes: flags.yes,
+            preview: flags.preview,
             json: flags.json,
           });
           break;
@@ -1018,6 +1023,7 @@ async function run() {
           await smsUpgrade({
             region: flags.region,
             yes: flags.yes,
+            preview: flags.preview,
             json: flags.json,
           });
           break;

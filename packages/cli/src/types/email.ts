@@ -445,6 +445,7 @@ export type EmailInboundInitOptions = {
 export type EmailInboundDestroyOptions = {
   region?: string;
   force?: boolean;
+  preview?: boolean;
   json?: boolean;
 };
 
@@ -503,6 +504,7 @@ export type EmailReplyInitOptions = {
   domain?: string;
   all?: boolean;
   yes?: boolean;
+  preview?: boolean;
   json?: boolean;
 };
 
@@ -532,6 +534,7 @@ export type EmailReplyDestroyOptions = {
   domain?: string;
   all?: boolean;
   force?: boolean;
+  preview?: boolean;
   json?: boolean;
 };
 

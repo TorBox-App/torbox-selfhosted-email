@@ -39,9 +39,13 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 import {
   ensurePulumiInstalled,
+  previewWithResourceChanges,
   withLockRetry,
 } from "../../utils/shared/pulumi.js";
 import {
@@ -485,6 +489,66 @@ export async function replyInit(options: EmailReplyInitOptions): Promise<void> {
 
   const stackName =
     emailService.pulumiStackName || `wraps-${identity.accountId}-${region}`;
+
+  // Preview mode — show what Pulumi would create across all target domains,
+  // using placeholder secrets (nothing is saved to disk or deployed).
+  if (options.preview) {
+    const previewResult = await progress.execute(
+      "Generating infrastructure preview",
+      async () => {
+        // Build an in-memory config with all target domains added (placeholder secrets).
+        const previewMetadata = JSON.parse(
+          JSON.stringify(metadata)
+        ) as typeof metadata;
+        const previewEmailConfig = previewMetadata.services.email!.config;
+        const rt = previewEmailConfig.replyThreading ?? {
+          enabled: false,
+          domains: [],
+        };
+        for (const domain of targetDomains) {
+          const filtered = rt.domains.filter((d) => d.domain !== domain);
+          filtered.push({
+            domain,
+            initialSecret: randomBytes(32).toString("base64"),
+            currentKid: 1,
+            createdAt: new Date().toISOString(),
+          });
+          rt.domains = filtered;
+        }
+        previewEmailConfig.replyThreading = {
+          enabled: true,
+          domains: rt.domains,
+        };
+
+        const stackConfig = buildEmailStackConfig(previewMetadata, region);
+
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
+        const stack =
+          await pulumi.automation.LocalWorkspace.createOrSelectStack(
+            {
+              stackName,
+              projectName: "wraps-email",
+              program: async () => {
+                const result = await deployEmailStack(stackConfig);
+                return result as Record<string, unknown>;
+              },
+            },
+            {
+              workDir: getPulumiWorkDir(),
+            }
+          );
+        await stack.setConfig("aws:region", { value: region });
+        return previewWithResourceChanges(stack, { diff: true });
+      }
+    );
+    displayPreview({
+      changeSummary: previewResult.changeSummary,
+      resourceChanges: previewResult.resourceChanges,
+      commandName: "wraps email reply init",
+    });
+    clack.outro(pc.green("Preview complete. Run without --preview to deploy."));
+    return;
+  }
 
   const results: Array<{
     domain: string;
@@ -946,8 +1010,8 @@ export async function replyDestroy(
     );
   }
 
-  // Confirm (skip in JSON mode or with --force).
-  if (!(options.force || isJsonMode())) {
+  // Confirm (skip in JSON mode, --force, or --preview).
+  if (!(options.force || options.preview || isJsonMode())) {
     const confirmed = await clack.confirm({
       message: `Remove reply threading for ${targets.join(", ")}?`,
       initialValue: false,
@@ -956,6 +1020,58 @@ export async function replyDestroy(
       clack.cancel("Operation cancelled.");
       return;
     }
+  }
+
+  const emailService = metadata.services.email;
+
+  // Preview mode — show what Pulumi would remove without deploying or saving.
+  if (options.preview) {
+    if (emailService) {
+      const previewMetadata = JSON.parse(
+        JSON.stringify(metadata)
+      ) as typeof metadata;
+      for (const domain of targets) {
+        stripDomainFromReplyThreadingMetadata({
+          domain,
+          metadata: previewMetadata,
+        });
+      }
+      const stackName =
+        emailService.pulumiStackName || `wraps-${identity.accountId}-${region}`;
+      const stackConfig = buildEmailStackConfig(previewMetadata, region);
+
+      const previewResult = await progress.execute(
+        "Generating infrastructure preview",
+        async () => {
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
+          const stack =
+            await pulumi.automation.LocalWorkspace.createOrSelectStack(
+              {
+                stackName,
+                projectName: "wraps-email",
+                program: async () => {
+                  const result = await deployEmailStack(stackConfig);
+                  return result as Record<string, unknown>;
+                },
+              },
+              {
+                workDir: getPulumiWorkDir(),
+              }
+            );
+          await stack.setConfig("aws:region", { value: region });
+          return previewWithResourceChanges(stack, { diff: true });
+        }
+      );
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        resourceChanges: previewResult.resourceChanges,
+        commandName: "wraps email reply destroy",
+      });
+    }
+    clack.outro(
+      pc.green("Preview complete. Run without --preview to destroy.")
+    );
+    return;
   }
 
   // Strip targeted domains from the in-memory metadata so the next Pulumi
@@ -967,7 +1083,6 @@ export async function replyDestroy(
   // Redeploy stack FIRST so Pulumi removes the SSM parameter(s) whose metadata
   // entries are gone. If this fails, no receipt-rule or metadata-disk changes
   // have been committed yet — the user can safely re-run.
-  const emailService = metadata.services.email;
   if (emailService) {
     const stackName =
       emailService.pulumiStackName || `wraps-${identity.accountId}-${region}`;

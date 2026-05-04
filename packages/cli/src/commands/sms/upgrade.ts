@@ -29,9 +29,15 @@ import {
   saveConnectionMetadata,
   updateServiceConfig,
 } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
-import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  previewWithResourceChanges,
+} from "../../utils/shared/pulumi.js";
 import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 import {
   calculateSMSCosts,
@@ -876,8 +882,8 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
   }
   console.log("");
 
-  // 9. Confirm upgrade
-  if (!options.yes) {
+  // 9. Confirm upgrade (skip if --yes or --preview)
+  if (!(options.yes || options.preview)) {
     const confirmed = await clack.confirm({
       message: "Proceed with upgrade?",
       initialValue: true,
@@ -905,53 +911,86 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
     smsConfig: updatedConfig,
   };
 
+  const stackName =
+    metadata.services.sms?.pulumiStackName ||
+    `wraps-sms-${identity.accountId}-${region}`;
+
+  // 11a. Helper to create the Pulumi stack (shared between preview and deploy)
+  const createStack = async () => {
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
+    const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
+      {
+        stackName,
+        projectName: "wraps-sms",
+        program: async () => {
+          const result = await deploySMSStack(stackConfig);
+          return {
+            roleArn: result.roleArn,
+            phoneNumber: result.phoneNumber,
+            phoneNumberArn: result.phoneNumberArn,
+            configSetName: result.configSetName,
+            tableName: result.tableName,
+            region: result.region,
+            lambdaFunctions: result.lambdaFunctions,
+            snsTopicArn: result.snsTopicArn,
+            queueUrl: result.queueUrl,
+            dlqUrl: result.dlqUrl,
+            optOutListArn: result.optOutListArn,
+          };
+        },
+      },
+      {
+        workDir: getPulumiWorkDir(),
+        envVars: {
+          PULUMI_CONFIG_PASSPHRASE: "",
+          AWS_REGION: region,
+        },
+        secretsProvider: "passphrase",
+      }
+    );
+    await stack.workspace.selectStack(stackName);
+    await stack.setConfig("aws:region", { value: region });
+    return stack;
+  };
+
+  // 12. Preview mode — show what would change without deploying
+  if (options.preview) {
+    try {
+      const previewResult = await progress.execute(
+        "Generating infrastructure preview",
+        async () => {
+          const stack = await createStack();
+          await stack.refresh({ onOutput: () => {} });
+          return previewWithResourceChanges(stack, { diff: true });
+        }
+      );
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        resourceChanges: previewResult.resourceChanges,
+        commandName: "wraps sms upgrade",
+      });
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to upgrade.")
+      );
+      trackServiceUpgrade("sms", {
+        region,
+        preview: true,
+        duration_ms: Date.now() - startTime,
+      });
+    } catch (error) {
+      trackError("PREVIEW_FAILED", "sms:upgrade", { step: "preview" });
+      throw error;
+    }
+    return;
+  }
+
   // 12. Update Pulumi stack
   let outputs: SMSStackOutputs;
   try {
     outputs = await progress.execute(
       "Updating SMS infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
-
-        const stack =
-          await pulumi.automation.LocalWorkspace.createOrSelectStack(
-            {
-              stackName:
-                metadata.services.sms?.pulumiStackName ||
-                `wraps-sms-${identity.accountId}-${region}`,
-              projectName: "wraps-sms",
-              program: async () => {
-                const result = await deploySMSStack(stackConfig);
-                return {
-                  roleArn: result.roleArn,
-                  phoneNumber: result.phoneNumber,
-                  phoneNumberArn: result.phoneNumberArn,
-                  configSetName: result.configSetName,
-                  tableName: result.tableName,
-                  region: result.region,
-                  lambdaFunctions: result.lambdaFunctions,
-                  snsTopicArn: result.snsTopicArn,
-                  queueUrl: result.queueUrl,
-                  dlqUrl: result.dlqUrl,
-                  optOutListArn: result.optOutListArn,
-                };
-              },
-            },
-            {
-              workDir: getPulumiWorkDir(),
-              envVars: {
-                PULUMI_CONFIG_PASSPHRASE: "",
-                AWS_REGION: region,
-              },
-              secretsProvider: "passphrase",
-            }
-          );
-
-        await stack.workspace.selectStack(
-          metadata.services.sms?.pulumiStackName ||
-            `wraps-sms-${identity.accountId}-${region}`
-        );
-        await stack.setConfig("aws:region", { value: region });
+        const stack = await createStack();
 
         // Refresh state to sync with AWS before upgrading
         await stack.refresh({ onOutput: () => {} });

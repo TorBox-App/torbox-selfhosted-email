@@ -43,13 +43,17 @@ import {
   removeInboundDomainFromMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 import {
   promptInboundSubdomain,
   promptWebhookUrl,
 } from "../../utils/shared/prompts.js";
 import {
   ensurePulumiInstalled,
+  previewWithResourceChanges,
   withLockRetry,
 } from "../../utils/shared/pulumi.js";
 import {
@@ -496,8 +500,8 @@ export async function inboundDestroy(
   // biome-ignore lint/style/noNonNullAssertion: validated by enabled check above
   const inboundConfig = emailService.config.inbound!;
 
-  // 4. Confirm
-  if (!options.force) {
+  // 4. Confirm (skip with --force or --preview)
+  if (!(options.force || options.preview)) {
     clack.log.warn(
       `This will remove inbound email for ${pc.cyan(inboundConfig.receivingDomain || "")}`
     );
@@ -512,25 +516,11 @@ export async function inboundDestroy(
     }
   }
 
-  // 5. Delete SES receipt rules
-  await progress.execute("Removing SES receipt rules", async () => {
-    await deleteReceiptRule(region);
-    await deleteReceiptRuleSet(region);
-  });
-
-  // 6. Ensure Pulumi work directory
-  await progress.execute("Preparing workspace", async () =>
-    ensurePulumiWorkDir({
-      accountId: identity.accountId,
-      region,
-    })
-  );
-
   const pulumiWorkDir = getPulumiWorkDir();
   const stackName =
     emailService.pulumiStackName || `wraps-${identity.accountId}-${region}`;
 
-  // 7. Redeploy with inbound disabled
+  // 5. Build updated config (inbound removed)
   const updatedEmailConfig = {
     ...emailService.config,
     inbound: undefined,
@@ -541,7 +531,8 @@ export async function inboundDestroy(
     emailConfig: updatedEmailConfig,
   });
 
-  await progress.execute("Removing inbound infrastructure", async () => {
+  const createStack = async () => {
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
     const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
       {
         stackName,
@@ -555,8 +546,47 @@ export async function inboundDestroy(
         workDir: pulumiWorkDir,
       }
     );
-
     await stack.setConfig("aws:region", { value: region });
+    return stack;
+  };
+
+  // 6. Preview mode — show what would be removed without deploying
+  if (options.preview) {
+    const previewResult = await progress.execute(
+      "Generating infrastructure preview",
+      async () => {
+        const stack = await createStack();
+        return previewWithResourceChanges(stack, { diff: true });
+      }
+    );
+    displayPreview({
+      changeSummary: previewResult.changeSummary,
+      resourceChanges: previewResult.resourceChanges,
+      commandName: "wraps email inbound destroy",
+    });
+    clack.outro(
+      pc.green("Preview complete. Run without --preview to destroy.")
+    );
+    return;
+  }
+
+  // 7. Delete SES receipt rules
+  await progress.execute("Removing SES receipt rules", async () => {
+    await deleteReceiptRule(region);
+    await deleteReceiptRuleSet(region);
+  });
+
+  // 8. Ensure Pulumi work directory
+  await progress.execute("Preparing workspace", async () =>
+    ensurePulumiWorkDir({
+      accountId: identity.accountId,
+      region,
+    })
+  );
+
+  // 9. Redeploy with inbound disabled
+  await progress.execute("Removing inbound infrastructure", async () => {
+    const stack = await createStack();
 
     await withLockRetry(
       () =>

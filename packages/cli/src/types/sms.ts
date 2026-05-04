@@ -136,6 +136,7 @@ export type SMSInitOptions = {
   phoneNumber?: string;
   preset?: SMSConfigPreset;
   yes?: boolean;
+  preview?: boolean;
   json?: boolean;
 };
 
@@ -183,6 +184,7 @@ export type SMSVerifyOptions = {
 export type SMSUpgradeOptions = {
   region?: string;
   yes?: boolean;
+  preview?: boolean;
   json?: boolean;
 };
 

@@ -1207,11 +1207,7 @@ describe("cli router forwards --yes and --preview to init/upgrade commands", () 
 
     // Commands whose option types don't include preview? yet.
     // Remove from this set when preview support is added to the implementation.
-    const PREVIEW_NOT_SUPPORTED = new Set([
-      "smsInit",
-      "smsUpgrade",
-      "replyInit",
-    ]);
+    const PREVIEW_NOT_SUPPORTED = new Set<string>([]);
 
     const content = readFile("packages/cli/src/cli.ts");
     const lines = content.split("\n");
@@ -1243,16 +1239,16 @@ describe("cli router forwards --yes and --preview to init/upgrade commands", () 
 
         if (isInitUpgrade) {
           const block = blockLines.join("\n");
-          if (!YES_NOT_NEEDED.has(fnName) && !block.includes("yes: flags.yes")) {
+          if (
+            !(YES_NOT_NEEDED.has(fnName) || block.includes("yes: flags.yes"))
+          ) {
             violations.push(
               `cli.ts:${blockStart} — ${fnName}() omits yes: flags.yes`
             );
           }
-          if (
-            !YES_NOT_NEEDED.has(fnName) &&
-            !PREVIEW_NOT_SUPPORTED.has(fnName) &&
-            !block.includes("preview: flags.preview")
-          ) {
+          const previewExempt =
+            YES_NOT_NEEDED.has(fnName) || PREVIEW_NOT_SUPPORTED.has(fnName);
+          if (!(previewExempt || block.includes("preview: flags.preview"))) {
             violations.push(
               `cli.ts:${blockStart} — ${fnName}() omits preview: flags.preview`
             );
@@ -1286,10 +1282,7 @@ describe("cli router forwards --yes and --preview to init/upgrade commands", () 
 describe("cli router forwards --force and --preview to destroy commands", () => {
   test("all *Destroy calls in cli.ts pass force: flags.force", () => {
     // Destroy commands whose option types don't include preview? yet.
-    const PREVIEW_NOT_SUPPORTED = new Set([
-      "inboundDestroy",
-      "replyDestroy",
-    ]);
+    const PREVIEW_NOT_SUPPORTED = new Set<string>([]);
 
     const content = readFile("packages/cli/src/cli.ts");
     const lines = content.split("\n");
@@ -1325,8 +1318,10 @@ describe("cli router forwards --force and --preview to destroy commands", () => 
             );
           }
           if (
-            !PREVIEW_NOT_SUPPORTED.has(fnName) &&
-            !block.includes("preview: flags.preview")
+            !(
+              PREVIEW_NOT_SUPPORTED.has(fnName) ||
+              block.includes("preview: flags.preview")
+            )
           ) {
             violations.push(
               `cli.ts:${blockStart} — ${fnName}() omits preview: flags.preview`

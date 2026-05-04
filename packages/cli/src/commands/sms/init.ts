@@ -34,7 +34,10 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 import {
   confirmDeploy,
   promptProvider,
@@ -43,6 +46,7 @@ import {
 } from "../../utils/shared/prompts.js";
 import {
   ensurePulumiInstalled,
+  previewWithResourceChanges,
   withLockRetry,
 } from "../../utils/shared/pulumi.js";
 import { getSMSCostSummary } from "../../utils/sms/costs.js";
@@ -331,8 +335,8 @@ export async function init(options: SMSInitOptions): Promise<void> {
     }
   }
 
-  // Confirm deployment
-  if (!options.yes) {
+  // Confirm deployment (skip if --yes or --preview)
+  if (!(options.yes || options.preview)) {
     const confirmed = await confirmDeploy();
     if (!confirmed) {
       clack.cancel("Deployment cancelled.");
@@ -348,47 +352,82 @@ export async function init(options: SMSInitOptions): Promise<void> {
     smsConfig,
   };
 
+  // 6a. Helper to create the Pulumi stack (shared between preview and deploy)
+  const createStack = async () => {
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
+    const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
+      {
+        stackName: `wraps-sms-${identity.accountId}-${region}`,
+        projectName: "wraps-sms",
+        program: async () => {
+          const result = await deploySMSStack(stackConfig);
+          return {
+            roleArn: result.roleArn,
+            phoneNumber: result.phoneNumber,
+            phoneNumberArn: result.phoneNumberArn,
+            configSetName: result.configSetName,
+            tableName: result.tableName,
+            region: result.region,
+            lambdaFunctions: result.lambdaFunctions,
+            snsTopicArn: result.snsTopicArn,
+            queueUrl: result.queueUrl,
+            dlqUrl: result.dlqUrl,
+            optOutListArn: result.optOutListArn,
+          };
+        },
+      },
+      {
+        workDir: getPulumiWorkDir(),
+        envVars: {
+          PULUMI_CONFIG_PASSPHRASE: "",
+          AWS_REGION: region,
+        },
+        secretsProvider: "passphrase",
+      }
+    );
+    await stack.setConfig("aws:region", { value: region });
+    return stack;
+  };
+
+  // 7. Preview mode — show what would be created without deploying
+  if (options.preview) {
+    try {
+      const previewResult = await progress.execute(
+        "Generating infrastructure preview",
+        async () => {
+          const stack = await createStack();
+          return previewWithResourceChanges(stack, { diff: true });
+        }
+      );
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        resourceChanges: previewResult.resourceChanges,
+        costEstimate: getSMSCostSummary(smsConfig, 0),
+        commandName: "wraps sms init",
+      });
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to deploy.")
+      );
+      trackServiceInit("sms", true, {
+        provider,
+        region,
+        preview: true,
+        duration_ms: Date.now() - startTime,
+      });
+    } catch (error) {
+      trackError("PREVIEW_FAILED", "sms:init", { step: "preview" });
+      throw error;
+    }
+    return;
+  }
+
   // 7. Deploy infrastructure using Pulumi
   let outputs: SMSStackOutputs;
   try {
     outputs = await progress.execute(
       "Deploying SMS infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
-
-        const stack =
-          await pulumi.automation.LocalWorkspace.createOrSelectStack(
-            {
-              stackName: `wraps-sms-${identity.accountId}-${region}`,
-              projectName: "wraps-sms",
-              program: async () => {
-                const result = await deploySMSStack(stackConfig);
-                return {
-                  roleArn: result.roleArn,
-                  phoneNumber: result.phoneNumber,
-                  phoneNumberArn: result.phoneNumberArn,
-                  configSetName: result.configSetName,
-                  tableName: result.tableName,
-                  region: result.region,
-                  lambdaFunctions: result.lambdaFunctions,
-                  snsTopicArn: result.snsTopicArn,
-                  queueUrl: result.queueUrl,
-                  dlqUrl: result.dlqUrl,
-                  optOutListArn: result.optOutListArn,
-                };
-              },
-            },
-            {
-              workDir: getPulumiWorkDir(),
-              envVars: {
-                PULUMI_CONFIG_PASSPHRASE: "",
-                AWS_REGION: region,
-              },
-              secretsProvider: "passphrase",
-            }
-          );
-
-        await stack.setConfig("aws:region", { value: region });
+        const stack = await createStack();
         const upResult = await withLockRetry(
           () => stack.up({ onOutput: console.log }),
           { accountId: identity.accountId, region, autoConfirm: options.yes }
