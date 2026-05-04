@@ -236,6 +236,7 @@ export const PRICING_TIERS: PricingTier[] = [
       "Behavioral segments",
       "1K AI generations/mo",
       "Unlimited AWS accounts",
+      "SSO + SCIM provisioning",
       "Priority support + SLA",
     ],
   },
@@ -492,6 +493,13 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
   },
   {
     name: "Behavioral segments",
+    free: false,
+    starter: false,
+    growth: false,
+    scale: true,
+  },
+  {
+    name: "SSO + SCIM",
     free: false,
     starter: false,
     growth: false,
