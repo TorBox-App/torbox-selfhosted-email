@@ -24,10 +24,15 @@ type BatchStatsProps = {
     completedAt: Date | null;
   };
   clicksByUrl?: Array<{ url: string; count: number }>;
+  unsubscribeCount?: number;
   organizationId: string;
 };
 
-export function BatchStats({ batch, clicksByUrl }: BatchStatsProps) {
+export function BatchStats({
+  batch,
+  clicksByUrl,
+  unsubscribeCount,
+}: BatchStatsProps) {
   const hasData = batch.sent > 0;
 
   return (
@@ -40,6 +45,22 @@ export function BatchStats({ batch, clicksByUrl }: BatchStatsProps) {
           status={batch.status}
           totalRecipients={batch.totalRecipients}
         />
+        {unsubscribeCount != null && unsubscribeCount > 0 && (
+          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: "hsl(38 92% 50%)" }}
+            />
+            <span>
+              {unsubscribeCount.toLocaleString("en-US")} unsubscribed
+              {batch.sent > 0 && (
+                <span className="ml-1 text-xs">
+                  ({((unsubscribeCount / batch.sent) * 100).toFixed(1)}%)
+                </span>
+              )}
+            </span>
+          </div>
+        )}
         {hasData && (
           <SankeyChart
             bounced={batch.bounced}

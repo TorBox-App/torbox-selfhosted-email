@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { BatchStats } from "./components/batch-stats";
 import { CancelBatchButton } from "./components/cancel-button";
+import { isUnsubscribeUrl } from "./components/sankey-utils";
 
 type BatchDetailPageProps = {
   params: Promise<{
@@ -95,6 +96,14 @@ export default async function BatchDetailPage({
     .groupBy(messageSend.clickedUrl)
     .orderBy(sql`count(*) desc`);
 
+  const filteredClicksByUrl = clicksByUrl.filter(
+    (r): r is { url: string; count: number } => r.url !== null
+  );
+
+  const unsubscribeCount = filteredClicksByUrl
+    .filter((r) => isUnsubscribeUrl(r.url))
+    .reduce((sum, r) => sum + r.count, 0);
+
   const canCancel =
     (batch.status === "scheduled" ||
       batch.status === "queued" ||
@@ -161,10 +170,9 @@ export default async function BatchDetailPage({
           startedAt: batch.startedAt,
           completedAt: batch.completedAt,
         }}
-        clicksByUrl={clicksByUrl.filter(
-          (r): r is { url: string; count: number } => r.url !== null
-        )}
+        clicksByUrl={filteredClicksByUrl}
         organizationId={orgWithMembership.id}
+        unsubscribeCount={unsubscribeCount}
       />
 
       {/* Email Details */}

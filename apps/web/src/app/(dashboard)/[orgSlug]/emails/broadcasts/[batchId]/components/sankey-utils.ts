@@ -2,9 +2,22 @@ export function truncateUrl(url: string): string {
   try {
     const parsed = new URL(url);
     const path = parsed.pathname === "/" ? "" : parsed.pathname;
-    return `${parsed.hostname}${path}`;
+    const label = `${parsed.hostname}${path}`;
+    return label.length > 40 ? `${label.slice(0, 37)}...` : label;
   } catch {
     return url.length > 40 ? `${url.slice(0, 37)}...` : url;
+  }
+}
+
+export function isUnsubscribeUrl(url: string): boolean {
+  try {
+    const { pathname } = new URL(url);
+    return (
+      pathname.startsWith("/unsubscribe/") ||
+      pathname.startsWith("/preferences/")
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -106,10 +119,20 @@ export function buildSankeyData(input: SankeyInput): SankeyData {
 
     // Column 3: Opened splits into per-URL clicks or aggregate Clicked
     if (input.clicksByUrl && input.clicksByUrl.length > 0) {
-      const top = input.clicksByUrl.slice(0, 5);
-      const rest = input.clicksByUrl.slice(5);
+      const regularClicks = input.clicksByUrl.filter(
+        (u) => !isUnsubscribeUrl(u.url)
+      );
+      const unsubCount = input.clicksByUrl
+        .filter((u) => isUnsubscribeUrl(u.url))
+        .reduce((sum, u) => sum + u.count, 0);
+
+      const top = regularClicks.slice(0, 5);
+      const rest = regularClicks.slice(5);
       const otherCount = rest.reduce((sum, u) => sum + u.count, 0);
 
+      if (unsubCount > 0) {
+        addLink("Opened", "Unsubscribe", unsubCount);
+      }
       for (const { url, count } of top) {
         addLink("Opened", truncateUrl(url), count);
       }

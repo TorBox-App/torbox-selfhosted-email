@@ -30,6 +30,7 @@ const NODE_COLORS: Record<string, string> = {
   Complained: "hsl(0 60% 45%)", // dark red
   "Not Opened": "hsl(215 16% 47%)", // slate-500
   "No Click": "hsl(215 16% 57%)", // slate-400
+  Unsubscribe: "hsl(38 92% 50%)", // amber-500
 };
 
 const CHART_HEIGHT = 300;

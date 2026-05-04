@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildSankeyData, truncateUrl } from "../sankey-utils";
+import {
+  buildSankeyData,
+  isUnsubscribeUrl,
+  truncateUrl,
+} from "../sankey-utils";
 
 describe("buildSankeyData", () => {
   it("returns correct nodes and links for email batch", () => {
@@ -249,6 +253,103 @@ describe("buildSankeyData", () => {
   });
 });
 
+describe("isUnsubscribeUrl", () => {
+  it("matches /unsubscribe/ paths", () => {
+    expect(
+      isUnsubscribeUrl("https://api.wraps.dev/unsubscribe/sometoken")
+    ).toBe(true);
+  });
+
+  it("matches /preferences/ paths", () => {
+    expect(
+      isUnsubscribeUrl("https://app.wraps.dev/preferences/sometoken")
+    ).toBe(true);
+  });
+
+  it("does not match regular URLs", () => {
+    expect(isUnsubscribeUrl("https://example.com/pricing")).toBe(false);
+    expect(isUnsubscribeUrl("https://example.com/")).toBe(false);
+  });
+
+  it("returns false for invalid URLs", () => {
+    expect(isUnsubscribeUrl("not-a-url")).toBe(false);
+  });
+});
+
+describe("buildSankeyData — unsubscribe grouping", () => {
+  it("groups unsubscribe URLs into a single Unsubscribe node", () => {
+    const result = buildSankeyData({
+      channel: "email",
+      sent: 1000,
+      delivered: 1000,
+      opened: 500,
+      clicked: 110,
+      failed: 0,
+      bounced: 0,
+      complained: 0,
+      hardBounced: 0,
+      softBounced: 0,
+      clicksByUrl: [
+        { url: "https://example.com/pricing", count: 100 },
+        {
+          url: "https://app.wraps.dev/preferences/eyJjaWQiOiIxMjMifQ",
+          count: 10,
+        },
+      ],
+    });
+
+    const nodeNames = result.nodes.map((n) => n.name);
+    expect(nodeNames).toContain("Unsubscribe");
+    expect(nodeNames).not.toContain(
+      "app.wraps.dev/preferences/eyJjaWQiOiIx..."
+    );
+    expect(nodeNames).toContain("example.com/pricing");
+
+    const openedIdx = result.nodes.findIndex((n) => n.name === "Opened");
+    const links = result.links.filter((l) => l.source === openedIdx);
+    const linkMap = new Map(
+      links.map((l) => [result.nodes[l.target]!.name, l.value])
+    );
+    expect(linkMap.get("Unsubscribe")).toBe(10);
+    expect(linkMap.get("example.com/pricing")).toBe(100);
+  });
+
+  it("sums multiple unsubscribe URLs into one Unsubscribe node", () => {
+    const result = buildSankeyData({
+      channel: "email",
+      sent: 1000,
+      delivered: 1000,
+      opened: 500,
+      clicked: 15,
+      failed: 0,
+      bounced: 0,
+      complained: 0,
+      hardBounced: 0,
+      softBounced: 0,
+      clicksByUrl: [
+        {
+          url: "https://api.wraps.dev/unsubscribe/token1",
+          count: 8,
+        },
+        {
+          url: "https://app.wraps.dev/preferences/token2",
+          count: 7,
+        },
+      ],
+    });
+
+    const nodeNames = result.nodes.map((n) => n.name);
+    expect(nodeNames).toContain("Unsubscribe");
+
+    const openedIdx = result.nodes.findIndex((n) => n.name === "Opened");
+    const unsubLink = result.links.find(
+      (l) =>
+        l.source === openedIdx && result.nodes[l.target]!.name === "Unsubscribe"
+    );
+    expect(unsubLink!.value).toBe(15);
+  });
+});
+
 describe("truncateUrl", () => {
   it("strips protocol and trailing slash", () => {
     expect(truncateUrl("https://example.com/")).toBe("example.com");
@@ -267,5 +368,13 @@ describe("truncateUrl", () => {
   it("truncates long non-URL strings", () => {
     const long = "a".repeat(50);
     expect(truncateUrl(long).length).toBeLessThanOrEqual(40);
+  });
+
+  it("truncates valid URLs with long token paths", () => {
+    const token =
+      "eyJjaWQiOiIwMzAxNDA4Yi1iYmZkLTQ5M2QtOWZjNS1mZmFlOTM3YzE1M2QiLCJvaWQiOiJiYmFk";
+    const result = truncateUrl(`https://app.wraps.dev/preferences/${token}`);
+    expect(result.length).toBeLessThanOrEqual(40);
+    expect(result).toBe("app.wraps.dev/preferences/eyJjaWQiOiI...");
   });
 });
