@@ -1,4 +1,5 @@
 import {
+  ArchiveState,
   CreateArchiveCommand,
   GetArchiveCommand,
   ListArchivesCommand,
@@ -12,29 +13,20 @@ import {
 import type * as pulumi from "@pulumi/pulumi";
 import type { ArchiveRetention } from "../../types/index.js";
 
-/**
- * Mail Manager archive configuration
- */
 export type MailManagerArchiveConfig = {
   name: string;
   retention: ArchiveRetention;
   configSetName: pulumi.Output<string>;
   region: string;
-  kmsKeyArn?: string; // Optional: provide existing KMS key, otherwise AWS-managed key is used
+  kmsKeyArn?: string;
 };
 
-/**
- * Mail Manager archive resources
- */
 export type MailManagerArchiveResources = {
   archiveId: string;
   archiveArn: string;
   kmsKeyArn?: string;
 };
 
-/**
- * Convert our retention types to AWS SDK RetentionPeriod enum
- */
 function retentionToAWSPeriod(retention: ArchiveRetention): RetentionPeriod {
   switch (retention) {
     case "3months":
@@ -75,160 +67,114 @@ function retentionToAWSPeriod(retention: ArchiveRetention): RetentionPeriod {
 }
 
 /**
- * Create Mail Manager archive for storing full email content
+ * Create Mail Manager archive for storing full email content.
  *
- * This creates:
- * 1. Mail Manager Archive - stores RFC 822/MIME formatted emails
- * 2. Links archive to SES Configuration Set
- *
- * Uses AWS SDK directly since Pulumi doesn't support Mail Manager yet.
+ * Reuses any existing ACTIVE archive matching the wraps-{name}-archive[-N] pattern.
+ * Archives in PENDING_DELETION are skipped — a new name with an incrementing suffix
+ * is tried until creation succeeds (up to MAX_NAME_ATTEMPTS).
  *
  * Cost: $2/GB ingestion + $0.19/GB/month storage
  * See: https://docs.aws.amazon.com/ses/latest/dg/eb-archiving.html
- *
- * Note: KMS encryption is optional. If not provided, AWS-managed encryption is used.
  */
 export async function createMailManagerArchive(
   config: MailManagerArchiveConfig
 ): Promise<MailManagerArchiveResources> {
   const region = config.region;
-  const archiveName = `wraps-${config.name}-archive`;
+  const baseArchiveName = `wraps-${config.name}-archive`;
+  const namePattern = new RegExp(`^${baseArchiveName}(-\\d+)?$`);
+  const MAX_NAME_ATTEMPTS = 10;
 
-  // Initialize clients
   const mailManagerClient = new MailManagerClient({ region });
   const sesClient = new SESv2Client({ region });
-
   const kmsKeyArn = config.kmsKeyArn;
-
-  // If no KMS key provided, create one for encryption
-  // Note: User can also opt to not provide one and AWS will use service-managed keys
-  if (!kmsKeyArn) {
-    // For now, we'll let AWS use service-managed keys
-    // In the future, we could create a customer-managed key here if needed:
-    //
-    // const kmsClient = new KMSClient({ region });
-    // const createKeyResult = await kmsClient.send(
-    //   new CreateKeyCommand({
-    //     Description: `KMS key for Wraps email archive (${archiveName})`,
-    //     Tags: [
-    //       { TagKey: "ManagedBy", TagValue: "wraps-cli" },
-    //       { TagKey: "Name", TagValue: `wraps-${config.name}-archive-key` },
-    //     ],
-    //   })
-    // );
-    // kmsKeyArn = createKeyResult.KeyMetadata?.Arn;
-  }
-
-  // 1. Create Mail Manager Archive (or get existing)
   const awsRetention = retentionToAWSPeriod(config.retention);
 
   let archiveId: string | undefined;
   let archiveArn: string | undefined;
 
-  // Check if archive already exists
+  // 1. Look for an existing ACTIVE archive matching our naming pattern.
+  //    Skip any in PENDING_DELETION — they can't be reused and will block
+  //    creating a new archive with the same name.
   try {
-    const listCommand = new ListArchivesCommand({});
-    const listResult = await mailManagerClient.send(listCommand);
-
-    const existingArchive = listResult.Archives?.find(
-      (archive: { ArchiveName?: string; ArchiveId?: string }) =>
-        archive.ArchiveName === archiveName
+    const listResult = await mailManagerClient.send(new ListArchivesCommand({}));
+    const existing = listResult.Archives?.find(
+      (a) =>
+        a.ArchiveState === ArchiveState.ACTIVE &&
+        a.ArchiveName !== undefined &&
+        namePattern.test(a.ArchiveName)
     );
 
-    if (existingArchive?.ArchiveId) {
-      // Archive exists, use it
-      console.log(`Using existing Mail Manager archive: ${archiveName}`);
-      archiveId = existingArchive.ArchiveId;
-
-      // Get full archive details to get ARN
-      const getCommand = new GetArchiveCommand({ ArchiveId: archiveId });
-      const getResult = await mailManagerClient.send(getCommand);
+    if (existing?.ArchiveId) {
+      console.log(`Using existing Mail Manager archive: ${existing.ArchiveName}`);
+      archiveId = existing.ArchiveId;
+      const getResult = await mailManagerClient.send(
+        new GetArchiveCommand({ ArchiveId: archiveId })
+      );
       archiveArn = getResult.ArchiveArn;
     }
   } catch (error) {
     console.log("Error checking for existing archive:", error);
-    // Continue to create new archive
+    // Fall through to creation
   }
 
-  // Create archive if it doesn't exist
+  // 2. Create a new archive if no active one was found.
+  //    On ConflictException (name blocked by a PENDING_DELETION archive),
+  //    retry with an incrementing suffix: -2, -3, …
   if (!archiveId) {
-    try {
-      const createArchiveCommand = new CreateArchiveCommand({
-        ArchiveName: archiveName,
-        Retention: {
-          RetentionPeriod: awsRetention,
-        },
-        ...(kmsKeyArn && { KmsKeyArn: kmsKeyArn }),
-        Tags: [
-          { Key: "ManagedBy", Value: "wraps-cli" },
-          { Key: "Name", Value: archiveName },
-          { Key: "Retention", Value: config.retention },
-        ],
-      });
+    for (let attempt = 1; attempt <= MAX_NAME_ATTEMPTS; attempt++) {
+      const archiveName =
+        attempt === 1 ? baseArchiveName : `${baseArchiveName}-${attempt}`;
 
-      const archiveResult = await mailManagerClient.send(createArchiveCommand);
-      archiveId = archiveResult.ArchiveId;
-
-      if (!archiveId) {
-        throw new Error(
-          "Failed to create Mail Manager Archive: No ArchiveId returned"
-        );
-      }
-
-      console.log(`Created new Mail Manager archive: ${archiveName}`);
-    } catch (error) {
-      // If it's a ConflictException, the archive was created between our check and now
-      if (
-        error instanceof Error &&
-        error.name === "ConflictException" &&
-        error.message.includes("Archive already exists")
-      ) {
-        console.log(
-          "Archive was created concurrently, fetching existing archive..."
+      try {
+        const result = await mailManagerClient.send(
+          new CreateArchiveCommand({
+            ArchiveName: archiveName,
+            Retention: { RetentionPeriod: awsRetention },
+            ...(kmsKeyArn && { KmsKeyArn: kmsKeyArn }),
+            Tags: [
+              { Key: "ManagedBy", Value: "wraps-cli" },
+              { Key: "Name", Value: archiveName },
+              { Key: "Retention", Value: config.retention },
+            ],
+          })
         );
 
-        // List again and find it
-        const listCommand = new ListArchivesCommand({});
-        const listResult = await mailManagerClient.send(listCommand);
-        const existingArchive = listResult.Archives?.find(
-          (archive: { ArchiveName?: string; ArchiveId?: string }) =>
-            archive.ArchiveName === archiveName
-        );
-
-        if (!existingArchive?.ArchiveId) {
+        archiveId = result.ArchiveId;
+        if (!archiveId) {
           throw new Error(
-            `Archive exists but couldn't find it: ${archiveName}`
+            "Failed to create Mail Manager Archive: No ArchiveId returned"
           );
         }
 
-        archiveId = existingArchive.ArchiveId;
-
-        // Get full archive details
-        const getCommand = new GetArchiveCommand({ ArchiveId: archiveId });
-        const getResult = await mailManagerClient.send(getCommand);
-        archiveArn = getResult.ArchiveArn;
-      } else {
+        console.log(`Created new Mail Manager archive: ${archiveName}`);
+        break;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.name === "ConflictException" &&
+          attempt < MAX_NAME_ATTEMPTS
+        ) {
+          console.log(
+            `Archive '${archiveName}' is unavailable, trying '${baseArchiveName}-${attempt + 1}'...`
+          );
+          continue;
+        }
         throw error;
       }
     }
   }
 
-  // Construct the ARN if we don't have it yet
+  // 3. Resolve the ARN if creation didn't return one.
   if (!archiveArn) {
-    // ARN format: arn:aws:ses:region:account-id:mailmanager-archive/archive-id
     const identity = await import("@aws-sdk/client-sts").then((m) =>
       new m.STSClient({ region }).send(new m.GetCallerIdentityCommand({}))
     );
-    const accountId = identity.Account;
-    archiveArn = `arn:aws:ses:${region}:${accountId}:mailmanager-archive/${archiveId}`;
+    archiveArn = `arn:aws:ses:${region}:${identity.Account}:mailmanager-archive/${archiveId}`;
   }
 
-  // 2. Link archive to SES Configuration Set
-  // We need to wait for the configSetName to resolve from Pulumi Output
+  // 4. Link archive to SES Configuration Set.
   const configSetName = await new Promise<string>((resolve) => {
-    config.configSetName.apply((name) => {
-      resolve(name);
-    });
+    config.configSetName.apply((name) => resolve(name));
   });
 
   if (!configSetName) {
@@ -237,14 +183,13 @@ export async function createMailManagerArchive(
     );
   }
 
-  const putArchivingOptionsCommand =
-    new PutConfigurationSetArchivingOptionsCommand({
-      ConfigurationSetName: configSetName,
-      ArchiveArn: archiveArn,
-    });
-
   try {
-    await sesClient.send(putArchivingOptionsCommand);
+    await sesClient.send(
+      new PutConfigurationSetArchivingOptionsCommand({
+        ConfigurationSetName: configSetName,
+        ArchiveArn: archiveArn,
+      })
+    );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -256,9 +201,5 @@ export async function createMailManagerArchive(
     throw new Error("Failed to get archive ID or ARN");
   }
 
-  return {
-    archiveId,
-    archiveArn,
-    kmsKeyArn,
-  };
+  return { archiveId, archiveArn, kmsKeyArn };
 }
