@@ -322,6 +322,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         metadata.provider === "vercel"
           ? `Currently: Vercel (${metadata.vercel?.teamSlug || "configured"})`
           : `Currently: ${metadata.provider} → Switch to Vercel OIDC, etc.`,
+    },
+    {
+      value: "per-domain-config-sets",
+      label: "Per-domain configuration sets",
+      hint: "Create dedicated SES config sets for each additional domain",
     }
   );
 
@@ -1652,6 +1657,155 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       }
 
       break;
+    }
+
+    case "per-domain-config-sets": {
+      const {
+        SESv2Client,
+        CreateConfigurationSetCommand,
+        CreateConfigurationSetEventDestinationCommand,
+        PutEmailIdentityConfigurationSetAttributesCommand,
+        EventType,
+      } = await import("@aws-sdk/client-sesv2");
+      const { domainToConfigSetName } = await import(
+        "../../utils/email/config-set-slug.js"
+      );
+
+      const sesClient = new SESv2Client({ region });
+      const accountId = identity.accountId;
+
+      const additionalDomains =
+        metadata.services.email?.config.additionalDomains ?? [];
+      const unmigratedDomains = additionalDomains.filter(
+        (d) => !d.configSetName
+      );
+
+      if (unmigratedDomains.length === 0) {
+        clack.log.info(
+          "All additional domains are already migrated to per-domain config sets."
+        );
+        clack.outro(pc.green("✓ Nothing to migrate"));
+        trackServiceUpgrade("email", {
+          action: "per-domain-config-sets",
+          duration_ms: Date.now() - startTime,
+        });
+        return;
+      }
+
+      clack.log.info(
+        `Migrating ${unmigratedDomains.length} domain(s) to per-domain configuration sets...`
+      );
+
+      const eventBusArn = `arn:aws:events:${region}:${accountId}:event-bus/default`;
+
+      for (let i = 0; i < unmigratedDomains.length; i++) {
+        const d = unmigratedDomains[i];
+        const configSetName = domainToConfigSetName(d.domain);
+
+        clack.log.step(`Migrating ${pc.cyan(d.domain)} → ${pc.dim(configSetName)}`);
+
+        await progress.execute(
+          `Creating config set for ${d.domain}`,
+          async () => {
+            await sesClient.send(
+              new CreateConfigurationSetCommand({
+                ConfigurationSetName: configSetName,
+                SuppressionOptions: {
+                  SuppressedReasons: ["BOUNCE", "COMPLAINT"],
+                },
+              })
+            );
+          }
+        );
+
+        const allEvents = [
+          EventType.SEND,
+          EventType.DELIVERY,
+          EventType.OPEN,
+          EventType.CLICK,
+          EventType.BOUNCE,
+          EventType.COMPLAINT,
+          EventType.REJECT,
+          EventType.RENDERING_FAILURE,
+          EventType.DELIVERY_DELAY,
+          EventType.SUBSCRIPTION,
+        ];
+
+        const matchingEventTypes =
+          d.trackingConfig != null
+            ? allEvents.filter((evt) => {
+                if (evt === EventType.OPEN) return d.trackingConfig!.opens;
+                if (evt === EventType.CLICK) return d.trackingConfig!.clicks;
+                return true;
+              })
+            : [...allEvents];
+
+        await progress.execute(
+          `Adding EventBridge destination for ${d.domain}`,
+          async () => {
+            await sesClient.send(
+              new CreateConfigurationSetEventDestinationCommand({
+                ConfigurationSetName: configSetName,
+                EventDestinationName: "wraps-eventbridge",
+                EventDestination: {
+                  Enabled: true,
+                  MatchingEventTypes: matchingEventTypes,
+                  EventBridgeDestination: { EventBusArn: eventBusArn },
+                },
+              })
+            );
+          }
+        );
+
+        // Persist configSetName BEFORE identity reassignment (resumable on failure)
+        d.configSetName = configSetName;
+        await saveConnectionMetadata(metadata);
+
+        try {
+          await progress.execute(
+            `Reassigning identity ${d.domain}`,
+            async () => {
+              await sesClient.send(
+                new PutEmailIdentityConfigurationSetAttributesCommand({
+                  EmailIdentity: d.domain,
+                  ConfigurationSetName: configSetName,
+                })
+              );
+            }
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          clack.log.warn(
+            `Failed to reassign identity for ${pc.cyan(d.domain)}: ${msg}`
+          );
+          clack.log.info(
+            pc.dim(
+              `Config set was saved — re-run to retry identity reassignment for ${d.domain}`
+            )
+          );
+        }
+
+        // Rate limit: 1-second delay between domains
+        if (i < unmigratedDomains.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      clack.log.info(
+        `For the primary domain (${pc.cyan(config.domain ?? "")}) config set rename: re-run ${pc.cyan("wraps email upgrade")} with a Pulumi stack update.`
+      );
+
+      clack.outro(
+        pc.green(
+          `✓ Per-domain config sets migration complete (${unmigratedDomains.length} domain(s))`
+        )
+      );
+
+      trackServiceUpgrade("email", {
+        action: "per-domain-config-sets",
+        duration_ms: Date.now() - startTime,
+      });
+      return;
     }
   }
 

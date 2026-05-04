@@ -1,5 +1,11 @@
 import { Resolver } from "node:dns/promises";
-import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
+import {
+  CreateConfigurationSetCommand,
+  CreateConfigurationSetEventDestinationCommand,
+  type EventType,
+  GetEmailIdentityCommand,
+  SESv2Client,
+} from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { getTelemetryClient } from "../../telemetry/client.js";
@@ -43,6 +49,7 @@ import {
   promptMailFromSubdomain,
   promptSubdomainSuggestions,
 } from "../../utils/shared/prompts.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 
 type DNSResult = {
   name: string;
@@ -652,16 +659,64 @@ export async function addDomain(options: {
       purpose = await promptDomainPurpose();
     }
 
-    // 4. Create SES identity or associate config set for existing domains
+    // 4. Create per-domain config set + event destination, then create/associate the SES identity
+    const configSetName = domainToConfigSetName(domain);
+    const trackingConfig = {
+      opens: purpose === "marketing" || purpose === "notifications",
+      clicks: purpose === "marketing" || purpose === "notifications",
+    };
+    const baseEventTypes: EventType[] = [
+      "SEND",
+      "DELIVERY",
+      "BOUNCE",
+      "COMPLAINT",
+      "REJECT",
+      "RENDERING_FAILURE",
+      "DELIVERY_DELAY",
+      "SUBSCRIPTION",
+    ];
+    const matchingEventTypes: EventType[] = trackingConfig.opens
+      ? [...baseEventTypes, "OPEN", "CLICK"]
+      : [...baseEventTypes];
+
+    const eventBusArn = `arn:aws:events:${region}:${identity.accountId}:event-bus/default`;
+
+    await progress.execute("Creating tracking configuration", async () => {
+      try {
+        await sesClient.send(
+          new CreateConfigurationSetCommand({
+            ConfigurationSetName: configSetName,
+            SuppressionOptions: { SuppressedReasons: ["BOUNCE", "COMPLAINT"] },
+          })
+        );
+      } catch (err) {
+        if ((err as { name?: string }).name !== "AlreadyExistsException") throw err;
+      }
+      try {
+        await sesClient.send(
+          new CreateConfigurationSetEventDestinationCommand({
+            ConfigurationSetName: configSetName,
+            EventDestinationName: "wraps-email-eventbridge",
+            EventDestination: {
+              Enabled: true,
+              MatchingEventTypes: matchingEventTypes,
+              EventBridgeDestination: { EventBusArn: eventBusArn },
+            },
+          })
+        );
+      } catch (err) {
+        if ((err as { name?: string }).name !== "AlreadyExistsException") throw err;
+      }
+    });
+
     if (domainAlreadyExists) {
-      // Associate wraps-email-tracking config set so events are tracked
       const { PutEmailIdentityConfigurationSetAttributesCommand } =
         await import("@aws-sdk/client-sesv2");
       await progress.execute("Associating tracking configuration", async () => {
         await sesClient.send(
           new PutEmailIdentityConfigurationSetAttributesCommand({
             EmailIdentity: domain,
-            ConfigurationSetName: "wraps-email-tracking",
+            ConfigurationSetName: configSetName,
           })
         );
       });
@@ -673,7 +728,7 @@ export async function addDomain(options: {
         await sesClient.send(
           new CreateEmailIdentityCommand({
             EmailIdentity: domain,
-            ConfigurationSetName: "wraps-email-tracking",
+            ConfigurationSetName: configSetName,
             DkimSigningAttributes: {
               NextSigningKeyLength: "RSA_2048_BIT",
             },
@@ -817,6 +872,8 @@ export async function addDomain(options: {
       domain,
       mailFromDomain,
       purpose,
+      configSetName,
+      trackingConfig,
       addedAt: new Date().toISOString(),
     };
     addDomainToMetadata(metadata, entry);

@@ -183,6 +183,13 @@ create_dkim_records "$DOMAIN" "$REGION"
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
+
+# Derive the primary domain's per-domain config set name from SES (used throughout)
+PRIMARY_CONFIG_SET_NAME=$(aws sesv2 get-email-identity \
+  --email-identity "$DOMAIN" \
+  --region "$REGION" \
+  --query 'ConfigurationSetName' \
+  --output text 2>/dev/null)
 verify_iam_no_events_policy
 verify_console_access_role
 
@@ -240,10 +247,10 @@ else
   fail "email status missing domain $DOMAIN"
 fi
 
-if echo "$STATUS_OUT" | jq -e '.data.resources.configSetName == "wraps-email-tracking"' &>/dev/null; then
-  pass "email status reports config set"
+if echo "$STATUS_OUT" | jq -e --arg cs "$PRIMARY_CONFIG_SET_NAME" '.data.resources.configSetName == $cs' &>/dev/null; then
+  pass "email status reports per-domain config set ($PRIMARY_CONFIG_SET_NAME)"
 else
-  fail "email status missing config set"
+  fail "email status config set mismatch (expected $PRIMARY_CONFIG_SET_NAME)"
 fi
 
 # domains verify
@@ -346,7 +353,7 @@ wraps email upgrade \
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION"
+verify_events "$REGION" "$DOMAIN"
 verify_iam_events_policy
 verify_console_access_role
 
@@ -389,7 +396,7 @@ fi
 
 # Verify resources still intact after sync
 verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION"
+verify_events "$REGION" "$DOMAIN"
 verify_iam_events_policy
 verify_console_access_role
 
@@ -423,7 +430,7 @@ else
   fail "SES identity $SUBDOMAIN not found"
 fi
 
-# Verify config set is linked
+# Verify subdomain has its own per-domain config set (not the shared wraps-email-tracking)
 typeset sub_cs
 sub_cs=$(aws sesv2 get-email-identity \
   --email-identity "$SUBDOMAIN" \
@@ -432,9 +439,33 @@ sub_cs=$(aws sesv2 get-email-identity \
   --output text 2>/dev/null)
 
 if [[ "$sub_cs" == "wraps-email-tracking" ]]; then
-  pass "Subdomain linked to wraps-email-tracking config set"
+  fail "Subdomain still using shared wraps-email-tracking (should have per-domain config set)"
+elif [[ "$sub_cs" == wraps-email-* ]]; then
+  pass "Subdomain has per-domain config set: $sub_cs"
 else
-  fail "Subdomain config set mismatch: $sub_cs"
+  fail "Subdomain config set unexpected value: $sub_cs"
+fi
+
+# Verify per-domain config set exists in SES
+if aws sesv2 get-configuration-set \
+  --configuration-set-name "$sub_cs" \
+  --region "$REGION" &>/dev/null; then
+  pass "Per-domain config set $sub_cs exists in SES"
+else
+  fail "Per-domain config set $sub_cs not found in SES"
+fi
+
+# Verify EventBridge destination is attached and enabled
+typeset sub_dest_out
+sub_dest_out=$(aws sesv2 get-configuration-set-event-destinations \
+  --configuration-set-name "$sub_cs" \
+  --region "$REGION" \
+  --output json 2>/dev/null)
+
+if echo "$sub_dest_out" | jq -e '[.EventDestinations[] | select(.Name == "wraps-email-eventbridge" and .Enabled == true)] | length > 0' &>/dev/null; then
+  pass "Per-domain config set has EventBridge destination enabled"
+else
+  fail "Per-domain config set missing enabled EventBridge destination"
 fi
 
 # Verify MAIL FROM is configured (domains add --yes defaults to mail.{domain})
@@ -516,6 +547,35 @@ else
   fail "Primary domain was removed (should only remove subdomain)"
 fi
 
+# Idempotency: re-add the same subdomain after removal. The per-domain config set
+# remains in AWS after identity deletion (domains remove does not delete config sets),
+# so CreateConfigurationSetCommand + CreateConfigurationSetEventDestinationCommand
+# both throw AlreadyExistsException — verify they are handled gracefully.
+section "Phase 2c: domains add idempotency (re-add after removal)"
+wraps email domains add \
+  --domain "$SUBDOMAIN" \
+  --region "$REGION" \
+  --yes \
+  --json
+
+if aws sesv2 get-email-identity \
+  --email-identity "$SUBDOMAIN" \
+  --region "$REGION" &>/dev/null; then
+  pass "Subdomain re-added successfully (config set AlreadyExists handled)"
+else
+  fail "Subdomain re-add failed"
+fi
+
+# Clean up: remove re-added subdomain + its orphaned config set
+wraps email domains remove \
+  --domain "$SUBDOMAIN" \
+  --force \
+  --json
+
+aws sesv2 delete-configuration-set \
+  --configuration-set-name "$sub_cs" \
+  --region "$REGION" &>/dev/null || true
+
 summary || { printf "${RED}Phase 2c FAILED${NC}\n"; exit 1; }
 
 # ─── Phase 3: Add SMTP credentials ───────────────────────────────────
@@ -530,7 +590,7 @@ wraps email upgrade \
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION"
+verify_events "$REGION" "$DOMAIN"
 verify_iam_events_policy
 verify_smtp
 verify_console_access_role
@@ -668,7 +728,7 @@ wraps email upgrade \
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION"
+verify_events "$REGION" "$DOMAIN"
 verify_iam_events_policy
 verify_smtp
 verify_console_access_role
@@ -788,7 +848,7 @@ else
     --from-email-address "test@${DOMAIN}" \
     --destination "{\"ToAddresses\":[\"${REPLY_ADDRESS}\"]}" \
     --content "{\"Simple\":{\"Subject\":{\"Data\":\"${SUBJECT}\"},\"Body\":{\"Text\":{\"Data\":\"e2e reply threading test\"}}}}" \
-    --configuration-set-name wraps-email-tracking \
+    --configuration-set-name "$PRIMARY_CONFIG_SET_NAME" \
     --region "$REGION" \
     --query 'MessageId' --output text 2>&1); then
     pass "Sent email to ${REPLY_ADDRESS} (MessageId: ${MESSAGE_ID})"
@@ -960,7 +1020,7 @@ aws sesv2 send-email \
   --from-email-address "test@${DOMAIN}" \
   --destination "{\"ToAddresses\":[\"${REPLY_ADDRESS_2}\"]}" \
   --content "{\"Simple\":{\"Subject\":{\"Data\":\"${SUBJECT_2}\"},\"Body\":{\"Text\":{\"Data\":\"rotate round-trip\"}}}}" \
-  --configuration-set-name wraps-email-tracking \
+  --configuration-set-name "$PRIMARY_CONFIG_SET_NAME" \
   --region "$REGION" \
   --query 'MessageId' --output text &>/dev/null
 
@@ -1065,7 +1125,7 @@ wraps email destroy \
   --json
 
 reset_counters
-verify_teardown "$DOMAIN" "$REGION"
+verify_teardown "$DOMAIN" "$REGION" "$PRIMARY_CONFIG_SET_NAME"
 
 # doctor (post-teardown — should find zero resources)
 section "Teardown: email doctor (clean state)"

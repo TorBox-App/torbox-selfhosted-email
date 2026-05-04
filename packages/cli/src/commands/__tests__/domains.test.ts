@@ -1,4 +1,6 @@
 import {
+  CreateConfigurationSetCommand,
+  CreateConfigurationSetEventDestinationCommand,
   CreateEmailIdentityCommand,
   DeleteEmailIdentityCommand,
   GetEmailIdentityCommand,
@@ -9,6 +11,7 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug";
 import {
   addDomain,
   getDkim,
@@ -155,7 +158,7 @@ describe("Domain Management Commands", () => {
       expect(createCalls.length).toBe(1);
       expect(createCalls[0].args[0].input).toMatchObject({
         EmailIdentity: "test.com",
-        ConfigurationSetName: "wraps-email-tracking",
+        ConfigurationSetName: domainToConfigSetName("test.com"),
         DkimSigningAttributes: {
           NextSigningKeyLength: "RSA_2048_BIT",
         },
@@ -222,7 +225,7 @@ describe("Domain Management Commands", () => {
       expect(configSetCalls.length).toBe(1);
       expect(configSetCalls[0].args[0].input).toMatchObject({
         EmailIdentity: "existing.com",
-        ConfigurationSetName: "wraps-email-tracking",
+        ConfigurationSetName: domainToConfigSetName("existing.com"),
       });
     });
 
@@ -749,6 +752,204 @@ describe("Domain Management Commands", () => {
       await verifyDomain({ domain: "nonexistent.com" });
 
       expect(mockExit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("addDomain - per-domain config sets", () => {
+    const defaultEventBusArn =
+      "arn:aws:events:us-east-1:123456789012:event-bus/default";
+
+    it("Unit 6: new domain: CreateConfigurationSetCommand called with derived name before CreateEmailIdentityCommand", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: { Tokens: ["tok1", "tok2", "tok3"], Status: "PENDING" },
+        });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      const configSetCalls = sesClientMock.commandCalls(CreateConfigurationSetCommand);
+      expect(configSetCalls.length).toBeGreaterThanOrEqual(1);
+      expect(configSetCalls[0].args[0].input).toMatchObject({
+        ConfigurationSetName: domainToConfigSetName("test.com"),
+      });
+
+      const allCalls = sesClientMock.calls();
+      const configSetIdx = allCalls.findIndex(
+        (c) => c.args[0] instanceof CreateConfigurationSetCommand
+      );
+      const identityIdx = allCalls.findIndex(
+        (c) => c.args[0] instanceof CreateEmailIdentityCommand
+      );
+      expect(configSetIdx).toBeGreaterThanOrEqual(0);
+      expect(identityIdx).toBeGreaterThanOrEqual(0);
+      expect(configSetIdx).toBeLessThan(identityIdx);
+    });
+
+    it("Unit 7: new domain: CreateConfigurationSetEventDestinationCommand called with Enabled: true", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: { Tokens: ["tok1", "tok2", "tok3"], Status: "PENDING" },
+        });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      const destCalls = sesClientMock.commandCalls(CreateConfigurationSetEventDestinationCommand);
+      expect(destCalls.length).toBeGreaterThanOrEqual(1);
+      expect(destCalls[0].args[0].input).toMatchObject({
+        ConfigurationSetName: domainToConfigSetName("test.com"),
+        EventDestination: {
+          Enabled: true,
+          EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+        },
+      });
+    });
+
+    it("Unit 8: new domain: CreateEmailIdentityCommand called with derived ConfigurationSetName", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: { Tokens: ["tok1", "tok2", "tok3"], Status: "PENDING" },
+        });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      const createCalls = sesClientMock.commandCalls(CreateEmailIdentityCommand);
+      expect(createCalls.length).toBe(1);
+      expect(createCalls[0].args[0].input).toMatchObject({
+        EmailIdentity: "test.com",
+        ConfigurationSetName: domainToConfigSetName("test.com"),
+      });
+    });
+
+    it("Unit 9: transactional purpose: event destination excludes OPEN and CLICK", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: { Tokens: ["tok1"], Status: "PENDING" },
+        });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+
+      const prompts = await import("../../utils/shared/prompts");
+      vi.mocked(prompts.promptDomainPurpose).mockResolvedValueOnce("transactional");
+
+      await addDomain({ domain: "test.com", yes: false });
+
+      const destCalls = sesClientMock.commandCalls(CreateConfigurationSetEventDestinationCommand);
+      expect(destCalls.length).toBeGreaterThanOrEqual(1);
+      const eventTypes = destCalls[0].args[0].input.EventDestination?.MatchingEventTypes ?? [];
+      expect(eventTypes).not.toContain("OPEN");
+      expect(eventTypes).not.toContain("CLICK");
+    });
+
+    it("Unit 10: marketing purpose: event destination includes OPEN and CLICK", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: { Tokens: ["tok1"], Status: "PENDING" },
+        });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+
+      const prompts = await import("../../utils/shared/prompts");
+      vi.mocked(prompts.promptDomainPurpose).mockResolvedValueOnce("marketing");
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
+
+      await addDomain({ domain: "test.com", yes: false });
+
+      const destCalls = sesClientMock.commandCalls(CreateConfigurationSetEventDestinationCommand);
+      expect(destCalls.length).toBeGreaterThanOrEqual(1);
+      const eventTypes = destCalls[0].args[0].input.EventDestination?.MatchingEventTypes ?? [];
+      expect(eventTypes).toContain("OPEN");
+      expect(eventTypes).toContain("CLICK");
+    });
+
+    it("Unit 11: adopted domain: CreateConfigurationSetCommand + event destination called before PutEmailIdentityConfigurationSetAttributesCommand", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: { Tokens: ["tok1"], Status: "SUCCESS" },
+      });
+
+      sesClientMock.on(CreateConfigurationSetCommand).resolves({});
+      sesClientMock.on(CreateConfigurationSetEventDestinationCommand).resolves({});
+      sesClientMock.on(PutEmailIdentityConfigurationSetAttributesCommand).resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      await addDomain({ domain: "existing.com", yes: true });
+
+      const configSetCalls = sesClientMock.commandCalls(CreateConfigurationSetCommand);
+      expect(configSetCalls.length).toBeGreaterThanOrEqual(1);
+      expect(configSetCalls[0].args[0].input).toMatchObject({
+        ConfigurationSetName: domainToConfigSetName("existing.com"),
+      });
+
+      const allCalls = sesClientMock.calls();
+      const csIdx = allCalls.findIndex(
+        (c) => c.args[0] instanceof CreateConfigurationSetCommand
+      );
+      const putIdx = allCalls.findIndex(
+        (c) => c.args[0] instanceof PutEmailIdentityConfigurationSetAttributesCommand
+      );
+      expect(csIdx).toBeGreaterThanOrEqual(0);
+      expect(putIdx).toBeGreaterThanOrEqual(0);
+      expect(csIdx).toBeLessThan(putIdx);
+
+      const putCalls = sesClientMock.commandCalls(PutEmailIdentityConfigurationSetAttributesCommand);
+      expect(putCalls[0].args[0].input).toMatchObject({
+        EmailIdentity: "existing.com",
+        ConfigurationSetName: domainToConfigSetName("existing.com"),
+      });
+    });
+
+    it("Unit 12: config set creation failure: error bubbles and metadata not updated", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock.on(GetEmailIdentityCommand).rejectsOnce(notFoundError);
+
+      const configSetError = new Error("ConfigurationSetAlreadyExistsException");
+      configSetError.name = "ConfigurationSetAlreadyExistsException";
+      sesClientMock.on(CreateConfigurationSetCommand).rejects(configSetError);
+
+      const metadata = await import("../../utils/shared/metadata");
+
+      await expect(addDomain({ domain: "fail.com", yes: true })).rejects.toThrow();
+
+      expect(metadata.saveConnectionMetadata).not.toHaveBeenCalled();
     });
   });
 });

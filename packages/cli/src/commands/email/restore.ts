@@ -3,6 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { EmailRestoreOptions } from "../../types/index.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { WrapsError } from "../../utils/shared/errors.js";
 import { getPulumiWorkDir } from "../../utils/shared/fs.js";
@@ -99,7 +100,10 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
   );
 
   if (metadata.services.email?.config.tracking?.enabled) {
-    console.log(`  ${pc.cyan("✓")} Configuration Set (wraps-email-tracking)`);
+    const configSetName = domainToConfigSetName(
+      metadata.services.email.config.domain ?? ""
+    );
+    console.log(`  ${pc.cyan("✓")} Configuration Set (${configSetName})`);
   }
   if (metadata.services.email?.config.eventTracking?.dynamoDBHistory) {
     console.log(`  ${pc.cyan("✓")} DynamoDB Table (wraps-email-history)`);

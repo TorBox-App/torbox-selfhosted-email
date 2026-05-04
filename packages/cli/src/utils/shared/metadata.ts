@@ -823,6 +823,8 @@ export type TrackedDomain = {
   purpose?: AdditionalDomain["purpose"];
   mailFromDomain?: string;
   addedAt?: string;
+  configSetName?: string;
+  trackingConfig?: AdditionalDomain["trackingConfig"];
 };
 
 /**
@@ -935,6 +937,8 @@ export function getAllTrackedDomains(
       purpose: d.purpose,
       mailFromDomain: d.mailFromDomain,
       addedAt: d.addedAt,
+      configSetName: d.configSetName,
+      trackingConfig: d.trackingConfig,
     });
   }
 

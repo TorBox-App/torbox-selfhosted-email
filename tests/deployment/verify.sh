@@ -148,11 +148,24 @@ verify_base() {
 
   section "Base: SES Configuration Set"
 
+  # Derive config set name from the SES identity so this works for both
+  # per-domain names (wraps-email-<slug>) and the legacy wraps-email-tracking name.
+  local derived_config_set_name
+  derived_config_set_name=$(aws sesv2 get-email-identity \
+    --email-identity "$domain" \
+    --region "$region" \
+    --query 'ConfigurationSetName' \
+    --output text 2>/dev/null)
+
+  # Fall back to legacy name if identity doesn't exist yet or has no config set
+  [[ -z "$derived_config_set_name" || "$derived_config_set_name" == "None" ]] && \
+    derived_config_set_name="wraps-email-tracking"
+
   local ses_output
   if ses_output=$(aws_check sesv2 get-configuration-set \
-    --configuration-set-name wraps-email-tracking \
+    --configuration-set-name "$derived_config_set_name" \
     --region "$region"); then
-    pass "SES config set wraps-email-tracking exists"
+    pass "SES config set $derived_config_set_name exists"
 
     # Check sending is enabled
     if echo "$ses_output" | jq -e '.SendingOptions.SendingEnabled == true' &>/dev/null; then
@@ -177,7 +190,7 @@ verify_base() {
       fail "SES config set missing suppression (BOUNCE/COMPLAINT), got: $suppressed_reasons"
     fi
   else
-    fail "SES config set wraps-email-tracking not found" "$ses_output"
+    fail "SES config set $derived_config_set_name not found" "$ses_output"
   fi
 
   section "Base: SES Domain Identity"
@@ -213,13 +226,13 @@ verify_base() {
       fi
     fi
 
-    # Check config set linkage
+    # Check config set linkage (per-domain names like wraps-email-<slug> or legacy wraps-email-tracking)
     local linked_config
     linked_config=$(echo "$identity_output" | jq -r '.ConfigurationSetName // "NONE"')
-    if [[ "$linked_config" == "wraps-email-tracking" ]]; then
-      pass "SES identity linked to wraps-email-tracking config set"
+    if [[ "$linked_config" == wraps-email-* ]]; then
+      pass "SES identity linked to config set: $linked_config"
     else
-      fail "SES identity config set: expected wraps-email-tracking, got $linked_config"
+      fail "SES identity config set: expected wraps-email-*, got $linked_config"
     fi
 
     # Check MAIL FROM domain (optional — not all presets/configs set it)
@@ -375,13 +388,27 @@ verify_console_access_role() {
 
 verify_events() {
   local region="${1:-us-east-1}"
+  local domain="${2:-}"
+
+  # Derive config set name from the SES identity when domain is provided,
+  # falling back to the legacy shared name for CDK/CFN/Pulumi callers.
+  local events_config_set_name="wraps-email-tracking"
+  if [[ -n "$domain" ]]; then
+    local _cs
+    _cs=$(aws sesv2 get-email-identity \
+      --email-identity "$domain" \
+      --region "$region" \
+      --query 'ConfigurationSetName' \
+      --output text 2>/dev/null)
+    [[ -n "$_cs" && "$_cs" != "None" ]] && events_config_set_name="$_cs"
+  fi
 
   section "Events: SES Event Destination"
 
   # Check that config set has an EventBridge event destination
   local event_dest_output
   if event_dest_output=$(aws_check sesv2 get-configuration-set-event-destinations \
-    --configuration-set-name wraps-email-tracking \
+    --configuration-set-name "$events_config_set_name" \
     --region "$region"); then
     local dest_count
     dest_count=$(echo "$event_dest_output" | jq '[.EventDestinations[]] | length')
@@ -1031,6 +1058,16 @@ verify_role_permissions() {
   local region="${2:?region required}"
   local domain="${3:?domain required}"
 
+  # Derive actual config set name from the SES identity
+  local role_config_set_name
+  role_config_set_name=$(aws sesv2 get-email-identity \
+    --email-identity "$domain" \
+    --region "$region" \
+    --query 'ConfigurationSetName' \
+    --output text 2>/dev/null)
+  [[ -z "$role_config_set_name" || "$role_config_set_name" == "None" ]] && \
+    role_config_set_name="wraps-email-tracking"
+
   local test_role="wraps-test-role-permissions"
   local test_policy="wraps-test-policy"
   local test_external_id="wraps-deploy-test-$$"
@@ -1222,7 +1259,7 @@ POLICY
 
   # ses:GetConfigurationSet
   if _assumed sesv2 get-configuration-set \
-    --configuration-set-name wraps-email-tracking --region "$region" &>/dev/null; then
+    --configuration-set-name "$role_config_set_name" --region "$region" &>/dev/null; then
     pass "ses:GetConfigurationSet"
   else
     fail "ses:GetConfigurationSet — AccessDenied"
@@ -1230,7 +1267,7 @@ POLICY
 
   # ses:GetConfigurationSetEventDestinations
   if _assumed sesv2 get-configuration-set-event-destinations \
-    --configuration-set-name wraps-email-tracking --region "$region" &>/dev/null; then
+    --configuration-set-name "$role_config_set_name" --region "$region" &>/dev/null; then
     pass "ses:GetConfigurationSetEventDestinations"
   else
     fail "ses:GetConfigurationSetEventDestinations — AccessDenied"
@@ -1243,7 +1280,7 @@ POLICY
     --from-email-address "test@${domain}" \
     --destination '{"ToAddresses":["success@simulator.amazonses.com"]}' \
     --content '{"Simple":{"Subject":{"Data":"Permission test"},"Body":{"Text":{"Data":"test"}}}}' \
-    --configuration-set-name wraps-email-tracking \
+    --configuration-set-name "$role_config_set_name" \
     --region "$region" &>/dev/null; then
     pass "ses:SendEmail (simulator)"
   else
@@ -1487,6 +1524,7 @@ pre_teardown_rename_archive() {
 verify_teardown() {
   local domain="${1:?domain required}"
   local region="${2:-us-east-1}"
+  local teardown_config_set="${3:-wraps-email-tracking}"
 
   section "Teardown: Verify Resources Removed"
 
@@ -1510,11 +1548,11 @@ verify_teardown() {
 
   # SES config set
   if aws sesv2 get-configuration-set \
-    --configuration-set-name wraps-email-tracking \
+    --configuration-set-name "$teardown_config_set" \
     --region "$region" &>/dev/null; then
-    fail "SES config set wraps-email-tracking still exists"
+    fail "SES config set $teardown_config_set still exists"
   else
-    pass "SES config set wraps-email-tracking removed"
+    pass "SES config set $teardown_config_set removed"
   fi
 
   # SES domain identity
@@ -1535,21 +1573,31 @@ verify_teardown() {
     pass "DynamoDB table wraps-email-history removed"
   fi
 
-  # SQS queues
-  if aws sqs get-queue-url \
-    --queue-name wraps-email-events \
-    --region "$region" &>/dev/null; then
-    fail "SQS queue wraps-email-events still exists"
-  else
+  # SQS queues — use a retry loop: SQS deletion is eventually consistent and
+  # GetQueueUrl may return results for up to ~60s after DeleteQueue completes.
+  local sqs_deadline=$(( $(date -u +%s) + 90 ))
+  local sqs_main_gone=false sqs_dlq_gone=false
+  while (( $(date -u +%s) < sqs_deadline )); do
+    if ! aws sqs get-queue-url --queue-name wraps-email-events --region "$region" &>/dev/null; then
+      sqs_main_gone=true
+    fi
+    if ! aws sqs get-queue-url --queue-name wraps-email-events-dlq --region "$region" &>/dev/null; then
+      sqs_dlq_gone=true
+    fi
+    [[ "$sqs_main_gone" == "true" && "$sqs_dlq_gone" == "true" ]] && break
+    sleep 5
+  done
+
+  if [[ "$sqs_main_gone" == "true" ]]; then
     pass "SQS queue wraps-email-events removed"
+  else
+    fail "SQS queue wraps-email-events still exists"
   fi
 
-  if aws sqs get-queue-url \
-    --queue-name wraps-email-events-dlq \
-    --region "$region" &>/dev/null; then
-    fail "SQS DLQ wraps-email-events-dlq still exists"
-  else
+  if [[ "$sqs_dlq_gone" == "true" ]]; then
     pass "SQS DLQ wraps-email-events-dlq removed"
+  else
+    fail "SQS DLQ wraps-email-events-dlq still exists"
   fi
 
   # Lambda

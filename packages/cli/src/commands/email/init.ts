@@ -49,6 +49,7 @@ import {
   promptConfigPreset,
   promptCustomConfig,
   promptDomain,
+  promptDomainPurpose,
   promptEstimatedVolume,
   promptMailFromSubdomain,
   promptProvider,
@@ -206,6 +207,38 @@ export async function init(options: InitOptions): Promise<void> {
       emailConfig.mailFromSubdomain = mailFromFull.endsWith(suffix)
         ? mailFromFull.slice(0, -suffix.length) || "mail"
         : "mail";
+    }
+  }
+
+  // Prompt for domain purpose and adjust tracking defaults (skip in quick mode and custom preset)
+  if (!options.quick && preset !== "custom" && emailConfig.tracking?.enabled) {
+    const purpose = await promptDomainPurpose();
+    if (purpose === "transactional") {
+      emailConfig.tracking = { ...emailConfig.tracking, opens: false, clicks: false };
+    } else if (purpose === "marketing" || purpose === "notifications") {
+      emailConfig.tracking = { ...emailConfig.tracking, opens: true, clicks: true };
+    } else {
+      const trackOpens = await clack.confirm({
+        message: "Track email opens?",
+        initialValue: emailConfig.tracking.opens ?? true,
+      });
+      if (clack.isCancel(trackOpens)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      const trackClicks = await clack.confirm({
+        message: "Track link clicks?",
+        initialValue: emailConfig.tracking.clicks ?? true,
+      });
+      if (clack.isCancel(trackClicks)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      emailConfig.tracking = {
+        ...emailConfig.tracking,
+        opens: trackOpens as boolean,
+        clicks: trackClicks as boolean,
+      };
     }
   }
 

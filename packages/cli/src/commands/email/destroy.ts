@@ -367,7 +367,30 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
     );
   }
 
-  // 9. Delete connection metadata (even on partial failure, so user isn't stuck)
+  // 9a. Best-effort SQS cleanup: Pulumi may skip the DLQ when the main queue
+  // fails to confirm deletion (dependency skipping with continueOnError). If
+  // either queue is still in AWS, delete it directly so the teardown is clean.
+  if (destroyFailed) {
+    try {
+      const { SQSClient, GetQueueUrlCommand, DeleteQueueCommand } =
+        await import("@aws-sdk/client-sqs");
+      const sqsClient = new SQSClient({ region });
+      for (const queueName of ["wraps-email-events", "wraps-email-events-dlq"]) {
+        try {
+          const { QueueUrl } = await sqsClient.send(
+            new GetQueueUrlCommand({ QueueName: queueName })
+          );
+          if (QueueUrl) {
+            await sqsClient.send(new DeleteQueueCommand({ QueueUrl }));
+          }
+          // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
+        } catch {}
+      }
+      // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
+    } catch {}
+  }
+
+  // 9b. Delete connection metadata (even on partial failure, so user isn't stuck)
   await deleteConnectionMetadata(identity.accountId, region);
 
   // 10. Display success message

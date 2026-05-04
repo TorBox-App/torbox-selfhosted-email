@@ -1,6 +1,7 @@
 import * as aws from "@pulumi/aws";
 import { retentionToDays } from "@wraps/core";
 import type { EmailStackConfig, StackOutputs } from "../types/index.js";
+import { domainToConfigSetName } from "../utils/email/config-set-slug.js";
 import { createAlertingResources } from "./resources/alerting.js";
 import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";
@@ -113,7 +114,7 @@ export async function deployEmailStack(
       !config.skipResourceImports &&
       emailConfig.eventTracking?.enabled &&
       (await eventDestinationExists(
-        "wraps-email-tracking",
+        domainToConfigSetName(emailConfig.domain ?? ""),
         "wraps-email-eventbridge",
         config.region
       ));
@@ -228,7 +229,7 @@ export async function deployEmailStack(
   let smtpResources;
   if (emailConfig.smtpCredentials?.enabled && sesResources) {
     smtpResources = await createSMTPCredentials({
-      configSetName: "wraps-email-tracking",
+      configSetName: domainToConfigSetName(emailConfig.domain ?? ""),
       region: config.region,
     });
   }

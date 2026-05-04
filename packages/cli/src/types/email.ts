@@ -21,6 +21,8 @@ export type AdditionalDomain = {
   domain: string;
   mailFromDomain?: string;
   purpose?: DomainPurpose;
+  configSetName?: string;
+  trackingConfig?: { opens: boolean; clicks: boolean };
   addedAt: string;
 };
 

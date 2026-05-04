@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import type { SESEventType } from "../../types/index.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 
 /**
  * SES resources configuration
@@ -126,8 +127,11 @@ export async function createSESResources(
   config: SESResourcesConfig
 ): Promise<SESResources> {
   // Configuration set for tracking (using SESv2 which supports tags)
+  const configSetName = config.domain
+    ? domainToConfigSetName(config.domain)
+    : "wraps-email-tracking";
   const configSetOptions: aws.sesv2.ConfigurationSetArgs = {
-    configurationSetName: "wraps-email-tracking",
+    configurationSetName: configSetName,
     deliveryOptions: config.tlsRequired
       ? {
           tlsPolicy: "REQUIRE", // Require TLS 1.2+ for all emails
@@ -160,7 +164,6 @@ export async function createSESResources(
   }
 
   // Check if configuration set already exists in AWS
-  const configSetName = "wraps-email-tracking";
   const exists = await configurationSetExists(configSetName, config.region);
 
   // Only use import when the resource exists in AWS but not yet in Pulumi state.
@@ -185,6 +188,21 @@ export async function createSESResources(
   if (config.eventTrackingEnabled) {
     const eventDestName = "wraps-email-eventbridge";
 
+    const opensEnabled = config.trackingConfig?.opens ?? true;
+    const clicksEnabled = config.trackingConfig?.clicks ?? true;
+    const matchingEventTypes: string[] = [
+      "SEND",
+      "DELIVERY",
+      ...(opensEnabled ? ["OPEN"] : []),
+      ...(clicksEnabled ? ["CLICK"] : []),
+      "BOUNCE",
+      "COMPLAINT",
+      "REJECT",
+      "RENDERING_FAILURE",
+      "DELIVERY_DELAY",
+      "SUBSCRIPTION",
+    ];
+
     new aws.sesv2.ConfigurationSetEventDestination(
       "wraps-email-all-events",
       {
@@ -192,18 +210,7 @@ export async function createSESResources(
         eventDestinationName: eventDestName,
         eventDestination: {
           enabled: true,
-          matchingEventTypes: [
-            "SEND",
-            "DELIVERY",
-            "OPEN",
-            "CLICK",
-            "BOUNCE",
-            "COMPLAINT",
-            "REJECT",
-            "RENDERING_FAILURE",
-            "DELIVERY_DELAY",
-            "SUBSCRIPTION",
-          ],
+          matchingEventTypes,
           eventBridgeDestination: {
             // SES requires default bus - cannot use custom bus
             eventBusArn: defaultEventBus.arn,
@@ -215,7 +222,7 @@ export async function createSESResources(
         // Skip when skipResourceImports is true (resource already tracked in state).
         import:
           config.importExistingEventDestination && !config.skipResourceImports
-            ? `wraps-email-tracking|${eventDestName}`
+            ? `${configSetName}|${eventDestName}`
             : undefined,
       }
     );

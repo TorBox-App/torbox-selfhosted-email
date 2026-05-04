@@ -16,6 +16,7 @@ import {
   pollDomainVerification,
   verifySandboxRecipient,
 } from "../../utils/email/verification.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -314,7 +315,7 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
                 },
               },
             },
-            ConfigurationSetName: "wraps-email-tracking",
+            ConfigurationSetName: domainToConfigSetName(domain),
           })
         );
 

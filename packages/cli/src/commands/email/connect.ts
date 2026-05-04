@@ -514,14 +514,16 @@ export async function connect(options: ConnectOptions): Promise<void> {
 
   // Show next steps
   if (selectedIdentities.length > 0 && emailConfig.tracking?.enabled) {
+    const displayConfigSetName =
+      outputs.configSetName ?? "wraps-email-<your-domain>";
     console.log(`\n${pc.bold("Next Steps:")}\n`);
     console.log(
-      `Update your code to use configuration set: ${pc.cyan("wraps-email-tracking")}`
+      `Update your code to use configuration set: ${pc.cyan(displayConfigSetName)}`
     );
     console.log(`\n${pc.dim("Example:")}`);
     console.log(
       pc.gray(`  await ses.sendEmail({
-    ConfigurationSetName: 'wraps-email-tracking',
+    ConfigurationSetName: '${displayConfigSetName}',
     // ... other parameters
   });`)
     );
