@@ -544,7 +544,13 @@ describe("upgrade per-domain-config-sets migration", () => {
       await setupPulumiMock();
 
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
-        baseMetadata() as any
+        baseMetadata({
+          emailConfig: {
+            additionalDomains: [
+              { domain: "app.example.com", addedAt: new Date().toISOString() },
+            ],
+          },
+        }) as any
       );
 
       vi.mocked(clack.select)

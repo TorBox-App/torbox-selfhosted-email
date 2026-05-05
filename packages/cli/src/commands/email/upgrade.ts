@@ -322,13 +322,19 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         metadata.provider === "vercel"
           ? `Currently: Vercel (${metadata.vercel?.teamSlug || "configured"})`
           : `Currently: ${metadata.provider} → Switch to Vercel OIDC, etc.`,
-    },
-    {
-      value: "per-domain-config-sets",
-      label: "Per-domain configuration sets",
-      hint: "Create dedicated SES config sets for each additional domain",
     }
   );
+
+  const unmigratedCount = (
+    metadata.services.email?.config.additionalDomains ?? []
+  ).filter((d) => !d.configSetName).length;
+  if (unmigratedCount > 0) {
+    upgradeOptions.push({
+      value: "per-domain-config-sets",
+      label: "Per-domain configuration sets",
+      hint: `Migrate ${unmigratedCount} additional domain(s) to dedicated SES config sets`,
+    });
+  }
 
   if (options.action) {
     upgradeAction = options.action;
