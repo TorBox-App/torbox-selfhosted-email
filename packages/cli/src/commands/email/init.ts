@@ -131,18 +131,7 @@ export async function init(options: InitOptions): Promise<void> {
     progress.info(`Using region: ${pc.cyan(region)}`);
   }
 
-  let domain = options.domain;
-  if (!domain) {
-    domain = await promptDomain();
-  }
-
-  // Get Vercel config if needed
-  let vercelConfig;
-  if (provider === "vercel") {
-    vercelConfig = await promptVercelConfig();
-  }
-
-  // 4. Check if connection already exists
+  // 4. Check if connection already exists (before prompting for domain/Vercel config)
   const existingConnection = await loadConnectionMetadata(
     identity.accountId,
     region
@@ -152,9 +141,24 @@ export async function init(options: InitOptions): Promise<void> {
       `Connection already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
     clack.log.info(`Created: ${existingConnection.timestamp}`);
+    const domainHint = options.domain ? ` ${options.domain}` : " <domain>";
+    clack.log.info(
+      `To add another sending domain: ${pc.cyan(`wraps email domain add${domainHint}`)}`
+    );
     clack.log.info(`Use ${pc.cyan("wraps status")} to view current setup`);
     clack.log.info(`Use ${pc.cyan("wraps upgrade")} to add more features`);
     process.exit(0);
+  }
+
+  let domain = options.domain;
+  if (!domain) {
+    domain = await promptDomain();
+  }
+
+  // Get Vercel config if needed
+  let vercelConfig;
+  if (provider === "vercel") {
+    vercelConfig = await promptVercelConfig();
   }
 
   // 5. Configuration selection
