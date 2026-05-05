@@ -19,6 +19,7 @@ import {
   Rocket,
   Send,
   ShieldCheck,
+  SlidersHorizontal,
   Smartphone,
   Sparkles,
   Tags,
@@ -46,6 +47,38 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.21.0",
+    date: "May 2026",
+    icon: SlidersHorizontal,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "Per-Domain SES Configuration Sets",
+    items: [
+      <>
+        <Code>wraps email domains config</Code> — configure SES options per
+        domain interactively or via flags
+      </>,
+      <>
+        Migrate via <Code>wraps email upgrade</Code> → "Per-domain configuration
+        sets": creates a dedicated config set for each sending identity, no DNS
+        changes needed
+      </>,
+      "7 configuration groups: open/click tracking, TLS delivery, sending toggle, reputation metrics, bounce/complaint suppression, email archiving, and VDM",
+      <>
+        10 boolean flags for scripting:{" "}
+        <Code>--opens</Code>, <Code>--clicks</Code>,{" "}
+        <Code>--tls-required</Code>, <Code>--suppress-bounce</Code>,{" "}
+        <Code>--archive</Code>, <Code>--vdm-engagement</Code>, and more
+      </>,
+      <>
+        Shared <Code>wraps-email-archive</Code> Mail Manager archive —
+        auto-created on first use, linked to each domain that enables archiving
+      </>,
+      "VDM options (engagement metrics, inbox placement) only shown when account has Virtual Deliverability Manager enabled",
+      "Fix: EventBridge now forwards all SES event types — previously some event subtypes were silently dropped",
+    ],
+  },
   {
     version: "Enterprise v1.0",
     date: "April 2026",
