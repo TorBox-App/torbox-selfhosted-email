@@ -214,9 +214,17 @@ export async function init(options: InitOptions): Promise<void> {
   if (!options.quick && preset !== "custom" && emailConfig.tracking?.enabled) {
     const purpose = await promptDomainPurpose();
     if (purpose === "transactional") {
-      emailConfig.tracking = { ...emailConfig.tracking, opens: false, clicks: false };
+      emailConfig.tracking = {
+        ...emailConfig.tracking,
+        opens: false,
+        clicks: false,
+      };
     } else if (purpose === "marketing" || purpose === "notifications") {
-      emailConfig.tracking = { ...emailConfig.tracking, opens: true, clicks: true };
+      emailConfig.tracking = {
+        ...emailConfig.tracking,
+        opens: true,
+        clicks: true,
+      };
     } else {
       const trackOpens = await clack.confirm({
         message: "Track email opens?",

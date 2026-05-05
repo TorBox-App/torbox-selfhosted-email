@@ -7,6 +7,7 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import type { EmailTestOptions } from "../../types/index.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import {
   isSimulatorAddress,
   SES_SIMULATOR_ADDRESSES,
@@ -16,7 +17,6 @@ import {
   pollDomainVerification,
   verifySandboxRecipient,
 } from "../../utils/email/verification.js";
-import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import {
   getAWSRegion,
   validateAWSCredentials,

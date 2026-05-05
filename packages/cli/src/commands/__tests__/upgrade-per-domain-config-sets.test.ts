@@ -39,20 +39,27 @@ const __sesSend = vi.fn().mockResolvedValue({});
 vi.mock("@aws-sdk/client-sesv2", async () => {
   class CreateConfigurationSetCommand {
     input: any;
-    constructor(input: any) { this.input = input; }
+    constructor(input: any) {
+      this.input = input;
+    }
   }
   class CreateConfigurationSetEventDestinationCommand {
     input: any;
-    constructor(input: any) { this.input = input; }
+    constructor(input: any) {
+      this.input = input;
+    }
   }
   class PutEmailIdentityConfigurationSetAttributesCommand {
     input: any;
-    constructor(input: any) { this.input = input; }
+    constructor(input: any) {
+      this.input = input;
+    }
   }
   class SESv2Client {
     send: (...args: any[]) => any;
     constructor() {
-      this.send = (...args: any[]) => (globalThis as any).__wrapsSesSend?.(...args) ?? Promise.resolve({});
+      this.send = (...args: any[]) =>
+        (globalThis as any).__wrapsSesSend?.(...args) ?? Promise.resolve({});
     }
   }
   const EventType = {
@@ -76,6 +83,7 @@ vi.mock("@aws-sdk/client-sesv2", async () => {
   };
 });
 
+import * as sesModule from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import * as aws from "../../utils/shared/aws.js";
@@ -84,7 +92,6 @@ import * as metadataUtils from "../../utils/shared/metadata.js";
 import * as promptUtils from "../../utils/shared/prompts.js";
 import * as pulumiUtils from "../../utils/shared/pulumi.js";
 import { upgrade } from "../email/upgrade.js";
-import * as sesModule from "@aws-sdk/client-sesv2";
 
 describe("upgrade per-domain-config-sets migration", () => {
   let mockSpinner: {
@@ -95,8 +102,12 @@ describe("upgrade per-domain-config-sets migration", () => {
 
   let mockSesClientSend: ReturnType<typeof vi.fn>;
   let CreateConfigurationSetCommand: new (input: any) => { input: any };
-  let CreateConfigurationSetEventDestinationCommand: new (input: any) => { input: any };
-  let PutEmailIdentityConfigurationSetAttributesCommand: new (input: any) => { input: any };
+  let CreateConfigurationSetEventDestinationCommand: new (
+    input: any
+  ) => { input: any };
+  let PutEmailIdentityConfigurationSetAttributesCommand: new (
+    input: any
+  ) => { input: any };
 
   const baseMetadata = (overrides: any = {}) => ({
     accountId: "123456789012",
@@ -150,8 +161,12 @@ describe("upgrade per-domain-config-sets migration", () => {
       return mockStack;
     });
 
-    vi.mocked(pulumi.automation.LocalWorkspace.createOrSelectStack).mockImplementation(createOrSelectStackMock);
-    vi.mocked(pulumiAutomation.LocalWorkspace.createOrSelectStack).mockImplementation(createOrSelectStackMock);
+    vi.mocked(
+      pulumi.automation.LocalWorkspace.createOrSelectStack
+    ).mockImplementation(createOrSelectStackMock);
+    vi.mocked(
+      pulumiAutomation.LocalWorkspace.createOrSelectStack
+    ).mockImplementation(createOrSelectStackMock);
   }
 
   beforeEach(() => {
@@ -181,10 +196,14 @@ describe("upgrade per-domain-config-sets migration", () => {
     vi.mocked(fsUtils.ensurePulumiWorkDir).mockReturnValue(undefined);
     vi.mocked(fsUtils.getPulumiWorkDir).mockReturnValue("/mock/.wraps/pulumi");
 
-    vi.mocked(metadataUtils.saveConnectionMetadata).mockResolvedValue(undefined);
+    vi.mocked(metadataUtils.saveConnectionMetadata).mockResolvedValue(
+      undefined
+    );
     vi.mocked(metadataUtils.updateEmailConfig).mockImplementation(() => {});
 
-    vi.mocked(promptUtils.promptVercelConfig).mockResolvedValue({ teamSlug: "my-team" });
+    vi.mocked(promptUtils.promptVercelConfig).mockResolvedValue({
+      teamSlug: "my-team",
+    });
 
     vi.mocked(deployEmailStack).mockResolvedValue({
       roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
@@ -196,9 +215,12 @@ describe("upgrade per-domain-config-sets migration", () => {
       dkimTokens: ["token1", "token2", "token3"],
     } as any);
 
-    CreateConfigurationSetCommand = sesModule.CreateConfigurationSetCommand as any;
-    CreateConfigurationSetEventDestinationCommand = sesModule.CreateConfigurationSetEventDestinationCommand as any;
-    PutEmailIdentityConfigurationSetAttributesCommand = sesModule.PutEmailIdentityConfigurationSetAttributesCommand as any;
+    CreateConfigurationSetCommand =
+      sesModule.CreateConfigurationSetCommand as any;
+    CreateConfigurationSetEventDestinationCommand =
+      sesModule.CreateConfigurationSetEventDestinationCommand as any;
+    PutEmailIdentityConfigurationSetAttributesCommand =
+      sesModule.PutEmailIdentityConfigurationSetAttributesCommand as any;
 
     mockSesClientSend = vi.fn().mockResolvedValue({});
     (globalThis as any).__wrapsSesSend = mockSesClientSend;
@@ -216,24 +238,42 @@ describe("upgrade per-domain-config-sets migration", () => {
         baseMetadata({
           emailConfig: {
             additionalDomains: [
-              { domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z", configSetName: "wraps-email-app-example-com" },
-              { domain: "mail.example.com", addedAt: "2024-01-01T00:00:00.000Z", configSetName: "wraps-email-mail-example-com" },
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+                configSetName: "wraps-email-app-example-com",
+              },
+              {
+                domain: "mail.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+                configSetName: "wraps-email-mail-example-com",
+              },
             ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
 
-      expect(mockSesClientSend).not.toHaveBeenCalledWith(expect.any(CreateConfigurationSetCommand));
-      expect(mockSesClientSend).not.toHaveBeenCalledWith(expect.any(CreateConfigurationSetEventDestinationCommand));
-      expect(mockSesClientSend).not.toHaveBeenCalledWith(expect.any(PutEmailIdentityConfigurationSetAttributesCommand));
+      expect(mockSesClientSend).not.toHaveBeenCalledWith(
+        expect.any(CreateConfigurationSetCommand)
+      );
+      expect(mockSesClientSend).not.toHaveBeenCalledWith(
+        expect.any(CreateConfigurationSetEventDestinationCommand)
+      );
+      expect(mockSesClientSend).not.toHaveBeenCalledWith(
+        expect.any(PutEmailIdentityConfigurationSetAttributesCommand)
+      );
 
       expect(clack.log.info).toHaveBeenCalledWith(
-        expect.stringMatching(/already migrated|all.*migrated|nothing|no.*domain/i)
+        expect.stringMatching(
+          /already migrated|all.*migrated|nothing|no.*domain/i
+        )
       );
     });
 
@@ -244,14 +284,23 @@ describe("upgrade per-domain-config-sets migration", () => {
         baseMetadata({
           emailConfig: {
             additionalDomains: [
-              { domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z", configSetName: "wraps-email-app-example-com" },
-              { domain: "mail.example.com", addedAt: "2024-01-01T00:00:00.000Z" },
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+                configSetName: "wraps-email-app-example-com",
+              },
+              {
+                domain: "mail.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
             ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
@@ -260,7 +309,9 @@ describe("upgrade per-domain-config-sets migration", () => {
         (call: any[]) => call[0] instanceof CreateConfigurationSetCommand
       );
       expect(createConfigSetCalls).toHaveLength(1);
-      expect(createConfigSetCalls[0][0].input.ConfigurationSetName).toBe("wraps-email-mail-example-com");
+      expect(createConfigSetCalls[0][0].input.ConfigurationSetName).toBe(
+        "wraps-email-mail-example-com"
+      );
     });
   });
 
@@ -271,12 +322,19 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
@@ -285,7 +343,9 @@ describe("upgrade per-domain-config-sets migration", () => {
         (call: any[]) => call[0] instanceof CreateConfigurationSetCommand
       );
       expect(createCalls).toHaveLength(1);
-      expect(createCalls[0][0].input.ConfigurationSetName).toBe("wraps-email-app-example-com");
+      expect(createCalls[0][0].input.ConfigurationSetName).toBe(
+        "wraps-email-app-example-com"
+      );
     });
 
     it("should call CreateConfigurationSetEventDestinationCommand with EventBridge destination", async () => {
@@ -294,23 +354,33 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
 
       const destCalls = mockSesClientSend.mock.calls.filter(
-        (call: any[]) => call[0] instanceof CreateConfigurationSetEventDestinationCommand
+        (call: any[]) =>
+          call[0] instanceof CreateConfigurationSetEventDestinationCommand
       );
       expect(destCalls).toHaveLength(1);
       const input = destCalls[0][0].input;
       expect(input.ConfigurationSetName).toBe("wraps-email-app-example-com");
-      expect(input.EventDestination.EventBridgeDestination.EventBusArn).toContain("event-bus/default");
+      expect(
+        input.EventDestination.EventBridgeDestination.EventBusArn
+      ).toContain("event-bus/default");
     });
 
     it("should call PutEmailIdentityConfigurationSetAttributesCommand to reassign identity", async () => {
@@ -319,18 +389,26 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
 
       const putCalls = mockSesClientSend.mock.calls.filter(
-        (call: any[]) => call[0] instanceof PutEmailIdentityConfigurationSetAttributesCommand
+        (call: any[]) =>
+          call[0] instanceof PutEmailIdentityConfigurationSetAttributesCommand
       );
       expect(putCalls).toHaveLength(1);
       const input = putCalls[0][0].input;
@@ -344,17 +422,21 @@ describe("upgrade per-domain-config-sets migration", () => {
       const savedMetadataSnapshots: any[] = [];
       let putIdentityCallCount = 0;
 
-      vi.mocked(metadataUtils.saveConnectionMetadata).mockImplementation(async (m) => {
-        savedMetadataSnapshots.push(JSON.parse(JSON.stringify(m)));
-      });
+      vi.mocked(metadataUtils.saveConnectionMetadata).mockImplementation(
+        async (m) => {
+          savedMetadataSnapshots.push(JSON.parse(JSON.stringify(m)));
+        }
+      );
 
       mockSesClientSend.mockImplementation(async (cmd: any) => {
         if (cmd instanceof PutEmailIdentityConfigurationSetAttributesCommand) {
           putIdentityCallCount++;
-          const lastSave = savedMetadataSnapshots[savedMetadataSnapshots.length - 1];
-          const domain = lastSave?.services?.email?.config?.additionalDomains?.find(
-            (d: any) => d.domain === "app.example.com"
-          );
+          const lastSave =
+            savedMetadataSnapshots[savedMetadataSnapshots.length - 1];
+          const domain =
+            lastSave?.services?.email?.config?.additionalDomains?.find(
+              (d: any) => d.domain === "app.example.com"
+            );
           expect(domain?.configSetName).toBe("wraps-email-app-example-com");
         }
         return {};
@@ -363,12 +445,19 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
@@ -383,14 +472,22 @@ describe("upgrade per-domain-config-sets migration", () => {
         baseMetadata({
           emailConfig: {
             additionalDomains: [
-              { domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" },
-              { domain: "mail.example.com", addedAt: "2024-01-01T00:00:00.000Z" },
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+              {
+                domain: "mail.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
             ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
@@ -399,7 +496,9 @@ describe("upgrade per-domain-config-sets migration", () => {
         (call: any[]) => call[0] instanceof CreateConfigurationSetCommand
       );
       expect(createCalls).toHaveLength(2);
-      const configSetNames = createCalls.map((call: any[]) => call[0].input.ConfigurationSetName);
+      const configSetNames = createCalls.map(
+        (call: any[]) => call[0].input.ConfigurationSetName
+      );
       expect(configSetNames).toContain("wraps-email-app-example-com");
       expect(configSetNames).toContain("wraps-email-mail-example-com");
     });
@@ -410,20 +509,29 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });
 
       const destCalls = mockSesClientSend.mock.calls.filter(
-        (call: any[]) => call[0] instanceof CreateConfigurationSetEventDestinationCommand
+        (call: any[]) =>
+          call[0] instanceof CreateConfigurationSetEventDestinationCommand
       );
-      const matchingEventTypes = destCalls[0][0].input.EventDestination.MatchingEventTypes;
+      const matchingEventTypes =
+        destCalls[0][0].input.EventDestination.MatchingEventTypes;
       expect(matchingEventTypes).toContain("SEND");
       expect(matchingEventTypes).toContain("DELIVERY");
       expect(matchingEventTypes).toContain("OPEN");
@@ -435,7 +543,9 @@ describe("upgrade per-domain-config-sets migration", () => {
     it("should include per-domain-config-sets option in upgrade menu", async () => {
       await setupPulumiMock();
 
-      vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(baseMetadata() as any);
+      vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
+        baseMetadata() as any
+      );
 
       vi.mocked(clack.select)
         .mockResolvedValueOnce("preset" as never)
@@ -450,7 +560,9 @@ describe("upgrade per-domain-config-sets migration", () => {
       );
       expect(upgradeMenuCall).toBeDefined();
       const options = (upgradeMenuCall![0] as any).options;
-      const migrationOption = options.find((o: any) => o.value === "per-domain-config-sets");
+      const migrationOption = options.find(
+        (o: any) => o.value === "per-domain-config-sets"
+      );
       expect(migrationOption).toBeDefined();
       expect(migrationOption.label).toBe("Per-domain configuration sets");
     });
@@ -463,15 +575,17 @@ describe("upgrade per-domain-config-sets migration", () => {
       let savedAfterConfigSet = false;
       let putIdentityCalled = false;
 
-      vi.mocked(metadataUtils.saveConnectionMetadata).mockImplementation(async (m) => {
-        const domains = m.services?.email?.config?.additionalDomains ?? [];
-        const migrated = domains.find(
-          (d: any) => d.domain === "app.example.com" && d.configSetName
-        );
-        if (migrated && !putIdentityCalled) {
-          savedAfterConfigSet = true;
+      vi.mocked(metadataUtils.saveConnectionMetadata).mockImplementation(
+        async (m) => {
+          const domains = m.services?.email?.config?.additionalDomains ?? [];
+          const migrated = domains.find(
+            (d: any) => d.domain === "app.example.com" && d.configSetName
+          );
+          if (migrated && !putIdentityCalled) {
+            savedAfterConfigSet = true;
+          }
         }
-      });
+      );
 
       mockSesClientSend.mockImplementation(async (cmd: any) => {
         if (cmd instanceof PutEmailIdentityConfigurationSetAttributesCommand) {
@@ -484,12 +598,19 @@ describe("upgrade per-domain-config-sets migration", () => {
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
         baseMetadata({
           emailConfig: {
-            additionalDomains: [{ domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z" }],
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       try {
@@ -509,13 +630,19 @@ describe("upgrade per-domain-config-sets migration", () => {
         baseMetadata({
           emailConfig: {
             additionalDomains: [
-              { domain: "app.example.com", addedAt: "2024-01-01T00:00:00.000Z", configSetName: "wraps-email-app-example-com" },
+              {
+                domain: "app.example.com",
+                addedAt: "2024-01-01T00:00:00.000Z",
+                configSetName: "wraps-email-app-example-com",
+              },
             ],
           },
         }) as any
       );
 
-      vi.mocked(clack.select).mockResolvedValueOnce("per-domain-config-sets" as never);
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
 
       await upgrade({ yes: true });

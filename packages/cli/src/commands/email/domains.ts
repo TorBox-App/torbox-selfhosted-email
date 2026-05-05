@@ -23,6 +23,7 @@ import {
   getDNSCredentials,
   getDNSProviderDisplayName,
 } from "../../utils/dns/index.js";
+import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -49,7 +50,6 @@ import {
   promptMailFromSubdomain,
   promptSubdomainSuggestions,
 } from "../../utils/shared/prompts.js";
-import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 
 type DNSResult = {
   name: string;
@@ -690,7 +690,8 @@ export async function addDomain(options: {
           })
         );
       } catch (err) {
-        if ((err as { name?: string }).name !== "AlreadyExistsException") throw err;
+        if ((err as { name?: string }).name !== "AlreadyExistsException")
+          throw err;
       }
       try {
         await sesClient.send(
@@ -705,7 +706,8 @@ export async function addDomain(options: {
           })
         );
       } catch (err) {
-        if ((err as { name?: string }).name !== "AlreadyExistsException") throw err;
+        if ((err as { name?: string }).name !== "AlreadyExistsException")
+          throw err;
       }
     });
 

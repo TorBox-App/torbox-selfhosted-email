@@ -1709,14 +1709,19 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         await progress.execute(
           `Creating config set for ${d.domain}`,
           async () => {
-            await sesClient.send(
-              new CreateConfigurationSetCommand({
-                ConfigurationSetName: configSetName,
-                SuppressionOptions: {
-                  SuppressedReasons: ["BOUNCE", "COMPLAINT"],
-                },
-              })
-            );
+            try {
+              await sesClient.send(
+                new CreateConfigurationSetCommand({
+                  ConfigurationSetName: configSetName,
+                  SuppressionOptions: {
+                    SuppressedReasons: ["BOUNCE", "COMPLAINT"],
+                  },
+                })
+              );
+            } catch (err) {
+              if ((err as { name?: string }).name !== "AlreadyExistsException")
+                throw err;
+            }
           }
         );
 
@@ -1745,17 +1750,22 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         await progress.execute(
           `Adding EventBridge destination for ${d.domain}`,
           async () => {
-            await sesClient.send(
-              new CreateConfigurationSetEventDestinationCommand({
-                ConfigurationSetName: configSetName,
-                EventDestinationName: "wraps-eventbridge",
-                EventDestination: {
-                  Enabled: true,
-                  MatchingEventTypes: matchingEventTypes,
-                  EventBridgeDestination: { EventBusArn: eventBusArn },
-                },
-              })
-            );
+            try {
+              await sesClient.send(
+                new CreateConfigurationSetEventDestinationCommand({
+                  ConfigurationSetName: configSetName,
+                  EventDestinationName: "wraps-email-eventbridge",
+                  EventDestination: {
+                    Enabled: true,
+                    MatchingEventTypes: matchingEventTypes,
+                    EventBridgeDestination: { EventBusArn: eventBusArn },
+                  },
+                })
+              );
+            } catch (err) {
+              if ((err as { name?: string }).name !== "AlreadyExistsException")
+                throw err;
+            }
           }
         );
 

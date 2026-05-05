@@ -375,7 +375,10 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       const { SQSClient, GetQueueUrlCommand, DeleteQueueCommand } =
         await import("@aws-sdk/client-sqs");
       const sqsClient = new SQSClient({ region });
-      for (const queueName of ["wraps-email-events", "wraps-email-events-dlq"]) {
+      for (const queueName of [
+        "wraps-email-events",
+        "wraps-email-events-dlq",
+      ]) {
         try {
           const { QueueUrl } = await sqsClient.send(
             new GetQueueUrlCommand({ QueueName: queueName })
@@ -389,6 +392,26 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
     } catch {}
   }
+
+  // 9b. Best-effort per-domain config set cleanup: these are created directly
+  // via the AWS SDK (not Pulumi), so Pulumi destroy never touches them. Delete
+  // each additional domain's config set to avoid leaking SES resources.
+  try {
+    const { SESv2Client, DeleteConfigurationSetCommand: DeleteConfigSet } =
+      await import("@aws-sdk/client-sesv2");
+    const sesv2 = new SESv2Client({ region });
+    const additionalDomains = emailConfig?.additionalDomains ?? [];
+    for (const d of additionalDomains) {
+      if (!d.configSetName) continue;
+      try {
+        await sesv2.send(
+          new DeleteConfigSet({ ConfigurationSetName: d.configSetName })
+        );
+        // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
+      } catch {}
+    }
+    // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
+  } catch {}
 
   // 9b. Delete connection metadata (even on partial failure, so user isn't stuck)
   await deleteConnectionMetadata(identity.accountId, region);
