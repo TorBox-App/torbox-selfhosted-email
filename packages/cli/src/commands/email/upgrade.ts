@@ -1702,7 +1702,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         const d = unmigratedDomains[i];
         const configSetName = domainToConfigSetName(d.domain);
 
-        clack.log.step(`Migrating ${pc.cyan(d.domain)} → ${pc.dim(configSetName)}`);
+        clack.log.step(
+          `Migrating ${pc.cyan(d.domain)} → ${pc.dim(configSetName)}`
+        );
 
         await progress.execute(
           `Creating config set for ${d.domain}`,
@@ -1759,7 +1761,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
         // Persist configSetName BEFORE identity reassignment (resumable on failure)
         d.configSetName = configSetName;
-        await saveConnectionMetadata(metadata);
+        await saveConnectionMetadata(metadata); // baseline:allow-early-save — migration checkpoint; Pulumi re-deploy comes later
 
         try {
           await progress.execute(

@@ -125,7 +125,7 @@ describe("email test command", () => {
     expect(input.Destination?.ToAddresses).toEqual([
       "success@simulator.amazonses.com",
     ]);
-    expect(input.ConfigurationSetName).toBe("wraps-email-tracking");
+    expect(input.ConfigurationSetName).toBe("wraps-email-example-com");
     expect(input.Content?.Simple?.Subject?.Data).toBe("Test email from Wraps");
   });
 
