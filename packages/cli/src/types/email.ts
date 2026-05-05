@@ -23,7 +23,31 @@ export type AdditionalDomain = {
   purpose?: DomainPurpose;
   configSetName?: string;
   trackingConfig?: { opens: boolean; clicks: boolean };
+  tlsRequired?: boolean;
+  reputationMetrics?: boolean;
+  suppressionReasons?: ("BOUNCE" | "COMPLAINT")[];
+  sendingEnabled?: boolean;
+  archiveEnabled?: boolean;
+  archiveArn?: string;
+  vdmEngagement?: boolean;
+  vdmInbox?: boolean;
   addedAt: string;
+};
+
+export type EmailDomainsConfigOptions = {
+  domain?: string;
+  opens?: boolean;
+  clicks?: boolean;
+  tlsRequired?: boolean;
+  reputationMetrics?: boolean;
+  suppressBounce?: boolean;
+  suppressComplaint?: boolean;
+  archive?: boolean;
+  sendingEnabled?: boolean;
+  vdmEngagement?: boolean;
+  vdmInbox?: boolean;
+  region?: string;
+  json?: boolean;
 };
 
 /**
@@ -165,6 +189,10 @@ export type WrapsEmailConfig = {
   ipPool?: string;
   dedicatedIp?: boolean;
   sendingEnabled?: boolean;
+  vdmOptions?: {
+    engagementTrackingEnabled?: boolean;
+    optimizedSharedDeliveryEnabled?: boolean;
+  };
 };
 
 /**

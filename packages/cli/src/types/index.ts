@@ -29,6 +29,7 @@ export type {
   AlertThresholds,
   DomainPurpose,
   EmailConfigOptions,
+  EmailDomainsConfigOptions,
   EmailConfigPreset,
   EmailConnectOptions,
   EmailFeatureCostBreakdown,

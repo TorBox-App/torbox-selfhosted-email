@@ -148,10 +148,13 @@ export async function deployEmailStack(
       region: config.region,
       trackingConfig: effectiveTrackingConfig,
       eventTypes: emailConfig.eventTracking?.events,
-      eventTrackingEnabled: emailConfig.eventTracking?.enabled, // Pass flag to create EventBridge destination
-      tlsRequired: emailConfig.tlsRequired, // Require TLS encryption for all emails
-      importExistingEventDestination: shouldImportEventDest, // Import if exists to avoid AlreadyExistsException
-      skipResourceImports: config.skipResourceImports, // Skip import flags when resources already in Pulumi state
+      eventTrackingEnabled: emailConfig.eventTracking?.enabled,
+      tlsRequired: emailConfig.tlsRequired,
+      reputationMetrics: emailConfig.reputationMetrics,
+      sendingEnabled: emailConfig.sendingEnabled,
+      suppressionReasons: emailConfig.suppressionList?.reasons,
+      importExistingEventDestination: shouldImportEventDest,
+      skipResourceImports: config.skipResourceImports,
     });
   }
 

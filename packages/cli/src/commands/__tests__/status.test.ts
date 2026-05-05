@@ -60,6 +60,7 @@ vi.mock("../../utils/shared/aws-detection.js", () => ({
 vi.mock("@clack/prompts", () => ({
   intro: vi.fn(),
   outro: vi.fn(),
+  note: vi.fn(),
   log: {
     error: vi.fn(),
     success: vi.fn(),
@@ -345,6 +346,67 @@ describe("email status command", () => {
       expect(output.success).toBe(true);
       expect(output.command).toBe("email.status");
       expect(output.data).toBeDefined();
+    });
+  });
+
+  describe("displayStatus rendering", () => {
+    it("Unit 6: renders Tracking line when domain has trackingConfig", async () => {
+      const { displayStatus } = await vi.importActual<
+        typeof import("../../utils/shared/output.js")
+      >("../../utils/shared/output.js");
+
+      const clack = await import("@clack/prompts");
+
+      displayStatus({
+        integrationLevel: "dashboard-only",
+        region: "us-east-1",
+        domains: [
+          {
+            domain: "test.com",
+            status: "verified",
+            trackingConfig: { opens: true, clicks: false },
+          },
+        ],
+        resources: {},
+      });
+
+      expect(clack.note).toHaveBeenCalledWith(
+        expect.stringContaining("Tracking:"),
+        expect.any(String)
+      );
+      const noteArg = vi.mocked(clack.note).mock.calls[0][0] as string;
+      // opens: true → "on"; clicks: false → "off"
+      expect(noteArg).toContain("on");
+      expect(noteArg).toContain("off");
+      // Verify renders differ: a hardcoded string couldn't satisfy both
+      expect(noteArg).toMatch(/opens.*on/);
+      expect(noteArg).toMatch(/clicks.*off/);
+    });
+
+    it("Unit 7: omits tracking line when domain has no trackingConfig", async () => {
+      const { displayStatus } = await vi.importActual<
+        typeof import("../../utils/shared/output.js")
+      >("../../utils/shared/output.js");
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.note).mockClear();
+
+      displayStatus({
+        integrationLevel: "dashboard-only",
+        region: "us-east-1",
+        domains: [
+          {
+            domain: "test.com",
+            status: "verified",
+          },
+        ],
+        resources: {},
+      });
+
+      const noteArg = vi.mocked(clack.note).mock.calls[0]?.[0] as
+        | string
+        | undefined;
+      expect(noteArg ?? "").not.toContain("Tracking:");
     });
   });
 });

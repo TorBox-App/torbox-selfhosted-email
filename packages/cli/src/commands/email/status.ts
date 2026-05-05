@@ -137,6 +137,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
           managed: tracked?.managed,
           isPrimary: tracked?.isPrimary,
           purpose: tracked?.purpose,
+          trackingConfig: tracked?.trackingConfig,
         };
       } catch (error) {
         // Non-fatal: return partial info if individual domain detail fetch fails
@@ -150,6 +151,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
             managed: tracked?.managed,
             isPrimary: tracked?.isPrimary,
             purpose: tracked?.purpose,
+            trackingConfig: tracked?.trackingConfig,
           };
         }
         throw error;

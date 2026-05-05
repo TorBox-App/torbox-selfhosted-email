@@ -1308,3 +1308,5 @@ export async function removeDomain(options: {
     throw error;
   }
 }
+
+export { configDomain } from "./config-domain.js";

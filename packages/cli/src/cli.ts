@@ -25,6 +25,7 @@ import { emailDestroy } from "./commands/email/destroy.js";
 import { emailDoctor } from "./commands/email/doctor.js";
 import {
   addDomain,
+  configDomain,
   getDkim,
   listDomains,
   removeDomain,
@@ -842,12 +843,31 @@ async function run() {
               break;
             }
 
+            case "config": {
+              await configDomain({
+                domain: flags.domain,
+                opens: flags.opens,
+                clicks: flags.clicks,
+                tlsRequired: flags.tlsRequired,
+                reputationMetrics: flags.reputationMetrics,
+                suppressBounce: flags.suppressBounce,
+                suppressComplaint: flags.suppressComplaint,
+                archive: flags.archive,
+                sendingEnabled: flags.sendingEnabled,
+                vdmEngagement: flags.vdmEngagement,
+                vdmInbox: flags.vdmInbox,
+                region: flags.region,
+                json: flags.json,
+              });
+              break;
+            }
+
             default:
               clack.log.error(
                 `Unknown domains command: ${domainsSubCommand || "(none)"}`
               );
               console.log(
-                `\nAvailable commands: ${pc.cyan("add")}, ${pc.cyan("list")}, ${pc.cyan("verify")}, ${pc.cyan("get-dkim")}, ${pc.cyan("remove")}\n`
+                `\nAvailable commands: ${pc.cyan("add")}, ${pc.cyan("list")}, ${pc.cyan("verify")}, ${pc.cyan("get-dkim")}, ${pc.cyan("remove")}, ${pc.cyan("config")}\n`
               );
               throw new Error(
                 `Unknown domains command: ${domainsSubCommand || "(none)"}`

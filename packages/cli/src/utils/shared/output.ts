@@ -353,6 +353,8 @@ export type StatusOutputs = {
     isPrimary?: boolean;
     /** Purpose label from metadata (transactional, marketing, etc.) */
     purpose?: string;
+    /** Per-domain tracking config (opens/clicks) */
+    trackingConfig?: { opens: boolean; clicks: boolean };
   }>;
   resources: {
     roleArn?: string;
@@ -416,6 +418,12 @@ export function displayStatus(status: StatusOutputs) {
         const mailFromColor =
           d.mailFromStatus === "SUCCESS" ? pc.green : pc.yellow;
         domainLine += `\n      ${pc.dim("MAIL FROM:")} ${d.mailFromDomain} ${mailFromColor(mailFromStatusIcon)}`;
+      }
+
+      if (d.trackingConfig !== undefined) {
+        const opensLabel = d.trackingConfig.opens ? pc.green("on") : pc.dim("off");
+        const clicksLabel = d.trackingConfig.clicks ? pc.green("on") : pc.dim("off");
+        domainLine += `\n      ${pc.dim("Tracking:")} opens ${opensLabel} · clicks ${clicksLabel}`;
       }
 
       return domainLine;

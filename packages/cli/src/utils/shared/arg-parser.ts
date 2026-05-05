@@ -64,6 +64,18 @@ export type CliFlags = {
   // Inbound status
   revealSecret?: boolean;
 
+  // Domain config
+  opens?: boolean;
+  clicks?: boolean;
+  tlsRequired?: boolean;
+  reputationMetrics?: boolean;
+  suppressBounce?: boolean;
+  suppressComplaint?: boolean;
+  archive?: boolean;
+  sendingEnabled?: boolean;
+  vdmEngagement?: boolean;
+  vdmInbox?: boolean;
+
   // Help / version (informational; cli.ts short-circuits before parsing)
   help?: boolean;
   version?: boolean;
@@ -130,6 +142,16 @@ const BOOLEAN_FLAGS = [
   "root",
   "cleanup",
   "reveal-secret",
+  "opens",
+  "clicks",
+  "tls-required",
+  "reputation-metrics",
+  "suppress-bounce",
+  "suppress-complaint",
+  "archive",
+  "sending-enabled",
+  "vdm-engagement",
+  "vdm-inbox",
   "help",
   "version",
 ] as const;

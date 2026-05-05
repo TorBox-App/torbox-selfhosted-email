@@ -19,6 +19,9 @@ export type SESResourcesConfig = {
   eventTypes?: SESEventType[];
   eventTrackingEnabled?: boolean; // NEW: Whether to create EventBridge event destination
   tlsRequired?: boolean; // Require TLS encryption for all emails
+  reputationMetrics?: boolean; // Enable CloudWatch reputation metrics
+  sendingEnabled?: boolean; // Enable/disable sending through this config set
+  suppressionReasons?: ("BOUNCE" | "COMPLAINT")[]; // Which event types trigger account suppression list
   importExistingEventDestination?: boolean; // Import existing event destination if it exists
   skipResourceImports?: boolean; // Skip import flags when resources already exist in Pulumi state
 };
@@ -138,10 +141,14 @@ export async function createSESResources(
         }
       : undefined,
     suppressionOptions: {
-      // Automatically suppress hard bounces and complaints at the configuration set level
-      // This provides protection even if account-level suppression isn't configured
-      suppressedReasons: ["BOUNCE", "COMPLAINT"],
+      suppressedReasons: config.suppressionReasons ?? ["BOUNCE", "COMPLAINT"],
     },
+    reputationOptions: config.reputationMetrics !== undefined
+      ? { reputationMetricsEnabled: config.reputationMetrics }
+      : undefined,
+    sendingOptions: config.sendingEnabled !== undefined
+      ? { sendingEnabled: config.sendingEnabled }
+      : undefined,
     tags: {
       ManagedBy: "wraps-cli",
       Service: "email",
