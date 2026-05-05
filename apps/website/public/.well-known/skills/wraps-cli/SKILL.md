@@ -117,6 +117,45 @@ wraps email upgrade --feature tracking
 wraps email upgrade --feature webhooks
 ```
 
+### `wraps email domains config`
+
+Configure SES configuration set options per domain — tracking, delivery, reputation, suppression, archiving, sending, and VDM.
+
+```bash
+# Interactive menu (7 groups — select, adjust, done)
+wraps email domains config
+
+# For a specific domain
+wraps email domains config --domain myapp.com
+
+# Non-interactive flags (apply directly, no menu)
+wraps email domains config --domain myapp.com --opens --clicks
+wraps email domains config --domain myapp.com --tls-required --no-reputation-metrics
+wraps email domains config --domain myapp.com --archive --suppress-bounce --suppress-complaint
+wraps email domains config --domain myapp.com --no-sending-enabled
+```
+
+**Flag reference:**
+
+| Group | Enable | Disable |
+|-------|--------|---------|
+| Open tracking | `--opens` | `--no-opens` |
+| Click tracking | `--clicks` | `--no-clicks` |
+| TLS required | `--tls-required` | `--no-tls-required` |
+| Sending enabled | `--sending-enabled` | `--no-sending-enabled` |
+| Reputation metrics | `--reputation-metrics` | `--no-reputation-metrics` |
+| Suppress bounces | `--suppress-bounce` | `--no-suppress-bounce` |
+| Suppress complaints | `--suppress-complaint` | `--no-suppress-complaint` |
+| Email archive | `--archive` | `--no-archive` |
+| VDM engagement | `--vdm-engagement` | `--no-vdm-engagement` |
+| VDM inbox | `--vdm-inbox` | `--no-vdm-inbox` |
+
+**Notes:**
+- Archive uses a shared `wraps-email-archive` Mail Manager archive, created automatically on first use
+- VDM options only appear when the AWS account has Virtual Deliverability Manager enabled
+- Primary domain: after changes, run `wraps email upgrade` to sync Pulumi state
+- Additional domains: changes are saved to local metadata immediately
+
 ### `wraps email connect`
 
 Import existing SES infrastructure into Wraps management.

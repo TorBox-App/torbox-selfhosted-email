@@ -371,6 +371,224 @@ export default function CLIReferenceEmailPageContent() {
             </CardContent>
           </Card>
         </div>
+
+        {/* domains config */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email domains config
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Configure SES configuration set options for a domain. Adjusts
+            tracking, delivery, reputation, suppression, archiving, sending, and
+            VDM settings directly on the domain&apos;s SES configuration set.
+            Works in interactive menu mode or non-interactively via flags.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email domains config [options]" />
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -d, --domain &lt;domain&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Domain to configure (prompted interactively if omitted)
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Tracking
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --opens / --no-opens
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable open tracking
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --clicks / --no-clicks
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable click tracking
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Delivery
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --tls-required / --no-tls-required
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Require TLS encryption for delivery
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Sending
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --sending-enabled / --no-sending-enabled
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable sending for this domain
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Reputation
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --reputation-metrics / --no-reputation-metrics
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable reputation metrics tracking
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Suppression
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --suppress-bounce / --no-suppress-bounce
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Add or remove BOUNCE from the suppression list
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --suppress-complaint / --no-suppress-complaint
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Add or remove COMPLAINT from the suppression list
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  Archive
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --archive / --no-archive
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable email archiving via Mail Manager
+                  </span>
+                </li>
+                <li className="pt-1 font-medium text-foreground">
+                  VDM (Virtual Deliverability Manager)
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --vdm-engagement / --no-vdm-engagement
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable VDM engagement tracking
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --vdm-inbox / --no-vdm-inbox
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Enable or disable VDM inbox placement optimization
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">How It Works</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+                <li>
+                  <strong className="text-foreground">Interactive mode</strong>{" "}
+                  — when no flags are passed, displays a menu with all 7
+                  configuration groups. Select a group, adjust its setting, then
+                  return to the menu. Select &quot;Done&quot; to apply all
+                  changes.
+                </li>
+                <li>
+                  <strong className="text-foreground">Flag mode</strong> — when
+                  any flag is passed, applies only those settings immediately
+                  without showing the menu.
+                </li>
+                <li>
+                  <strong className="text-foreground">Primary domain</strong> —
+                  changes are applied directly to the SES configuration set. A
+                  note is shown afterward to run{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    wraps email upgrade
+                  </code>{" "}
+                  to sync Pulumi state.
+                </li>
+                <li>
+                  <strong className="text-foreground">Additional domains</strong>{" "}
+                  — changes are applied to the domain&apos;s configuration set
+                  and saved to local metadata.
+                </li>
+                <li>
+                  <strong className="text-foreground">Email archive</strong> —
+                  uses a shared{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    wraps-email-archive
+                  </code>{" "}
+                  Mail Manager archive, created automatically on first use.
+                </li>
+                <li>
+                  <strong className="text-foreground">VDM options</strong> —
+                  only shown when your AWS account has Virtual Deliverability
+                  Manager enabled.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Examples</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Interactive configuration wizard:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email domains config" />
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Enable open and click tracking for a domain:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email domains config -d yourdomain.com --opens --clicks" />
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Require TLS and disable reputation metrics:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email domains config -d yourdomain.com --tls-required --no-reputation-metrics" />
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-muted-foreground text-sm">
+                  Enable archiving and suppress bounces:
+                </p>
+                <CLICommand command="npx @wraps.dev/cli email domains config -d yourdomain.com --archive --suppress-bounce" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* wraps email inbound */}
