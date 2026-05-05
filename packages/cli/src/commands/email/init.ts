@@ -143,7 +143,7 @@ export async function init(options: InitOptions): Promise<void> {
     clack.log.info(`Created: ${existingConnection.timestamp}`);
     const domainHint = options.domain ? ` ${options.domain}` : " <domain>";
     clack.log.info(
-      `To add another sending domain: ${pc.cyan(`wraps email domain add${domainHint}`)}`
+      `To add another sending domain: ${pc.cyan(`wraps email domains add${domainHint}`)}`
     );
     clack.log.info(`Use ${pc.cyan("wraps status")} to view current setup`);
     clack.log.info(`Use ${pc.cyan("wraps upgrade")} to add more features`);
