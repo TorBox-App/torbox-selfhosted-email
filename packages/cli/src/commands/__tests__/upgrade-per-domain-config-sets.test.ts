@@ -503,7 +503,7 @@ describe("upgrade per-domain-config-sets migration", () => {
       expect(configSetNames).toContain("wraps-email-mail-example-com");
     });
 
-    it("should use all event types for domains without trackingConfig", async () => {
+    it("should use all event types for domains without trackingConfig or purpose", async () => {
       await setupPulumiMock();
 
       vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
@@ -538,6 +538,112 @@ describe("upgrade per-domain-config-sets migration", () => {
       expect(matchingEventTypes).toContain("CLICK");
       expect(matchingEventTypes).toContain("BOUNCE");
       expect(matchingEventTypes).toContain("COMPLAINT");
+    });
+
+    it("should exclude OPEN and CLICK for transactional domains without trackingConfig", async () => {
+      await setupPulumiMock();
+
+      vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
+        baseMetadata({
+          emailConfig: {
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                purpose: "transactional",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }) as any
+      );
+
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
+      vi.mocked(clack.confirm).mockResolvedValue(true as never);
+
+      await upgrade({ yes: true });
+
+      const destCalls = mockSesClientSend.mock.calls.filter(
+        (call: any[]) =>
+          call[0] instanceof CreateConfigurationSetEventDestinationCommand
+      );
+      const matchingEventTypes =
+        destCalls[0][0].input.EventDestination.MatchingEventTypes;
+      expect(matchingEventTypes).not.toContain("OPEN");
+      expect(matchingEventTypes).not.toContain("CLICK");
+      expect(matchingEventTypes).toContain("SEND");
+      expect(matchingEventTypes).toContain("BOUNCE");
+    });
+
+    it("should exclude OPEN and CLICK for notifications domains without trackingConfig", async () => {
+      await setupPulumiMock();
+
+      vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
+        baseMetadata({
+          emailConfig: {
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                purpose: "notifications",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }) as any
+      );
+
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
+      vi.mocked(clack.confirm).mockResolvedValue(true as never);
+
+      await upgrade({ yes: true });
+
+      const destCalls = mockSesClientSend.mock.calls.filter(
+        (call: any[]) =>
+          call[0] instanceof CreateConfigurationSetEventDestinationCommand
+      );
+      const matchingEventTypes =
+        destCalls[0][0].input.EventDestination.MatchingEventTypes;
+      expect(matchingEventTypes).not.toContain("OPEN");
+      expect(matchingEventTypes).not.toContain("CLICK");
+      expect(matchingEventTypes).toContain("SEND");
+      expect(matchingEventTypes).toContain("BOUNCE");
+    });
+
+    it("should include OPEN and CLICK for marketing domains without trackingConfig", async () => {
+      await setupPulumiMock();
+
+      vi.mocked(metadataUtils.loadConnectionMetadata).mockResolvedValue(
+        baseMetadata({
+          emailConfig: {
+            additionalDomains: [
+              {
+                domain: "app.example.com",
+                purpose: "marketing",
+                addedAt: "2024-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }) as any
+      );
+
+      vi.mocked(clack.select).mockResolvedValueOnce(
+        "per-domain-config-sets" as never
+      );
+      vi.mocked(clack.confirm).mockResolvedValue(true as never);
+
+      await upgrade({ yes: true });
+
+      const destCalls = mockSesClientSend.mock.calls.filter(
+        (call: any[]) =>
+          call[0] instanceof CreateConfigurationSetEventDestinationCommand
+      );
+      const matchingEventTypes =
+        destCalls[0][0].input.EventDestination.MatchingEventTypes;
+      expect(matchingEventTypes).toContain("OPEN");
+      expect(matchingEventTypes).toContain("CLICK");
     });
 
     it("should include per-domain-config-sets option in upgrade menu", async () => {
