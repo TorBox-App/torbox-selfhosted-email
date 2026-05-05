@@ -188,13 +188,11 @@ export async function createSESResources(
   if (config.eventTrackingEnabled) {
     const eventDestName = "wraps-email-eventbridge";
 
-    const opensEnabled = config.trackingConfig?.opens ?? true;
-    const clicksEnabled = config.trackingConfig?.clicks ?? true;
     const matchingEventTypes: string[] = [
       "SEND",
       "DELIVERY",
-      ...(opensEnabled ? ["OPEN"] : []),
-      ...(clicksEnabled ? ["CLICK"] : []),
+      "OPEN",
+      "CLICK",
       "BOUNCE",
       "COMPLAINT",
       "REJECT",

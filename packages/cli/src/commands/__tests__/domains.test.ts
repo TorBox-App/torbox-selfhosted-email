@@ -865,7 +865,7 @@ describe("Domain Management Commands", () => {
       });
     });
 
-    it("Unit 9: transactional purpose: event destination excludes OPEN and CLICK", async () => {
+    it("Unit 9: all event types always forwarded to EventBridge regardless of purpose", async () => {
       const notFoundError = new Error("Not found");
       notFoundError.name = "NotFoundException";
       sesClientMock
@@ -894,8 +894,10 @@ describe("Domain Management Commands", () => {
       expect(destCalls.length).toBeGreaterThanOrEqual(1);
       const eventTypes =
         destCalls[0].args[0].input.EventDestination?.MatchingEventTypes ?? [];
-      expect(eventTypes).not.toContain("OPEN");
-      expect(eventTypes).not.toContain("CLICK");
+      expect(eventTypes).toContain("OPEN");
+      expect(eventTypes).toContain("CLICK");
+      expect(eventTypes).toContain("SEND");
+      expect(eventTypes).toContain("BOUNCE");
     });
 
     it("Unit 10: marketing purpose: event destination includes OPEN and CLICK", async () => {

@@ -665,9 +665,11 @@ export async function addDomain(options: {
       opens: purpose === "marketing" || purpose === "notifications",
       clicks: purpose === "marketing" || purpose === "notifications",
     };
-    const baseEventTypes: EventType[] = [
+    const matchingEventTypes: EventType[] = [
       "SEND",
       "DELIVERY",
+      "OPEN",
+      "CLICK",
       "BOUNCE",
       "COMPLAINT",
       "REJECT",
@@ -675,9 +677,6 @@ export async function addDomain(options: {
       "DELIVERY_DELAY",
       "SUBSCRIPTION",
     ];
-    const matchingEventTypes: EventType[] = trackingConfig.opens
-      ? [...baseEventTypes, "OPEN", "CLICK"]
-      : [...baseEventTypes];
 
     const eventBusArn = `arn:aws:events:${region}:${identity.accountId}:event-bus/default`;
 

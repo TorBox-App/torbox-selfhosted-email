@@ -1731,7 +1731,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           }
         );
 
-        const allEvents = [
+        const matchingEventTypes = [
           EventType.SEND,
           EventType.DELIVERY,
           EventType.OPEN,
@@ -1743,22 +1743,6 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           EventType.DELIVERY_DELAY,
           EventType.SUBSCRIPTION,
         ];
-
-        // Derive tracking from explicit config, then fall back to purpose,
-        // then default to all events. Transactional/notifications disable
-        // open+click tracking; marketing enables it.
-        const trackingEnabled =
-          d.trackingConfig != null
-            ? d.trackingConfig
-            : d.purpose === "transactional" || d.purpose === "notifications"
-              ? { opens: false, clicks: false }
-              : { opens: true, clicks: true };
-
-        const matchingEventTypes = allEvents.filter((evt) => {
-          if (evt === EventType.OPEN) return trackingEnabled.opens;
-          if (evt === EventType.CLICK) return trackingEnabled.clicks;
-          return true;
-        });
 
         await progress.execute(
           `Adding EventBridge destination for ${d.domain}`,
