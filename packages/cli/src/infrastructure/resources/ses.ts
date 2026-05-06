@@ -143,12 +143,14 @@ export async function createSESResources(
     suppressionOptions: {
       suppressedReasons: config.suppressionReasons ?? ["BOUNCE", "COMPLAINT"],
     },
-    reputationOptions: config.reputationMetrics !== undefined
-      ? { reputationMetricsEnabled: config.reputationMetrics }
-      : undefined,
-    sendingOptions: config.sendingEnabled !== undefined
-      ? { sendingEnabled: config.sendingEnabled }
-      : undefined,
+    reputationOptions:
+      config.reputationMetrics !== undefined
+        ? { reputationMetricsEnabled: config.reputationMetrics }
+        : undefined,
+    sendingOptions:
+      config.sendingEnabled !== undefined
+        ? { sendingEnabled: config.sendingEnabled }
+        : undefined,
     tags: {
       ManagedBy: "wraps-cli",
       Service: "email",

@@ -1,8 +1,8 @@
+import { Building2 } from "lucide-react";
 import type { Metadata } from "next";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
-import { Building2 } from "lucide-react";
 import { ScalePlanContent } from "./page-content";
 
 const articleSchema = {
@@ -100,8 +100,8 @@ export default function Page() {
                 "1-year history",
               ].map((tag) => (
                 <span
-                  key={tag}
                   className="rounded-full border bg-muted/30 px-3 py-1 text-foreground/70 text-sm"
+                  key={tag}
                 >
                   {tag}
                 </span>

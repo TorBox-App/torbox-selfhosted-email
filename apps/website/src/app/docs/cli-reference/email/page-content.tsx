@@ -405,9 +405,7 @@ export default function CLIReferenceEmailPageContent() {
                     Domain to configure (prompted interactively if omitted)
                   </span>
                 </li>
-                <li className="pt-1 font-medium text-foreground">
-                  Tracking
-                </li>
+                <li className="pt-1 font-medium text-foreground">Tracking</li>
                 <li>
                   <code className="rounded bg-muted px-2 py-1">
                     --opens / --no-opens
@@ -424,9 +422,7 @@ export default function CLIReferenceEmailPageContent() {
                     Enable or disable click tracking
                   </span>
                 </li>
-                <li className="pt-1 font-medium text-foreground">
-                  Delivery
-                </li>
+                <li className="pt-1 font-medium text-foreground">Delivery</li>
                 <li>
                   <code className="rounded bg-muted px-2 py-1">
                     --tls-required / --no-tls-required
@@ -435,9 +431,7 @@ export default function CLIReferenceEmailPageContent() {
                     Require TLS encryption for delivery
                   </span>
                 </li>
-                <li className="pt-1 font-medium text-foreground">
-                  Sending
-                </li>
+                <li className="pt-1 font-medium text-foreground">Sending</li>
                 <li>
                   <code className="rounded bg-muted px-2 py-1">
                     --sending-enabled / --no-sending-enabled
@@ -446,9 +440,7 @@ export default function CLIReferenceEmailPageContent() {
                     Enable or disable sending for this domain
                   </span>
                 </li>
-                <li className="pt-1 font-medium text-foreground">
-                  Reputation
-                </li>
+                <li className="pt-1 font-medium text-foreground">Reputation</li>
                 <li>
                   <code className="rounded bg-muted px-2 py-1">
                     --reputation-metrics / --no-reputation-metrics
@@ -476,9 +468,7 @@ export default function CLIReferenceEmailPageContent() {
                     Add or remove COMPLAINT from the suppression list
                   </span>
                 </li>
-                <li className="pt-1 font-medium text-foreground">
-                  Archive
-                </li>
+                <li className="pt-1 font-medium text-foreground">Archive</li>
                 <li>
                   <code className="rounded bg-muted px-2 py-1">
                     --archive / --no-archive
@@ -537,7 +527,9 @@ export default function CLIReferenceEmailPageContent() {
                   to sync Pulumi state.
                 </li>
                 <li>
-                  <strong className="text-foreground">Additional domains</strong>{" "}
+                  <strong className="text-foreground">
+                    Additional domains
+                  </strong>{" "}
                   — changes are applied to the domain&apos;s configuration set
                   and saved to local metadata.
                 </li>

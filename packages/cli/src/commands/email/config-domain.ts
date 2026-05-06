@@ -1,4 +1,11 @@
 import {
+  ArchiveState,
+  CreateArchiveCommand,
+  GetArchiveCommand,
+  ListArchivesCommand,
+  MailManagerClient,
+} from "@aws-sdk/client-mailmanager";
+import {
   GetAccountCommand,
   GetConfigurationSetCommand,
   GetConfigurationSetEventDestinationsCommand,
@@ -11,13 +18,6 @@ import {
   SESv2Client,
   UpdateConfigurationSetEventDestinationCommand,
 } from "@aws-sdk/client-sesv2";
-import {
-  ArchiveState,
-  CreateArchiveCommand,
-  GetArchiveCommand,
-  ListArchivesCommand,
-  MailManagerClient,
-} from "@aws-sdk/client-mailmanager";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
@@ -59,7 +59,8 @@ async function findOrCreateEmailArchive(region: string): Promise<string> {
   try {
     const listResult = await client.send(new ListArchivesCommand({}));
     const existing = listResult.Archives?.find(
-      (a) => a.ArchiveState === ArchiveState.ACTIVE && a.ArchiveName === baseName
+      (a) =>
+        a.ArchiveState === ArchiveState.ACTIVE && a.ArchiveName === baseName
     );
     if (existing?.ArchiveId) {
       const getResult = await client.send(
@@ -67,8 +68,9 @@ async function findOrCreateEmailArchive(region: string): Promise<string> {
       );
       if (getResult.ArchiveArn) return getResult.ArchiveArn;
     }
-  } catch {
-    // fall through to creation
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    // fall through to creation if listing/getting archives fails
   }
 
   let archiveId: string | undefined;
@@ -164,12 +166,19 @@ export async function configDomain(
               domain: primaryDomain,
               configSetName: domainToConfigSetName(primaryDomain),
               tlsRequired: metadata.services.email.config.tlsRequired,
-              reputationMetrics: metadata.services.email.config.reputationMetrics,
-              suppressionReasons: metadata.services.email.config.suppressionList?.reasons,
+              reputationMetrics:
+                metadata.services.email.config.reputationMetrics,
+              suppressionReasons:
+                metadata.services.email.config.suppressionList?.reasons,
               sendingEnabled: metadata.services.email.config.sendingEnabled,
-              archiveEnabled: metadata.services.email.config.emailArchiving?.enabled,
-              vdmEngagement: metadata.services.email.config.vdmOptions?.engagementTrackingEnabled,
-              vdmInbox: metadata.services.email.config.vdmOptions?.optimizedSharedDeliveryEnabled,
+              archiveEnabled:
+                metadata.services.email.config.emailArchiving?.enabled,
+              vdmEngagement:
+                metadata.services.email.config.vdmOptions
+                  ?.engagementTrackingEnabled,
+              vdmInbox:
+                metadata.services.email.config.vdmOptions
+                  ?.optimizedSharedDeliveryEnabled,
             },
           ]
         : []),
@@ -199,7 +208,10 @@ export async function configDomain(
         "MISSING_REQUIRED_FLAG",
         "Provide --domain <domain>"
       );
-    } else if (!options.domain) {
+    }
+    if (options.domain) {
+      targetDomain = options.domain;
+    } else {
       if (candidates.length === 0) {
         progress.stop();
         clack.log.error(
@@ -224,8 +236,6 @@ export async function configDomain(
         return;
       }
       targetDomain = selected;
-    } else {
-      targetDomain = options.domain;
     }
 
     const candidate = candidates.find((c) => c.domain === targetDomain);
@@ -252,33 +262,54 @@ export async function configDomain(
 
     // Detect group flags — `options.*` can be true/false from direct calls;
     // `--no-X` in argv covers the CLI negated-flag path.
-    const flag = (val: boolean | undefined, noArgv: string): boolean | undefined =>
-      val !== undefined ? val : process.argv.includes(noArgv) ? false : undefined;
+    const flag = (
+      val: boolean | undefined,
+      noArgv: string
+    ): boolean | undefined =>
+      val !== undefined
+        ? val
+        : process.argv.includes(noArgv)
+          ? false
+          : undefined;
 
     const opensFlag = flag(options.opens, "--no-opens");
     const clicksFlag = flag(options.clicks, "--no-clicks");
     const tlsFlag = flag(options.tlsRequired, "--no-tls-required");
-    const reputationFlag = flag(options.reputationMetrics, "--no-reputation-metrics");
-    const suppressBounceFlag = flag(options.suppressBounce, "--no-suppress-bounce");
-    const suppressComplaintFlag = flag(options.suppressComplaint, "--no-suppress-complaint");
+    const reputationFlag = flag(
+      options.reputationMetrics,
+      "--no-reputation-metrics"
+    );
+    const suppressBounceFlag = flag(
+      options.suppressBounce,
+      "--no-suppress-bounce"
+    );
+    const suppressComplaintFlag = flag(
+      options.suppressComplaint,
+      "--no-suppress-complaint"
+    );
     const archiveFlag = flag(options.archive, "--no-archive");
-    const sendingEnabledFlag = flag(options.sendingEnabled, "--no-sending-enabled");
-    const vdmEngagementFlag = flag(options.vdmEngagement, "--no-vdm-engagement");
+    const sendingEnabledFlag = flag(
+      options.sendingEnabled,
+      "--no-sending-enabled"
+    );
+    const vdmEngagementFlag = flag(
+      options.vdmEngagement,
+      "--no-vdm-engagement"
+    );
     const vdmInboxFlag = flag(options.vdmInbox, "--no-vdm-inbox");
 
-    const hasGroupFlags =
-      [
-        opensFlag,
-        clicksFlag,
-        tlsFlag,
-        reputationFlag,
-        suppressBounceFlag,
-        suppressComplaintFlag,
-        archiveFlag,
-        sendingEnabledFlag,
-        vdmEngagementFlag,
-        vdmInboxFlag,
-      ].some((f) => f !== undefined);
+    const hasGroupFlags = [
+      opensFlag,
+      clicksFlag,
+      tlsFlag,
+      reputationFlag,
+      suppressBounceFlag,
+      suppressComplaintFlag,
+      archiveFlag,
+      sendingEnabledFlag,
+      vdmEngagementFlag,
+      vdmInboxFlag,
+    ].some((f) => f !== undefined);
 
     const sesClient = new SESv2Client({ region });
 
@@ -342,7 +373,12 @@ function persistCandidateField<K extends keyof DomainCandidate>(
 ): void {
   (ctx.candidate as DomainCandidate)[field] = value;
   if (ctx.candidate.additionalIndex !== undefined) {
-    (ctx.additionalDomains[ctx.candidate.additionalIndex] as Record<string, unknown>)[field as string] = value;
+    (
+      ctx.additionalDomains[ctx.candidate.additionalIndex] as Record<
+        string,
+        unknown
+      >
+    )[field as string] = value;
   } else {
     const emailConfig = ctx.metadata.services.email!.config;
     switch (field) {
@@ -364,10 +400,13 @@ function persistCandidateField<K extends keyof DomainCandidate>(
         break;
       }
       case "archiveEnabled":
-        if (!emailConfig.emailArchiving) {
-          emailConfig.emailArchiving = { enabled: value as boolean, retention: "18months" };
-        } else {
+        if (emailConfig.emailArchiving) {
           emailConfig.emailArchiving.enabled = value as boolean;
+        } else {
+          emailConfig.emailArchiving = {
+            enabled: value as boolean,
+            retention: "18months",
+          };
         }
         break;
       case "archiveArn":
@@ -387,7 +426,8 @@ function persistCandidateField<K extends keyof DomainCandidate>(
         break;
       case "vdmInbox":
         if (!emailConfig.vdmOptions) emailConfig.vdmOptions = {};
-        emailConfig.vdmOptions.optimizedSharedDeliveryEnabled = value as boolean;
+        emailConfig.vdmOptions.optimizedSharedDeliveryEnabled =
+          value as boolean;
         break;
     }
   }
@@ -414,7 +454,7 @@ async function applyTracking(
     throw new WrapsError(
       `Event destination not found for ${ctx.candidate.domain}. Run ${pc.cyan("wraps email upgrade")} first.`,
       "EVENT_DESTINATION_NOT_FOUND",
-      `Run wraps email upgrade`
+      "Run wraps email upgrade"
     );
   }
 
@@ -423,7 +463,7 @@ async function applyTracking(
     throw new WrapsError(
       `Event destination for ${ctx.candidate.domain} is not an EventBridge destination. Run ${pc.cyan("wraps email upgrade")} first.`,
       "INVALID_EVENT_DESTINATION",
-      `Run wraps email upgrade`
+      "Run wraps email upgrade"
     );
   }
 
@@ -450,7 +490,10 @@ async function applyTracking(
   await saveMetadata(ctx);
 }
 
-async function applyDelivery(ctx: ApplyContext, tlsRequired: boolean): Promise<void> {
+async function applyDelivery(
+  ctx: ApplyContext,
+  tlsRequired: boolean
+): Promise<void> {
   await ctx.sesClient.send(
     new PutConfigurationSetDeliveryOptionsCommand({
       ConfigurationSetName: ctx.candidate.configSetName,
@@ -461,7 +504,10 @@ async function applyDelivery(ctx: ApplyContext, tlsRequired: boolean): Promise<v
   await saveMetadata(ctx);
 }
 
-async function applySending(ctx: ApplyContext, enabled: boolean): Promise<void> {
+async function applySending(
+  ctx: ApplyContext,
+  enabled: boolean
+): Promise<void> {
   await ctx.sesClient.send(
     new PutConfigurationSetSendingOptionsCommand({
       ConfigurationSetName: ctx.candidate.configSetName,
@@ -472,7 +518,10 @@ async function applySending(ctx: ApplyContext, enabled: boolean): Promise<void> 
   await saveMetadata(ctx);
 }
 
-async function applyReputation(ctx: ApplyContext, enabled: boolean): Promise<void> {
+async function applyReputation(
+  ctx: ApplyContext,
+  enabled: boolean
+): Promise<void> {
   await ctx.sesClient.send(
     new PutConfigurationSetReputationOptionsCommand({
       ConfigurationSetName: ctx.candidate.configSetName,
@@ -497,7 +546,11 @@ async function applySuppression(
   await saveMetadata(ctx);
 }
 
-async function applyArchive(ctx: ApplyContext, enable: boolean, region: string): Promise<void> {
+async function applyArchive(
+  ctx: ApplyContext,
+  enable: boolean,
+  region: string
+): Promise<void> {
   if (enable) {
     const archiveArn = await findOrCreateEmailArchive(region);
     await ctx.sesClient.send(
@@ -581,9 +634,8 @@ async function applyFlagMode(
     const opens = opensFlag ?? false;
     const clicks = clicksFlag ?? false;
     try {
-      await args.progress.execute(
-        "Updating tracking configuration",
-        async () => applyTracking(ctx, opens, clicks)
+      await args.progress.execute("Updating tracking configuration", async () =>
+        applyTracking(ctx, opens, clicks)
       );
     } catch (error) {
       args.progress.stop();
@@ -608,31 +660,33 @@ async function applyFlagMode(
   }
 
   if (tlsFlag !== undefined) {
-    await args.progress.execute(
-      "Updating TLS policy",
-      async () => applyDelivery(ctx, tlsFlag)
+    await args.progress.execute("Updating TLS policy", async () =>
+      applyDelivery(ctx, tlsFlag)
     );
     clack.log.success(`TLS policy set to ${tlsFlag ? "required" : "optional"}`);
   }
 
   if (sendingEnabledFlag !== undefined) {
-    await args.progress.execute(
-      "Updating sending status",
-      async () => applySending(ctx, sendingEnabledFlag)
+    await args.progress.execute("Updating sending status", async () =>
+      applySending(ctx, sendingEnabledFlag)
     );
     clack.log.success(`Sending ${sendingEnabledFlag ? "enabled" : "disabled"}`);
   }
 
   if (reputationFlag !== undefined) {
-    await args.progress.execute(
-      "Updating reputation metrics",
-      async () => applyReputation(ctx, reputationFlag)
+    await args.progress.execute("Updating reputation metrics", async () =>
+      applyReputation(ctx, reputationFlag)
     );
-    clack.log.success(`Reputation metrics ${reputationFlag ? "enabled" : "disabled"}`);
+    clack.log.success(
+      `Reputation metrics ${reputationFlag ? "enabled" : "disabled"}`
+    );
   }
 
   if (suppressBounceFlag !== undefined || suppressComplaintFlag !== undefined) {
-    const currentReasons = candidate.suppressionReasons ?? ["BOUNCE", "COMPLAINT"];
+    const currentReasons = candidate.suppressionReasons ?? [
+      "BOUNCE",
+      "COMPLAINT",
+    ];
     const suppressBounce =
       suppressBounceFlag !== undefined
         ? suppressBounceFlag
@@ -645,9 +699,8 @@ async function applyFlagMode(
       ...(suppressBounce ? ["BOUNCE" as const] : []),
       ...(suppressComplaint ? ["COMPLAINT" as const] : []),
     ];
-    await args.progress.execute(
-      "Updating suppression settings",
-      async () => applySuppression(ctx, newReasons)
+    await args.progress.execute("Updating suppression settings", async () =>
+      applySuppression(ctx, newReasons)
     );
     clack.log.success(
       `Suppression: ${newReasons.length > 0 ? newReasons.join(", ").toLowerCase() : "none"}`
@@ -659,15 +712,16 @@ async function applyFlagMode(
       archiveFlag ? "Enabling email archiving" : "Disabling email archiving",
       async () => applyArchive(ctx, archiveFlag, region)
     );
-    clack.log.success(`Email archiving ${archiveFlag ? "enabled" : "disabled"}`);
+    clack.log.success(
+      `Email archiving ${archiveFlag ? "enabled" : "disabled"}`
+    );
   }
 
   if (vdmEngagementFlag !== undefined || vdmInboxFlag !== undefined) {
     const engagement = vdmEngagementFlag ?? candidate.vdmEngagement ?? false;
     const inbox = vdmInboxFlag ?? candidate.vdmInbox ?? false;
-    await args.progress.execute(
-      "Updating VDM settings",
-      async () => applyVdm(ctx, engagement, inbox)
+    await args.progress.execute("Updating VDM settings", async () =>
+      applyVdm(ctx, engagement, inbox)
     );
     clack.log.success(
       `VDM: engagement ${engagement ? "on" : "off"}, inbox placement ${inbox ? "on" : "off"}`
@@ -708,14 +762,14 @@ async function applyInteractiveMode(
   let account: { VdmAttributes?: { VdmEnabled?: string } } | null = null;
   try {
     account = await sesClient.send(new GetAccountCommand({}));
-  } catch {
-    account = null;
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    account = null; // GetAccount may fail if SES is not fully configured — treat VDM as disabled
   }
 
   progress.stop();
 
-  const vdmEnabled =
-    account?.VdmAttributes?.VdmEnabled === "ENABLED";
+  const vdmEnabled = account?.VdmAttributes?.VdmEnabled === "ENABLED";
 
   let primaryDomainChanged = false;
 
@@ -725,10 +779,13 @@ async function applyInteractiveMode(
     const sendingEnabled = configSet.SendingOptions?.SendingEnabled ?? true;
     const reputationEnabled =
       configSet.ReputationOptions?.ReputationMetricsEnabled ?? false;
-    const suppressedReasons = configSet.SuppressionOptions?.SuppressedReasons ?? [];
+    const suppressedReasons =
+      configSet.SuppressionOptions?.SuppressedReasons ?? [];
     const archiveArn = configSet.ArchivingOptions?.ArchiveArn;
-    const vdmEngagement = configSet.VdmOptions?.DashboardOptions?.EngagementMetrics;
-    const vdmInbox = configSet.VdmOptions?.GuardianOptions?.OptimizedSharedDelivery;
+    const vdmEngagement =
+      configSet.VdmOptions?.DashboardOptions?.EngagementMetrics;
+    const vdmInbox =
+      configSet.VdmOptions?.GuardianOptions?.OptimizedSharedDelivery;
     const trackingCfg = candidate.trackingConfig;
 
     const menuOptions: Array<{ value: string; label: string; hint?: string }> =
@@ -816,7 +873,8 @@ async function applyInteractiveMode(
         clack.log.success(
           `Tracking: opens ${wantsOpens ? "on" : "off"}, clicks ${wantsClicks ? "on" : "off"}`
         );
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
@@ -827,14 +885,19 @@ async function applyInteractiveMode(
         });
         if (clack.isCancel(wantsTls)) break;
         const deliveryProgress = new DeploymentProgress();
-        await deliveryProgress.execute(
-          "Updating TLS policy",
-          async () => applyDelivery(ctx, wantsTls)
+        await deliveryProgress.execute("Updating TLS policy", async () =>
+          applyDelivery(ctx, wantsTls)
         );
         deliveryProgress.stop();
-        configSet.DeliveryOptions = { ...configSet.DeliveryOptions, TlsPolicy: wantsTls ? "REQUIRE" : "OPTIONAL" };
-        clack.log.success(`TLS policy set to ${wantsTls ? "required" : "optional"}`);
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        configSet.DeliveryOptions = {
+          ...configSet.DeliveryOptions,
+          TlsPolicy: wantsTls ? "REQUIRE" : "OPTIONAL",
+        };
+        clack.log.success(
+          `TLS policy set to ${wantsTls ? "required" : "optional"}`
+        );
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
@@ -845,14 +908,14 @@ async function applyInteractiveMode(
         });
         if (clack.isCancel(wantsSending)) break;
         const sendingProgress = new DeploymentProgress();
-        await sendingProgress.execute(
-          "Updating sending status",
-          async () => applySending(ctx, wantsSending)
+        await sendingProgress.execute("Updating sending status", async () =>
+          applySending(ctx, wantsSending)
         );
         sendingProgress.stop();
         configSet.SendingOptions = { SendingEnabled: wantsSending };
         clack.log.success(`Sending ${wantsSending ? "enabled" : "disabled"}`);
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
@@ -863,25 +926,31 @@ async function applyInteractiveMode(
         });
         if (clack.isCancel(wantsReputation)) break;
         const repProgress = new DeploymentProgress();
-        await repProgress.execute(
-          "Updating reputation metrics",
-          async () => applyReputation(ctx, wantsReputation)
+        await repProgress.execute("Updating reputation metrics", async () =>
+          applyReputation(ctx, wantsReputation)
         );
         repProgress.stop();
-        configSet.ReputationOptions = { ReputationMetricsEnabled: wantsReputation };
-        clack.log.success(`Reputation metrics ${wantsReputation ? "enabled" : "disabled"}`);
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        configSet.ReputationOptions = {
+          ReputationMetricsEnabled: wantsReputation,
+        };
+        clack.log.success(
+          `Reputation metrics ${wantsReputation ? "enabled" : "disabled"}`
+        );
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
       case "suppression": {
         const wantsBounce = await clack.confirm({
-          message: "Suppress on BOUNCE (add bounced addresses to account suppression list)?",
+          message:
+            "Suppress on BOUNCE (add bounced addresses to account suppression list)?",
           initialValue: suppressedReasons.includes("BOUNCE"),
         });
         if (clack.isCancel(wantsBounce)) break;
         const wantsComplaint = await clack.confirm({
-          message: "Suppress on COMPLAINT (add complained addresses to account suppression list)?",
+          message:
+            "Suppress on COMPLAINT (add complained addresses to account suppression list)?",
           initialValue: suppressedReasons.includes("COMPLAINT"),
         });
         if (clack.isCancel(wantsComplaint)) break;
@@ -890,34 +959,42 @@ async function applyInteractiveMode(
           ...(wantsComplaint ? ["COMPLAINT" as const] : []),
         ];
         const supProgress = new DeploymentProgress();
-        await supProgress.execute(
-          "Updating suppression settings",
-          async () => applySuppression(ctx, newReasons)
+        await supProgress.execute("Updating suppression settings", async () =>
+          applySuppression(ctx, newReasons)
         );
         supProgress.stop();
         configSet.SuppressionOptions = { SuppressedReasons: newReasons };
         clack.log.success(
           `Suppression: ${newReasons.length > 0 ? newReasons.join(" + ") : "none"}`
         );
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
       case "archive": {
         const wantsArchive = await clack.confirm({
-          message: "Enable email archiving (stores full email content in wraps-email-archive)?",
+          message:
+            "Enable email archiving (stores full email content in wraps-email-archive)?",
           initialValue: !!archiveArn,
         });
         if (clack.isCancel(wantsArchive)) break;
         const archiveProgress = new DeploymentProgress();
         await archiveProgress.execute(
-          wantsArchive ? "Enabling email archiving" : "Disabling email archiving",
+          wantsArchive
+            ? "Enabling email archiving"
+            : "Disabling email archiving",
           async () => applyArchive(ctx, wantsArchive, region)
         );
         archiveProgress.stop();
-        configSet.ArchivingOptions = { ArchiveArn: wantsArchive ? candidate.archiveArn : undefined };
-        clack.log.success(`Email archiving ${wantsArchive ? "enabled" : "disabled"}`);
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        configSet.ArchivingOptions = {
+          ArchiveArn: wantsArchive ? candidate.archiveArn : undefined,
+        };
+        clack.log.success(
+          `Email archiving ${wantsArchive ? "enabled" : "disabled"}`
+        );
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
 
@@ -933,9 +1010,8 @@ async function applyInteractiveMode(
         });
         if (clack.isCancel(wantsInbox)) break;
         const vdmProgress = new DeploymentProgress();
-        await vdmProgress.execute(
-          "Updating VDM settings",
-          async () => applyVdm(ctx, wantsEngagement, wantsInbox)
+        await vdmProgress.execute("Updating VDM settings", async () =>
+          applyVdm(ctx, wantsEngagement, wantsInbox)
         );
         vdmProgress.stop();
         configSet.VdmOptions = {
@@ -949,7 +1025,8 @@ async function applyInteractiveMode(
         clack.log.success(
           `VDM: engagement ${wantsEngagement ? "on" : "off"}, inbox ${wantsInbox ? "on" : "off"}`
         );
-        if (candidate.additionalIndex === undefined) primaryDomainChanged = true;
+        if (candidate.additionalIndex === undefined)
+          primaryDomainChanged = true;
         break;
       }
     }

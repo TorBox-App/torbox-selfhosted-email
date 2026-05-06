@@ -45,32 +45,32 @@ export function ScalePlanContent() {
         <div className="grid gap-4 sm:grid-cols-2">
           {[
             {
-              icon: <Key size={18} className="text-orange-500" />,
+              icon: <Key className="text-orange-500" size={18} />,
               title: "SSO + SCIM provisioning",
               desc: "Connect any SAML 2.0 or OIDC IdP. SCIM syncs user provisioning and deprovisioning automatically.",
             },
             {
-              icon: <TrendingUp size={18} className="text-orange-500" />,
+              icon: <TrendingUp className="text-orange-500" size={18} />,
               title: "Behavioral segments",
               desc: "Segment users by events they've fired, not just properties they have. \"Users who opened 3+ emails but haven't converted\" is a behavioral segment.",
             },
             {
-              icon: <Server size={18} className="text-orange-500" />,
+              icon: <Server className="text-orange-500" size={18} />,
               title: "Unlimited AWS accounts",
               desc: "Growth caps at 3 accounts. Scale removes the limit. Connect staging, prod, and every regional account.",
             },
             {
-              icon: <Database size={18} className="text-orange-500" />,
+              icon: <Database className="text-orange-500" size={18} />,
               title: "1-year event history",
               desc: "Events, deliveries, and segment memberships retained for 365 days. Growth keeps 90, Starter keeps 30.",
             },
             {
-              icon: <Sparkles size={18} className="text-orange-500" />,
+              icon: <Sparkles className="text-orange-500" size={18} />,
               title: "1,000 AI generations/month",
               desc: "Template generation, workflow generation, subject line suggestions — 1K per month vs. 250 on Growth.",
             },
             {
-              icon: <Shield size={18} className="text-orange-500" />,
+              icon: <Shield className="text-orange-500" size={18} />,
               title: "Priority support + SLA",
               desc: "Named SLA, not just priority queue. Response time commitments in writing.",
             },
@@ -129,8 +129,8 @@ export function ScalePlanContent() {
           <span className="font-mono text-orange-500 text-sm">
             app.wraps.dev → Settings → SSO
           </span>
-          . You paste your metadata URL, we detect the provider, and you're done.
-          SCIM endpoint and token are on the same page.
+          . You paste your metadata URL, we detect the provider, and you're
+          done. SCIM endpoint and token are on the same page.
         </p>
 
         <p className="mb-4 text-foreground/80 leading-relaxed">
@@ -210,8 +210,8 @@ export function ScalePlanContent() {
 
         <p className="mb-6 text-foreground/80 text-lg leading-relaxed">
           Behavioral segments go further. Instead of filtering on contact
-          properties, you filter on events those contacts have fired. The segment
-          updates automatically as new events come in.
+          properties, you filter on events those contacts have fired. The
+          segment updates automatically as new events come in.
         </p>
 
         <Card className="mb-6 overflow-hidden">
@@ -410,12 +410,12 @@ export function ScalePlanContent() {
           <Card className="p-6">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-                <Shield size={16} className="text-orange-500" />
+                <Shield className="text-orange-500" size={16} />
               </div>
               <h3 className="font-semibold text-foreground text-lg">
                 Audit trail
               </h3>
-              <Badge variant="outline" className="text-xs">
+              <Badge className="text-xs" variant="outline">
                 Coming soon
               </Badge>
             </div>
@@ -432,24 +432,24 @@ export function ScalePlanContent() {
           <Card className="p-6">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-                <Database size={16} className="text-orange-500" />
+                <Database className="text-orange-500" size={16} />
               </div>
               <h3 className="font-semibold text-foreground text-lg">
                 Custom data retention
               </h3>
-              <Badge variant="outline" className="text-xs">
+              <Badge className="text-xs" variant="outline">
                 Coming soon
               </Badge>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               Scale today includes a fixed 365-day retention window. Custom
-              retention lets you configure this per resource type: event history,
-              contact activity, delivery logs. Some regulated industries need to
-              retain less (GDPR right-to-erasure compliance); others need to
-              retain more for audit purposes. You'll be able to set both.
+              retention lets you configure this per resource type: event
+              history, contact activity, delivery logs. Some regulated
+              industries need to retain less (GDPR right-to-erasure compliance);
+              others need to retain more for audit purposes. You'll be able to
+              set both.
             </p>
           </Card>
-
         </div>
       </section>
 

@@ -15,8 +15,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { CodeBlock, Collapsible } from "@/components/blog/interactive";
 import { JsonLd } from "@/components/json-ld";
-import { CodeBlock, Collapsible } from "./page-content";
 
 const articleSchema = {
   "@context": "https://schema.org",

@@ -421,8 +421,12 @@ export function displayStatus(status: StatusOutputs) {
       }
 
       if (d.trackingConfig !== undefined) {
-        const opensLabel = d.trackingConfig.opens ? pc.green("on") : pc.dim("off");
-        const clicksLabel = d.trackingConfig.clicks ? pc.green("on") : pc.dim("off");
+        const opensLabel = d.trackingConfig.opens
+          ? pc.green("on")
+          : pc.dim("off");
+        const clicksLabel = d.trackingConfig.clicks
+          ? pc.green("on")
+          : pc.dim("off");
         domainLine += `\n      ${pc.dim("Tracking:")} opens ${opensLabel} · clicks ${clicksLabel}`;
       }
 

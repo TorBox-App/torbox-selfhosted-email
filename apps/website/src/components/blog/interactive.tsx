@@ -13,7 +13,7 @@ export const CodeBlock = ({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(children);
+    navigator.clipboard.writeText(children.trim());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -63,6 +63,7 @@ export const Collapsible = ({
   return (
     <div className="my-2 overflow-hidden rounded-lg border bg-muted/30">
       <button
+        aria-expanded={isOpen}
         className="flex w-full items-center gap-3 px-4 py-3 text-left font-medium transition-colors hover:bg-muted/50"
         onClick={() => setIsOpen(!isOpen)}
         type="button"

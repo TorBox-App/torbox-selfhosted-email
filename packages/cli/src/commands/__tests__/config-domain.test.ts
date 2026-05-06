@@ -1,4 +1,10 @@
 import {
+  CreateArchiveCommand,
+  GetArchiveCommand,
+  ListArchivesCommand,
+  MailManagerClient,
+} from "@aws-sdk/client-mailmanager";
+import {
   GetAccountCommand,
   GetConfigurationSetCommand,
   GetConfigurationSetEventDestinationsCommand,
@@ -11,12 +17,6 @@ import {
   SESv2Client,
   UpdateConfigurationSetEventDestinationCommand,
 } from "@aws-sdk/client-sesv2";
-import {
-  CreateArchiveCommand,
-  GetArchiveCommand,
-  ListArchivesCommand,
-  MailManagerClient,
-} from "@aws-sdk/client-mailmanager";
 import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { domainToConfigSetName } from "../../utils/email/config-set-slug";
@@ -235,9 +235,7 @@ describe("configDomain — extended config set options", () => {
     sesClientMock.on(GetConfigurationSetCommand).resolves({
       ReputationOptions: { ReputationMetricsEnabled: false },
     });
-    sesClientMock
-      .on(PutConfigurationSetReputationOptionsCommand)
-      .resolves({});
+    sesClientMock.on(PutConfigurationSetReputationOptionsCommand).resolves({});
 
     const clack = await import("@clack/prompts");
     vi.mocked(clack.select)
@@ -264,7 +262,10 @@ describe("configDomain — extended config set options", () => {
           email: expect.objectContaining({
             config: expect.objectContaining({
               additionalDomains: expect.arrayContaining([
-                expect.objectContaining({ domain: "test.com", reputationMetrics: true }),
+                expect.objectContaining({
+                  domain: "test.com",
+                  reputationMetrics: true,
+                }),
               ]),
             }),
           }),
@@ -277,9 +278,7 @@ describe("configDomain — extended config set options", () => {
     sesClientMock.on(GetConfigurationSetCommand).resolves({
       SuppressionOptions: { SuppressedReasons: ["BOUNCE", "COMPLAINT"] },
     });
-    sesClientMock
-      .on(PutConfigurationSetSuppressionOptionsCommand)
-      .resolves({});
+    sesClientMock.on(PutConfigurationSetSuppressionOptionsCommand).resolves({});
 
     const clack = await import("@clack/prompts");
     vi.mocked(clack.select)
@@ -317,7 +316,9 @@ describe("configDomain — extended config set options", () => {
         },
       ],
     });
-    mailManagerMock.on(GetArchiveCommand).resolves({ ArchiveArn: testArchiveArn });
+    mailManagerMock
+      .on(GetArchiveCommand)
+      .resolves({ ArchiveArn: testArchiveArn });
 
     const clack = await import("@clack/prompts");
     vi.mocked(clack.select)
@@ -385,9 +386,9 @@ describe("configDomain — extended config set options", () => {
     await configDomain({ domain: "test.com" });
 
     const selectCall = vi.mocked(clack.select).mock.calls[0][0];
-    const optionValues = (
-      selectCall.options as Array<{ value: string }>
-    ).map((o) => o.value);
+    const optionValues = (selectCall.options as Array<{ value: string }>).map(
+      (o) => o.value
+    );
     expect(optionValues).not.toContain("vdm");
   });
 
@@ -403,7 +404,7 @@ describe("configDomain — extended config set options", () => {
       .mockResolvedValueOnce("vdm" as never)
       .mockResolvedValueOnce("done" as never);
     vi.mocked(clack.confirm)
-      .mockResolvedValueOnce(true as never)  // engagement: on
+      .mockResolvedValueOnce(true as never) // engagement: on
       .mockResolvedValueOnce(false as never); // inbox: off
 
     await configDomain({ domain: "test.com" });
@@ -451,7 +452,10 @@ describe("configDomain — extended config set options", () => {
           email: expect.objectContaining({
             config: expect.objectContaining({
               additionalDomains: expect.arrayContaining([
-                expect.objectContaining({ domain: "test.com", sendingEnabled: false }),
+                expect.objectContaining({
+                  domain: "test.com",
+                  sendingEnabled: false,
+                }),
               ]),
             }),
           }),
@@ -531,10 +535,14 @@ describe("configDomain — extended config set options", () => {
     );
 
     // Must NOT be in additionalDomains
-    const saved = vi.mocked(metadata.saveConnectionMetadata).mock.calls[0][0] as {
-      services: { email: { config: { additionalDomains?: Array<{ domain: string }> } } };
+    const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+      .calls[0][0] as {
+      services: {
+        email: { config: { additionalDomains?: Array<{ domain: string }> } };
+      };
     };
-    const savedAdditional = saved?.services?.email?.config?.additionalDomains ?? [];
+    const savedAdditional =
+      saved?.services?.email?.config?.additionalDomains ?? [];
     expect(savedAdditional.some((d) => d.domain === "primary.com")).toBe(false);
   });
 
@@ -554,7 +562,9 @@ describe("configDomain — extended config set options", () => {
         },
       ],
     });
-    mailManagerMock.on(GetArchiveCommand).resolves({ ArchiveArn: testArchiveArn });
+    mailManagerMock
+      .on(GetArchiveCommand)
+      .resolves({ ArchiveArn: testArchiveArn });
 
     const clack = await import("@clack/prompts");
 

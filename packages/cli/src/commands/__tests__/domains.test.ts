@@ -1067,18 +1067,16 @@ describe("Domain Management Commands", () => {
         metadataWithDomain as any
       );
 
-      sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY", "OPEN", "CLICK"],
-              EventBridgeDestination: { EventBusArn: defaultEventBusArn },
-            },
-          ],
-        });
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY", "OPEN", "CLICK"],
+            EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+          },
+        ],
+      });
       sesClientMock
         .on(UpdateConfigurationSetEventDestinationCommand)
         .resolves({});
@@ -1089,7 +1087,9 @@ describe("Domain Management Commands", () => {
         GetConfigurationSetEventDestinationsCommand
       );
       expect(getCalls.length).toBe(1);
-      expect(getCalls[0].args[0].input.ConfigurationSetName).toBe(configSetName);
+      expect(getCalls[0].args[0].input.ConfigurationSetName).toBe(
+        configSetName
+      );
 
       const updateCalls = sesClientMock.commandCalls(
         UpdateConfigurationSetEventDestinationCommand
@@ -1103,8 +1103,12 @@ describe("Domain Management Commands", () => {
           MatchingEventTypes: expect.not.arrayContaining(["OPEN", "CLICK"]),
         }),
       });
-      expect(updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes).toContain("SEND");
-      expect(updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes).toContain("DELIVERY");
+      expect(
+        updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes
+      ).toContain("SEND");
+      expect(
+        updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes
+      ).toContain("DELIVERY");
 
       expect(metadata.saveConnectionMetadata).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1130,18 +1134,16 @@ describe("Domain Management Commands", () => {
         metadataWithDomain as any
       );
 
-      sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY"],
-              EventBridgeDestination: { EventBusArn: defaultEventBusArn },
-            },
-          ],
-        });
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY"],
+            EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+          },
+        ],
+      });
       sesClientMock
         .on(UpdateConfigurationSetEventDestinationCommand)
         .resolves({});
@@ -1152,7 +1154,9 @@ describe("Domain Management Commands", () => {
         GetConfigurationSetEventDestinationsCommand
       );
       expect(getCalls.length).toBe(1);
-      expect(getCalls[0].args[0].input.ConfigurationSetName).toBe(configSetName);
+      expect(getCalls[0].args[0].input.ConfigurationSetName).toBe(
+        configSetName
+      );
 
       const updateCalls = sesClientMock.commandCalls(
         UpdateConfigurationSetEventDestinationCommand
@@ -1163,7 +1167,12 @@ describe("Domain Management Commands", () => {
         EventDestinationName: "wraps-email-eventbridge",
         EventDestination: expect.objectContaining({
           Enabled: true,
-          MatchingEventTypes: expect.arrayContaining(["OPEN", "CLICK", "SEND", "DELIVERY"]),
+          MatchingEventTypes: expect.arrayContaining([
+            "OPEN",
+            "CLICK",
+            "SEND",
+            "DELIVERY",
+          ]),
         }),
       });
 
@@ -1256,25 +1265,24 @@ describe("Domain Management Commands", () => {
         metadataWithDomain as any
       );
 
-      sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY"],
-              // no EventBridgeDestination
-            },
-          ],
-        });
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY"],
+            // no EventBridgeDestination
+          },
+        ],
+      });
 
       await configDomain({ domain: "test.com", opens: false, clicks: false });
 
       expect(mockExit).toHaveBeenCalledWith(1);
       expect(
-        sesClientMock.commandCalls(UpdateConfigurationSetEventDestinationCommand)
-          .length
+        sesClientMock.commandCalls(
+          UpdateConfigurationSetEventDestinationCommand
+        ).length
       ).toBe(0);
     });
 
@@ -1287,19 +1295,19 @@ describe("Domain Management Commands", () => {
       const clack = await import("@clack/prompts");
       vi.mocked(clack.select).mockResolvedValueOnce("test.com" as never);
 
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY"],
+            EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+          },
+        ],
+      });
       sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY"],
-              EventBridgeDestination: { EventBusArn: defaultEventBusArn },
-            },
-          ],
-        });
-      sesClientMock.on(UpdateConfigurationSetEventDestinationCommand).resolves({});
+        .on(UpdateConfigurationSetEventDestinationCommand)
+        .resolves({});
 
       // opens/clicks also passed so we skip the confirm prompts and go straight to SES
       await configDomain({ opens: true, clicks: false });
@@ -1308,7 +1316,9 @@ describe("Domain Management Commands", () => {
         UpdateConfigurationSetEventDestinationCommand
       );
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0].args[0].input.ConfigurationSetName).toBe(configSetName);
+      expect(updateCalls[0].args[0].input.ConfigurationSetName).toBe(
+        configSetName
+      );
       const newTypes =
         updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes ?? [];
       expect(newTypes).toContain("OPEN");
@@ -1326,19 +1336,19 @@ describe("Domain Management Commands", () => {
 
       const primaryConfigSetName = domainToConfigSetName("primary.com");
 
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY"],
+            EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+          },
+        ],
+      });
       sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY"],
-              EventBridgeDestination: { EventBusArn: defaultEventBusArn },
-            },
-          ],
-        });
-      sesClientMock.on(UpdateConfigurationSetEventDestinationCommand).resolves({});
+        .on(UpdateConfigurationSetEventDestinationCommand)
+        .resolves({});
 
       await configDomain({ opens: true, clicks: false });
 
@@ -1346,7 +1356,9 @@ describe("Domain Management Commands", () => {
         UpdateConfigurationSetEventDestinationCommand
       );
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0].args[0].input.ConfigurationSetName).toBe(primaryConfigSetName);
+      expect(updateCalls[0].args[0].input.ConfigurationSetName).toBe(
+        primaryConfigSetName
+      );
       const newTypes =
         updateCalls[0].args[0].input.EventDestination?.MatchingEventTypes ?? [];
       expect(newTypes).toContain("OPEN");
@@ -1354,9 +1366,13 @@ describe("Domain Management Commands", () => {
       // Metadata timestamp is updated and saved
       expect(metadata.saveConnectionMetadata).toHaveBeenCalled();
       // No additionalDomain entry exists for "primary.com" — it only lives in config.domain
-      const savedArg = vi.mocked(metadata.saveConnectionMetadata).mock.calls[0][0] as any;
-      const savedAdditional = savedArg?.services?.email?.config?.additionalDomains ?? [];
-      expect(savedAdditional.some((d: any) => d.domain === "primary.com")).toBe(false);
+      const savedArg = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      const savedAdditional =
+        savedArg?.services?.email?.config?.additionalDomains ?? [];
+      expect(savedAdditional.some((d: any) => d.domain === "primary.com")).toBe(
+        false
+      );
     });
 
     it("Unit 9: no flags in interactive mode → shows menu, selects tracking, prompts and uses answers", async () => {
@@ -1371,23 +1387,23 @@ describe("Domain Management Commands", () => {
         .mockResolvedValueOnce("tracking" as never)
         .mockResolvedValueOnce("done" as never);
       vi.mocked(clack.confirm)
-        .mockResolvedValueOnce(true)   // opens: yes
+        .mockResolvedValueOnce(true) // opens: yes
         .mockResolvedValueOnce(false); // clicks: no
 
       sesClientMock.on(GetConfigurationSetCommand).resolves({});
+      sesClientMock.on(GetConfigurationSetEventDestinationsCommand).resolves({
+        EventDestinations: [
+          {
+            Name: "wraps-email-eventbridge",
+            Enabled: true,
+            MatchingEventTypes: ["SEND", "DELIVERY"],
+            EventBridgeDestination: { EventBusArn: defaultEventBusArn },
+          },
+        ],
+      });
       sesClientMock
-        .on(GetConfigurationSetEventDestinationsCommand)
-        .resolves({
-          EventDestinations: [
-            {
-              Name: "wraps-email-eventbridge",
-              Enabled: true,
-              MatchingEventTypes: ["SEND", "DELIVERY"],
-              EventBridgeDestination: { EventBusArn: defaultEventBusArn },
-            },
-          ],
-        });
-      sesClientMock.on(UpdateConfigurationSetEventDestinationCommand).resolves({});
+        .on(UpdateConfigurationSetEventDestinationCommand)
+        .resolves({});
 
       await configDomain({ domain: "test.com" });
 

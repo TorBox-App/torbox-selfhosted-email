@@ -66,10 +66,10 @@ const releases: Release[] = [
       </>,
       "7 configuration groups: open/click tracking, TLS delivery, sending toggle, reputation metrics, bounce/complaint suppression, email archiving, and VDM",
       <>
-        10 boolean flags for scripting:{" "}
-        <Code>--opens</Code>, <Code>--clicks</Code>,{" "}
-        <Code>--tls-required</Code>, <Code>--suppress-bounce</Code>,{" "}
-        <Code>--archive</Code>, <Code>--vdm-engagement</Code>, and more
+        10 boolean flags for scripting: <Code>--opens</Code>,{" "}
+        <Code>--clicks</Code>, <Code>--tls-required</Code>,{" "}
+        <Code>--suppress-bounce</Code>, <Code>--archive</Code>,{" "}
+        <Code>--vdm-engagement</Code>, and more
       </>,
       <>
         Shared <Code>wraps-email-archive</Code> Mail Manager archive —
