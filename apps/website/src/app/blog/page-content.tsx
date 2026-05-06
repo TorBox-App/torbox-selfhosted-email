@@ -8,6 +8,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
+  Building2,
   Calendar,
   Clock,
   Code2,
@@ -17,6 +18,7 @@ import {
   KeyRound,
   Mail,
   Network,
+  Send,
   Server,
   Shield,
   User,
@@ -39,6 +41,72 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "scale-plan-enterprise-features",
+    title: "SSO, Behavioral Segments, and What's Next: Inside the Scale Plan",
+    description:
+      "Every Scale-exclusive feature explained — SSO + SCIM, behavioral segments, unlimited AWS accounts, 1-year history — plus a look at audit trail and custom retention coming next.",
+    category: "Product",
+    date: "May 2026",
+    readTime: "7 min read",
+    author: "Wraps Team",
+    icon: <Building2 className="h-6 w-6" />,
+  },
+  {
+    slug: "vibe-coding-email",
+    title: "Sending Email from AI-Built Apps (Lovable, Bolt, Base44, Replit)",
+    description:
+      "Built your app with AI? Here's how to add email without putting AWS credentials in your code. One CLI command, one API key, any platform.",
+    category: "Guide",
+    date: "May 2026",
+    readTime: "5 min read",
+    author: "Wraps Team",
+    icon: <Send className="h-6 w-6" />,
+  },
+  {
+    slug: "lovable-send-email",
+    title: "How to Send Email from Your Lovable App",
+    description:
+      "Deploy one CLI command, add two env vars to Lovable via Supabase, and send email with plain fetch. AWS credentials never touch your app.",
+    category: "Guide",
+    date: "May 2026",
+    readTime: "8 min read",
+    author: "Wraps Team",
+    icon: <Mail className="h-6 w-6" />,
+  },
+  {
+    slug: "bolt-send-email",
+    title: "How to Send Email from Your Bolt.new App",
+    description:
+      "Deploy one CLI command, add two server env vars to Bolt, and send email from a server route. AWS credentials stay on your machine.",
+    category: "Guide",
+    date: "May 2026",
+    readTime: "8 min read",
+    author: "Wraps Team",
+    icon: <Mail className="h-6 w-6" />,
+  },
+  {
+    slug: "base44-send-email",
+    title: "How to Send Email from Your Base44 App",
+    description:
+      "Deploy one CLI command, add two server secrets to Base44, and send email from a backend function. AWS credentials never reach browser code.",
+    category: "Guide",
+    date: "May 2026",
+    readTime: "8 min read",
+    author: "Wraps Team",
+    icon: <Mail className="h-6 w-6" />,
+  },
+  {
+    slug: "replit-send-email",
+    title: "How to Send Email from Your Replit App",
+    description:
+      "Deploy one CLI command, add two Replit Secrets, and send email from a server route. AWS credentials stay on your local machine.",
+    category: "Guide",
+    date: "May 2026",
+    readTime: "8 min read",
+    author: "Wraps Team",
+    icon: <Mail className="h-6 w-6" />,
+  },
   {
     slug: "signed-reply-threading",
     title: "Signed Reply-To for Agents",
