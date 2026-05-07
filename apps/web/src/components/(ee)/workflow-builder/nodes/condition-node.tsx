@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Handle, Position } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
-import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import type { WorkflowNodeStepStats } from "@/actions/(ee)/workflows";
 import { cn } from "@/lib/utils";
 import {
   getNodeStats,

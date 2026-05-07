@@ -2,7 +2,7 @@ import { auth } from "@wraps/auth";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getWorkflow, listWorkflowExecutions } from "@/actions/workflows";
+import { getWorkflow, listWorkflowExecutions } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { ExecutionsTable } from "./components/executions-table";

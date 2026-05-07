@@ -59,7 +59,7 @@ describe("createNextWorkflowSchedule", () => {
     process.env.NODE_ENV = "development";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const result = await createNextWorkflowSchedule({
@@ -78,7 +78,7 @@ describe("createNextWorkflowSchedule", () => {
     process.env.NODE_ENV = "production";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     await expect(
@@ -101,7 +101,7 @@ describe("createNextWorkflowSchedule", () => {
     mockSend.mockResolvedValueOnce({});
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
     const { CreateScheduleCommand } = await import("@aws-sdk/client-scheduler");
 
@@ -148,7 +148,7 @@ describe("createNextWorkflowSchedule", () => {
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     // Use a cron expression with a past date that cannot produce a next run
@@ -175,7 +175,7 @@ describe("createNextWorkflowSchedule", () => {
     process.env.NODE_ENV = "development";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const name1 = await createNextWorkflowSchedule({
@@ -187,7 +187,7 @@ describe("createNextWorkflowSchedule", () => {
     // Same workflowId should produce same schedule name
     vi.resetModules();
     const { createNextWorkflowSchedule: create2 } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const name2 = await create2({
@@ -205,7 +205,7 @@ describe("createNextWorkflowSchedule", () => {
     process.env.NODE_ENV = "development";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const name1 = await createNextWorkflowSchedule({
@@ -231,7 +231,7 @@ describe("createNextWorkflowSchedule", () => {
     mockSend.mockResolvedValueOnce({});
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     // No timezone provided — should use UTC for cron computation
@@ -269,7 +269,7 @@ describe("deleteWorkflowSchedule", () => {
     process.env.SCHEDULER_ROLE_ARN = "";
     process.env.NODE_ENV = "development";
 
-    const { deleteWorkflowSchedule } = await import("../workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
 
     await deleteWorkflowSchedule("wf-12345678");
 
@@ -283,7 +283,7 @@ describe("deleteWorkflowSchedule", () => {
 
     mockSend.mockResolvedValueOnce({});
 
-    const { deleteWorkflowSchedule } = await import("../workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
     const { DeleteScheduleCommand } = await import("@aws-sdk/client-scheduler");
 
     await deleteWorkflowSchedule("wf-abcdefgh-1234");
@@ -304,7 +304,7 @@ describe("deleteWorkflowSchedule", () => {
     notFoundError.name = "ResourceNotFoundException";
     mockSend.mockRejectedValueOnce(notFoundError);
 
-    const { deleteWorkflowSchedule } = await import("../workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
 
     // Should not throw
     await expect(
@@ -320,7 +320,7 @@ describe("deleteWorkflowSchedule", () => {
     otherError.name = "AccessDeniedException";
     mockSend.mockRejectedValueOnce(otherError);
 
-    const { deleteWorkflowSchedule } = await import("../workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
 
     await expect(deleteWorkflowSchedule("wf-error")).rejects.toThrow(
       "Access denied"
@@ -334,7 +334,7 @@ describe("deleteWorkflowSchedule", () => {
 
     // The schedule name should be deterministic based on workflowId
     const { createNextWorkflowSchedule, deleteWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const createName = await createNextWorkflowSchedule({
@@ -376,7 +376,7 @@ describe("Schedule name format", () => {
     process.env.NODE_ENV = "development";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const longId = "a".repeat(100);
@@ -396,7 +396,7 @@ describe("Schedule name format", () => {
     process.env.NODE_ENV = "development";
 
     const { createNextWorkflowSchedule } = await import(
-      "../workflow-scheduler"
+      "../services/workflow-scheduler"
     );
 
     const name = await createNextWorkflowSchedule({

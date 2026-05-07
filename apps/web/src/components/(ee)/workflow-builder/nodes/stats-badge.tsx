@@ -1,6 +1,6 @@
 "use client";
 
-import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import type { WorkflowNodeStepStats } from "@/actions/(ee)/workflows";
 
 type StatsBadgeProps = {
   stats: WorkflowNodeStepStats;

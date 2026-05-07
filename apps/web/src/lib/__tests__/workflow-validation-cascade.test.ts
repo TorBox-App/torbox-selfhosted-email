@@ -1,6 +1,6 @@
 import type { CascadeChannelConfig } from "@wraps/db";
 import { describe, expect, it } from "vitest";
-import { validateCascadeChannels } from "../workflow-validation";
+import { validateCascadeChannels } from "../(ee)/workflow-validation";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CASCADE CHANNEL VALIDATION TESTS

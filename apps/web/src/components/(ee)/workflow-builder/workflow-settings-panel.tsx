@@ -20,7 +20,7 @@ import {
   type PhoneNumber,
   type VerifiedIdentity,
 } from "@/actions/aws-accounts";
-import { updateWorkflow } from "@/actions/workflows";
+import { updateWorkflow } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useWorkflowStore } from "./use-workflow-store";

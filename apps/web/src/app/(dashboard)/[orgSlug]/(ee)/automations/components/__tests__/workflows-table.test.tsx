@@ -7,7 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { WorkflowWithMeta } from "@/actions/workflows";
+import type { WorkflowWithMeta } from "@/actions/(ee)/workflows";
 
 const {
   mockDeleteWorkflow,
@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("@/actions/workflows", () => ({
+vi.mock("@/actions/(ee)/workflows", () => ({
   deleteWorkflow: mockDeleteWorkflow,
   disableWorkflow: mockDisableWorkflow,
   duplicateWorkflow: mockDuplicateWorkflow,

@@ -72,7 +72,7 @@ const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
 const mockCreateNextWorkflowSchedule = vi.fn();
 
-vi.mock("../../services/workflow-scheduler", () => ({
+vi.mock("../services/workflow-scheduler", () => ({
   createNextWorkflowSchedule: mockCreateNextWorkflowSchedule,
 }));
 

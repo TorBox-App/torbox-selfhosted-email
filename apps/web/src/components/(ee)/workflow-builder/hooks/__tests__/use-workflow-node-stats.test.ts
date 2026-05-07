@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import type { WorkflowNodeStepStats } from "@/actions/(ee)/workflows";
 import {
   aggregateCascadeStats,
   getNodeStats,

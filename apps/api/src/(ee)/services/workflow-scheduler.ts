@@ -17,9 +17,9 @@ import { db, eq, type TriggerConfig, workflow } from "@wraps/db";
 import { Cron } from "croner";
 import { and } from "drizzle-orm";
 
-import { awsDefaults } from "../lib/aws-defaults";
-import { log } from "../lib/logger";
-import { formatScheduleExpression, type WorkflowJob } from "./workflow-queue";
+import { awsDefaults } from "../../lib/aws-defaults";
+import { log } from "../../lib/logger";
+import { formatScheduleExpression, type WorkflowJob } from "../../services/workflow-queue";
 
 const scheduler = new SchedulerClient(awsDefaults);
 

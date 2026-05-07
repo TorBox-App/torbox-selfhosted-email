@@ -285,7 +285,7 @@ vi.mock("../../services/workflow-queue", () => ({
   deleteScheduledStep: mockDeleteScheduledStep,
 }));
 
-vi.mock("../../services/workflow-scheduler", () => ({
+vi.mock("../services/workflow-scheduler", () => ({
   createNextWorkflowSchedule: mockCreateNextWorkflowSchedule,
 }));
 

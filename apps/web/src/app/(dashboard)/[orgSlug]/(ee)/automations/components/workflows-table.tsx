@@ -70,7 +70,7 @@ import {
   duplicateWorkflow,
   enableWorkflow,
   type WorkflowWithMeta,
-} from "@/actions/workflows";
+} from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
@@ -80,7 +80,7 @@ import {
   getTriggerDescription,
   WORKFLOW_STATUS_COLORS,
   WORKFLOW_STATUS_LABELS,
-} from "@/lib/workflows";
+} from "@/lib/(ee)/workflows";
 import { CreateWorkflowDialog } from "./create-workflow-dialog";
 
 type WorkflowsTableProps = {

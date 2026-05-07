@@ -31,7 +31,7 @@ import {
   type ValidationResult,
   validateCascadeChannels,
   validateWorkflow,
-} from "@/lib/workflow-validation";
+} from "@/lib/(ee)/workflow-validation";
 import type { NodePaletteType } from "./node-palette";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1428,4 +1428,4 @@ export const useCanRedo = () =>
 export type {
   ValidationError,
   ValidationResult,
-} from "@/lib/workflow-validation";
+} from "@/lib/(ee)/workflow-validation";

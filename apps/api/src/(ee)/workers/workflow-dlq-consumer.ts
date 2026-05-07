@@ -21,7 +21,7 @@ import { and, sql } from "drizzle-orm";
 
 import { flushLogger, log } from "../../lib/logger";
 import type { WorkflowJob } from "../../services/workflow-queue";
-import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
+import { createNextWorkflowSchedule } from "../services/workflow-scheduler";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled", "failed"]);
 

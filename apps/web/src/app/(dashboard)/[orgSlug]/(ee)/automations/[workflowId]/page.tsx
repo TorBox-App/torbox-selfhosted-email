@@ -8,7 +8,7 @@ import {
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { getWorkflow } from "@/actions/workflows";
+import { getWorkflow } from "@/actions/(ee)/workflows";
 import { WorkflowBuilder } from "@/components/(ee)/workflow-builder/workflow-builder";
 import { getOrganizationWithMembership } from "@/lib/organization";
 

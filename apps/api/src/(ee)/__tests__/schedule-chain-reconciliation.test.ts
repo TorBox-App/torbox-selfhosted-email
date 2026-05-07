@@ -167,7 +167,7 @@ vi.mock("../../services/workflow-queue", () => ({
   formatScheduleExpression: vi.fn((d: Date) => `at(${d.toISOString()})`),
 }));
 
-vi.mock("../../services/workflow-scheduler", () => ({
+vi.mock("../services/workflow-scheduler", () => ({
   createNextWorkflowSchedule: mockCreateNextWorkflowSchedule,
   reconcileScheduleChains: mockReconcileScheduleChains,
 }));
@@ -292,13 +292,13 @@ describe("Schedule chain resilience", () => {
   });
 
   it("reconcileScheduleChains is exported from workflow-scheduler", async () => {
-    const mod = await import("../../services/workflow-scheduler");
+    const mod = await import("../services/workflow-scheduler");
     expect(mod.reconcileScheduleChains).toBeDefined();
     expect(typeof mod.reconcileScheduleChains).toBe("function");
   });
 
   it("reconcileScheduleChains detects and repairs broken chains", async () => {
-    const mod = await import("../../services/workflow-scheduler");
+    const mod = await import("../services/workflow-scheduler");
     const result = await mod.reconcileScheduleChains();
 
     expect(result).toBeDefined();

@@ -10,7 +10,7 @@ import {
   getTriggerDescription,
   WORKFLOW_STATUS_COLORS,
   WORKFLOW_STATUS_LABELS,
-} from "../workflows";
+} from "../(ee)/workflows";
 
 // Helper to create a mock workflow
 function createMockWorkflow(overrides: Partial<Workflow> = {}): Workflow {

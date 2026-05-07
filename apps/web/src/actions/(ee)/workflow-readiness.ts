@@ -3,7 +3,7 @@
 import { db, template } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { createActionLogger, serializeError } from "@/lib/logger";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { verifyOrgAccess } from "../shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES

@@ -15,7 +15,7 @@ import { Ban } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { cancelWorkflowExecution } from "@/actions/workflows";
+import { cancelWorkflowExecution } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 
 export function CancelButton({

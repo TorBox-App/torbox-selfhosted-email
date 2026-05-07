@@ -5,7 +5,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { buildWorkflowSystemPrompt } from "@/lib/ai/workflow-system-prompt";
+import { buildWorkflowSystemPrompt } from "@/lib/ai/(ee)/workflow-system-prompt";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";

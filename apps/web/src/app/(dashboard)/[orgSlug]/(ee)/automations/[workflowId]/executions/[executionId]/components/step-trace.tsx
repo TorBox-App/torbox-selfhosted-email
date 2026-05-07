@@ -21,9 +21,9 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import type { StepEngagement } from "@/actions/workflows";
+import type { StepEngagement } from "@/actions/(ee)/workflows";
 import { cn } from "@/lib/utils";
-import { STEP_STATUS_COLORS, STEP_STATUS_LABELS } from "@/lib/workflows";
+import { STEP_STATUS_COLORS, STEP_STATUS_LABELS } from "@/lib/(ee)/workflows";
 
 const STEP_TYPE_ICONS: Record<string, typeof Zap> = {
   trigger: Zap,

@@ -37,7 +37,7 @@ import {
   listWorkflowExecutions,
   listWorkflows,
   updateWorkflow,
-} from "../workflows";
+} from "../(ee)/workflows";
 
 // Test data
 const testUser = {

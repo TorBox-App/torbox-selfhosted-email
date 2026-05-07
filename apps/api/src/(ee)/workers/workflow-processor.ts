@@ -30,7 +30,7 @@ import {
   enqueueWorkflowStepBatch,
   type WorkflowJob,
 } from "../../services/workflow-queue";
-import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
+import { createNextWorkflowSchedule } from "../services/workflow-scheduler";
 
 import {
   handleCondition,

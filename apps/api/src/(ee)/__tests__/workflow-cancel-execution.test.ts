@@ -32,7 +32,7 @@ vi.mock("../../services/workflow-queue", () => ({
   deleteScheduledStep: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { cancelWorkflowExecution } from "../../services/workflow-cancel";
+import { cancelWorkflowExecution } from "../services/workflow-cancel";
 import { deleteScheduledStep } from "../../services/workflow-queue";
 
 const TEST_PREFIX = "api-wf-exec-cancel";

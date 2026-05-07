@@ -5,7 +5,7 @@ import type { CascadeChannelConfig } from "@wraps/db";
 import { Handle, Position } from "@xyflow/react";
 import { Layers, Mail, MessageSquare } from "lucide-react";
 import { useMemo } from "react";
-import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import type { WorkflowNodeStepStats } from "@/actions/(ee)/workflows";
 import { cn, formatDurationCompact } from "@/lib/utils";
 import {
   getNodeStats,

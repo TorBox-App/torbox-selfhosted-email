@@ -17,7 +17,7 @@ import {
   vi,
 } from "vitest";
 
-vi.mock("../services/workflow-scheduler", () => ({
+vi.mock("../(ee)/services/workflow-scheduler", () => ({
   createNextWorkflowSchedule: vi.fn(),
   deleteWorkflowSchedule: vi.fn(),
 }));
@@ -28,11 +28,11 @@ vi.mock("../lib/logger", () => ({
 
 import { Elysia } from "elysia";
 import type { AuthContext } from "../middleware/auth";
-import { workflowScheduleRoutes } from "../routes/workflow-schedules";
+import { workflowScheduleRoutes } from "../(ee)/routes/workflow-schedules";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
-} from "../services/workflow-scheduler";
+} from "../(ee)/services/workflow-scheduler";
 
 const TEST_PREFIX = "wf-schedules-test";
 

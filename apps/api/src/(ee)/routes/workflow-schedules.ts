@@ -11,11 +11,11 @@ import { db, eq, workflow } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { t } from "elysia";
 
-import { log } from "../lib/logger";
+import { log } from "../../lib/logger";
 import {
   type AuthContext,
   createAuthenticatedRoutes,
-} from "../middleware/auth";
+} from "../../middleware/auth";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,

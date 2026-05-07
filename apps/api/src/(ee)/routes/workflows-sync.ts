@@ -22,9 +22,9 @@ import {
 } from "@wraps/db";
 import { inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
-import { trackFirstResourceCreated } from "../lib/activation-tracking";
-import type { AuthContext } from "../middleware/auth";
-import { createAuthenticatedRoutes } from "../middleware/auth";
+import { trackFirstResourceCreated } from "../../lib/activation-tracking";
+import type { AuthContext } from "../../middleware/auth";
+import { createAuthenticatedRoutes } from "../../middleware/auth";
 
 type DbOrTx =
   | typeof db

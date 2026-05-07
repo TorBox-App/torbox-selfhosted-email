@@ -21,7 +21,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   checkWorkflowReadiness,
   type ReadinessCheck,
-} from "@/actions/workflow-readiness";
+} from "@/actions/(ee)/workflow-readiness";
 import { Button } from "@/components/ui/button";
 import type { WorkflowNode } from "./use-workflow-store";
 import { useWorkflowStore } from "./use-workflow-store";

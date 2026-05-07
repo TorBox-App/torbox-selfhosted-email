@@ -19,12 +19,12 @@ import { ArrowLeft, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
-import type { ExecutionWithContact } from "@/actions/workflows";
+import type { ExecutionWithContact } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import {
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
-} from "@/lib/workflows";
+} from "@/lib/(ee)/workflows";
 
 const STATUS_TABS = [
   { label: "All", value: undefined },

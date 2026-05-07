@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import type { WorkflowNodeStepStats } from "@/actions/(ee)/workflows";
 import { StatsBadge } from "../stats-badge";
 
 function makeStats(

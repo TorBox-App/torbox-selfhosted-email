@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/reasoning";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
-import { extractWorkflowFromMessage } from "@/lib/ai/workflow-parser";
+import { extractWorkflowFromMessage } from "@/lib/ai/(ee)/workflow-parser";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "./use-workflow-store";
 

@@ -1,6 +1,6 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
-import { listWorkflows } from "@/actions/workflows";
+import { listWorkflows } from "@/actions/(ee)/workflows";
 import { FeatureGate } from "@/components/feature-gate";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkFeatureAccess, getOrganizationPlan } from "@/lib/plan-limits";

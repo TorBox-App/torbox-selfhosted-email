@@ -16,7 +16,7 @@ import {
   createAuthenticatedRoutes,
 } from "../../middleware/auth";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
-import { cancelWorkflowExecution } from "../../services/workflow-cancel";
+import { cancelWorkflowExecution } from "../services/workflow-cancel";
 import {
   enqueueWorkflowStep,
   enqueueWorkflowStepBatch,

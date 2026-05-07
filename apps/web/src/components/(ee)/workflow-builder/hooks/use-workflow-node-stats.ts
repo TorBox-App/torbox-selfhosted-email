@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getWorkflowNodeStats,
   type WorkflowNodeStepStats,
-} from "@/actions/workflows";
+} from "@/actions/(ee)/workflows";
 
 export const workflowNodeStatsKeys = {
   all: ["workflow-node-stats"] as const,

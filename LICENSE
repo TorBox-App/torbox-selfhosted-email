@@ -3,7 +3,11 @@ Copyright (c) 2025 Jarod Stewart
 Portions of this software – namely all files that reside under the following directories of this repository – are licensed under the license defined in "ee/LICENSE.md".
 
     apps/web/src/app/(dashboard)/[orgSlug]/(ee)
+    apps/web/src/app/api/[orgSlug]/(ee)
     apps/web/src/components/(ee)
+    apps/web/src/actions/(ee)
+    apps/web/src/lib/(ee)
+    apps/web/src/lib/ai/(ee)
     apps/api/src/(ee)
 
 All third-party components incorporated into the Wraps Software are licensed under the original license provided by the owner of the applicable component.

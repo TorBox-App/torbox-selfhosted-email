@@ -8,8 +8,8 @@
 import { db, eq, workflow, workflowExecution } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 
-import { log } from "../lib/logger";
-import { deleteScheduledStep } from "./workflow-queue";
+import { log } from "../../lib/logger";
+import { deleteScheduledStep } from "../../services/workflow-queue";
 
 const CANCELLABLE_STATUSES = new Set([
   "pending",

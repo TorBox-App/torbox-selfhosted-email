@@ -27,8 +27,8 @@ import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { checkPermission } from "../shared/permissions";
+import { verifyOrgAccess } from "../shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES

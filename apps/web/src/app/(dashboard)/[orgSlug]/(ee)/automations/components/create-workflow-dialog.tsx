@@ -13,7 +13,7 @@ import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createWorkflow } from "@/actions/workflows";
+import { createWorkflow } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

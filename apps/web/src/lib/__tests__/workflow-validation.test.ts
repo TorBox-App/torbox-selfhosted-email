@@ -1,6 +1,6 @@
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
 import { describe, expect, it } from "vitest";
-import { validateWorkflow } from "../workflow-validation";
+import { validateWorkflow } from "../(ee)/workflow-validation";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEST HELPERS

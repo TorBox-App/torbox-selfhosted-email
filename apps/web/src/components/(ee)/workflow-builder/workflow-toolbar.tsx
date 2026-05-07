@@ -36,7 +36,7 @@ import {
   disableWorkflow,
   enableWorkflow,
   updateWorkflow,
-} from "@/actions/workflows";
+} from "@/actions/(ee)/workflows";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { Button } from "@/components/ui/button";
 import { useRequireAws } from "@/hooks/use-require-aws";

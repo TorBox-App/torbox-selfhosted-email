@@ -24,8 +24,8 @@ import { templatesSyncRoutes } from "./routes/templates-sync";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
-import { workflowScheduleRoutes } from "./routes/workflow-schedules";
-import { workflowsSyncRoutes } from "./routes/workflows-sync";
+import { workflowScheduleRoutes } from "./(ee)/routes/workflow-schedules";
+import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 
 /**
  * OpenAPI documentation configuration
