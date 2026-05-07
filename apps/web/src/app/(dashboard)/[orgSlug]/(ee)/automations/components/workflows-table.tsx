@@ -74,13 +74,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { cn } from "@/lib/utils";
 import {
   getStepCount,
   getTriggerDescription,
   WORKFLOW_STATUS_COLORS,
   WORKFLOW_STATUS_LABELS,
 } from "@/lib/(ee)/workflows";
+import { cn } from "@/lib/utils";
 import { CreateWorkflowDialog } from "./create-workflow-dialog";
 
 type WorkflowsTableProps = {

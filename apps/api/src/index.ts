@@ -9,7 +9,9 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import * as Sentry from "@sentry/aws-serverless";
 import { Elysia } from "elysia";
+import { workflowScheduleRoutes } from "./(ee)/routes/workflow-schedules";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
+import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
 import type { AuthContext } from "./middleware/auth";
@@ -24,8 +26,6 @@ import { templatesSyncRoutes } from "./routes/templates-sync";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
-import { workflowScheduleRoutes } from "./(ee)/routes/workflow-schedules";
-import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 
 /**
  * OpenAPI documentation configuration

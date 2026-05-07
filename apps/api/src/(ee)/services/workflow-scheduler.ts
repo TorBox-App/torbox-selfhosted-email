@@ -19,7 +19,10 @@ import { and } from "drizzle-orm";
 
 import { awsDefaults } from "../../lib/aws-defaults";
 import { log } from "../../lib/logger";
-import { formatScheduleExpression, type WorkflowJob } from "../../services/workflow-queue";
+import {
+  formatScheduleExpression,
+  type WorkflowJob,
+} from "../../services/workflow-queue";
 
 const scheduler = new SchedulerClient(awsDefaults);
 

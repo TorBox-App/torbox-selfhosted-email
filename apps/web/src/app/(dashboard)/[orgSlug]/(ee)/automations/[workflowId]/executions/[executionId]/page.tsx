@@ -12,11 +12,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getWorkflowExecution } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
-import { getOrganizationWithMembership } from "@/lib/organization";
 import {
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
 } from "@/lib/(ee)/workflows";
+import { getOrganizationWithMembership } from "@/lib/organization";
 import { CancelButton } from "./components/cancel-button";
 import { RetryButton } from "./components/retry-button";
 import { StepTrace } from "./components/step-trace";

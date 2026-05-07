@@ -16,12 +16,12 @@ import {
   createAuthenticatedRoutes,
 } from "../../middleware/auth";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
-import { cancelWorkflowExecution } from "../services/workflow-cancel";
 import {
   enqueueWorkflowStep,
   enqueueWorkflowStepBatch,
   type WorkflowJob,
 } from "../../services/workflow-queue";
+import { cancelWorkflowExecution } from "../services/workflow-cancel";
 
 // Common response schemas
 const _errorResponse = t.Object({

@@ -269,7 +269,9 @@ describe("deleteWorkflowSchedule", () => {
     process.env.SCHEDULER_ROLE_ARN = "";
     process.env.NODE_ENV = "development";
 
-    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import(
+      "../services/workflow-scheduler"
+    );
 
     await deleteWorkflowSchedule("wf-12345678");
 
@@ -283,7 +285,9 @@ describe("deleteWorkflowSchedule", () => {
 
     mockSend.mockResolvedValueOnce({});
 
-    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import(
+      "../services/workflow-scheduler"
+    );
     const { DeleteScheduleCommand } = await import("@aws-sdk/client-scheduler");
 
     await deleteWorkflowSchedule("wf-abcdefgh-1234");
@@ -304,7 +308,9 @@ describe("deleteWorkflowSchedule", () => {
     notFoundError.name = "ResourceNotFoundException";
     mockSend.mockRejectedValueOnce(notFoundError);
 
-    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import(
+      "../services/workflow-scheduler"
+    );
 
     // Should not throw
     await expect(
@@ -320,7 +326,9 @@ describe("deleteWorkflowSchedule", () => {
     otherError.name = "AccessDeniedException";
     mockSend.mockRejectedValueOnce(otherError);
 
-    const { deleteWorkflowSchedule } = await import("../services/workflow-scheduler");
+    const { deleteWorkflowSchedule } = await import(
+      "../services/workflow-scheduler"
+    );
 
     await expect(deleteWorkflowSchedule("wf-error")).rejects.toThrow(
       "Access denied"

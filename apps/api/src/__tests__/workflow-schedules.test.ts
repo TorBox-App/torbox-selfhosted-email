@@ -27,12 +27,12 @@ vi.mock("../lib/logger", () => ({
 }));
 
 import { Elysia } from "elysia";
-import type { AuthContext } from "../middleware/auth";
 import { workflowScheduleRoutes } from "../(ee)/routes/workflow-schedules";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
 } from "../(ee)/services/workflow-scheduler";
+import type { AuthContext } from "../middleware/auth";
 
 const TEST_PREFIX = "wf-schedules-test";
 

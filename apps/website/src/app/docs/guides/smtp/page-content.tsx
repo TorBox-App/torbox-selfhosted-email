@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, CheckCircle2, Clock, Info, KeyRound } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -529,10 +530,10 @@ export default function SMTPPageContent() {
                 recipient.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/production-access">
+                <Link href="/docs/guides/production-access">
                   Request production access
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -548,10 +549,10 @@ export default function SMTPPageContent() {
                 Add and verify additional sending domains for your SMTP setup.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/domain-verification">
+                <Link href="/docs/guides/domain-verification">
                   Verify a domain
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

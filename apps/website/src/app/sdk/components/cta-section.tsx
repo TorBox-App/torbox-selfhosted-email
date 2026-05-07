@@ -3,6 +3,7 @@
 import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, Terminal } from "lucide-react";
 import { motion, useInView } from "motion/react";
+import Link from "next/link";
 import { useRef } from "react";
 
 export function SdkCtaSection() {
@@ -42,10 +43,10 @@ export function SdkCtaSection() {
                 className="bg-orange-500 text-white hover:bg-orange-600"
                 size="lg"
               >
-                <a href="/docs/quickstart/email">
+                <Link href="/docs/quickstart/email">
                   Get Started
                   <ArrowRight className="ml-2 size-4" />
-                </a>
+                </Link>
               </Button>
               <Button
                 asChild
@@ -53,7 +54,7 @@ export function SdkCtaSection() {
                 size="lg"
                 variant="outline"
               >
-                <a href="/docs/sdk-reference">SDK Reference</a>
+                <Link href="/docs/sdk-reference">SDK Reference</Link>
               </Button>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Button } from "@wraps/ui/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
+import Link from "next/link";
 
 export function SdkHeroSection() {
   return (
@@ -35,10 +36,10 @@ export function SdkHeroSection() {
               className="h-14 bg-orange-500 px-8 text-base hover:bg-orange-600 sm:h-16 sm:px-12 sm:text-lg"
               size="lg"
             >
-              <a href="/docs/quickstart/email">
+              <Link href="/docs/quickstart/email">
                 Get Started
                 <ArrowRight className="ml-2 size-5" />
-              </a>
+              </Link>
             </Button>
             <Button
               asChild
@@ -46,10 +47,10 @@ export function SdkHeroSection() {
               size="lg"
               variant="outline"
             >
-              <a href="/docs/sdk-reference">
+              <Link href="/docs/sdk-reference">
                 <BookOpen className="mr-2 size-5" />
                 SDK Reference
-              </a>
+              </Link>
             </Button>
           </div>
         </div>
