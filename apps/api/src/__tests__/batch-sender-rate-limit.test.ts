@@ -1,18 +1,27 @@
 /**
- * Batch Sender — SES Error Recovery
+ * Batch Sender — Per-Account SES Rate Limit
  *
- * Tests the catch-block inside the SES bulk send loop (sesTemplateName path):
+ * The worker reads MaxSendRate from GetAccountCommand and uses it to calculate
+ * the DelaySeconds on the next-chunk SQS message:
  *
- *   Throttle  → re-queues same chunkIndex with 30s delay; does NOT proceed
- *   Permission → inserts failed records for all recipients, then re-throws
- *   Generic    → inserts failed records, increments failed counter, continues
+ *   rateLimitDelay = ceil(CHUNK_SIZE / maxSendRate)
+ *                  = ceil(50 / maxSendRate)
+ *
+ * This per-account value varies based on sending reputation and AWS limits.
+ * New accounts get ~14 emails/sec; high-volume senders can be 200+.
+ *
+ * Tests:
+ *   - Default new-account rate (14 eps) → 4s delay between chunks
+ *   - High-volume account (200 eps) → 1s delay (minimum meaningful)
+ *   - Mid-range account (25 eps) → 2s delay
+ *   - GetAccount failure → falls back to DEFAULT_RATE_LIMIT (14 eps) → 4s
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeMockContext } from "./__helpers__/lambda-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SQS mock — captures SendMessageCommand inputs so we can assert re-queue args
+// SQS mock — captures DelaySeconds on outgoing chunk messages
 // ─────────────────────────────────────────────────────────────────────────────
 
 const sqsSendCalls: Array<{ MessageBody: string; DelaySeconds?: number }> = [];
@@ -35,21 +44,32 @@ vi.mock("@aws-sdk/client-sqs", () => ({
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SES mock — throws specific errors on the bulk send call (index 1)
+// SES mock — configurable MaxSendRate, or throws on GetAccount call
 // ─────────────────────────────────────────────────────────────────────────────
 
+let sesMaxSendRate: number | null = 14; // null = throw on GetAccount
 let sesCallCount = 0;
-let sesErrorToThrow: Error | null = null;
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: class {
     send = vi.fn().mockImplementation(() => {
       sesCallCount++;
-      // Index 0 = GetAccount, index 1+ = SendBulkEmail
-      if (sesCallCount > 1 && sesErrorToThrow) {
-        return Promise.reject(sesErrorToThrow);
+      // Call 0 = GetAccountCommand
+      if (sesCallCount === 1) {
+        if (sesMaxSendRate === null) {
+          return Promise.reject(new Error("GetAccount failed: network error"));
+        }
+        return Promise.resolve({
+          SendQuota: { MaxSendRate: sesMaxSendRate },
+        });
       }
-      return Promise.resolve({ SendQuota: { MaxSendRate: 14 } });
+      // Call 1+ = SendBulkEmailCommand
+      return Promise.resolve({
+        BulkEmailEntryResults: [
+          { Status: "SUCCESS", MessageId: "msg-1" },
+          { Status: "SUCCESS", MessageId: "msg-2" },
+        ],
+      });
     });
   },
   GetAccountCommand: class {
@@ -64,18 +84,12 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DB mock — index-based selects, tracks inserts
-// Bulk path select order (batch.from != null, emailTemplateId set):
-//   0: batch
-//   1: contacts
-//   2: template  \  via Promise.all
-//   3: org       /
-//   4: existingSendRecords (dedup)
+// DB mock — bulk path select order:
+//   0: batch  1: contacts  2: template  3: org  4: dedup
 // ─────────────────────────────────────────────────────────────────────────────
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
-const insertValuesCalls: unknown[] = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -108,9 +122,8 @@ vi.mock("@wraps/db", async () => {
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockImplementation((vals: unknown) => {
-          insertValuesCalls.push(vals);
-          return { onConflictDoNothing: vi.fn().mockResolvedValue(undefined) };
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
         }),
       }),
     },
@@ -163,7 +176,7 @@ const { handler } = await import("../workers/batch-sender");
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function makeBulkBatch(overrides: Record<string, unknown> = {}) {
+function makeBatch(overrides: Record<string, unknown> = {}) {
   return {
     id: "batch-1",
     organizationId: "org-1",
@@ -173,11 +186,12 @@ function makeBulkBatch(overrides: Record<string, unknown> = {}) {
     segmentId: null,
     emailTemplateId: "tmpl-1",
     htmlContent: null,
-    subject: "Test Subject",
+    subject: "Rate Test",
     from: "sender@example.com",
     fromName: "Sender",
     replyTo: null,
-    totalRecipients: 2,
+    // Ensure more contacts remain so the worker enqueues a next chunk
+    totalRecipients: 100,
     processedRecipients: 0,
     sent: 0,
     failed: 0,
@@ -186,37 +200,24 @@ function makeBulkBatch(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeContacts() {
-  return [
-    {
-      id: "contact-1",
-      email: "alice@example.com",
-      phone: null,
-      firstName: "Alice",
-      lastName: null,
-      company: null,
-      jobTitle: null,
-      properties: {},
-      createdAt: new Date("2026-01-15T10:00:00Z"),
-    },
-    {
-      id: "contact-2",
-      email: "bob@example.com",
-      phone: null,
-      firstName: "Bob",
-      lastName: null,
-      company: null,
-      jobTitle: null,
-      properties: {},
-      createdAt: new Date("2026-01-15T11:00:00Z"),
-    },
-  ];
+function makeContacts(count = 50) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `c${i}`,
+    email: `user${i}@example.com`,
+    phone: null,
+    firstName: `User${i}`,
+    lastName: null,
+    company: null,
+    jobTitle: null,
+    properties: {},
+    createdAt: new Date("2026-01-15T10:00:00Z"),
+  }));
 }
 
-function setupBulkSelects(existingSendRecords: unknown[] = []) {
+function setupSelects() {
   selectResults = [
-    [makeBulkBatch()],
-    makeContacts(),
+    [makeBatch()],
+    makeContacts(50),
     [
       {
         sesTemplateName: "wraps-tmpl-1",
@@ -225,11 +226,11 @@ function setupBulkSelects(existingSendRecords: unknown[] = []) {
       },
     ],
     [{ name: "Test Org" }],
-    existingSendRecords,
+    [], // dedup: no existing records
   ];
 }
 
-function makeSQSEvent(chunkIndex = 0) {
+function makeSQSEvent() {
   return {
     Records: [
       {
@@ -238,7 +239,7 @@ function makeSQSEvent(chunkIndex = 0) {
           organizationId: "org-1",
           awsAccountId: "aws-1",
           channel: "email",
-          chunkIndex,
+          chunkIndex: 0,
         }),
         messageId: "sqs-msg-1",
         receiptHandle: "handle-1",
@@ -256,115 +257,75 @@ function makeSQSEvent(chunkIndex = 0) {
 beforeEach(() => {
   vi.clearAllMocks();
   sesCallCount = 0;
-  sesErrorToThrow = null;
+  sesMaxSendRate = 14;
   sqsSendCalls.length = 0;
   selectCallIndex = 0;
   selectResults = [];
-  insertValuesCalls.length = 0;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Throttle error
+// Rate limit delay calculations
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("SES throttle error", () => {
-  it("re-queues the same chunkIndex (not incremented) with 30s delay", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(new Error("Rate exceeded"), {
-      name: "Throttling",
-    });
+describe("inter-chunk delay reflects account MaxSendRate", () => {
+  it("new-account rate (14 eps) → ceil(50/14) = 4s delay on next chunk", async () => {
+    sesMaxSendRate = 14;
+    setupSelects();
 
-    await handler(makeSQSEvent(2), makeMockContext(), vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(sqsSendCalls).toHaveLength(1);
-
-    const requeued = JSON.parse(sqsSendCalls[0].MessageBody);
-    // chunkIndex must remain 2 — NOT incremented to 3
-    expect(requeued.chunkIndex).toBe(2);
-    expect(requeued.batchId).toBe("batch-1");
-    expect(requeued.organizationId).toBe("org-1");
+    expect(sqsSendCalls[0].DelaySeconds).toBe(4);
   });
 
-  it("delays the re-queued message by exactly 30 seconds", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(new Error("Rate exceeded"), {
-      name: "TooManyRequestsException",
-    });
+  it("high-volume account (200 eps) → ceil(50/200) = 1s delay on next chunk", async () => {
+    sesMaxSendRate = 200;
+    setupSelects();
 
-    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    expect(sqsSendCalls[0]?.DelaySeconds).toBe(30);
+    expect(sqsSendCalls).toHaveLength(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(1);
   });
 
-  it("does NOT insert any messageSend records when throttled (chunk will retry)", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(new Error("Rate limit exceeded"), {
-      name: "Throttling",
-    });
+  it("mid-range account (25 eps) → ceil(50/25) = 2s delay on next chunk", async () => {
+    sesMaxSendRate = 25;
+    setupSelects();
 
-    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const sendInserts = (insertValuesCalls as unknown[][]).filter(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    );
-    expect(sendInserts).toHaveLength(0);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Permission error
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("SES permission error", () => {
-  it("inserts failed messageSend records for all recipients before re-throwing", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(
-      new Error("User is not authorized to perform: ses:SendBulkEmail"),
-      { name: "AccessDeniedException" }
-    );
-
-    await expect(
-      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
-    ).rejects.toThrow();
-
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-
-    expect(sendInsert).toBeDefined();
-    expect(sendInsert).toHaveLength(2);
-    expect(sendInsert?.every((r) => r.status === "failed")).toBe(true);
+    expect(sqsSendCalls).toHaveLength(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(2);
   });
 
-  it("error message mentions IAM role and instructs how to fix it", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(new Error("AccessDenied"), {
-      name: "AccessDenied",
-    });
+  it("very constrained account (1 eps) → ceil(50/1) = 50s delay on next chunk", async () => {
+    sesMaxSendRate = 1;
+    setupSelects();
 
-    await expect(
-      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
-    ).rejects.toThrow(/IAM role|CloudFormation|update-role/i);
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    expect(sqsSendCalls).toHaveLength(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(50);
   });
 
-  it("does NOT re-queue an SQS message when permission error occurs", async () => {
-    setupBulkSelects();
-    sesErrorToThrow = Object.assign(new Error("is not authorized to perform"), {
-      name: "AccessDeniedException",
-    });
+  it("GetAccount failure falls back to default (14 eps) → 4s delay", async () => {
+    sesMaxSendRate = null; // makes GetAccountCommand throw
+    setupSelects();
 
-    await expect(
-      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
-    ).rejects.toThrow();
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    expect(sqsSendCalls).toHaveLength(0);
+    expect(sqsSendCalls).toHaveLength(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(4);
+  });
+
+  it("next-chunk message carries the correct chunkIndex (not re-using current)", async () => {
+    sesMaxSendRate = 14;
+    setupSelects();
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    const nextJob = JSON.parse(sqsSendCalls[0].MessageBody);
+    expect(nextJob.chunkIndex).toBe(1); // incremented from 0
+    expect(nextJob.batchId).toBe("batch-1");
   });
 });

@@ -7,6 +7,10 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  makeMockContext,
+  makeSqsRecordAttributes,
+} from "./__helpers__/lambda-context";
 
 // Track SES calls to verify no duplicate sends
 const sesSendCalls: unknown[][] = [];
@@ -233,7 +237,7 @@ function makeSQSEvent() {
         }),
         messageId: "sqs-msg-1",
         receiptHandle: "handle-1",
-        attributes: {} as never,
+        attributes: makeSqsRecordAttributes(),
         messageAttributes: {},
         md5OfBody: "",
         eventSource: "aws:sqs",
@@ -296,7 +300,7 @@ describe("Batch sender idempotency", () => {
       existingSendRecords: [{ contactId: "contact-1", status: "sent" }],
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // SES should only be called for contact-2 (not contact-1)
     expect(sesSendCalls).toHaveLength(2); // GetAccount + 1 bulk send
@@ -330,7 +334,7 @@ describe("Batch sender idempotency", () => {
       ],
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // Only GetAccount call, no bulk send
     const bulkSendCalls = sesSendCalls.filter(
@@ -352,7 +356,7 @@ describe("Batch sender idempotency", () => {
       existingSendRecords: [],
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     // SES bulk send should include both contacts
     const bulkCall = sesSendCalls[1]?.[0] as
@@ -370,7 +374,7 @@ describe("Batch sender idempotency", () => {
       existingSendRecords: [{ contactId: "contact-1", status: "failed" }],
     });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const bulkCall = sesSendCalls[1]?.[0] as
       | Record<string, unknown>
@@ -385,5 +389,47 @@ describe("Batch sender idempotency", () => {
     );
     const processedExpr = progressUpdate?.processedRecipients;
     expect(getSqlNumericParams(processedExpr).at(-1)).toBe(2);
+  });
+
+  it("progress UPDATE carries heartbeat fields in a single .set() call", async () => {
+    setupSelects({
+      batch: makeBatch({ totalRecipients: 100 }),
+      existingSendRecords: [],
+    });
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    const progressUpdate = updateSetCalls.find(
+      (call) => "processedRecipients" in call && "lastChunkIndex" in call
+    );
+
+    expect(progressUpdate).toBeDefined();
+    expect(progressUpdate).toMatchObject({
+      lastChunkIndex: 0,
+    });
+    expect(progressUpdate?.lastChunkAt).toBeInstanceOf(Date);
+    // lastCursor must be an object or null — never undefined, so the column
+    // actually overwrites prior state. With 2 contacts we expect a cursor.
+    expect(progressUpdate?.lastCursor).toMatchObject({ id: "contact-2" });
+
+    expect(progressUpdate).toHaveProperty("sent");
+    expect(progressUpdate).toHaveProperty("failed");
+  });
+
+  it("progress UPDATE writes lastCursor=null when chunk is short (terminal)", async () => {
+    // Short-chunk path (contacts.length < Math.min(CHUNK_SIZE, remaining)):
+    // we still want lastChunkAt/lastChunkIndex recorded for observability.
+    setupSelects({
+      batch: makeBatch({ totalRecipients: 2 }),
+      existingSendRecords: [],
+    });
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    const progressUpdate = updateSetCalls.find(
+      (call) => "processedRecipients" in call && "lastChunkIndex" in call
+    );
+    expect(progressUpdate).toBeDefined();
+    expect(progressUpdate?.lastChunkIndex).toBe(0);
   });
 });

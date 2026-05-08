@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 // Track SESv2Client constructor calls
 const sesClientInstances: Array<{ region: string }> = [];
@@ -211,7 +212,7 @@ describe("batch-sender SES region", () => {
       ],
     };
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // SES client should be created with customer's region (eu-west-1),
     // NOT the Lambda's region (us-east-1)

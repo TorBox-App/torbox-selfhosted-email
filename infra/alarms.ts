@@ -5,7 +5,7 @@
  * Alerts when any message lands in the workflow or batch DLQs.
  */
 
-import { batchDlq, workflowDlq } from "./queues";
+import { batchDlq, batchQueue, workflowDlq } from "./queues";
 
 // SNS topic for alarm notifications
 export const alertsTopic = new aws.sns.Topic("AlertsTopic", {
@@ -61,6 +61,34 @@ new aws.cloudwatch.MetricAlarm("BatchDlqAlarm", {
   period: 60,
   evaluationPeriods: 1,
   threshold: 1,
+  comparisonOperator: "GreaterThanOrEqualToThreshold",
+  treatMissingData: "notBreaching",
+  alarmActions: [alertsTopic.arn],
+  okActions: [alertsTopic.arn],
+  tags: {
+    ManagedBy: "sst",
+    Service: "wraps-api",
+  },
+});
+
+// Alarm: batch messages sitting too long on the main queue.
+// DLQ alarm only fires AFTER 3 retries — roughly 15+ min of failure before
+// a broadcast operator sees anything. This fires earlier: if the oldest
+// message on the main queue has been waiting >= 15 min, something is
+// blocking the worker and we want to know BEFORE DLQ landing.
+new aws.cloudwatch.MetricAlarm("BatchQueueAgeAlarm", {
+  name: $interpolate`wraps-batch-queue-age-${$app.stage}`,
+  alarmDescription:
+    "Oldest batch message has been on the queue for >= 15 minutes — worker likely stalled",
+  namespace: "AWS/SQS",
+  metricName: "ApproximateAgeOfOldestMessage",
+  dimensions: {
+    QueueName: batchQueue.nodes.queue.name,
+  },
+  statistic: "Maximum",
+  period: 60,
+  evaluationPeriods: 3,
+  threshold: 900, // 15 minutes
   comparisonOperator: "GreaterThanOrEqualToThreshold",
   treatMissingData: "notBreaching",
   alarmActions: [alertsTopic.arn],

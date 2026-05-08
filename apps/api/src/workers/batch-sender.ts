@@ -27,8 +27,9 @@ import {
   segment,
   template,
 } from "@wraps/db";
+import { transformVariablesForSes } from "@wraps/email";
 import { sendEmail } from "@wraps/email-send";
-import type { SQSEvent, SQSHandler } from "aws-lambda";
+import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
@@ -37,39 +38,6 @@ import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
 import { applyVariableMappings } from "./variable-mappings";
-
-/**
- * Transform variables from dot notation to SES-compatible camelCase format.
- * Also converts fallback syntax to Handlebars conditionals.
- *
- * Examples:
- *   {{contact.firstName}} -> {{contactFirstName}}
- *   {{contact.firstName|there}} -> {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
- *
- * This is a safety net for the fallback path - normally auto-publish handles this.
- */
-function transformVariablesForSes(html: string): string {
-  return html.replace(
-    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
-    (_match, varName: string, fallback: string | undefined) => {
-      // Convert dot notation to camelCase: contact.firstName -> contactFirstName
-      const sesName = varName
-        .split(".")
-        .map((part, index) =>
-          index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
-        )
-        .join("");
-
-      // If there's a fallback value, use Handlebars conditional
-      if (fallback !== undefined) {
-        const trimmedFallback = fallback.trim();
-        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmedFallback}{{/if}}`;
-      }
-
-      return `{{${sesName}}}`;
-    }
-  );
-}
 
 // Align chunk size with SES bulk limit for clean 1:1 mapping
 const CHUNK_SIZE = 50; // SES SendBulkEmail limit per API call
@@ -85,7 +53,17 @@ const dedupStatuses = new Set<string>([
   "suppressed",
 ] as const);
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+// Below this remaining-time floor, re-enqueue the chunk instead of racing
+// the invocation timeout. Above receiveCount=2, fall through — processing
+// slowly beats an infinite re-enqueue loop.
+const SELF_RESCHEDULE_FLOOR_MS = 45_000;
+const SELF_RESCHEDULE_LOOP_GUARD = 2;
+const SELF_RESCHEDULE_DELAY_SECONDS = 10;
+
+export const handler: SQSHandler = async (
+  event: SQSEvent,
+  context: Context
+) => {
   if (!QUEUE_URL) {
     throw new Error(
       "BATCH_QUEUE_URL not configured — check Lambda environment"
@@ -94,35 +72,44 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
   try {
     for (const record of event.Records) {
       const job: BatchJob = JSON.parse(record.body);
-      await processJob(job);
+      await processJob(job, context, record);
     }
   } finally {
     await flushLogger();
   }
 };
 
-async function processJob(job: BatchJob): Promise<void> {
+async function processJob(
+  job: BatchJob,
+  context: Context,
+  record: SQSRecord
+): Promise<void> {
   const { batchId, organizationId, awsAccountId, channel, chunkIndex } = job;
 
-  // Load batch details
+  // Scoped by (id, organizationId) — blocks cross-org reads.
   const [batch] = await db
     .select()
     .from(batchSend)
-    .where(eq(batchSend.id, batchId))
+    .where(
+      and(
+        eq(batchSend.id, batchId),
+        eq(batchSend.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!batch) {
-    log.error("Batch not found", undefined, { batchId });
+    log.error("Batch not found", undefined, { batchId, organizationId });
     return;
   }
 
-  // Check if batch was cancelled
+  // Cancelled / unsupported-channel checks MUST run before self-reschedule
+  // so a doomed batch can't bounce forever on short-remaining invocations.
   if (batch.status === "cancelled") {
     log.info("Batch cancelled, skipping", { batchId });
     return;
   }
 
-  // Reject unsupported channels before any state mutation
   if (channel !== "email") {
     log.error("Unsupported batch channel", undefined, {
       batchId,
@@ -141,6 +128,30 @@ async function processJob(job: BatchJob): Promise<void> {
       })
       .where(eq(batchSend.id, batchId));
     return;
+  }
+
+  const remainingMs = context.getRemainingTimeInMillis();
+  if (remainingMs < SELF_RESCHEDULE_FLOOR_MS) {
+    const receiveCount = Number(record.attributes.ApproximateReceiveCount ?? 1);
+    if (receiveCount > SELF_RESCHEDULE_LOOP_GUARD) {
+      log.warn("broadcast.self_reschedule.suspected_loop", {
+        batchId,
+        chunkIndex,
+        remainingMs,
+        receiveCount,
+      });
+    } else {
+      log.info("broadcast.self_reschedule", {
+        batchId,
+        chunkIndex,
+        remainingMs,
+        receiveCount,
+      });
+      await enqueueNextChunk(job, {
+        delaySeconds: SELF_RESCHEDULE_DELAY_SECONDS,
+      });
+      return;
+    }
   }
 
   // Mark as processing on first chunk
@@ -801,28 +812,30 @@ async function processJob(job: BatchJob): Promise<void> {
       .where(inArray(contact.id, sentContactIds));
   }
 
-  // Update batch progress
+  // Compute cursor BEFORE the progress UPDATE so the heartbeat pointer
+  // (lastCursor) lands in the same write — DLQ consumer and /resume both
+  // read lastChunkIndex/lastCursor to know where to pick up.
+  const lastContact = contacts.at(-1);
+  const nextCursor = lastContact ? { id: lastContact.id } : null;
+
   await db
     .update(batchSend)
     .set({
       processedRecipients: sql`${batchSend.processedRecipients} + ${chunkProcessedRecipients}`,
       sent: sql`${batchSend.sent} + ${sent}`,
       failed: sql`${batchSend.failed} + ${failed}`,
+      lastChunkAt: new Date(),
+      lastChunkIndex: chunkIndex,
+      lastCursor: nextCursor,
     })
     .where(eq(batchSend.id, batchId));
-
-  // Build cursor from last contact for next chunk
-  const lastContact = contacts.at(-1);
-  const nextCursor = lastContact
-    ? { createdAt: lastContact.createdAt.toISOString(), id: lastContact.id }
-    : undefined;
 
   const shouldEnqueueNextChunk =
     contacts.length === Math.min(CHUNK_SIZE, remainingRecipients) &&
     batch.processedRecipients + contacts.length < batch.totalRecipients;
   if (shouldEnqueueNextChunk) {
     await enqueueNextChunk(
-      { ...job, chunkIndex: chunkIndex + 1, cursor: nextCursor },
+      { ...job, chunkIndex: chunkIndex + 1, cursor: nextCursor ?? undefined },
       { delaySeconds: rateLimitDelay }
     );
   } else {
@@ -852,7 +865,7 @@ type RecipientFilter = {
   segmentId?: string;
 };
 
-export type BatchCursor = { createdAt: string; id: string };
+export type BatchCursor = { id: string };
 
 export async function getContactsChunk(
   organizationId: string,
@@ -921,9 +934,7 @@ export async function getContactsChunk(
   // position instead of using OFFSET, which breaks when contacts are
   // added/deleted between chunks.
   if (cursor) {
-    conditions.push(
-      sql`(${contact.createdAt}, ${contact.id}) > (${new Date(cursor.createdAt)}, ${cursor.id})`
-    );
+    conditions.push(sql`${contact.id} > ${cursor.id}`);
   }
 
   return db
@@ -940,7 +951,7 @@ export async function getContactsChunk(
     })
     .from(contact)
     .where(and(...(conditions as Parameters<typeof and>)))
-    .orderBy(contact.createdAt, contact.id)
+    .orderBy(contact.id)
     .limit(limit);
 }
 

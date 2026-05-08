@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 // Capture SQS SendMessageCommand calls
 const sqsSendCalls: Array<{ MessageBody: string; DelaySeconds?: number }> = [];
@@ -266,17 +267,14 @@ describe("processJob cursor passing", () => {
       chunkIndex: 0,
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // Should have enqueued a next chunk
     expect(sqsSendCalls.length).toBe(1);
 
     const nextJob = JSON.parse(sqsSendCalls[0].MessageBody);
     expect(nextJob.chunkIndex).toBe(1);
-    expect(nextJob.cursor).toEqual({
-      createdAt: lastContact.createdAt.toISOString(),
-      id: lastContact.id,
-    });
+    expect(nextJob.cursor).toEqual({ id: lastContact.id });
   });
 
   it("completes batch when chunk returns fewer than CHUNK_SIZE contacts", async () => {
@@ -368,13 +366,10 @@ describe("processJob cursor passing", () => {
       awsAccountId: "aws-1",
       channel: "email",
       chunkIndex: 1,
-      cursor: {
-        createdAt: mockContacts[49].createdAt.toISOString(),
-        id: mockContacts[49].id,
-      },
+      cursor: { id: mockContacts[49].id },
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // Should NOT enqueue another chunk
     expect(sqsSendCalls.length).toBe(0);
@@ -441,13 +436,10 @@ describe("processJob cursor passing", () => {
       awsAccountId: "aws-1",
       channel: "email",
       chunkIndex: 1,
-      cursor: {
-        createdAt: mockContacts[49].createdAt.toISOString(),
-        id: mockContacts[49].id,
-      },
+      cursor: { id: mockContacts[49].id },
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     const updateCalls = (db.update as ReturnType<typeof vi.fn>).mock.calls;
     expect(updateCalls.length).toBeGreaterThan(0);
@@ -545,7 +537,7 @@ describe("processJob cursor passing", () => {
       chunkIndex: 0,
     });
 
-    await handler(event, {} as never, () => {});
+    await handler(event, makeMockContext(), () => {});
 
     // shouldEnqueueNextChunk should be false: 0 + 50 < 50 is false
     expect(sqsSendCalls.length).toBe(0);

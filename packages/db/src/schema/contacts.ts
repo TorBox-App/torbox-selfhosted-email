@@ -173,6 +173,15 @@ export const contact = pgTable(
       table.organizationId,
       table.status
     ),
+
+    // Keyset pagination for batch-sender chunking. Ordering tuple:
+    // (organizationId, createdAt, id). Created CONCURRENTLY in prod via
+    // packages/db/scripts/create-broadcast-resume-indexes.ts.
+    keysetIdx: index("contact_keyset_idx").on(
+      table.organizationId,
+      table.createdAt,
+      table.id
+    ),
   })
 );
 

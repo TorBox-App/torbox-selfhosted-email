@@ -1339,3 +1339,45 @@ describe("cli router forwards --force and --preview to destroy commands", () => 
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// Broadcast resume: schema must declare the indexes that the
+// out-of-band CONCURRENT script creates. Without this, a future
+// db:generate could forget about them and drift silently.
+// ─────────────────────────────────────────────────────────
+
+describe("broadcast resume schema indexes", () => {
+  test("message_send_dedup_idx is declared in schema/batch.ts", () => {
+    const batchSchema = readFile("packages/db/src/schema/batch.ts");
+    expect(batchSchema).toContain('uniqueIndex("message_send_dedup_idx")');
+    expect(batchSchema).toMatch(
+      /message_send_dedup_idx[\s\S]{0,200}contact_id IS NOT NULL/
+    );
+  });
+
+  test("contact_keyset_idx is declared in schema/contacts.ts", () => {
+    const contactsSchema = readFile("packages/db/src/schema/contacts.ts");
+    expect(contactsSchema).toContain('index("contact_keyset_idx")');
+    expect(contactsSchema).toMatch(
+      /contact_keyset_idx[\s\S]{0,300}organizationId[\s\S]{0,100}createdAt[\s\S]{0,100}\bid\b/
+    );
+  });
+
+  test("concurrent-index script exists and covers both indexes", () => {
+    const script = readFile(
+      "packages/db/scripts/create-broadcast-resume-indexes.ts"
+    );
+    expect(script).toContain("CREATE UNIQUE INDEX CONCURRENTLY");
+    expect(script).toContain("message_send_dedup_idx");
+    expect(script).toContain("CREATE INDEX CONCURRENTLY");
+    expect(script).toContain("contact_keyset_idx");
+  });
+
+  test("migration 0055 does NOT contain the concurrent indexes (kept out of drizzle-kit)", () => {
+    const migration = readFile(
+      "packages/db/src/migrations/0055_broadcast_resume_columns.sql"
+    );
+    const hasConcurrentIndexCreate =
+      /^\s*CREATE\s+(UNIQUE\s+)?INDEX\s+(CONCURRENTLY\s+)?(IF NOT EXISTS\s+)?"?(message_send_dedup_idx|contact_keyset_idx)"?/m;
+    expect(migration).not.toMatch(hasConcurrentIndexCreate);
+  });
+});
