@@ -5,13 +5,15 @@
  * Uses soft caps with 25% grace period before hard blocking.
  *
  * Thresholds:
- * - 80%: Dashboard warning (not blocked)
- * - 100%: Critical warning, email notification
+ * - 100%: Warning logged
  * - 125%: Hard block with 429 response
+ *
+ * Usage: call applyEventLimit(app) on the Elysia instance that owns your
+ * routes. Do NOT wrap in a plugin — Elysia 1.4 does not propagate plugin
+ * hooks to parent route instances.
  */
 
 import { and, db, eq, eventUsageMonthly, sqlExpr as sql } from "@wraps/db";
-import { Elysia } from "elysia";
 
 import { log } from "../lib/logger";
 import type { AuthContext } from "./auth";
@@ -92,84 +94,63 @@ export function getEventTTLExpiration(): Date {
 }
 
 /**
- * Event limit middleware
+ * onBeforeHandle callback that enforces monthly event limits.
  *
- * Checks current event usage against plan limits.
- * Sets response headers with usage info.
- * Returns 429 if over 125% limit (hard block).
+ * Add directly to the Elysia instance that owns your routes:
+ *   createAuthenticatedRoutes("/v1/events").onBeforeHandle(enforceEventLimit).post(...)
+ *
+ * Elysia 1.4 does not propagate plugin hooks to parent route instances, so
+ * this must be added inline — not wrapped in a plugin and .use()-d.
  */
-export const eventLimitMiddleware = new Elysia({ name: "event-limit" }).derive(
-  async (ctx) => {
-    const auth = (ctx as unknown as { auth: AuthContext }).auth;
+// biome-ignore lint/suspicious/noExplicitAny: ctx shape varies across Elysia route instances
+export async function enforceEventLimit(ctx: any) {
+  const auth = (ctx as { auth: AuthContext }).auth;
+  if (!auth) return;
 
-    if (!auth) {
-      // Auth middleware should have already set this
-      return {};
+  const { set } = ctx;
+  const { organizationId, planId } = auth;
+  const limit =
+    EVENT_LIMITS[planId as keyof typeof EVENT_LIMITS] ?? EVENT_LIMITS.free;
+
+  try {
+    const currentUsage = await getEventUsageCount(organizationId);
+    const percentUsed = Math.round((currentUsage / limit) * 100);
+    const remaining = Math.max(0, limit - currentUsage);
+    const graceLimit = Math.floor(limit * 1.25);
+
+    set.headers["X-Event-Limit"] = String(limit);
+    set.headers["X-Event-Current"] = String(currentUsage);
+    set.headers["X-Event-Remaining"] = String(remaining);
+    set.headers["X-Event-Percent"] = String(percentUsed);
+
+    if (currentUsage >= graceLimit) {
+      set.status = 429;
+      set.headers["X-Event-Exceeded"] = "true";
+      set.headers["Retry-After"] = String(getSecondsUntilNextMonth());
+      return {
+        error: "event_limit_exceeded",
+        message: `Monthly event limit exceeded (${percentUsed}% used). Upgrade your plan to continue ingesting events.`,
+        upgradeUrl: "https://app.wraps.dev/settings/billing",
+        current: currentUsage,
+        limit,
+        percentUsed,
+        resetsAt: getNextMonthResetDate().toISOString(),
+      };
     }
 
-    const { set } = ctx;
-    const { organizationId, planId } = auth;
-
-    // Get limit for this plan (fallback to free tier)
-    const limit =
-      EVENT_LIMITS[planId as keyof typeof EVENT_LIMITS] ?? EVENT_LIMITS.free;
-
-    try {
-      const currentUsage = await getEventUsageCount(organizationId);
-      const percentUsed = Math.round((currentUsage / limit) * 100);
-      const remaining = Math.max(0, limit - currentUsage);
-      const graceLimit = Math.floor(limit * 1.25); // 25% grace period
-
-      // Set usage headers
-      set.headers["X-Event-Limit"] = String(limit);
-      set.headers["X-Event-Current"] = String(currentUsage);
-      set.headers["X-Event-Remaining"] = String(remaining);
-      set.headers["X-Event-Percent"] = String(percentUsed);
-
-      // Hard block at 125%
-      if (currentUsage >= graceLimit) {
-        set.status = 429;
-        set.headers["X-Event-Exceeded"] = "true";
-        set.headers["Retry-After"] = String(getSecondsUntilNextMonth());
-
-        throw new Error(
-          JSON.stringify({
-            error: "event_limit_exceeded",
-            message: `Monthly event limit exceeded (${percentUsed}% used). Upgrade your plan to continue ingesting events.`,
-            upgradeUrl: "https://app.wraps.dev/settings/billing",
-            current: currentUsage,
-            limit,
-            percentUsed,
-            resetsAt: getNextMonthResetDate().toISOString(),
-          })
-        );
-      }
-
-      // Log warning at 100% (but don't block)
-      if (currentUsage >= limit) {
-        log.warn("Event limit reached", {
-          organizationId,
-          percentUsed,
-          currentUsage,
-          limit,
-        });
-      }
-    } catch (error) {
-      // Re-throw limit exceeded errors
-      if (
-        error instanceof Error &&
-        error.message.includes("event_limit_exceeded")
-      ) {
-        throw error;
-      }
-
-      // Log other errors but fail open
-      log.error("Event limit check failed", error, { organizationId });
+    if (currentUsage >= limit) {
+      log.warn("Event limit reached", {
+        organizationId,
+        percentUsed,
+        currentUsage,
+        limit,
+      });
     }
-
-    return {};
+  } catch (error) {
+    log.error("Event limit check failed", error, { organizationId });
+    // fail open — a DB error here should not block event ingestion
   }
-);
+}
 
 /**
  * Get seconds until the 1st of next month (for Retry-After header)

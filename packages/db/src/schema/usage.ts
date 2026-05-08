@@ -286,14 +286,14 @@ export const messageUsageMonthlyRelations = relations(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EVENT USAGE TRACKING (for analytics - no billing limits)
+// EVENT USAGE TRACKING
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Event Usage Monthly Summary
  *
- * One row per organization per month for analytics tracking.
- * Events are now unlimited - this table is kept for analytics purposes.
+ * One row per organization per month. Used by event-limit middleware to
+ * enforce plan quotas and set X-Event-* response headers.
  *
  * The periodKey is formatted as "YYYY-MM" (e.g., "2025-01")
  * Combined with organizationId creates a unique constraint.

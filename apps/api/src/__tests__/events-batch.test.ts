@@ -37,9 +37,8 @@ vi.mock("../services/workflow-queue", () => ({
 
 import { Elysia } from "elysia";
 
-// Mock event-limit middleware to pass through (must use Elysia instance)
 vi.mock("../middleware/event-limit", () => ({
-  eventLimitMiddleware: new Elysia({ name: "event-limit" }),
+  enforceEventLimit: vi.fn().mockResolvedValue(undefined),
   getEventTTLExpiration: () => {
     const ttl = new Date();
     ttl.setFullYear(ttl.getFullYear() + 2);

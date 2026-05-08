@@ -44,7 +44,7 @@ import {
   createAuthenticatedRoutes,
 } from "../middleware/auth";
 import {
-  eventLimitMiddleware,
+  enforceEventLimit,
   getEventTTLExpiration,
   incrementEventUsage,
 } from "../middleware/event-limit";
@@ -66,8 +66,7 @@ const propertiesSchema = t.Optional(
 );
 
 export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
-  // Apply event limit middleware (checks usage before allowing ingestion)
-  .use(eventLimitMiddleware)
+  .onBeforeHandle(enforceEventLimit)
 
   /**
    * Ingest a custom event
