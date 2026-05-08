@@ -410,10 +410,7 @@ describe("Batch sender idempotency", () => {
     expect(progressUpdate?.lastChunkAt).toBeInstanceOf(Date);
     // lastCursor must be an object or null — never undefined, so the column
     // actually overwrites prior state. With 2 contacts we expect a cursor.
-    expect(progressUpdate?.lastCursor).toMatchObject({
-      id: "contact-2",
-      createdAt: expect.any(String),
-    });
+    expect(progressUpdate?.lastCursor).toMatchObject({ id: "contact-2" });
 
     expect(progressUpdate).toHaveProperty("sent");
     expect(progressUpdate).toHaveProperty("failed");

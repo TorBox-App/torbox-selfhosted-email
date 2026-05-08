@@ -274,10 +274,7 @@ describe("processJob cursor passing", () => {
 
     const nextJob = JSON.parse(sqsSendCalls[0].MessageBody);
     expect(nextJob.chunkIndex).toBe(1);
-    expect(nextJob.cursor).toEqual({
-      createdAt: lastContact.createdAt.toISOString(),
-      id: lastContact.id,
-    });
+    expect(nextJob.cursor).toEqual({ id: lastContact.id });
   });
 
   it("completes batch when chunk returns fewer than CHUNK_SIZE contacts", async () => {
@@ -369,10 +366,7 @@ describe("processJob cursor passing", () => {
       awsAccountId: "aws-1",
       channel: "email",
       chunkIndex: 1,
-      cursor: {
-        createdAt: mockContacts[49].createdAt.toISOString(),
-        id: mockContacts[49].id,
-      },
+      cursor: { id: mockContacts[49].id },
     });
 
     await handler(event, makeMockContext(), () => {});
@@ -442,10 +436,7 @@ describe("processJob cursor passing", () => {
       awsAccountId: "aws-1",
       channel: "email",
       chunkIndex: 1,
-      cursor: {
-        createdAt: mockContacts[49].createdAt.toISOString(),
-        id: mockContacts[49].id,
-      },
+      cursor: { id: mockContacts[49].id },
     });
 
     await handler(event, makeMockContext(), () => {});

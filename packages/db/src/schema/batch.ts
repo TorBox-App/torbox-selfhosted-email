@@ -170,10 +170,7 @@ export const batchSend = pgTable(
     // ═══════════════════════════════════════════════════════════════════════
     lastChunkAt: timestamp("last_chunk_at"),
     lastChunkIndex: integer("last_chunk_index"),
-    lastCursor: json("last_cursor").$type<{
-      createdAt: string;
-      id: string;
-    } | null>(),
+    lastCursor: json("last_cursor").$type<{ id: string } | null>(),
 
     // ═══════════════════════════════════════════════════════════════════════
     // TIMING

@@ -27,8 +27,8 @@ import {
   segment,
   template,
 } from "@wraps/db";
-import { sendEmail } from "@wraps/email-send";
 import { transformVariablesForSes } from "@wraps/email";
+import { sendEmail } from "@wraps/email-send";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
@@ -816,9 +816,7 @@ async function processJob(
   // (lastCursor) lands in the same write — DLQ consumer and /resume both
   // read lastChunkIndex/lastCursor to know where to pick up.
   const lastContact = contacts.at(-1);
-  const nextCursor = lastContact
-    ? { createdAt: lastContact.createdAt.toISOString(), id: lastContact.id }
-    : null;
+  const nextCursor = lastContact ? { id: lastContact.id } : null;
 
   await db
     .update(batchSend)
@@ -867,7 +865,7 @@ type RecipientFilter = {
   segmentId?: string;
 };
 
-export type BatchCursor = { createdAt: string; id: string };
+export type BatchCursor = { id: string };
 
 export async function getContactsChunk(
   organizationId: string,
@@ -936,9 +934,7 @@ export async function getContactsChunk(
   // position instead of using OFFSET, which breaks when contacts are
   // added/deleted between chunks.
   if (cursor) {
-    conditions.push(
-      sql`(${contact.createdAt}, ${contact.id}) > (${new Date(cursor.createdAt)}, ${cursor.id})`
-    );
+    conditions.push(sql`${contact.id} > ${cursor.id}`);
   }
 
   return db
@@ -955,7 +951,7 @@ export async function getContactsChunk(
     })
     .from(contact)
     .where(and(...(conditions as Parameters<typeof and>)))
-    .orderBy(contact.createdAt, contact.id)
+    .orderBy(contact.id)
     .limit(limit);
 }
 
