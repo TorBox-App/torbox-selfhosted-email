@@ -12,6 +12,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 const generateUnsubscribeTokenMock = vi.fn(
   async (
@@ -272,7 +273,7 @@ describe("Batch sender unsubscribe token scope", () => {
       makeBatch({ audienceType: "topic", topicId: "topic-newsletter" })
     );
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(generateUnsubscribeTokenMock).toHaveBeenCalled();
     for (const call of generateUnsubscribeTokenMock.mock.calls) {
@@ -285,7 +286,7 @@ describe("Batch sender unsubscribe token scope", () => {
   it("omits topicId when audienceType=all (global unsubscribe)", async () => {
     setupSelects(makeBatch({ audienceType: "all", topicId: null }));
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(generateUnsubscribeTokenMock).toHaveBeenCalled();
     for (const call of generateUnsubscribeTokenMock.mock.calls) {
@@ -298,7 +299,7 @@ describe("Batch sender unsubscribe token scope", () => {
       makeBatch({ audienceType: "segment", segmentId: "seg-1", topicId: null })
     );
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(generateUnsubscribeTokenMock).toHaveBeenCalled();
     for (const call of generateUnsubscribeTokenMock.mock.calls) {

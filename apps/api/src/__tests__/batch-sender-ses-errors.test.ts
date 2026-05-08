@@ -9,6 +9,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SQS mock — captures SendMessageCommand inputs so we can assert re-queue args
@@ -273,7 +274,7 @@ describe("SES throttle error", () => {
       name: "Throttling",
     });
 
-    await handler(makeSQSEvent(2), {} as never, vi.fn());
+    await handler(makeSQSEvent(2), makeMockContext(), vi.fn());
 
     expect(sqsSendCalls).toHaveLength(1);
 
@@ -290,7 +291,7 @@ describe("SES throttle error", () => {
       name: "TooManyRequestsException",
     });
 
-    await handler(makeSQSEvent(0), {} as never, vi.fn());
+    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
 
     expect(sqsSendCalls[0]?.DelaySeconds).toBe(30);
   });
@@ -301,7 +302,7 @@ describe("SES throttle error", () => {
       name: "Throttling",
     });
 
-    await handler(makeSQSEvent(0), {} as never, vi.fn());
+    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
 
     const sendInserts = (insertValuesCalls as unknown[][]).filter(
       (vals) =>
@@ -327,7 +328,7 @@ describe("SES permission error", () => {
     );
 
     await expect(
-      handler(makeSQSEvent(0), {} as never, vi.fn())
+      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
     ).rejects.toThrow();
 
     const sendInsert = (insertValuesCalls as unknown[][]).find(
@@ -350,7 +351,7 @@ describe("SES permission error", () => {
     });
 
     await expect(
-      handler(makeSQSEvent(0), {} as never, vi.fn())
+      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
     ).rejects.toThrow(/IAM role|CloudFormation|update-role/i);
   });
 
@@ -361,7 +362,7 @@ describe("SES permission error", () => {
     });
 
     await expect(
-      handler(makeSQSEvent(0), {} as never, vi.fn())
+      handler(makeSQSEvent(0), makeMockContext(), vi.fn())
     ).rejects.toThrow();
 
     expect(sqsSendCalls).toHaveLength(0);

@@ -13,6 +13,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMockContext } from "./__helpers__/lambda-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // sendEmail mock — captures call args, resolves/rejects on demand
@@ -241,7 +242,7 @@ describe("transformVariablesForSes via raw HTML path", () => {
     );
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-1" });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const htmlSent = mockSendEmail.mock.calls[0]?.[0]?.html;
     expect(htmlSent).toBe("<p>Hi {{contactFirstName}}!</p>");
@@ -253,7 +254,7 @@ describe("transformVariablesForSes via raw HTML path", () => {
     ]);
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-1" });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const htmlSent = mockSendEmail.mock.calls[0]?.[0]?.html;
     expect(htmlSent).toBe(
@@ -267,7 +268,7 @@ describe("transformVariablesForSes via raw HTML path", () => {
     ]);
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-1" });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const htmlSent = mockSendEmail.mock.calls[0]?.[0]?.html;
     expect(htmlSent).toBe("<p>Hello from Wraps!</p>");
@@ -283,7 +284,7 @@ describe("messageSend record insertion", () => {
     setupSelects(makeRawBatch(), [makeContact("c1", "alice@example.com")]);
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-abc" });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const sendInsert = (insertValuesCalls as unknown[][]).find(
       (vals) =>
@@ -305,7 +306,7 @@ describe("messageSend record insertion", () => {
     setupSelects(makeRawBatch(), [makeContact("c1", "alice@example.com")]);
     mockSendEmail.mockRejectedValueOnce(new Error("MessageRejected: Bounced"));
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const sendInsert = (insertValuesCalls as unknown[][]).find(
       (vals) =>
@@ -333,7 +334,7 @@ describe("messageSend record insertion", () => {
       .mockResolvedValueOnce({ messageId: "msg-alice" })
       .mockRejectedValueOnce(new Error("SMTP error"));
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const sendInsert = (insertValuesCalls as unknown[][]).find(
       (vals) =>
@@ -368,7 +369,7 @@ describe("messageSend record insertion", () => {
       .mockResolvedValueOnce({ messageId: "msg-2" })
       .mockResolvedValueOnce({ messageId: "msg-3" });
 
-    await handler(makeSQSEvent(), {} as never, vi.fn());
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     expect(mockSendEmail).toHaveBeenCalledTimes(3);
 
