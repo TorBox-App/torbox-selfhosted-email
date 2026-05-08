@@ -9,6 +9,7 @@ import type {
   EmailStackConfig,
   InboundDomain,
   Provider,
+  SelfhostConfig,
   ServiceType,
   SMSConfigPreset,
   WrapsCdnConfig,
@@ -75,6 +76,12 @@ export type ConnectionMetadata = {
     email?: ServiceConfig<WrapsEmailConfig, EmailConfigPreset>;
     sms?: ServiceConfig<WrapsSMSConfig, SMSConfigPreset>;
     cdn?: ServiceConfig<WrapsCdnConfig, CdnConfigPreset>;
+    selfhost?: {
+      deployedAt: string;
+      pulumiStackName: string;
+      config: SelfhostConfig;
+      apiUrl: string;
+    };
   };
 };
 
@@ -709,6 +716,9 @@ export function hasService(
   if (service === "cdn") {
     return metadata.services.cdn !== undefined;
   }
+  if (service === "selfhost") {
+    return metadata.services.selfhost !== undefined;
+  }
   return false;
 }
 
@@ -727,6 +737,9 @@ export function getConfiguredServices(
   }
   if (metadata.services.cdn) {
     services.push("cdn");
+  }
+  if (metadata.services.selfhost) {
+    services.push("selfhost");
   }
   return services;
 }

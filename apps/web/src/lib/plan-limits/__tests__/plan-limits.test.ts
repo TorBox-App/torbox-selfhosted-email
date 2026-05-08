@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import {
   awsAccount,
   contact,
@@ -10,7 +11,16 @@ import {
   workflow,
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   checkAwsAccountLimit,
   checkContactLimit,
@@ -19,6 +29,18 @@ import {
   checkWorkflowLimit,
   getOrganizationPlan,
 } from "../index";
+
+// Signing secret must match the embedded constant in plan-limits/index.ts
+const WEB_SIGNING_SECRET =
+  "wraps-1-f2e3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2";
+
+function makeWebLicenseKey(tier: string, expires: string): string {
+  const payload = `v1.${tier}.${expires}`;
+  const hmac = createHmac("sha256", WEB_SIGNING_SECRET)
+    .update(payload)
+    .digest("hex");
+  return `${payload}.${hmac}`;
+}
 
 // Test data
 const testOrgId = "plan-limits-test-org";
@@ -133,6 +155,41 @@ describe("Plan Limits", () => {
 
       const plan = await getOrganizationPlan(testOrgId);
       expect(plan).toBe("free"); // Past due subscriptions fall back to free tier
+    });
+
+    describe("license key override", () => {
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it("returns licensed tier without querying DB when WRAPS_LICENSE_KEY is valid", async () => {
+        // Use an org ID that has no DB record — if DB is queried it would return "free"
+        const nonExistentOrgId = "license-override-test-no-db-record";
+        vi.stubEnv(
+          "WRAPS_LICENSE_KEY",
+          makeWebLicenseKey("scale", "2099-12-31")
+        );
+
+        const plan = await getOrganizationPlan(nonExistentOrgId);
+
+        // Only possible if license key is applied — no DB record exists for this org
+        expect(plan).toBe("scale");
+      });
+
+      it("falls back to DB subscription when WRAPS_LICENSE_KEY is not set", async () => {
+        await db.insert(subscription).values({
+          id: `sub_test_${Date.now()}`,
+          plan: "growth",
+          referenceId: testOrgId,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        const plan = await getOrganizationPlan(testOrgId);
+
+        expect(plan).toBe("growth"); // From DB, not license key
+      });
     });
   });
 

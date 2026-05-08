@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { and, apiKey, db, eq, member, session, subscription } from "@wraps/db";
 import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { validateLicenseKey } from "../lib/license";
 import { log } from "../lib/logger";
 
 export type AuthContext = {
@@ -75,11 +76,13 @@ async function validateApiKey(key: string): Promise<AuthContext | null> {
     .set({ lastUsedAt: new Date() })
     .where(eq(apiKey.id, result.id));
 
+  const licenseOverride = validateLicenseKey(process.env.WRAPS_LICENSE_KEY);
+
   return {
     apiKeyId: result.id,
     organizationId: result.organizationId,
     userId: result.createdBy,
-    planId: extractPlan(result),
+    planId: licenseOverride.valid ? licenseOverride.tier : extractPlan(result),
   };
 }
 
@@ -139,12 +142,16 @@ async function validateSessionWithReason(
       return { auth: null, reason: "user not member of org" };
     }
 
+    const licenseOverride = validateLicenseKey(process.env.WRAPS_LICENSE_KEY);
+
     return {
       auth: {
         apiKeyId: null,
         organizationId: orgId,
         userId: result.userId,
-        planId: extractPlan(result),
+        planId: licenseOverride.valid
+          ? licenseOverride.tier
+          : extractPlan(result),
       },
       reason: "ok",
     };

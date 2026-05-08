@@ -10,6 +10,7 @@
  * - Workflow limits (free tier: 1, paid: unlimited)
  */
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   awsAccount,
   contact,
@@ -27,6 +28,47 @@ import {
   type PlanFeature,
   type PlanId,
 } from "../plans";
+
+// Duplicate of apps/api/src/lib/license.ts — intentional to avoid cross-package coupling.
+// Keep in sync manually; consolidate when divergence causes an actual bug.
+const LICENSE_SIGNING_SECRET =
+  "wraps-1-f2e3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2";
+const LICENSE_VALID_TIERS = ["starter", "growth", "scale"] as const;
+type LicenseTier = (typeof LICENSE_VALID_TIERS)[number];
+
+function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
+  if (!key) {
+    return null;
+  }
+  const parts = key.split(".");
+  if (parts.length !== 4 || parts[0] !== "v1") {
+    return null;
+  }
+  const [, tier, expires, hmac] = parts;
+  if (!(LICENSE_VALID_TIERS as readonly string[]).includes(tier)) {
+    return null;
+  }
+  const expiryDate = new Date(expires);
+  if (Number.isNaN(expiryDate.getTime())) {
+    return null;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (expires < today) {
+    return null;
+  }
+  const expectedHex = createHmac("sha256", LICENSE_SIGNING_SECRET)
+    .update(`v1.${tier}.${expires}`)
+    .digest("hex");
+  const expectedBuf = Buffer.from(expectedHex, "hex");
+  const actualBuf = Buffer.from(hmac, "hex");
+  if (
+    actualBuf.length !== expectedBuf.length ||
+    !timingSafeEqual(actualBuf, expectedBuf)
+  ) {
+    return null;
+  }
+  return tier as LicenseTier;
+}
 
 export type LimitCheckResult = {
   allowed: boolean;
@@ -52,6 +94,11 @@ export type FeatureCheckResult = {
 export async function getOrganizationPlan(
   organizationId: string
 ): Promise<PlanId> {
+  const licensedTier = validateWebLicenseKey(process.env.WRAPS_LICENSE_KEY);
+  if (licensedTier) {
+    return licensedTier;
+  }
+
   const [sub] = await db
     .select({ plan: subscription.plan, status: subscription.status })
     .from(subscription)

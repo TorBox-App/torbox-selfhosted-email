@@ -66,6 +66,10 @@ import { permissions } from "./commands/permissions.js";
 import { connect as platformConnect } from "./commands/platform/connect.js";
 import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
+// Self-hosted commands
+import { selfhostDeploy } from "./commands/selfhost/deploy.js";
+import { selfhostStatus } from "./commands/selfhost/status.js";
+import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
 import { dashboard } from "./commands/shared/dashboard.js";
 import { destroy } from "./commands/shared/destroy.js";
@@ -142,7 +146,10 @@ function showHelp() {
     `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)`
   );
   console.log(
-    `  ${pc.cyan("cdn")}         CDN infrastructure (AWS S3 + CloudFront)\n`
+    `  ${pc.cyan("cdn")}         CDN infrastructure (AWS S3 + CloudFront)`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost")}    Self-hosted Wraps control plane (enterprise)\n`
   );
   console.log("Email Commands:");
   console.log(
@@ -246,6 +253,16 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("cdn destroy")}          Remove CDN infrastructure\n`
+  );
+  console.log("Self-Hosted Commands:");
+  console.log(
+    `  ${pc.cyan("selfhost deploy")}      Deploy Wraps API to your AWS account`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost upgrade")}     Rebuild and redeploy the self-hosted API`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details\n`
   );
   console.log("Local Development:");
   console.log(
@@ -1004,6 +1021,55 @@ async function run() {
         success: true,
         duration_ms: emailDuration,
         service: "email",
+      });
+      return;
+    }
+
+    // Handle selfhost subcommands (e.g., wraps selfhost deploy)
+    if (primaryCommand === "selfhost" && subCommand) {
+      switch (subCommand) {
+        case "deploy":
+          await selfhostDeploy({
+            region: flags.region,
+            neonApiKey: flags["neon-api-key"],
+            licenseKey: flags["license-key"],
+            appUrl: flags["app-url"],
+            yes: flags.yes,
+            preview: flags.preview,
+            json: flags.json,
+          });
+          break;
+
+        case "upgrade":
+          await selfhostUpgrade({
+            region: flags.region,
+            yes: flags.yes,
+            preview: flags.preview,
+            json: flags.json,
+          });
+          break;
+
+        case "status":
+          await selfhostStatus({
+            region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        default:
+          clack.log.error(`Unknown selfhost command: ${subCommand}`);
+          console.log(
+            `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
+          );
+          throw new Error(`Unknown selfhost command: ${subCommand}`);
+      }
+      // Track selfhost commands
+      const selfhostDuration = Date.now() - startTime;
+      const selfhostCommandName = `selfhost:${subCommand}`;
+      trackCommand(selfhostCommandName, {
+        success: true,
+        duration_ms: selfhostDuration,
+        service: "selfhost",
       });
       return;
     }

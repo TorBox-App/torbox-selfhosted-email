@@ -62,6 +62,15 @@ export type {
   WrapsEmailFeatureMetadata,
 } from "./email.js";
 export { DEFAULT_ALERT_THRESHOLDS, SES_RECEIVING_REGIONS } from "./email.js";
+// Re-export selfhost types
+export type {
+  SelfhostConfig,
+  SelfhostDeployOptions,
+  SelfhostStackConfig,
+  SelfhostStackOutputs,
+  SelfhostStatusOptions,
+  SelfhostUpgradeOptions,
+} from "./selfhost.js";
 // Re-export shared types
 export type {
   ArchiveRetention,

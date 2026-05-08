@@ -977,6 +977,7 @@ describe("no hardcoded us-east-1 outside allow-list", () => {
     /^packages\/cli\/src\/infrastructure\/resources\/cloudfront\.ts$/,
     /^packages\/cli\/src\/infrastructure\/resources\/s3-cdn\.ts$/,
     /^packages\/cli\/src\/commands\/cdn\//,
+    /^packages\/cli\/src\/commands\/selfhost\//,
     /^packages\/cli\/src\/utils\/shared\/s3-state\.ts$/,
     /^packages\/cli\/src\/utils\/shared\/aws\.ts$/,
     /^packages\/cli\/src\/utils\/shared\/prompts\.ts$/,

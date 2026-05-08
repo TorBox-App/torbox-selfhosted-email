@@ -136,7 +136,9 @@ describe("GET /v1/templates/pull", () => {
       expect(tmpl.subject).toBe("Welcome!");
       expect(tmpl.emailType).toBe("transactional");
       expect(tmpl.channel).toBe("email");
-      expect(tmpl.variables).toEqual([{ name: "firstName", fallback: "there" }]);
+      expect(tmpl.variables).toEqual([
+        { name: "firstName", fallback: "there" },
+      ]);
       expect(tmpl.sourceHash).toBe("abc123");
       expect(tmpl.status).toBe("PUBLISHED");
       expect(tmpl.updatedAt).toBe("2024-08-01T10:00:00.000Z");

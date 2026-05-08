@@ -489,7 +489,7 @@ export const auth = betterAuth<BetterAuthOptions>({
       try {
         const wraps = await getWrapsClient();
         await wraps.sendTemplate({
-          from: "Wraps <hello@wraps.dev>",
+          from: process.env.AUTH_EMAIL_FROM ?? "Wraps <hello@wraps.dev>",
           to: user.email,
           template: "password-reset",
           templateData: {
@@ -507,7 +507,7 @@ export const auth = betterAuth<BetterAuthOptions>({
       try {
         const wraps = await getWrapsClient();
         await wraps.sendTemplate({
-          from: "Wraps <hello@wraps.dev>",
+          from: process.env.AUTH_EMAIL_FROM ?? "Wraps <hello@wraps.dev>",
           to: user.email,
           template: "password-changed",
           templateData: {

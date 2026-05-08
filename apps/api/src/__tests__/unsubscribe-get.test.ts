@@ -102,7 +102,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/wrong-type", { method: "GET" })
+        new Request("http://localhost/unsubscribe/wrong-type", {
+          method: "GET",
+        })
       );
 
       expect(res.status).toBe(400);
@@ -120,7 +122,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/valid-token", { method: "GET" })
+        new Request("http://localhost/unsubscribe/valid-token", {
+          method: "GET",
+        })
       );
 
       expect(res.status).toBe(404);
@@ -167,7 +171,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/topic-token", { method: "GET" })
+        new Request("http://localhost/unsubscribe/topic-token", {
+          method: "GET",
+        })
       );
 
       expect(res.status).toBe(200);
@@ -233,7 +239,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/quote-token", { method: "GET" })
+        new Request("http://localhost/unsubscribe/quote-token", {
+          method: "GET",
+        })
       );
 
       expect(res.status).toBe(200);
@@ -247,7 +255,11 @@ describe("GET /unsubscribe/:token", () => {
     it("masks jane@example.com as j***e@example.com", async () => {
       mockValidToken();
       selectQueue.push([
-        { id: "contact-jane", email: "jane@example.com", emailStatus: "active" },
+        {
+          id: "contact-jane",
+          email: "jane@example.com",
+          emailStatus: "active",
+        },
       ]);
 
       const { unsubscribeRoutes } = await import("../routes/unsubscribe");
@@ -255,7 +267,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/mask-token", { method: "GET" })
+        new Request("http://localhost/unsubscribe/mask-token", {
+          method: "GET",
+        })
       );
 
       const html = await res.text();
@@ -274,7 +288,9 @@ describe("GET /unsubscribe/:token", () => {
 
       const app = new Elysia().use(unsubscribeRoutes);
       const res = await app.handle(
-        new Request("http://localhost/unsubscribe/short-token", { method: "GET" })
+        new Request("http://localhost/unsubscribe/short-token", {
+          method: "GET",
+        })
       );
 
       const html = await res.text();

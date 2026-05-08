@@ -152,7 +152,10 @@ beforeAll(async () => {
   await db
     .insert(organization)
     .values(testOrg)
-    .onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrg.name },
+    });
 
   await db
     .insert(organization)
@@ -186,12 +189,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   // Delete all aws_account rows for both test orgs so each test starts clean
-  await db
-    .delete(awsAccount)
-    .where(eq(awsAccount.organizationId, testOrg.id));
-  await db
-    .delete(awsAccount)
-    .where(eq(awsAccount.organizationId, otherOrg.id));
+  await db.delete(awsAccount).where(eq(awsAccount.organizationId, testOrg.id));
+  await db.delete(awsAccount).where(eq(awsAccount.organizationId, otherOrg.id));
 });
 
 // --- Tests ---
@@ -381,7 +380,10 @@ describe("DELETE /v1/connections/:id — real DB", () => {
 
   it("returns 404 for a nonexistent connection id", async () => {
     const app = createTestApp();
-    const res = await deleteConnection(app, "nonexistent-id-that-does-not-exist");
+    const res = await deleteConnection(
+      app,
+      "nonexistent-id-that-does-not-exist"
+    );
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe("Connection not found");
@@ -448,11 +450,7 @@ describe("Plan limit enforcement (real DB count)", () => {
   it("allows unlimited connections on scale plan", async () => {
     const app = createTestApp({ planId: "scale" });
 
-    const accountIds = [
-      "100000000001",
-      "100000000002",
-      "100000000003",
-    ];
+    const accountIds = ["100000000001", "100000000002", "100000000003"];
 
     for (const accountId of accountIds) {
       const res = await postConnection(app, { accountId });

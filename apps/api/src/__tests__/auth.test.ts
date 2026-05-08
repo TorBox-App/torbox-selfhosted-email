@@ -5,7 +5,7 @@
  * Tests API key auth, session auth, tenant isolation, and edge cases.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import {
   apiKey,
   db,
@@ -17,7 +17,16 @@ import {
   user,
 } from "@wraps/db";
 import { inArray } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { SIGNING_SECRET } from "../lib/license";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
 const TEST_PREFIX = "auth-test";
@@ -525,6 +534,45 @@ describe("Authentication", () => {
       );
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe("License Key Override", () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    function makeScaleKey(): string {
+      const payload = "v1.scale.2099-12-31";
+      const hmac = createHmac("sha256", SIGNING_SECRET)
+        .update(payload)
+        .digest("hex");
+      return `${payload}.${hmac}`;
+    }
+
+    it("when WRAPS_LICENSE_KEY is a valid scale key, planId overrides Stripe subscription", async () => {
+      vi.stubEnv("WRAPS_LICENSE_KEY", makeScaleKey());
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` }, // ORG1 has "starter" Stripe plan
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.planId).toBe("scale");
+    });
+
+    it("when WRAPS_LICENSE_KEY is not set, planId comes from Stripe subscription", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.planId).toBe("starter"); // Stripe subscription plan for ORG1
     });
   });
 });
