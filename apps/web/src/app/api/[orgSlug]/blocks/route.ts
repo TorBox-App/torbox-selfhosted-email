@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
-import { db, reusableBlock } from "@wraps/db";
+import { auditLog, db, reusableBlock } from "@wraps/db";
 import { and, desc, eq, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -120,18 +121,34 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // Create block
-    const [newBlock] = await db
-      .insert(reusableBlock)
-      .values({
-        organizationId: orgWithMembership.id,
-        name: name.trim(),
-        description: description?.trim() || null,
-        category: category || "custom",
-        content,
-        createdBy: session.user.id,
-      })
-      .returning();
+    const auditCtx = await getAuditContext();
+
+    // Create block and write audit log in one transaction
+    const [newBlock] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .insert(reusableBlock)
+        .values({
+          organizationId: orgWithMembership.id,
+          name: name.trim(),
+          description: description?.trim() || null,
+          category: category || "custom",
+          content,
+          createdBy: session.user.id,
+        })
+        .returning();
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "block.created",
+          resource: "block",
+          resourceId: r.id,
+          metadata: { blockId: r.id, name: r.name, category: r.category },
+        })
+      );
+      return [r];
+    });
 
     return NextResponse.json(newBlock, { status: 201 });
   } catch (error) {

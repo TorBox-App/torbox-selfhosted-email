@@ -400,6 +400,13 @@
       "when": 1776894016267,
       "tag": "0056_broadcast_resume_dedup_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1778272845152,
+      "tag": "0057_audit_log_actoremail_jsonb",
+      "breakpoints": true
     }
   ]
 }

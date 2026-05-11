@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
-import { brandKit, db } from "@wraps/db";
+import { auditLog, brandKit, db } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -91,52 +92,72 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const body = await request.json();
 
-    const [updated] = await db
-      .update(brandKit)
-      .set({
-        ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
-        ...(body.primaryColor !== undefined && {
-          primaryColor: body.primaryColor,
-        }),
-        ...(body.secondaryColor !== undefined && {
-          secondaryColor: body.secondaryColor,
-        }),
-        ...(body.backgroundColor !== undefined && {
-          backgroundColor: body.backgroundColor,
-        }),
-        ...(body.textColor !== undefined && { textColor: body.textColor }),
-        ...(body.fontFamily !== undefined && { fontFamily: body.fontFamily }),
-        ...(body.headingFontFamily !== undefined && {
-          headingFontFamily: body.headingFontFamily || null,
-        }),
-        ...(body.buttonStyle !== undefined && {
-          buttonStyle: body.buttonStyle,
-        }),
-        ...(body.buttonRadius !== undefined && {
-          buttonRadius: body.buttonRadius,
-        }),
-        ...(body.companyName !== undefined && {
-          companyName: body.companyName || null,
-        }),
-        ...(body.companyAddress !== undefined && {
-          companyAddress: body.companyAddress || null,
-        }),
-        ...(body.socialLinks !== undefined && {
-          socialLinks: body.socialLinks,
-        }),
-        ...(body.sourceDomain !== undefined && {
-          sourceDomain: body.sourceDomain || null,
-        }),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(brandKit.id, id),
-          eq(brandKit.organizationId, orgWithMembership.id)
+    const auditCtx = await getAuditContext();
+
+    const [updated] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .update(brandKit)
+        .set({
+          ...(body.name !== undefined && { name: body.name.trim() }),
+          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
+          ...(body.primaryColor !== undefined && {
+            primaryColor: body.primaryColor,
+          }),
+          ...(body.secondaryColor !== undefined && {
+            secondaryColor: body.secondaryColor,
+          }),
+          ...(body.backgroundColor !== undefined && {
+            backgroundColor: body.backgroundColor,
+          }),
+          ...(body.textColor !== undefined && { textColor: body.textColor }),
+          ...(body.fontFamily !== undefined && { fontFamily: body.fontFamily }),
+          ...(body.headingFontFamily !== undefined && {
+            headingFontFamily: body.headingFontFamily || null,
+          }),
+          ...(body.buttonStyle !== undefined && {
+            buttonStyle: body.buttonStyle,
+          }),
+          ...(body.buttonRadius !== undefined && {
+            buttonRadius: body.buttonRadius,
+          }),
+          ...(body.companyName !== undefined && {
+            companyName: body.companyName || null,
+          }),
+          ...(body.companyAddress !== undefined && {
+            companyAddress: body.companyAddress || null,
+          }),
+          ...(body.socialLinks !== undefined && {
+            socialLinks: body.socialLinks,
+          }),
+          ...(body.sourceDomain !== undefined && {
+            sourceDomain: body.sourceDomain || null,
+          }),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(brandKit.id, id),
+            eq(brandKit.organizationId, orgWithMembership.id)
+          )
         )
-      )
-      .returning();
+        .returning();
+
+      if (!r) return [r];
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "brand_kit.updated",
+          resource: "brand_kit",
+          resourceId: r.id,
+          metadata: { brandKitId: r.id, name: r.name },
+        })
+      );
+
+      return [r];
+    });
 
     if (!updated) {
       return NextResponse.json(
@@ -198,29 +219,45 @@ export async function DELETE(_request: Request, context: RouteContext) {
       );
     }
 
-    // Delete the brand kit
-    await db
-      .delete(brandKit)
-      .where(
-        and(
-          eq(brandKit.id, id),
-          eq(brandKit.organizationId, orgWithMembership.id)
-        )
-      );
+    const auditCtx = await getAuditContext();
 
-    // If we deleted the default, promote another kit to default
-    if (kit.isDefault) {
-      const remainingKit = await db.query.brandKit.findFirst({
-        where: eq(brandKit.organizationId, orgWithMembership.id),
-      });
+    // Delete brand kit, promote new default if needed, and write audit log in one transaction
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(brandKit)
+        .where(
+          and(
+            eq(brandKit.id, id),
+            eq(brandKit.organizationId, orgWithMembership.id)
+          )
+        );
 
-      if (remainingKit) {
-        await db
-          .update(brandKit)
-          .set({ isDefault: true })
-          .where(eq(brandKit.id, remainingKit.id));
+      // If we deleted the default, promote another kit to default
+      if (kit.isDefault) {
+        const remainingKit = await tx.query.brandKit.findFirst({
+          where: eq(brandKit.organizationId, orgWithMembership.id),
+        });
+
+        if (remainingKit) {
+          await tx
+            .update(brandKit)
+            .set({ isDefault: true })
+            .where(eq(brandKit.id, remainingKit.id));
+        }
       }
-    }
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "brand_kit.deleted",
+          resource: "brand_kit",
+          resourceId: id,
+          metadata: { brandKitId: id, name: kit.name },
+        })
+      );
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

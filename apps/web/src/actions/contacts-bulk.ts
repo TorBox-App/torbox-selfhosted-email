@@ -1,12 +1,15 @@
 "use server";
 
 import {
+  auditLog,
+  db,
   bulkDeleteContacts as dbBulkDeleteContacts,
   findContactByEmailHash,
   findContactsByEmailHashes,
   insertContact,
 } from "@wraps/db";
 import { trackContactsImported } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
@@ -71,20 +74,23 @@ export async function bulkCreateContactsFromEmails(
       };
     }
 
+    const auditCtx = await getAuditContext();
+
     let created = 0;
     let skipped = 0;
     const errors: string[] = [];
 
+    // Validate emails and check for duplicates outside the transaction
+    type EmailTuple = { email: string; emailHash: string };
+    const toInsert: EmailTuple[] = [];
+
     for (const email of uniqueEmails) {
-      // Validate email
       if (!email.includes("@")) {
         errors.push(`Invalid email: ${email}`);
         continue;
       }
 
       const emailHashValue = hashEmail(email);
-
-      // Check for duplicate
       const existing = await findContactByEmailHash(
         emailHashValue,
         organizationId
@@ -94,27 +100,47 @@ export async function bulkCreateContactsFromEmails(
         continue;
       }
 
-      // Create contact
-      try {
-        const result = await insertContact({
-          organizationId,
-          email,
-          emailHash: emailHashValue,
-          emailStatus: "active",
-          emailVerifiedAt: new Date(),
-          status: "active",
-          confirmedAt: new Date(),
-          createdBy: access.userId,
-        });
-        if (result) {
-          created++;
-        } else {
-          skipped++;
-        }
-      } catch (_err) {
-        errors.push(`Failed to create contact for ${email}`);
-      }
+      toInsert.push({ email, emailHash: emailHashValue });
     }
+
+    // Insert all valid new contacts + audit in one transaction
+    await db.transaction(async (tx) => {
+      for (const { email, emailHash } of toInsert) {
+        try {
+          const result = await insertContact(
+            {
+              organizationId,
+              email,
+              emailHash,
+              emailStatus: "active",
+              emailVerifiedAt: new Date(),
+              status: "active",
+              confirmedAt: new Date(),
+              createdBy: access.userId,
+            },
+            tx
+          );
+          if (result) {
+            created++;
+          } else {
+            skipped++;
+          }
+        } catch (_err) {
+          errors.push(`Failed to create contact for ${email}`);
+        }
+      }
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.created_bulk",
+          resource: "contact",
+          metadata: { count: emails.length },
+        })
+      );
+    });
 
     // Revalidate
     revalidateContacts(orgSlug);
@@ -221,8 +247,23 @@ export async function bulkDeleteContacts(
       return { success: false, error: "No contacts selected" };
     }
 
-    // Delete contacts (cascades to contact_topic)
-    await dbBulkDeleteContacts(contactIds, organizationId);
+    const auditCtx = await getAuditContext();
+
+    // Delete contacts + write audit log in one transaction
+    await db.transaction(async (tx) => {
+      await dbBulkDeleteContacts(contactIds, organizationId, tx);
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.deleted_bulk",
+          resource: "contact",
+          metadata: { count: contactIds.length },
+        })
+      );
+    });
 
     // Revalidate
     revalidateContacts(orgSlug);

@@ -42,11 +42,29 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+const mockTx = {
+  delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+  update: vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+  }),
+  insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
+  query: { ssoProvider: { findFirst: mockFindFirst } },
+};
+
 vi.mock("@wraps/db", () => ({
-  db: { query: { ssoProvider: { findFirst: mockFindFirst } } },
+  db: {
+    query: { ssoProvider: { findFirst: mockFindFirst } },
+    transaction: vi
+      .fn()
+      .mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) =>
+        cb(mockTx)
+      ),
+  },
   and: vi.fn(),
   eq: vi.fn(),
   ssoProvider: {},
+  auditLog: {},
+  scimToken: {},
 }));
 
 const {

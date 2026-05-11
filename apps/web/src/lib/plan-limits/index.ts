@@ -231,6 +231,7 @@ export async function checkFeatureAccess(
     customRetention: "Custom retention",
     prioritySLA: "Priority SLA",
     sso: "SSO & SCIM provisioning",
+    auditLog: "Audit logs",
   };
 
   return {

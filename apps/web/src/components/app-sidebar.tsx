@@ -127,6 +127,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: `/${orgSlug}/settings/sso`,
           },
           {
+            title: "Audit Logs",
+            url: `/${orgSlug}/settings/audit-logs`,
+          },
+          {
             title: "Billing",
             url: `/${orgSlug}/settings/billing`,
           },

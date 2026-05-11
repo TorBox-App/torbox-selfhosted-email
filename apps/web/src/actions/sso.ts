@@ -2,10 +2,11 @@
 
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
-import { and, db, eq, ssoProvider, verification } from "@wraps/db";
+import { and, auditLog, db, eq, ssoProvider, verification } from "@wraps/db";
 import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
@@ -86,6 +87,21 @@ export async function saveSsoProvider(
       headers: hdrs,
     });
 
+    getAuditContext()
+      .then((auditCtx) =>
+        db.insert(auditLog).values(
+          auditLogEntry(auditCtx, {
+            organizationId: orgId,
+            actorId: access.userId,
+            actorEmail: access.userEmail,
+            action: "sso.provider_saved",
+            resource: "sso_provider",
+            metadata: { domain: data.domain, issuer: data.issuer },
+          })
+        )
+      )
+      .catch(() => {});
+
     revalidatePath(`/${access.orgSlug}/settings/sso`);
     return { success: true };
   } catch (error) {
@@ -122,6 +138,21 @@ export async function deleteSsoProvider(
       headers: hdrs,
     });
 
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "sso.provider_deleted",
+          resource: "sso_provider",
+          resourceId: providerId,
+          metadata: { providerId },
+        })
+      );
+    });
+
     revalidatePath(`/${access.orgSlug}/settings/sso`);
     return { success: true };
   } catch (error) {
@@ -151,13 +182,28 @@ export async function requestDomainVerification(
     const permError = checkPermission(access.role, "sso", ["write"]);
     if (permError) return permError;
 
-    if (!(await requireProviderOwnership(orgId, providerId)))
-      return { success: false, error: "Provider not found" };
+    const provider = await requireProviderOwnership(orgId, providerId);
+    if (!provider) return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
     const result = await ssoApi.requestDomainVerification({
       body: { providerId },
       headers: hdrs,
+    });
+
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "sso.domain_verification_requested",
+          resource: "sso_provider",
+          resourceId: providerId,
+          metadata: { domain: provider.domain },
+        })
+      );
     });
 
     revalidatePath(`/${access.orgSlug}/settings/sso`);
@@ -197,13 +243,28 @@ export async function verifyDomain(
     const permError = checkPermission(access.role, "sso", ["write"]);
     if (permError) return permError;
 
-    if (!(await requireProviderOwnership(orgId, providerId)))
-      return { success: false, error: "Provider not found" };
+    const provider = await requireProviderOwnership(orgId, providerId);
+    if (!provider) return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
     await ssoApi.verifyDomain({
       body: { providerId },
       headers: hdrs,
+    });
+
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "sso.domain_verified",
+          resource: "sso_provider",
+          resourceId: providerId,
+          metadata: { domain: provider.domain },
+        })
+      );
     });
 
     revalidatePath(`/${access.orgSlug}/settings/sso`);
@@ -352,6 +413,21 @@ export async function generateScimToken(
     const result = await ssoApi.generateSCIMToken({
       body: { providerId, organizationId: orgId },
       headers: hdrs,
+    });
+
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "sso.scim_token_generated",
+          resource: "sso_provider",
+          resourceId: providerId,
+          metadata: {},
+        })
+      );
     });
 
     revalidatePath(`/${access.orgSlug}/settings/sso`);

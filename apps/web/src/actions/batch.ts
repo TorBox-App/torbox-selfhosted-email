@@ -3,7 +3,9 @@
 
 import { auth } from "@wraps/auth";
 import {
+  auditLog,
   countBroadcastRecipients,
+  db,
   deleteDraftBroadcast,
   duplicateBroadcast,
   findAwsAccountForOrg,
@@ -27,6 +29,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import { trackBroadcastCreated } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import type {
   BatchStatus,
   CancelBatchResult,
@@ -386,6 +389,25 @@ export async function createBatchSend(
 
     revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
 
+    const auditCtx = await getAuditContext();
+    db.insert(auditLog)
+      .values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.sent",
+          resource: "broadcast",
+          resourceId: result.id,
+          metadata: {
+            broadcastId: result.id,
+            channel: data.channel ?? "email",
+            recipientCount,
+          },
+        })
+      )
+      .catch(() => {});
+
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: data.channel ?? "email",
       recipientCount,
@@ -430,27 +452,49 @@ export async function saveDraftBatchSend(
       };
     }
 
-    const newBatch = await insertDraftBroadcast({
-      organizationId,
-      status: "draft",
-      channel: data.channel ?? "email",
-      name: data.name ?? null,
-      subject: data.subject ?? null,
-      previewText: data.previewText ?? null,
-      from: data.from ?? null,
-      fromName: data.fromName ?? null,
-      replyTo: data.replyTo ?? null,
-      emailTemplateId: data.templateId ?? null,
-      htmlContent: data.htmlContent ?? null,
-      variableMappings: data.variableMappings ?? null,
-      body: data.body ?? null,
-      senderId: data.senderId ?? null,
-      audienceType: data.recipientFilter?.audienceType ?? "all",
-      topicId: data.recipientFilter?.topicId ?? null,
-      segmentId: data.recipientFilter?.segmentId ?? null,
-      awsAccountId: data.awsAccountId ?? null,
-      scheduledFor: data.scheduledFor ?? null,
-      createdBy: access.userId,
+    const auditCtx = await getAuditContext();
+    const newBatch = await db.transaction(async (tx) => {
+      const inserted = await insertDraftBroadcast(
+        {
+          organizationId,
+          status: "draft",
+          channel: data.channel ?? "email",
+          name: data.name ?? null,
+          subject: data.subject ?? null,
+          previewText: data.previewText ?? null,
+          from: data.from ?? null,
+          fromName: data.fromName ?? null,
+          replyTo: data.replyTo ?? null,
+          emailTemplateId: data.templateId ?? null,
+          htmlContent: data.htmlContent ?? null,
+          variableMappings: data.variableMappings ?? null,
+          body: data.body ?? null,
+          senderId: data.senderId ?? null,
+          audienceType: data.recipientFilter?.audienceType ?? "all",
+          topicId: data.recipientFilter?.topicId ?? null,
+          segmentId: data.recipientFilter?.segmentId ?? null,
+          awsAccountId: data.awsAccountId ?? null,
+          scheduledFor: data.scheduledFor ?? null,
+          createdBy: access.userId,
+        },
+        tx
+      );
+      if (!inserted) return null;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.draft_saved",
+          resource: "broadcast",
+          resourceId: inserted.id,
+          metadata: {
+            broadcastId: inserted.id,
+            channel: data.channel ?? "email",
+          },
+        })
+      );
+      return inserted;
     });
 
     if (!newBatch) {
@@ -579,7 +623,21 @@ export async function updateDraftBatchSend(
       updateData.segmentId = data.recipientFilter.segmentId ?? null;
     }
 
-    await updateDraftBroadcast(batchId, organizationId, updateData);
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await updateDraftBroadcast(batchId, organizationId, updateData, tx);
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.draft_updated",
+          resource: "broadcast",
+          resourceId: batchId,
+          metadata: { broadcastId: batchId },
+        })
+      );
+    });
 
     revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
     revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
@@ -738,6 +796,25 @@ export async function promoteDraftToSend(
     revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
     revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
 
+    const auditCtx = await getAuditContext();
+    db.insert(auditLog)
+      .values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.sent_from_draft",
+          resource: "broadcast",
+          resourceId: batchId,
+          metadata: {
+            broadcastId: batchId,
+            channel: merged.channel,
+            recipientCount,
+          },
+        })
+      )
+      .catch(() => {});
+
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: merged.channel,
       recipientCount,
@@ -775,7 +852,23 @@ export async function deleteDraftBatchSend(
     const permError = checkPermission(access.role, "broadcasts", ["write"]);
     if (permError) return permError;
 
-    const deleted = await deleteDraftBroadcast(batchId, organizationId);
+    const auditCtx = await getAuditContext();
+    const deleted = await db.transaction(async (tx) => {
+      const rows = await deleteDraftBroadcast(batchId, organizationId, tx);
+      if (rows.length === 0) return rows;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.draft_deleted",
+          resource: "broadcast",
+          resourceId: batchId,
+          metadata: { broadcastId: batchId },
+        })
+      );
+      return rows;
+    });
 
     if (deleted.length === 0) {
       return {
@@ -834,11 +927,28 @@ export async function duplicateBatchSend(
       return { success: false, error: "Broadcast not found" };
     }
 
-    const newBatch = await duplicateBroadcast(
-      source,
-      organizationId,
-      access.userId
-    );
+    const auditCtx = await getAuditContext();
+    const newBatch = await db.transaction(async (tx) => {
+      const inserted = await duplicateBroadcast(
+        source,
+        organizationId,
+        access.userId,
+        tx
+      );
+      if (!inserted) return null;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "broadcast.duplicated",
+          resource: "broadcast",
+          resourceId: inserted.id,
+          metadata: { broadcastId: inserted.id, sourceId: sourceBatchId },
+        })
+      );
+      return inserted;
+    });
 
     if (!newBatch) {
       return { success: false, error: "Failed to duplicate broadcast" };
@@ -934,6 +1044,19 @@ export async function cancelBatchSend(
         };
       }
     }
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "broadcast.cancelled",
+        resource: "broadcast",
+        resourceId: batchId,
+        metadata: { broadcastId: batchId },
+      })
+    );
 
     revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
     revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");

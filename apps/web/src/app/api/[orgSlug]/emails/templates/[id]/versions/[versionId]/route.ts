@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
-import { db, template, templateVersion } from "@wraps/db";
+import { auditLog, db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -151,44 +152,65 @@ export async function POST(_request: Request, context: RouteContext) {
 
     const nextVersion = versions[0] ? versions[0].version + 1 : 1;
 
-    // Create a new version with current content before restoring (backup)
-    await db.insert(templateVersion).values({
-      templateId: id,
-      content: existingTemplate.content,
-      source: existingTemplate.source,
-      compiledHtml: existingTemplate.compiledHtml,
-      version: nextVersion,
-      createdBy: session.user.id,
-      changeNote: `Backup before restoring to v${versionToRestore.version}`,
-    });
+    const auditCtx = await getAuditContext();
 
-    // Update template with restored content
-    const [updated] = await db
-      .update(template)
-      .set({
+    const [updated] = await db.transaction(async (tx) => {
+      // Create a new version with current content before restoring (backup)
+      await tx.insert(templateVersion).values({
+        templateId: id,
+        content: existingTemplate.content,
+        source: existingTemplate.source,
+        compiledHtml: existingTemplate.compiledHtml,
+        version: nextVersion,
+        createdBy: session.user.id,
+        changeNote: `Backup before restoring to v${versionToRestore.version}`,
+      });
+
+      // Update template with restored content
+      const [r] = await tx
+        .update(template)
+        .set({
+          content: versionToRestore.content,
+          source: versionToRestore.source,
+          compiledHtml: versionToRestore.compiledHtml,
+          updatedAt: new Date(),
+          lastEditedBy: session.user.id,
+        })
+        .where(
+          and(
+            eq(template.id, id),
+            eq(template.organizationId, orgWithMembership.id)
+          )
+        )
+        .returning();
+
+      // Create a version for the restore
+      await tx.insert(templateVersion).values({
+        templateId: id,
         content: versionToRestore.content,
         source: versionToRestore.source,
         compiledHtml: versionToRestore.compiledHtml,
-        updatedAt: new Date(),
-        lastEditedBy: session.user.id,
-      })
-      .where(
-        and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
-        )
-      )
-      .returning();
+        version: nextVersion + 1,
+        createdBy: session.user.id,
+        changeNote: `Restored from v${versionToRestore.version}`,
+      });
 
-    // Create a version for the restore
-    await db.insert(templateVersion).values({
-      templateId: id,
-      content: versionToRestore.content,
-      source: versionToRestore.source,
-      compiledHtml: versionToRestore.compiledHtml,
-      version: nextVersion + 1,
-      createdBy: session.user.id,
-      changeNote: `Restored from v${versionToRestore.version}`,
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.version_restored",
+          resource: "template",
+          resourceId: id,
+          metadata: {
+            templateId: id,
+            restoredFromVersion: versionToRestore.version,
+          },
+        })
+      );
+
+      return [r];
     });
 
     return NextResponse.json({

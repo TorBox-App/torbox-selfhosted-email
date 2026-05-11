@@ -4,6 +4,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -226,17 +227,20 @@ export const auditLog = pgTable(
       .references(() => organization.id, { onDelete: "cascade" })
       .notNull(),
     userId: text("user_id").references(() => user.id),
+    actorEmail: text("actor_email"),
     action: text("action").notNull(),
     resource: text("resource").notNull(),
     resourceId: text("resource_id"),
-    metadata: json("metadata"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    orgIdx: index("audit_log_org_idx").on(table.organizationId),
-    timestampIdx: index("audit_log_timestamp_idx").on(table.createdAt),
+    orgCreatedIdx: index("audit_log_org_created_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
   })
 );
 

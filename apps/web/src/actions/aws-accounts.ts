@@ -37,6 +37,7 @@ import {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
+import { writeAuditLog } from "./audit-log";
 import { checkPermission } from "./shared/permissions";
 
 // Create server validator
@@ -316,6 +317,20 @@ export async function connectAWSAccountAction(
       region: validatedData.region,
       accountId: validatedData.accountId,
     });
+
+    // Audit log (best-effort)
+    writeAuditLog({
+      organizationId: validatedData.organizationId,
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "resource.deployed",
+      resource: "aws_account",
+      resourceId: account.id,
+      metadata: {
+        accountId: validatedData.accountId,
+        region: validatedData.region,
+      },
+    }).catch(() => {});
 
     return {
       success: true,
@@ -920,6 +935,16 @@ export async function deleteAWSAccount(
 
     // 5. Revalidate the settings page
     revalidatePath(`/${member.organization.slug}/settings`, "page");
+
+    // Audit log (best-effort)
+    writeAuditLog({
+      organizationId,
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "resource.deleted",
+      resource: "aws_account",
+      resourceId: awsAccountId,
+    }).catch(() => {});
 
     log.info("AWS account deleted");
     return { success: true };

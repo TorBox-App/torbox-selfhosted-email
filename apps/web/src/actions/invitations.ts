@@ -1,9 +1,17 @@
 "use server";
 
 import { auth } from "@wraps/auth";
-import { db, invitation, member, organization, user } from "@wraps/db";
+import {
+  auditLog,
+  db,
+  invitation,
+  member,
+  organization,
+  user,
+} from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 
 export type InvitationDetails = {
@@ -207,30 +215,45 @@ export async function acceptInvitation(
       };
     }
 
-    // Atomically claim the invitation — prevents TOCTOU race
-    // If another request already accepted it, this returns 0 rows.
-    const claimResult = await db
-      .update(invitation)
-      .set({ status: "accepted" })
-      .where(
-        and(eq(invitation.id, invitationId), eq(invitation.status, "pending"))
-      );
+    const auditCtx = await getAuditContext();
+    // Atomically claim the invitation, create membership, and write audit log
+    const claimResult = await db.transaction(async (tx) => {
+      const result = await tx
+        .update(invitation)
+        .set({ status: "accepted" })
+        .where(
+          and(eq(invitation.id, invitationId), eq(invitation.status, "pending"))
+        );
+      if ((result as any)?.rowCount === 0) return "already_used";
 
-    if ((claimResult as any)?.rowCount === 0) {
+      await tx.insert(member).values({
+        id: crypto.randomUUID(),
+        organizationId: inv.organizationId,
+        userId: session.user.id,
+        role: inv.role || "member",
+        createdAt: new Date(),
+      });
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: inv.organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "member.invite_accepted",
+          resource: "invitation",
+          resourceId: invitationId,
+          metadata: { organizationId: inv.organizationId },
+        })
+      );
+      return "ok";
+    });
+
+    if (claimResult === "already_used") {
       return {
         success: false,
         error: "This invitation has already been used",
       };
     }
-
-    // Create membership — safe because we atomically claimed the invitation
-    await db.insert(member).values({
-      id: crypto.randomUUID(),
-      organizationId: inv.organizationId,
-      userId: session.user.id,
-      role: inv.role || "member",
-      createdAt: new Date(),
-    });
 
     // Get organization slug for redirect
     const org = await db.query.organization.findFirst({

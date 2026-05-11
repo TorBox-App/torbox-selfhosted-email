@@ -43,7 +43,8 @@ export type PlanFeature =
   | "advancedSegments" // Scale+: Behavioral segments
   | "customRetention" // Enterprise+: Custom data retention
   | "prioritySLA" // Enterprise+: Priority support SLA
-  | "sso"; // Scale+: SSO + SCIM provisioning
+  | "sso" // Scale+: SSO + SCIM provisioning
+  | "auditLog"; // Starter+: Audit log viewer
 
 export type RateLimits = {
   dailyRequests: number; // -1 = unlimited
@@ -131,6 +132,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       customRetention: false,
       prioritySLA: false,
       sso: false,
+      auditLog: false,
     },
 
     // Rate Limits
@@ -188,6 +190,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       customRetention: false,
       prioritySLA: false,
       sso: false,
+      auditLog: true,
     },
 
     // Rate Limits
@@ -246,6 +249,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       customRetention: false,
       prioritySLA: false,
       sso: false,
+      auditLog: true,
     },
 
     // Rate Limits
@@ -304,6 +308,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       customRetention: false,
       prioritySLA: true, // Priority support SLA
       sso: true, // SSO + SCIM provisioning
+      auditLog: true,
     },
 
     // Rate Limits

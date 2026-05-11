@@ -1,6 +1,6 @@
 {
-  "id": "0055_broadcast_resume_columns",
-  "prevId": "0055_broadcast_resume_columns",
+  "id": "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
+  "prevId": "0d868daa-7769-476f-92ea-3d27281eb90b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2229,26 +2229,23 @@
           "notNull": true,
           "default": "now()"
         },
-        "lastChunkAt": {
+        "last_chunk_at": {
           "name": "last_chunk_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
-        "lastChunkIndex": {
+        "last_chunk_index": {
           "name": "last_chunk_index",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
-        "lastCursor": {
+        "last_cursor": {
           "name": "last_cursor",
           "type": "json",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         }
       },
       "indexes": {
@@ -6676,9 +6673,5 @@
   "roles": {},
   "policies": {},
   "views": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
 }

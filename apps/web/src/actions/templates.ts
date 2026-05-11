@@ -4,7 +4,7 @@ import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import type { EmailType } from "@wraps/db";
-import { awsAccount, brandKit, db, template } from "@wraps/db";
+import { auditLog, awsAccount, brandKit, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
   generateSESTemplateName,
@@ -15,6 +15,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import {
@@ -88,6 +89,8 @@ export async function publishTemplateToSES(
   const log = createActionLogger("publishTemplateToSES", {
     orgSlug: access.orgSlug,
   });
+
+  const auditCtx = await getAuditContext();
 
   try {
     // Fetch template
@@ -226,25 +229,42 @@ export async function publishTemplateToSES(
       textPart: sesText,
     });
 
-    // Update template in our database
-    // Store the SES-transformed HTML for consistency
+    // Update template in our database + audit log in one transaction
     const now = new Date();
-    await db
-      .update(template)
-      .set({
-        status: "PUBLISHED",
-        sesTemplateName,
-        publishedAt: now,
-        compiledHtml: sesHtml, // Store SES-compatible HTML
-        compiledText: sesText,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(template.id, templateId),
-          eq(template.organizationId, organizationId)
-        )
+    await db.transaction(async (tx) => {
+      await tx
+        .update(template)
+        .set({
+          status: "PUBLISHED",
+          sesTemplateName,
+          publishedAt: now,
+          compiledHtml: sesHtml, // Store SES-compatible HTML
+          compiledText: sesText,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(template.id, templateId),
+            eq(template.organizationId, organizationId)
+          )
+        );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "template.published",
+          resource: "template",
+          resourceId: templateId,
+          metadata: {
+            templateId,
+            name: templateData.name,
+            type: templateData.emailType,
+          },
+        })
       );
+    });
 
     log.info({ templateId, sesTemplateName }, "Template published to SES");
 
@@ -355,15 +375,29 @@ export async function bulkDeleteTemplates(
       }
     }
 
-    // Delete templates from database
-    await db
-      .delete(template)
-      .where(
-        and(
-          eq(template.organizationId, organizationId),
-          inArray(template.id, templateIds)
-        )
+    // Delete templates from database + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(template)
+        .where(
+          and(
+            eq(template.organizationId, organizationId),
+            inArray(template.id, templateIds)
+          )
+        );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "template.deleted",
+          resource: "template",
+          metadata: { count: templateIds.length, templateIds },
+        })
       );
+    });
 
     // Revalidate
     revalidateTemplates(access.orgSlug);
@@ -409,19 +443,33 @@ export async function bulkUpdateTemplateType(
       return { success: false, error: "Invalid email type" };
     }
 
-    // Update templates
-    await db
-      .update(template)
-      .set({
-        emailType,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(template.organizationId, organizationId),
-          inArray(template.id, templateIds)
-        )
+    // Update templates + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(template)
+        .set({
+          emailType,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(template.organizationId, organizationId),
+            inArray(template.id, templateIds)
+          )
+        );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "template.type_updated",
+          resource: "template",
+          metadata: { count: templateIds.length, newType: emailType },
+        })
       );
+    });
 
     // Revalidate
     revalidateTemplates(access.orgSlug);
@@ -473,20 +521,34 @@ export async function bulkUpdateTemplateStatus(
       return { success: false, error: "Invalid status" };
     }
 
-    // For DRAFT or ARCHIVED, just update the status
+    // For DRAFT or ARCHIVED, just update the status + audit in one transaction
     if (status !== "PUBLISHED") {
-      await db
-        .update(template)
-        .set({
-          status,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(template.organizationId, organizationId),
-            inArray(template.id, templateIds)
-          )
+      const auditCtx = await getAuditContext();
+      await db.transaction(async (tx) => {
+        await tx
+          .update(template)
+          .set({
+            status,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(template.organizationId, organizationId),
+              inArray(template.id, templateIds)
+            )
+          );
+
+        await tx.insert(auditLog).values(
+          auditLogEntry(auditCtx, {
+            organizationId,
+            actorId: access.userId,
+            actorEmail: access.userEmail,
+            action: "template.status_updated",
+            resource: "template",
+            metadata: { count: templateIds.length, newStatus: status },
+          })
         );
+      });
 
       revalidateTemplates(access.orgSlug);
 
@@ -556,6 +618,19 @@ export async function bulkUpdateTemplateStatus(
       }
     }
 
+    // Write audit log for the overall bulk status update
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "template.status_updated",
+        resource: "template",
+        metadata: { count: templates.length, newStatus: status },
+      })
+    );
+
     revalidateTemplates(access.orgSlug);
 
     return {
@@ -608,6 +683,8 @@ export async function convertTiptapTemplate(
   const log = createActionLogger("convertTiptapTemplate", {
     orgSlug: access.orgSlug,
   });
+
+  const auditCtx = await getAuditContext();
 
   try {
     const templateData = await db.query.template.findFirst({
@@ -665,21 +742,36 @@ export async function convertTiptapTemplate(
       match = variableRegex.exec(compiledHtml);
     }
 
-    await db
-      .update(template)
-      .set({
-        sourceFormat: "react-email",
-        compiledHtml,
-        compiledText,
-        variables,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(template.id, templateId),
-          eq(template.organizationId, organizationId)
-        )
+    // Update template + write audit log in one transaction
+    await db.transaction(async (tx) => {
+      await tx
+        .update(template)
+        .set({
+          sourceFormat: "react-email",
+          compiledHtml,
+          compiledText,
+          variables,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(template.id, templateId),
+            eq(template.organizationId, organizationId)
+          )
+        );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "template.converted",
+          resource: "template",
+          resourceId: templateId,
+          metadata: { templateId },
+        })
       );
+    });
 
     log.info({ templateId }, "Converted TipTap template to react-email");
     return { success: true };

@@ -1,6 +1,6 @@
 {
-  "id": "c2d3e4f5-a6b7-8901-bcde-f12345678901",
-  "prevId": "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
+  "id": "d3e4f5a6-b7c8-9012-cdef-123456789012",
+  "prevId": "c2d3e4f5-a6b7-8901-bcde-f12345678901",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -166,6 +166,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "actor_email": {
+          "name": "actor_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "action": {
           "name": "action",
           "type": "text",
@@ -186,7 +192,7 @@
         },
         "metadata": {
           "name": "metadata",
-          "type": "json",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -211,24 +217,15 @@
         }
       },
       "indexes": {
-        "audit_log_org_idx": {
-          "name": "audit_log_org_idx",
+        "audit_log_org_created_idx": {
+          "name": "audit_log_org_created_idx",
           "columns": [
             {
               "expression": "organization_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_log_timestamp_idx": {
-          "name": "audit_log_timestamp_idx",
-          "columns": [
+            },
             {
               "expression": "created_at",
               "isExpression": false,

@@ -1,11 +1,12 @@
 "use server";
 
 import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
+import { auditLog, db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
 import { organization } from "@wraps/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import {
   type CreateOrganizationInput,
   createOrganizationSchema,
@@ -235,17 +236,39 @@ export async function updateOrganizationAction(
       }
     }
 
-    // 6. Update organization in database
+    // 6. Update organization in database + write audit log atomically
     const { eq } = await import("drizzle-orm");
-    const [updatedOrg] = await db
-      .update(organization)
-      .set({
-        ...(name && { name }),
-        ...(newSlug && { slug: newSlug }),
-        ...(logo !== undefined && { logo }),
-      })
-      .where(eq(organization.id, orgWithMembership.id))
-      .returning();
+    const auditCtx = await getAuditContext();
+
+    const updates: Record<string, unknown> = {};
+    if (name) updates.name = name;
+    if (newSlug) updates.slug = newSlug;
+    if (logo !== undefined) updates.logo = logo;
+
+    const updatedOrg = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(organization)
+        .set({
+          ...(name && { name }),
+          ...(newSlug && { slug: newSlug }),
+          ...(logo !== undefined && { logo }),
+        })
+        .where(eq(organization.id, orgWithMembership.id))
+        .returning();
+      if (!updated) return null;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "settings.updated",
+          resource: "organization",
+          resourceId: orgWithMembership.id,
+          metadata: { fields: Object.keys(updates) },
+        })
+      );
+      return updated;
+    });
 
     if (!updatedOrg) {
       return {
@@ -254,14 +277,14 @@ export async function updateOrganizationAction(
       };
     }
 
-    // 7. Revalidate paths
+    // 8. Revalidate paths
     revalidatePath("/");
     revalidatePath(`/${orgSlug}`);
     if (newSlug && newSlug !== orgSlug) {
       revalidatePath(`/${newSlug}`);
     }
 
-    // 8. Return success
+    // 9. Return success
     return {
       success: true,
       organization: {

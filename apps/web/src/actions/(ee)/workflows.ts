@@ -3,6 +3,7 @@
 
 import { auth } from "@wraps/auth";
 import {
+  auditLog,
   type CanvasViewport,
   contact,
   db,
@@ -25,6 +26,7 @@ import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
 import { checkPermission } from "../shared/permissions";
@@ -440,22 +442,38 @@ export async function createWorkflow(
       },
     ];
 
-    const [newWorkflow] = await db
-      .insert(workflow)
-      .values({
-        organizationId,
-        name: data.name.trim(),
-        description: data.description?.trim() || null,
-        awsAccountId: data.awsAccountId || null,
-        topicId: data.topicId || null,
-        status: "draft",
-        triggerType: "event",
-        triggerConfig: {},
-        steps: defaultSteps,
-        transitions: [],
-        createdBy: access.userId,
-      })
-      .returning();
+    const auditCtx = await getAuditContext();
+    const [newWorkflow] = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(workflow)
+        .values({
+          organizationId,
+          name: data.name.trim(),
+          description: data.description?.trim() || null,
+          awsAccountId: data.awsAccountId || null,
+          topicId: data.topicId || null,
+          status: "draft",
+          triggerType: "event",
+          triggerConfig: {},
+          steps: defaultSteps,
+          transitions: [],
+          createdBy: access.userId,
+        })
+        .returning();
+      if (!created) return [undefined];
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.created",
+          resource: "workflow",
+          resourceId: created.id,
+          metadata: { workflowId: created.id, name: created.name },
+        })
+      );
+      return [created];
+    });
 
     if (!newWorkflow) {
       return { success: false, error: "Failed to create workflow" };
@@ -646,16 +664,33 @@ export async function updateWorkflow(
       updateData.defaultSenderId = data.defaultSenderId;
     }
 
-    // Update workflow
-    await db
-      .update(workflow)
-      .set(updateData)
-      .where(
-        and(
-          eq(workflow.id, workflowId),
-          eq(workflow.organizationId, organizationId)
-        )
+    // Update workflow + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(workflow)
+        .set(updateData)
+        .where(
+          and(
+            eq(workflow.id, workflowId),
+            eq(workflow.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.updated",
+          resource: "workflow",
+          resourceId: workflowId,
+          metadata: {
+            workflowId,
+            name: updateData.name ?? existing.name,
+          },
+        })
       );
+    });
 
     // Handle schedule changes for enabled workflows
     if (existing.status === "enabled") {
@@ -782,15 +817,29 @@ export async function deleteWorkflow(
       await callWorkflowScheduleApi(workflowId, organizationId, "disable");
     }
 
-    // Delete workflow (cascades to executions)
-    await db
-      .delete(workflow)
-      .where(
-        and(
-          eq(workflow.id, workflowId),
-          eq(workflow.organizationId, organizationId)
-        )
+    // Delete workflow (cascades to executions) + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(workflow)
+        .where(
+          and(
+            eq(workflow.id, workflowId),
+            eq(workflow.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.deleted",
+          resource: "workflow",
+          resourceId: workflowId,
+          metadata: { workflowId },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/automations`, "page");
@@ -1003,19 +1052,33 @@ export async function enableWorkflow(
       }
     }
 
-    // Enable workflow (schedule already created if needed)
-    await db
-      .update(workflow)
-      .set({
-        status: "enabled",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(workflow.id, workflowId),
-          eq(workflow.organizationId, organizationId)
-        )
+    // Enable workflow (schedule already created if needed) + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(workflow)
+        .set({
+          status: "enabled",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(workflow.id, workflowId),
+            eq(workflow.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.enabled",
+          resource: "workflow",
+          resourceId: workflowId,
+          metadata: { workflowId },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/automations`, "page");
@@ -1074,20 +1137,34 @@ export async function disableWorkflow(
       return { success: false, error: "Workflow not found" };
     }
 
-    // Pause workflow and mark as edited from dashboard (for CLI conflict detection)
-    await db
-      .update(workflow)
-      .set({
-        status: "paused",
-        lastEditedFrom: "dashboard",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(workflow.id, workflowId),
-          eq(workflow.organizationId, organizationId)
-        )
+    // Pause workflow + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(workflow)
+        .set({
+          status: "paused",
+          lastEditedFrom: "dashboard",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(workflow.id, workflowId),
+            eq(workflow.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.disabled",
+          resource: "workflow",
+          resourceId: workflowId,
+          metadata: { workflowId },
+        })
       );
+    });
 
     // If schedule trigger, delete pending EventBridge schedule (best effort)
     if (existing.triggerType === "schedule") {
@@ -1187,28 +1264,44 @@ export async function duplicateWorkflow(
       })
     );
 
-    // Create duplicate workflow
-    const [newWorkflow] = await db
-      .insert(workflow)
-      .values({
-        organizationId,
-        name: `${original.name} (copy)`,
-        description: original.description,
-        awsAccountId: original.awsAccountId,
-        topicId: original.topicId,
-        status: "draft", // Always start as draft
-        triggerType: original.triggerType,
-        triggerConfig: original.triggerConfig,
-        steps: newSteps,
-        transitions: newTransitions,
-        canvasViewport: original.canvasViewport,
-        allowReentry: original.allowReentry,
-        reentryDelaySeconds: original.reentryDelaySeconds,
-        maxConcurrentExecutions: original.maxConcurrentExecutions,
-        contactCooldownSeconds: original.contactCooldownSeconds,
-        createdBy: access.userId,
-      })
-      .returning();
+    // Create duplicate workflow + audit log in one transaction
+    const auditCtx = await getAuditContext();
+    const [newWorkflow] = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(workflow)
+        .values({
+          organizationId,
+          name: `${original.name} (copy)`,
+          description: original.description,
+          awsAccountId: original.awsAccountId,
+          topicId: original.topicId,
+          status: "draft", // Always start as draft
+          triggerType: original.triggerType,
+          triggerConfig: original.triggerConfig,
+          steps: newSteps,
+          transitions: newTransitions,
+          canvasViewport: original.canvasViewport,
+          allowReentry: original.allowReentry,
+          reentryDelaySeconds: original.reentryDelaySeconds,
+          maxConcurrentExecutions: original.maxConcurrentExecutions,
+          contactCooldownSeconds: original.contactCooldownSeconds,
+          createdBy: access.userId,
+        })
+        .returning();
+      if (!created) return [undefined];
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "workflow.duplicated",
+          resource: "workflow",
+          resourceId: created.id,
+          metadata: { workflowId: created.id, sourceId: workflowId },
+        })
+      );
+      return [created];
+    });
 
     if (!newWorkflow) {
       return { success: false, error: "Failed to duplicate workflow" };

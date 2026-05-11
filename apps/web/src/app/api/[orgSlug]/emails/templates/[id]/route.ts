@@ -1,10 +1,11 @@
 import { auth } from "@wraps/auth";
-import { awsAccount, db, template, templateVersion } from "@wraps/db";
+import { auditLog, awsAccount, db, template, templateVersion } from "@wraps/db";
 import { deleteSESTemplate } from "@wraps/email";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -196,55 +197,80 @@ export async function PUT(request: Request, context: RouteContext) {
       updateData.brandKitId = brandKitId;
     }
 
-    // Update template
-    const [updated] = await db
-      .update(template)
-      .set(updateData)
-      .where(
-        and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
+    const auditCtx = await getAuditContext();
+
+    const [updated] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .update(template)
+        .set(updateData)
+        .where(
+          and(
+            eq(template.id, id),
+            eq(template.organizationId, orgWithMembership.id)
+          )
         )
-      )
-      .returning();
+        .returning();
+
+      if (!r) return [r];
+
+      // Create version snapshot if content was updated
+      // Only create a version if:
+      // 1. It's a manual save (createVersion: true)
+      // 2. OR it's been more than 5 minutes since the last version
+      if (content !== undefined) {
+        // Get the most recent version
+        const versions = await tx.query.templateVersion.findMany({
+          where: eq(templateVersion.templateId, id),
+          orderBy: [desc(templateVersion.version)],
+          limit: 1,
+        });
+
+        const lastVersion = versions[0];
+        const nextVersion = lastVersion ? lastVersion.version + 1 : 1;
+
+        // Check if we should create a version
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const shouldCreateVersion =
+          createVersion === true || // Manual save
+          !lastVersion || // No versions yet
+          new Date(lastVersion.createdAt) < fiveMinutesAgo; // Last version is old enough
+
+        if (shouldCreateVersion) {
+          await tx.insert(templateVersion).values({
+            templateId: id,
+            content,
+            version: nextVersion,
+            createdBy: session.user.id,
+          });
+        }
+      }
+
+      const auditAction =
+        status === "PUBLISHED" ? "template.published" : "template.updated";
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: auditAction,
+          resource: "template",
+          resourceId: r.id,
+          metadata: {
+            templateId: r.id,
+            name: r.name,
+            ...(status ? { status } : {}),
+          },
+        })
+      );
+
+      return [r];
+    });
 
     if (!updated) {
       return NextResponse.json(
         { error: "Template not found" },
         { status: 404 }
       );
-    }
-
-    // Create version snapshot if content was updated
-    // Only create a version if:
-    // 1. It's a manual save (createVersion: true)
-    // 2. OR it's been more than 5 minutes since the last version
-    if (content !== undefined) {
-      // Get the most recent version
-      const versions = await db.query.templateVersion.findMany({
-        where: eq(templateVersion.templateId, id),
-        orderBy: [desc(templateVersion.version)],
-        limit: 1,
-      });
-
-      const lastVersion = versions[0];
-      const nextVersion = lastVersion ? lastVersion.version + 1 : 1;
-
-      // Check if we should create a version
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const shouldCreateVersion =
-        createVersion === true || // Manual save
-        !lastVersion || // No versions yet
-        new Date(lastVersion.createdAt) < fiveMinutesAgo; // Last version is old enough
-
-      if (shouldCreateVersion) {
-        await db.insert(templateVersion).values({
-          templateId: id,
-          content,
-          version: nextVersion,
-          createdBy: session.user.id,
-        });
-      }
     }
 
     return NextResponse.json(updated);
@@ -336,15 +362,30 @@ export async function DELETE(_request: Request, context: RouteContext) {
       }
     }
 
+    const auditCtx = await getAuditContext();
+
     // Delete template from database (versions will cascade)
-    await db
-      .delete(template)
-      .where(
-        and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
-        )
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(template)
+        .where(
+          and(
+            eq(template.id, id),
+            eq(template.organizationId, orgWithMembership.id)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.deleted",
+          resource: "template",
+          resourceId: id,
+          metadata: { templateId: id },
+        })
       );
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

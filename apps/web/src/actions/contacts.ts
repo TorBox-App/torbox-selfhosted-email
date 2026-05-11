@@ -1,6 +1,8 @@
 "use server";
 
 import {
+  auditLog,
+  db,
   deleteContact as dbDeleteContact,
   fetchTopicsForSubscription,
   findContactByEmailHash,
@@ -15,6 +17,7 @@ import {
 } from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { trackContactCreated } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import type {
   ContactStatus,
   CreateContactResult,
@@ -353,45 +356,74 @@ export async function createContact(
       data.status ||
       (emailStatus === "active" ? "active" : "pending_confirmation");
 
-    // Create contact
-    const newContact = await insertContact({
-      organizationId,
-      // Email fields
-      email: email || null,
-      emailHash: emailHashValue,
-      emailStatus,
-      emailVerifiedAt: emailStatus === "active" ? new Date() : null,
-      // Phone fields
-      phone: phone || null,
-      phoneHash: phoneHashValue,
-      smsStatus,
-      smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
-      // Contact details
-      firstName: data.firstName || null,
-      lastName: data.lastName || null,
-      company: data.company || null,
-      jobTitle: data.jobTitle || null,
-      preferredChannel: data.preferredChannel ?? null,
-      // Shared
-      properties: data.properties || {},
-      createdBy: access.userId,
-      // Legacy fields
-      status: legacyStatus,
-      confirmedAt: legacyStatus === "active" ? new Date() : null,
-    } as InsertContactData);
+    // Fetch audit context before the transaction (headers() may not work inside)
+    const auditCtx = await getAuditContext();
 
-    if (!newContact) {
-      return { success: false, error: "Failed to create contact" };
-    }
-
-    // Subscribe to topics if provided, after verifying they belong to this org
+    // Verify topic ownership before transaction
+    let ownedTopicIds: string[] = [];
     if (data.topicIds && data.topicIds.length > 0) {
       const ownedTopics = await fetchTopicsForSubscription(
         data.topicIds,
         organizationId
       );
-      const ownedTopicIds = ownedTopics.map((t) => t.id);
-      await subscribeContactToTopicsOnCreate(newContact.id, ownedTopicIds);
+      ownedTopicIds = ownedTopics.map((t) => t.id);
+    }
+
+    // Create contact + subscribe to topics + write audit log in one transaction
+    const channel = email ? "email" : "sms";
+    const newContact = await db.transaction(async (tx) => {
+      const inserted = await insertContact(
+        {
+          organizationId,
+          // Email fields
+          email: email || null,
+          emailHash: emailHashValue,
+          emailStatus,
+          emailVerifiedAt: emailStatus === "active" ? new Date() : null,
+          // Phone fields
+          phone: phone || null,
+          phoneHash: phoneHashValue,
+          smsStatus,
+          smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
+          // Contact details
+          firstName: data.firstName || null,
+          lastName: data.lastName || null,
+          company: data.company || null,
+          jobTitle: data.jobTitle || null,
+          preferredChannel: data.preferredChannel ?? null,
+          // Shared
+          properties: data.properties || {},
+          createdBy: access.userId,
+          // Legacy fields
+          status: legacyStatus,
+          confirmedAt: legacyStatus === "active" ? new Date() : null,
+        } as InsertContactData,
+        tx
+      );
+
+      if (!inserted) return null;
+
+      if (ownedTopicIds.length > 0) {
+        await subscribeContactToTopicsOnCreate(inserted.id, ownedTopicIds, tx);
+      }
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.created",
+          resource: "contact",
+          resourceId: inserted.id,
+          metadata: { contactId: inserted.id, email: email ?? null, channel },
+        })
+      );
+
+      return inserted;
+    });
+
+    if (!newContact) {
+      return { success: false, error: "Failed to create contact" };
     }
 
     // Revalidate
@@ -612,12 +644,32 @@ export async function updateContact(
       };
     }
 
-    // Update contact
-    await updateContactFields(
-      contactId,
-      organizationId,
-      updateData as Partial<InsertContactData> & Record<string, unknown>
+    const auditCtx = await getAuditContext();
+    const updatedFields = Object.keys(data).filter(
+      (k) => data[k as keyof typeof data] !== undefined
     );
+
+    // Update contact + write audit log in one transaction
+    await db.transaction(async (tx) => {
+      await updateContactFields(
+        contactId,
+        organizationId,
+        updateData as Partial<InsertContactData> & Record<string, unknown>,
+        tx
+      );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.updated",
+          resource: "contact",
+          resourceId: contactId,
+          metadata: { contactId, fields: updatedFields },
+        })
+      );
+    });
 
     // Revalidate
     revalidateContacts(orgSlug);
@@ -661,8 +713,24 @@ export async function deleteContact(
       return { success: false, error: "Contact not found" };
     }
 
-    // Delete contact (cascades to contact_topic)
-    await dbDeleteContact(contactId, organizationId);
+    const auditCtx = await getAuditContext();
+
+    // Delete contact + write audit log in one transaction
+    await db.transaction(async (tx) => {
+      await dbDeleteContact(contactId, organizationId, tx);
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.deleted",
+          resource: "contact",
+          resourceId: contactId,
+          metadata: { contactId },
+        })
+      );
+    });
 
     // Revalidate
     revalidateContacts(orgSlug);

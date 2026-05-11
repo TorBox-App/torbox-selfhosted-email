@@ -1,8 +1,9 @@
 "use server";
 
-import { contact, contactTopic, db, topic } from "@wraps/db";
+import { auditLog, contact, contactTopic, db, topic } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { trackContactsImported } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import type { ImportContactsResult } from "@/lib/contacts";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
@@ -115,6 +116,8 @@ export async function importContacts(
       limitCheck.limit === -1
         ? Number.POSITIVE_INFINITY
         : limitCheck.limit - limitCheck.current;
+
+    const auditCtx = await getAuditContext();
 
     let created = 0;
     let updated = 0;
@@ -260,112 +263,129 @@ export async function importContacts(
         }
       }
 
-      // Batch INSERT new contacts
-      if (newRows.length > 0) {
-        const insertedContacts = await db
-          .insert(contact)
-          .values(
-            newRows.map((row) => ({
-              organizationId,
-              email: row.email,
-              emailHash: row.emailHash,
-              emailStatus: row.email ? ("active" as const) : null,
-              emailVerifiedAt: row.email ? new Date() : null,
-              phone: row.phone,
-              phoneHash: row.phoneHash,
-              smsStatus: row.phone ? ("pending_consent" as const) : null,
-              firstName: row.firstName,
-              lastName: row.lastName,
-              company: row.company,
-              jobTitle: row.jobTitle,
-              properties: row.properties,
-              createdBy: access.userId,
-              status: "active" as const,
-              confirmedAt: new Date(),
-              ...(row.createdAt ? { createdAt: row.createdAt } : {}),
-            }))
-          )
-          .returning({ id: contact.id });
+      // Batch INSERT new contacts + UPDATE duplicates in one transaction per batch
+      await db.transaction(async (tx) => {
+        // Batch INSERT new contacts
+        if (newRows.length > 0) {
+          const insertedContacts = await tx
+            .insert(contact)
+            .values(
+              newRows.map((row) => ({
+                organizationId,
+                email: row.email,
+                emailHash: row.emailHash,
+                emailStatus: row.email ? ("active" as const) : null,
+                emailVerifiedAt: row.email ? new Date() : null,
+                phone: row.phone,
+                phoneHash: row.phoneHash,
+                smsStatus: row.phone ? ("pending_consent" as const) : null,
+                firstName: row.firstName,
+                lastName: row.lastName,
+                company: row.company,
+                jobTitle: row.jobTitle,
+                properties: row.properties,
+                createdBy: access.userId,
+                status: "active" as const,
+                confirmedAt: new Date(),
+                ...(row.createdAt ? { createdAt: row.createdAt } : {}),
+              }))
+            )
+            .returning({ id: contact.id });
 
-        created += insertedContacts.length;
-        allCreatedContactIds.push(...insertedContacts.map((c) => c.id));
-      }
+          created += insertedContacts.length;
+          allCreatedContactIds.push(...insertedContacts.map((c) => c.id));
+        }
 
-      // UPDATE duplicate contacts (individual updates for varied data)
-      for (const { row, existingContactId } of duplicateRows) {
-        try {
-          const updateData: Record<string, unknown> = {};
-          if (row.firstName) {
-            updateData.firstName = row.firstName;
-          }
-          if (row.lastName) {
-            updateData.lastName = row.lastName;
-          }
-          if (row.company) {
-            updateData.company = row.company;
-          }
-          if (row.jobTitle) {
-            updateData.jobTitle = row.jobTitle;
-          }
-          if (row.properties && Object.keys(row.properties).length > 0) {
-            // Merge properties using SQL jsonb concat
-            updateData.properties = row.properties;
-          }
+        // UPDATE duplicate contacts (individual updates for varied data)
+        for (const { row, existingContactId } of duplicateRows) {
+          try {
+            const updateData: Record<string, unknown> = {};
+            if (row.firstName) {
+              updateData.firstName = row.firstName;
+            }
+            if (row.lastName) {
+              updateData.lastName = row.lastName;
+            }
+            if (row.company) {
+              updateData.company = row.company;
+            }
+            if (row.jobTitle) {
+              updateData.jobTitle = row.jobTitle;
+            }
+            if (row.properties && Object.keys(row.properties).length > 0) {
+              // Merge properties using SQL jsonb concat
+              updateData.properties = row.properties;
+            }
 
-          if (Object.keys(updateData).length > 0) {
-            await db
-              .update(contact)
-              .set(updateData)
-              .where(
-                and(
-                  eq(contact.id, existingContactId),
-                  eq(contact.organizationId, organizationId)
-                )
-              );
+            if (Object.keys(updateData).length > 0) {
+              await tx
+                .update(contact)
+                .set(updateData)
+                .where(
+                  and(
+                    eq(contact.id, existingContactId),
+                    eq(contact.organizationId, organizationId)
+                  )
+                );
+            }
+            updated++;
+            allUpdatedContactIds.push(existingContactId);
+          } catch {
+            errors.push({
+              row: row.index,
+              error: "Failed to update existing contact",
+            });
           }
-          updated++;
-          allUpdatedContactIds.push(existingContactId);
-        } catch {
-          errors.push({
-            row: row.index,
-            error: "Failed to update existing contact",
-          });
+        }
+      });
+    }
+
+    // Topic subscriptions + audit log in one final transaction
+    await db.transaction(async (tx) => {
+      // Topic subscriptions for all created + updated contacts
+      const allContactIds = [...allCreatedContactIds, ...allUpdatedContactIds];
+      if (validatedTopicIds.length > 0 && allContactIds.length > 0) {
+        // For updated contacts, remove existing subscriptions to these topics first
+        if (allUpdatedContactIds.length > 0) {
+          await tx
+            .delete(contactTopic)
+            .where(
+              and(
+                inArray(contactTopic.contactId, allUpdatedContactIds),
+                inArray(contactTopic.topicId, validatedTopicIds)
+              )
+            );
+        }
+
+        // Batch insert topic subscriptions
+        const topicValues = allContactIds.flatMap((contactId) =>
+          validatedTopicIds.map((topicId) => ({
+            contactId,
+            topicId,
+            status: "subscribed",
+          }))
+        );
+
+        // Insert in chunks to avoid query size limits
+        const TOPIC_BATCH = 500;
+        for (let i = 0; i < topicValues.length; i += TOPIC_BATCH) {
+          await tx
+            .insert(contactTopic)
+            .values(topicValues.slice(i, i + TOPIC_BATCH));
         }
       }
-    }
 
-    // Topic subscriptions for all created + updated contacts
-    const allContactIds = [...allCreatedContactIds, ...allUpdatedContactIds];
-    if (validatedTopicIds.length > 0 && allContactIds.length > 0) {
-      // For updated contacts, remove existing subscriptions to these topics first
-      if (allUpdatedContactIds.length > 0) {
-        await db
-          .delete(contactTopic)
-          .where(
-            and(
-              inArray(contactTopic.contactId, allUpdatedContactIds),
-              inArray(contactTopic.topicId, validatedTopicIds)
-            )
-          );
-      }
-
-      // Batch insert topic subscriptions
-      const topicValues = allContactIds.flatMap((contactId) =>
-        validatedTopicIds.map((topicId) => ({
-          contactId,
-          topicId,
-          status: "subscribed",
-        }))
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "contact.imported",
+          resource: "contact",
+          metadata: { count: created, updated },
+        })
       );
-
-      // Insert in chunks to avoid query size limits
-      const TOPIC_BATCH = 500;
-      for (let i = 0; i < topicValues.length; i += TOPIC_BATCH) {
-        await db
-          .insert(contactTopic)
-          .values(topicValues.slice(i, i + TOPIC_BATCH));
-      }
-    }
+    });
 
     // Post-processing
     revalidateContacts(orgSlug);

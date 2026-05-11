@@ -2,7 +2,7 @@ import { passkey } from "@better-auth/passkey";
 import { scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
-import { db, eq } from "@wraps/db";
+import { auditLog, db, eq, member } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import * as scimSchema from "@wraps/db/schema/scim-provider";
 import * as ssoSchema from "@wraps/db/schema/sso-provider";
@@ -389,6 +389,38 @@ async function isNewDeviceOrIp(
   }
 }
 
+/**
+ * Write auth.login audit log rows for every org the user belongs to.
+ * Exported for testability — called from session.create.after hook.
+ * Failures are silently swallowed so a DB issue never breaks login.
+ */
+export async function writeLoginAuditLogs(
+  userId: string,
+  sessionId: string,
+  userEmail: string
+): Promise<void> {
+  const orgs = await db.query.member.findMany({
+    where: eq(member.userId, userId),
+    columns: { organizationId: true },
+  });
+  for (const { organizationId } of orgs) {
+    await db
+      .insert(auditLog)
+      .values({
+        organizationId,
+        userId,
+        actorEmail: userEmail,
+        action: "auth.login",
+        resource: "session",
+        resourceId: sessionId,
+        metadata: { userId },
+        ipAddress: null,
+        userAgent: null,
+      })
+      .catch(() => {});
+  }
+}
+
 // Only initialize Stripe client if the secret key is available
 // This prevents build-time errors when env vars aren't set (e.g., during Next.js static generation)
 const stripeClient = process.env.STRIPE_SECRET_KEY
@@ -718,6 +750,11 @@ export const auth = betterAuth<BetterAuthOptions>({
                   userAgent: session.userAgent ?? undefined,
                 });
               }
+            }
+
+            // Write auth.login audit log for each org the user belongs to
+            if (user) {
+              await writeLoginAuditLogs(session.userId, session.id, user.email);
             }
           } catch (error) {
             console.error("Error in login alert hook:", error);

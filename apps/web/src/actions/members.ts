@@ -1,11 +1,19 @@
 "use server";
 
-import { awsAccount, contact, db, messageSend, template } from "@wraps/db";
+import {
+  auditLog,
+  awsAccount,
+  contact,
+  db,
+  messageSend,
+  template,
+} from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { VALID_ROLES } from "@/lib/preset-roles";
 import { checkPermission } from "./shared/permissions";
@@ -199,13 +207,30 @@ export async function updateMemberRole(
       };
     }
 
+    const auditCtx = await getAuditContext();
     // Update the role (scoped to org to prevent cross-org IDOR)
-    await db
-      .update(member)
-      .set({ role: newRole })
-      .where(
-        and(eq(member.id, memberId), eq(member.organizationId, organizationId))
+    await db.transaction(async (tx) => {
+      await tx
+        .update(member)
+        .set({ role: newRole })
+        .where(
+          and(
+            eq(member.id, memberId),
+            eq(member.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "member.role_changed",
+          resource: "member",
+          resourceId: targetMember.userId,
+          metadata: { oldRole: targetMember.role, newRole },
+        })
       );
+    });
 
     revalidatePath(`/${access.orgSlug}/settings/members`);
 
@@ -307,28 +332,7 @@ export async function inviteMember(
       };
     }
 
-    // Create the invitation
-    const [newInvitation] = await db
-      .insert(invitation)
-      .values({
-        id: crypto.randomUUID(),
-        organizationId,
-        email,
-        role,
-        status: "pending",
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        inviterId: access.userId,
-      })
-      .returning();
-
-    if (!newInvitation) {
-      return {
-        success: false,
-        error: "Failed to create invitation",
-      };
-    }
-
-    // Get organization details for email
+    // Get organization details for email (needed after transaction)
     const org = await db.query.organization.findFirst({
       where: (orgs, { eq: eqOp }) => eqOp(orgs.id, organizationId),
     });
@@ -337,6 +341,43 @@ export async function inviteMember(
       return {
         success: false,
         error: "Organization not found",
+      };
+    }
+
+    const auditCtx = await getAuditContext();
+    // Create the invitation + audit log atomically
+    const newInvitation = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(invitation)
+        .values({
+          id: crypto.randomUUID(),
+          organizationId,
+          email,
+          role,
+          status: "pending",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          inviterId: access.userId,
+        })
+        .returning();
+      if (!inserted) return null;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "member.invited",
+          resource: "invitation",
+          resourceId: inserted.id,
+          metadata: { inviteeEmail: email, role },
+        })
+      );
+      return inserted;
+    });
+
+    if (!newInvitation) {
+      return {
+        success: false,
+        error: "Failed to create invitation",
       };
     }
 
@@ -486,12 +527,29 @@ export async function removeMember(
       };
     }
 
+    const auditCtx = await getAuditContext();
     // Remove the member (scoped to org to prevent cross-org IDOR)
-    await db
-      .delete(member)
-      .where(
-        and(eq(member.id, memberId), eq(member.organizationId, organizationId))
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(member)
+        .where(
+          and(
+            eq(member.id, memberId),
+            eq(member.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "member.removed",
+          resource: "member",
+          resourceId: targetMember.userId,
+          metadata: { role: targetMember.role },
+        })
       );
+    });
 
     revalidatePath(`/${access.orgSlug}/settings/members`);
 
@@ -553,15 +611,29 @@ export async function cancelInvitation(
       };
     }
 
-    // Delete the invitation (scoped to org)
-    await db
-      .delete(invitation)
-      .where(
-        and(
-          eq(invitation.id, invitationId),
-          eq(invitation.organizationId, organizationId)
-        )
+    const auditCtx = await getAuditContext();
+    // Delete the invitation + audit log atomically
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(invitation)
+        .where(
+          and(
+            eq(invitation.id, invitationId),
+            eq(invitation.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "member.invite_cancelled",
+          resource: "invitation",
+          resourceId: invitationId,
+          metadata: { inviteeEmail: targetInvitation.email },
+        })
       );
+    });
 
     revalidatePath(`/${access.orgSlug}/settings/members`);
 

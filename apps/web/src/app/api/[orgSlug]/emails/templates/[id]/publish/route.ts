@@ -1,6 +1,6 @@
 import { toPlainText } from "@react-email/render";
 import { auth } from "@wraps/auth";
-import { awsAccount, db, template } from "@wraps/db";
+import { auditLog, awsAccount, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
   generateSESTemplateName,
@@ -10,6 +10,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -138,25 +139,43 @@ export async function POST(_request: Request, context: RouteContext) {
       textPart: sesText,
     });
 
-    // Update template in our database
-    // Store the SES-transformed HTML so fallback paths also have correct format
+    // Update template + audit log atomically
+    // (SES upsert already succeeded above — DB is the source of truth)
     const now = new Date();
-    await db
-      .update(template)
-      .set({
-        status: "PUBLISHED",
-        sesTemplateName,
-        publishedAt: now,
-        compiledHtml: sesHtml,
-        compiledText: sesText,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
-        )
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(template)
+        .set({
+          status: "PUBLISHED",
+          sesTemplateName,
+          publishedAt: now,
+          compiledHtml: sesHtml,
+          compiledText: sesText,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(template.id, id),
+            eq(template.organizationId, orgWithMembership.id)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.published",
+          resource: "template",
+          resourceId: id,
+          metadata: {
+            templateId: id,
+            name: templateData.name,
+            sesTemplateName,
+          },
+        })
       );
+    });
 
     return NextResponse.json({
       success: true,
@@ -254,21 +273,36 @@ export async function DELETE(_request: Request, context: RouteContext) {
       templateData.sesTemplateName
     );
 
-    // Update template in our database
-    await db
-      .update(template)
-      .set({
-        status: "DRAFT",
-        sesTemplateName: null,
-        publishedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
-        )
+    // Update template + audit log atomically
+    const now = new Date();
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(template)
+        .set({
+          status: "DRAFT",
+          sesTemplateName: null,
+          publishedAt: null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(template.id, id),
+            eq(template.organizationId, orgWithMembership.id)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.unpublished",
+          resource: "template",
+          resourceId: id,
+          metadata: { templateId: id, name: templateData.name },
+        })
       );
+    });
 
     return NextResponse.json({
       success: true,

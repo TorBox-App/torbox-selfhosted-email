@@ -1,8 +1,9 @@
 "use server";
 
-import { buildConditionSQL, contact, db, segment } from "@wraps/db";
+import { auditLog, buildConditionSQL, contact, db, segment } from "@wraps/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
@@ -188,20 +189,36 @@ export async function createSegment(
       memberCount = countResult?.count ?? 0;
     }
 
+    const auditCtx = await getAuditContext();
+
     // Create segment
-    const [newSegment] = await db
-      .insert(segment)
-      .values({
-        organizationId,
-        name: data.name.trim(),
-        description: data.description?.trim() || null,
-        condition: data.condition,
-        trackMembership: data.trackMembership ?? false,
-        memberCount,
-        lastComputedAt: new Date(),
-        createdBy: access.userId,
-      })
-      .returning();
+    const [newSegment] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .insert(segment)
+        .values({
+          organizationId,
+          name: data.name.trim(),
+          description: data.description?.trim() || null,
+          condition: data.condition,
+          trackMembership: data.trackMembership ?? false,
+          memberCount,
+          lastComputedAt: new Date(),
+          createdBy: access.userId,
+        })
+        .returning();
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "segment.created",
+          resource: "segment",
+          resourceId: r.id,
+          metadata: { segmentId: r.id, name: r.name },
+        })
+      );
+      return [r];
+    });
 
     if (!newSegment) {
       return { success: false, error: "Failed to create segment" };
@@ -301,16 +318,31 @@ export async function updateSegment(
       updateData.trackMembership = data.trackMembership;
     }
 
+    const auditCtx = await getAuditContext();
+
     // Update segment
-    await db
-      .update(segment)
-      .set(updateData)
-      .where(
-        and(
-          eq(segment.id, segmentId),
-          eq(segment.organizationId, organizationId)
-        )
+    await db.transaction(async (tx) => {
+      await tx
+        .update(segment)
+        .set(updateData)
+        .where(
+          and(
+            eq(segment.id, segmentId),
+            eq(segment.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "segment.updated",
+          resource: "segment",
+          resourceId: segmentId,
+          metadata: { segmentId, name: updateData.name ?? existing.name },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/segments`, "page");
@@ -364,15 +396,30 @@ export async function deleteSegment(
       return { success: false, error: "Segment not found" };
     }
 
+    const auditCtx = await getAuditContext();
+
     // Delete segment
-    await db
-      .delete(segment)
-      .where(
-        and(
-          eq(segment.id, segmentId),
-          eq(segment.organizationId, organizationId)
-        )
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(segment)
+        .where(
+          and(
+            eq(segment.id, segmentId),
+            eq(segment.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "segment.deleted",
+          resource: "segment",
+          resourceId: segmentId,
+          metadata: { segmentId },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/segments`, "page");

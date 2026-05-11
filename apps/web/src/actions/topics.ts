@@ -1,8 +1,9 @@
 "use server";
 
-import { contactTopic, db, topic } from "@wraps/db";
+import { auditLog, contactTopic, db, topic } from "@wraps/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
@@ -227,19 +228,35 @@ export async function createTopic(
       return { success: false, error: "A topic with this slug already exists" };
     }
 
+    const auditCtx = await getAuditContext();
+
     // Create topic
-    const [newTopic] = await db
-      .insert(topic)
-      .values({
-        organizationId,
-        name: data.name.trim(),
-        slug,
-        description: data.description?.trim() || null,
-        public: data.public ?? true,
-        doubleOptIn: data.doubleOptIn ?? false,
-        createdBy: access.userId,
-      })
-      .returning();
+    const [newTopic] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .insert(topic)
+        .values({
+          organizationId,
+          name: data.name.trim(),
+          slug,
+          description: data.description?.trim() || null,
+          public: data.public ?? true,
+          doubleOptIn: data.doubleOptIn ?? false,
+          createdBy: access.userId,
+        })
+        .returning();
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "topic.created",
+          resource: "topic",
+          resourceId: r.id,
+          metadata: { topicId: r.id, name: r.name, slug: r.slug },
+        })
+      );
+      return [r];
+    });
 
     if (!newTopic) {
       return { success: false, error: "Failed to create topic" };
@@ -343,13 +360,28 @@ export async function updateTopic(
       updateData.doubleOptIn = data.doubleOptIn;
     }
 
+    const auditCtx = await getAuditContext();
+
     // Update topic
-    await db
-      .update(topic)
-      .set(updateData)
-      .where(
-        and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+    await db.transaction(async (tx) => {
+      await tx
+        .update(topic)
+        .set(updateData)
+        .where(
+          and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "topic.updated",
+          resource: "topic",
+          resourceId: topicId,
+          metadata: { topicId, name: updateData.name ?? existing.name },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/topics`, "page");
@@ -395,12 +427,27 @@ export async function deleteTopic(
       return { success: false, error: "Topic not found" };
     }
 
+    const auditCtx = await getAuditContext();
+
     // Delete topic (cascades to contact_topic)
-    await db
-      .delete(topic)
-      .where(
-        and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(topic)
+        .where(
+          and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
+          action: "topic.deleted",
+          resource: "topic",
+          resourceId: topicId,
+          metadata: { topicId },
+        })
       );
+    });
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/topics`, "page");

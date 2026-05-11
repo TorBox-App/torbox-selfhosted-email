@@ -1,11 +1,12 @@
 import { auth } from "@wraps/auth";
 import type { WorkflowStep } from "@wraps/db";
-import { batchSend, db, template, workflow } from "@wraps/db";
+import { auditLog, batchSend, db, template, workflow } from "@wraps/db";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { checkPermission } from "@/actions/shared/permissions";
 import { trackTemplateCreated } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -209,28 +210,44 @@ export async function POST(request: Request, context: RouteContext) {
     const defaultContent =
       templateChannel === "sms" ? { type: "doc", content: [] } : {};
 
+    const auditCtx = await getAuditContext();
+
     // Create template with empty content (or pre-populated from starter)
-    const [newTemplate] = await db
-      .insert(template)
-      .values({
-        organizationId: orgWithMembership.id,
-        name: name.trim(),
-        description: description?.trim() || null,
-        subject: templateChannel === "sms" ? null : subject?.trim() || null,
-        previewText:
-          templateChannel === "sms" ? null : previewText?.trim() || null,
-        ...(emailType === "transactional" || emailType === "marketing"
-          ? { emailType }
-          : {}),
-        channel: templateChannel,
-        content: defaultContent,
-        source: typeof source === "string" ? source : null,
-        compiledHtml: typeof compiledHtml === "string" ? compiledHtml : null,
-        sourceFormat: templateChannel === "sms" ? "tiptap" : "react-email",
-        createdBy: session.user.id,
-        status: "DRAFT",
-      })
-      .returning();
+    const [newTemplate] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .insert(template)
+        .values({
+          organizationId: orgWithMembership.id,
+          name: name.trim(),
+          description: description?.trim() || null,
+          subject: templateChannel === "sms" ? null : subject?.trim() || null,
+          previewText:
+            templateChannel === "sms" ? null : previewText?.trim() || null,
+          ...(emailType === "transactional" || emailType === "marketing"
+            ? { emailType }
+            : {}),
+          channel: templateChannel,
+          content: defaultContent,
+          source: typeof source === "string" ? source : null,
+          compiledHtml: typeof compiledHtml === "string" ? compiledHtml : null,
+          sourceFormat: templateChannel === "sms" ? "tiptap" : "react-email",
+          createdBy: session.user.id,
+          status: "DRAFT",
+        })
+        .returning();
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.created",
+          resource: "template",
+          resourceId: r.id,
+          metadata: { templateId: r.id, name: r.name, channel: r.channel },
+        })
+      );
+      return [r];
+    });
 
     // Track activation event (fire-and-forget)
     trackTemplateCreated(session.user.email, orgWithMembership.id);

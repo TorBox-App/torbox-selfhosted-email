@@ -2,7 +2,7 @@
 
 import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
-import { apiKey, db } from "@wraps/db";
+import { apiKey, auditLog, db } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -18,6 +18,7 @@ import {
   READ_ONLY_PERMISSIONS,
   type UpdateApiKeyResult,
 } from "@/lib/api-keys";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -191,19 +192,35 @@ export async function createApiKey(
     // Store the display prefix (first part of key for identification)
     const displayPrefix = extractPrefix(key);
 
-    // Create in database
-    const [newKey] = await db
-      .insert(apiKey)
-      .values({
-        organizationId,
-        name: options.name.trim(),
-        keyHash: hash,
-        prefix: displayPrefix,
-        permissions,
-        expiresAt,
-        createdBy: session.user.id,
-      })
-      .returning();
+    const auditCtx = await getAuditContext();
+    // Create in database + audit log atomically
+    const newKey = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(apiKey)
+        .values({
+          organizationId,
+          name: options.name.trim(),
+          keyHash: hash,
+          prefix: displayPrefix,
+          permissions,
+          expiresAt,
+          createdBy: session.user.id,
+        })
+        .returning();
+      if (!inserted) return null;
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "api_key.created",
+          resource: "api_key",
+          resourceId: inserted.id,
+          metadata: { name: options.name.trim() },
+        })
+      );
+      return inserted;
+    });
 
     if (!newKey) {
       return { success: false, error: "Failed to create API key" };
@@ -400,12 +417,29 @@ export async function deleteApiKey(
       return { success: false, error: "API key not found" };
     }
 
-    // Delete from database
-    await db
-      .delete(apiKey)
-      .where(
-        and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId))
+    const auditCtx = await getAuditContext();
+    // Delete from database + audit log atomically
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(apiKey)
+        .where(
+          and(
+            eq(apiKey.id, apiKeyId),
+            eq(apiKey.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "api_key.revoked",
+          resource: "api_key",
+          resourceId: apiKeyId,
+          metadata: { name: existingKey.name },
+        })
       );
+    });
 
     // Revalidate settings page
     revalidatePath(`/${membership.organization.slug}/settings`, "page");
