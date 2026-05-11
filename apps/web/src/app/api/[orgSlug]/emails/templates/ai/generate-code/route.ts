@@ -16,7 +16,7 @@ import {
 import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { generateCodeBodySchema } from "@/lib/ai/generate-code-schema";
 import { fetchAndProcessImage } from "@/lib/ai/image-utils";
 import { buildReactEmailSystemPrompt } from "@/lib/ai/react-email-system-prompt";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -70,18 +70,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const rawBody = await request.json();
 
-    const bodySchema = z.object({
-      messages: z.array(z.any()).min(1, "Messages are required"),
-      templateId: z.string().optional(),
-      conversationId: z.string().uuid().optional(),
-      brandKitId: z.string().optional(),
-      existingSource: z.string().optional(),
-      imageUrl: z.string().url().optional(),
-      imageBase64: z.string().optional(),
-      imageMediaType: z.string().optional(),
-    });
-
-    const parsed = bodySchema.safeParse(rawBody);
+    const parsed = generateCodeBodySchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: parsed.error.flatten() },

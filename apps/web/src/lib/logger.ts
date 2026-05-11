@@ -17,6 +17,7 @@
  * Logs go to stdout. Use Vercel Log Drains to forward to Axiom/Datadog.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import pino from "pino";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -108,10 +109,21 @@ export function createActionLogger(
   actionName: string,
   context: Omit<RequestContext, "path" | "method">
 ): pino.Logger {
-  return logger.child({
-    action: actionName,
-    ...context,
-  });
+  const base = logger.child({ action: actionName, ...context });
+
+  // Wrap .error() to forward caught errors to Sentry automatically.
+  // All server action catch blocks use log.error({ err: serializeError(e) }, ...)
+  // so this single hook ensures Sentry sees every swallowed operational failure.
+  const originalError = base.error.bind(base);
+  const wrappedError = (...args: Parameters<typeof originalError>) => {
+    originalError(...args);
+    const [firstArg] = args;
+    if (firstArg && typeof firstArg === "object" && !Array.isArray(firstArg)) {
+      const err = (firstArg as Record<string, unknown>).err;
+      if (err instanceof Error) Sentry.captureException(err);
+    }
+  };
+  return Object.assign(base, { error: wrappedError });
 }
 
 /**

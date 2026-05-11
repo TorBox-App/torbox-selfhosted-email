@@ -63,7 +63,7 @@ function ReadinessCheckRow({ check }: { check: ReadinessCheck }) {
 /**
  * Build client-side readiness checks from local state.
  */
-function buildClientChecks(opts: {
+export function buildClientChecks(opts: {
   workflow: Workflow;
   workflowState: Workflow | null;
   nodes: WorkflowNode[];
@@ -198,8 +198,12 @@ export function EnableReadinessDialog({
     const currentWorkflow = workflowRef.current;
     const currentOrgId = organizationIdRef.current;
 
-    const { nodes, workflow: workflowState, validationResult, isDirty } =
-      useWorkflowStore.getState();
+    const {
+      nodes,
+      workflow: workflowState,
+      validationResult,
+      isDirty,
+    } = useWorkflowStore.getState();
 
     const clientChecks = buildClientChecks({
       workflow: currentWorkflow,
