@@ -239,7 +239,7 @@ export function CodeTemplateAIPanel({
       api: `/api/${orgSlug}/emails/templates/ai/generate-code`,
       body: {
         templateId,
-        conversationId,
+        conversationId: conversationId ?? undefined,
         brandKitId: selectedBrandKit?.id,
         existingSource: currentSource || undefined,
         imageUrl: imageAttachment?.url,
