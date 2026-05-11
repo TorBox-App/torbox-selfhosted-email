@@ -55,6 +55,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -195,6 +196,9 @@ export function BatchForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSavingDraft, startSaveDraftTransition] = useTransition();
+  // Tracks the draft ID after first save so rapid re-saves update in place
+  // instead of creating duplicate rows before the router.push resolves.
+  const savedDraftId = useRef<string | null>(draftId ?? null);
   const {
     requireAws,
     dialogOpen: awsDialogOpen,
@@ -394,15 +398,20 @@ export function BatchForm({
 
     startSaveDraftTransition(async () => {
       try {
-        if (mode === "edit" && draftId) {
+        const existingId = savedDraftId.current;
+        if (existingId) {
           const result = await updateDraftBatchSend(
-            draftId,
+            existingId,
             organizationId,
             payload
           );
           if (result.success) {
             toast.success("Draft saved");
-            router.refresh();
+            if (mode !== "edit") {
+              router.push(`/${orgSlug}/emails/broadcasts/${existingId}/edit`);
+            } else {
+              router.refresh();
+            }
           } else {
             toast.error("Failed to save draft", { description: result.error });
           }
@@ -411,9 +420,8 @@ export function BatchForm({
 
         const result = await saveDraftBatchSend(organizationId, payload);
         if (result.success) {
+          savedDraftId.current = result.batch.id;
           toast.success("Draft saved");
-          // On first save, navigate to the edit URL so subsequent saves
-          // update in place (no duplicate rows).
           router.push(`/${orgSlug}/emails/broadcasts/${result.batch.id}/edit`);
         } else {
           toast.error("Failed to save draft", { description: result.error });
