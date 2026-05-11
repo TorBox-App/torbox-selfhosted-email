@@ -17,7 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   checkWorkflowReadiness,
   type ReadinessCheck,
@@ -168,23 +168,41 @@ export function EnableReadinessDialog({
   const [isChecking, startTransition] = useTransition();
   const [hasRun, setHasRun] = useState(false);
 
-  const nodes = useWorkflowStore((state) => state.nodes);
-  const workflowState = useWorkflowStore((state) => state.workflow);
-  const validationResult = useWorkflowStore((state) => state.validationResult);
-  const isDirty = useWorkflowStore((state) => state.isDirty);
+  // Keep refs current so the effect can read them without listing them as deps.
+  const workflowRef = useRef(workflow);
+  const organizationIdRef = useRef(organizationId);
+  workflowRef.current = workflow;
+  organizationIdRef.current = organizationId;
+
+  // Guard: run the checks exactly once per dialog open, regardless of how many
+  // times the effect fires (revalidatePath delivers a new workflow object reference,
+  // React Strict Mode double-invokes, onNodesChange fires from React Flow, etc.).
+  const hasStartedRef = useRef(false);
+
+  const workflowName = useWorkflowStore((state) => state.workflow?.name);
   const toggleSettingsPanel = useWorkflowStore(
     (state) => state.toggleSettingsPanel
   );
 
   useEffect(() => {
     if (!open) {
+      hasStartedRef.current = false;
       setChecks([]);
       setHasRun(false);
       return;
     }
 
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+
+    const currentWorkflow = workflowRef.current;
+    const currentOrgId = organizationIdRef.current;
+
+    const { nodes, workflow: workflowState, validationResult, isDirty } =
+      useWorkflowStore.getState();
+
     const clientChecks = buildClientChecks({
-      workflow,
+      workflow: currentWorkflow,
       workflowState,
       nodes,
       validationResult,
@@ -199,27 +217,19 @@ export function EnableReadinessDialog({
     if (needsServerCheck) {
       startTransition(async () => {
         const result = await checkWorkflowReadiness(
-          workflow.id,
-          organizationId,
+          currentWorkflow.id,
+          currentOrgId,
           payload
         );
         if (result.success) {
-          setChecks((prev) => [...prev, ...result.checks]);
+          setChecks([...clientChecks, ...result.checks]);
         }
         setHasRun(true);
       });
     } else {
       setHasRun(true);
     }
-  }, [
-    open,
-    workflow,
-    workflowState,
-    nodes,
-    validationResult,
-    isDirty,
-    organizationId,
-  ]);
+  }, [open]);
 
   const hasCriticalFailure = checks.some(
     (c) => c.severity === "critical" && c.status === "fail"
@@ -237,7 +247,7 @@ export function EnableReadinessDialog({
         <DialogHeader>
           <DialogTitle>Enable Workflow</DialogTitle>
           <DialogDescription>
-            Pre-flight checks for {workflowState?.name ?? workflow.name}
+            Pre-flight checks for {workflowName ?? workflow.name}
           </DialogDescription>
         </DialogHeader>
 
@@ -264,18 +274,15 @@ export function EnableReadinessDialog({
               )}
             </div>
           ))}
-
-          {isChecking && (
-            <div className="flex items-center gap-3 py-2">
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
-              <p className="text-muted-foreground text-sm">
-                Checking templates and conditions...
-              </p>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
+          {isChecking && (
+            <span className="mr-auto flex items-center gap-1.5 text-muted-foreground text-xs">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Checking...
+            </span>
+          )}
           <Button onClick={() => onOpenChange(false)} variant="outline">
             Cancel
           </Button>

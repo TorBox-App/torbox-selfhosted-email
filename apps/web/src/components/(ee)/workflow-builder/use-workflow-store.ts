@@ -385,6 +385,24 @@ function transitionsToEdges(
       branch = "timeout";
     }
 
+    // Discard branch values that are not valid React Flow handle IDs.
+    // Trigger type names (e.g. "event") can end up stored as branch values
+    // from older data; using them as sourceHandle causes React Flow error #008.
+    const VALID_HANDLES = new Set([
+      "yes",
+      "no",
+      "timeout",
+      "default",
+      "engaged",
+      "exhausted",
+      "opened",
+      "clicked",
+      "bounced",
+    ]);
+    if (branch !== undefined && !VALID_HANDLES.has(branch)) {
+      branch = undefined;
+    }
+
     let source = transition.fromStepId;
     let target = transition.toStepId;
     let sourceHandle = branch;
