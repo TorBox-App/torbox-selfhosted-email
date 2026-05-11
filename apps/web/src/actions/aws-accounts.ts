@@ -18,15 +18,17 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
-import { awsAccount, db } from "@wraps/db";
+import { auditLog, awsAccount, db } from "@wraps/db";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import {
   trackAwsConnected,
   trackDomainVerified,
 } from "@/lib/activation-tracking";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getCredentials } from "@/lib/aws/assume-role";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { findWrapsArchive } from "@/lib/aws/mailmanager";
@@ -37,7 +39,6 @@ import {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
-import { writeAuditLog } from "./audit-log";
 import { checkPermission } from "./shared/permissions";
 
 // Create server validator
@@ -318,19 +319,32 @@ export async function connectAWSAccountAction(
       accountId: validatedData.accountId,
     });
 
-    // Audit log (best-effort)
-    writeAuditLog({
-      organizationId: validatedData.organizationId,
-      actorId: session.user.id,
-      actorEmail: session.user.email,
-      action: "resource.deployed",
-      resource: "aws_account",
-      resourceId: account.id,
-      metadata: {
-        accountId: validatedData.accountId,
-        region: validatedData.region,
-      },
-    }).catch(() => {});
+    // Audit log (best-effort, after response)
+    const auditCtx = await getAuditContext();
+    after(() =>
+      db
+        .insert(auditLog)
+        .values(
+          auditLogEntry(auditCtx, {
+            organizationId: validatedData.organizationId,
+            actorId: session.user.id,
+            actorEmail: session.user.email,
+            action: "resource.deployed",
+            resource: "aws_account",
+            resourceId: account.id,
+            metadata: {
+              accountId: validatedData.accountId,
+              region: validatedData.region,
+            },
+          })
+        )
+        .catch((err) =>
+          log.warn(
+            { err: serializeError(err) },
+            "Best-effort audit log write failed"
+          )
+        )
+    );
 
     return {
       success: true,
@@ -936,15 +950,28 @@ export async function deleteAWSAccount(
     // 5. Revalidate the settings page
     revalidatePath(`/${member.organization.slug}/settings`, "page");
 
-    // Audit log (best-effort)
-    writeAuditLog({
-      organizationId,
-      actorId: session.user.id,
-      actorEmail: session.user.email,
-      action: "resource.deleted",
-      resource: "aws_account",
-      resourceId: awsAccountId,
-    }).catch(() => {});
+    // Audit log (best-effort, after response)
+    const auditCtx = await getAuditContext();
+    after(() =>
+      db
+        .insert(auditLog)
+        .values(
+          auditLogEntry(auditCtx, {
+            organizationId,
+            actorId: session.user.id,
+            actorEmail: session.user.email,
+            action: "resource.deleted",
+            resource: "aws_account",
+            resourceId: awsAccountId,
+          })
+        )
+        .catch((err) =>
+          log.warn(
+            { err: serializeError(err) },
+            "Best-effort audit log write failed"
+          )
+        )
+    );
 
     log.info("AWS account deleted");
     return { success: true };

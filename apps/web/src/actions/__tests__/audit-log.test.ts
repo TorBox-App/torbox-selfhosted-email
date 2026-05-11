@@ -1,15 +1,6 @@
-import {
-  auditLog,
-  db,
-  eq,
-  member,
-  organization,
-  subscription,
-  user,
-} from "@wraps/db";
-import { and, gte, sql } from "drizzle-orm";
+import { auditLog, db, eq, member, organization, user } from "@wraps/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { listAuditLogs, writeAuditLog } from "../audit-log";
+import { listAuditLogs } from "../audit-log";
 
 // --- Mocks ---
 
@@ -128,45 +119,6 @@ afterAll(async () => {
   await db.delete(user).where(eq(user.id, userB.id));
 });
 
-// --- writeAuditLog ---
-
-describe("writeAuditLog", () => {
-  it("inserts a row with correct organizationId, actorId, actorEmail, action, and resource", async () => {
-    await writeAuditLog({
-      organizationId: orgA.id,
-      actorId: userA.id,
-      actorEmail: userA.email,
-      action: "member.invited",
-      resource: "invitation",
-      resourceId: "test-invitation-id",
-      metadata: { inviteeEmail: "invited@example.com", role: "member" },
-    });
-
-    const [row] = await db
-      .select()
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, orgA.id),
-          eq(auditLog.action, "member.invited")
-        )
-      )
-      .limit(1);
-
-    expect(row).toBeDefined();
-    expect(row.organizationId).toBe(orgA.id);
-    expect(row.userId).toBe(userA.id);
-    expect(row.actorEmail).toBe(userA.email);
-    expect(row.action).toBe("member.invited");
-    expect(row.resource).toBe("invitation");
-    expect(row.resourceId).toBe("test-invitation-id");
-    expect(row.metadata).toEqual({
-      inviteeEmail: "invited@example.com",
-      role: "member",
-    });
-  });
-});
-
 // --- listAuditLogs ---
 
 describe("listAuditLogs", () => {
@@ -229,20 +181,49 @@ describe("listAuditLogs", () => {
       createdAt: oldDate,
     });
 
+    // Insert a recent event (2 days ago — well within the free plan 7-day window)
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    await db.insert(auditLog).values({
+      id: "audit-recent-event-test",
+      organizationId: orgA.id,
+      userId: userA.id,
+      actorEmail: userA.email,
+      action: "settings.updated",
+      resource: "organization",
+      createdAt: recentDate,
+    });
+
     // orgA is on free plan (7-day retention) — no paid subscription
     const result = await listAuditLogs(orgA.id);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
 
+    // Old event must be excluded
     const oldEvent = result.data.find((e) => e.id === "audit-old-event-test");
     expect(oldEvent).toBeUndefined();
+
+    // Recent event must be included — confirms the query is filtering, not returning nothing
+    const recentEvent = result.data.find(
+      (e) => e.id === "audit-recent-event-test"
+    );
+    expect(recentEvent).toBeDefined();
   });
 
   it("filters results by action type when filter.action is provided", async () => {
-    await writeAuditLog({
+    // Seed a sentinel row with a different action — must be excluded by the filter
+    await db.insert(auditLog).values({
+      id: "audit-filter-sentinel",
       organizationId: orgA.id,
-      actorId: userA.id,
+      userId: userA.id,
+      actorEmail: userA.email,
+      action: "member.invited",
+      resource: "member",
+    });
+
+    await db.insert(auditLog).values({
+      organizationId: orgA.id,
+      userId: userA.id,
       actorEmail: userA.email,
       action: "api_key.revoked",
       resource: "api_key",
@@ -260,5 +241,64 @@ describe("listAuditLogs", () => {
     for (const event of result.data) {
       expect(event.action).toBe("api_key.revoked");
     }
+
+    // The sentinel row with a different action must not appear
+    const sentinel = result.data.find((e) => e.id === "audit-filter-sentinel");
+    expect(sentinel).toBeUndefined();
+  });
+
+  it("returns Unauthorized for a user with the member role (not owner or admin)", async () => {
+    const memberUser = {
+      id: "audit-test-member-user",
+      email: "member@example.com",
+      name: "Member User",
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      image: null,
+      twoFactorEnabled: false,
+      stripeCustomerId: null,
+    };
+    await db
+      .insert(user)
+      .values(memberUser)
+      .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+    await db
+      .insert(member)
+      .values({
+        id: "audit-test-member-role",
+        organizationId: orgA.id,
+        userId: memberUser.id,
+        role: "member",
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    const { auth } = await import("@wraps/auth");
+    vi.mocked(auth.api.getSession).mockResolvedValueOnce({
+      user: {
+        id: memberUser.id,
+        email: memberUser.email,
+        name: memberUser.name,
+      },
+      session: {
+        id: "member-session",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userId: memberUser.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        token: "member-token",
+      },
+    } as any);
+
+    const result = await listAuditLogs(orgA.id);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toBe("Unauthorized");
+
+    // Cleanup
+    await db.delete(member).where(eq(member.id, "audit-test-member-role"));
+    await db.delete(user).where(eq(user.id, memberUser.id));
   });
 });

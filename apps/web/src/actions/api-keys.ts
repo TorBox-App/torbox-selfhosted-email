@@ -216,7 +216,7 @@ export async function createApiKey(
           action: "api_key.created",
           resource: "api_key",
           resourceId: inserted.id,
-          metadata: { name: options.name.trim() },
+          metadata: { name: options.name.trim(), type: keyType },
         })
       );
       return inserted;

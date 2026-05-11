@@ -174,7 +174,10 @@ describe("createApiKey audit logging", () => {
     expect(row.resourceId).toBe(result.apiKey.id);
     expect(row.userId).toBe(testUser.id);
     expect(row.actorEmail).toBe(testUser.email);
-    expect(row.metadata).toMatchObject({ name: "Audit Test Key" });
+    expect(row.metadata).toMatchObject({
+      name: "Audit Test Key",
+      type: "live",
+    });
   });
 });
 
