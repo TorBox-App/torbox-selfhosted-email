@@ -1,3 +1,4 @@
+// baseline:allow-large-file
 /**
  * Batch Sender Worker
  *
@@ -15,6 +16,7 @@ import {
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
 import {
+  awsAccount,
   batchSend,
   buildConditionSQL,
   contact,
@@ -28,7 +30,7 @@ import {
   template,
 } from "@wraps/db";
 import { transformVariablesForSes } from "@wraps/email";
-import { sendEmail } from "@wraps/email-send";
+import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
@@ -202,6 +204,20 @@ async function processJob(
 
   // Get customer AWS credentials
   const credentials = await getCredentials(awsAccountId, organizationId);
+
+  // Resolve the correct SES config set for this account (may be per-domain)
+  const [accountRow] = await db
+    .select({ features: awsAccount.features })
+    .from(awsAccount)
+    .where(
+      and(
+        eq(awsAccount.id, awsAccountId),
+        eq(awsAccount.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+  const configSetName =
+    accountRow?.features?.email?.configSetName ?? WRAPS_CONFIGURATION_SET_NAME;
 
   // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({
@@ -518,7 +534,7 @@ async function processJob(
               },
             },
             BulkEmailEntries: bulkEntries,
-            ConfigurationSetName: "wraps-email-tracking",
+            ConfigurationSetName: configSetName,
             // Message tags for tracking in CloudWatch and EventBridge
             DefaultEmailTags: [
               { Name: "batchId", Value: batchId },

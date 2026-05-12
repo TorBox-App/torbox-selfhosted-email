@@ -36,7 +36,7 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
-import { sendEmail } from "@wraps/email-send";
+import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
 import { and, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { awsDefaults } from "../../lib/aws-defaults";
@@ -148,9 +148,9 @@ export async function handleSendEmail(
     };
   }
 
-  // Get AWS account region
+  // Get AWS account region and features (for config set name)
   const [account] = await db
-    .select({ region: awsAccount.region })
+    .select({ region: awsAccount.region, features: awsAccount.features })
     .from(awsAccount)
     .where(eq(awsAccount.id, wf.awsAccountId))
     .limit(1);
@@ -158,6 +158,9 @@ export async function handleSendEmail(
   if (!account) {
     throw new Error(`AWS account ${wf.awsAccountId} not found`);
   }
+
+  const configSetName =
+    account.features?.email?.configSetName ?? WRAPS_CONFIGURATION_SET_NAME;
 
   // Get template (scoped by org for defense-in-depth)
   const [tmpl] = await db
@@ -376,7 +379,7 @@ export async function handleSendEmail(
               Headers: headers.length > 0 ? headers : undefined,
             },
           },
-          ConfigurationSetName: "wraps-email-tracking",
+          ConfigurationSetName: configSetName,
           EmailTags: emailTags,
         })
       );
@@ -409,6 +412,7 @@ export async function handleSendEmail(
         replyTo: replyTo ?? undefined,
         marketing,
         tags: sharedTags,
+        configurationSetName: configSetName,
       });
       messageId = result.messageId;
 
@@ -435,6 +439,7 @@ export async function handleSendEmail(
         replyTo: replyTo ?? undefined,
         marketing,
         tags: sharedTags,
+        configurationSetName: configSetName,
       });
       messageId = result.messageId;
 
