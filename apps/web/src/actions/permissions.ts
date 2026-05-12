@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, db } from "@wraps/db";
@@ -207,12 +208,12 @@ export async function revokeAccessAction(
 
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal error";
     const log = createActionLogger("revokeAccessAction", {});
     log.error(
       { err: serializeError(error), userId, awsAccountId },
       "Failed to revoke access"
     );
-    return { error: "Internal error", details: message };
+    Sentry.captureException(error);
+    return { error: "Something went wrong. Please try again." };
   }
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { render, toPlainText } from "@react-email/render";
+import * as Sentry from "@sentry/nextjs";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import type { EmailType } from "@wraps/db";
@@ -284,10 +285,10 @@ export async function publishTemplateToSES(
       { err: serializeError(error), templateId },
       "Failed to publish template to SES"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to publish template",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -780,9 +781,10 @@ export async function convertTiptapTemplate(
       { err: serializeError(error), templateId },
       "Failed to convert TipTap template"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Conversion failed",
+      error: "Something went wrong. Please try again.",
     };
   }
 }

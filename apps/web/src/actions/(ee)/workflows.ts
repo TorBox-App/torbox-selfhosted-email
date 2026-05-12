@@ -1,6 +1,7 @@
 "use server";
 // baseline:allow-large-file
 
+import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import {
   auditLog,
@@ -239,13 +240,10 @@ async function callWorkflowScheduleApi(
 
     return { success: true };
   } catch (error) {
-    console.error(
-      `[workflow-schedule] API ${action} error for ${workflowId}:`,
-      error
-    );
+    Sentry.captureException(error, { extra: { action, workflowId } });
     return {
       success: false,
-      error: error instanceof Error ? error.message : "API call failed",
+      error: "Something went wrong. Please try again.",
     };
   }
 }

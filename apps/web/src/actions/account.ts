@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import {
   createServerValidate,
   type ServerValidateError,
@@ -116,10 +117,10 @@ export async function updateAccountAction(
 
     const log = createActionLogger("updateAccountAction", {});
     log.error({ err: serializeError(error) }, "Failed to update account");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -243,10 +244,10 @@ export async function updateSecuritySettingsAction(
       { err: serializeError(error) },
       "Failed to update security settings"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -302,10 +303,10 @@ export async function changePasswordAction(
 
     const log = createActionLogger("changePasswordAction", {});
     log.error({ err: serializeError(error) }, "Failed to change password");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }

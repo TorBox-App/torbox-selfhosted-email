@@ -1,6 +1,7 @@
 "use server";
 
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
+import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import { and, auditLog, db, eq, ssoProvider, verification } from "@wraps/db";
 import { gt } from "drizzle-orm";
@@ -107,10 +108,10 @@ export async function saveSsoProvider(
   } catch (error) {
     const log = createActionLogger("saveSsoProvider", { orgSlug: orgId });
     log.error({ err: serializeError(error) }, "Failed to save SSO provider");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to save SSO provider",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -158,12 +159,10 @@ export async function deleteSsoProvider(
   } catch (error) {
     const log = createActionLogger("deleteSsoProvider", { orgSlug: orgId });
     log.error({ err: serializeError(error) }, "Failed to delete SSO provider");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to delete SSO provider",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -219,12 +218,10 @@ export async function requestDomainVerification(
       { err: serializeError(error) },
       "Failed to request domain verification"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to request domain verification",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -272,9 +269,10 @@ export async function verifyDomain(
   } catch (error) {
     const log = createActionLogger("verifyDomain", { orgSlug: orgId });
     log.error({ err: serializeError(error) }, "Failed to verify domain");
+    Sentry.captureException(error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to verify domain",
+      error: "Something went wrong. Please try again.",
     };
   }
 }

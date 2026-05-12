@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
@@ -161,10 +162,10 @@ export async function createOrganizationAction(
   } catch (error) {
     const log = createActionLogger("createOrganizationAction", {});
     log.error({ err: serializeError(error) }, "Failed to create organization");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -310,10 +311,10 @@ export async function updateOrganizationAction(
   } catch (error) {
     const log = createActionLogger("updateOrganizationAction", { orgSlug });
     log.error({ err: serializeError(error) }, "Failed to update organization");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -388,10 +389,10 @@ export async function getSenderDefaultsAction(
   } catch (error) {
     const log = createActionLogger("getSenderDefaultsAction", { orgSlug });
     log.error({ err: serializeError(error) }, "Failed to get sender defaults");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -505,10 +506,10 @@ export async function updateSenderDefaultsAction(
       { err: serializeError(error) },
       "Failed to update sender defaults"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }

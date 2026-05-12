@@ -1,4 +1,5 @@
 "use server";
+
 // baseline:allow-large-file
 
 import { DescribeTableCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
@@ -17,6 +18,7 @@ import {
   ListEmailIdentitiesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
+import * as Sentry from "@sentry/nextjs";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, awsAccount, db } from "@wraps/db";
@@ -258,6 +260,7 @@ export async function connectAWSAccountAction(
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       log.warn({ err: serializeError(error) }, "Failed to assume AWS role");
+      Sentry.captureException(error);
       return {
         error: "Unable to connect to AWS account",
         details: message,
@@ -881,6 +884,7 @@ export async function scanAWSAccountFeatures(
       "Failed to scan AWS account features"
     );
     const message = error instanceof Error ? error.message : "Unknown error";
+    Sentry.captureException(error);
     return {
       success: false,
       error: `Failed to scan features: ${message}`,
@@ -991,6 +995,7 @@ export async function deleteAWSAccount(
   } catch (error) {
     log.error({ err: serializeError(error) }, "Failed to delete AWS account");
     const message = error instanceof Error ? error.message : "Unknown error";
+    Sentry.captureException(error);
     return {
       success: false,
       error: `Failed to delete AWS account: ${message}`,
@@ -1109,10 +1114,10 @@ export async function saveWebhookSecretAction(
     };
   } catch (error) {
     log.error({ err: serializeError(error) }, "Failed to save webhook secret");
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -1217,10 +1222,10 @@ export async function removeWebhookSecretAction(
       { err: serializeError(error) },
       "Failed to remove webhook secret"
     );
+    Sentry.captureException(error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Something went wrong. Please try again.",
     };
   }
 }
@@ -1424,6 +1429,7 @@ export async function getVerifiedDomains(
       { err: serializeError(error) },
       "Failed to fetch verified domains"
     );
+    Sentry.captureException(error);
 
     // Check for AWS permission errors
     const isAccessDenied =
