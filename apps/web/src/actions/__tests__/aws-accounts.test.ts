@@ -1356,6 +1356,11 @@ describe("scanAWSAccountFeatures — config set detection", () => {
   it("stores wraps-email-tracking when global config set exists", async () => {
     mockSend.mockImplementation(
       (command: { _type: string; ConfigurationSetName?: string }) => {
+        if (command._type === "ListConfigurationSetsCommand") {
+          return Promise.resolve({
+            ConfigurationSets: ["wraps-email-tracking"],
+          });
+        }
         if (command._type === "GetConfigurationSetCommand") {
           return Promise.resolve({ TrackingOptions: {} });
         }

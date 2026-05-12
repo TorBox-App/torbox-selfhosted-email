@@ -232,7 +232,10 @@ describe("SSO Actions", () => {
       mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
       mockVerifyDomainApi.mockRejectedValue(new Error("TXT record not found"));
       const result = await verifyDomain(TEST_ORG_ID, "provider-1");
-      expect(result).toEqual({ success: false, error: "TXT record not found" });
+      expect(result).toEqual({
+        success: false,
+        error: "Something went wrong. Please try again.",
+      });
     });
   });
 
