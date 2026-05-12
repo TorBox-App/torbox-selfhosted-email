@@ -11,7 +11,11 @@ import {
   generateDateRange,
   validateTimezone,
 } from "@/lib/analytics-utils";
-import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
+import {
+  getCloudWatchMetricsBatch,
+  getSESReputationMetrics,
+  SES_METRICS,
+} from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -61,21 +65,32 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
         SES_METRICS.RENDERING_FAILURE,
       ];
 
-      const metricsResults = await Promise.all(
-        accounts.map(async (account) => {
-          try {
-            return await getCloudWatchMetricsBatch({
-              awsAccountId: account.id,
-              metrics: allMetrics,
-              period,
-              startTime,
-              endTime,
-            });
-          } catch {
-            return null;
-          }
-        })
-      );
+      const [metricsResults, reputationResults] = await Promise.all([
+        Promise.all(
+          accounts.map(async (account) => {
+            try {
+              return await getCloudWatchMetricsBatch({
+                awsAccountId: account.id,
+                metrics: allMetrics,
+                period,
+                startTime,
+                endTime,
+              });
+            } catch {
+              return null;
+            }
+          })
+        ),
+        Promise.all(
+          accounts.map(async (account) => {
+            try {
+              return await getSESReputationMetrics(account.id);
+            } catch {
+              return null;
+            }
+          })
+        ),
+      ]);
 
       const allKeys = [
         "sent",
@@ -162,10 +177,36 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
 
       const deliveryRate =
         effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
+
+      const reputationBounceRate = reputationResults.reduce<number | null>(
+        (worst, r) => {
+          if (r?.bounceRate == null) return worst;
+          const pct = r.bounceRate * 100;
+          return worst === null ? pct : Math.max(worst, pct);
+        },
+        null
+      );
+      const reputationComplaintRate = reputationResults.reduce<number | null>(
+        (worst, r) => {
+          if (r?.complaintRate == null) return worst;
+          const pct = r.complaintRate * 100;
+          return worst === null ? pct : Math.max(worst, pct);
+        },
+        null
+      );
+
       const bounceRate =
-        effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
+        reputationBounceRate !== null
+          ? reputationBounceRate
+          : effectiveSent > 0
+            ? (totalBounced / effectiveSent) * 100
+            : 0;
       const complaintRate =
-        effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
+        reputationComplaintRate !== null
+          ? reputationComplaintRate
+          : effectiveSent > 0
+            ? (totalComplaints / effectiveSent) * 100
+            : 0;
 
       const dateRange = generateDateRange(startTime, endTime, timezone);
       const defaults = {

@@ -36,9 +36,12 @@ vi.mock("next/cache", () => ({
 }));
 
 const mockGetCloudWatchMetricsBatch = vi.fn();
+const mockGetSESReputationMetrics = vi.fn();
 vi.mock("@/lib/aws/cloudwatch", () => ({
   getCloudWatchMetricsBatch: (...args: unknown[]) =>
     mockGetCloudWatchMetricsBatch(...args),
+  getSESReputationMetrics: (...args: unknown[]) =>
+    mockGetSESReputationMetrics(...args),
   SES_METRICS: {
     SEND: "Send",
     DELIVERY: "Delivery",
@@ -139,6 +142,10 @@ function makeCloudWatchBatchResult(day: {
 describe("Email Chart API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetSESReputationMetrics.mockResolvedValue({
+      bounceRate: null,
+      complaintRate: null,
+    });
   });
 
   it("returns correct deliveryRate in overview when rendering failures exist", async () => {
@@ -168,5 +175,39 @@ describe("Email Chart API", () => {
     expect(data.overview.deliveryRate).toBeCloseTo(99.1, 1);
     // NOT the buggy rate
     expect(data.overview.deliveryRate).not.toBeCloseTo(88.71, 1);
+  });
+
+  it("uses SES reputation bounceRate/complaintRate over period-based calculation", async () => {
+    mockGetCloudWatchMetricsBatch.mockResolvedValueOnce(
+      makeCloudWatchBatchResult({
+        sends: 24,
+        deliveries: 20,
+        bounces: 1,
+        complaints: 1,
+        opens: 5,
+        clicks: 1,
+        renderingFailures: 0,
+      })
+    );
+    // SES reputation shows much lower rates based on full account history
+    mockGetSESReputationMetrics.mockResolvedValueOnce({
+      bounceRate: 0.0002,
+      complaintRate: 0.0003,
+    });
+
+    const { GET } = await import("../[orgSlug]/analytics/email-chart/route");
+    const request = new Request(
+      "http://localhost/api/test-org/analytics/email-chart?days=30&tz=UTC"
+    );
+    const context = { params: Promise.resolve({ orgSlug: "test-org" }) };
+
+    const response = await GET(request, context);
+    const data = await response.json();
+
+    // period-based would be 1/24*100 = 4.17% — reputation should win
+    expect(data.overview.bounceRate).toBeCloseTo(0.02, 2);
+    expect(data.overview.bounceRate).not.toBeCloseTo(4.17, 1);
+    // 0.0003 * 100 = 0.03%, rounded to 2 decimals
+    expect(data.overview.complaintRate).toBeCloseTo(0.03, 2);
   });
 });
