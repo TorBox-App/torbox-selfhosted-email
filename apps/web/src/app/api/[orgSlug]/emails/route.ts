@@ -2,7 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
-import { and, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
@@ -136,87 +136,83 @@ export async function GET(request: Request, context: RouteContext) {
     // Aggregate DynamoDB events
     const emails = aggregateEmailEvents(allEvents).slice(0, limit);
 
-    // Enrich with authoritative sentAt from PostgreSQL.
-    // DynamoDB Send events may be TTL-expired, leaving only engagement events
-    // with incorrect timestamps. The message_send table always has the real sentAt.
-    const messageIds = emails.map((e) => e.messageId).filter(Boolean);
-    if (messageIds.length > 0) {
-      const pgRecords = await db
-        .select({
-          messageId: messageSend.messageId,
-          sentAt: messageSend.sentAt,
-        })
-        .from(messageSend)
-        .where(
-          and(
-            eq(messageSend.organizationId, orgWithMembership.id),
-            inArray(messageSend.messageId, messageIds)
-          )
-        );
+    // Query PostgreSQL for all messages in the time window.
+    // Used to both enrich authoritative sentAt on DynamoDB records AND fill in
+    // any messages that exist in PG but are missing from DynamoDB (e.g. when
+    // DynamoDB has older events but the Lambda hasn't written the newest sends yet).
+    const pgEmails = await db
+      .select({
+        id: messageSend.id,
+        messageId: messageSend.messageId,
+        from: messageSend.from,
+        recipient: messageSend.recipient,
+        subject: messageSend.subject,
+        status: messageSend.status,
+        sentAt: messageSend.sentAt,
+        openedAt: messageSend.openedAt,
+        clickedAt: messageSend.clickedAt,
+      })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, orgWithMembership.id),
+          eq(messageSend.channel, "email"),
+          isNotNull(messageSend.sentAt),
+          gte(messageSend.sentAt, startTime),
+          lte(messageSend.sentAt, endTime)
+        )
+      )
+      .orderBy(desc(messageSend.sentAt))
+      .limit(limit);
 
-      const pgSentAt = new Map(
-        pgRecords
-          .filter((r) => r.messageId && r.sentAt)
-          .map((r) => [r.messageId, r.sentAt?.getTime()])
-      );
+    const pgByMessageId = new Map(
+      pgEmails
+        .filter((r) => r.messageId && r.sentAt)
+        .map((r) => [r.messageId!, r])
+    );
 
-      for (const email of emails) {
-        const authoritative = pgSentAt.get(email.messageId);
-        if (authoritative && authoritative < email.sentAt) {
+    // Enrich sentAt for existing DynamoDB entries (authoritative PG timestamp)
+    const dynamoMessageIds = new Set<string>();
+    for (const email of emails) {
+      dynamoMessageIds.add(email.messageId);
+      const pg = pgByMessageId.get(email.messageId);
+      if (pg?.sentAt) {
+        const authoritative = pg.sentAt.getTime();
+        if (authoritative < email.sentAt) {
           email.sentAt = authoritative;
         }
       }
     }
 
-    // If DynamoDB returned no data, fall back to PostgreSQL
-    if (emails.length === 0) {
-      const pgEmails = await db
-        .select({
-          id: messageSend.id,
-          messageId: messageSend.messageId,
-          from: messageSend.from,
-          recipient: messageSend.recipient,
-          subject: messageSend.subject,
-          status: messageSend.status,
-          sentAt: messageSend.sentAt,
-          openedAt: messageSend.openedAt,
-          clickedAt: messageSend.clickedAt,
-        })
-        .from(messageSend)
-        .where(
-          and(
-            eq(messageSend.organizationId, orgWithMembership.id),
-            eq(messageSend.channel, "email"),
-            isNotNull(messageSend.sentAt),
-            gte(messageSend.sentAt, startTime),
-            lte(messageSend.sentAt, endTime)
-          )
-        )
-        .orderBy(desc(messageSend.sentAt))
-        .limit(limit);
-
-      return NextResponse.json(
-        pgEmails.map((e) => ({
-          id: e.id,
-          messageId: e.messageId ?? e.id,
-          from: e.from ?? "",
-          to: [e.recipient],
-          subject: e.subject ?? "(no subject)",
-          status: (e.status as EmailStatus) ?? "sent",
-          sentAt: e.sentAt?.getTime() ?? 0,
-          lastActivityAt:
-            e.clickedAt?.getTime() ??
-            e.openedAt?.getTime() ??
-            e.sentAt?.getTime() ??
-            0,
-          eventCount: 1,
-          hasOpened: !!e.openedAt,
-          hasClicked: !!e.clickedAt,
-        }))
-      );
+    // Add PG records not present in DynamoDB results
+    let addedFromPg = false;
+    for (const pg of pgEmails) {
+      const msgId = pg.messageId ?? pg.id;
+      if (dynamoMessageIds.has(msgId)) continue;
+      emails.push({
+        id: pg.id,
+        messageId: msgId,
+        from: pg.from ?? "",
+        to: [pg.recipient],
+        subject: pg.subject ?? "(no subject)",
+        status: (pg.status as EmailStatus) ?? "sent",
+        sentAt: pg.sentAt!.getTime(),
+        lastActivityAt:
+          pg.clickedAt?.getTime() ??
+          pg.openedAt?.getTime() ??
+          pg.sentAt!.getTime(),
+        eventCount: 1,
+        hasOpened: !!pg.openedAt,
+        hasClicked: !!pg.clickedAt,
+      });
+      addedFromPg = true;
     }
 
-    return NextResponse.json(emails);
+    if (addedFromPg) {
+      emails.sort((a, b) => b.sentAt - a.sentAt);
+    }
+
+    return NextResponse.json(emails.slice(0, limit));
   } catch (error) {
     const log = createRequestLogger({
       path: "/api/[orgSlug]/emails",
