@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
-import { db, template, templateVersion } from "@wraps/db";
+import { auditLog, db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -136,19 +137,41 @@ export async function POST(request: Request, context: RouteContext) {
 
     const nextVersion = versions[0] ? versions[0].version + 1 : 1;
 
-    // Create new version
-    const [newVersion] = await db
-      .insert(templateVersion)
-      .values({
-        templateId: id,
-        content: existingTemplate.content,
-        source: existingTemplate.source,
-        compiledHtml: existingTemplate.compiledHtml,
-        version: nextVersion,
-        createdBy: session.user.id,
-        changeNote: changeNote?.trim() || null,
-      })
-      .returning();
+    const auditCtx = await getAuditContext();
+
+    // Create new version + write audit log in one transaction
+    const [newVersion] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .insert(templateVersion)
+        .values({
+          templateId: id,
+          content: existingTemplate.content,
+          source: existingTemplate.source,
+          compiledHtml: existingTemplate.compiledHtml,
+          version: nextVersion,
+          createdBy: session.user.id,
+          changeNote: changeNote?.trim() || null,
+        })
+        .returning();
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "template.version_created",
+          resource: "template",
+          resourceId: id,
+          metadata: {
+            templateId: id,
+            version: nextVersion,
+            changeNote: changeNote?.trim() || null,
+          },
+        })
+      );
+
+      return [r];
+    });
 
     return NextResponse.json(newVersion);
   } catch (error) {

@@ -101,6 +101,20 @@ const ACTION_LABELS: Record<AuditLogAction, string> = {
   "workflow.enabled": "Workflow Enabled",
   "workflow.disabled": "Workflow Disabled",
   "workflow.duplicated": "Workflow Duplicated",
+  "org.created": "Organization Created",
+  "permissions.granted": "Permission Granted",
+  "permissions.revoked": "Permission Revoked",
+  "contact.topic_subscribed": "Topic Subscribed",
+  "contact.topic_unsubscribed": "Topic Unsubscribed",
+  "contact.topics_bulk_subscribed": "Topics Bulk Subscribed",
+  "contact.topics_bulk_unsubscribed": "Topics Bulk Unsubscribed",
+  "settings.sender_defaults_updated": "Sender Defaults Updated",
+  "settings.webhook_secret_saved": "Webhook Secret Saved",
+  "settings.webhook_secret_removed": "Webhook Secret Removed",
+  "block.updated": "Block Updated",
+  "block.deleted": "Block Deleted",
+  "template.duplicated": "Template Duplicated",
+  "template.version_created": "Template Version Created",
 };
 
 const ALL_ACTIONS: AuditLogAction[] = [
@@ -163,6 +177,20 @@ const ALL_ACTIONS: AuditLogAction[] = [
   "workflow.enabled",
   "workflow.disabled",
   "workflow.duplicated",
+  "org.created",
+  "permissions.granted",
+  "permissions.revoked",
+  "contact.topic_subscribed",
+  "contact.topic_unsubscribed",
+  "contact.topics_bulk_subscribed",
+  "contact.topics_bulk_unsubscribed",
+  "settings.sender_defaults_updated",
+  "settings.webhook_secret_saved",
+  "settings.webhook_secret_removed",
+  "block.updated",
+  "block.deleted",
+  "template.duplicated",
+  "template.version_created",
 ];
 
 function getActionBadgeClass(action: string): string {

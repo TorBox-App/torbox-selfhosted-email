@@ -59,7 +59,21 @@ export type AuditLogAction =
   | "workflow.deleted"
   | "workflow.enabled"
   | "workflow.disabled"
-  | "workflow.duplicated";
+  | "workflow.duplicated"
+  | "org.created"
+  | "permissions.granted"
+  | "permissions.revoked"
+  | "contact.topic_subscribed"
+  | "contact.topic_unsubscribed"
+  | "contact.topics_bulk_subscribed"
+  | "contact.topics_bulk_unsubscribed"
+  | "settings.sender_defaults_updated"
+  | "settings.webhook_secret_saved"
+  | "settings.webhook_secret_removed"
+  | "block.updated"
+  | "block.deleted"
+  | "template.duplicated"
+  | "template.version_created";
 
 export async function getAuditContext(): Promise<{
   ipAddress: string | null;

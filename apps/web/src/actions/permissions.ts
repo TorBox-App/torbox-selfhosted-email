@@ -2,9 +2,10 @@
 
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
+import { auditLog, db } from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import {
   grantAccessFormOpts,
   grantAccessSchema,
@@ -93,6 +94,24 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
         : undefined,
     });
 
+    // 6.5. Write audit log
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId: awsAccountRecord.organizationId,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "permissions.granted",
+        resource: "aws_account_permission",
+        resourceId: validatedData.awsAccountId,
+        metadata: {
+          awsAccountId: validatedData.awsAccountId,
+          targetUserId: validatedData.userId,
+          permissions: validatedData.permissions,
+        },
+      })
+    );
+
     // 7. Revalidate
     revalidatePath("/");
     revalidatePath(`/${awsAccountRecord.organizationId}`);
@@ -164,6 +183,23 @@ export async function revokeAccessAction(
       userId,
       awsAccountId,
     });
+
+    // 4.5. Write audit log
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId: awsAccountRecord.organizationId,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "permissions.revoked",
+        resource: "aws_account_permission",
+        resourceId: awsAccountId,
+        metadata: {
+          awsAccountId,
+          targetUserId: userId,
+        },
+      })
+    );
 
     // 5. Revalidate
     revalidatePath("/");

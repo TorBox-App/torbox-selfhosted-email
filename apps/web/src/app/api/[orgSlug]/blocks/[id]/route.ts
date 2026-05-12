@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
-import { db, reusableBlock } from "@wraps/db";
+import { auditLog, db, reusableBlock } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -97,24 +98,44 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const { name, content, category, description } = await request.json();
 
-    const [updated] = await db
-      .update(reusableBlock)
-      .set({
-        ...(name && { name: name.trim() }),
-        ...(content && { content }),
-        ...(category && { category }),
-        ...(description !== undefined && {
-          description: description?.trim() || null,
-        }),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(reusableBlock.id, id),
-          eq(reusableBlock.organizationId, orgWithMembership.id)
+    const auditCtx = await getAuditContext();
+
+    const [updated] = await db.transaction(async (tx) => {
+      const [r] = await tx
+        .update(reusableBlock)
+        .set({
+          ...(name && { name: name.trim() }),
+          ...(content && { content }),
+          ...(category && { category }),
+          ...(description !== undefined && {
+            description: description?.trim() || null,
+          }),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(reusableBlock.id, id),
+            eq(reusableBlock.organizationId, orgWithMembership.id)
+          )
         )
-      )
-      .returning();
+        .returning();
+
+      if (r) {
+        await tx.insert(auditLog).values(
+          auditLogEntry(auditCtx, {
+            organizationId: orgWithMembership.id,
+            actorId: session.user.id,
+            actorEmail: session.user.email,
+            action: "block.updated",
+            resource: "block",
+            resourceId: id,
+            metadata: { blockId: id },
+          })
+        );
+      }
+
+      return [r];
+    });
 
     if (!updated) {
       return NextResponse.json({ error: "Block not found" }, { status: 404 });
@@ -158,14 +179,30 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await db
-      .delete(reusableBlock)
-      .where(
-        and(
-          eq(reusableBlock.id, id),
-          eq(reusableBlock.organizationId, orgWithMembership.id)
-        )
+    const auditCtx = await getAuditContext();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(reusableBlock)
+        .where(
+          and(
+            eq(reusableBlock.id, id),
+            eq(reusableBlock.organizationId, orgWithMembership.id)
+          )
+        );
+
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: orgWithMembership.id,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "block.deleted",
+          resource: "block",
+          resourceId: id,
+          metadata: { blockId: id },
+        })
       );
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

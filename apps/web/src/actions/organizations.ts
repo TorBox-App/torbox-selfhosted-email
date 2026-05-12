@@ -135,6 +135,20 @@ export async function createOrganizationAction(
     // and prevents navigation to the onboarding page.
     revalidatePath("/", "page");
 
+    // 8.5. Write audit log
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId: newOrg.id,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "org.created",
+        resource: "organization",
+        resourceId: newOrg.id,
+        metadata: { name, slug },
+      })
+    );
+
     // 9. Return success
     return {
       success: true,
@@ -461,6 +475,19 @@ export async function updateSenderDefaultsAction(
 
     // 5. Revalidate paths
     revalidatePath(`/${orgSlug}/settings/sender-defaults`);
+
+    // 5.5. Write audit log
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId: orgWithMembership.id,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "settings.sender_defaults_updated",
+        resource: "organization",
+        resourceId: orgWithMembership.id,
+      })
+    );
 
     return {
       success: true,

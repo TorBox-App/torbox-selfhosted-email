@@ -1,7 +1,8 @@
 "use server";
 
-import { contactTopic, db } from "@wraps/db";
+import { auditLog, contactTopic, db } from "@wraps/db";
 import { and, eq, or } from "drizzle-orm";
+import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { revalidateContacts } from "./contacts";
 import { checkPermission } from "./shared/permissions";
@@ -97,6 +98,19 @@ export async function subscribeContactToTopics(
 
     // Revalidate
     revalidateContacts(orgSlug);
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "contact.topic_subscribed",
+        resource: "contact",
+        resourceId: contactId,
+        metadata: { contactId, topicIds },
+      })
+    );
 
     return { success: true };
   } catch (error) {
@@ -197,6 +211,19 @@ export async function bulkSubscribeContactsToTopics(
     }
 
     revalidateContacts(orgSlug);
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "contact.topics_bulk_subscribed",
+        resource: "contact",
+        metadata: { contactCount: subscribed, topicIds },
+      })
+    );
+
     return { success: true, count: subscribed };
   } catch (error) {
     const log = createActionLogger("bulkSubscribeContactsToTopics", {
@@ -266,6 +293,19 @@ export async function bulkUnsubscribeContactsFromTopics(
     }
 
     revalidateContacts(orgSlug);
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "contact.topics_bulk_unsubscribed",
+        resource: "contact",
+        metadata: { contactCount: unsubscribedCount, topicIds },
+      })
+    );
+
     return { success: true, count: unsubscribedCount };
   } catch (error) {
     const log = createActionLogger("bulkUnsubscribeContactsFromTopics", {
@@ -327,6 +367,19 @@ export async function unsubscribeContactFromTopics(
 
     // Revalidate
     revalidateContacts(orgSlug);
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: access.userId,
+        actorEmail: access.userEmail,
+        action: "contact.topic_unsubscribed",
+        resource: "contact",
+        resourceId: contactId,
+        metadata: { contactId, topicIds },
+      })
+    );
 
     return { success: true };
   } catch (error) {

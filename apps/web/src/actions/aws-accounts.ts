@@ -1072,6 +1072,18 @@ export async function saveWebhookSecretAction(
         )
       );
 
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "settings.webhook_secret_saved",
+        resource: "aws_account",
+        resourceId: awsAccountId,
+      })
+    );
+
     // Revalidate the page
     revalidatePath(
       `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`
@@ -1164,6 +1176,18 @@ export async function removeWebhookSecretAction(
           eq(awsAccount.organizationId, organizationId)
         )
       );
+
+    const auditCtx = await getAuditContext();
+    await db.insert(auditLog).values(
+      auditLogEntry(auditCtx, {
+        organizationId,
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        action: "settings.webhook_secret_removed",
+        resource: "aws_account",
+        resourceId: awsAccountId,
+      })
+    );
 
     // Revalidate the page
     revalidatePath(
