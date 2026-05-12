@@ -293,6 +293,7 @@ export async function deployLambdaFunctions(
     batchSize: 10, // Process up to 10 messages per invocation
     maximumBatchingWindowInSeconds: 5, // Wait up to 5 seconds to batch messages
     functionResponseTypes: ["ReportBatchItemFailures"], // Enable partial batch responses
+    enabled: true, // Explicitly keep enabled — Pulumi import omits this and AWS may default to disabled
   };
 
   const eventSourceMapping = existingMappingUuid
