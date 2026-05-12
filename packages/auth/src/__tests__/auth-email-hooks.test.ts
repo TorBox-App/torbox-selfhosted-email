@@ -45,7 +45,7 @@ describe("Better Auth email hooks", () => {
     });
   });
 
-  it("sends password reset emails from hello@wraps.dev", async () => {
+  it("sends password reset emails using AUTH_EMAIL_FROM and AUTH_EMAIL_CONFIGURATION_SET", async () => {
     const params: SendResetPasswordParams = {
       user: {
         email: "user@example.com",
@@ -58,9 +58,10 @@ describe("Better Auth email hooks", () => {
 
     expect(getWrapsClientMock).toHaveBeenCalledTimes(1);
     expect(sendTemplateMock).toHaveBeenCalledWith({
-      from: "Wraps <hello@wraps.dev>",
+      from: process.env.AUTH_EMAIL_FROM,
       to: "user@example.com",
       template: "password-reset",
+      configurationSetName: process.env.AUTH_EMAIL_CONFIGURATION_SET,
       templateData: {
         privacyUrl: "https://wraps.dev/privacy",
         resetPasswordUrl:
@@ -71,7 +72,7 @@ describe("Better Auth email hooks", () => {
     });
   });
 
-  it("sends password changed emails from hello@wraps.dev", async () => {
+  it("sends password changed emails using AUTH_EMAIL_FROM and AUTH_EMAIL_CONFIGURATION_SET", async () => {
     const params: OnPasswordResetParams = {
       user: {
         email: "user@example.com",
@@ -83,9 +84,10 @@ describe("Better Auth email hooks", () => {
 
     expect(getWrapsClientMock).toHaveBeenCalledTimes(1);
     expect(sendTemplateMock).toHaveBeenCalledWith({
-      from: "Wraps <hello@wraps.dev>",
+      from: process.env.AUTH_EMAIL_FROM,
       to: "user@example.com",
       template: "password-changed",
+      configurationSetName: process.env.AUTH_EMAIL_CONFIGURATION_SET,
       templateData: {
         name: "Test User",
         email: "user@example.com",

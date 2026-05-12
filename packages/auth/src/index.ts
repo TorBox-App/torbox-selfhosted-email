@@ -521,9 +521,10 @@ export const auth = betterAuth<BetterAuthOptions>({
       try {
         const wraps = await getWrapsClient();
         await wraps.sendTemplate({
-          from: process.env.AUTH_EMAIL_FROM ?? "Wraps <hello@wraps.dev>",
+          from: process.env.AUTH_EMAIL_FROM,
           to: user.email,
           template: "password-reset",
+          configurationSetName: process.env.AUTH_EMAIL_CONFIGURATION_SET,
           templateData: {
             privacyUrl: "https://wraps.dev/privacy",
             resetPasswordUrl: url,
@@ -539,9 +540,10 @@ export const auth = betterAuth<BetterAuthOptions>({
       try {
         const wraps = await getWrapsClient();
         await wraps.sendTemplate({
-          from: process.env.AUTH_EMAIL_FROM ?? "Wraps <hello@wraps.dev>",
+          from: process.env.AUTH_EMAIL_FROM,
           to: user.email,
           template: "password-changed",
+          configurationSetName: process.env.AUTH_EMAIL_CONFIGURATION_SET,
           templateData: {
             name: user.name,
             email: user.email,
