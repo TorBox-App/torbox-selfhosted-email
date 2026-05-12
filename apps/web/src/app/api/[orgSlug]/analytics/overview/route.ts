@@ -4,7 +4,10 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
-import { getSESMetricsSummary } from "@/lib/aws/cloudwatch";
+import {
+  getSESMetricsSummary,
+  getSESReputationMetrics,
+} from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -65,24 +68,39 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    const metricsResults = await Promise.all(
-      accounts.map(async (account) => {
-        try {
-          return await getSESMetricsSummary({
-            awsAccountId: account.id,
-            startTime,
-            endTime,
-            period: 3600,
-          });
-        } catch (error) {
-          log.error(
-            { err: serializeError(error), accountId: account.id },
-            "Failed to fetch metrics for account"
-          );
-          return null;
-        }
-      })
-    );
+    const [metricsResults, reputationResults] = await Promise.all([
+      Promise.all(
+        accounts.map(async (account) => {
+          try {
+            return await getSESMetricsSummary({
+              awsAccountId: account.id,
+              startTime,
+              endTime,
+              period: 3600,
+            });
+          } catch (error) {
+            log.error(
+              { err: serializeError(error), accountId: account.id },
+              "Failed to fetch metrics for account"
+            );
+            return null;
+          }
+        })
+      ),
+      Promise.all(
+        accounts.map(async (account) => {
+          try {
+            return await getSESReputationMetrics(account.id);
+          } catch (error) {
+            log.error(
+              { err: serializeError(error), accountId: account.id },
+              "Failed to fetch reputation metrics for account"
+            );
+            return null;
+          }
+        })
+      ),
+    ]);
 
     const calculateTotal = (
       metricName:
@@ -128,10 +146,45 @@ export async function GET(request: Request, context: RouteContext) {
 
     const deliveryRate =
       effectiveSent > 0 ? (totalDelivered / effectiveSent) * 100 : 0;
+
+    // Use SES account-level reputation metrics for bounce/complaint rates when
+    // available. SES computes these over its own rolling window (covering full
+    // account history), which matches what the SES console displays. Computing
+    // rates from period-filtered sends produces inflated numbers for accounts
+    // with low recent volume (e.g., 1 bounce / 13 sends = 7.5% vs SES's 0.02%).
+    //
+    // Reputation metrics are decimals (0–1); multiply by 100 for percentages.
+    // Take the worst rate across accounts since each account's reputation is
+    // independent and any bad actor affects the org's health.
+    const reputationBounceRate = reputationResults.reduce<number | null>(
+      (worst, r) => {
+        if (r?.bounceRate == null) return worst;
+        const pct = r.bounceRate * 100;
+        return worst === null ? pct : Math.max(worst, pct);
+      },
+      null
+    );
+    const reputationComplaintRate = reputationResults.reduce<number | null>(
+      (worst, r) => {
+        if (r?.complaintRate == null) return worst;
+        const pct = r.complaintRate * 100;
+        return worst === null ? pct : Math.max(worst, pct);
+      },
+      null
+    );
+
     const bounceRate =
-      effectiveSent > 0 ? (totalBounced / effectiveSent) * 100 : 0;
+      reputationBounceRate !== null
+        ? reputationBounceRate
+        : effectiveSent > 0
+          ? (totalBounced / effectiveSent) * 100
+          : 0;
     const complaintRate =
-      effectiveSent > 0 ? (totalComplaints / effectiveSent) * 100 : 0;
+      reputationComplaintRate !== null
+        ? reputationComplaintRate
+        : effectiveSent > 0
+          ? (totalComplaints / effectiveSent) * 100
+          : 0;
 
     return NextResponse.json({
       totalSent: Math.round(totalSent),
