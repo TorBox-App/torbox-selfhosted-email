@@ -93,6 +93,16 @@ vi.mock("@wraps/db", async () => {
         from: vi.fn().mockImplementation((table: unknown) => {
           const name = getTableName(table);
 
+          if (name === "aws_account") {
+            return {
+              where: vi.fn().mockImplementation(() => ({
+                then: (resolve: (v: unknown) => void) =>
+                  Promise.resolve([{}]).then(resolve),
+                limit: vi.fn().mockResolvedValue([{}]),
+              })),
+            };
+          }
+
           if (name === "batch_send") {
             const batchResult = [
               {
@@ -287,6 +297,14 @@ describe("processJob cursor passing", () => {
       from: vi.fn().mockImplementation((table: unknown) => {
         const name = getTableName(table);
 
+        if (name === "aws_account") {
+          return {
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{}]),
+            }),
+          };
+        }
+
         if (name === "batch_send") {
           return {
             where: vi.fn().mockReturnValue({
@@ -396,6 +414,14 @@ describe("processJob cursor passing", () => {
       from: vi.fn().mockImplementation((table: unknown) => {
         const name = getTableName(table);
 
+        if (name === "aws_account") {
+          return {
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{}]),
+            }),
+          };
+        }
+
         if (name === "batch_send") {
           return {
             where: vi.fn().mockReturnValue({
@@ -455,6 +481,14 @@ describe("processJob cursor passing", () => {
     (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
       from: vi.fn().mockImplementation((table: unknown) => {
         const name = getTableName(table);
+
+        if (name === "aws_account") {
+          return {
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{}]),
+            }),
+          };
+        }
 
         if (name === "batch_send") {
           return {

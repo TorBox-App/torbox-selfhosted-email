@@ -190,7 +190,7 @@ export async function GET(request: Request, context: RouteContext) {
       const msgId = pg.messageId ?? pg.id;
       if (dynamoMessageIds.has(msgId)) continue;
       emails.push({
-        id: pg.id,
+        id: msgId,
         messageId: msgId,
         from: pg.from ?? "",
         to: [pg.recipient],

@@ -209,8 +209,9 @@ function setupSelects(opts: {
   };
 
   const results: unknown[][] = [
-    [opts.batch], // 1: batchSend
-    [contact], // 2: contacts (getContactsChunk)
+    [opts.batch], // 0: batchSend
+    [contact], // 1: contacts (getContactsChunk)
+    [{}], // 2: aws account features (config set lookup — after contacts)
     [
       {
         sesTemplateName: "ses-tmpl-1",

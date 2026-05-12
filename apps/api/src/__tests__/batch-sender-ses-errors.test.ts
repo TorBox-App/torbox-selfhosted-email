@@ -217,6 +217,7 @@ function setupBulkSelects(existingSendRecords: unknown[] = []) {
   selectResults = [
     [makeBulkBatch()],
     makeContacts(),
+    [{}], // aws account features (config set lookup — after contacts)
     [
       {
         sesTemplateName: "wraps-tmpl-1",

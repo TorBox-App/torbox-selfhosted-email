@@ -525,7 +525,10 @@ export async function scanAWSAccountFeatures(
       }
     }
 
-    // 7. Scan for SES Configuration Set, Custom Tracking Domain, and Tracked Events
+    // 7. Scan for SES Configuration Set, Custom Tracking Domain, and Tracked Events.
+    // Always list ALL wraps-email-* config sets so per-domain sets are included.
+    // Prefer per-domain sets (wraps-email-<domain>) over the legacy global set
+    // (wraps-email-tracking) as the canonical name shown in the dashboard.
     let configSetName: string | undefined;
     let customTrackingDomain: string | undefined;
     let trackedEvents: string[] = [];
@@ -536,98 +539,66 @@ export async function scanAWSAccountFeatures(
     });
 
     try {
-      // Try common Wraps configuration set name
-      const configSetResponse = await sesClientForConfigSet.send(
-        new GetConfigurationSetCommand({
-          ConfigurationSetName: "wraps-email-tracking",
-        })
+      const listResponse = await sesClientForConfigSet.send(
+        new ListConfigurationSetsCommand({ PageSize: 100 })
+      );
+      const wrapsConfigSets = (listResponse.ConfigurationSets ?? []).filter(
+        (name) => name.startsWith("wraps-email-")
       );
 
-      // If the command succeeds, the config set exists
-      if (configSetResponse) {
-        configSetName = "wraps-email-tracking";
+      // Per-domain sets (anything other than the legacy global name)
+      const perDomainSets = wrapsConfigSets.filter(
+        (name) => name !== "wraps-email-tracking"
+      );
+      // Prefer per-domain sets; fall back to legacy global if that's all there is
+      const setsToCheck =
+        perDomainSets.length > 0 ? perDomainSets : wrapsConfigSets;
 
-        // Extract custom tracking domain if configured
-        customTrackingDomain =
-          configSetResponse.TrackingOptions?.CustomRedirectDomain ?? undefined;
-
-        // Get event destinations to determine which events are tracked
+      const allEventTypes = new Set<string>();
+      for (const setName of setsToCheck) {
         try {
-          const eventDestResponse = await sesClientForConfigSet.send(
-            new GetConfigurationSetEventDestinationsCommand({
-              ConfigurationSetName: "wraps-email-tracking",
+          const csResponse = await sesClientForConfigSet.send(
+            new GetConfigurationSetCommand({
+              ConfigurationSetName: setName,
             })
           );
-
-          // Collect all unique event types across all destinations
-          const eventTypes = new Set<string>();
+          const trackingDomain =
+            csResponse.TrackingOptions?.CustomRedirectDomain ?? undefined;
+          const eventDestResponse = await sesClientForConfigSet.send(
+            new GetConfigurationSetEventDestinationsCommand({
+              ConfigurationSetName: setName,
+            })
+          );
+          const hasDestinations =
+            (eventDestResponse.EventDestinations ?? []).length > 0;
           for (const destination of eventDestResponse.EventDestinations ?? []) {
             for (const eventType of destination.MatchingEventTypes ?? []) {
-              eventTypes.add(eventType);
+              allEventTypes.add(eventType);
             }
           }
-          trackedEvents = Array.from(eventTypes).sort();
-        } catch (destError: any) {
-          // If we can't get event destinations, just continue without them
-          if (destError.name !== "AccessDeniedException") {
+          // Canonical = first set with event destinations; fall back to first match
+          if (!configSetName && hasDestinations) {
+            configSetName = setName;
+            customTrackingDomain = trackingDomain;
+          } else if (!configSetName && setsToCheck[0] === setName) {
+            configSetName = setName;
+            customTrackingDomain = trackingDomain;
+          }
+        } catch (detailError: any) {
+          if (detailError.name !== "AccessDeniedException") {
             log.warn(
-              { err: serializeError(destError) },
-              "Error scanning for event destinations"
+              { err: serializeError(detailError), configSetName: setName },
+              "Error fetching config set details"
             );
           }
         }
       }
+      trackedEvents = Array.from(allEventTypes).sort();
     } catch (error: any) {
-      if (error.name === "NotFoundException") {
-        // wraps-email-tracking not found — account may have run per-domain upgrade.
-        // Fall back to listing all config sets and picking any wraps-email-* match.
-        try {
-          const listResponse = await sesClientForConfigSet.send(
-            new ListConfigurationSetsCommand({ PageSize: 100 })
-          );
-          const perDomainSet = listResponse.ConfigurationSets?.find((name) =>
-            name.startsWith("wraps-email-")
-          );
-          if (perDomainSet) {
-            configSetName = perDomainSet;
-            try {
-              const csResponse = await sesClientForConfigSet.send(
-                new GetConfigurationSetCommand({
-                  ConfigurationSetName: perDomainSet,
-                })
-              );
-              customTrackingDomain =
-                csResponse.TrackingOptions?.CustomRedirectDomain ?? undefined;
-              const eventDestResponse = await sesClientForConfigSet.send(
-                new GetConfigurationSetEventDestinationsCommand({
-                  ConfigurationSetName: perDomainSet,
-                })
-              );
-              const eventTypes = new Set<string>();
-              for (const destination of eventDestResponse.EventDestinations ??
-                []) {
-                for (const eventType of destination.MatchingEventTypes ?? []) {
-                  eventTypes.add(eventType);
-                }
-              }
-              trackedEvents = Array.from(eventTypes).sort();
-            } catch (detailError: any) {
-              log.warn(
-                { err: serializeError(detailError) },
-                "Error fetching per-domain config set details"
-              );
-            }
-          }
-        } catch (listError: any) {
-          log.warn(
-            { err: serializeError(listError) },
-            "Error listing config sets during fallback scan"
-          );
-        }
-      } else if (error.name !== "AccessDeniedException") {
+      if (error.name !== "AccessDeniedException") {
         log.warn(
           { err: serializeError(error) },
-          "Error scanning for config set"
+          "Error listing config sets during scan"
         );
       }
     }

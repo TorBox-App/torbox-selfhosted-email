@@ -264,10 +264,12 @@ function setupSelects(opts: {
   existingSendRecords?: Array<{ contactId: string; status: string }>;
 }) {
   selectResults = [
-    // 1. batch
+    // 0. batch
     [opts.batch],
-    // 2. contacts chunk
+    // 1. contacts chunk
     opts.contacts ?? makeContacts(),
+    // 2. aws account features (config set lookup — after contacts)
+    [{}],
     // 3. template
     [
       {

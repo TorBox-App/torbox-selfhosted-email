@@ -23,6 +23,7 @@ const mockSendEmail = vi.fn();
 
 vi.mock("@wraps/email-send", () => ({
   sendEmail: mockSendEmail,
+  WRAPS_CONFIGURATION_SET_NAME: "wraps-email-tracking",
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
