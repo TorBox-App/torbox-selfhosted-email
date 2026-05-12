@@ -10,7 +10,7 @@ import {
   workflowExecution,
 } from "@wraps/db";
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
@@ -271,10 +271,7 @@ export async function getContactTimeline(
     const log = createActionLogger("getContactTimeline", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), contactId },
-      "Failed to get contact timeline"
-    );
+    log.error({ err: error, contactId }, "Failed to get contact timeline");
     return { success: false, error: "Failed to fetch timeline" };
   }
 }
@@ -465,10 +462,7 @@ export async function getContactAnalytics(
     const log = createActionLogger("getContactAnalytics", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), days },
-      "Failed to get contact analytics"
-    );
+    log.error({ err: error, days }, "Failed to get contact analytics");
     return { success: false, error: "Failed to fetch contact analytics" };
   }
 }

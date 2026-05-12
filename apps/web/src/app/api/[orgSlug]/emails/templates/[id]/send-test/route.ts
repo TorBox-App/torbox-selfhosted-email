@@ -15,7 +15,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import {
   generatePreferencesUrl,
@@ -306,7 +306,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error sending test email");
+    log.error({ err: error }, "Error sending test email");
     return NextResponse.json(
       {
         error:

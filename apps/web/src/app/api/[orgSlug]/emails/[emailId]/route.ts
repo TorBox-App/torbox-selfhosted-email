@@ -6,7 +6,7 @@ import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -98,7 +98,7 @@ export async function GET(_request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch emails for account"
           );
           return [];
@@ -241,7 +241,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/emails/[emailId]",
       method: "GET",
       orgSlug,
-    }).error({ err: serializeError(error) }, "Error fetching email detail");
+    }).error({ err: error }, "Error fetching email detail");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

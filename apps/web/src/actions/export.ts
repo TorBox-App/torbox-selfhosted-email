@@ -17,7 +17,7 @@ import type {
   SmsStatus,
 } from "@/lib/contacts";
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
@@ -157,7 +157,7 @@ export async function exportAllContacts(
     const log = createActionLogger("exportAllContacts", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to export contacts");
+    log.error({ err: error }, "Failed to export contacts");
     return { success: false, error: "Failed to export contacts" };
   }
 }
@@ -195,7 +195,7 @@ export async function exportAllEvents(
     const log = createActionLogger("exportAllEvents", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to export events");
+    log.error({ err: error }, "Failed to export events");
     return { success: false, error: "Failed to export events" };
   }
 }

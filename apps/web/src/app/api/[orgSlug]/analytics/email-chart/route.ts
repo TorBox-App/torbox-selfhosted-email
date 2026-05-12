@@ -16,7 +16,7 @@ import {
   getSESReputationMetrics,
   SES_METRICS,
 } from "@/lib/aws/cloudwatch";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -301,10 +301,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/email-chart",
       method: "GET",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching email chart data"
-    );
+    log.error({ err: error }, "Error fetching email chart data");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

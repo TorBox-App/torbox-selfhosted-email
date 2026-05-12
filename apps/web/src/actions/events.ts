@@ -18,7 +18,7 @@ import type {
   ListEventsOptions,
   ListEventsResult,
 } from "@/lib/events";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
 
@@ -62,7 +62,7 @@ export async function listEvents(
     };
   } catch (error) {
     const log = createActionLogger("listEvents", { orgSlug: organizationId });
-    log.error({ err: serializeError(error) }, "Failed to list events");
+    log.error({ err: error }, "Failed to list events");
     return { success: false, error: "Failed to fetch events" };
   }
 }
@@ -94,7 +94,7 @@ export async function getEvent(
     };
   } catch (error) {
     const log = createActionLogger("getEvent", { orgSlug: organizationId });
-    log.error({ err: serializeError(error), eventId }, "Failed to get event");
+    log.error({ err: error, eventId }, "Failed to get event");
     return { success: false, error: "Failed to fetch event" };
   }
 }
@@ -120,7 +120,7 @@ export async function getEventNames(
     const log = createActionLogger("getEventNames", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to get event names");
+    log.error({ err: error }, "Failed to get event names");
     return { success: false, error: "Failed to fetch event names" };
   }
 }
@@ -227,10 +227,7 @@ export async function getEventAnalytics(
     const log = createActionLogger("getEventAnalytics", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), days },
-      "Failed to get event analytics"
-    );
+    log.error({ err: error, days }, "Failed to get event analytics");
     return { success: false, error: "Failed to fetch event analytics" };
   }
 }

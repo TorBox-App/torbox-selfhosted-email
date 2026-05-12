@@ -1,6 +1,5 @@
 "use server";
 
-import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
@@ -16,7 +15,7 @@ import {
   type UpdateOrganizationInput,
   updateOrganizationSchema,
 } from "@/lib/forms/update-organization";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import {
   generateSlug,
   getOrganizationWithMembership,
@@ -161,8 +160,7 @@ export async function createOrganizationAction(
     };
   } catch (error) {
     const log = createActionLogger("createOrganizationAction", {});
-    log.error({ err: serializeError(error) }, "Failed to create organization");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to create organization");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -310,8 +308,7 @@ export async function updateOrganizationAction(
     };
   } catch (error) {
     const log = createActionLogger("updateOrganizationAction", { orgSlug });
-    log.error({ err: serializeError(error) }, "Failed to update organization");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to update organization");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -388,8 +385,7 @@ export async function getSenderDefaultsAction(
     };
   } catch (error) {
     const log = createActionLogger("getSenderDefaultsAction", { orgSlug });
-    log.error({ err: serializeError(error) }, "Failed to get sender defaults");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to get sender defaults");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -502,11 +498,7 @@ export async function updateSenderDefaultsAction(
     };
   } catch (error) {
     const log = createActionLogger("updateSenderDefaultsAction", { orgSlug });
-    log.error(
-      { err: serializeError(error) },
-      "Failed to update sender defaults"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to update sender defaults");
     return {
       success: false,
       error: "Something went wrong. Please try again.",

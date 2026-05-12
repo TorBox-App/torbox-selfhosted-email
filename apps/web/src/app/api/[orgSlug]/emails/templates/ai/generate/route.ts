@@ -8,7 +8,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { extractTipTapJson, validateTipTapJson } from "@/lib/ai/validator";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
 
@@ -159,10 +159,7 @@ export async function POST(request: Request, context: RouteContext) {
           totalTokens: usage?.totalTokens,
           model: MODEL_ID,
         }).catch((error) => {
-          log.error(
-            { err: serializeError(error) },
-            "Failed to track AI request"
-          );
+          log.error({ err: error }, "Failed to track AI request");
         });
 
         // Track conversation in database (async)
@@ -172,10 +169,7 @@ export async function POST(request: Request, context: RouteContext) {
           messages,
           userId: session.user.id,
         }).catch((error) => {
-          log.error(
-            { err: serializeError(error) },
-            "Failed to track conversation"
-          );
+          log.error({ err: error }, "Failed to track conversation");
         });
       },
     });
@@ -191,7 +185,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error generating AI content");
+    log.error({ err: error }, "Error generating AI content");
     return NextResponse.json(
       { error: "Failed to generate content" },
       { status: 500 }
@@ -229,9 +223,6 @@ async function trackConversation(data: {
       createdBy: data.userId,
     });
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to track AI conversation"
-    );
+    log.error({ err: error }, "Failed to track AI conversation");
   }
 }

@@ -8,7 +8,7 @@ import {
   getSESMetricsSummary,
   getSESReputationMetrics,
 } from "@/lib/aws/cloudwatch";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -80,7 +80,7 @@ export async function GET(request: Request, context: RouteContext) {
             });
           } catch (error) {
             log.error(
-              { err: serializeError(error), accountId: account.id },
+              { err: error, accountId: account.id },
               "Failed to fetch metrics for account"
             );
             return null;
@@ -93,7 +93,7 @@ export async function GET(request: Request, context: RouteContext) {
             return await getSESReputationMetrics(account.id);
           } catch (error) {
             log.error(
-              { err: serializeError(error), accountId: account.id },
+              { err: error, accountId: account.id },
               "Failed to fetch reputation metrics for account"
             );
             return null;
@@ -201,10 +201,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/overview",
       method: "GET",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching analytics overview"
-    );
+    log.error({ err: error }, "Error fetching analytics overview");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

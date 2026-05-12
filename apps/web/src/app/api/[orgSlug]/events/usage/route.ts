@@ -1,7 +1,7 @@
 import { auth } from "@wraps/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import {
   checkEventUsageLimit,
@@ -79,7 +79,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/events/usage",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching event usage");
+    log.error({ err: error }, "Error fetching event usage");
     return NextResponse.json(
       { error: "Failed to fetch event usage" },
       { status: 500 }

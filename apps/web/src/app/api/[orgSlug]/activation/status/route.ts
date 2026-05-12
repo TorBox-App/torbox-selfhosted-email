@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { computeActivationScore } from "@/lib/activation-tracking";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -53,10 +53,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching activation status"
-    );
+    log.error({ err: error }, "Error fetching activation status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getRecentActivityFromPostgres } from "@/lib/analytics-fallback";
 import { getRecentEmailActivity } from "@/lib/aws/dynamodb";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -68,7 +68,7 @@ export async function GET(request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch recent activity for account"
           );
           return [];
@@ -105,7 +105,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/recent-activity",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching recent activity");
+    log.error({ err: error }, "Error fetching recent activity");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

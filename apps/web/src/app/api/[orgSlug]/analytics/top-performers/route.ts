@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getTopPerformersFromPostgres } from "@/lib/analytics-fallback";
 import { getEmailEngagementMetrics } from "@/lib/aws/dynamodb";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -76,7 +76,7 @@ export async function GET(request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch email metrics for account"
           );
           return [];
@@ -133,7 +133,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/top-performers",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching top performers");
+    log.error({ err: error }, "Error fetching top performers");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

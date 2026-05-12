@@ -1,6 +1,6 @@
 import { auth } from "@wraps/auth";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -46,7 +46,7 @@ export async function POST(_request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error verifying CLI");
+    log.error({ err: error }, "Error verifying CLI");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildWorkflowSystemPrompt } from "@/lib/ai/(ee)/workflow-system-prompt";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
 
@@ -165,10 +165,7 @@ export async function POST(request: Request, context: RouteContext) {
           totalTokens: usage?.totalTokens,
           model: MODEL_ID,
         }).catch((error) => {
-          log.error(
-            { err: serializeError(error) },
-            "Failed to track AI request"
-          );
+          log.error({ err: error }, "Failed to track AI request");
         });
       },
     });
@@ -184,7 +181,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error generating AI workflow");
+    log.error({ err: error }, "Error generating AI workflow");
     return NextResponse.json(
       { error: "Failed to generate workflow" },
       { status: 500 }

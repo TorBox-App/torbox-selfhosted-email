@@ -1,6 +1,5 @@
 "use server";
 
-import * as Sentry from "@sentry/nextjs";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, db } from "@wraps/db";
@@ -11,7 +10,7 @@ import {
   grantAccessFormOpts,
   grantAccessSchema,
 } from "@/lib/forms/grant-access";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { revokeAWSAccountAccess } from "@/lib/permissions/revoke-access";
@@ -132,7 +131,7 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
     // Handle other errors
     const message = e instanceof Error ? e.message : "Internal error";
     const log = createActionLogger("grantAccessAction", {});
-    log.error({ err: serializeError(e) }, "Failed to grant access");
+    log.error({ err: e }, "Failed to grant access");
     return { error: "Internal error", details: message };
   }
 }
@@ -209,11 +208,7 @@ export async function revokeAccessAction(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("revokeAccessAction", {});
-    log.error(
-      { err: serializeError(error), userId, awsAccountId },
-      "Failed to revoke access"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error, userId, awsAccountId }, "Failed to revoke access");
     return { error: "Something went wrong. Please try again." };
   }
 }

@@ -12,7 +12,7 @@ import { EmailArchiveViewer } from "@/components/email-archive-viewer";
 import { Button } from "@/components/ui/button";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import { isOpenEventBot } from "@/lib/email-bot-detection";
-import { logger, serializeError } from "@/lib/logger";
+import { logger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import type { Email, EmailStatus } from "../types";
 import { CopyButton } from "./components/copy-button";
@@ -286,7 +286,7 @@ async function fetchEmail(
       events: [],
     };
   } catch (error) {
-    logger.error({ err: serializeError(error) }, "fetchEmail failed");
+    logger.error({ err: error }, "fetchEmail failed");
     return null;
   }
 }

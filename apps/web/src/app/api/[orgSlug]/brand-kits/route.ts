@@ -4,7 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -48,7 +48,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching brand kits");
+    log.error({ err: error }, "Error fetching brand kits");
     return NextResponse.json(
       { error: "Failed to fetch brand kits" },
       { status: 500 }
@@ -143,7 +143,7 @@ export async function POST(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits",
       method: "POST",
     });
-    log.error({ err: serializeError(error) }, "Error creating brand kit");
+    log.error({ err: error }, "Error creating brand kit");
     return NextResponse.json(
       { error: "Failed to create brand kit" },
       { status: 500 }

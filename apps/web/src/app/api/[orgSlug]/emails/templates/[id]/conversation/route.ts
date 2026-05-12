@@ -3,7 +3,7 @@ import { aiConversation, db, template } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -81,7 +81,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error loading AI conversation");
+    log.error({ err: error }, "Error loading AI conversation");
     return NextResponse.json(
       { error: "Failed to load conversation" },
       { status: 500 }
@@ -149,7 +149,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       method: "DELETE",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error clearing AI conversation");
+    log.error({ err: error }, "Error clearing AI conversation");
     return NextResponse.json(
       { error: "Failed to clear conversation" },
       { status: 500 }

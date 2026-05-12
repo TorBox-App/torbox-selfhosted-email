@@ -1,7 +1,7 @@
 import { auth } from "@wraps/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, getUsageWarning } from "@/lib/usage/ai-usage";
 
@@ -57,7 +57,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/ai/usage",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching AI usage");
+    log.error({ err: error }, "Error fetching AI usage");
     return NextResponse.json(
       { error: "Failed to fetch AI usage" },
       { status: 500 }

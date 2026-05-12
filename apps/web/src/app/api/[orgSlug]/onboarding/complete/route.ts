@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { trackOnboardingCompleted } from "@/lib/activation-tracking";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -97,7 +97,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error completing onboarding");
+    log.error({ err: error }, "Error completing onboarding");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -10,7 +10,7 @@ import {
 } from "@wraps/db";
 import { trackContactsImported } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
 import { hashEmail } from "./shared/hash";
@@ -156,7 +156,7 @@ export async function bulkCreateContactsFromEmails(
   } catch (error) {
     const log = createActionLogger("bulkCreateContactsFromEmails", { orgSlug });
     log.error(
-      { err: serializeError(error), emailCount: emails.length },
+      { err: error, emailCount: emails.length },
       "Failed to bulk create contacts"
     );
     return { success: false, error: "Failed to create contacts" };
@@ -213,7 +213,7 @@ export async function checkExistingContacts(
       orgSlug: organizationId,
     });
     log.error(
-      { err: serializeError(error), emailCount: emails.length },
+      { err: error, emailCount: emails.length },
       "Failed to check existing contacts"
     );
     return { success: false, error: "Failed to check contacts" };
@@ -272,7 +272,7 @@ export async function bulkDeleteContacts(
   } catch (error) {
     const log = createActionLogger("bulkDeleteContacts", { orgSlug });
     log.error(
-      { err: serializeError(error), count: contactIds.length },
+      { err: error, count: contactIds.length },
       "Failed to bulk delete contacts"
     );
     return { success: false, error: "Failed to delete contacts" };

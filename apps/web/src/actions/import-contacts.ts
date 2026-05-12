@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { trackContactsImported } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import type { ImportContactsResult } from "@/lib/contacts";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
 import { hashEmail, hashPhone } from "./shared/hash";
@@ -400,7 +400,7 @@ export async function importContacts(
   } catch (error) {
     const log = createActionLogger("importContacts", { orgSlug });
     log.error(
-      { err: serializeError(error), contactCount: data.contacts.length },
+      { err: error, contactCount: data.contacts.length },
       "Failed to import contacts"
     );
     return { success: false, error: "Failed to import contacts" };

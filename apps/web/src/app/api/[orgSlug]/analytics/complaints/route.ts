@@ -11,7 +11,7 @@ import {
   validateTimezone,
 } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -87,7 +87,7 @@ export async function GET(request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch events for account"
           );
           return [];
@@ -151,10 +151,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/complaints",
       method: "GET",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching complaint analytics"
-    );
+    log.error({ err: error }, "Error fetching complaint analytics");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

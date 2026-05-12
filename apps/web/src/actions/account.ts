@@ -1,6 +1,5 @@
 "use server";
 
-import * as Sentry from "@sentry/nextjs";
 import {
   createServerValidate,
   type ServerValidateError,
@@ -21,7 +20,7 @@ import {
   updateAccountFormOpts,
   updateAccountSchema,
 } from "@/lib/forms/update-account";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 
 // Server validator for account update
 const serverValidateAccount = createServerValidate({
@@ -116,8 +115,7 @@ export async function updateAccountAction(
     }
 
     const log = createActionLogger("updateAccountAction", {});
-    log.error({ err: serializeError(error) }, "Failed to update account");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to update account");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -185,7 +183,8 @@ export async function getSecuritySettingsAction(): Promise<{
       loginAlertsEnabled: userData?.loginAlertsEnabled ?? false,
     };
   } catch (error) {
-    console.error("Failed to get security settings:", error);
+    const log = createActionLogger("getSecuritySettingsAction", {});
+    log.error({ err: error }, "Failed to get security settings");
     return null;
   }
 }
@@ -240,11 +239,7 @@ export async function updateSecuritySettingsAction(
     }
 
     const log = createActionLogger("updateSecuritySettingsAction", {});
-    log.error(
-      { err: serializeError(error) },
-      "Failed to update security settings"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to update security settings");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -302,8 +297,7 @@ export async function changePasswordAction(
     }
 
     const log = createActionLogger("changePasswordAction", {});
-    log.error({ err: serializeError(error) }, "Failed to change password");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to change password");
     return {
       success: false,
       error: "Something went wrong. Please try again.",

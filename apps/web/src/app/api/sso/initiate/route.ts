@@ -2,7 +2,7 @@ import { auth } from "@wraps/auth";
 import { db, ssoProvider } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { logger, serializeError } from "@/lib/logger";
+import { logger } from "@/lib/logger";
 
 type SsoInitiateApi = {
   signInSSO(opts: {
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       return NextResponse.redirect(result.url);
     }
   } catch (error) {
-    logger.error({ err: serializeError(error), iss }, "SSO initiate failed");
+    logger.error({ err: error, iss }, "SSO initiate failed");
   }
 
   return NextResponse.redirect(new URL("/sign-in", req.url));

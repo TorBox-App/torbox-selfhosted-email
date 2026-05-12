@@ -4,7 +4,7 @@ import { auditLog, contactTopic, db, topic } from "@wraps/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
   type CreateTopicResult,
@@ -96,7 +96,7 @@ export async function listTopics(
     };
   } catch (error) {
     const log = createActionLogger("listTopics", { orgSlug: organizationId });
-    log.error({ err: serializeError(error) }, "Failed to list topics");
+    log.error({ err: error }, "Failed to list topics");
     return { success: false, error: "Failed to fetch topics" };
   }
 }
@@ -165,7 +165,7 @@ export async function getTopic(
     };
   } catch (error) {
     const log = createActionLogger("getTopic", { orgSlug: organizationId });
-    log.error({ err: serializeError(error), topicId }, "Failed to get topic");
+    log.error({ err: error, topicId }, "Failed to get topic");
     return { success: false, error: "Failed to fetch topic" };
   }
 }
@@ -269,7 +269,7 @@ export async function createTopic(
     return await getTopic(newTopic.id, organizationId);
   } catch (error) {
     const log = createActionLogger("createTopic", { orgSlug: organizationId });
-    log.error({ err: serializeError(error) }, "Failed to create topic");
+    log.error({ err: error }, "Failed to create topic");
     return { success: false, error: "Failed to create topic" };
   }
 }
@@ -390,10 +390,7 @@ export async function updateTopic(
     return await getTopic(topicId, organizationId);
   } catch (error) {
     const log = createActionLogger("updateTopic", { orgSlug: organizationId });
-    log.error(
-      { err: serializeError(error), topicId },
-      "Failed to update topic"
-    );
+    log.error({ err: error, topicId }, "Failed to update topic");
     return { success: false, error: "Failed to update topic" };
   }
 }
@@ -455,10 +452,7 @@ export async function deleteTopic(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("deleteTopic", { orgSlug: organizationId });
-    log.error(
-      { err: serializeError(error), topicId },
-      "Failed to delete topic"
-    );
+    log.error({ err: error, topicId }, "Failed to delete topic");
     return { success: false, error: "Failed to delete topic" };
   }
 }
@@ -558,10 +552,7 @@ export async function getTopicSubscribers(
     const log = createActionLogger("getTopicSubscribers", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), topicId },
-      "Failed to get topic subscribers"
-    );
+    log.error({ err: error, topicId }, "Failed to get topic subscribers");
     return { success: false, error: "Failed to fetch subscribers" };
   }
 }

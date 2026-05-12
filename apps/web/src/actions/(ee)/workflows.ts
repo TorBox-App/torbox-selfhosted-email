@@ -28,7 +28,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
 import { checkPermission } from "../shared/permissions";
 import { verifyOrgAccess } from "../shared/verify-org-access";
@@ -325,7 +325,7 @@ export async function listWorkflows(
     const log = createActionLogger("listWorkflows", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to list workflows");
+    log.error({ err: error }, "Failed to list workflows");
     return { success: false, error: "Failed to fetch workflows" };
   }
 }
@@ -371,10 +371,7 @@ export async function getWorkflow(
     return { success: true, workflow: w as WorkflowWithMeta };
   } catch (error) {
     const log = createActionLogger("getWorkflow", { orgSlug: organizationId });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to get workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to get workflow");
     return { success: false, error: "Failed to fetch workflow" };
   }
 }
@@ -486,10 +483,7 @@ export async function createWorkflow(
         const log = createActionLogger("createWorkflow", {
           orgSlug: organizationId,
         });
-        log.error(
-          { err: serializeError(err) },
-          "Failed to track workflow created"
-        );
+        log.error({ err }, "Failed to track workflow created");
       }
     );
 
@@ -498,7 +492,7 @@ export async function createWorkflow(
     const log = createActionLogger("createWorkflow", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to create workflow");
+    log.error({ err: error }, "Failed to create workflow");
     return { success: false, error: "Failed to create workflow" };
   }
 }
@@ -739,10 +733,7 @@ export async function updateWorkflow(
     const log = createActionLogger("updateWorkflow", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to update workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to update workflow");
     return { success: false, error: "Failed to update workflow" };
   }
 }
@@ -847,10 +838,7 @@ export async function deleteWorkflow(
     const log = createActionLogger("deleteWorkflow", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to delete workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to delete workflow");
     return { success: false, error: "Failed to delete workflow" };
   }
 }
@@ -1087,10 +1075,7 @@ export async function enableWorkflow(
     const log = createActionLogger("enableWorkflow", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to enable workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to enable workflow");
     return { success: false, error: "Failed to enable workflow" };
   }
 }
@@ -1178,10 +1163,7 @@ export async function disableWorkflow(
     const log = createActionLogger("disableWorkflow", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to disable workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to disable workflow");
     return { success: false, error: "Failed to disable workflow" };
   }
 }
@@ -1313,10 +1295,7 @@ export async function duplicateWorkflow(
     const log = createActionLogger("duplicateWorkflow", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to duplicate workflow"
-    );
+    log.error({ err: error, workflowId }, "Failed to duplicate workflow");
     return { success: false, error: "Failed to duplicate workflow" };
   }
 }
@@ -1381,10 +1360,7 @@ export async function getWorkflowStats(
     const log = createActionLogger("getWorkflowStats", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to get workflow stats"
-    );
+    log.error({ err: error, workflowId }, "Failed to get workflow stats");
     return { success: false, error: "Failed to get workflow stats" };
   }
 }
@@ -1464,10 +1440,7 @@ export async function listWorkflowExecutions(
     const log = createActionLogger("listWorkflowExecutions", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to list workflow executions"
-    );
+    log.error({ err: error, workflowId }, "Failed to list workflow executions");
     return { success: false, error: "Failed to list workflow executions" };
   }
 }
@@ -1592,10 +1565,7 @@ export async function getWorkflowExecution(
     const log = createActionLogger("getWorkflowExecution", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), executionId },
-      "Failed to get workflow execution"
-    );
+    log.error({ err: error, executionId }, "Failed to get workflow execution");
     return { success: false, error: "Failed to get workflow execution" };
   }
 }
@@ -1660,10 +1630,7 @@ export async function retryWorkflowExecution(
     const log = createActionLogger("retryWorkflowExecution", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), executionId },
-      "Failed to retry execution"
-    );
+    log.error({ err: error, executionId }, "Failed to retry execution");
     return { success: false, error: "Failed to retry execution" };
   }
 }
@@ -1728,10 +1695,7 @@ export async function cancelWorkflowExecution(
     const log = createActionLogger("cancelWorkflowExecution", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), executionId },
-      "Failed to cancel execution"
-    );
+    log.error({ err: error, executionId }, "Failed to cancel execution");
     return { success: false, error: "Failed to cancel execution" };
   }
 }
@@ -1956,10 +1920,7 @@ export async function getWorkflowNodeStats(
     const log = createActionLogger("getWorkflowNodeStats", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to get node stats"
-    );
+    log.error({ err: error, workflowId }, "Failed to get node stats");
     return { success: false, error: "Failed to get node stats" };
   }
 }

@@ -51,7 +51,7 @@ import type {
   UpdateDraftBatchResult,
 } from "@/lib/batch";
 import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -134,7 +134,7 @@ export async function listBatchSends(
     const log = createActionLogger("listBatchSends", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to list batch sends");
+    log.error({ err: error }, "Failed to list batch sends");
     return { success: false, error: "Failed to fetch batch sends" };
   }
 }
@@ -170,10 +170,7 @@ export async function getBatchSend(
     const log = createActionLogger("getBatchSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), batchId },
-      "Failed to get batch send"
-    );
+    log.error({ err: error, batchId }, "Failed to get batch send");
     return { success: false, error: "Failed to fetch batch send" };
   }
 }
@@ -418,7 +415,7 @@ export async function createBatchSend(
     const log = createActionLogger("createBatchSend", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to create batch send");
+    log.error({ err: error }, "Failed to create batch send");
     return { success: false, error: "Failed to create batch send" };
   }
 }
@@ -508,7 +505,7 @@ export async function saveDraftBatchSend(
     const log = createActionLogger("saveDraftBatchSend", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to save draft batch");
+    log.error({ err: error }, "Failed to save draft batch");
     return { success: false, error: "Failed to save draft" };
   }
 }
@@ -647,10 +644,7 @@ export async function updateDraftBatchSend(
     const log = createActionLogger("updateDraftBatchSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), batchId },
-      "Failed to update draft batch"
-    );
+    log.error({ err: error, batchId }, "Failed to update draft batch");
     return { success: false, error: "Failed to update draft" };
   }
 }
@@ -825,10 +819,7 @@ export async function promoteDraftToSend(
     const log = createActionLogger("promoteDraftToSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), batchId },
-      "Failed to promote draft"
-    );
+    log.error({ err: error, batchId }, "Failed to promote draft");
     return { success: false, error: "Failed to send broadcast" };
   }
 }
@@ -884,10 +875,7 @@ export async function deleteDraftBatchSend(
     const log = createActionLogger("deleteDraftBatchSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), batchId },
-      "Failed to delete draft batch"
-    );
+    log.error({ err: error, batchId }, "Failed to delete draft batch");
     return { success: false, error: "Failed to delete draft" };
   }
 }
@@ -961,10 +949,7 @@ export async function duplicateBatchSend(
     const log = createActionLogger("duplicateBatchSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), sourceBatchId },
-      "Failed to duplicate broadcast"
-    );
+    log.error({ err: error, sourceBatchId }, "Failed to duplicate broadcast");
     return { success: false, error: "Failed to duplicate broadcast" };
   }
 }
@@ -1066,10 +1051,7 @@ export async function cancelBatchSend(
     const log = createActionLogger("cancelBatchSend", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), batchId },
-      "Failed to cancel batch send"
-    );
+    log.error({ err: error, batchId }, "Failed to cancel batch send");
     return { success: false, error: "Failed to cancel batch send" };
   }
 }
@@ -1111,7 +1093,7 @@ export async function getRecipientCount(
     const log = createActionLogger("getRecipientCount", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to get recipient count");
+    log.error({ err: error }, "Failed to get recipient count");
     return { success: false, error: "Failed to count recipients" };
   }
 }
@@ -1158,7 +1140,7 @@ export async function getSampleContacts(
     const log = createActionLogger("getSampleContacts", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to get sample contacts");
+    log.error({ err: error }, "Failed to get sample contacts");
     return { success: false, error: "Failed to fetch sample contacts" };
   }
 }
@@ -1196,7 +1178,7 @@ export async function listTemplatesForBatch(organizationId: string): Promise<
     const log = createActionLogger("listTemplatesForBatch", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to list templates");
+    log.error({ err: error }, "Failed to list templates");
     return { success: false, error: "Failed to fetch templates" };
   }
 }
@@ -1229,7 +1211,7 @@ export async function listTopicsForBatch(organizationId: string): Promise<
     const log = createActionLogger("listTopicsForBatch", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to list topics");
+    log.error({ err: error }, "Failed to list topics");
     return { success: false, error: "Failed to fetch topics" };
   }
 }
@@ -1262,7 +1244,7 @@ export async function listSegmentsForBatch(organizationId: string): Promise<
     const log = createActionLogger("listSegmentsForBatch", {
       orgSlug: organizationId,
     });
-    log.error({ err: serializeError(error) }, "Failed to list segments");
+    log.error({ err: error }, "Failed to list segments");
     return { success: false, error: "Failed to fetch segments" };
   }
 }
@@ -1432,10 +1414,7 @@ export async function extractTemplateVariables(
     const log = createActionLogger("extractTemplateVariables", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), templateId },
-      "Failed to extract variables"
-    );
+    log.error({ err: error, templateId }, "Failed to extract variables");
     return { success: false, error: "Failed to extract template variables" };
   }
 }
@@ -1484,10 +1463,7 @@ export async function getTemplateContent(
     const log = createActionLogger("getTemplateContent", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), templateId },
-      "Failed to get template content"
-    );
+    log.error({ err: error, templateId }, "Failed to get template content");
     return { success: false, error: "Failed to fetch template content" };
   }
 }

@@ -12,7 +12,7 @@ import {
   workflow,
 } from "@wraps/db";
 import { and, eq, ilike, or } from "drizzle-orm";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -283,7 +283,7 @@ export async function universalSearch(
 
     return { success: true, results };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Universal search failed");
+    log.error({ err: error }, "Universal search failed");
     return { success: false, error: "Search failed" };
   }
 }

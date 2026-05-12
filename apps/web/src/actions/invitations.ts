@@ -12,7 +12,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 
 export type InvitationDetails = {
   id: string;
@@ -122,10 +122,7 @@ export async function getInvitation(
     };
   } catch (error) {
     const log = createActionLogger("getInvitation", {});
-    log.error(
-      { err: serializeError(error), invitationId },
-      "Failed to fetch invitation"
-    );
+    log.error({ err: error, invitationId }, "Failed to fetch invitation");
     return {
       success: false,
       error: "Failed to fetch invitation details",
@@ -279,10 +276,7 @@ export async function acceptInvitation(
     };
   } catch (error) {
     const log = createActionLogger("acceptInvitation", {});
-    log.error(
-      { err: serializeError(error), invitationId },
-      "Failed to accept invitation"
-    );
+    log.error({ err: error, invitationId }, "Failed to accept invitation");
     return {
       success: false,
       error: "Failed to accept invitation. Please try again.",
@@ -363,10 +357,7 @@ export async function declineInvitation(
     };
   } catch (error) {
     const log = createActionLogger("declineInvitation", {});
-    log.error(
-      { err: serializeError(error), invitationId },
-      "Failed to decline invitation"
-    );
+    log.error({ err: error, invitationId }, "Failed to decline invitation");
     return {
       success: false,
       error: "Failed to decline invitation. Please try again.",

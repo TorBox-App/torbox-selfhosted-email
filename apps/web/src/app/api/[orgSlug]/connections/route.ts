@@ -3,7 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -62,7 +62,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error fetching connections");
+    log.error({ err: error }, "Error fetching connections");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

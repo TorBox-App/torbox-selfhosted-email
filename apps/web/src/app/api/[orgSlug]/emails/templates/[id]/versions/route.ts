@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -78,7 +78,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error fetching versions");
+    log.error({ err: error }, "Error fetching versions");
     return NextResponse.json(
       { error: "Failed to fetch versions" },
       { status: 500 }
@@ -181,7 +181,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error creating version");
+    log.error({ err: error }, "Error creating version");
     return NextResponse.json(
       { error: "Failed to create version" },
       { status: 500 }

@@ -1,7 +1,6 @@
 "use server";
 
 import { render, toPlainText } from "@react-email/render";
-import * as Sentry from "@sentry/nextjs";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import type { EmailType } from "@wraps/db";
@@ -18,7 +17,7 @@ import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import {
   tiptapToReactEmail,
   toBrandKitColors,
@@ -281,11 +280,7 @@ export async function publishTemplateToSES(
 
     return { success: true, sesTemplateName };
   } catch (error) {
-    log.error(
-      { err: serializeError(error), templateId },
-      "Failed to publish template to SES"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error, templateId }, "Failed to publish template to SES");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -367,7 +362,7 @@ export async function bulkDeleteTemplates(
               );
             } catch (err) {
               log.warn(
-                { err: serializeError(err), templateId: t.id },
+                { err, templateId: t.id },
                 "Failed to delete template from SES"
               );
             }
@@ -409,7 +404,7 @@ export async function bulkDeleteTemplates(
       orgSlug: organizationId,
     });
     log.error(
-      { err: serializeError(error), count: templateIds.length },
+      { err: error, count: templateIds.length },
       "Failed to bulk delete templates"
     );
     return { success: false, error: "Failed to delete templates" };
@@ -481,7 +476,7 @@ export async function bulkUpdateTemplateType(
       orgSlug: organizationId,
     });
     log.error(
-      { err: serializeError(error), count: templateIds.length, emailType },
+      { err: error, count: templateIds.length, emailType },
       "Failed to bulk update template type"
     );
     return { success: false, error: "Failed to update templates" };
@@ -646,7 +641,7 @@ export async function bulkUpdateTemplateStatus(
       orgSlug: organizationId,
     });
     log.error(
-      { err: serializeError(error), count: templateIds.length, status },
+      { err: error, count: templateIds.length, status },
       "Failed to bulk update template status"
     );
     return { success: false, error: "Failed to update templates" };
@@ -777,11 +772,7 @@ export async function convertTiptapTemplate(
     log.info({ templateId }, "Converted TipTap template to react-email");
     return { success: true };
   } catch (error) {
-    log.error(
-      { err: serializeError(error), templateId },
-      "Failed to convert TipTap template"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error, templateId }, "Failed to convert TipTap template");
     return {
       success: false,
       error: "Something went wrong. Please try again.",

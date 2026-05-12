@@ -7,8 +7,9 @@ import {
   MailManagerClient,
   StartArchiveSearchCommand,
 } from "@aws-sdk/client-mailmanager";
+import * as Sentry from "@sentry/nextjs";
 import { type ParsedMail, simpleParser } from "mailparser";
-import { logger, serializeError } from "@/lib/logger";
+import { logger } from "@/lib/logger";
 import type { AssumedRoleCredentials } from "./assume-role";
 
 /**
@@ -115,7 +116,8 @@ export async function findWrapsArchive(
     }
 
     // Log other errors for debugging
-    logger.error({ err: serializeError(error) }, "Error finding archive");
+    logger.error({ err: error }, "Error finding archive");
+    Sentry.captureException(error);
     return null;
   }
 }

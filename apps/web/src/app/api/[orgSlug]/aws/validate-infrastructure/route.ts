@@ -10,7 +10,7 @@ import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
 } from "@/lib/aws/detect-features";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
@@ -136,10 +136,7 @@ export async function POST(request: Request, context: RouteContext) {
         }
       } catch (stackError) {
         // Stack detection failed, but role is valid
-        log.warn(
-          { err: serializeError(stackError) },
-          "Could not detect infrastructure stack"
-        );
+        log.warn({ err: stackError }, "Could not detect infrastructure stack");
       }
 
       // Check AWS account limit before creating/updating
@@ -256,10 +253,7 @@ export async function POST(request: Request, context: RouteContext) {
         tableName: stackOutputs.TableName,
       });
     } catch (error: unknown) {
-      log.error(
-        { err: serializeError(error) },
-        "Error validating infrastructure"
-      );
+      log.error({ err: error }, "Error validating infrastructure");
 
       // Provide user-friendly error messages
       let errorMessage = "Failed to validate AWS connection";
@@ -286,10 +280,7 @@ export async function POST(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/aws/validate-infrastructure",
       method: "POST",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error validating infrastructure"
-    );
+    log.error({ err: error }, "Error validating infrastructure");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

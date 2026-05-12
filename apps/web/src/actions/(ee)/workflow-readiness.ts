@@ -2,7 +2,7 @@
 
 import { db, template } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { verifyOrgAccess } from "../shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -150,10 +150,7 @@ export async function checkWorkflowReadiness(
     const log = createActionLogger("checkWorkflowReadiness", {
       orgSlug: organizationId,
     });
-    log.error(
-      { err: serializeError(error), workflowId },
-      "Failed to check workflow readiness"
-    );
+    log.error({ err: error, workflowId }, "Failed to check workflow readiness");
     return { success: false, error: "Failed to check workflow readiness" };
   }
 }

@@ -29,7 +29,7 @@ import type {
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { hashEmail, hashPhone } from "./shared/hash";
 import { checkPermission } from "./shared/permissions";
@@ -157,7 +157,7 @@ export async function listContacts(
     };
   } catch (error) {
     const log = createActionLogger("listContacts", { orgSlug: organizationId });
-    log.error({ err: serializeError(error) }, "Failed to list contacts");
+    log.error({ err: error }, "Failed to list contacts");
     return { success: false, error: "Failed to fetch contacts" };
   }
 }
@@ -242,10 +242,7 @@ export async function getContact(
     };
   } catch (error) {
     const log = createActionLogger("getContact", { orgSlug: organizationId });
-    log.error(
-      { err: serializeError(error), contactId },
-      "Failed to get contact"
-    );
+    log.error({ err: error, contactId }, "Failed to get contact");
     return { success: false, error: "Failed to fetch contact" };
   }
 }
@@ -436,7 +433,7 @@ export async function createContact(
     return await getContact(newContact.id, organizationId);
   } catch (error) {
     const log = createActionLogger("createContact", { orgSlug });
-    log.error({ err: serializeError(error) }, "Failed to create contact");
+    log.error({ err: error }, "Failed to create contact");
     return { success: false, error: "Failed to create contact" };
   }
 }
@@ -678,10 +675,7 @@ export async function updateContact(
     return await getContact(contactId, organizationId);
   } catch (error) {
     const log = createActionLogger("updateContact", { orgSlug });
-    log.error(
-      { err: serializeError(error), contactId },
-      "Failed to update contact"
-    );
+    log.error({ err: error, contactId }, "Failed to update contact");
     return { success: false, error: "Failed to update contact" };
   }
 }
@@ -738,10 +732,7 @@ export async function deleteContact(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("deleteContact", { orgSlug });
-    log.error(
-      { err: serializeError(error), contactId },
-      "Failed to delete contact"
-    );
+    log.error({ err: error, contactId }, "Failed to delete contact");
     return { success: false, error: "Failed to delete contact" };
   }
 }

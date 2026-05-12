@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -58,7 +58,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits/[id]",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching brand kit");
+    log.error({ err: error }, "Error fetching brand kit");
     return NextResponse.json(
       { error: "Failed to fetch brand kit" },
       { status: 500 }
@@ -172,7 +172,7 @@ export async function PUT(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits/[id]",
       method: "PUT",
     });
-    log.error({ err: serializeError(error) }, "Error updating brand kit");
+    log.error({ err: error }, "Error updating brand kit");
     return NextResponse.json(
       { error: "Failed to update brand kit" },
       { status: 500 }
@@ -265,7 +265,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits/[id]",
       method: "DELETE",
     });
-    log.error({ err: serializeError(error) }, "Error deleting brand kit");
+    log.error({ err: error }, "Error deleting brand kit");
     return NextResponse.json(
       { error: "Failed to delete brand kit" },
       { status: 500 }

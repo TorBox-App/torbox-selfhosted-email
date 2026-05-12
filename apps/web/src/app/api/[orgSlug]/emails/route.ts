@@ -10,7 +10,7 @@ import {
   aggregateEmailEvents,
   findIncompleteMessageIds,
 } from "@/lib/email-aggregation";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -83,7 +83,7 @@ export async function GET(request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch emails for account"
           );
           return [];
@@ -120,7 +120,7 @@ export async function GET(request: Request, context: RouteContext) {
             return await queryEventsByMessageIds({ awsAccountId, messageIds });
           } catch (error) {
             log.error(
-              { err: serializeError(error), awsAccountId },
+              { err: error, awsAccountId },
               "Failed to backfill events"
             );
             return [];
@@ -218,7 +218,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/emails",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching emails");
+    log.error({ err: error }, "Error fetching emails");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

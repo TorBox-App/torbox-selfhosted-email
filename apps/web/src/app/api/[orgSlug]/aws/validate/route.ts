@@ -5,7 +5,7 @@ import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { assumeRole } from "@/lib/aws/assume-role";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
@@ -171,7 +171,7 @@ export async function POST(request: Request, context: RouteContext) {
         roleName,
       });
     } catch (error: any) {
-      log.error({ err: serializeError(error) }, "Error assuming role");
+      log.error({ err: error }, "Error assuming role");
 
       // Provide user-friendly error messages
       // The assumeRole helper wraps AWS errors with descriptive messages
@@ -201,10 +201,7 @@ export async function POST(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/aws/validate",
       method: "POST",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error validating AWS connection"
-    );
+    log.error({ err: error }, "Error validating AWS connection");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

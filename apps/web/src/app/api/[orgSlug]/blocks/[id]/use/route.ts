@@ -3,7 +3,7 @@ import { db, reusableBlock } from "@wraps/db";
 import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -61,7 +61,7 @@ export async function POST(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/blocks/[id]/use",
       method: "POST",
     });
-    log.error({ err: serializeError(error) }, "Error tracking block usage");
+    log.error({ err: error }, "Error tracking block usage");
     return NextResponse.json(
       { error: "Failed to track usage" },
       { status: 500 }

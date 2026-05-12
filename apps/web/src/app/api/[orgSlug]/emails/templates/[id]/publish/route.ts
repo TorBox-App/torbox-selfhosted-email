@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -190,7 +190,7 @@ export async function POST(_request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error publishing template");
+    log.error({ err: error }, "Error publishing template");
     return NextResponse.json(
       {
         error:
@@ -315,7 +315,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       method: "DELETE",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error unpublishing template");
+    log.error({ err: error }, "Error unpublishing template");
     return NextResponse.json(
       {
         error:

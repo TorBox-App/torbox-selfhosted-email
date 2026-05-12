@@ -3,7 +3,7 @@
 import { auditLog, contactTopic, db } from "@wraps/db";
 import { and, eq, or } from "drizzle-orm";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { revalidateContacts } from "./contacts";
 import { checkPermission } from "./shared/permissions";
 import { verifyOrgAccess } from "./shared/verify-org-access";
@@ -116,7 +116,7 @@ export async function subscribeContactToTopics(
   } catch (error) {
     const log = createActionLogger("subscribeContactToTopics", { orgSlug });
     log.error(
-      { err: serializeError(error), contactId, topicIds },
+      { err: error, contactId, topicIds },
       "Failed to subscribe contact to topics"
     );
     return { success: false, error: "Failed to subscribe to topics" };
@@ -230,7 +230,7 @@ export async function bulkSubscribeContactsToTopics(
       orgSlug,
     });
     log.error(
-      { err: serializeError(error), contactCount: contactIds.length, topicIds },
+      { err: error, contactCount: contactIds.length, topicIds },
       "Failed to bulk subscribe contacts"
     );
     return { success: false, error: "Failed to subscribe contacts" };
@@ -312,7 +312,7 @@ export async function bulkUnsubscribeContactsFromTopics(
       orgSlug,
     });
     log.error(
-      { err: serializeError(error), contactCount: contactIds.length, topicIds },
+      { err: error, contactCount: contactIds.length, topicIds },
       "Failed to bulk unsubscribe contacts"
     );
     return { success: false, error: "Failed to unsubscribe contacts" };
@@ -385,7 +385,7 @@ export async function unsubscribeContactFromTopics(
   } catch (error) {
     const log = createActionLogger("unsubscribeContactFromTopics", { orgSlug });
     log.error(
-      { err: serializeError(error), contactId, topicIds },
+      { err: error, contactId, topicIds },
       "Failed to unsubscribe contact from topics"
     );
     return { success: false, error: "Failed to unsubscribe from topics" };

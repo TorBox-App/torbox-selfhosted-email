@@ -1,7 +1,7 @@
 import { del, put } from "@vercel/blob";
 import { auth } from "@wraps/auth";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 export const runtime = "nodejs";
@@ -108,10 +108,7 @@ export async function POST(request: Request) {
           method: "POST",
           orgSlug,
         });
-        log.warn(
-          { err: serializeError(error), oldLogoUrl },
-          "Failed to delete old logo"
-        );
+        log.warn({ err: error, oldLogoUrl }, "Failed to delete old logo");
       }
     }
 
@@ -124,10 +121,7 @@ export async function POST(request: Request) {
       path: "/api/upload/organization-logo",
       method: "POST",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Failed to upload organization logo"
-    );
+    log.error({ err: error }, "Failed to upload organization logo");
     return NextResponse.json(
       { error: "Failed to upload image" },
       { status: 500 }
@@ -199,10 +193,7 @@ export async function DELETE(request: Request) {
       path: "/api/upload/organization-logo",
       method: "DELETE",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Failed to delete organization logo"
-    );
+    log.error({ err: error }, "Failed to delete organization logo");
     return NextResponse.json(
       { error: "Failed to delete image" },
       { status: 500 }

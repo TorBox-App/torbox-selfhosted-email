@@ -18,7 +18,6 @@ import {
   ListEmailIdentitiesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
-import * as Sentry from "@sentry/nextjs";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { auditLog, awsAccount, db } from "@wraps/db";
@@ -39,7 +38,7 @@ import {
   connectAWSAccountFormOpts,
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 import { checkPermission } from "./shared/permissions";
@@ -166,7 +165,7 @@ export async function listAWSAccounts(
       })),
     };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to list AWS accounts");
+    log.error({ err: error }, "Failed to list AWS accounts");
     return {
       success: false,
       error: "Failed to fetch AWS accounts",
@@ -259,8 +258,7 @@ export async function connectAWSAccountAction(
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      log.warn({ err: serializeError(error) }, "Failed to assume AWS role");
-      Sentry.captureException(error);
+      log.warn({ err: error }, "Failed to assume AWS role");
       return {
         error: "Unable to connect to AWS account",
         details: message,
@@ -342,12 +340,7 @@ export async function connectAWSAccountAction(
             },
           })
         )
-        .catch((err) =>
-          log.warn(
-            { err: serializeError(err) },
-            "Best-effort audit log write failed"
-          )
-        )
+        .catch((err) => log.warn({ err }, "Best-effort audit log write failed"))
     );
 
     return {
@@ -371,7 +364,7 @@ export async function connectAWSAccountAction(
 
     // Handle other errors
     const message = e instanceof Error ? e.message : "Internal error";
-    log.error({ err: serializeError(e) }, "Failed to connect AWS account");
+    log.error({ err: e }, "Failed to connect AWS account");
     return { error: "Internal error", details: message };
   }
 }
@@ -521,10 +514,7 @@ export async function scanAWSAccountFeatures(
         error.name !== "ResourceNotFoundException" &&
         error.name !== "AccessDeniedException"
       ) {
-        log.warn(
-          { err: serializeError(error) },
-          "Error scanning for DynamoDB table"
-        );
+        log.warn({ err: error }, "Error scanning for DynamoDB table");
       }
     }
 
@@ -590,7 +580,7 @@ export async function scanAWSAccountFeatures(
         } catch (detailError: any) {
           if (detailError.name !== "AccessDeniedException") {
             log.warn(
-              { err: serializeError(detailError), configSetName: setName },
+              { err: detailError, configSetName: setName },
               "Error fetching config set details"
             );
           }
@@ -599,10 +589,7 @@ export async function scanAWSAccountFeatures(
       trackedEvents = Array.from(allEventTypes).sort();
     } catch (error: any) {
       if (error.name !== "AccessDeniedException") {
-        log.warn(
-          { err: serializeError(error) },
-          "Error listing config sets during scan"
-        );
+        log.warn({ err: error }, "Error listing config sets during scan");
       }
     }
 
@@ -624,10 +611,7 @@ export async function scanAWSAccountFeatures(
       sesSandbox = !accountResponse.ProductionAccessEnabled;
     } catch (error: any) {
       if (error.name !== "AccessDeniedException") {
-        log.warn(
-          { err: serializeError(error) },
-          "Error checking SES sandbox status"
-        );
+        log.warn({ err: error }, "Error checking SES sandbox status");
       }
     }
 
@@ -663,10 +647,7 @@ export async function scanAWSAccountFeatures(
       // AccessDeniedException means user hasn't granted SMS permissions
       // That's fine - assume SMS is not enabled
       if (error.name !== "AccessDeniedException") {
-        log.warn(
-          { err: serializeError(error) },
-          "Error scanning for SMS infrastructure"
-        );
+        log.warn({ err: error }, "Error scanning for SMS infrastructure");
       }
     }
 
@@ -693,10 +674,7 @@ export async function scanAWSAccountFeatures(
         error.name !== "ResourceNotFoundException" &&
         error.name !== "AccessDeniedException"
       ) {
-        log.warn(
-          { err: serializeError(error) },
-          "Error scanning for SMS history table"
-        );
+        log.warn({ err: error }, "Error scanning for SMS history table");
       }
     }
 
@@ -718,10 +696,7 @@ export async function scanAWSAccountFeatures(
       // AccessDeniedException means user hasn't granted permissions
       // That's fine - assume no dedicated IPs
       if (error.name !== "AccessDeniedException") {
-        log.warn(
-          { err: serializeError(error) },
-          "Error scanning for dedicated IPs"
-        );
+        log.warn({ err: error }, "Error scanning for dedicated IPs");
       }
     }
 
@@ -767,7 +742,7 @@ export async function scanAWSAccountFeatures(
       }
     } catch (error: any) {
       if (error.name !== "AccessDeniedException") {
-        log.warn({ err: serializeError(error) }, "Error scanning identities");
+        log.warn({ err: error }, "Error scanning identities");
       }
     }
 
@@ -801,10 +776,7 @@ export async function scanAWSAccountFeatures(
         error.$metadata?.httpStatusCode !== 404 &&
         error.$metadata?.httpStatusCode !== 403
       ) {
-        log.warn(
-          { err: serializeError(error) },
-          "Error scanning for inbound bucket"
-        );
+        log.warn({ err: error }, "Error scanning for inbound bucket");
       }
     }
 
@@ -879,12 +851,8 @@ export async function scanAWSAccountFeatures(
       features: featuresJson,
     };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to scan AWS account features"
-    );
+    log.error({ err: error }, "Failed to scan AWS account features");
     const message = error instanceof Error ? error.message : "Unknown error";
-    Sentry.captureException(error);
     return {
       success: false,
       error: `Failed to scan features: ${message}`,
@@ -982,20 +950,14 @@ export async function deleteAWSAccount(
             resourceId: awsAccountId,
           })
         )
-        .catch((err) =>
-          log.warn(
-            { err: serializeError(err) },
-            "Best-effort audit log write failed"
-          )
-        )
+        .catch((err) => log.warn({ err }, "Best-effort audit log write failed"))
     );
 
     log.info("AWS account deleted");
     return { success: true };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to delete AWS account");
+    log.error({ err: error }, "Failed to delete AWS account");
     const message = error instanceof Error ? error.message : "Unknown error";
-    Sentry.captureException(error);
     return {
       success: false,
       error: `Failed to delete AWS account: ${message}`,
@@ -1113,8 +1075,7 @@ export async function saveWebhookSecretAction(
       message: "Webhook secret saved successfully",
     };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to save webhook secret");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to save webhook secret");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -1218,11 +1179,7 @@ export async function removeWebhookSecretAction(
       message: "Webhook disconnected successfully",
     };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to remove webhook secret"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to remove webhook secret");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -1425,11 +1382,7 @@ export async function getVerifiedDomains(
       identities: verifiedIdentities,
     };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to fetch verified domains"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to fetch verified domains");
 
     // Check for AWS permission errors
     const isAccessDenied =
@@ -1560,10 +1513,7 @@ export async function getSMSPhoneNumbers(
       phoneNumbers,
     };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to fetch SMS phone numbers"
-    );
+    log.error({ err: error }, "Failed to fetch SMS phone numbers");
     return {
       success: false,
       error:

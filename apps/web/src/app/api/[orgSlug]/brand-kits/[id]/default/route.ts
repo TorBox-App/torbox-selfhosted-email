@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -92,10 +92,7 @@ export async function POST(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/brand-kits/[id]/default",
       method: "POST",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error setting default brand kit"
-    );
+    log.error({ err: error }, "Error setting default brand kit");
     return NextResponse.json(
       { error: "Failed to set default brand kit" },
       { status: 500 }

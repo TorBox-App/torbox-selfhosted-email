@@ -8,7 +8,7 @@ import {
   getSMSRegistrations,
   getSMSSpendLimits,
 } from "@/lib/aws/sms-voice";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -110,7 +110,7 @@ export async function GET(_request: Request, context: RouteContext) {
         } catch (error) {
           log.error(
             {
-              err: serializeError(error),
+              err: error,
               accountId: account.id,
               awsAccountId: account.accountId,
               roleArn: account.roleArn,
@@ -183,7 +183,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/sms/status",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching SMS status");
+    log.error({ err: error }, "Error fetching SMS status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

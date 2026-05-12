@@ -4,7 +4,7 @@ import { organizationExtension } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { getSetupStatus } from "@/lib/setup-status";
 
@@ -74,10 +74,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching onboarding status"
-    );
+    log.error({ err: error }, "Error fetching onboarding status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

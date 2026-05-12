@@ -4,7 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { querySMSEvents } from "@/lib/aws/sms-voice";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -142,7 +142,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/sms/volume",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching SMS volume data");
+    log.error({ err: error }, "Error fetching SMS volume data");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

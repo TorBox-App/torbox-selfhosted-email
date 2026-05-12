@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { trackAwsConnected } from "@/lib/activation-tracking";
 import { assumeRole } from "@/lib/aws/assume-role";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -144,7 +144,7 @@ export async function POST(request: Request, context: RouteContext) {
         method: "POST",
         orgSlug,
       });
-      log.error({ err: serializeError(awsError) }, "AWS validation error");
+      log.error({ err: awsError }, "AWS validation error");
       return NextResponse.json(
         { error: `Failed to validate AWS connection: ${awsError.message}` },
         { status: 400 }
@@ -157,7 +157,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error in AWS validation route");
+    log.error({ err: error }, "Error in AWS validation route");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

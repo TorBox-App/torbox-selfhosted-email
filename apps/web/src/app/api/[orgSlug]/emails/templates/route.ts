@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { checkPermission } from "@/actions/shared/permissions";
 import { trackTemplateCreated } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -146,7 +146,7 @@ export async function GET(request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error fetching templates");
+    log.error({ err: error }, "Error fetching templates");
     return NextResponse.json(
       { error: "Failed to fetch templates" },
       { status: 500 }
@@ -260,7 +260,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error creating template");
+    log.error({ err: error }, "Error creating template");
     return NextResponse.json(
       { error: "Failed to create template" },
       { status: 500 }

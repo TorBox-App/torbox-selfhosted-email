@@ -4,7 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getSMSMetricsSummary } from "@/lib/aws/sms-voice";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -78,7 +78,7 @@ export async function GET(request: Request, context: RouteContext) {
           });
         } catch (error) {
           log.error(
-            { err: serializeError(error), accountId: account.id },
+            { err: error, accountId: account.id },
             "Failed to fetch SMS metrics for account"
           );
           return null;
@@ -119,10 +119,7 @@ export async function GET(request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/analytics/sms/overview",
       method: "GET",
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching SMS analytics overview"
-    );
+    log.error({ err: error }, "Error fetching SMS analytics overview");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

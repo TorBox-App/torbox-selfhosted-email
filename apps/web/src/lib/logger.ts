@@ -39,6 +39,7 @@ function createLogger(): pino.Logger {
     formatters: {
       level: (label) => ({ level: label }),
     },
+    serializers: { err: pino.stdSerializers.err },
     timestamp: pino.stdTimeFunctions.isoTime,
   });
 }

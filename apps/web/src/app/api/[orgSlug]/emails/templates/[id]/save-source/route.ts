@@ -5,7 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 const saveSourceSchema = z
@@ -154,7 +154,7 @@ export async function POST(request: Request, context: RouteContext) {
       template: updated,
     });
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to save template source");
+    log.error({ err: error }, "Failed to save template source");
     return NextResponse.json(
       { error: "Failed to save template source" },
       { status: 500 }

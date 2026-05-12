@@ -4,7 +4,7 @@ import { auth } from "@wraps/auth";
 import { contact, db, eq, topicSettings } from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { generatePreferencesUrl } from "@/lib/unsubscribe-token";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;
@@ -68,7 +68,7 @@ export async function getTopicSettings(
 
     return { success: true, settings: settings ?? null };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to get topic settings");
+    log.error({ err: error }, "Failed to get topic settings");
     return { success: false, error: "Failed to fetch settings" };
   }
 }
@@ -136,10 +136,7 @@ export async function updateTopicSettings(
     log.info("Updated topic settings");
     return { success: true };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to update topic settings"
-    );
+    log.error({ err: error }, "Failed to update topic settings");
     return { success: false, error: "Failed to save settings" };
   }
 }
@@ -188,7 +185,7 @@ export async function generatePreferenceCenterPreviewUrl(
     log.info("Generated preference center preview URL");
     return { success: true, url };
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to generate preview URL");
+    log.error({ err: error }, "Failed to generate preview URL");
     return { success: false, error: "Failed to generate preview URL" };
   }
 }

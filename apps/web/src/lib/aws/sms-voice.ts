@@ -22,8 +22,9 @@ import {
   QueryCommand,
   type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
+import * as Sentry from "@sentry/nextjs";
 import { db } from "@wraps/db";
-import { logger, serializeError } from "@/lib/logger";
+import { logger } from "@/lib/logger";
 import { getOrAssumeRole } from "./credential-cache";
 
 /**
@@ -158,9 +159,10 @@ export async function getSMSAccountAttributes(
     return response.AccountAttributes || [];
   } catch (error) {
     logger.error(
-      { err: serializeError(error), awsAccountId },
+      { err: error, awsAccountId },
       "Failed to fetch SMS account attributes"
     );
+    Sentry.captureException(error);
     return [];
   }
 }
@@ -200,12 +202,13 @@ export async function getSMSSpendLimits(
   } catch (error) {
     logger.error(
       {
-        err: serializeError(error),
+        err: error,
         awsAccountId,
         accountId: account.accountId,
       },
       "Failed to fetch SMS spend limits"
     );
+    Sentry.captureException(error);
     return [];
   }
 }
@@ -245,12 +248,13 @@ export async function getSMSPhoneNumbers(
   } catch (error) {
     logger.error(
       {
-        err: serializeError(error),
+        err: error,
         awsAccountId,
         accountId: account.accountId,
       },
       "Failed to fetch SMS phone numbers"
     );
+    Sentry.captureException(error);
     return [];
   }
 }
@@ -291,9 +295,10 @@ export async function getSMSConfigurationSets(
     return response.ConfigurationSets || [];
   } catch (error) {
     logger.error(
-      { err: serializeError(error), awsAccountId },
+      { err: error, awsAccountId },
       "Failed to fetch SMS configuration sets"
     );
+    Sentry.captureException(error);
     return [];
   }
 }
@@ -333,12 +338,13 @@ export async function getSMSRegistrations(
   } catch (error) {
     logger.error(
       {
-        err: serializeError(error),
+        err: error,
         awsAccountId,
         accountId: account.accountId,
       },
       "Failed to fetch SMS registrations"
     );
+    Sentry.captureException(error);
     return [];
   }
 }

@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 const updateTemplateSchema = z
@@ -100,7 +100,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error fetching template");
+    log.error({ err: error }, "Error fetching template");
     return NextResponse.json(
       { error: "Failed to fetch template" },
       { status: 500 }
@@ -281,7 +281,7 @@ export async function PUT(request: Request, context: RouteContext) {
       method: "PUT",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error updating template");
+    log.error({ err: error }, "Error updating template");
     return NextResponse.json(
       { error: "Failed to update template" },
       { status: 500 }
@@ -355,7 +355,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
             orgSlug,
           });
           log.warn(
-            { err: serializeError(err), templateId: id },
+            { err, templateId: id },
             "Failed to delete template from SES"
           );
         }
@@ -395,7 +395,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       method: "DELETE",
       orgSlug,
     });
-    log.error({ err: serializeError(error) }, "Error deleting template");
+    log.error({ err: error }, "Error deleting template");
     return NextResponse.json(
       { error: "Failed to delete template" },
       { status: 500 }

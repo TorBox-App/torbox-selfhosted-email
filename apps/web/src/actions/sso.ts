@@ -1,7 +1,6 @@
 "use server";
 
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
-import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import { and, auditLog, db, eq, ssoProvider, verification } from "@wraps/db";
 import { gt } from "drizzle-orm";
@@ -9,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { createActionLogger, serializeError } from "@/lib/logger";
+import { createActionLogger } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
 
 type SsoScimApi = {
@@ -107,8 +106,7 @@ export async function saveSsoProvider(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("saveSsoProvider", { orgSlug: orgId });
-    log.error({ err: serializeError(error) }, "Failed to save SSO provider");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to save SSO provider");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -158,8 +156,7 @@ export async function deleteSsoProvider(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("deleteSsoProvider", { orgSlug: orgId });
-    log.error({ err: serializeError(error) }, "Failed to delete SSO provider");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to delete SSO provider");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -214,11 +211,7 @@ export async function requestDomainVerification(
     const log = createActionLogger("requestDomainVerification", {
       orgSlug: orgId,
     });
-    log.error(
-      { err: serializeError(error) },
-      "Failed to request domain verification"
-    );
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to request domain verification");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -268,8 +261,7 @@ export async function verifyDomain(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("verifyDomain", { orgSlug: orgId });
-    log.error({ err: serializeError(error) }, "Failed to verify domain");
-    Sentry.captureException(error);
+    log.error({ err: error }, "Failed to verify domain");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -365,7 +357,7 @@ export async function verifyDomainViaSES(
         }
       } catch (err) {
         log.warn(
-          { err: serializeError(err), accountId: account.id },
+          { err, accountId: account.id },
           "SES identity check failed for account"
         );
       }
@@ -376,10 +368,7 @@ export async function verifyDomainViaSES(
       error: `${provider.domain} is not verified in any connected AWS account`,
     };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to verify domain via SES"
-    );
+    log.error({ err: error }, "Failed to verify domain via SES");
     return {
       success: false,
       error:
@@ -432,7 +421,7 @@ export async function generateScimToken(
     return { success: true, token: result.scimToken };
   } catch (error) {
     const log = createActionLogger("generateScimToken", { orgSlug: orgId });
-    log.error({ err: serializeError(error) }, "Failed to generate SCIM token");
+    log.error({ err: error }, "Failed to generate SCIM token");
     return {
       success: false,
       error:

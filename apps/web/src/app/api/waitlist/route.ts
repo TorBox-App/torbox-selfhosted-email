@@ -1,6 +1,6 @@
 import { createPlatformClient } from "@wraps.dev/client";
 import { NextResponse } from "next/server";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 
 /**
  * Validate email format
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
     log.info({ email: normalizedEmail, product }, "Contact added to waitlist");
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    log.error({ err: serializeError(error) }, "Failed to add to waitlist");
+    log.error({ err: error }, "Failed to add to waitlist");
     return NextResponse.json(
       { error: "Failed to join waitlist" },
       { status: 500, headers: corsHeaders }

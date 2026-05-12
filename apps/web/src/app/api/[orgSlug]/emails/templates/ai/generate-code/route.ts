@@ -19,7 +19,7 @@ import { NextResponse } from "next/server";
 import { generateCodeBodySchema } from "@/lib/ai/generate-code-schema";
 import { fetchAndProcessImage } from "@/lib/ai/image-utils";
 import { buildReactEmailSystemPrompt } from "@/lib/ai/react-email-system-prompt";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
 
@@ -163,7 +163,7 @@ export async function POST(request: Request, context: RouteContext) {
           orgSlug,
         });
         log.warn(
-          { err: serializeError(imageError) },
+          { err: imageError },
           "Failed to process image, continuing without it"
         );
       }
@@ -259,7 +259,7 @@ export async function POST(request: Request, context: RouteContext) {
         for (const result of results) {
           if (result.status === "rejected") {
             log.error(
-              { err: serializeError(result.reason) },
+              { err: result.reason },
               "Failed to track AI usage or conversation"
             );
           }
@@ -278,10 +278,7 @@ export async function POST(request: Request, context: RouteContext) {
       method: "POST",
       orgSlug,
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error generating AI code content"
-    );
+    log.error({ err: error }, "Error generating AI code content");
     return NextResponse.json(
       { error: "Failed to generate content" },
       { status: 500 }
@@ -381,9 +378,6 @@ async function trackConversation(data: {
       });
     }
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to track AI conversation"
-    );
+    log.error({ err: error }, "Failed to track AI conversation");
   }
 }

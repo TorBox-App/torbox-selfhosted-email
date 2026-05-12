@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { getSMSPhoneNumbers } from "@/lib/aws/sms-voice";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -188,7 +188,7 @@ export async function GET(_request: Request, context: RouteContext) {
       path: "/api/[orgSlug]/products",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching products status");
+    log.error({ err: error }, "Error fetching products status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
