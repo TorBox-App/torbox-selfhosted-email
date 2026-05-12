@@ -13,6 +13,7 @@ import {
   GetConfigurationSetEventDestinationsCommand,
   GetDedicatedIpsCommand,
   GetEmailIdentityCommand,
+  ListConfigurationSetsCommand,
   ListEmailIdentitiesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
@@ -529,14 +530,14 @@ export async function scanAWSAccountFeatures(
     let customTrackingDomain: string | undefined;
     let trackedEvents: string[] = [];
 
-    try {
-      const sesClient = new SESv2Client({
-        region: account.region,
-        credentials: awsCredentials,
-      });
+    const sesClientForConfigSet = new SESv2Client({
+      region: account.region,
+      credentials: awsCredentials,
+    });
 
+    try {
       // Try common Wraps configuration set name
-      const configSetResponse = await sesClient.send(
+      const configSetResponse = await sesClientForConfigSet.send(
         new GetConfigurationSetCommand({
           ConfigurationSetName: "wraps-email-tracking",
         })
@@ -552,7 +553,7 @@ export async function scanAWSAccountFeatures(
 
         // Get event destinations to determine which events are tracked
         try {
-          const eventDestResponse = await sesClient.send(
+          const eventDestResponse = await sesClientForConfigSet.send(
             new GetConfigurationSetEventDestinationsCommand({
               ConfigurationSetName: "wraps-email-tracking",
             })
@@ -577,12 +578,53 @@ export async function scanAWSAccountFeatures(
         }
       }
     } catch (error: any) {
-      // ResourceNotFoundException means config set doesn't exist
-      // AccessDeniedException means user hasn't granted permissions
-      if (
-        error.name !== "NotFoundException" &&
-        error.name !== "AccessDeniedException"
-      ) {
+      if (error.name === "NotFoundException") {
+        // wraps-email-tracking not found — account may have run per-domain upgrade.
+        // Fall back to listing all config sets and picking any wraps-email-* match.
+        try {
+          const listResponse = await sesClientForConfigSet.send(
+            new ListConfigurationSetsCommand({ PageSize: 100 })
+          );
+          const perDomainSet = listResponse.ConfigurationSets?.find((name) =>
+            name.startsWith("wraps-email-")
+          );
+          if (perDomainSet) {
+            configSetName = perDomainSet;
+            try {
+              const csResponse = await sesClientForConfigSet.send(
+                new GetConfigurationSetCommand({
+                  ConfigurationSetName: perDomainSet,
+                })
+              );
+              customTrackingDomain =
+                csResponse.TrackingOptions?.CustomRedirectDomain ?? undefined;
+              const eventDestResponse = await sesClientForConfigSet.send(
+                new GetConfigurationSetEventDestinationsCommand({
+                  ConfigurationSetName: perDomainSet,
+                })
+              );
+              const eventTypes = new Set<string>();
+              for (const destination of eventDestResponse.EventDestinations ??
+                []) {
+                for (const eventType of destination.MatchingEventTypes ?? []) {
+                  eventTypes.add(eventType);
+                }
+              }
+              trackedEvents = Array.from(eventTypes).sort();
+            } catch (detailError: any) {
+              log.warn(
+                { err: serializeError(detailError) },
+                "Error fetching per-domain config set details"
+              );
+            }
+          }
+        } catch (listError: any) {
+          log.warn(
+            { err: serializeError(listError) },
+            "Error listing config sets during fallback scan"
+          );
+        }
+      } else if (error.name !== "AccessDeniedException") {
         log.warn(
           { err: serializeError(error) },
           "Error scanning for config set"

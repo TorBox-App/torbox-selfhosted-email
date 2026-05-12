@@ -16,6 +16,7 @@ import {
   listAWSAccounts,
   removeWebhookSecretAction,
   saveWebhookSecretAction,
+  scanAWSAccountFeatures,
 } from "../aws-accounts";
 
 // Test data
@@ -177,11 +178,17 @@ vi.mock("@/lib/aws/credential-cache", () => ({
 
 // Mock AWS SES SDK - must use function factory for hoisting
 const mockSend = vi.fn();
+const mockDynamoSend = vi.fn();
+const mockS3Send = vi.fn();
+const mockSmsSend = vi.fn();
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: class {
-    send = (command: { _type: string; EmailIdentity?: string }) =>
-      mockSend(command);
+    send = (command: {
+      _type: string;
+      EmailIdentity?: string;
+      ConfigurationSetName?: string;
+    }) => mockSend(command);
   },
   ListEmailIdentitiesCommand: class {
     _type = "ListEmailIdentitiesCommand";
@@ -194,6 +201,71 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
       this.EmailIdentity = input.EmailIdentity;
     }
   },
+  GetConfigurationSetCommand: class {
+    _type = "GetConfigurationSetCommand";
+    ConfigurationSetName: string;
+    constructor(input: { ConfigurationSetName: string }) {
+      this.ConfigurationSetName = input.ConfigurationSetName;
+    }
+  },
+  GetConfigurationSetEventDestinationsCommand: class {
+    _type = "GetConfigurationSetEventDestinationsCommand";
+    ConfigurationSetName: string;
+    constructor(input: { ConfigurationSetName: string }) {
+      this.ConfigurationSetName = input.ConfigurationSetName;
+    }
+  },
+  ListConfigurationSetsCommand: class {
+    _type = "ListConfigurationSetsCommand";
+    constructor(public input?: unknown) {}
+  },
+  GetAccountCommand: class {
+    _type = "GetAccountCommand";
+    constructor(public input?: unknown) {}
+  },
+  GetDedicatedIpsCommand: class {
+    _type = "GetDedicatedIpsCommand";
+    constructor(public input?: unknown) {}
+  },
+}));
+
+vi.mock("@aws-sdk/client-dynamodb", () => ({
+  DynamoDBClient: class {
+    send = (...args: unknown[]) => mockDynamoSend(...args);
+  },
+  DescribeTableCommand: class {
+    _type = "DescribeTableCommand";
+    constructor(public input?: unknown) {}
+  },
+}));
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: class {
+    send = (...args: unknown[]) => mockS3Send(...args);
+  },
+  HeadBucketCommand: class {
+    _type = "HeadBucketCommand";
+    constructor(public input?: unknown) {}
+  },
+}));
+
+vi.mock("@aws-sdk/client-pinpoint-sms-voice-v2", () => ({
+  PinpointSMSVoiceV2Client: class {
+    send = (...args: unknown[]) => mockSmsSend(...args);
+  },
+  DescribePhoneNumbersCommand: class {
+    _type = "DescribePhoneNumbersCommand";
+    constructor(public input?: unknown) {}
+  },
+}));
+
+vi.mock("@/lib/aws/mailmanager", () => ({
+  findWrapsArchive: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/activation-tracking", () => ({
+  trackDomainVerified: vi.fn().mockResolvedValue(undefined),
+  trackAwsConnected: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Set up test database
@@ -271,6 +343,9 @@ beforeAll(async () => {
 beforeEach(() => {
   currentMockUserId = testUser.id;
   mockSend.mockReset();
+  mockDynamoSend.mockReset();
+  mockS3Send.mockReset();
+  mockSmsSend.mockReset();
   mockGetOrAssumeRole.mockReset();
 
   // Default mock for credentials
@@ -1198,5 +1273,285 @@ describe("removeWebhookSecretAction", () => {
     expect(vi_revalidatePath).toHaveBeenCalledWith(
       `/${testOrganization.slug}/settings/aws-accounts/${testAwsAccount2.id}`
     );
+  });
+});
+
+// ─── scanAWSAccountFeatures ────────────────────────────────────────────────
+
+const scanTestAccount = {
+  id: "test-scan-account-1",
+  organizationId: testOrganization.id,
+  name: "Scan Test AWS Account",
+  accountId: "333444555666",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::333444555666:role/WrapsRole",
+  externalId: "scan-test-external-id",
+  isVerified: true,
+  lastVerifiedAt: new Date(),
+  createdBy: testUser.id,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  webhookSecret: null,
+};
+
+// Silence noisy AWS calls for scanAWSAccountFeatures tests — each test only
+// needs to configure the config-set-specific behaviour.
+function setupQuietScanDefaults() {
+  const notFound = Object.assign(new Error("ResourceNotFoundException"), {
+    name: "ResourceNotFoundException",
+  });
+  const accessDenied = Object.assign(new Error("AccessDeniedException"), {
+    name: "AccessDeniedException",
+  });
+
+  // DynamoDB: table not found for both email and SMS history
+  mockDynamoSend.mockRejectedValue(notFound);
+  // S3: inbound bucket not found
+  mockS3Send.mockRejectedValue(
+    Object.assign(new Error("NotFound"), { name: "NotFound" })
+  );
+  // Pinpoint SMS: access denied (SMS not set up)
+  mockSmsSend.mockRejectedValue(accessDenied);
+
+  // SES: sandbox check, dedicated IPs, and identity list are all benign
+  mockSend.mockImplementation(
+    (command: { _type: string; ConfigurationSetName?: string }) => {
+      switch (command._type) {
+        case "GetAccountCommand":
+          return Promise.resolve({ ProductionAccessEnabled: true });
+        case "GetDedicatedIpsCommand":
+          return Promise.resolve({ DedicatedIps: [] });
+        case "ListEmailIdentitiesCommand":
+          return Promise.resolve({ EmailIdentities: [] });
+        case "GetConfigurationSetEventDestinationsCommand":
+          return Promise.resolve({ EventDestinations: [] });
+        default:
+          return Promise.reject(
+            new Error(`Unexpected SES command: ${command._type}`)
+          );
+      }
+    }
+  );
+}
+
+describe("scanAWSAccountFeatures — config set detection", () => {
+  beforeAll(async () => {
+    await db
+      .insert(awsAccount)
+      .values(scanTestAccount)
+      .onConflictDoUpdate({
+        target: awsAccount.id,
+        set: { updatedAt: new Date() },
+      });
+  });
+
+  afterAll(async () => {
+    await db.delete(awsAccount).where(eq(awsAccount.id, scanTestAccount.id));
+  });
+
+  beforeEach(() => {
+    setupQuietScanDefaults();
+  });
+
+  it("stores wraps-email-tracking when global config set exists", async () => {
+    mockSend.mockImplementation(
+      (command: { _type: string; ConfigurationSetName?: string }) => {
+        if (command._type === "GetConfigurationSetCommand") {
+          return Promise.resolve({ TrackingOptions: {} });
+        }
+        if (command._type === "GetConfigurationSetEventDestinationsCommand") {
+          return Promise.resolve({
+            EventDestinations: [
+              { MatchingEventTypes: ["SEND", "OPEN", "CLICK"] },
+            ],
+          });
+        }
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.resolve({ ProductionAccessEnabled: true });
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          case "ListEmailIdentitiesCommand":
+            return Promise.resolve({ EmailIdentities: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+
+    const result = await scanAWSAccountFeatures(
+      scanTestAccount.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.features.email!.configSetName).toBe("wraps-email-tracking");
+    }
+
+    const row = await db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.id, scanTestAccount.id),
+    });
+    expect(row?.emailEnabled).toBe(true);
+    expect(row?.features?.email?.configSetName).toBe("wraps-email-tracking");
+  });
+
+  it("falls back to per-domain config set when wraps-email-tracking is missing", async () => {
+    const notFound = Object.assign(new Error("NotFoundException"), {
+      name: "NotFoundException",
+    });
+
+    mockSend.mockImplementation(
+      (command: { _type: string; ConfigurationSetName?: string }) => {
+        if (command._type === "GetConfigurationSetCommand") {
+          if (command.ConfigurationSetName === "wraps-email-tracking") {
+            return Promise.reject(notFound);
+          }
+          // per-domain config set — return tracking domain
+          return Promise.resolve({
+            TrackingOptions: { CustomRedirectDomain: "track.example.com" },
+          });
+        }
+        if (command._type === "ListConfigurationSetsCommand") {
+          return Promise.resolve({
+            ConfigurationSets: [
+              "other-config",
+              "wraps-email-example-com",
+              "wraps-email-secondary-com",
+            ],
+          });
+        }
+        if (command._type === "GetConfigurationSetEventDestinationsCommand") {
+          return Promise.resolve({
+            EventDestinations: [{ MatchingEventTypes: ["SEND", "OPEN"] }],
+          });
+        }
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.resolve({ ProductionAccessEnabled: true });
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          case "ListEmailIdentitiesCommand":
+            return Promise.resolve({ EmailIdentities: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+
+    const result = await scanAWSAccountFeatures(
+      scanTestAccount.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // Should pick the first wraps-email-* match from the list
+      expect(result.features.email!.configSetName).toBe(
+        "wraps-email-example-com"
+      );
+      expect(result.features.email!.customTrackingDomain).toBe(
+        "track.example.com"
+      );
+    }
+
+    const row = await db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.id, scanTestAccount.id),
+    });
+    expect(row?.emailEnabled).toBe(true);
+    expect(row?.features?.email?.configSetName).toBe("wraps-email-example-com");
+  });
+
+  it("sets emailEnabled=false when no wraps-email-* config set exists", async () => {
+    const notFound = Object.assign(new Error("NotFoundException"), {
+      name: "NotFoundException",
+    });
+
+    mockSend.mockImplementation(
+      (command: { _type: string; ConfigurationSetName?: string }) => {
+        if (command._type === "GetConfigurationSetCommand") {
+          return Promise.reject(notFound);
+        }
+        if (command._type === "ListConfigurationSetsCommand") {
+          return Promise.resolve({
+            ConfigurationSets: ["some-other-config", "another-config"],
+          });
+        }
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.resolve({ ProductionAccessEnabled: true });
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          case "ListEmailIdentitiesCommand":
+            return Promise.resolve({ EmailIdentities: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+
+    const result = await scanAWSAccountFeatures(
+      scanTestAccount.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.features.email?.configSetName).toBeUndefined();
+    }
+
+    const row = await db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.id, scanTestAccount.id),
+    });
+    expect(row?.emailEnabled).toBe(false);
+    expect(row?.features?.email?.configSetName).toBeUndefined();
+  });
+
+  it("continues gracefully when config set scan is access denied", async () => {
+    const accessDenied = Object.assign(new Error("AccessDeniedException"), {
+      name: "AccessDeniedException",
+    });
+
+    mockSend.mockImplementation(
+      (command: { _type: string; ConfigurationSetName?: string }) => {
+        if (command._type === "GetConfigurationSetCommand") {
+          return Promise.reject(accessDenied);
+        }
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.resolve({ ProductionAccessEnabled: true });
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          case "ListEmailIdentitiesCommand":
+            return Promise.resolve({ EmailIdentities: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+
+    const result = await scanAWSAccountFeatures(
+      scanTestAccount.id,
+      testOrganization.id
+    );
+
+    // Should not throw — access denied is silently skipped
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.features.email?.configSetName).toBeUndefined();
+    }
+
+    const row = await db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.id, scanTestAccount.id),
+    });
+    expect(row?.emailEnabled).toBe(false);
   });
 });
