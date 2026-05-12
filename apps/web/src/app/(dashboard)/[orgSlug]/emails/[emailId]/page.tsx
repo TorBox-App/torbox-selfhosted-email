@@ -1,16 +1,18 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
+import { messageSend } from "@wraps/db/schema/batch";
 import { Badge } from "@wraps/ui/components/ui/badge";
 import { Card, CardContent } from "@wraps/ui/components/ui/card";
-import { eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmailArchiveViewer } from "@/components/email-archive-viewer";
 import { Button } from "@/components/ui/button";
-import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import { isOpenEventBot } from "@/lib/email-bot-detection";
+import { logger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import type { Email, EmailStatus } from "../types";
 import { CopyButton } from "./components/copy-button";
@@ -74,16 +76,98 @@ function mapEventTypeToStatus(eventType: string): EmailStatus {
   return (mapping[eventType] as EmailStatus) || "sent";
 }
 
+function pgStatusToEmailStatus(status: string | null | undefined): EmailStatus {
+  switch (status) {
+    case "pending":
+    case "queued":
+      return "sent";
+    case "opted_out":
+      return "suppressed";
+    default:
+      return (status as EmailStatus) ?? "sent";
+  }
+}
+
+function buildEmailFromEvents(
+  emailId: string,
+  emailEvents: any[],
+  archivingEnabled: boolean
+): Email & { archivingEnabled: boolean } {
+  const statusPriority: EmailStatus[] = [
+    "complained",
+    "rendering_failure",
+    "rejected",
+    "failed",
+    "bounced",
+    "suppressed",
+    "clicked",
+    "opened",
+    "delivery_delay",
+    "delivered",
+    "sent",
+  ];
+
+  let finalStatus: EmailStatus = "sent";
+  let currentPriority = statusPriority.indexOf(finalStatus);
+
+  for (const event of emailEvents) {
+    if (event.eventType === "Open" && isOpenEventBot(event.additionalData)) {
+      continue;
+    }
+    const eventStatus = mapEventTypeToStatus(event.eventType);
+    const eventPriority = statusPriority.indexOf(eventStatus);
+    if (eventPriority < currentPriority) {
+      finalStatus = eventStatus;
+      currentPriority = eventPriority;
+    }
+  }
+
+  const firstEvent = emailEvents[0];
+  return {
+    id: emailId,
+    messageId: emailId,
+    from: firstEvent.from,
+    to: firstEvent.to,
+    replyTo: undefined,
+    subject: firstEvent.subject,
+    htmlBody: firstEvent.additionalData
+      ? (() => {
+          try {
+            const data = JSON.parse(firstEvent.additionalData);
+            return data.htmlBody || data.textBody || undefined;
+          } catch {
+            return;
+          }
+        })()
+      : undefined,
+    textBody: undefined,
+    status: finalStatus,
+    sentAt: firstEvent.mailSentAt ?? firstEvent.sentAt,
+    archivingEnabled,
+    events: emailEvents.map((event) => ({
+      type: event.eventType.toLowerCase().replace(/ /g, "_") as EmailStatus,
+      timestamp: event.createdAt,
+      metadata: event.additionalData
+        ? (() => {
+            try {
+              return JSON.parse(event.additionalData);
+            } catch {
+              return {};
+            }
+          })()
+        : {},
+    })),
+  };
+}
+
 async function fetchEmail(
   organizationId: string,
   emailId: string
 ): Promise<(Email & { archivingEnabled: boolean }) | null> {
   try {
-    // Search for the email across all accounts (last 90 days)
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    // Get all AWS accounts for this organization
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, organizationId),
     });
@@ -92,7 +176,7 @@ async function fetchEmail(
       return null;
     }
 
-    // Fetch events from all accounts and find the matching email
+    // Step 1: time-windowed DynamoDB query (fast path for recent emails)
     const allEventsWithAccount = await Promise.all(
       accounts.map(async (account) => {
         try {
@@ -109,7 +193,6 @@ async function fetchEmail(
       })
     );
 
-    // Find which account has this email
     let emailAccount: (typeof accounts)[0] | null = null;
     let emailEvents: any[] = [];
 
@@ -122,87 +205,88 @@ async function fetchEmail(
       }
     }
 
-    if (emailEvents.length === 0 || !emailAccount) {
+    if (emailEvents.length > 0 && emailAccount) {
+      emailEvents.sort((a, b) => a.sentAt - b.sentAt);
+      return buildEmailFromEvents(
+        emailId,
+        emailEvents,
+        emailAccount.features?.email?.archivingEnabled ?? false
+      );
+    }
+
+    // Step 2: look up the PG record to get the canonical messageId and account.
+    // Handles two cases:
+    //  a) emailId is the PG UUID (old emails whose messageId wasn't set)
+    //  b) emailId is the SES messageId but the email is older than 90 days
+    const pgRecord = await db
+      .select({
+        id: messageSend.id,
+        messageId: messageSend.messageId,
+        awsAccountId: messageSend.awsAccountId,
+        from: messageSend.from,
+        recipient: messageSend.recipient,
+        subject: messageSend.subject,
+        status: messageSend.status,
+        sentAt: messageSend.sentAt,
+      })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, organizationId),
+          eq(messageSend.channel, "email"),
+          or(eq(messageSend.id, emailId), eq(messageSend.messageId, emailId))
+        )
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+
+    if (!pgRecord) {
       return null;
     }
 
-    // Sort events by timestamp
-    emailEvents.sort((a, b) => a.sentAt - b.sentAt);
+    // Step 3: try a direct DynamoDB PK lookup (no time window) using the real messageId
+    const realMessageId = pgRecord.messageId ?? emailId;
+    const pgAccount = accounts.find((a) => a.id === pgRecord.awsAccountId);
 
-    // Get the first event for basic details
-    const firstEvent = emailEvents[0];
-
-    // Determine the final status based on most significant event
-    const statusPriority: EmailStatus[] = [
-      "complained",
-      "rendering_failure",
-      "rejected",
-      "failed",
-      "bounced",
-      "suppressed",
-      "clicked",
-      "opened",
-      "delivery_delay",
-      "delivered",
-      "sent",
-    ];
-
-    let finalStatus: EmailStatus = "sent";
-    let currentPriority = statusPriority.indexOf(finalStatus);
-
-    for (const event of emailEvents) {
-      // Don't let bot opens promote status
-      if (event.eventType === "Open" && isOpenEventBot(event.additionalData)) {
-        continue;
-      }
-
-      const eventStatus = mapEventTypeToStatus(event.eventType);
-      const eventPriority = statusPriority.indexOf(eventStatus);
-
-      if (eventPriority < currentPriority) {
-        finalStatus = eventStatus;
-        currentPriority = eventPriority;
+    if (pgAccount) {
+      try {
+        const dynEvents = await queryEventsByMessageIds({
+          awsAccountId: pgAccount.id,
+          messageIds: [realMessageId],
+        });
+        if (dynEvents.length > 0) {
+          dynEvents.sort((a, b) => a.sentAt - b.sentAt);
+          return buildEmailFromEvents(
+            realMessageId,
+            dynEvents,
+            pgAccount.features?.email?.archivingEnabled ?? false
+          );
+        }
+      } catch {
+        // fall through to PG-only
       }
     }
 
-    // Build the email detail response
+    // Step 4: PG-only fallback — show whatever metadata we have
+    if (!pgRecord.sentAt) {
+      return null;
+    }
     return {
       id: emailId,
-      messageId: emailId,
-      from: firstEvent.from,
-      to: firstEvent.to,
+      messageId: realMessageId,
+      from: pgRecord.from ?? "",
+      to: [pgRecord.recipient],
       replyTo: undefined,
-      subject: firstEvent.subject,
-      htmlBody: firstEvent.additionalData
-        ? (() => {
-            try {
-              const data = JSON.parse(firstEvent.additionalData);
-              return data.htmlBody || data.textBody || undefined;
-            } catch {
-              return;
-            }
-          })()
-        : undefined,
+      subject: pgRecord.subject ?? "(no subject)",
+      htmlBody: undefined,
       textBody: undefined,
-      status: finalStatus,
-      sentAt: firstEvent.mailSentAt ?? firstEvent.sentAt,
-      archivingEnabled: emailAccount.features?.email?.archivingEnabled ?? false,
-      events: emailEvents.map((event) => ({
-        type: event.eventType.toLowerCase().replace(/ /g, "_") as EmailStatus,
-        timestamp: event.createdAt,
-        metadata: event.additionalData
-          ? (() => {
-              try {
-                return JSON.parse(event.additionalData);
-              } catch {
-                return {};
-              }
-            })()
-          : {},
-      })),
+      status: pgStatusToEmailStatus(pgRecord.status),
+      sentAt: pgRecord.sentAt.getTime(),
+      archivingEnabled: false,
+      events: [],
     };
   } catch (error) {
-    console.error("[fetchEmail] Error fetching email:", error);
+    logger.error({ err: serializeError(error) }, "fetchEmail failed");
     return null;
   }
 }
