@@ -8,7 +8,7 @@
   },
   "license": "AGPL-3.0-or-later",
   "scripts": {
-    "baseline": "pnpm exec code-baseline scan .",
+    "baseline": "pnpm exec baseline scan .",
     "build": "turbo run build",
     "dev": "turbo run dev --concurrency 12",
     "test": "turbo run test",

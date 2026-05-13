@@ -108,11 +108,11 @@ jobs:
 
       - name: Run baseline (changed files only)
         if: github.event_name == 'pull_request'
-        run: pnpm exec code-baseline scan --format github --changed-only .
+        run: pnpm exec baseline scan --format github --changed-only .
 
       - name: Run baseline (full scan)
         if: github.event_name == 'push'
-        run: pnpm exec code-baseline scan --format github .
+        run: pnpm exec baseline scan --format github .
 
   lint:
     runs-on: blacksmith-2vcpu-ubuntu-2404
