@@ -18,6 +18,8 @@
     "EMAIL_FROM",
     "BLOB_READ_WRITE_TOKEN"
   ],
+  "cacheMaxSize": "10GB",
+  "cacheMaxAge": "7d",
   "concurrency": "11",
   "tasks": {
     "build": {
