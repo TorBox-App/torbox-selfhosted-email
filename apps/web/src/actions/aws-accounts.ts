@@ -38,7 +38,7 @@ import {
   connectAWSAccountFormOpts,
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
-import { createActionLogger } from "@/lib/logger";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 import { checkPermission } from "./shared/permissions";
@@ -1038,31 +1038,32 @@ export async function saveWebhookSecretAction(
       };
     }
 
-    // Update the webhook secret, re-scoped by org for defense-in-depth
-    await db
-      .update(awsAccount)
-      .set({
-        webhookSecret,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(awsAccount.id, awsAccountId),
-          eq(awsAccount.organizationId, organizationId)
-        )
-      );
-
+    // Update the webhook secret + audit log atomically
     const auditCtx = await getAuditContext();
-    await db.insert(auditLog).values(
-      auditLogEntry(auditCtx, {
-        organizationId,
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        action: "settings.webhook_secret_saved",
-        resource: "aws_account",
-        resourceId: awsAccountId,
-      })
-    );
+    await db.transaction(async (tx) => {
+      await tx
+        .update(awsAccount)
+        .set({
+          webhookSecret,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(awsAccount.id, awsAccountId),
+            eq(awsAccount.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "settings.webhook_secret_saved",
+          resource: "aws_account",
+          resourceId: awsAccountId,
+        })
+      );
+    });
 
     // Revalidate the page
     revalidatePath(
@@ -1075,7 +1076,7 @@ export async function saveWebhookSecretAction(
       message: "Webhook secret saved successfully",
     };
   } catch (error) {
-    log.error({ err: error }, "Failed to save webhook secret");
+    log.error({ err: serializeError(error) }, "Failed to save webhook secret");
     return {
       success: false,
       error: "Something went wrong. Please try again.",
@@ -1142,31 +1143,32 @@ export async function removeWebhookSecretAction(
       };
     }
 
-    // Remove the webhook secret, re-scoped by org for defense-in-depth
-    await db
-      .update(awsAccount)
-      .set({
-        webhookSecret: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(awsAccount.id, awsAccountId),
-          eq(awsAccount.organizationId, organizationId)
-        )
-      );
-
+    // Remove the webhook secret + audit log atomically
     const auditCtx = await getAuditContext();
-    await db.insert(auditLog).values(
-      auditLogEntry(auditCtx, {
-        organizationId,
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        action: "settings.webhook_secret_removed",
-        resource: "aws_account",
-        resourceId: awsAccountId,
-      })
-    );
+    await db.transaction(async (tx) => {
+      await tx
+        .update(awsAccount)
+        .set({
+          webhookSecret: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(awsAccount.id, awsAccountId),
+            eq(awsAccount.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "settings.webhook_secret_removed",
+          resource: "aws_account",
+          resourceId: awsAccountId,
+        })
+      );
+    });
 
     // Revalidate the page
     revalidatePath(
@@ -1179,7 +1181,10 @@ export async function removeWebhookSecretAction(
       message: "Webhook disconnected successfully",
     };
   } catch (error) {
-    log.error({ err: error }, "Failed to remove webhook secret");
+    log.error(
+      { err: serializeError(error) },
+      "Failed to remove webhook secret"
+    );
     return {
       success: false,
       error: "Something went wrong. Please try again.",

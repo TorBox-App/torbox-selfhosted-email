@@ -10,7 +10,7 @@ import {
   grantAccessFormOpts,
   grantAccessSchema,
 } from "@/lib/forms/grant-access";
-import { createActionLogger } from "@/lib/logger";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { revokeAWSAccountAccess } from "@/lib/permissions/revoke-access";
@@ -83,34 +83,37 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
       };
     }
 
-    // 6. Grant access
-    await grantAWSAccountAccess({
-      userId: validatedData.userId,
-      awsAccountId: validatedData.awsAccountId,
-      permissions: validatedData.permissions,
-      grantedBy: session.user.id,
-      expiresAt: validatedData.expiresAt
-        ? new Date(validatedData.expiresAt)
-        : undefined,
-    });
-
-    // 6.5. Write audit log
+    // 6. Grant access + audit log atomically
     const auditCtx = await getAuditContext();
-    await db.insert(auditLog).values(
-      auditLogEntry(auditCtx, {
-        organizationId: awsAccountRecord.organizationId,
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        action: "permissions.granted",
-        resource: "aws_account_permission",
-        resourceId: validatedData.awsAccountId,
-        metadata: {
+    await db.transaction(async (tx) => {
+      await grantAWSAccountAccess(
+        {
+          userId: validatedData.userId,
           awsAccountId: validatedData.awsAccountId,
-          targetUserId: validatedData.userId,
           permissions: validatedData.permissions,
+          grantedBy: session.user.id,
+          expiresAt: validatedData.expiresAt
+            ? new Date(validatedData.expiresAt)
+            : undefined,
         },
-      })
-    );
+        tx
+      );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: awsAccountRecord.organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "permissions.granted",
+          resource: "aws_account_permission",
+          resourceId: validatedData.awsAccountId,
+          metadata: {
+            awsAccountId: validatedData.awsAccountId,
+            targetUserId: validatedData.userId,
+            permissions: validatedData.permissions,
+          },
+        })
+      );
+    });
 
     // 7. Revalidate
     revalidatePath("/");
@@ -131,7 +134,7 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
     // Handle other errors
     const message = e instanceof Error ? e.message : "Internal error";
     const log = createActionLogger("grantAccessAction", {});
-    log.error({ err: e }, "Failed to grant access");
+    log.error({ err: serializeError(e) }, "Failed to grant access");
     return { error: "Internal error", details: message };
   }
 }
@@ -178,28 +181,25 @@ export async function revokeAccessAction(
       };
     }
 
-    // 4. Revoke access
-    await revokeAWSAccountAccess({
-      userId,
-      awsAccountId,
-    });
-
-    // 4.5. Write audit log
+    // 4. Revoke access + audit log atomically
     const auditCtx = await getAuditContext();
-    await db.insert(auditLog).values(
-      auditLogEntry(auditCtx, {
-        organizationId: awsAccountRecord.organizationId,
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        action: "permissions.revoked",
-        resource: "aws_account_permission",
-        resourceId: awsAccountId,
-        metadata: {
-          awsAccountId,
-          targetUserId: userId,
-        },
-      })
-    );
+    await db.transaction(async (tx) => {
+      await revokeAWSAccountAccess({ userId, awsAccountId }, tx);
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId: awsAccountRecord.organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "permissions.revoked",
+          resource: "aws_account_permission",
+          resourceId: awsAccountId,
+          metadata: {
+            awsAccountId,
+            targetUserId: userId,
+          },
+        })
+      );
+    });
 
     // 5. Revalidate
     revalidatePath("/");
@@ -208,7 +208,10 @@ export async function revokeAccessAction(
     return { success: true };
   } catch (error) {
     const log = createActionLogger("revokeAccessAction", {});
-    log.error({ err: error, userId, awsAccountId }, "Failed to revoke access");
+    log.error(
+      { err: serializeError(error), userId, awsAccountId },
+      "Failed to revoke access"
+    );
     return { error: "Something went wrong. Please try again." };
   }
 }

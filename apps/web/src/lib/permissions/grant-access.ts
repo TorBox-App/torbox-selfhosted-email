@@ -1,25 +1,26 @@
-import { awsAccountPermission, db } from "@wraps/db";
+import { awsAccountPermission, type DbOrTx, db } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { PERMISSION_LEVELS, type PermissionLevel } from "./types";
 
-export async function grantAWSAccountAccess(params: {
-  userId: string;
-  awsAccountId: string;
-  permissions: PermissionLevel;
-  grantedBy: string;
-  expiresAt?: Date;
-}) {
+export async function grantAWSAccountAccess(
+  params: {
+    userId: string;
+    awsAccountId: string;
+    permissions: PermissionLevel;
+    grantedBy: string;
+    expiresAt?: Date;
+  },
+  dbOrTx: DbOrTx = db
+) {
   const permissionList = PERMISSION_LEVELS[params.permissions];
 
-  // Check if permission already exists
-  const existing = await db.query.awsAccountPermission.findFirst({
+  const existing = await dbOrTx.query.awsAccountPermission.findFirst({
     where: (p, { and, eq }) =>
       and(eq(p.userId, params.userId), eq(p.awsAccountId, params.awsAccountId)),
   });
 
   if (existing) {
-    // Update existing permission
-    await db
+    await dbOrTx
       .update(awsAccountPermission)
       .set({
         permissions: [...permissionList],
@@ -28,8 +29,7 @@ export async function grantAWSAccountAccess(params: {
       })
       .where(eq(awsAccountPermission.id, existing.id));
   } else {
-    // Create new permission
-    await db.insert(awsAccountPermission).values({
+    await dbOrTx.insert(awsAccountPermission).values({
       userId: params.userId,
       awsAccountId: params.awsAccountId,
       permissions: [...permissionList],
