@@ -1,25 +1,30 @@
-import { createHmac } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import { SIGNING_SECRET, validateLicenseKey } from "../lib/license";
+import { generateKeyPairSync, sign } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { validateLicenseKey } from "../lib/license";
 
-function makeKey(
-  tier: string,
-  expires: string,
-  secret = SIGNING_SECRET
-): string {
+const { privateKey: TEST_PRIV_PEM, publicKey: TEST_PUB_PEM } =
+  generateKeyPairSync("ed25519", {
+    publicKeyEncoding: { type: "spki", format: "pem" },
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  }) as { privateKey: string; publicKey: string };
+
+function makeKey(tier: string, expires: string): string {
   const payload = `v1.${tier}.${expires}`;
-  const hmac = createHmac("sha256", secret).update(payload).digest("hex");
-  return `v1.${tier}.${expires}.${hmac}`;
+  const sig = sign(null, Buffer.from(payload), TEST_PRIV_PEM).toString("hex");
+  return `${payload}.${sig}`;
 }
 
 describe("validateLicenseKey", () => {
+  beforeEach(() => vi.stubEnv("WRAPS_LICENSE_PUBLIC_KEY_PEM", TEST_PUB_PEM));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("returns valid:true and tier for a correctly signed, non-expired key", () => {
     const key = makeKey("scale", "2099-12-31");
     const result = validateLicenseKey(key);
     expect(result).toEqual({ valid: true, tier: "scale" });
   });
 
-  it("returns valid:false and tier:null for a tampered HMAC", () => {
+  it("returns valid:false and tier:null for a tampered signature", () => {
     const key = makeKey("scale", "2099-12-31");
     const tampered = `${key.slice(0, -4)}dead`;
     const result = validateLicenseKey(tampered);
@@ -30,5 +35,10 @@ describe("validateLicenseKey", () => {
     const key = makeKey("scale", "2020-01-01");
     const result = validateLicenseKey(key);
     expect(result).toEqual({ valid: false, tier: null });
+  });
+
+  it("returns valid:false for a 128-char non-hex signature", () => {
+    const key = `v1.scale.2099-12-31.${"g".repeat(128)}`;
+    expect(validateLicenseKey(key)).toEqual({ valid: false, tier: null });
   });
 });

@@ -10,7 +10,7 @@
  * - Workflow limits (free tier: 1, paid: unlimited)
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createPublicKey, verify } from "node:crypto";
 import {
   awsAccount,
   contact,
@@ -31,10 +31,16 @@ import {
 
 // Duplicate of apps/api/src/lib/license.ts — intentional to avoid cross-package coupling.
 // Keep in sync manually; consolidate when divergence causes an actual bug.
-const LICENSE_SIGNING_SECRET =
-  "wraps-1-f2e3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2";
+const PROD_PUBLIC_KEY_PEM =
+  "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAkhqfyiWd3VYixEy5TiQVa8JS/ut0Guns972lfgNBtgo=\n-----END PUBLIC KEY-----\n";
 const LICENSE_VALID_TIERS = ["starter", "growth", "scale"] as const;
 type LicenseTier = (typeof LICENSE_VALID_TIERS)[number];
+
+function getPublicKey() {
+  return createPublicKey(
+    process.env.WRAPS_LICENSE_PUBLIC_KEY_PEM ?? PROD_PUBLIC_KEY_PEM
+  );
+}
 
 function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
   if (!key) {
@@ -44,7 +50,7 @@ function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
   if (parts.length !== 4 || parts[0] !== "v1") {
     return null;
   }
-  const [, tier, expires, hmac] = parts;
+  const [, tier, expires, sigHex] = parts;
   if (!(LICENSE_VALID_TIERS as readonly string[]).includes(tier)) {
     return null;
   }
@@ -56,15 +62,16 @@ function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
   if (expires < today) {
     return null;
   }
-  const expectedHex = createHmac("sha256", LICENSE_SIGNING_SECRET)
-    .update(`v1.${tier}.${expires}`)
-    .digest("hex");
-  const expectedBuf = Buffer.from(expectedHex, "hex");
-  const actualBuf = Buffer.from(hmac, "hex");
-  if (
-    actualBuf.length !== expectedBuf.length ||
-    !timingSafeEqual(actualBuf, expectedBuf)
-  ) {
+  if (sigHex.length !== 128) {
+    return null;
+  }
+  try {
+    const payload = Buffer.from(`v1.${tier}.${expires}`);
+    const sig = Buffer.from(sigHex, "hex");
+    if (!verify(null, payload, getPublicKey(), sig)) {
+      return null;
+    }
+  } catch {
     return null;
   }
   return tier as LicenseTier;

@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { generateKeyPairSync, sign } from "node:crypto";
 import {
   awsAccount,
   contact,
@@ -30,16 +30,16 @@ import {
   getOrganizationPlan,
 } from "../index";
 
-// Signing secret must match the embedded constant in plan-limits/index.ts
-const WEB_SIGNING_SECRET =
-  "wraps-1-f2e3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2";
+const { privateKey: TEST_PRIV_PEM, publicKey: TEST_PUB_PEM } =
+  generateKeyPairSync("ed25519", {
+    publicKeyEncoding: { type: "spki", format: "pem" },
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  }) as { privateKey: string; publicKey: string };
 
 function makeWebLicenseKey(tier: string, expires: string): string {
   const payload = `v1.${tier}.${expires}`;
-  const hmac = createHmac("sha256", WEB_SIGNING_SECRET)
-    .update(payload)
-    .digest("hex");
-  return `${payload}.${hmac}`;
+  const sig = sign(null, Buffer.from(payload), TEST_PRIV_PEM).toString("hex");
+  return `${payload}.${sig}`;
 }
 
 // Test data
@@ -162,18 +162,57 @@ describe("Plan Limits", () => {
         vi.unstubAllEnvs();
       });
 
-      it("returns licensed tier without querying DB when WRAPS_LICENSE_KEY is valid", async () => {
+      it("returns licensed tier without querying DB when WRAPS_LICENSE_KEY is valid Ed25519 scale key", async () => {
         // Use an org ID that has no DB record — if DB is queried it would return "free"
         const nonExistentOrgId = "license-override-test-no-db-record";
         vi.stubEnv(
           "WRAPS_LICENSE_KEY",
           makeWebLicenseKey("scale", "2099-12-31")
         );
+        vi.stubEnv("WRAPS_LICENSE_PUBLIC_KEY_PEM", TEST_PUB_PEM);
 
         const plan = await getOrganizationPlan(nonExistentOrgId);
 
         // Only possible if license key is applied — no DB record exists for this org
         expect(plan).toBe("scale");
+      });
+
+      it("falls back to Stripe plan when WRAPS_LICENSE_KEY signature is tampered", async () => {
+        await db.insert(subscription).values({
+          id: `sub_test_${Date.now()}`,
+          plan: "growth",
+          referenceId: testOrgId,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        const validKey = makeWebLicenseKey("scale", "2099-12-31");
+        // Tamper the last 4 hex chars of the signature
+        const tamperedKey = `${validKey.slice(0, -4)}0000`;
+        vi.stubEnv("WRAPS_LICENSE_KEY", tamperedKey);
+        vi.stubEnv("WRAPS_LICENSE_PUBLIC_KEY_PEM", TEST_PUB_PEM);
+
+        const plan = await getOrganizationPlan(testOrgId);
+
+        expect(plan).toBe("growth"); // Falls back to Stripe subscription
+      });
+
+      it("rejects license key signed with a different private key", async () => {
+        const { publicKey: wrongPub } = generateKeyPairSync("ed25519", {
+          publicKeyEncoding: { type: "spki", format: "pem" },
+          privateKeyEncoding: { type: "pkcs8", format: "pem" },
+        }) as { publicKey: string };
+        vi.stubEnv(
+          "WRAPS_LICENSE_KEY",
+          makeWebLicenseKey("scale", "2099-12-31")
+        );
+        vi.stubEnv("WRAPS_LICENSE_PUBLIC_KEY_PEM", wrongPub);
+        // Non-existent org — if verify() is skipped and tier extracted, plan would be "scale"
+        const plan = await getOrganizationPlan(
+          "license-wrong-key-no-db-record"
+        );
+        expect(plan).toBe("free"); // wrong pubkey → verify() fails → no override → no DB record → free
       });
 
       it("falls back to DB subscription when WRAPS_LICENSE_KEY is not set", async () => {

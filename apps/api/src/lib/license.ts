@@ -1,10 +1,7 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createPublicKey, verify } from "node:crypto";
 
-// Embedded constant — self-hosted customers who have the source can see this.
-// Wraps controls key issuance; the security model is authorization, not obscurity.
-// Rotate via new SIGNING_SECRET + re-issuing all active keys.
-export const SIGNING_SECRET =
-  "wraps-1-f2e3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2";
+const PROD_PUBLIC_KEY_PEM =
+  "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAkhqfyiWd3VYixEy5TiQVa8JS/ut0Guns972lfgNBtgo=\n-----END PUBLIC KEY-----\n";
 
 const VALID_TIERS = ["starter", "growth", "scale"] as const;
 type ValidTier = (typeof VALID_TIERS)[number];
@@ -14,13 +11,19 @@ export type LicenseResult = {
   tier: ValidTier | null;
 };
 
+function getPublicKey() {
+  return createPublicKey(
+    process.env.WRAPS_LICENSE_PUBLIC_KEY_PEM ?? PROD_PUBLIC_KEY_PEM
+  );
+}
+
 /**
  * Validate a Wraps license key.
  *
- * Format: v1.<tier>.<expires_YYYY-MM-DD>.<hmac_hex>
- * HMAC payload: "v1.<tier>.<expires_YYYY-MM-DD>"
+ * Format: v1.<tier>.<expires_YYYY-MM-DD>.<ed25519_sig_hex>
+ * Signed payload: "v1.<tier>.<expires_YYYY-MM-DD>"
  *
- * Pure function — caller provides the key string (reads no env vars).
+ * Pure function — caller provides the key string (reads no env vars except at verify time).
  */
 export function validateLicenseKey(key: string | undefined): LicenseResult {
   if (!key) {
@@ -29,12 +32,12 @@ export function validateLicenseKey(key: string | undefined): LicenseResult {
 
   const parts = key.split(".");
 
-  // Format requires exactly: v1, tier, expires (YYYY-MM-DD), hmac — 4 segments
+  // Format requires exactly: v1, tier, expires (YYYY-MM-DD), sig — 4 segments
   if (parts.length !== 4 || parts[0] !== "v1") {
     return { valid: false, tier: null };
   }
 
-  const [, tier, expires, hmac] = parts;
+  const [, tier, expires, sigHex] = parts;
 
   if (!(VALID_TIERS as readonly string[]).includes(tier)) {
     return { valid: false, tier: null };
@@ -52,19 +55,18 @@ export function validateLicenseKey(key: string | undefined): LicenseResult {
     return { valid: false, tier: null };
   }
 
-  // Verify HMAC with timing-safe comparison
-  const payload = `v1.${tier}.${expires}`;
-  const expectedHex = createHmac("sha256", SIGNING_SECRET)
-    .update(payload)
-    .digest("hex");
+  // Ed25519 signature is 64 bytes = 128 hex chars
+  if (sigHex.length !== 128) {
+    return { valid: false, tier: null };
+  }
 
-  const expectedBuf = Buffer.from(expectedHex, "hex");
-  const actualBuf = Buffer.from(hmac, "hex");
-
-  if (
-    actualBuf.length !== expectedBuf.length ||
-    !timingSafeEqual(actualBuf, expectedBuf)
-  ) {
+  try {
+    const payload = Buffer.from(`v1.${tier}.${expires}`);
+    const sig = Buffer.from(sigHex, "hex");
+    if (!verify(null, payload, getPublicKey(), sig)) {
+      return { valid: false, tier: null };
+    }
+  } catch {
     return { valid: false, tier: null };
   }
 

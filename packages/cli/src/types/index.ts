@@ -62,6 +62,8 @@ export type {
   WrapsEmailFeatureMetadata,
 } from "./email.js";
 export { DEFAULT_ALERT_THRESHOLDS, SES_RECEIVING_REGIONS } from "./email.js";
+// Re-export license types
+export type { LicenseGenerateOptions } from "./license.js";
 // Re-export selfhost types
 export type {
   SelfhostConfig,

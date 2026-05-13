@@ -5,7 +5,7 @@
  * Tests API key auth, session auth, tenant isolation, and edge cases.
  */
 
-import { createHash, createHmac } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   apiKey,
   db,
@@ -21,12 +21,12 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
   vi,
 } from "vitest";
-import { SIGNING_SECRET } from "../lib/license";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
 const TEST_PREFIX = "auth-test";
@@ -538,14 +538,18 @@ describe("Authentication", () => {
   });
 
   describe("License Key Override", () => {
+    const { privateKey: LIC_PRIV_PEM, publicKey: LIC_PUB_PEM } =
+      generateKeyPairSync("ed25519", {
+        publicKeyEncoding: { type: "spki", format: "pem" },
+        privateKeyEncoding: { type: "pkcs8", format: "pem" },
+      }) as { privateKey: string; publicKey: string };
+
+    beforeEach(() => vi.stubEnv("WRAPS_LICENSE_PUBLIC_KEY_PEM", LIC_PUB_PEM));
     afterEach(() => vi.unstubAllEnvs());
 
     function makeScaleKey(): string {
       const payload = "v1.scale.2099-12-31";
-      const hmac = createHmac("sha256", SIGNING_SECRET)
-        .update(payload)
-        .digest("hex");
-      return `${payload}.${hmac}`;
+      return `${payload}.${sign(null, Buffer.from(payload), LIC_PRIV_PEM).toString("hex")}`;
     }
 
     it("when WRAPS_LICENSE_KEY is a valid scale key, planId overrides Stripe subscription", async () => {
@@ -560,6 +564,21 @@ describe("Authentication", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.planId).toBe("scale");
+    });
+
+    it("when WRAPS_LICENSE_KEY is tampered, planId falls back to Stripe subscription", async () => {
+      const tampered = `${makeScaleKey().slice(0, -4)}dead`;
+      vi.stubEnv("WRAPS_LICENSE_KEY", tampered);
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.planId).toBe("starter"); // tampered key rejected, falls back to ORG1 Stripe plan
     });
 
     it("when WRAPS_LICENSE_KEY is not set, planId comes from Stripe subscription", async () => {

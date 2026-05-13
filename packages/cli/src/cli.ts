@@ -59,6 +59,8 @@ import { upgrade } from "./commands/email/upgrade.js";
 import { workflowsInit } from "./commands/email/workflows/init.js";
 import { workflowsPush } from "./commands/email/workflows/push.js";
 import { workflowsValidate } from "./commands/email/workflows/validate.js";
+// License commands
+import { licenseGenerate } from "./commands/license/generate.js";
 // Info commands
 import { news } from "./commands/news.js";
 import { permissions } from "./commands/permissions.js";
@@ -149,7 +151,10 @@ function showHelp() {
     `  ${pc.cyan("cdn")}         CDN infrastructure (AWS S3 + CloudFront)`
   );
   console.log(
-    `  ${pc.cyan("selfhost")}    Self-hosted Wraps control plane (enterprise)\n`
+    `  ${pc.cyan("selfhost")}    Self-hosted Wraps control plane (enterprise)`
+  );
+  console.log(
+    `  ${pc.cyan("license")}     License key management (Wraps team only)\n`
   );
   console.log("Email Commands:");
   console.log(
@@ -1021,6 +1026,33 @@ async function run() {
         success: true,
         duration_ms: emailDuration,
         service: "email",
+      });
+      return;
+    }
+
+    // Handle license subcommands (e.g., wraps license generate)
+    if (primaryCommand === "license" && subCommand) {
+      switch (subCommand) {
+        case "generate":
+          await licenseGenerate({
+            // baseline:allow-no-region
+            tier: flags.tier,
+            expires: flags.expires,
+            json: flags.json,
+          });
+          break;
+
+        default:
+          clack.log.error(`Unknown license command: ${subCommand}`);
+          console.log(
+            `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
+          );
+          throw new Error(`Unknown license command: ${subCommand}`);
+      }
+      trackCommand(`license:${subCommand}`, {
+        success: true,
+        duration_ms: Date.now() - startTime,
+        service: "license",
       });
       return;
     }
