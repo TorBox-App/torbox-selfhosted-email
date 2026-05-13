@@ -18,7 +18,7 @@
     "@aws-sdk/util-dynamodb": "catalog:",
     "@opentui/core": "latest",
     "@opentui/react": "latest",
-    "react": "^19.0.0"
+    "react": "^19.2.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

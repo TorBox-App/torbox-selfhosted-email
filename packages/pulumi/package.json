@@ -71,14 +71,14 @@
     "@aws-sdk/client-mailmanager": "catalog:"
   },
   "devDependencies": {
-    "@wraps/core": "workspace:*",
-    "@pulumi/aws": "^7.11.1",
+    "@pulumi/aws": "^7.28.0",
     "@pulumi/cloudflare": "^6.12.0",
     "@pulumi/command": "^1.0.3",
-    "tsx": "^4.20.6",
     "@pulumi/pulumi": "^3.207.0",
     "@types/node": "catalog:",
+    "@wraps/core": "workspace:*",
     "tsup": "catalog:",
+    "tsx": "^4.20.6",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

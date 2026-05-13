@@ -10,17 +10,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@wraps/ui": "workspace:*",
     "@jsquash/avif": "2.1.1",
     "@jsquash/jpeg": "1.6.0",
     "@jsquash/png": "3.1.1",
     "@jsquash/resize": "2.1.1",
     "@jsquash/webp": "1.5.0",
+    "@wraps/ui": "workspace:*",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.462.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "recharts": "2.15.4",
     "sonner": "2.0.7",
     "tailwind-merge": "^3.4.0"
