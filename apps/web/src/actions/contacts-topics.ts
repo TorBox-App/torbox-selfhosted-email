@@ -293,18 +293,18 @@ export async function bulkUnsubscribeContactsFromTopics(
               or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
             )
           );
-      }
 
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.topics_bulk_unsubscribed",
-          resource: "contact",
-          metadata: { contactCount: unsubscribedCount, topicIds },
-        })
-      );
+        await tx.insert(auditLog).values(
+          auditLogEntry(auditCtx, {
+            organizationId,
+            actorId: access.userId,
+            actorEmail: access.userEmail,
+            action: "contact.topics_bulk_unsubscribed",
+            resource: "contact",
+            metadata: { contactCount: unsubscribedCount, topicIds },
+          })
+        );
+      }
     });
 
     revalidateContacts(orgSlug);
