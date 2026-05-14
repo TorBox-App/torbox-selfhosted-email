@@ -78,7 +78,7 @@ chmod +x "$STAGING/runtime/node"
 # Use pnpm deploy to create pruned production install
 echo "Creating production install with pnpm deploy..."
 DEPLOY_DIR="$TMPDIR_BASE/deploy"
-pnpm --filter @wraps.dev/cli deploy "$DEPLOY_DIR" --prod --legacy
+pnpm --filter @wraps.dev/cli deploy "$DEPLOY_DIR" --prod --legacy --no-strict-peer-dependencies
 
 # Copy node_modules from deploy
 cp -R "$DEPLOY_DIR/node_modules" "$STAGING/lib/node_modules"
