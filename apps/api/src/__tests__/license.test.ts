@@ -41,4 +41,11 @@ describe("validateLicenseKey", () => {
     const key = `v1.scale.2099-12-31.${"g".repeat(128)}`;
     expect(validateLicenseKey(key)).toEqual({ valid: false, tier: null });
   });
+
+  it("returns valid:false when tier is swapped but original signature retained", () => {
+    const original = makeKey("scale", "2099-12-31");
+    const [, , expires, sig] = original.split(".");
+    const forged = `v1.growth.${expires}.${sig}`;
+    expect(validateLicenseKey(forged)).toEqual({ valid: false, tier: null });
+  });
 });
