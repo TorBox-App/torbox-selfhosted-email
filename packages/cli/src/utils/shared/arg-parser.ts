@@ -76,6 +76,10 @@ export type CliFlags = {
   vdmEngagement?: boolean;
   vdmInbox?: boolean;
 
+  // License
+  tier?: string;
+  expires?: string;
+
   // Help / version (informational; cli.ts short-circuits before parsing)
   help?: boolean;
   version?: boolean;
@@ -117,6 +121,8 @@ const STRING_FLAGS = [
   "workflow",
   "org",
   "subdomain",
+  "tier",
+  "expires",
 ] as const;
 
 /**

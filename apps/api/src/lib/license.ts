@@ -1,7 +1,7 @@
 import { createPublicKey, verify } from "node:crypto";
 
 const PROD_PUBLIC_KEY_PEM =
-  "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAkhqfyiWd3VYixEy5TiQVa8JS/ut0Guns972lfgNBtgo=\n-----END PUBLIC KEY-----\n";
+  "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEATgLTGM1FH6spW9Ayl9Srb1dDHk7KlVX9NBTQQw+4vjQ=\n-----END PUBLIC KEY-----\n";
 
 const VALID_TIERS = ["starter", "growth", "scale"] as const;
 type ValidTier = (typeof VALID_TIERS)[number];
