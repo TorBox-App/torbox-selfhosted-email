@@ -219,6 +219,24 @@ async function assessVariableCoverage(
       .map((m) => m.variableName)
   );
 
+  // Names the batch sender always provides from contact columns (not properties)
+  const BATCH_SENDER_SHORT_NAMES = new Set([
+    "firstName",
+    "lastName",
+    "company",
+    "jobTitle",
+    "email",
+    "contactFirstName",
+    "contactLastName",
+    "contactCompany",
+    "contactJobTitle",
+    "contactEmail",
+    "organizationName",
+    "unsubscribeUrl",
+    "preferencesUrl",
+    "confirmationUrl",
+  ]);
+
   const knownVariableNames = new Set(
     getVariablesForContext("broadcast").map((v) => v.name)
   );
@@ -226,20 +244,34 @@ async function assessVariableCoverage(
   type StoredVar = { name: string; fallback?: string | null };
   const storedVars = (templateData.variables ?? []) as StoredVar[];
 
+  // Also parse variables from the subject line — these aren't stored in
+  // templateData.variables (which is extracted from body HTML only)
+  const subjectVarRegex = /\{\{([^}|]+?)(?:\|([^}]*))?\}\}/g;
+  const subjectVarsSeen = new Set(storedVars.map((v) => v.name));
+  const allVars: StoredVar[] = [...storedVars];
+  if (templateData.subject) {
+    let m = subjectVarRegex.exec(templateData.subject);
+    while (m !== null) {
+      const name = m[1].trim();
+      const fallback = m[2]?.trim();
+      if (!subjectVarsSeen.has(name)) {
+        subjectVarsSeen.add(name);
+        allVars.push(fallback ? { name, fallback } : { name });
+      }
+      m = subjectVarRegex.exec(templateData.subject);
+    }
+  }
+
   const riskyVars: string[] = [];
-  for (const v of storedVars) {
+  for (const v of allVars) {
     if (HANDLEBARS_KEYWORDS.has(v.name)) continue;
     if (v.fallback) continue;
     if (staticMappedVars.has(v.name)) continue;
+    if (BATCH_SENDER_SHORT_NAMES.has(v.name)) continue;
     if (knownVariableNames.has(v.name)) continue;
+    if (knownVariableNames.has(`contact.${v.name}`)) continue;
     if (v.name.startsWith("contact.")) continue;
     if (v.name.startsWith("organization.")) continue;
-    if (
-      v.name === "unsubscribeUrl" ||
-      v.name === "preferencesUrl" ||
-      v.name === "confirmationUrl"
-    )
-      continue;
     riskyVars.push(v.name);
   }
 

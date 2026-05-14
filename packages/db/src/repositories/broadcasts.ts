@@ -464,6 +464,7 @@ export async function findTemplateVariables(
       emailType: true,
       sourceFormat: true,
       variables: true,
+      subject: true,
     },
   });
 }
