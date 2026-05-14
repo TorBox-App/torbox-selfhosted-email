@@ -1387,13 +1387,20 @@ export async function getVerifiedDomains(
       identities: verifiedIdentities,
     };
   } catch (error) {
-    log.error({ err: error }, "Failed to fetch verified domains");
-
-    // Check for AWS permission errors
     const isAccessDenied =
       error instanceof Error &&
       ((error as { name?: string }).name === "AccessDeniedException" ||
-        error.message.includes("is not authorized to perform"));
+        error.message.includes("is not authorized to perform") ||
+        error.message.includes("Access denied when assuming role"));
+
+    if (isAccessDenied) {
+      log.warn(
+        { err: error },
+        "AWS permission denied fetching verified domains"
+      );
+    } else {
+      log.error({ err: error }, "Failed to fetch verified domains");
+    }
 
     return {
       success: false,
@@ -1518,7 +1525,21 @@ export async function getSMSPhoneNumbers(
       phoneNumbers,
     };
   } catch (error) {
-    log.error({ err: error }, "Failed to fetch SMS phone numbers");
+    const isAccessDenied =
+      error instanceof Error &&
+      ((error as { name?: string }).name === "AccessDeniedException" ||
+        error.message.includes("is not authorized to perform") ||
+        error.message.includes("Access denied when assuming role"));
+
+    if (isAccessDenied) {
+      log.warn(
+        { err: error },
+        "AWS permission denied fetching SMS phone numbers"
+      );
+    } else {
+      log.error({ err: error }, "Failed to fetch SMS phone numbers");
+    }
+
     return {
       success: false,
       error:

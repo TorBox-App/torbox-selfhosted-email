@@ -123,7 +123,10 @@ export async function assumeRole(
   } catch (error) {
     // Enhance error message for common failures
     if (error instanceof Error) {
-      if (error.message.includes("AccessDenied")) {
+      if (
+        error.message.includes("AccessDenied") ||
+        error.message.includes("is not authorized to perform")
+      ) {
         throw new Error(
           "Access denied when assuming role. Check that the IAM role trust policy allows your backend account and that the external ID matches."
         );
