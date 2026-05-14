@@ -242,6 +242,20 @@ export type GetSampleContactsResult =
       error: string;
     };
 
+export type CheckTemplateVariableCoverageResult =
+  | {
+      success: true;
+      allFail: boolean;
+      missingCount: number;
+      totalSampled: number;
+      totalRecipients: number;
+      missingVariables: string[];
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
 // Helper to calculate progress percentage
 export function calculateProgress(batch: BatchSendWithMeta): number {
   if (batch.totalRecipients === 0) {

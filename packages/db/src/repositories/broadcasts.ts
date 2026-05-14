@@ -388,6 +388,49 @@ export async function getSampleBroadcastRecipients(
   return { contacts, totalCount: countResult?.count ?? 0 };
 }
 
+export type SampleRecipientWithProperties = SampleRecipient & {
+  properties: Record<string, unknown> | null;
+};
+
+export async function getSampleRecipientsWithProperties(
+  organizationId: string,
+  channel: Channel,
+  filter?: BroadcastRecipientFilter,
+  limit = 50,
+  dbClient: DbClient = db
+): Promise<{ contacts: SampleRecipientWithProperties[]; totalCount: number }> {
+  const conditions = await buildRecipientConditions(
+    organizationId,
+    channel,
+    filter,
+    dbClient
+  );
+
+  const whereClause = and(...conditions);
+
+  const [[countResult], contacts] = await Promise.all([
+    dbClient
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contact)
+      .where(whereClause),
+    dbClient
+      .select({
+        id: contact.id,
+        email: contact.email,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        company: contact.company,
+        properties: contact.properties,
+      })
+      .from(contact)
+      .where(whereClause)
+      .orderBy(desc(contact.createdAt))
+      .limit(limit),
+  ]);
+
+  return { contacts, totalCount: countResult?.count ?? 0 };
+}
+
 // ── Template queries ──────────────────────────────────────────────────────────
 
 export async function findTemplateForValidation(

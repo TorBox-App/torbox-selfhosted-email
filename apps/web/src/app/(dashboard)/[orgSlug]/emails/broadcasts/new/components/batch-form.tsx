@@ -34,6 +34,7 @@ import {
 import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { format } from "date-fns";
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarIcon,
   Check,
@@ -66,6 +67,8 @@ import {
 } from "@/actions/aws-accounts";
 import {
   type AudienceType,
+  checkTemplateVariableCoverage,
+  type CheckTemplateVariableCoverageResult,
   type ContentType,
   createBatchSend,
   getRecipientCount,
@@ -1438,6 +1441,40 @@ function ReviewStep({
   topics: Topic[];
 }) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [coverageResult, setCoverageResult] =
+    useState<CheckTemplateVariableCoverageResult | null>(null);
+
+  // Check variable coverage when template + audience are both set
+  useEffect(() => {
+    if (data.contentType !== "template" || !data.templateId) {
+      setCoverageResult(null);
+      return;
+    }
+    const filter: RecipientFilter = {
+      audienceType: data.audienceType,
+      topicId: data.audienceType === "topic" ? data.topicId : undefined,
+      segmentId: data.audienceType === "segment" ? data.segmentId : undefined,
+    };
+    checkTemplateVariableCoverage(
+      organizationId,
+      data.templateId,
+      filter,
+      data.variableMappings.length > 0 ? data.variableMappings : undefined
+    ).then(setCoverageResult);
+  }, [
+    organizationId,
+    data.contentType,
+    data.templateId,
+    data.audienceType,
+    data.topicId,
+    data.segmentId,
+    data.variableMappings,
+  ]);
+
+  const coverageWarning =
+    coverageResult?.success && coverageResult.missingCount > 0
+      ? coverageResult
+      : null;
 
   // Fetch templates with React Query - auto-updates when templates change
   const { data: templatesData } = useTemplates(orgSlug);
@@ -1558,6 +1595,25 @@ function ReviewStep({
         onChange={onChange}
         schedulingEnabled={schedulingEnabled}
       />
+
+      {/* Variable coverage warning */}
+      {coverageWarning && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="space-y-1">
+            <p className="font-medium text-amber-800 text-sm dark:text-amber-200">
+              {coverageWarning.missingCount === coverageWarning.totalSampled
+                ? "All sampled contacts are missing required template variables"
+                : `${coverageWarning.missingCount} of ${coverageWarning.totalSampled} contacts are missing template variables`}
+            </p>
+            <p className="text-amber-700 text-xs dark:text-amber-300">
+              Missing: {coverageWarning.missingVariables.join(", ")}. Add these
+              attributes to your contacts or set a fallback value in the
+              template.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end pt-4">
         <Button

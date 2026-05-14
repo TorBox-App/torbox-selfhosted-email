@@ -17,6 +17,7 @@ import {
   findTemplateForValidation,
   findTemplateVariables,
   getSampleBroadcastRecipients,
+  getSampleRecipientsWithProperties,
   insertDraftBroadcast,
   listBroadcasts,
   listPublishedTemplates,
@@ -34,6 +35,7 @@ import type {
   BatchStatus,
   CancelBatchResult,
   Channel,
+  CheckTemplateVariableCoverageResult,
   CreateBatchInput,
   CreateBatchResult,
   CreateDraftBatchInput,
@@ -49,6 +51,7 @@ import type {
   SaveDraftBatchResult,
   UpdateDraftBatchInput,
   UpdateDraftBatchResult,
+  VariableMapping,
 } from "@/lib/batch";
 import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
 import { createActionLogger } from "@/lib/logger";
@@ -65,11 +68,13 @@ export type {
   AudienceType,
   BatchSendWithMeta,
   CancelBatchResult,
+  CheckTemplateVariableCoverageResult,
   ContentType,
   CreateBatchResult,
   GetBatchResult,
   ListBatchesResult,
   RecipientFilter,
+  VariableMapping,
 } from "@/lib/batch";
 
 /**
@@ -175,6 +180,152 @@ export async function getBatchSend(
   }
 }
 
+// =============================================================================
+// TEMPLATE VARIABLE COVERAGE
+// =============================================================================
+
+/**
+ * Identifies "risky" template variables — custom variables with no fallback
+ * and no static mapping — then checks a sample of contacts to see how many
+ * are missing them. Returns coverage stats without performing auth checks
+ * (callers are responsible for auth).
+ */
+async function assessVariableCoverage(
+  organizationId: string,
+  templateId: string,
+  recipientFilter: RecipientFilter | undefined,
+  variableMappings: VariableMapping[] | undefined
+): Promise<{
+  allFail: boolean;
+  missingCount: number;
+  totalSampled: number;
+  totalRecipients: number;
+  missingVariables: string[];
+}> {
+  const EMPTY = {
+    allFail: false,
+    missingCount: 0,
+    totalSampled: 0,
+    totalRecipients: 0,
+    missingVariables: [] as string[],
+  };
+
+  const templateData = await findTemplateVariables(templateId, organizationId);
+  if (!templateData) return EMPTY;
+
+  const staticMappedVars = new Set(
+    (variableMappings ?? [])
+      .filter((m) => m.source.type === "static")
+      .map((m) => m.variableName)
+  );
+
+  const knownVariableNames = new Set(
+    getVariablesForContext("broadcast").map((v) => v.name)
+  );
+
+  type StoredVar = { name: string; fallback?: string | null };
+  const storedVars = (templateData.variables ?? []) as StoredVar[];
+
+  const riskyVars: string[] = [];
+  for (const v of storedVars) {
+    if (HANDLEBARS_KEYWORDS.has(v.name)) continue;
+    if (v.fallback) continue;
+    if (staticMappedVars.has(v.name)) continue;
+    if (knownVariableNames.has(v.name)) continue;
+    if (v.name.startsWith("contact.")) continue;
+    if (v.name.startsWith("organization.")) continue;
+    if (
+      v.name === "unsubscribeUrl" ||
+      v.name === "preferencesUrl" ||
+      v.name === "confirmationUrl"
+    )
+      continue;
+    riskyVars.push(v.name);
+  }
+
+  if (riskyVars.length === 0) return EMPTY;
+
+  const { contacts, totalCount } = await getSampleRecipientsWithProperties(
+    organizationId,
+    "email",
+    recipientFilter
+      ? {
+          audienceType: recipientFilter.audienceType,
+          topicId: recipientFilter.topicId,
+          segmentId: recipientFilter.segmentId,
+        }
+      : undefined
+  );
+
+  if (contacts.length === 0) {
+    return {
+      ...EMPTY,
+      totalRecipients: totalCount,
+      missingVariables: riskyVars,
+    };
+  }
+
+  const missingContacts = contacts.filter(
+    (c: { properties: Record<string, unknown> | null }) => {
+      const props = c.properties ?? {};
+      return riskyVars.some((varName) => {
+        const val = props[varName];
+        return val == null || val === "";
+      });
+    }
+  );
+
+  return {
+    allFail: missingContacts.length === contacts.length,
+    missingCount: missingContacts.length,
+    totalSampled: contacts.length,
+    totalRecipients: totalCount,
+    missingVariables: riskyVars,
+  };
+}
+
+/**
+ * Pre-flight check: assess whether template custom variables can be resolved
+ * for the selected audience. Returned data drives a warning banner in the
+ * broadcast form (review step) before the user clicks Send.
+ */
+export async function checkTemplateVariableCoverage(
+  organizationId: string,
+  templateId: string,
+  recipientFilter: RecipientFilter,
+  variableMappings?: VariableMapping[]
+): Promise<CheckTemplateVariableCoverageResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+    const permError = checkPermission(access.role, "broadcasts", ["read"]);
+    if (permError) return permError;
+
+    const coverage = await assessVariableCoverage(
+      organizationId,
+      templateId,
+      recipientFilter,
+      variableMappings
+    );
+
+    return { success: true, ...coverage };
+  } catch (error) {
+    const log = createActionLogger("checkTemplateVariableCoverage", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: error, templateId }, "Failed to assess variable coverage");
+    return {
+      success: false,
+      error: "Failed to check template variable coverage",
+    };
+  }
+}
+
 /**
  * Shared pre-send validation.
  *
@@ -193,6 +344,7 @@ type PrepareSendData = {
   templateId?: string;
   recipientFilter?: RecipientFilter;
   scheduledFor?: Date;
+  variableMappings?: VariableMapping[];
 };
 
 type PrepareSendResult =
@@ -286,6 +438,23 @@ async function validateAndPrepareSend(
           ? "No contacts with SMS consent found"
           : "No active email contacts found",
     };
+  }
+
+  // Block sends where every contact would fail template rendering due to
+  // missing custom variables that have no fallback and no static mapping.
+  if (data.templateId && data.channel !== "sms") {
+    const coverage = await assessVariableCoverage(
+      organizationId,
+      data.templateId,
+      data.recipientFilter,
+      data.variableMappings
+    );
+    if (coverage.allFail && coverage.missingVariables.length > 0) {
+      return {
+        ok: false,
+        error: `All contacts are missing required template variables: ${coverage.missingVariables.join(", ")}. Add these attributes to your contacts or set a fallback in the template.`,
+      };
+    }
   }
 
   return { ok: true, recipientCount };
