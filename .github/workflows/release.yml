@@ -83,6 +83,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
 
       - name: Build dependencies
@@ -100,6 +101,7 @@ jobs:
             --tag ${{ needs.parse.outputs.dist_tag }}
         env:
           NPM_CONFIG_PROVENANCE: true
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         env:
@@ -187,6 +189,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
 
       - name: Build dependencies
@@ -204,6 +207,7 @@ jobs:
             --tag ${{ needs.parse.outputs.dist_tag }}
         env:
           NPM_CONFIG_PROVENANCE: true
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Download standalone artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
