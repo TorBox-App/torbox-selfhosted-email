@@ -101,7 +101,6 @@ jobs:
             --tag ${{ needs.parse.outputs.dist_tag }}
         env:
           NPM_CONFIG_PROVENANCE: true
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         env:
@@ -207,7 +206,6 @@ jobs:
             --tag ${{ needs.parse.outputs.dist_tag }}
         env:
           NPM_CONFIG_PROVENANCE: true
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Download standalone artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
