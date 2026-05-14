@@ -14,6 +14,7 @@ import {
   GetRoleCommand,
   IAMClient,
   PutRolePolicyCommand,
+  UpdateAssumeRolePolicyCommand,
 } from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro, select } from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
@@ -433,6 +434,34 @@ async function updatePlatformRole(
         })
       );
     });
+
+    if (externalId) {
+      const trustPolicy = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+            },
+            Action: "sts:AssumeRole",
+            Condition: {
+              StringEquals: {
+                "sts:ExternalId": externalId,
+              },
+            },
+          },
+        ],
+      };
+      await progress.execute("Repairing trust policy", async () => {
+        await iam.send(
+          new UpdateAssumeRolePolicyCommand({
+            RoleName: roleName,
+            PolicyDocument: JSON.stringify(trustPolicy),
+          })
+        );
+      });
+    }
 
     progress.succeed("Platform access role updated");
   } else if (externalId) {

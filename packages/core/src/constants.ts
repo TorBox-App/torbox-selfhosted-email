@@ -73,3 +73,9 @@ export const RESOURCE_PREFIX = "wraps-email";
 export const DEFAULT_TAGS = {
   ManagedBy: "wraps",
 } as const;
+
+/**
+ * Prefix for ExternalId values baked into customer IAM trust policies.
+ * NEVER change this — existing customer roles depend on it for sts:AssumeRole.
+ */
+export const EXTERNAL_ID_PREFIX = "wraps_";

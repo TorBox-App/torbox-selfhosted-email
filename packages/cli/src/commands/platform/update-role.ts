@@ -2,6 +2,7 @@ import {
   CreateRoleCommand,
   GetRoleCommand,
   IAMClient,
+  UpdateAssumeRolePolicyCommand,
 } from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro } from "@clack/prompts";
 import pc from "picocolors";
@@ -25,7 +26,7 @@ import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
  * This command:
  * - Only updates the role if it exists (does not create it)
  * - Updates inline policies to match current feature requirements
- * - Preserves the trust policy (AssumeRole configuration)
+ * - Repairs the trust policy (principal + ExternalId) using stored metadata
  */
 export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   const startTime = Date.now();
@@ -200,6 +201,35 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
         })
       );
     });
+
+    if (externalId) {
+      const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
+      const trustPolicy = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+            },
+            Action: "sts:AssumeRole",
+            Condition: {
+              StringEquals: {
+                "sts:ExternalId": externalId,
+              },
+            },
+          },
+        ],
+      };
+      await progress.execute("Repairing trust policy", async () => {
+        await iam.send(
+          new UpdateAssumeRolePolicyCommand({
+            RoleName: roleName,
+            PolicyDocument: JSON.stringify(trustPolicy),
+          })
+        );
+      });
+    }
   }
 
   progress.stop();

@@ -7,6 +7,7 @@ import {
   DEFAULT_MAIL_FROM_SUBDOMAIN,
   DEFAULT_SUPPRESSION_REASONS,
   DEFAULT_TAGS,
+  EXTERNAL_ID_PREFIX,
   RESOURCE_PREFIX,
   VERCEL_OIDC_THUMBPRINT,
   VERCEL_OIDC_URL,
@@ -98,5 +99,11 @@ describe("DEFAULT_TAGS", () => {
   it("has ManagedBy tag", () => {
     expect(DEFAULT_TAGS).toHaveProperty("ManagedBy");
     expect(DEFAULT_TAGS.ManagedBy).toBe("wraps");
+  });
+});
+
+describe("EXTERNAL_ID_PREFIX", () => {
+  it("is exactly wraps_ — changing this breaks customer IAM trust policies", () => {
+    expect(EXTERNAL_ID_PREFIX).toBe("wraps_");
   });
 });
