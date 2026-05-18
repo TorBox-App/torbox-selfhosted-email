@@ -58,6 +58,7 @@ aws_check() {
 verify_base() {
   local domain="${1:?domain required}"
   local region="${2:-us-east-1}"
+  local reputation_expected="${3:-true}"
 
   section "Base: IAM Role"
 
@@ -174,11 +175,15 @@ verify_base() {
       fail "SES config set sending not enabled"
     fi
 
-    # Check reputation metrics
-    if echo "$ses_output" | jq -e '.ReputationOptions.ReputationMetricsEnabled == true' &>/dev/null; then
-      pass "SES config set reputation metrics enabled"
+    # Check reputation metrics (starter preset disables this; production enables it)
+    if [[ "$reputation_expected" == "true" ]]; then
+      if echo "$ses_output" | jq -e '.ReputationOptions.ReputationMetricsEnabled == true' &>/dev/null; then
+        pass "SES config set reputation metrics enabled"
+      else
+        fail "SES config set reputation metrics not enabled"
+      fi
     else
-      fail "SES config set reputation metrics not enabled"
+      pass "SES config set reputation metrics not required (starter)"
     fi
 
     # Check suppression (BOUNCE and COMPLAINT)
@@ -1022,6 +1027,46 @@ verify_webhook() {
 
 # ─── Archiving Verification ──────────────────────────────────────────
 
+verify_alerting() {
+  local region="${1:-us-east-1}"
+  local events_enabled="${2:-true}"
+
+  section "Alerting Resources"
+
+  # SNS topic
+  local topic_arn
+  topic_arn=$(aws sns list-topics --region "$region" --query "Topics[?ends_with(TopicArn, ':wraps-email-alerts')].TopicArn | [0]" --output text 2>/dev/null)
+  if [[ "$topic_arn" != "None" && -n "$topic_arn" ]]; then
+    pass "SNS topic wraps-email-alerts exists"
+  else
+    fail "SNS topic wraps-email-alerts not found"
+  fi
+
+  # CloudWatch alarms (all 4 created by alerting.ts)
+  for alarm_name in wraps-email-bounce-rate-warning wraps-email-bounce-rate-critical wraps-email-complaint-rate-warning wraps-email-complaint-rate-critical; do
+    if aws cloudwatch describe-alarms \
+      --alarm-names "$alarm_name" \
+      --region "$region" \
+      --query 'MetricAlarms[0].AlarmName' --output text 2>/dev/null | grep -q "$alarm_name"; then
+      pass "CloudWatch alarm $alarm_name exists"
+    else
+      fail "CloudWatch alarm $alarm_name not found"
+    fi
+  done
+
+  # DLQ alarm only present when event tracking (SQS) is also deployed
+  if [[ "$events_enabled" == "true" ]]; then
+    if aws cloudwatch describe-alarms \
+      --alarm-names wraps-email-dlq-messages \
+      --region "$region" \
+      --query 'MetricAlarms[0].AlarmName' --output text 2>/dev/null | grep -q 'wraps-email-dlq-messages'; then
+      pass "CloudWatch alarm wraps-email-dlq-messages exists"
+    else
+      fail "CloudWatch alarm wraps-email-dlq-messages not found"
+    fi
+  fi
+}
+
 verify_archiving() {
   section "Email Archiving"
 
@@ -1663,6 +1708,27 @@ verify_teardown() {
   else
     pass "SSM reply-secret parameters removed"
   fi
+
+  # SNS alerting topic
+  local alerting_topic_arn
+  alerting_topic_arn=$(aws sns list-topics --region "$region" --query "Topics[?ends_with(TopicArn, ':wraps-email-alerts')].TopicArn | [0]" --output text 2>/dev/null)
+  if [[ "$alerting_topic_arn" != "None" && -n "$alerting_topic_arn" ]]; then
+    fail "SNS topic wraps-email-alerts still exists"
+  else
+    pass "SNS topic wraps-email-alerts removed"
+  fi
+
+  # CloudWatch alarms
+  for alarm_name in wraps-email-bounce-rate-warning wraps-email-bounce-rate-critical wraps-email-complaint-rate-warning wraps-email-complaint-rate-critical wraps-email-dlq-messages; do
+    if aws cloudwatch describe-alarms \
+      --alarm-names "$alarm_name" \
+      --region "$region" \
+      --query 'MetricAlarms[0].AlarmName' --output text 2>/dev/null | grep -q "$alarm_name"; then
+      fail "CloudWatch alarm $alarm_name still exists"
+    else
+      pass "CloudWatch alarm $alarm_name removed"
+    fi
+  done
 
   # MailManager archive (accepts PENDING_DELETION as removed — archives take time to purge)
   local archive_output

@@ -110,9 +110,10 @@ export async function selfhostUpgrade(
     `wraps-selfhost-${identity.accountId}-${region}`;
 
   // 6. Rebuild the API
+  const childStdio = isJsonMode() ? "pipe" : "inherit";
   await progress.execute("Building Wraps API", async () => {
     execSync("pnpm --filter @wraps/api build", {
-      stdio: "inherit",
+      stdio: childStdio,
       cwd: repoRoot,
     });
   });
@@ -122,7 +123,7 @@ export async function selfhostUpgrade(
   await progress.execute("Packaging Lambda", async () => {
     execSync("/bin/sh -c 'zip -r ../lambda.zip .'", {
       cwd: join(repoRoot, "apps/api/dist"),
-      stdio: "inherit",
+      stdio: childStdio,
     });
   });
 

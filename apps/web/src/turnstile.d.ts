@@ -1,4 +1,4 @@
-interface TurnstileWidget {
+type TurnstileWidget = {
   render: (
     container: Element | string,
     options: {
@@ -12,8 +12,9 @@ interface TurnstileWidget {
   ) => string;
   remove: (widgetId: string) => void;
   reset: (widgetId: string) => void;
-}
+};
 
+// biome-ignore lint/style/useConsistentTypeDefinitions: interface required for global declaration merging
 interface Window {
   turnstile?: TurnstileWidget;
   onloadTurnstileCallback?: () => void;

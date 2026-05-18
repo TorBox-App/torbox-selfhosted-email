@@ -31,12 +31,12 @@ METHODS=()
 for arg in "$@"; do
   case "$arg" in
     --sequential) SEQUENTIAL=true ;;
-    cli|cdk|pulumi|cfn) METHODS+=("$arg") ;;
-    *) printf "Unknown arg: %s\nUsage: run-all.sh [--sequential] [cli] [cdk] [pulumi] [cfn]\n" "$arg"; exit 1 ;;
+    cli|cdk|pulumi|cfn|selfhost) METHODS+=("$arg") ;;
+    *) printf "Unknown arg: %s\nUsage: run-all.sh [--sequential] [cli] [cdk] [pulumi] [cfn] [selfhost]\n" "$arg"; exit 1 ;;
   esac
 done
 
-# Default: all methods
+# Default: all methods except selfhost (requires separate Neon + license credentials)
 if (( ${#METHODS[@]} == 0 )); then
   METHODS=(cli cdk pulumi cfn)
 fi

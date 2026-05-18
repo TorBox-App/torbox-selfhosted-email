@@ -134,6 +134,9 @@ export async function selfhostDeploy(
     neonApiKey = neonApiKeyAnswer as string;
   }
 
+  // 5b. Neon org ID (required for organization-scoped API keys)
+  const neonOrgId = options.neonOrgId;
+
   // 6. Prompt for license key
   let licenseKey = options.licenseKey;
   if (!licenseKey) {
@@ -176,9 +179,10 @@ export async function selfhostDeploy(
   }
 
   // 9. Build the API
+  const childStdio = isJsonMode() ? "pipe" : "inherit";
   await progress.execute("Building Wraps API", async () => {
     execSync("pnpm --filter @wraps/api build", {
-      stdio: "inherit",
+      stdio: childStdio,
       cwd: repoRoot,
     });
   });
@@ -188,7 +192,7 @@ export async function selfhostDeploy(
   await progress.execute("Packaging Lambda", async () => {
     execSync("/bin/sh -c 'zip -r ../lambda.zip .'", {
       cwd: join(repoRoot, "apps/api/dist"),
-      stdio: "inherit",
+      stdio: childStdio,
     });
   });
 
@@ -198,7 +202,8 @@ export async function selfhostDeploy(
     async () =>
       provisionNeonProject(
         neonApiKey as string,
-        buildNeonProjectName(identity.accountId, region as string)
+        buildNeonProjectName(identity.accountId, region as string),
+        { orgId: neonOrgId }
       )
   );
 
@@ -242,7 +247,7 @@ export async function selfhostDeploy(
   // 12. Run database migrations
   await progress.execute("Running database migrations", async () => {
     execSync("pnpm --filter @wraps/db db:migrate", {
-      stdio: "inherit",
+      stdio: childStdio,
       cwd: repoRoot,
       env: {
         ...process.env,

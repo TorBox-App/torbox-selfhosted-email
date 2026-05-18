@@ -4,6 +4,7 @@ import {
   AlertTriangleIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  KeyRoundIcon,
   MailIcon,
   MessageSquareIcon,
   XCircleIcon,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEventUsage } from "@/hooks/use-event-usage";
+import { useProductsStatus } from "@/hooks/use-products-status";
 import { cn } from "@/lib/utils";
 import { useProductsStore } from "@/stores/products-store";
 import { useAnalyticsOverview } from "../emails/analytics/hooks/use-analytics";
@@ -88,6 +90,7 @@ export function HealthStatus({
   const { data: emailData } = useAnalyticsOverview(orgSlug, days);
   const { data: smsData } = useSMSAnalyticsOverview(orgSlug, days);
   const { data: eventUsage } = useEventUsage(orgSlug);
+  const { data: productsApiStatus } = useProductsStatus(orgSlug);
 
   const channels: ChannelHealth[] = [];
 
@@ -171,6 +174,27 @@ export function HealthStatus({
       ],
       href: `/${orgSlug}/settings/billing`,
     });
+  }
+
+  // IAM role permissions check
+  if (productsApiStatus) {
+    const roleUpdateProducts = productsApiStatus.products.filter(
+      (p) => p.needsRoleUpdate
+    );
+    if (roleUpdateProducts.length > 0) {
+      const affected = roleUpdateProducts.map((p) => p.name).join(" · ");
+      const setupHref =
+        roleUpdateProducts[0].id === "email"
+          ? `/${orgSlug}/emails/setup`
+          : `/${orgSlug}/sms/setup`;
+      channels.push({
+        channel: "IAM Role",
+        icon: <KeyRoundIcon className="h-3.5 w-3.5" />,
+        level: "critical",
+        metrics: [`${affected} permissions missing`],
+        href: setupHref,
+      });
+    }
   }
 
   const overallLevel =

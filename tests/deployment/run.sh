@@ -48,7 +48,7 @@ while (( $# > 0 )); do
       PASSTHROUGH_ARGS+=(--sequential)
       shift
       ;;
-    cli|cdk|pulumi|cfn)
+    cli|cdk|pulumi|cfn|selfhost)
       PASSTHROUGH_ARGS+=("$1")
       shift
       ;;

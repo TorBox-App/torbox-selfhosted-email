@@ -80,6 +80,12 @@ export type CliFlags = {
   tier?: string;
   expires?: string;
 
+  // Self-hosted
+  neonApiKey?: string;
+  neonOrgId?: string;
+  licenseKey?: string;
+  appUrl?: string;
+
   // Help / version (informational; cli.ts short-circuits before parsing)
   help?: boolean;
   version?: boolean;
@@ -123,6 +129,10 @@ const STRING_FLAGS = [
   "subdomain",
   "tier",
   "expires",
+  "neon-api-key",
+  "neon-org-id",
+  "license-key",
+  "app-url",
 ] as const;
 
 /**

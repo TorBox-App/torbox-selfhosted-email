@@ -51,6 +51,26 @@ extract_json() {
   grep -E '^\{' | tail -1
 }
 
+# Helper: verify the full production resource set.
+# Always checks: base, events, IAM events policy, alerting, console access role.
+# Optional add-ons passed as args: "smtp", "archiving"
+#   verify_production_stack
+#   verify_production_stack smtp
+#   verify_production_stack archiving smtp
+verify_production_stack() {
+  verify_base "$DOMAIN" "$REGION" "true"
+  verify_events "$REGION" "$DOMAIN"
+  verify_iam_events_policy
+  verify_alerting "$REGION" "true"
+  for check in "$@"; do
+    case "$check" in
+      archiving) verify_archiving ;;
+      smtp)      verify_smtp ;;
+    esac
+  done
+  verify_console_access_role
+}
+
 # Helper: create MX + SPF records in Route53 for an inbound-capable domain.
 # JSON mode skips DNS management, so we do it manually. SES inbound SMTP uses
 # `inbound-smtp.{region}.amazonaws.com`.
@@ -182,7 +202,7 @@ wraps email init \
 create_dkim_records "$DOMAIN" "$REGION"
 
 reset_counters
-verify_base "$DOMAIN" "$REGION"
+verify_base "$DOMAIN" "$REGION" "false"
 
 # Derive the primary domain's per-domain config set name from SES (used throughout)
 PRIMARY_CONFIG_SET_NAME=$(aws sesv2 get-email-identity \
@@ -352,10 +372,7 @@ wraps email upgrade \
   --json
 
 reset_counters
-verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION" "$DOMAIN"
-verify_iam_events_policy
-verify_console_access_role
+verify_production_stack
 
 # Verify SMTP still not deployed
 section "Phase 2: Verify no SMTP"
@@ -395,10 +412,7 @@ else
 fi
 
 # Verify resources still intact after sync
-verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION" "$DOMAIN"
-verify_iam_events_policy
-verify_console_access_role
+verify_production_stack
 
 summary || { printf "${RED}Phase 2b FAILED${NC}\n"; exit 1; }
 
@@ -589,11 +603,7 @@ wraps email upgrade \
   --json
 
 reset_counters
-verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION" "$DOMAIN"
-verify_iam_events_policy
-verify_smtp
-verify_console_access_role
+verify_production_stack smtp
 
 summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
 
@@ -706,14 +716,37 @@ fi
 
 summary || { printf "${RED}Phase 3b FAILED${NC}\n"; exit 1; }
 
-# ─── Phase 3c: Platform role permission smoke test ───────────────────
+# ─── Phase 3c: Enable email archiving ────────────────────────────────
+#
+# The upgrade --action archiving flow requires an interactive retention selection.
+# We patch the metadata directly and sync via `email config` — same deployment path,
+# and correctly tests that archiving is deployed alongside alerting.
 
-printf "\n${YELLOW}Phase 3c: Platform role permission smoke test${NC}\n"
+printf "\n${YELLOW}Phase 3c: Enable email archiving${NC}\n"
+
+METADATA_FILE="${HOME}/.wraps/connections/${ACCOUNT_ID}-${REGION}.json"
+jq '.services.email.config.emailArchiving = {"enabled": true, "retention": "90days"}' \
+  "$METADATA_FILE" > /tmp/wraps-meta-archiving.json
+mv /tmp/wraps-meta-archiving.json "$METADATA_FILE"
+
+wraps email config \
+  --region "$REGION" \
+  --yes \
+  --json
+
+reset_counters
+verify_production_stack archiving smtp
+
+summary || { printf "${RED}Phase 3c FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 3d: Platform role permission smoke test ───────────────────
+
+printf "\n${YELLOW}Phase 3d: Platform role permission smoke test${NC}\n"
 
 reset_counters
 verify_role_permissions "$ACCOUNT_ID" "$REGION" "$DOMAIN"
 
-summary || { printf "${RED}Phase 3c FAILED${NC}\n"; exit 1; }
+summary || { printf "${RED}Phase 3d FAILED${NC}\n"; exit 1; }
 
 # ─── Phase 4: Idempotent re-deploy (same preset, nothing should change) ──
 
@@ -727,11 +760,7 @@ wraps email upgrade \
   --json
 
 reset_counters
-verify_base "$DOMAIN" "$REGION"
-verify_events "$REGION" "$DOMAIN"
-verify_iam_events_policy
-verify_smtp
-verify_console_access_role
+verify_production_stack archiving smtp
 
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
 

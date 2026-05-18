@@ -12,8 +12,16 @@ export type NeonProject = {
 export async function provisionNeonProject(
   apiKey: string,
   projectName: string,
-  region = "aws-us-east-2"
+  options: { region?: string; orgId?: string } = {}
 ): Promise<NeonProject> {
+  const { region = "aws-us-east-2", orgId } = options;
+  const projectPayload: Record<string, unknown> = {
+    name: projectName,
+    pg_version: 16,
+    region_id: region,
+  };
+  if (orgId) projectPayload.org_id = orgId;
+
   const response = await fetch("https://console.neon.tech/api/v2/projects", {
     method: "POST",
     headers: {
@@ -21,13 +29,7 @@ export async function provisionNeonProject(
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({
-      project: {
-        name: projectName,
-        pg_version: 16,
-        region_id: region,
-      },
-    }),
+    body: JSON.stringify({ project: projectPayload }),
   });
 
   if (!response.ok) {

@@ -9,9 +9,9 @@ import {
   CardTitle,
 } from "@wraps/ui/components/ui/card";
 import { Label } from "@wraps/ui/components/ui/label";
-import Script from "next/script";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Script from "next/script";
 import posthog from "posthog-js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -184,7 +184,7 @@ export default function SignUpForm({
   });
 
   useEffect(() => {
-    if (!turnstileReady || !TURNSTILE_SITE_KEY || !window.turnstile) return;
+    if (!(turnstileReady && TURNSTILE_SITE_KEY && window.turnstile)) return;
 
     const container = document.getElementById("turnstile-widget");
     if (!container) return;
@@ -466,8 +466,8 @@ export default function SignUpForm({
 
       {TURNSTILE_SITE_KEY && (
         <Script
-          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           onReady={() => setTurnstileReady(true)}
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         />
       )}
     </div>

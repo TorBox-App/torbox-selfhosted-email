@@ -14,7 +14,10 @@ export async function POST(request: NextRequest) {
     const token = request.headers.get("x-turnstile-token");
 
     if (!token) {
-      return NextResponse.json({ error: "Verification required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Verification required" },
+        { status: 400 }
+      );
     }
 
     if (TURNSTILE_SECRET_KEY) {
@@ -23,7 +26,10 @@ export async function POST(request: NextRequest) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ secret: TURNSTILE_SECRET_KEY, response: token }),
+          body: JSON.stringify({
+            secret: TURNSTILE_SECRET_KEY,
+            response: token,
+          }),
         }
       );
       const result = await verifyResponse.json();

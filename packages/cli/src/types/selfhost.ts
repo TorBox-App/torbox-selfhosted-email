@@ -1,6 +1,7 @@
 export type SelfhostDeployOptions = {
   region?: string;
   neonApiKey?: string;
+  neonOrgId?: string;
   licenseKey?: string;
   appUrl?: string;
   yes?: boolean;
