@@ -9,10 +9,11 @@ import {
   CardTitle,
 } from "@wraps/ui/components/ui/card";
 import { Label } from "@wraps/ui/components/ui/label";
+import Script from "next/script";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
@@ -20,6 +21,8 @@ import { cn, toSafeRedirectPath } from "@/lib/utils";
 import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function SignUpForm({
   onSwitchToSignIn,
@@ -37,6 +40,9 @@ export default function SignUpForm({
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+  const [turnstileReady, setTurnstileReady] = useState(false);
+  const turnstileToken = useRef<string | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   const isAuthInProgress = isRedirecting || isGoogleLoading || isGitHubLoading;
 
@@ -67,6 +73,11 @@ export default function SignUpForm({
       password: "",
     },
     onSubmit: async ({ value }) => {
+      if (TURNSTILE_SITE_KEY && !turnstileToken.current) {
+        toast.error("Please wait for verification to complete.");
+        return;
+      }
+
       // Step 1: Sign up the user
       let signupResult;
       try {
@@ -74,6 +85,9 @@ export default function SignUpForm({
           email: value.email,
           password: value.password,
           name: value.name,
+          fetchOptions: turnstileToken.current
+            ? { headers: { "x-turnstile-token": turnstileToken.current } }
+            : undefined,
         });
       } catch {
         toast.error(
@@ -168,6 +182,34 @@ export default function SignUpForm({
       }),
     },
   });
+
+  useEffect(() => {
+    if (!turnstileReady || !TURNSTILE_SITE_KEY || !window.turnstile) return;
+
+    const container = document.getElementById("turnstile-widget");
+    if (!container) return;
+
+    turnstileWidgetId.current = window.turnstile.render(container, {
+      sitekey: TURNSTILE_SITE_KEY,
+      theme: "auto",
+      callback: (token) => {
+        turnstileToken.current = token;
+      },
+      "expired-callback": () => {
+        turnstileToken.current = null;
+      },
+      "error-callback": () => {
+        turnstileToken.current = null;
+      },
+    });
+
+    return () => {
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.remove(turnstileWidgetId.current);
+        turnstileWidgetId.current = null;
+      }
+    };
+  }, [turnstileReady]);
 
   // Redirect already-authenticated users away from the signup page
   useEffect(() => {
@@ -280,11 +322,21 @@ export default function SignUpForm({
                   )}
                 </form.Field>
 
+                {TURNSTILE_SITE_KEY && (
+                  <div className="flex justify-center">
+                    <div id="turnstile-widget" />
+                  </div>
+                )}
+
                 <form.Subscribe>
                   {(state) => (
                     <Button
                       className="w-full cursor-pointer"
-                      disabled={!state.canSubmit || isAuthInProgress}
+                      disabled={
+                        !state.canSubmit ||
+                        isAuthInProgress ||
+                        (!!TURNSTILE_SITE_KEY && !turnstileToken.current)
+                      }
                       loading={state.isSubmitting || isRedirecting}
                       type="submit"
                     >
@@ -411,6 +463,13 @@ export default function SignUpForm({
         </Link>
         .
       </div>
+
+      {TURNSTILE_SITE_KEY && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          onReady={() => setTurnstileReady(true)}
+        />
+      )}
     </div>
   );
 }
