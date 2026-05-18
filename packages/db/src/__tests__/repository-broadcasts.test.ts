@@ -40,10 +40,7 @@ describe("Repository: getSampleRecipientsWithProperties", () => {
       })
       .onConflictDoNothing();
 
-    await db
-      .insert(contact)
-      .values([contactA, contactB])
-      .onConflictDoNothing();
+    await db.insert(contact).values([contactA, contactB]).onConflictDoNothing();
   });
 
   afterAll(async () => {

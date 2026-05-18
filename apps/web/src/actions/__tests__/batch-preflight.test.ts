@@ -29,7 +29,11 @@ import {
   vi,
 } from "vitest";
 import { checkFeatureAccess } from "@/lib/plan-limits";
-import { checkTemplateVariableCoverage, promoteDraftToSend, saveDraftBatchSend } from "../batch";
+import {
+  checkTemplateVariableCoverage,
+  promoteDraftToSend,
+  saveDraftBatchSend,
+} from "../batch";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -286,7 +290,9 @@ afterAll(async () => {
   await db
     .delete(batchSend)
     .where(eq(batchSend.organizationId, testOrganization.id));
-  await db.delete(contact).where(eq(contact.organizationId, testOrganization.id));
+  await db
+    .delete(contact)
+    .where(eq(contact.organizationId, testOrganization.id));
   await db.delete(template).where(eq(template.id, templateNoCustomVars.id));
   await db.delete(template).where(eq(template.id, templateWithCustomVar.id));
   await db.delete(template).where(eq(template.id, templateWithFallback.id));
@@ -619,7 +625,9 @@ describe("promoteDraftToSend — blocks all-fail sends", () => {
     } finally {
       fetchSpy.mockRestore();
       delete process.env.NEXT_PUBLIC_API_URL;
-      await db.delete(batchSend).where(eq(batchSend.organizationId, blockOrgId));
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, blockOrgId));
       await db.delete(template).where(eq(template.id, blockTemplate.id));
       await db.delete(contact).where(eq(contact.id, blockContactId));
       await db.delete(awsAccount).where(eq(awsAccount.id, blockAwsId));
