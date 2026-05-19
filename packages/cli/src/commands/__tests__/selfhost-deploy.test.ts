@@ -6,6 +6,10 @@ vi.mock("node:child_process", () => ({
   exec: vi.fn(),
 }));
 
+vi.mock("node:fs", () => ({
+  writeFileSync: vi.fn(),
+}));
+
 vi.mock("@pulumi/pulumi", () => ({
   automation: {
     LocalWorkspace: {
@@ -33,10 +37,10 @@ vi.mock("../../utils/selfhost/neon.js", async () => {
 vi.mock("../../telemetry/events.js");
 
 import * as prompts from "@clack/prompts";
+import * as neon from "../../utils/selfhost/neon.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
 import * as metadata from "../../utils/shared/metadata.js";
-import * as neon from "../../utils/selfhost/neon.js";
 import * as pulumiUtils from "../../utils/shared/pulumi.js";
 import { selfhostDeploy } from "../selfhost/deploy.js";
 
@@ -66,8 +70,7 @@ const MOCK_PULUMI_OUTPUTS = {
       value: "arn:aws:sqs:us-east-1:123456789012:wraps-selfhost-workflow",
     },
     schedulerRoleArn: {
-      value:
-        "arn:aws:iam::123456789012:role/wraps-selfhost-scheduler-role",
+      value: "arn:aws:iam::123456789012:role/wraps-selfhost-scheduler-role",
     },
     schedulerGroupName: { value: "wraps-selfhost-schedulers" },
   },

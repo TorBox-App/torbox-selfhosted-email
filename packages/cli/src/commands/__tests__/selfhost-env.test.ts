@@ -32,8 +32,10 @@ const MOCK_SELFHOST_METADATA = {
       apiUrl: "https://abc123.lambda-url.us-east-1.on.aws",
       config: {
         databaseUrl: "postgres://user:pass@torbox-db.example.com:5432/wraps",
-        betterAuthSecret: "deadbeefcafe1234567890abcdef1234567890abcdef1234567890abcdef1234",
-        unsubscribeSecret: "feedfacecafe1234567890abcdef1234567890abcdef1234567890abcdef1234",
+        betterAuthSecret:
+          "deadbeefcafe1234567890abcdef1234567890abcdef1234567890abcdef1234",
+        unsubscribeSecret:
+          "feedfacecafe1234567890abcdef1234567890abcdef1234567890abcdef1234",
         licenseKey: "v1.scale.2027-05-19.abc123",
         appUrl: "https://app.torbox.app",
       },
@@ -106,9 +108,7 @@ describe("selfhostEnv", () => {
       await selfhostEnv({ region: "us-east-1" });
 
       const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
-      expect(output).toContain(
-        "NEXT_PUBLIC_APP_URL=https://app.torbox.app"
-      );
+      expect(output).toContain("NEXT_PUBLIC_APP_URL=https://app.torbox.app");
       expect(output).toContain("CORS_ORIGIN=https://app.torbox.app");
     });
 

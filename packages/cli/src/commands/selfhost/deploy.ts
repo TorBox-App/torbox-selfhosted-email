@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
@@ -194,9 +195,12 @@ export async function selfhostDeploy(
 
   // 10. Package Lambda: zip the self-contained bun bundle (no npm install needed)
   const lambdaZipPath = join(repoRoot, "apps/api/lambda.zip");
+  const distDir = join(repoRoot, "apps/api/dist");
   await progress.execute("Packaging Lambda", async () => {
+    // Node 22 treats .js as CJS unless package.json declares "type":"module"
+    writeFileSync(join(distDir, "package.json"), '{"type":"module"}\n');
     execSync("/bin/sh -c 'zip -r ../lambda.zip .'", {
-      cwd: join(repoRoot, "apps/api/dist"),
+      cwd: distDir,
       stdio: childStdio,
     });
   });

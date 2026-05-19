@@ -59,9 +59,7 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   }
 
   // Output in .env format — no ANSI so it can be piped to a file
-  console.log(
-    `# Wraps Self-Hosted — environment for apps/web on Vercel`
-  );
+  console.log("# Wraps Self-Hosted — environment for apps/web on Vercel");
   console.log(
     `# Deployment: ${identity.accountId} / ${region} — ${config.appUrl}`
   );
@@ -83,7 +81,9 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   console.log("# AWS_SECRET_ACCESS_KEY=<fill-in>");
 
   clack.outro(
-    pc.dim("Paste into Vercel → Settings → Environment Variables → Add from .env")
+    pc.dim(
+      "Paste into Vercel → Settings → Environment Variables → Add from .env"
+    )
   );
 
   trackCommand("selfhost:env", {
