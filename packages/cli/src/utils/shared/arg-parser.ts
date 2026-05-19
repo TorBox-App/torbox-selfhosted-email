@@ -81,6 +81,7 @@ export type CliFlags = {
   expires?: string;
 
   // Self-hosted
+  databaseUrl?: string;
   neonApiKey?: string;
   neonOrgId?: string;
   licenseKey?: string;
@@ -129,6 +130,7 @@ const STRING_FLAGS = [
   "subdomain",
   "tier",
   "expires",
+  "database-url",
   "neon-api-key",
   "neon-org-id",
   "license-key",

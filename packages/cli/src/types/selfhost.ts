@@ -1,5 +1,6 @@
 export type SelfhostDeployOptions = {
   region?: string;
+  databaseUrl?: string;
   neonApiKey?: string;
   neonOrgId?: string;
   licenseKey?: string;
@@ -22,7 +23,7 @@ export type SelfhostStatusOptions = {
 };
 
 export type SelfhostConfig = {
-  neonProjectId: string;
+  neonProjectId?: string;
   databaseUrl: string;
   licenseKey: string;
   appUrl: string;

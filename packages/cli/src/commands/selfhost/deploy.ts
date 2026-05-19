@@ -120,22 +120,27 @@ export async function selfhostDeploy(
     process.exit(0);
   }
 
-  // 5. Prompt for Neon API key
-  let neonApiKey = options.neonApiKey;
-  if (!neonApiKey) {
-    const neonApiKeyAnswer = await clack.password({
-      message:
-        "Neon API key (create one at console.neon.tech/app/settings/api-keys):",
-    });
-    if (clack.isCancel(neonApiKeyAnswer)) {
-      clack.cancel("Operation cancelled.");
-      process.exit(0);
-    }
-    neonApiKey = neonApiKeyAnswer as string;
-  }
+  // 5. Resolve database connection — either a user-supplied URL or a new Neon project
+  let resolvedDatabaseUrl = options.databaseUrl;
+  let resolvedNeonProjectId: string | undefined;
+  let neonApiKey: string | undefined;
+  let neonOrgId: string | undefined;
 
-  // 5b. Neon org ID (required for organization-scoped API keys)
-  const neonOrgId = options.neonOrgId;
+  if (!resolvedDatabaseUrl) {
+    neonApiKey = options.neonApiKey;
+    if (!neonApiKey) {
+      const neonApiKeyAnswer = await clack.password({
+        message:
+          "Neon API key (create one at console.neon.tech/app/settings/api-keys):",
+      });
+      if (clack.isCancel(neonApiKeyAnswer)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      neonApiKey = neonApiKeyAnswer as string;
+    }
+    neonOrgId = options.neonOrgId;
+  }
 
   // 6. Prompt for license key
   let licenseKey = options.licenseKey;
@@ -196,28 +201,31 @@ export async function selfhostDeploy(
     });
   });
 
-  // 11. Provision Neon database
-  const neonProject = await progress.execute(
-    "Provisioning Neon PostgreSQL database",
-    async () =>
-      provisionNeonProject(
-        neonApiKey as string,
-        buildNeonProjectName(identity.accountId, region as string),
-        { orgId: neonOrgId }
-      )
-  );
+  // 11. Provision Neon database (skipped when --database-url is provided)
+  if (!resolvedDatabaseUrl) {
+    const neonProject = await progress.execute(
+      "Provisioning Neon PostgreSQL database",
+      async () =>
+        provisionNeonProject(
+          neonApiKey as string,
+          buildNeonProjectName(identity.accountId, region as string),
+          { orgId: neonOrgId }
+        )
+    );
+    progress.info(`Neon project created: ${pc.cyan(neonProject.name)}`);
+    resolvedDatabaseUrl = neonProject.connectionString;
+    resolvedNeonProjectId = neonProject.id;
+  }
 
-  progress.info(`Neon project created: ${pc.cyan(neonProject.name)}`);
-
-  // Save critical state immediately after Neon provisioning, before Pulumi.
+  // Save critical state immediately after database resolution, before Pulumi.
   // If Pulumi fails partway through, re-running deploy will find this record
   // and avoid creating a second orphaned Neon project.
   const unsubscribeSecret = randomBytes(32).toString("hex");
   const betterAuthSecret = randomBytes(32).toString("hex");
 
   const selfhostConfig: SelfhostConfig = {
-    neonProjectId: neonProject.id,
-    databaseUrl: neonProject.connectionString,
+    neonProjectId: resolvedNeonProjectId,
+    databaseUrl: resolvedDatabaseUrl as string,
     licenseKey: licenseKey as string,
     appUrl: appUrl as string,
     unsubscribeSecret,
@@ -251,7 +259,7 @@ export async function selfhostDeploy(
       cwd: repoRoot,
       env: {
         ...process.env,
-        DATABASE_URL: neonProject.connectionString,
+        DATABASE_URL: resolvedDatabaseUrl as string,
       },
     });
   });
@@ -270,7 +278,7 @@ export async function selfhostDeploy(
             accountId: identity.accountId,
             region: region as string,
             lambdaZipPath,
-            databaseUrl: neonProject.connectionString,
+            databaseUrl: resolvedDatabaseUrl as string,
             licenseKey: licenseKey as string,
             appUrl: appUrl as string,
             unsubscribeSecret,
@@ -410,7 +418,9 @@ export async function selfhostDeploy(
       `${pc.bold("API URL:")} ${pc.cyan(outputs.apiUrl)}`,
       `${pc.bold("Region:")} ${pc.cyan(region as string)}`,
       `${pc.bold("Lambda ARN:")} ${pc.dim(outputs.lambdaArn)}`,
-      `${pc.bold("Neon Project:")} ${pc.dim(neonProject.id)}`,
+      ...(resolvedNeonProjectId
+        ? [`${pc.bold("Neon Project:")} ${pc.dim(resolvedNeonProjectId)}`]
+        : []),
       "",
       pc.dim("Next steps:"),
       pc.dim(`  Set WRAPS_API_URL=${outputs.apiUrl} in your app`),

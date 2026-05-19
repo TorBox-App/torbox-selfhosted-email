@@ -15,7 +15,7 @@ function displaySelfhostStatus(options: {
   region: string;
   apiUrl: string;
   deployedAt: string;
-  neonProjectId: string;
+  neonProjectId?: string;
   appUrl: string;
   licenseKeyPrefix: string;
 }) {
@@ -33,7 +33,9 @@ function displaySelfhostStatus(options: {
   lines.push(pc.bold("Configuration"));
   lines.push(`  App URL: ${pc.cyan(options.appUrl)}`);
   lines.push(`  License Key: ${pc.dim(`${options.licenseKeyPrefix}...`)}`);
-  lines.push(`  Neon Project: ${pc.dim(options.neonProjectId)}`);
+  if (options.neonProjectId) {
+    lines.push(`  Neon Project: ${pc.dim(options.neonProjectId)}`);
+  }
 
   clack.note(lines.join("\n"), "Self-Hosted Status");
 }

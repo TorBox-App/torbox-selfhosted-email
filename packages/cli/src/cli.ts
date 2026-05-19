@@ -1063,6 +1063,7 @@ async function run() {
         case "deploy":
           await selfhostDeploy({
             region: flags.region,
+            databaseUrl: flags.databaseUrl,
             neonApiKey: flags.neonApiKey,
             neonOrgId: flags.neonOrgId,
             licenseKey: flags.licenseKey,

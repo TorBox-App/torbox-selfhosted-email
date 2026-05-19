@@ -203,6 +203,28 @@ describe("parseCliArgs", () => {
     });
   });
 
+  describe("selfhost flags", () => {
+    it("parses --database-url as databaseUrl", () => {
+      const { flags } = parseCliArgs(
+        argv(
+          "selfhost",
+          "deploy",
+          "--database-url",
+          "postgres://user:pass@host:5432/db"
+        )
+      );
+      expect(flags.databaseUrl).toBe("postgres://user:pass@host:5432/db");
+    });
+
+    it("preserves --neon-api-key alongside --database-url absent", () => {
+      const { flags } = parseCliArgs(
+        argv("selfhost", "deploy", "--neon-api-key", "neon_abc123")
+      );
+      expect(flags.neonApiKey).toBe("neon_abc123");
+      expect(flags.databaseUrl).toBeUndefined();
+    });
+  });
+
   describe("complex real-world scenarios", () => {
     it("full email init command", () => {
       const { flags, sub } = parseCliArgs(
