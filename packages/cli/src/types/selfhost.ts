@@ -22,6 +22,11 @@ export type SelfhostStatusOptions = {
   json?: boolean;
 };
 
+export type SelfhostEnvOptions = {
+  region?: string;
+  json?: boolean;
+};
+
 export type SelfhostConfig = {
   neonProjectId?: string;
   databaseUrl: string;

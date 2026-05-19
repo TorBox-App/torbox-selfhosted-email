@@ -70,6 +70,7 @@ import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
 // Self-hosted commands
 import { selfhostDeploy } from "./commands/selfhost/deploy.js";
+import { selfhostEnv } from "./commands/selfhost/env.js";
 import { selfhostStatus } from "./commands/selfhost/status.js";
 import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
@@ -1085,6 +1086,13 @@ async function run() {
 
         case "status":
           await selfhostStatus({
+            region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "env":
+          await selfhostEnv({
             region: flags.region,
             json: flags.json,
           });

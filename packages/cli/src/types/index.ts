@@ -68,6 +68,7 @@ export type { LicenseGenerateOptions } from "./license.js";
 export type {
   SelfhostConfig,
   SelfhostDeployOptions,
+  SelfhostEnvOptions,
   SelfhostStackConfig,
   SelfhostStackOutputs,
   SelfhostStatusOptions,
