@@ -217,6 +217,13 @@ export async function selfhostDeploy(
     resolvedNeonProjectId = neonProject.id;
   }
 
+  if (!resolvedDatabaseUrl) {
+    throw new Error(
+      "[bug] resolvedDatabaseUrl was not set after DB resolution"
+    );
+  }
+  const databaseUrl = resolvedDatabaseUrl;
+
   // Save critical state immediately after database resolution, before Pulumi.
   // If Pulumi fails partway through, re-running deploy will find this record
   // and avoid creating a second orphaned Neon project.
@@ -225,7 +232,7 @@ export async function selfhostDeploy(
 
   const selfhostConfig: SelfhostConfig = {
     neonProjectId: resolvedNeonProjectId,
-    databaseUrl: resolvedDatabaseUrl as string,
+    databaseUrl,
     licenseKey: licenseKey as string,
     appUrl: appUrl as string,
     unsubscribeSecret,
@@ -259,7 +266,7 @@ export async function selfhostDeploy(
       cwd: repoRoot,
       env: {
         ...process.env,
-        DATABASE_URL: resolvedDatabaseUrl as string,
+        DATABASE_URL: databaseUrl,
       },
     });
   });
@@ -278,7 +285,7 @@ export async function selfhostDeploy(
             accountId: identity.accountId,
             region: region as string,
             lambdaZipPath,
-            databaseUrl: resolvedDatabaseUrl as string,
+            databaseUrl,
             licenseKey: licenseKey as string,
             appUrl: appUrl as string,
             unsubscribeSecret,

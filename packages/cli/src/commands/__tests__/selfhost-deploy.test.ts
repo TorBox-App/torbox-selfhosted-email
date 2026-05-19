@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setJsonMode } from "../../utils/shared/json-output.js";
 
 vi.mock("node:child_process", () => ({
@@ -133,10 +133,6 @@ describe("selfhostDeploy", () => {
     vi.mocked(
       pulumi.automation.LocalWorkspace.createOrSelectStack
     ).mockResolvedValue(mockStack as any);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   describe("when --database-url is provided", () => {
