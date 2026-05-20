@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { and, apiKey, db, eq, member, session, subscription } from "@wraps/db";
 import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { validateLicenseKey } from "../lib/license";
+import { validateLicenseKey } from "../(ee)/lib/license";
 import { log } from "../lib/logger";
 
 export type AuthContext = {

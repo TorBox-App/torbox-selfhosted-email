@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { validateLicenseKey } from "../lib/license";
+import { validateLicenseKey } from "../(ee)/lib/license";
 
 const { privateKey: TEST_PRIV_PEM, publicKey: TEST_PUB_PEM } =
   generateKeyPairSync("ed25519", {
