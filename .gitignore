@@ -9,6 +9,7 @@ build/
 .next/
 out/
 **/lambda/**/*.mjs
+apps/api/lambda.zip
 **/.bundled
 *.tsbuildinfo
 
