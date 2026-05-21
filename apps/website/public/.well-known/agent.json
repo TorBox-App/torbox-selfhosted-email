@@ -14,7 +14,8 @@
     "openapi": "https://api.wraps.dev/swagger/json",
     "docs": "https://wraps.dev/llms.txt",
     "full_docs": "https://wraps.dev/llms-full.txt",
-    "authentication": "Bearer token via better-auth"
+    "authentication": "Bearer token via OAuth 2.0 Device Authorization Grant (RFC 8628)",
+    "oauth_discovery": "https://api.wraps.dev/.well-known/oauth-authorization-server"
   },
   "capabilities": {
     "streaming": false,
@@ -75,6 +76,7 @@
     "llms_txt": "https://wraps.dev/llms.txt",
     "llms_full_txt": "https://wraps.dev/llms-full.txt",
     "skills": "https://wraps.dev/.well-known/skills/",
+    "oauth_discovery": "https://api.wraps.dev/.well-known/oauth-authorization-server",
     "cli_quickstart": "https://wraps.dev/docs/quickstart/email",
     "sdk_reference": "https://wraps.dev/docs/sdk-reference",
     "cli_reference": "https://wraps.dev/docs/cli-reference"

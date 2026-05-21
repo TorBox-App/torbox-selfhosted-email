@@ -21,6 +21,7 @@ import { contactsRoutes } from "./routes/contacts";
 import { contactsTopicsRoutes } from "./routes/contacts-topics";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
+import { wellKnownRoutes } from "./routes/well-known";
 import { preferenceEventsRoutes } from "./routes/preference-events";
 import { templatesSyncRoutes } from "./routes/templates-sync";
 import { toolsRoutes } from "./routes/tools";
@@ -228,6 +229,7 @@ export const app = new Elysia()
       exclude: ["/swagger", "/swagger/json"],
     })
   )
+  .use(wellKnownRoutes)
   .use(healthRoutes)
   .use(connectionsRoutes)
   .use(contactsRoutes)
