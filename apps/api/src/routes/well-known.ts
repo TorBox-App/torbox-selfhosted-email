@@ -4,8 +4,7 @@ export const wellKnownRoutes = new Elysia({ prefix: "/.well-known" }).get(
   "/oauth-authorization-server",
   () => ({
     issuer: "https://api.wraps.dev",
-    device_authorization_endpoint:
-      "https://app.wraps.dev/api/auth/device/code",
+    device_authorization_endpoint: "https://app.wraps.dev/api/auth/device/code",
     token_endpoint: "https://app.wraps.dev/api/auth/device/token",
     grant_types_supported: [
       "urn:ietf:params:oauth:grant-type:device_code",

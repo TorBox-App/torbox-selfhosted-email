@@ -48,6 +48,43 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "Platform v0.18.0",
+    date: "May 2026",
+    icon: Bot,
+    iconColor:
+      "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    title: "Wraps MCP Server",
+    items: [
+      <>
+        WebMCP tools — <Code>get_pricing</Code>, <Code>get_quickstart</Code>,{" "}
+        <Code>search_docs</Code> registered via{" "}
+        <Code>navigator.modelContext.provideContext()</Code> for in-browser
+        agent interaction
+      </>,
+      <>
+        Per-page markdown at <Code>/api/md/{"<path>"}</Code> — agents requesting
+        any docs URL get page-specific content rather than the generic{" "}
+        <Code>llms.txt</Code> summary (11 pages: quickstarts, SDK reference, CLI
+        reference, webhooks, domain verification)
+      </>,
+      <>
+        OAuth 2.0 discovery at{" "}
+        <Code>/.well-known/oauth-authorization-server</Code> (RFC 8414) on both
+        wraps.dev and api.wraps.dev — describes Device Authorization Grant for
+        agent and CLI authentication
+      </>,
+      <>
+        RFC 9727 API catalog at <Code>/.well-known/api-catalog</Code> —
+        linkset+json pointing to OpenAPI spec, docs, and health endpoint
+      </>,
+      "RFC 8288 Link header on the homepage advertises /docs as the service documentation endpoint for agent discovery",
+      <>
+        <Code>robots.txt</Code> AI signals: <Code>ai-train: no</Code>,{" "}
+        <Code>ai-input: yes</Code>, <Code>search: yes</Code>
+      </>,
+    ],
+  },
+  {
     version: "CLI v2.21.0",
     date: "May 2026",
     icon: SlidersHorizontal,
