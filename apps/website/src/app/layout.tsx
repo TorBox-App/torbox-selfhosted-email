@@ -5,6 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { JsonLd } from "@/components/json-ld";
 import { ThemeProvider } from "@/components/theme-provider";
+import { WebMCP } from "@/components/webmcp";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { InViewProvider } from "@/hooks/use-shared-in-view";
 import { inter, jetbrainsMono, spaceGrotesk } from "@/lib/fonts";
@@ -110,6 +111,7 @@ export default function RootLayout({
             </AnalyticsProvider>
           </ThemeProvider>
         </NuqsAdapter>
+        <WebMCP />
         <Analytics />
         <SpeedInsights />
       </body>

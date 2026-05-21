@@ -48,7 +48,8 @@ const nextConfig = {
         headers: [
           {
             key: "Link",
-            value: '</docs>; rel="service-doc"',
+            value:
+              '</docs>; rel="service-doc", </.well-known/api-catalog>; rel="api-catalog"',
           },
         ],
       },
