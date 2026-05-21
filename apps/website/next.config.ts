@@ -44,6 +44,15 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: "/",
+        headers: [
+          {
+            key: "Link",
+            value: '</docs>; rel="service-doc"',
+          },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           {
