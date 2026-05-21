@@ -6,23 +6,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Serve llms.txt as markdown for any page request from an AI agent
-  const llmsUrl = new URL("/llms.txt", request.nextUrl.origin);
-  const res = await fetch(llmsUrl, { next: { revalidate: 3600 } });
+  const { pathname } = request.nextUrl;
+  // Route the request to /api/md/<path> so dynamic route params carry the page path
+  const mdPath = pathname === "/" ? "/api/md/root" : `/api/md${pathname}`;
+  const mdUrl = new URL(mdPath, request.nextUrl.origin);
 
-  if (!res.ok) {
-    return NextResponse.next();
-  }
-
-  const body = await res.text();
-
-  return new NextResponse(body, {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-      Vary: "Accept",
-      "Cache-Control": "public, max-age=3600",
-    },
-  });
+  return NextResponse.rewrite(mdUrl);
 }
 
 export const config = {
