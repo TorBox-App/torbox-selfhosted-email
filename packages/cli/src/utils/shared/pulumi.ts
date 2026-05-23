@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import type {
   EngineEvent,
@@ -31,8 +31,9 @@ function findSdkInstalledPulumi(): string | undefined {
     .sort()
     .reverse();
 
+  const binaryName = process.platform === "win32" ? "pulumi.exe" : "pulumi";
   for (const version of versions) {
-    const binPath = join(versionsDir, version, "bin", "pulumi");
+    const binPath = join(versionsDir, version, "bin", binaryName);
     if (existsSync(binPath)) {
       return dirname(binPath);
     }
@@ -54,7 +55,7 @@ export async function checkPulumiInstalled(): Promise<boolean> {
     // Not in PATH — check SDK install location
     const binDir = findSdkInstalledPulumi();
     if (binDir) {
-      process.env.PATH = `${binDir}:${process.env.PATH}`;
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH}`;
       return true;
     }
     return false;
@@ -76,7 +77,7 @@ export async function ensurePulumiInstalled(): Promise<boolean> {
       // Add installed binary to PATH so LocalWorkspace.createOrSelectStack
       // (which internally calls PulumiCommand.get()) can find it
       const binDir = dirname(cmd.command);
-      process.env.PATH = `${binDir}:${process.env.PATH}`;
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH}`;
       return true; // Was auto-installed
     } catch (_error) {
       // If auto-install fails, throw helpful error

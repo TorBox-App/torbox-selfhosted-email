@@ -110,7 +110,19 @@ export async function createServiceIAMRole(
       }]
     }`);
   } else {
-    throw new Error("Other providers not yet implemented");
+    // railway / other: access-key-based providers — allow any IAM identity in the
+    // account to assume the role so users can attach it to an IAM user or role.
+    const identity = await aws.getCallerIdentity();
+    assumeRolePolicy = pulumi.output(`{
+      "Version": "2012-10-17",
+      "Statement": [{
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::${identity.accountId}:root"
+        },
+        "Action": "sts:AssumeRole"
+      }]
+    }`);
   }
 
   // Check if role already exists
