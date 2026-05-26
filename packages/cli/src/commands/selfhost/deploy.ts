@@ -130,30 +130,65 @@ export async function selfhostDeploy(
 
   if (!resolvedDatabaseUrl) {
     neonApiKey = options.neonApiKey;
-    if (!neonApiKey) {
-      const neonApiKeyAnswer = await clack.password({
-        message:
-          "Neon API key (create one at console.neon.tech/app/settings/api-keys):",
-      });
-      if (clack.isCancel(neonApiKeyAnswer)) {
-        clack.cancel("Operation cancelled.");
-        process.exit(0);
-      }
-      neonApiKey = neonApiKeyAnswer as string;
-    }
     neonOrgId = options.neonOrgId;
-    if (!neonOrgId) {
-      const neonOrgIdAnswer = await clack.text({
-        message:
-          "Neon organization ID (find at console.neon.tech/app/settings — leave blank for personal account):",
-        placeholder: "org-...",
+
+    if (!neonApiKey) {
+      // Neither --database-url nor --neon-api-key supplied — ask interactively
+      const dbChoice = await clack.select({
+        message: "How do you want to connect the database?",
+        options: [
+          {
+            value: "url",
+            label: "Enter a connection string",
+            hint: "Neon, Supabase, Railway, self-hosted Postgres...",
+          },
+          {
+            value: "neon",
+            label: "Provision a new Neon database",
+            hint: "Requires a Neon API key",
+          },
+        ],
       });
-      if (clack.isCancel(neonOrgIdAnswer)) {
+      if (clack.isCancel(dbChoice)) {
         clack.cancel("Operation cancelled.");
         process.exit(0);
       }
-      const trimmed = (neonOrgIdAnswer as string).trim();
-      if (trimmed) neonOrgId = trimmed;
+
+      if (dbChoice === "url") {
+        const dbUrlAnswer = await clack.text({
+          message: "Postgres connection string:",
+          placeholder: "postgres://user:pass@host:5432/dbname",
+        });
+        if (clack.isCancel(dbUrlAnswer)) {
+          clack.cancel("Operation cancelled.");
+          process.exit(0);
+        }
+        resolvedDatabaseUrl = dbUrlAnswer as string;
+      } else {
+        const neonApiKeyAnswer = await clack.password({
+          message:
+            "Neon API key (create one at console.neon.tech/app/settings/api-keys):",
+        });
+        if (clack.isCancel(neonApiKeyAnswer)) {
+          clack.cancel("Operation cancelled.");
+          process.exit(0);
+        }
+        neonApiKey = neonApiKeyAnswer as string;
+
+        if (!neonOrgId) {
+          const neonOrgIdAnswer = await clack.text({
+            message:
+              "Neon organization ID (find at console.neon.tech/app/settings — leave blank for personal account):",
+            placeholder: "org-...",
+          });
+          if (clack.isCancel(neonOrgIdAnswer)) {
+            clack.cancel("Operation cancelled.");
+            process.exit(0);
+          }
+          const trimmed = (neonOrgIdAnswer as string).trim();
+          if (trimmed) neonOrgId = trimmed;
+        }
+      }
     }
   }
 

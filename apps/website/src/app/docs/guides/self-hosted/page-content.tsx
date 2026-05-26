@@ -44,12 +44,12 @@ AWS_BACKEND_ACCOUNT_ID=123456789012`;
 const awsRoleArnExample = `# Add after setting up Vercel OIDC (Step 6):
 AWS_ROLE_ARN=arn:aws:iam::123456789012:role/<your-vercel-backend-role>`;
 
-const deployWithDatabaseExample = `# Option A: Bring your own Postgres (Neon, Supabase, Railway, etc.)
+const deployWithDatabaseExample = `# Pass flags directly (non-interactive):
 wraps selfhost deploy --database-url "postgres://user:pass@your-db.example.com/wraps"
+wraps selfhost deploy --neon-api-key "your-key" --neon-org-id "org-..."
 
-# Option B: Let Wraps create a Neon database automatically
-wraps selfhost deploy --neon-api-key "your-neon-api-key" --neon-org-id "org-..."
-# (--neon-org-id is required for Neon organization accounts; omit for personal accounts)`;
+# Or run without flags — the CLI will prompt you to choose:
+wraps selfhost deploy`;
 
 export default function SelfHostedPageContent() {
   return (
