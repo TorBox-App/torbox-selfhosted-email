@@ -73,14 +73,23 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   }
 
   console.log("");
-  console.log(
-    "# AWS credentials for role assumption — create an IAM user in your account"
-  );
-  console.log(
-    `# with sts:AssumeRole permission on arn:aws:iam::${identity.accountId}:role/wraps-console-access-role`
-  );
-  console.log("# AWS_ACCESS_KEY_ID=<fill-in>");
-  console.log("# AWS_SECRET_ACCESS_KEY=<fill-in>");
+  console.log("# =============================================================================");
+  console.log("# AWS Backend Credentials — Vercel OIDC (recommended)");
+  console.log("# =============================================================================");
+  console.log("#");
+  console.log("# 1. In Vercel: Project Settings → Cloud → Configure AWS");
+  console.log("#    Copy the OIDC Provider URL (looks like https://oidc.vercel.com/<team-id>)");
+  console.log("#");
+  console.log("# 2. In AWS IAM → Identity providers → Add provider:");
+  console.log("#    Provider type: OpenID Connect");
+  console.log("#    Provider URL:  <your Vercel OIDC URL from step 1>");
+  console.log("#    Audience:      sts.amazonaws.com");
+  console.log("#");
+  console.log("# 3. Create an IAM role that trusts that OIDC provider, with this permission:");
+  console.log(`#    sts:AssumeRole on arn:aws:iam::${identity.accountId}:role/wraps-console-access-role`);
+  console.log("#");
+  console.log("# 4. Set AWS_ROLE_ARN to that role's ARN in Vercel:");
+  console.log(`# AWS_ROLE_ARN=arn:aws:iam::${identity.accountId}:role/<your-vercel-backend-role>`);
 
   clack.outro(
     pc.dim(
