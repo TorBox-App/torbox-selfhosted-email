@@ -46,12 +46,6 @@ if (existsSync(outputMigrationsDir)) {
   rmSync(outputMigrationsDir, { recursive: true });
 }
 mkdirSync(outputMigrationsDir, { recursive: true });
-// Copy only .sql files (skip snapshots — not needed for runtime migration)
-cpSync(dbMigrationsDir, outputMigrationsDir, {
-  recursive: true,
-  filter: (src) => {
-    if (src === dbMigrationsDir) return true;
-    return src.endsWith(".sql");
-  },
-});
+// Copy everything — .sql files + meta/_journal.json (required by Drizzle migrator)
+cpSync(dbMigrationsDir, outputMigrationsDir, { recursive: true });
 console.log(`✓ dist/selfhost-migrations/`);
