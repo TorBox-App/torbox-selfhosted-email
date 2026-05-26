@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/cli",
-  "version": "2.21.6",
+  "version": "2.21.7",
   "description": "Deploy email, SMS, and CDN infrastructure to your AWS account with one command. Sets up SES with DKIM/SPF/DMARC, event processing, and history automatically.",
   "type": "module",
   "main": "./dist/cli.js",
@@ -26,8 +26,9 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "pnpm build:console && pnpm build:lambda && tsup",
+    "build": "pnpm build:console && pnpm build:lambda && pnpm build:selfhost-lambda && tsup",
     "build:lambda": "tsx scripts/build-lambda.ts",
+    "build:selfhost-lambda": "tsx scripts/build-selfhost-lambda.ts",
     "build:console": "pnpm --filter @wraps/console build",
     "test": "vitest run",
     "test:watch": "vitest --watch",
@@ -58,6 +59,8 @@
   "author": "Wraps",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "drizzle-orm": "catalog:",
     "@aws-sdk/client-acm": "catalog:",
     "@aws-sdk/client-cloudformation": "catalog:",
     "@aws-sdk/client-cloudfront": "catalog:",

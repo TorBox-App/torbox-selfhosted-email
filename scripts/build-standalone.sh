@@ -92,6 +92,8 @@ cp "$DEPLOY_DIR/package.json" "$STAGING/package.json"
 cp "$CLI_DIR/dist/cli.js" "$STAGING/lib/cli.js"
 [[ -d "$CLI_DIR/dist/console" ]] && cp -R "$CLI_DIR/dist/console" "$STAGING/lib/console"
 [[ -d "$CLI_DIR/dist/lambda" ]] && cp -R "$CLI_DIR/dist/lambda" "$STAGING/lib/lambda"
+[[ -f "$CLI_DIR/dist/api-lambda.zip" ]] && cp "$CLI_DIR/dist/api-lambda.zip" "$STAGING/lib/api-lambda.zip"
+[[ -d "$CLI_DIR/dist/selfhost-migrations" ]] && cp -R "$CLI_DIR/dist/selfhost-migrations" "$STAGING/lib/selfhost-migrations"
 
 # Prune unnecessary files from node_modules
 echo "Pruning node_modules..."

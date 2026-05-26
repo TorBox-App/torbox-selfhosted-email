@@ -1,6 +1,5 @@
-import { execSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
@@ -33,10 +32,9 @@ import {
   withTimeout,
 } from "../../utils/shared/timeout.js";
 
-// After tsup bundles to dist/cli.js, import.meta.url resolves to packages/cli/dist/cli.js.
-// 4 levels up from that file reaches the repo root.
 const __filename = fileURLToPath(import.meta.url);
-const repoRoot = join(__filename, "../../../..");
+const cliDir = dirname(__filename);
+const bundledLambdaZip = join(cliDir, "api-lambda.zip");
 
 /**
  * Self-hosted upgrade command — rebuilds the API Lambda and re-runs Pulumi
@@ -110,26 +108,14 @@ export async function selfhostUpgrade(
     selfhostService.pulumiStackName ||
     `wraps-selfhost-${identity.accountId}-${region}`;
 
-  // 6. Rebuild the API
-  const childStdio = isJsonMode() ? "pipe" : "inherit";
-  await progress.execute("Building Wraps API", async () => {
-    execSync("pnpm --filter @wraps/api build", {
-      stdio: childStdio,
-      cwd: repoRoot,
-    });
-  });
-
-  // 7. Repackage Lambda: zip the self-contained bun bundle (no npm install needed)
-  const lambdaZipPath = join(repoRoot, "apps/api/lambda.zip");
-  const distDir = join(repoRoot, "apps/api/dist");
-  await progress.execute("Packaging Lambda", async () => {
-    // Node 22 treats .js as CJS unless package.json declares "type":"module"
-    writeFileSync(join(distDir, "package.json"), '{"type":"module"}\n');
-    execSync("/bin/sh -c 'zip -r ../lambda.zip .'", {
-      cwd: distDir,
-      stdio: childStdio,
-    });
-  });
+  // 6. Verify bundled Lambda zip (pre-built at CLI build time)
+  if (!existsSync(bundledLambdaZip)) {
+    throw new Error(
+      `Bundled API lambda not found at ${bundledLambdaZip}. ` +
+        "Run 'pnpm build' in the CLI package to generate it."
+    );
+  }
+  const lambdaZipPath = bundledLambdaZip;
 
   const createStack = async () => {
     await ensurePulumiWorkDir({ accountId: identity.accountId, region });

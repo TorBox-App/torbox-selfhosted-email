@@ -1,7 +1,6 @@
-import { execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
@@ -38,10 +37,12 @@ import {
   withTimeout,
 } from "../../utils/shared/timeout.js";
 
-// After tsup bundles to dist/cli.js, import.meta.url resolves to packages/cli/dist/cli.js.
-// 4 levels up from that file reaches the repo root.
+// Resolve paths relative to this file — works for both the source repo
+// (packages/cli/dist/cli.js) and the installed standalone CLI (~/.wraps/lib/cli.js).
 const __filename = fileURLToPath(import.meta.url);
-const repoRoot = join(__filename, "../../../..");
+const cliDir = dirname(__filename);
+const bundledLambdaZip = join(cliDir, "api-lambda.zip");
+const bundledMigrationsDir = join(cliDir, "selfhost-migrations");
 
 /**
  * Self-hosted deploy command — deploys the Wraps API Lambda into the
@@ -184,26 +185,14 @@ export async function selfhostDeploy(
     }
   }
 
-  // 9. Build the API
-  const childStdio = isJsonMode() ? "pipe" : "inherit";
-  await progress.execute("Building Wraps API", async () => {
-    execSync("pnpm --filter @wraps/api build", {
-      stdio: childStdio,
-      cwd: repoRoot,
-    });
-  });
-
-  // 10. Package Lambda: zip the self-contained bun bundle (no npm install needed)
-  const lambdaZipPath = join(repoRoot, "apps/api/lambda.zip");
-  const distDir = join(repoRoot, "apps/api/dist");
-  await progress.execute("Packaging Lambda", async () => {
-    // Node 22 treats .js as CJS unless package.json declares "type":"module"
-    writeFileSync(join(distDir, "package.json"), '{"type":"module"}\n');
-    execSync("/bin/sh -c 'zip -r ../lambda.zip .'", {
-      cwd: distDir,
-      stdio: childStdio,
-    });
-  });
+  // 9. Verify bundled Lambda zip (pre-built at CLI build time)
+  if (!existsSync(bundledLambdaZip)) {
+    throw new Error(
+      `Bundled API lambda not found at ${bundledLambdaZip}. ` +
+        "Run 'pnpm build' in the CLI package to generate it."
+    );
+  }
+  const lambdaZipPath = bundledLambdaZip;
 
   // 11. Provision Neon database (skipped when --database-url is provided)
   if (!resolvedDatabaseUrl) {
@@ -263,16 +252,17 @@ export async function selfhostDeploy(
   savedMetadata.timestamp = deployedAt;
   await saveConnectionMetadata(savedMetadata); // baseline:allow-early-save — Neon orphan prevention
 
-  // 12. Run database migrations
+  // 12. Run database migrations using bundled SQL files + Neon HTTP driver
   await progress.execute("Running database migrations", async () => {
-    execSync("pnpm --filter @wraps/db db:migrate", {
-      stdio: childStdio,
-      cwd: repoRoot,
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-      },
-    });
+    const { neonConfig, Pool } = await import("@neondatabase/serverless");
+    const { drizzle } = await import("drizzle-orm/neon-serverless");
+    const { migrate } = await import("drizzle-orm/neon-serverless/migrator");
+
+    neonConfig.poolQueryViaFetch = true;
+    const pool = new Pool({ connectionString: databaseUrl });
+    const db = drizzle(pool);
+    await migrate(db, { migrationsFolder: bundledMigrationsDir });
+    await pool.end();
   });
 
   const createStack = async () => {
