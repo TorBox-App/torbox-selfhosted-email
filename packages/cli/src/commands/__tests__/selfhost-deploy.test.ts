@@ -1,13 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setJsonMode } from "../../utils/shared/json-output.js";
 
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-  exec: vi.fn(),
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock("node:fs", () => ({
-  writeFileSync: vi.fn(),
+vi.mock("@neondatabase/serverless", () => ({
+  neonConfig: {},
+  Pool: class {
+    end() {
+      return Promise.resolve();
+    }
+  },
+}));
+
+vi.mock("drizzle-orm/neon-serverless", () => ({
+  drizzle: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock("drizzle-orm/neon-serverless/migrator", () => ({
+  migrate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@pulumi/pulumi", () => ({
