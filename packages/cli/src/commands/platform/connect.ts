@@ -391,7 +391,7 @@ async function deployEventBridge(
   progress.succeed("Event streaming configured");
 }
 
-/** AWS Account ID of the Wraps Platform (used in trust policy) */
+/** AWS Account ID of the Wraps Platform (used in trust policy for cloud-hosted customers) */
 const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
 
 /**
@@ -404,6 +404,12 @@ async function updatePlatformRole(
 ): Promise<void> {
   const roleName = "wraps-console-access-role";
   const iam = new IAMClient({ region: "us-east-1" });
+
+  // Self-hosted customers run the dashboard in their own AWS account, so the
+  // trust policy must trust their account rather than the Wraps platform account.
+  const trustedAccountId = metadata.services?.selfhost
+    ? metadata.accountId
+    : WRAPS_PLATFORM_ACCOUNT_ID;
 
   let roleExists = false;
   try {
@@ -442,7 +448,7 @@ async function updatePlatformRole(
           {
             Effect: "Allow",
             Principal: {
-              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+              AWS: `arn:aws:iam::${trustedAccountId}:root`,
             },
             Action: "sts:AssumeRole",
             Condition: {
@@ -472,7 +478,7 @@ async function updatePlatformRole(
           {
             Effect: "Allow",
             Principal: {
-              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+              AWS: `arn:aws:iam::${trustedAccountId}:root`,
             },
             Action: "sts:AssumeRole",
             Condition: {
