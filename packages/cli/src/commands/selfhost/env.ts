@@ -42,13 +42,15 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
     return;
   }
 
-  const { config } = metadata.services.selfhost;
+  const { config, apiUrl } = metadata.services.selfhost;
 
   const env: Record<string, string> = {
     DATABASE_URL: config.databaseUrl,
     NEXT_PUBLIC_APP_URL: config.appUrl,
+    NEXT_PUBLIC_API_URL: apiUrl,
     CORS_ORIGIN: config.appUrl,
     BETTER_AUTH_SECRET: config.betterAuthSecret,
+    UNSUBSCRIBE_SECRET: config.unsubscribeSecret,
     WRAPS_LICENSE_KEY: config.licenseKey,
     AWS_BACKEND_ACCOUNT_ID: identity.accountId,
   };
