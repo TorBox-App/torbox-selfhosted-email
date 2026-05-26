@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
@@ -43,8 +43,7 @@ console.log(`✓ dist/api-lambda.zip`);
 
 console.log("Copying selfhost migrations...");
 if (existsSync(outputMigrationsDir)) {
-  // Clear existing so stale migrations don't linger between builds
-  execSync(`rm -rf "${outputMigrationsDir}"`);
+  rmSync(outputMigrationsDir, { recursive: true });
 }
 mkdirSync(outputMigrationsDir, { recursive: true });
 // Copy only .sql files (skip snapshots — not needed for runtime migration)
