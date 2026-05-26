@@ -44,6 +44,15 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
 
   const { config, apiUrl } = metadata.services.selfhost;
 
+  if (!apiUrl) {
+    clack.log.error("Self-hosted deployment is incomplete — API URL is not available yet.");
+    console.log(
+      `\nThe deployment may have failed partway through. Re-run ${pc.cyan("wraps selfhost deploy")} to complete it.\n`
+    );
+    process.exit(1);
+    return;
+  }
+
   const env: Record<string, string> = {
     DATABASE_URL: config.databaseUrl,
     NEXT_PUBLIC_APP_URL: config.appUrl,

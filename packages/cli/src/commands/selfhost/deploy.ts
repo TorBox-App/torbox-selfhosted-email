@@ -158,6 +158,11 @@ export async function selfhostDeploy(
         const dbUrlAnswer = await clack.text({
           message: "Postgres connection string:",
           placeholder: "postgres://user:pass@host:5432/dbname",
+          validate: (v) => {
+            if (!v.trim()) return "Connection string cannot be empty";
+            if (!v.startsWith("postgres://") && !v.startsWith("postgresql://"))
+              return "Must be a valid postgres:// or postgresql:// connection string";
+          },
         });
         if (clack.isCancel(dbUrlAnswer)) {
           clack.cancel("Operation cancelled.");
