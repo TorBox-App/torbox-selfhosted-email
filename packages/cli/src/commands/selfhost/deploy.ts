@@ -142,6 +142,19 @@ export async function selfhostDeploy(
       neonApiKey = neonApiKeyAnswer as string;
     }
     neonOrgId = options.neonOrgId;
+    if (!neonOrgId) {
+      const neonOrgIdAnswer = await clack.text({
+        message:
+          "Neon organization ID (find at console.neon.tech/app/settings — leave blank for personal account):",
+        placeholder: "org-...",
+      });
+      if (clack.isCancel(neonOrgIdAnswer)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      const trimmed = (neonOrgIdAnswer as string).trim();
+      if (trimmed) neonOrgId = trimmed;
+    }
   }
 
   // 6. Prompt for license key

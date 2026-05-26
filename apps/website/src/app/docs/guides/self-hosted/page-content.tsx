@@ -48,7 +48,8 @@ const deployWithDatabaseExample = `# Option A: Bring your own Postgres (Neon, Su
 wraps selfhost deploy --database-url "postgres://user:pass@your-db.example.com/wraps"
 
 # Option B: Let Wraps create a Neon database automatically
-wraps selfhost deploy --neon-api-key "your-neon-api-key"`;
+wraps selfhost deploy --neon-api-key "your-neon-api-key" --neon-org-id "org-..."
+# (--neon-org-id is required for Neon organization accounts; omit for personal accounts)`;
 
 export default function SelfHostedPageContent() {
   return (
