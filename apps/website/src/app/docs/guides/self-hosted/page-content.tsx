@@ -616,6 +616,50 @@ export default function SelfHostedPageContent() {
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
             7
           </div>
+          Sign In to Your Instance
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Create your account in the browser, then connect the CLI to your
+          self-hosted instance.
+        </p>
+        <ol className="mb-6 list-decimal space-y-4 pl-6 text-muted-foreground">
+          <li>
+            <span className="font-medium text-foreground">
+              Open your dashboard URL
+            </span>{" "}
+            in a browser and sign up with email and password. Create your
+            organization when prompted.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">
+              Connect the CLI
+            </span>{" "}
+            — run the command below. It reads your deployment metadata to find
+            the dashboard URL, then opens a browser for device authorization
+            against your own instance (not the Wraps SaaS platform).
+          </li>
+        </ol>
+        <div className="mb-4">
+          <CLICommand command="wraps selfhost login" />
+        </div>
+        <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">
+            Why not <code className="rounded bg-muted px-1.5 py-0.5">wraps auth login</code>?
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            The standard login command authenticates against the Wraps SaaS
+            platform. <code className="rounded bg-muted px-1.5 py-0.5">wraps selfhost login</code> reads your deployment
+            metadata and authenticates against your own dashboard URL instead.
+          </p>
+        </div>
+      </section>
+
+      {/* Step 8 */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
+            8
+          </div>
           Verify Your Deployment
         </h2>
         <p className="mb-4 text-muted-foreground">
@@ -627,8 +671,8 @@ export default function SelfHostedPageContent() {
         <p className="mb-4 text-muted-foreground">
           A healthy deployment reports the API URL, Lambda ARN, deployed
           version, and database connectivity. Then open your dashboard URL and
-          sign in — you should see your connected AWS account, SES sending
-          stats, and any email or SMS infrastructure you deployed in Steps 2–3.
+          confirm your connected AWS account, SES sending stats, and any email
+          or SMS infrastructure you deployed in Steps 2–3 are visible.
         </p>
         <div className="rounded-lg border-green-500 border-l-4 bg-green-500/10 p-4">
           <p className="font-medium text-sm">You are fully self-hosted</p>

@@ -67,7 +67,8 @@ export default function SelfHostedPage() {
         <h2>Step 4: Get Your Environment Variables</h2>
         <h2>Step 5: Deploy the Dashboard to Vercel</h2>
         <h2>Step 6: Set Up Vercel OIDC Authentication</h2>
-        <h2>Step 7: Verify Your Deployment</h2>
+        <h2>Step 7: Sign In to Your Instance</h2>
+        <h2>Step 8: Verify Your Deployment</h2>
       </article>
       <SelfHostedPageContent />
     </>
