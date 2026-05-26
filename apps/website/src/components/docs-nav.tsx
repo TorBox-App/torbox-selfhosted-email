@@ -284,6 +284,11 @@ const navItems: NavSection[] = [
         icon: Cloud,
       },
       {
+        title: "Self-Hosted Deployment",
+        href: "/docs/guides/self-hosted",
+        icon: Server,
+      },
+      {
         title: "Vercel Setup",
         href: "/docs/guides/vercel-setup",
         icon: Rocket,
