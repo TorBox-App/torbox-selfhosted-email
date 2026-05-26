@@ -163,6 +163,7 @@ jobs:
         run: |
           pnpm --filter @wraps/core build
           pnpm --filter @wraps.dev/email-check build
+          pnpm --filter @wraps/db build
 
       - run: pnpm --filter @wraps.dev/cli build
 
