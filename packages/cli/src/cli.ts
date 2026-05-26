@@ -71,6 +71,7 @@ import { updateRole } from "./commands/platform/update-role.js";
 // Self-hosted commands
 import { selfhostDeploy } from "./commands/selfhost/deploy.js";
 import { selfhostEnv } from "./commands/selfhost/env.js";
+import { selfhostLogin } from "./commands/selfhost/login.js";
 import { selfhostStatus } from "./commands/selfhost/status.js";
 import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
@@ -263,6 +264,9 @@ function showHelp() {
   console.log("Self-Hosted Commands:");
   console.log(
     `  ${pc.cyan("selfhost deploy")}      Deploy Wraps API to your AWS account`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost login")}       Sign in to your self-hosted Wraps instance`
   );
   console.log(
     `  ${pc.cyan("selfhost upgrade")}     Rebuild and redeploy the self-hosted API`
@@ -1093,6 +1097,13 @@ async function run() {
 
         case "env":
           await selfhostEnv({
+            region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "login":
+          await selfhostLogin({
             region: flags.region,
             json: flags.json,
           });
