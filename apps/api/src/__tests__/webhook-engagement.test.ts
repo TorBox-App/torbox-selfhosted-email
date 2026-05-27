@@ -268,6 +268,85 @@ describe("Webhook: Engagement", () => {
     );
   });
 
+  it("cancels timeout scheduler for click when waitTimeoutSchedulerName is set", async () => {
+    setupWebhookMocks({
+      waitingExecutions: [
+        {
+          id: "exec-click",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: "wraps-wf-to-timeout-click",
+        },
+      ],
+    });
+
+    const event = buildClickEvent();
+    await sendWebhookEvent(app, event);
+
+    expect(deleteScheduledStep).toHaveBeenCalledWith(
+      "wraps-wf-to-timeout-click"
+    );
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-click", branch: "clicked" })
+    );
+  });
+
+  it("does not call enqueueWorkflowStep when no waiting executions (open)", async () => {
+    setupWebhookMocks({ waitingExecutions: [] });
+
+    const event = buildOpenEvent();
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("does not call enqueueWorkflowStep when no waiting executions (click)", async () => {
+    setupWebhookMocks({ waitingExecutions: [] });
+
+    const event = buildClickEvent();
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("resumes all waiting executions when multiple are present (open)", async () => {
+    setupWebhookMocks({
+      waitingExecutions: [
+        {
+          id: "exec-a",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: "wraps-wf-to-timeout-a",
+        },
+        {
+          id: "exec-b",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: null,
+        },
+      ],
+    });
+
+    const event = buildOpenEvent();
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).toHaveBeenCalledTimes(2);
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-a", branch: "opened" })
+    );
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-b", branch: "opened" })
+    );
+    expect(deleteScheduledStep).toHaveBeenCalledWith("wraps-wf-to-timeout-a");
+    expect(deleteScheduledStep).toHaveBeenCalledTimes(1);
+  });
+
   it("does NOT call deleteScheduledStep when waitTimeoutSchedulerName is null (open event)", async () => {
     setupWebhookMocks({
       waitingExecutions: [

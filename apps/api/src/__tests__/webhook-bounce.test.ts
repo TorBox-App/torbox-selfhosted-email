@@ -40,7 +40,9 @@ vi.mock("@wraps/db", async () => {
 
 const { webhooksRoutes } = await import("../routes/webhooks");
 const { Elysia } = await import("elysia");
-const { enqueueWorkflowStep } = await import("../services/workflow-queue");
+const { enqueueWorkflowStep, deleteScheduledStep } = await import(
+  "../services/workflow-queue"
+);
 
 const TEST_AWS_ACCOUNT_NUMBER = "123456789012";
 const TEST_WEBHOOK_SECRET = "test-secret-key";
@@ -235,6 +237,83 @@ describe("Webhook: Bounce", () => {
         organizationId: "org-1",
       })
     );
+  });
+
+  it("cancels timeout scheduler when waitTimeoutSchedulerName is set", async () => {
+    setupWebhookMocks({
+      waitingExecutions: [
+        {
+          id: "exec-1",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: "wraps-wf-to-timeout-1",
+        },
+      ],
+    });
+
+    const event = buildBounceEvent({ bounceType: "Permanent" });
+    await sendWebhookEvent(app, event);
+
+    expect(deleteScheduledStep).toHaveBeenCalledWith("wraps-wf-to-timeout-1");
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-1", branch: "bounced" })
+    );
+  });
+
+  it("does not call enqueueWorkflowStep when no waiting executions", async () => {
+    setupWebhookMocks({ waitingExecutions: [] });
+
+    const event = buildBounceEvent({ bounceType: "Permanent" });
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("does not call resumeWaitingExecutions when contactId is null", async () => {
+    setupWebhookMocks({ message: { contactId: null } });
+
+    const event = buildBounceEvent({ bounceType: "Permanent" });
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("resumes all waiting executions when multiple are present", async () => {
+    setupWebhookMocks({
+      waitingExecutions: [
+        {
+          id: "exec-1",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: null,
+        },
+        {
+          id: "exec-2",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: "wraps-wf-to-timeout-2",
+        },
+      ],
+    });
+
+    const event = buildBounceEvent({ bounceType: "Permanent" });
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).toHaveBeenCalledTimes(2);
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-1", branch: "bounced" })
+    );
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-2", branch: "bounced" })
+    );
+    expect(deleteScheduledStep).toHaveBeenCalledWith("wraps-wf-to-timeout-2");
+    expect(deleteScheduledStep).toHaveBeenCalledTimes(1);
   });
 
   it("increments batchSend.bounced counter when batchSendId present", async () => {
