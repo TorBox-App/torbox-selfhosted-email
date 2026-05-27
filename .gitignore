@@ -12,6 +12,7 @@ out/
 apps/api/lambda.zip
 **/.bundled
 *.tsbuildinfo
+**/tsup.config.bundled_*.mjs
 
 # Turborepo
 .turbo/
