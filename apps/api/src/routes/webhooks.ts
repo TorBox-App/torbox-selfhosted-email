@@ -515,7 +515,11 @@ async function processBounce(
   timestamp?: string
 ): Promise<void> {
   if (bounceSubType === "Suppressed") {
-    return processSuppression(message, "Suppressed", timestamp);
+    await processSuppression(message, "Suppressed", timestamp);
+    if (message.contactId) {
+      await resumeWaitingExecutions(messageId, message.contactId, "bounced");
+    }
+    return;
   }
 
   const bouncedAt = timestamp ? new Date(timestamp) : new Date();

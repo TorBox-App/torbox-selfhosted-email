@@ -37,6 +37,7 @@ vi.mock("@wraps/db", async () => {
 
 const { webhooksRoutes } = await import("../routes/webhooks");
 const { Elysia } = await import("elysia");
+const { enqueueWorkflowStep } = await import("../services/workflow-queue");
 
 const TEST_AWS_ACCOUNT_NUMBER = "123456789012";
 const TEST_WEBHOOK_SECRET = "test-secret-key";
@@ -104,17 +105,19 @@ const mockMessageSend = {
 
 type MockOpts = {
   message?: Partial<typeof mockMessageSend>;
+  waitingExecutions?: Array<Record<string, unknown>>;
 };
 
 function setupMocks(opts: MockOpts = {}) {
   const message = { ...mockMessageSend, ...opts.message };
+  const waitingExecutions = opts.waitingExecutions ?? [];
 
   let selectCallCount = 0;
   mockDbSelect.mockImplementation(() => {
     selectCallCount++;
     if (selectCallCount === 1) return selectChain([mockAwsAccount]);
     if (selectCallCount === 2) return selectChain([message]);
-    return selectChainNoLimit([]);
+    return selectChainNoLimit(waitingExecutions);
   });
 
   const updateCalls: ReturnType<typeof updateChain>[] = [];
@@ -212,6 +215,36 @@ describe("Webhook: Bounce with bounceSubType=Suppressed", () => {
         undefined
     );
     expect(bouncedCounterUpdate).toBeUndefined();
+  });
+
+  it("resumes waiting workflow executions with 'bounced' branch", async () => {
+    setupMocks({
+      waitingExecutions: [
+        {
+          id: "exec-1",
+          organizationId: "org-1",
+          contactId: "contact-1",
+          status: "waiting",
+          waitingForEvent: "email_engagement:ses-msg-001",
+          waitTimeoutSchedulerName: null,
+        },
+      ],
+    });
+
+    const event = buildBounceEvent({
+      bounceType: "Permanent",
+      bounceSubType: "Suppressed",
+    });
+    await sendWebhookEvent(app, event);
+
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "bounced",
+        organizationId: "org-1",
+      })
+    );
   });
 
   it("still sets status='bounced' for non-Suppressed permanent bounces", async () => {
