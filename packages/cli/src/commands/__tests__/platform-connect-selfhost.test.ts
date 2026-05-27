@@ -128,11 +128,11 @@ describe("platform connect - selfhost trust policy", () => {
     );
 
     // Role does not exist → CreateRole path
-    iamMock
-      .on(GetRoleCommand)
-      .rejects(
-        Object.assign(new Error("NoSuchEntity"), { name: "NoSuchEntityException" })
-      );
+    iamMock.on(GetRoleCommand).rejects(
+      Object.assign(new Error("NoSuchEntity"), {
+        name: "NoSuchEntityException",
+      })
+    );
     iamMock.on(CreateRoleCommand).resolves({});
     iamMock.on(PutRolePolicyCommand).resolves({});
     iamMock.on(UpdateAssumeRolePolicyCommand).resolves({});

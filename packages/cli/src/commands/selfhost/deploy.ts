@@ -160,7 +160,7 @@ export async function selfhostDeploy(
           placeholder: "postgres://user:pass@host:5432/dbname",
           validate: (v) => {
             if (!v.trim()) return "Connection string cannot be empty";
-            if (!v.startsWith("postgres://") && !v.startsWith("postgresql://"))
+            if (!(v.startsWith("postgres://") || v.startsWith("postgresql://")))
               return "Must be a valid postgres:// or postgresql:// connection string";
           },
         });

@@ -2,15 +2,15 @@ import * as clack from "@clack/prompts";
 import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import { saveAuthConfig } from "../../utils/shared/config.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
-import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
-import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
-import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   createCliAuthClient,
   fetchOrganizations,
 } from "../../utils/shared/auth-client.js";
+import { validateAWSCredentials } from "../../utils/shared/aws.js";
+import { saveAuthConfig } from "../../utils/shared/config.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
+import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
+import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
 type SelfhostLoginOptions = {
   region?: string;
@@ -118,9 +118,7 @@ export async function selfhostLogin(
           token: tokenData.access_token,
           tokenType: "session",
           expiresAt: tokenData.expires_in
-            ? new Date(
-                Date.now() + tokenData.expires_in * 1000
-              ).toISOString()
+            ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
             : undefined,
           organizations: organizations.length > 0 ? organizations : undefined,
         },

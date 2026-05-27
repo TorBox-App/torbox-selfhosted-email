@@ -3,14 +3,11 @@ import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import {
-  getAppBaseUrl,
-  saveAuthConfig,
-} from "../../utils/shared/config.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
-import {
   createCliAuthClient,
   fetchOrganizations,
 } from "../../utils/shared/auth-client.js";
+import { getAppBaseUrl, saveAuthConfig } from "../../utils/shared/config.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 
 type LoginOptions = {
   token?: string;

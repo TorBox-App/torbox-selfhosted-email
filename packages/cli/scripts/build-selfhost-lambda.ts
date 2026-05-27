@@ -1,8 +1,8 @@
 #!/usr/bin/env node
+import { execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 
 /**
  * Build the selfhost API Lambda and copy migrations into dist/ so they're
@@ -39,7 +39,7 @@ writeFileSync(join(apiDistDir, "package.json"), '{"type":"module"}\n');
 
 console.log("Packaging Lambda zip...");
 execSync(`zip -r "${outputZip}" .`, { cwd: apiDistDir, stdio: "inherit" });
-console.log(`✓ dist/api-lambda.zip`);
+console.log("✓ dist/api-lambda.zip");
 
 console.log("Copying selfhost migrations...");
 if (existsSync(outputMigrationsDir)) {
@@ -48,4 +48,4 @@ if (existsSync(outputMigrationsDir)) {
 mkdirSync(outputMigrationsDir, { recursive: true });
 // Copy everything — .sql files + meta/_journal.json (required by Drizzle migrator)
 cpSync(dbMigrationsDir, outputMigrationsDir, { recursive: true });
-console.log(`✓ dist/selfhost-migrations/`);
+console.log("✓ dist/selfhost-migrations/");
