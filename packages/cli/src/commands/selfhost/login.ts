@@ -1,53 +1,21 @@
 import * as clack from "@clack/prompts";
-import { createAuthClient } from "better-auth/client";
-import {
-  deviceAuthorizationClient,
-  organizationClient,
-} from "better-auth/client/plugins";
 import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import type { OrgInfo } from "../../utils/shared/config.js";
 import { saveAuthConfig } from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
+import {
+  createCliAuthClient,
+  fetchOrganizations,
+} from "../../utils/shared/auth-client.js";
 
 type SelfhostLoginOptions = {
   region?: string;
   json?: boolean;
 };
-
-function createCliAuthClient(baseURL: string) {
-  return createAuthClient({
-    baseURL,
-    plugins: [deviceAuthorizationClient(), organizationClient()],
-  });
-}
-
-async function fetchOrganizations(
-  baseURL: string,
-  token: string
-): Promise<OrgInfo[]> {
-  try {
-    const client = createCliAuthClient(baseURL);
-    const { data } = await client.organization.list({
-      fetchOptions: {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    });
-    if (!data) return [];
-    return data.map((org: { id: string; name: string; slug: string }) => ({
-      id: org.id,
-      name: org.name,
-      slug: org.slug,
-    }));
-    // baseline:allow-next-line no-swallowed-errors — org list is optional
-  } catch {
-    return [];
-  }
-}
 
 export async function selfhostLogin(
   options: SelfhostLoginOptions
@@ -80,8 +48,7 @@ export async function selfhostLogin(
     return;
   }
 
-  const { appUrl } = metadata.services.selfhost.config;
-  const baseURL = appUrl;
+  const { appUrl: baseURL } = metadata.services.selfhost.config;
 
   clack.log.info(`Connecting to: ${pc.cyan(baseURL)}`);
 
@@ -94,6 +61,11 @@ export async function selfhostLogin(
   });
 
   if (codeError || !codeData) {
+    trackCommand("selfhost:login", {
+      success: false,
+      duration_ms: Date.now() - startTime,
+      method: "device",
+    });
     trackError("DEVICE_AUTH_FAILED", "selfhost:login", {
       step: "request_code",
     });
@@ -157,6 +129,7 @@ export async function selfhostLogin(
       trackCommand("selfhost:login", {
         success: true,
         duration_ms: Date.now() - startTime,
+        method: "device",
       });
 
       clack.log.success("Signed in to your self-hosted Wraps instance.");
@@ -191,6 +164,11 @@ export async function selfhostLogin(
       }
 
       if (errorCode === "access_denied") {
+        trackCommand("selfhost:login", {
+          success: false,
+          duration_ms: Date.now() - startTime,
+          method: "device",
+        });
         trackError("ACCESS_DENIED", "selfhost:login", { step: "poll_token" });
         spinner.stop("Denied.");
         clack.log.error("Authorization was denied.");
@@ -201,6 +179,11 @@ export async function selfhostLogin(
     }
   }
 
+  trackCommand("selfhost:login", {
+    success: false,
+    duration_ms: Date.now() - startTime,
+    method: "device",
+  });
   trackError("DEVICE_CODE_EXPIRED", "selfhost:login", { step: "poll_token" });
   spinner.stop("Expired.");
   clack.log.error(

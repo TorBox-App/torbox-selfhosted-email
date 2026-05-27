@@ -1,55 +1,21 @@
 import * as clack from "@clack/prompts";
-import { createAuthClient } from "better-auth/client";
-import {
-  deviceAuthorizationClient,
-  organizationClient,
-} from "better-auth/client/plugins";
 import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import {
   getAppBaseUrl,
-  type OrgInfo,
   saveAuthConfig,
 } from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
+import {
+  createCliAuthClient,
+  fetchOrganizations,
+} from "../../utils/shared/auth-client.js";
 
 type LoginOptions = {
   token?: string;
   json?: boolean;
 };
-
-function createCliAuthClient(baseURL: string) {
-  return createAuthClient({
-    baseURL,
-    plugins: [deviceAuthorizationClient(), organizationClient()],
-  });
-}
-
-async function fetchOrganizations(
-  baseURL: string,
-  token: string
-): Promise<OrgInfo[]> {
-  try {
-    const client = createCliAuthClient(baseURL);
-    const { data } = await client.organization.list({
-      fetchOptions: {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    });
-    if (!data) {
-      return [];
-    }
-    return data.map((org: { id: string; name: string; slug: string }) => ({
-      id: org.id,
-      name: org.name,
-      slug: org.slug,
-    }));
-    // baseline:allow-next-line no-swallowed-errors — org list is optional
-  } catch {
-    return [];
-  }
-}
 
 export async function login(options: LoginOptions): Promise<void> {
   const startTime = Date.now();
