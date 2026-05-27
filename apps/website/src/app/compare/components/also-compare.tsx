@@ -33,6 +33,11 @@ const comparisons = [
     href: "/compare/klaviyo-vs-wraps",
     tagline: "10x cheaper at scale",
   },
+  {
+    competitor: "Mailgun",
+    href: "/compare/mailgun-vs-wraps",
+    tagline: "Your infra, AWS pricing, no suspensions",
+  },
 ];
 
 /**
