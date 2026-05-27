@@ -282,6 +282,13 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             event.detail.suppression?.reason,
             event.detail.suppression?.timestamp
           );
+          if (message.contactId) {
+            await resumeWaitingExecutions(
+              messageId,
+              message.contactId,
+              "bounced"
+            );
+          }
           break;
 
         case "Rendering Failure":

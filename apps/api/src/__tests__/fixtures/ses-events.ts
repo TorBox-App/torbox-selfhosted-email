@@ -167,3 +167,27 @@ export function buildClickEvent(
     },
   };
 }
+
+export function buildSuppressionEvent(
+  overrides: BaseOverrides & {
+    reason?: string;
+    suppressedAt?: string;
+    recipients?: string[];
+  } = {}
+) {
+  const suppressedAt = overrides.suppressedAt ?? new Date().toISOString();
+  return {
+    ...baseEnvelope(overrides),
+    detail: {
+      eventType: "Suppressed" as const,
+      mail: makeMail(overrides.mail),
+      suppression: {
+        reason: overrides.reason ?? "OnAccountSuppressionList",
+        timestamp: suppressedAt,
+        suppressedRecipients: (
+          overrides.recipients ?? ["user@example.com"]
+        ).map((emailAddress) => ({ emailAddress })),
+      },
+    },
+  };
+}
