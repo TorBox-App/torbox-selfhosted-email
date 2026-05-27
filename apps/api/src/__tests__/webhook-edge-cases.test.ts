@@ -8,10 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  buildBounceEvent,
-  buildDeliveryEvent,
-} from "./fixtures/ses-events";
+import { buildBounceEvent, buildDeliveryEvent } from "./fixtures/ses-events";
 
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
