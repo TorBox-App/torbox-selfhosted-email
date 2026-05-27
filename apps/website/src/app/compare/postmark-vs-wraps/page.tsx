@@ -23,6 +23,7 @@ import { CodeComparison } from "@/app/compare/components/code-comparison";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title: "Postmark vs Wraps - Comparison for Transactional Email",
@@ -287,6 +288,34 @@ const featureRows: {
   },
 ];
 
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Postmark vs Wraps",
+  description:
+    "Detailed comparison of Postmark and Wraps for transactional and application email. Pricing at real volumes, feature differences, architecture tradeoffs, and migration guide.",
+  datePublished: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-03-01T00:00:00.000Z",
+  author: {
+    "@type": "Organization",
+    name: "Wraps",
+    url: "https://wraps.dev",
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Wraps",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://wraps.dev/logo.png",
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": "https://wraps.dev/compare/postmark-vs-wraps",
+  },
+};
+
 const postmarkCode = `import { ServerClient } from "postmark";
 
 const client = new ServerClient(
@@ -319,6 +348,7 @@ export default function PostmarkVsWrapsPage() {
       <Script id="breadcrumb-schema" type="application/ld+json">
         {JSON.stringify(breadcrumbSchema)}
       </Script>
+      <JsonLd data={articleSchema} />
 
       <main className="container mx-auto px-4 pt-24 pb-16">
         <div className="mx-auto max-w-4xl">

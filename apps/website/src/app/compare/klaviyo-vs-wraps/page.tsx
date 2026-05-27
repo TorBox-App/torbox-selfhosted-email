@@ -28,6 +28,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title:
@@ -347,6 +348,34 @@ const featureComparison = [
   },
 ];
 
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Klaviyo vs Wraps",
+  description:
+    "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure. See pricing at real volumes, architecture differences, and which is right for your team.",
+  datePublished: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-03-01T00:00:00.000Z",
+  author: {
+    "@type": "Organization",
+    name: "Wraps",
+    url: "https://wraps.dev",
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Wraps",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://wraps.dev/logo.png",
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": "https://wraps.dev/compare/klaviyo-vs-wraps",
+  },
+};
+
 const migrationTimeline = [
   { phase: "Audit existing Klaviyo setup", duration: "1-2 days" },
   { phase: "Set up Wraps infrastructure", duration: "1-3 days" },
@@ -364,6 +393,7 @@ export default function KlaviyoVsWrapsPage() {
       <Script id="breadcrumb-jsonld" type="application/ld+json">
         {JSON.stringify(breadcrumbJsonLd)}
       </Script>
+      <JsonLd data={articleSchema} />
 
       <main className="container mx-auto px-4 pt-24 pb-16">
         <div className="mx-auto max-w-4xl">

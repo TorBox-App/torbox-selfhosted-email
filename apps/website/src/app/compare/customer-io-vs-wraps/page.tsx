@@ -23,6 +23,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title: "Customer.io vs Wraps - Contact-Based Pricing vs Unlimited Contacts",
@@ -324,6 +325,34 @@ const featureRows: {
   },
 ];
 
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Customer.io vs Wraps",
+  description:
+    "Compare Customer.io and Wraps for email infrastructure. Customer.io charges per contact with high-watermark billing. Wraps deploys to your AWS with unlimited contacts on every tier.",
+  datePublished: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-03-01T00:00:00.000Z",
+  author: {
+    "@type": "Organization",
+    name: "Wraps",
+    url: "https://wraps.dev",
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Wraps",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://wraps.dev/logo.png",
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": "https://wraps.dev/compare/customer-io-vs-wraps",
+  },
+};
+
 const userQuotes = [
   {
     quote:
@@ -354,6 +383,7 @@ export default function CustomerIoVsWrapsPage() {
       <Script id="breadcrumb-jsonld" type="application/ld+json">
         {JSON.stringify(breadcrumbJsonLd)}
       </Script>
+      <JsonLd data={articleSchema} />
 
       <main className="container mx-auto px-4 pt-24 pb-16">
         <div className="mx-auto max-w-4xl">

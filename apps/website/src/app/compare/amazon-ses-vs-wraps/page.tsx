@@ -22,6 +22,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title: "Amazon SES vs Wraps - Same Infrastructure, Better DX",
@@ -318,6 +319,34 @@ const featureComparison: {
   },
 ];
 
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Amazon SES vs Wraps",
+  description:
+    "Wraps deploys TO Amazon SES, not instead of it. Same AWS pricing, same infrastructure ownership — plus a dashboard, TypeScript SDK, and one-command setup. Compare the two approaches.",
+  datePublished: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-03-01T00:00:00.000Z",
+  author: {
+    "@type": "Organization",
+    name: "Wraps",
+    url: "https://wraps.dev",
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Wraps",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://wraps.dev/logo.png",
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": "https://wraps.dev/compare/amazon-ses-vs-wraps",
+  },
+};
+
 const chooseSesReasons = [
   "You have a dedicated platform/infrastructure team with deep AWS expertise",
   "You already built and maintain a production SES pipeline you're happy with",
@@ -342,6 +371,7 @@ export default function AmazonSesVsWrapsPage() {
       <Script id="breadcrumb-jsonld" type="application/ld+json">
         {JSON.stringify(breadcrumbJsonLd)}
       </Script>
+      <JsonLd data={articleSchema} />
 
       <main className="container mx-auto px-4 pt-24 pb-16">
         <div className="mx-auto max-w-4xl">
