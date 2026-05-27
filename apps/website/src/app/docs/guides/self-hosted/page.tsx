@@ -40,8 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     title: "Self-Hosted Deployment Guide | Wraps",
-    description:
-      "Deploy the full Wraps control plane to your own AWS account.",
+    description: "Deploy the full Wraps control plane to your own AWS account.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/guides/self-hosted",

@@ -306,9 +306,7 @@ export default function SelfHostedPageContent() {
         </div>
         <p className="text-muted-foreground text-sm">
           If you only need SMS, skip this step and run{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            wraps sms init
-          </code>{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">wraps sms init</code>{" "}
           instead.
         </p>
       </section>
@@ -631,9 +629,7 @@ export default function SelfHostedPageContent() {
             organization when prompted.
           </li>
           <li>
-            <span className="font-medium text-foreground">
-              Connect the CLI
-            </span>{" "}
+            <span className="font-medium text-foreground">Connect the CLI</span>{" "}
             — run the command below. It reads your deployment metadata to find
             the dashboard URL, then opens a browser for device authorization
             against your own instance (not the Wraps SaaS platform).
@@ -644,12 +640,20 @@ export default function SelfHostedPageContent() {
         </div>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">
-            Why not <code className="rounded bg-muted px-1.5 py-0.5">wraps auth login</code>?
+            Why not{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps auth login
+            </code>
+            ?
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             The standard login command authenticates against the Wraps SaaS
-            platform. <code className="rounded bg-muted px-1.5 py-0.5">wraps selfhost login</code> reads your deployment
-            metadata and authenticates against your own dashboard URL instead.
+            platform.{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps selfhost login
+            </code>{" "}
+            reads your deployment metadata and authenticates against your own
+            dashboard URL instead.
           </p>
         </div>
       </section>

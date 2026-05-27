@@ -116,6 +116,7 @@ const posts: BlogPost[] = [
     date: "April 2026",
     readTime: "6 min read",
     author: "Wraps Team",
+    featured: true,
     icon: <KeyRound className="h-6 w-6" />,
   },
   {
@@ -295,23 +296,25 @@ export default function BlogContent() {
                     key={post.slug}
                   >
                     <Card className="flex flex-col overflow-hidden py-0 transition-all hover:border-primary/50 hover:shadow-lg md:h-72 md:flex-row">
+                      {post.image && (
+                        <div
+                          className={`md:h-full md:shrink-0 ${index % 2 !== 0 ? "md:order-2" : ""}`}
+                        >
+                          <img
+                            alt={post.title}
+                            className={`aspect-video w-full object-cover ${
+                              index % 2 !== 0
+                                ? "rounded-t-xl md:rounded-r-xl md:rounded-tl-none md:h-full md:w-auto"
+                                : "rounded-t-xl md:rounded-l-xl md:rounded-tr-none md:h-full md:w-auto"
+                            }`}
+                            height={630}
+                            src={post.image}
+                            width={1200}
+                          />
+                        </div>
+                      )}
                       <div
-                        className={`md:h-full md:shrink-0 ${index % 2 !== 0 ? "md:order-2" : ""}`}
-                      >
-                        <img
-                          alt={post.title}
-                          className={`aspect-video w-full object-cover ${
-                            index % 2 !== 0
-                              ? "rounded-t-xl md:rounded-r-xl md:rounded-tl-none md:h-full md:w-auto"
-                              : "rounded-t-xl md:rounded-l-xl md:rounded-tr-none md:h-full md:w-auto"
-                          }`}
-                          height={630}
-                          src={post.image || ""}
-                          width={1200}
-                        />
-                      </div>
-                      <div
-                        className={`flex flex-1 flex-col ${index % 2 !== 0 ? "md:order-1" : ""}`}
+                        className={`flex flex-1 flex-col ${post.image && index % 2 !== 0 ? "md:order-1" : ""}`}
                       >
                         <CardHeader className="pt-4">
                           <div className="mb-1 flex flex-wrap items-center gap-2">
