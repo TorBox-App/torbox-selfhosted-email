@@ -514,6 +514,10 @@ async function processBounce(
   bounceSubType?: string,
   timestamp?: string
 ): Promise<void> {
+  if (bounceSubType === "Suppressed") {
+    return processSuppression(message, "Suppressed", timestamp);
+  }
+
   const bouncedAt = timestamp ? new Date(timestamp) : new Date();
 
   // Update messageSend status
