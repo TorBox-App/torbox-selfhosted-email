@@ -11,6 +11,7 @@ function mapEventTypeToStatus(eventType: string): EmailStatus {
     Open: "opened",
     Click: "clicked",
     Bounce: "bounced",
+    Suppressed: "suppressed",
     Complaint: "complained",
     Reject: "rejected",
     "Rendering Failure": "rendering_failure",
@@ -35,7 +36,7 @@ type DynamoEmailEvent = {
   expiresAt: number;
 };
 
-const STATUS_PRIORITY: EmailStatus[] = [
+export const STATUS_PRIORITY: EmailStatus[] = [
   "complained",
   "rendering_failure",
   "rejected",

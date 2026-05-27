@@ -9,6 +9,7 @@ import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import {
   aggregateEmailEvents,
   findIncompleteMessageIds,
+  STATUS_PRIORITY,
 } from "@/lib/email-aggregation";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -171,7 +172,9 @@ export async function GET(request: Request, context: RouteContext) {
         .map((r) => [r.messageId!, r])
     );
 
-    // Enrich sentAt for existing DynamoDB entries (authoritative PG timestamp)
+    // Enrich sentAt and status for existing DynamoDB entries using authoritative PG data.
+    // PG status takes priority when it reflects a more severe outcome (e.g. complaint
+    // recorded by the webhook but not yet written to DynamoDB by the Lambda processor).
     const dynamoMessageIds = new Set<string>();
     for (const email of emails) {
       dynamoMessageIds.add(email.messageId);
@@ -180,6 +183,14 @@ export async function GET(request: Request, context: RouteContext) {
         const authoritative = pg.sentAt.getTime();
         if (authoritative < email.sentAt) {
           email.sentAt = authoritative;
+        }
+      }
+      if (pg?.status) {
+        const pgStatus = pg.status as EmailStatus;
+        const pgPriority = STATUS_PRIORITY.indexOf(pgStatus);
+        const currentPriority = STATUS_PRIORITY.indexOf(email.status);
+        if (pgPriority !== -1 && pgPriority < currentPriority) {
+          email.status = pgStatus;
         }
       }
     }

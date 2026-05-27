@@ -164,4 +164,100 @@ describe("aggregateEmailEvents", () => {
     const result = aggregateEmailEvents([events]);
     expect(result[0].hasOpened).toBe(true);
   });
+
+  it("complaint beats delivered when Complaint arrives after Delivery", () => {
+    const events = [
+      {
+        messageId: "msg-1",
+        sentAt: 1000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Delivery",
+        eventData: "{}",
+        createdAt: 1000,
+        expiresAt: 9_999_999,
+      },
+      {
+        messageId: "msg-1",
+        sentAt: 1001,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Complaint",
+        eventData: "{}",
+        createdAt: 1001,
+        expiresAt: 9_999_999,
+      },
+    ];
+
+    const result = aggregateEmailEvents([events]);
+    expect(result[0].status).toBe("complained");
+  });
+
+  it("complaint beats delivered when Complaint arrives before Delivery in event array", () => {
+    const events = [
+      {
+        messageId: "msg-1",
+        sentAt: 1001,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Complaint",
+        eventData: "{}",
+        createdAt: 1001,
+        expiresAt: 9_999_999,
+      },
+      {
+        messageId: "msg-1",
+        sentAt: 1000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Delivery",
+        eventData: "{}",
+        createdAt: 1000,
+        expiresAt: 9_999_999,
+      },
+    ];
+
+    const result = aggregateEmailEvents([events]);
+    expect(result[0].status).toBe("complained");
+  });
+
+  it("suppressed maps correctly and beats delivered", () => {
+    const events = [
+      {
+        messageId: "msg-1",
+        sentAt: 1000,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Delivery",
+        eventData: "{}",
+        createdAt: 1000,
+        expiresAt: 9_999_999,
+      },
+      {
+        messageId: "msg-1",
+        sentAt: 1001,
+        accountId: "acc-1",
+        from: "sender@test.com",
+        to: ["recipient@test.com"],
+        subject: "Test",
+        eventType: "Suppressed",
+        eventData: "{}",
+        createdAt: 1001,
+        expiresAt: 9_999_999,
+      },
+    ];
+
+    const result = aggregateEmailEvents([events]);
+    expect(result[0].status).toBe("suppressed");
+  });
 });
