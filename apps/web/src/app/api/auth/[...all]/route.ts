@@ -10,7 +10,7 @@ export { GET };
 export async function POST(request: NextRequest) {
   const url = new URL(request.url);
 
-  if (url.pathname === "/api/auth/sign-up/email") {
+  if (url.pathname === "/api/auth/sign-up/email" && TURNSTILE_SECRET_KEY) {
     const token = request.headers.get("x-turnstile-token");
 
     if (!token) {
@@ -20,25 +20,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (TURNSTILE_SECRET_KEY) {
-      const verifyResponse = await fetch(
-        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            secret: TURNSTILE_SECRET_KEY,
-            response: token,
-          }),
-        }
-      );
-      const result = await verifyResponse.json();
-      if (!result.success) {
-        return NextResponse.json(
-          { error: "Verification failed. Please try again." },
-          { status: 403 }
-        );
+    const verifyResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: TURNSTILE_SECRET_KEY,
+          response: token,
+        }),
       }
+    );
+    const result = await verifyResponse.json();
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Verification failed. Please try again." },
+        { status: 403 }
+      );
     }
   }
 
