@@ -329,7 +329,7 @@ export default function SelfHostedPageContent() {
           metrics, and DynamoDB event history.
         </p>
         <div className="mb-4">
-          <CLICommand command="wraps platform connect" />
+          <CLICommand command="wraps selfhost connect" />
         </div>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Single-account deployments</p>
