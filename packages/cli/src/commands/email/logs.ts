@@ -63,6 +63,18 @@ function truncate(str: string | null, len: number): string {
   return str.length > len ? `${str.slice(0, len - 1)}…` : str;
 }
 
+// Matches ANSI SGR escape sequences (e.g. from picocolors) so we can measure
+// and pad by visible width. Built via fromCharCode to keep the ESC control
+// character out of the regex source.
+const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+
+// padEnd counts the invisible ANSI bytes, which misaligns colored columns.
+// Pad by the visible (escape-stripped) length instead.
+function padVisible(str: string, len: number): string {
+  const visibleLength = str.replace(ANSI_PATTERN, "").length;
+  return visibleLength >= len ? str : str + " ".repeat(len - visibleLength);
+}
+
 export async function emailLogsList(
   options: EmailLogsListOptions
 ): Promise<void> {
@@ -136,9 +148,9 @@ export async function emailLogsList(
 
   const rows = data.logs.map((log) => {
     const time = relativeTime(log.createdAt).padEnd(COL.time);
-    const status = colorStatus(log.status.padEnd(COL.status));
-    const to = truncate(log.recipient, COL.to).padEnd(COL.to);
-    const subject = truncate(log.subject, COL.subject).padEnd(COL.subject);
+    const status = padVisible(colorStatus(log.status), COL.status);
+    const to = padVisible(truncate(log.recipient, COL.to), COL.to);
+    const subject = padVisible(truncate(log.subject, COL.subject), COL.subject);
     const msgId = truncate(log.messageId, COL.msgId);
     return `${time}  ${status}  ${to}  ${subject}  ${msgId}`;
   });

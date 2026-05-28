@@ -1,8 +1,9 @@
 /**
  * Webhook SDK Send Storage Tests
  *
- * Verifies that Send events for unknown messageIds (SDK transactional sends)
- * insert a messageSend row, while other event types are still ignored.
+ * Verifies that lifecycle events for unknown messageIds (SDK transactional
+ * sends) materialize a messageSend row regardless of arrival order, while
+ * engagement-only events (Open, Click) are still ignored.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -91,8 +92,12 @@ function mockMessageSendLookup(found: boolean) {
 
 function mockInsertChain() {
   mockOnConflictDoNothing.mockResolvedValue([]);
+  // The same values() mock backs both the messageSend insert
+  // (onConflictDoNothing) and the usage-tracking insert (onConflictDoUpdate)
+  // that the Delivery path fires.
   mockInsertValues.mockReturnValue({
     onConflictDoNothing: mockOnConflictDoNothing,
+    onConflictDoUpdate: vi.fn().mockResolvedValue([{ messageCount: 1 }]),
   });
   mockDbInsert.mockReturnValue({ values: mockInsertValues });
 }
@@ -197,22 +202,40 @@ describe("webhook SDK send storage", () => {
     expect(mockOnConflictDoNothing).toHaveBeenCalledWith();
   });
 
-  it("Delivery event for unknown messageId is still ignored (no messageSend insert)", async () => {
+  it("Delivery event for unknown messageId materializes a delivered row (out-of-order safe)", async () => {
     mockAccountLookup();
     mockMessageSendLookup(false);
-    // Delivery path fires the usage-tracking insert; wire that up here.
-    const mockUsageInsertValues = vi.fn().mockReturnValue({
-      onConflictDoUpdate: vi.fn().mockResolvedValue([{ messageCount: 1 }]),
-    });
-    mockDbInsert.mockReturnValue({ values: mockUsageInsertValues });
+    mockInsertChain();
 
-    await sendWebhook(makeEventOfType("Delivery", "ses-sdk-delivery-001"));
-
-    // Exactly one insert fires (usage tracking), never a messageSend row
-    expect(mockDbInsert).toHaveBeenCalledTimes(1);
-    expect(mockUsageInsertValues).not.toHaveBeenCalledWith(
-      expect.objectContaining({ sourceType: "transactional" })
+    const response = await sendWebhook(
+      makeEventOfType("Delivery", "ses-sdk-delivery-001")
     );
+
+    expect(response.status).toBe(200);
+    // SES does not guarantee event order. A Delivery that arrives before its
+    // Send must still create the log row, with the delivered status.
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: "ses-sdk-delivery-001",
+        sourceType: "transactional",
+        status: "delivered",
+      })
+    );
+    expect(mockOnConflictDoNothing).toHaveBeenCalledWith();
+  });
+
+  it("Open event for unknown messageId does not materialize a row", async () => {
+    mockAccountLookup();
+    mockMessageSendLookup(false);
+    mockInsertChain();
+
+    const response = await sendWebhook(
+      makeEventOfType("Open", "ses-sdk-open-001")
+    );
+
+    expect(response.status).toBe(200);
+    // Engagement-only events don't represent a send/delivery outcome — skip.
+    expect(mockInsertValues).not.toHaveBeenCalled();
   });
 
   it("Send event with no destination is skipped (no insert)", async () => {
@@ -239,7 +262,7 @@ describe("webhook SDK send storage", () => {
     expect(mockInsertValues).not.toHaveBeenCalled();
   });
 
-  it("Bounce event for unknown messageId is still ignored (no insert)", async () => {
+  it("Bounce event for unknown messageId materializes a bounced row", async () => {
     mockAccountLookup();
     mockMessageSendLookup(false);
     mockInsertChain();
@@ -249,6 +272,12 @@ describe("webhook SDK send storage", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockOnConflictDoNothing).not.toHaveBeenCalled();
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: "ses-sdk-bounce-001",
+        status: "bounced",
+      })
+    );
+    expect(mockOnConflictDoNothing).toHaveBeenCalledWith();
   });
 });

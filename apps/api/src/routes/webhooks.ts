@@ -101,6 +101,63 @@ type EventBridgeEvent = {
 };
 
 /**
+ * Derive the persisted status + event timestamps for an SDK send (direct SES)
+ * from whichever lifecycle event arrives first. SES does NOT guarantee event
+ * ordering, so the row may be materialized by a Delivery/Bounce that precedes
+ * its Send event. Returns null for events that shouldn't create a standalone
+ * log row on their own (Open, Click, Reject, DeliveryDelay, Rendering Failure).
+ */
+function sdkLogLifecycleFields(
+  eventType: SesEventType,
+  detail: EventBridgeEvent["detail"]
+): {
+  status: "sent" | "delivered" | "bounced" | "complained" | "suppressed";
+  deliveredAt?: Date;
+  bouncedAt?: Date;
+  bounceType?: string;
+  bounceSubType?: string;
+  complainedAt?: Date;
+  suppressedAt?: Date;
+} | null {
+  switch (eventType) {
+    case "Send":
+      return { status: "sent" };
+    case "Delivery":
+      return {
+        status: "delivered",
+        deliveredAt: detail.delivery?.timestamp
+          ? new Date(detail.delivery.timestamp)
+          : undefined,
+      };
+    case "Bounce":
+      return {
+        status: "bounced",
+        bouncedAt: detail.bounce?.timestamp
+          ? new Date(detail.bounce.timestamp)
+          : undefined,
+        bounceType: detail.bounce?.bounceType,
+        bounceSubType: detail.bounce?.bounceSubType,
+      };
+    case "Complaint":
+      return {
+        status: "complained",
+        complainedAt: detail.complaint?.timestamp
+          ? new Date(detail.complaint.timestamp)
+          : undefined,
+      };
+    case "Suppressed":
+      return {
+        status: "suppressed",
+        suppressedAt: detail.suppression?.timestamp
+          ? new Date(detail.suppression.timestamp)
+          : undefined,
+      };
+    default:
+      return null;
+  }
+}
+
+/**
  * Increment delivery count for an org in message_usage_monthly.
  * Counts ALL deliveries (SDK + batch + workflow) for billing and analytics.
  */
@@ -204,26 +261,29 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       .limit(1);
 
     if (!message) {
-      // Message not found — likely sent via SDK (direct SES).
-      // Store a minimal row for Send events so they appear in email logs.
-      if (eventType === "Send") {
-        const recipient = mail.destination?.[0];
-        if (recipient) {
-          await db
-            .insert(messageSend)
-            .values({
-              organizationId: account.organizationId,
-              awsAccountId: account.id,
-              channel: "email",
-              sourceType: "transactional",
-              recipient,
-              from: mail.source ?? null,
-              messageId,
-              status: "sent",
-              sentAt: mail.timestamp ? new Date(mail.timestamp) : new Date(),
-            })
-            .onConflictDoNothing();
-        }
+      // Message not found — likely sent via SDK (direct SES), not through our
+      // batch pipeline. Materialize a minimal row so the send appears in email
+      // logs. Because SES doesn't guarantee event order, we create the row from
+      // whichever lifecycle event arrives first (e.g. Delivery before Send) and
+      // let onConflictDoNothing keep it. Once the row exists, subsequent events
+      // find it above and flow through normal status processing.
+      const recipient = mail.destination?.[0];
+      const lifecycle = sdkLogLifecycleFields(eventType, event.detail);
+      if (recipient && lifecycle) {
+        await db
+          .insert(messageSend)
+          .values({
+            organizationId: account.organizationId,
+            awsAccountId: account.id,
+            channel: "email",
+            sourceType: "transactional",
+            recipient,
+            from: mail.source ?? null,
+            messageId,
+            sentAt: mail.timestamp ? new Date(mail.timestamp) : new Date(),
+            ...lifecycle,
+          })
+          .onConflictDoNothing();
       }
       // Count delivery and track activation in parallel.
       if (eventType === "Delivery") {

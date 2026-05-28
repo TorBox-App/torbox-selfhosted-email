@@ -1,4 +1,5 @@
-import { and, count, desc, eq, lt } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, count, desc, eq, lt, or } from "drizzle-orm";
 import { db } from "../index";
 import type { MessageSend, MessageSendStatus } from "../schema/batch";
 import { messageSend } from "../schema/batch";
@@ -9,6 +10,31 @@ export type EmailLogFilters = {
   cursor?: string;
   limit?: number;
 };
+
+// Opaque keyset cursor: `${createdAt ISO}|${id}` base64url-encoded.
+// The id tiebreaker is essential — createdAt defaults to now() which is the
+// transaction timestamp, so a single batch insert stamps every row with an
+// identical createdAt. A createdAt-only cursor with strict `<` would skip the
+// rest of that batch on the next page.
+export function encodeCursor(createdAt: Date, id: string): string {
+  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString("base64url");
+}
+
+export function decodeCursor(
+  cursor: string
+): { createdAt: Date; id: string } | null {
+  const decoded = Buffer.from(cursor, "base64url").toString("utf8");
+  const sep = decoded.indexOf("|");
+  if (sep === -1) {
+    return null;
+  }
+  const createdAt = new Date(decoded.slice(0, sep));
+  const id = decoded.slice(sep + 1);
+  if (Number.isNaN(createdAt.getTime()) || !id) {
+    return null;
+  }
+  return { createdAt, id };
+}
 
 const EMAIL_LOG_LIST_FIELDS = {
   id: messageSend.id,
@@ -40,10 +66,11 @@ export type EmailLogListItem = {
   createdAt: Date;
 };
 
-function buildConditions(organizationId: string, filters: EmailLogFilters) {
-  const conditions: ReturnType<typeof eq>[] = [
-    eq(messageSend.organizationId, organizationId),
-  ];
+function buildConditions(
+  organizationId: string,
+  filters: EmailLogFilters
+): SQL[] {
+  const conditions: SQL[] = [eq(messageSend.organizationId, organizationId)];
   if (filters.status) {
     conditions.push(eq(messageSend.status, filters.status));
   }
@@ -76,17 +103,26 @@ export async function listEmailLogs(
       );
 
   const cursorConditions = [...conditions];
-  if (filters.cursor) {
-    cursorConditions.push(
-      lt(messageSend.createdAt, new Date(filters.cursor)) as never
+  const cursor = filters.cursor ? decodeCursor(filters.cursor) : null;
+  if (cursor) {
+    // Tuple comparison: rows strictly before the cursor by (createdAt, id).
+    const keyset = or(
+      lt(messageSend.createdAt, cursor.createdAt),
+      and(
+        eq(messageSend.createdAt, cursor.createdAt),
+        lt(messageSend.id, cursor.id)
+      )
     );
+    if (keyset) {
+      cursorConditions.push(keyset);
+    }
   }
 
   const rows = await dbClient
     .select(EMAIL_LOG_LIST_FIELDS)
     .from(messageSend)
     .where(and(...cursorConditions))
-    .orderBy(desc(messageSend.createdAt))
+    .orderBy(desc(messageSend.createdAt), desc(messageSend.id))
     .limit(limit + 1);
 
   const hasNextPage = rows.length > limit;
@@ -95,7 +131,7 @@ export async function listEmailLogs(
   ) as EmailLogListItem[];
   const lastLog = logs.at(-1);
   const nextCursor =
-    hasNextPage && lastLog ? (lastLog.createdAt as Date).toISOString() : null;
+    hasNextPage && lastLog ? encodeCursor(lastLog.createdAt, lastLog.id) : null;
 
   return { logs, total, nextCursor };
 }

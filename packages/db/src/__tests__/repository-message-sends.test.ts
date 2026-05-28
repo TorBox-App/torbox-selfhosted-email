@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DbClient } from "../repositories/events";
 import {
+  decodeCursor,
+  encodeCursor,
   getEmailLogByMessageId,
   listEmailLogs,
 } from "../repositories/message-sends";
@@ -121,7 +123,7 @@ describe("Repository: listEmailLogs", () => {
 
     const result = await listEmailLogs(
       ORG_ID,
-      { cursor: "2026-05-20T10:00:00.000Z" },
+      { cursor: encodeCursor(new Date("2026-05-20T10:00:00Z"), "row-id-1") },
       dbClient
     );
 
@@ -138,21 +140,28 @@ describe("Repository: listEmailLogs", () => {
     expect(result.logs).toHaveLength(2);
   });
 
-  it("returns nextCursor as ISO string when rows exceed limit, null when not", async () => {
+  it("returns a compound (createdAt,id) cursor when rows exceed limit, null when not", async () => {
     const limit = 2;
+    const lastVisible = makeLogRow({
+      id: "row-page1-last",
+      createdAt: new Date("2026-05-20T09:00:00Z"),
+    });
     const rows = [
-      makeLogRow({ createdAt: new Date("2026-05-20T10:00:00Z") }),
-      makeLogRow({ createdAt: new Date("2026-05-20T09:00:00Z") }),
-      makeLogRow({ createdAt: new Date("2026-05-20T08:00:00Z") }), // sentinel
+      makeLogRow({ id: "row-page1-first" }),
+      lastVisible,
+      makeLogRow({ id: "row-sentinel" }), // beyond limit → triggers nextCursor
     ];
     const { dbClient } = makeMockDbForList(10, rows);
 
     const result = await listEmailLogs(ORG_ID, { limit }, dbClient);
 
     expect(result.logs).toHaveLength(limit);
-    expect(result.nextCursor).toBe(
-      new Date("2026-05-20T09:00:00Z").toISOString()
-    );
+    // Cursor must encode the LAST visible row's createdAt AND its id (tiebreaker)
+    expect(result.nextCursor).not.toBeNull();
+    expect(decodeCursor(result.nextCursor as string)).toEqual({
+      createdAt: lastVisible.createdAt,
+      id: lastVisible.id,
+    });
 
     const { dbClient: dbClient2 } = makeMockDbForList(2, [
       makeLogRow({ createdAt: new Date("2026-05-20T10:00:00Z") }),
@@ -160,6 +169,66 @@ describe("Repository: listEmailLogs", () => {
     ]);
     const result2 = await listEmailLogs(ORG_ID, { limit }, dbClient2);
     expect(result2.nextCursor).toBeNull();
+  });
+
+  it("keyset cursor filters by (createdAt,id) tuple, not createdAt alone", async () => {
+    // Two rows share an identical createdAt (batch insert) — the id tiebreaker
+    // is what prevents the next page from skipping the rest of the batch.
+    const sharedCreatedAt = new Date("2026-05-20T10:00:00Z");
+    let capturedWhere: unknown;
+    const dbClient = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockImplementation((cond) => {
+            capturedWhere = cond;
+            return {
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            };
+          }),
+        }),
+      }),
+    } as unknown as DbClient;
+
+    await listEmailLogs(
+      ORG_ID,
+      { cursor: encodeCursor(sharedCreatedAt, "batch-row-007") },
+      dbClient
+    );
+
+    function hasValue(
+      node: unknown,
+      target: string,
+      seen = new WeakSet<object>()
+    ): boolean {
+      if (typeof node === "string") {
+        return node === target;
+      }
+      if (!node || typeof node !== "object") {
+        return false;
+      }
+      if (seen.has(node as object)) {
+        return false;
+      }
+      seen.add(node as object);
+      return Object.values(node as object).some((v) =>
+        hasValue(v, target, seen)
+      );
+    }
+    // The id from the cursor must appear in the WHERE clause (tuple comparison)
+    expect(hasValue(capturedWhere, "batch-row-007")).toBe(true);
+  });
+
+  it("ignores a malformed cursor instead of throwing", () => {
+    expect(decodeCursor("not-a-real-cursor")).toBeNull();
+    expect(decodeCursor("")).toBeNull();
+    // Round-trips cleanly
+    const ts = new Date("2026-05-20T10:00:00Z");
+    expect(decodeCursor(encodeCursor(ts, "abc"))).toEqual({
+      createdAt: ts,
+      id: "abc",
+    });
   });
 });
 

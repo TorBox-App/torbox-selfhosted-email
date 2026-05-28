@@ -306,7 +306,11 @@ describe("webhook delivery counting", () => {
 
     await sendWebhook(makeDeliveryEvent());
 
-    const insertedValues = mockInsertValues.mock.calls[0][0];
-    expect(insertedValues.periodKey).toMatch(/^\d{4}-\d{2}$/);
+    // SDK delivery now also materializes a messageSend row, so the usage insert
+    // is no longer guaranteed to be the first call — find it by its periodKey.
+    const usageInsert = mockInsertValues.mock.calls
+      .map((call) => call[0])
+      .find((values) => values.periodKey !== undefined);
+    expect(usageInsert?.periodKey).toMatch(/^\d{4}-\d{2}$/);
   });
 });

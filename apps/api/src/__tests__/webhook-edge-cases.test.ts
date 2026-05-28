@@ -105,6 +105,7 @@ function setupAccountOnly() {
   mockDbInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
     }),
   });
 }
@@ -125,6 +126,7 @@ function setupWithMessage() {
   mockDbInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
     }),
   });
 }
@@ -191,6 +193,7 @@ describe("Webhook: SDK delivery (message not found)", () => {
     mockDbInsert.mockReturnValue({
       values: vi.fn().mockReturnValue({
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
       }),
     });
   });
@@ -252,6 +255,13 @@ describe("Webhook: account found, message not found for non-Delivery events", ()
       selectCallCount++;
       if (selectCallCount === 1) return selectChain([mockAwsAccount]);
       return selectChain([]);
+    });
+    // Lifecycle events (Bounce/Complaint) now materialize a minimal SDK log row.
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
     });
   });
 
