@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Package,
   Rocket,
+  Search,
   Send,
   ShieldCheck,
   SlidersHorizontal,
@@ -47,6 +48,37 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.22.0",
+    date: "May 2026",
+    icon: Search,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "Email Logs Inspection",
+    items: [
+      <>
+        <Code>wraps email logs list</Code> — paginated table of sent emails with
+        status, recipient, subject, and message ID
+      </>,
+      <>
+        <Code>wraps email logs get {"<messageId>"}</Code> — full delivery detail
+        for a single message including bounce type and timestamps
+      </>,
+      <>
+        Filter by status: <Code>--status delivered</Code>,{" "}
+        <Code>--status bounced</Code>, <Code>--status complained</Code>, and
+        more
+      </>,
+      <>
+        Cursor-based pagination with <Code>--limit</Code> and{" "}
+        <Code>--cursor</Code> flags for large result sets
+      </>,
+      <>
+        <Code>--json</Code> output for CI/CD pipelines and scripting
+      </>,
+      "Logs cover both SDK sends and batch broadcasts — unified view across all sending paths",
+    ],
+  },
   {
     version: "Platform v0.18.0",
     date: "May 2026",
