@@ -170,7 +170,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   }, [isInitialized, orgSlug, currentStep, searchParams]);
 
   // Check if onboarding is already completed
-  const { data: onboardingStatus } = useQuery({
+  const { data: onboardingStatus, isLoading: isStatusLoading } = useQuery({
     queryKey: ["onboarding-status", orgSlug],
     queryFn: async () => {
       if (!orgSlug) {
@@ -192,6 +192,10 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     (org) => org.slug === orgSlug || org.id === orgSlug
   );
 
+  // Self-hosted orgs get their plan from the license key, not Stripe — skip the
+  // plan selection / billing step entirely.
+  const isSelfHosted = onboardingStatus?.selfHosted === true;
+
   // EFFECT 3: Handle billing step adjustment based on subscription status
   useEffect(() => {
     if (
@@ -200,6 +204,15 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       hasShownSubscribedToast.current ||
       userAdvancedPastBilling.current
     ) {
+      return;
+    }
+
+    // Self-hosted: billing step doesn't apply. Move off it and never reset back.
+    if (isSelfHosted) {
+      hasAdjustedBillingStep.current = true;
+      if (currentStep === 1) {
+        setCurrentStep(2);
+      }
       return;
     }
 
@@ -215,7 +228,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       hasAdjustedBillingStep.current = true;
       setCurrentStep(1);
     }
-  }, [isInitialized, onboardingStatus, currentStep]);
+  }, [isInitialized, onboardingStatus, isSelfHosted, currentStep]);
 
   // EFFECT 4: Analytics tracking (onboarding started + step views)
   useEffect(() => {
@@ -355,6 +368,17 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     return <Loader fullScreen />;
   }
 
+  // Don't flash the billing step before we know whether it should be skipped.
+  // Self-hosted orgs (and already-subscribed users) skip it via EFFECT 3.
+  if (currentStep === 1 && (isStatusLoading || isSelfHosted)) {
+    return <Loader fullScreen />;
+  }
+
+  // Self-hosted orgs never see the "Choose Plan" step, so drop it from the
+  // progress indicator and shift the displayed step number accordingly.
+  const visibleSteps = isSelfHosted ? STEPS.slice(1) : STEPS;
+  const displayStep = isSelfHosted ? currentStep - 1 : currentStep;
+
   const CurrentStepComponent = STEPS[currentStep - 1].component;
 
   const handleNext = () => {
@@ -404,8 +428,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     <div className="space-y-8">
       {/* Progress Indicator */}
       <StepProgress
-        currentStep={currentStep}
-        steps={STEPS.map((s) => s.title)}
+        currentStep={displayStep}
+        steps={visibleSteps.map((s) => s.title)}
       />
 
       {/* Current Step Content */}

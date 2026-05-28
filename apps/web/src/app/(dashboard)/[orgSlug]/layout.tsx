@@ -7,7 +7,8 @@ import {
   getOrganizationWithDashboardData,
   getOrganizationWithMembership,
 } from "@/lib/organization";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { getOrganizationPlan, isSelfHosted } from "@/lib/plan-limits";
+import { PLANS } from "@/lib/plans";
 
 type OrganizationLayoutProps = {
   children: ReactNode;
@@ -45,18 +46,17 @@ export default async function OrganizationLayout({
     redirect(`/${orgSlug}/onboarding`);
   }
 
+  // Self-hosted orgs are licensed via WRAPS_LICENSE_KEY and have no Stripe
+  // subscription — don't bounce them to the upgrade page.
+  const selfHosted = isSelfHosted();
+
   // If subscription is cancelled/expired, redirect to upgrade page
-  if (!orgData.activeSubscription) {
+  if (!(selfHosted || orgData.activeSubscription)) {
     redirect(`/${orgSlug}/upgrade`);
   }
 
-  // Get plan from subscription (source of truth)
-  const rawPlanId = orgData.activeSubscription.plan;
-  const planId: PlanId = ["free", "starter", "growth", "scale"].includes(
-    rawPlanId
-  )
-    ? (rawPlanId as PlanId)
-    : "free";
+  // Plan source of truth: license key (self-hosted) then subscription.
+  const planId = await getOrganizationPlan(orgData.id);
   const plan = PLANS[planId];
 
   const productsStatus = {

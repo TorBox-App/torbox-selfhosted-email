@@ -6,6 +6,7 @@ import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 import { getSetupStatus } from "@/lib/setup-status";
 
 type RouteContext = {
@@ -59,6 +60,7 @@ export async function GET(_request: Request, context: RouteContext) {
       completedAt: extension?.onboardingCompletedAt,
       hasAwsAccount: setupStatus.hasAwsAccount,
       hasActiveSubscription: !!activeSubscription,
+      selfHosted: isSelfHosted(),
       steps: {
         hasAwsAccount: setupStatus.hasAwsAccount,
         hasPlatformConnection: setupStatus.hasPlatformConnection,

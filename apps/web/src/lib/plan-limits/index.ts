@@ -77,6 +77,15 @@ function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
   return tier as LicenseTier;
 }
 
+/**
+ * True when running as a self-hosted deployment with a valid license key.
+ * Self-hosted orgs get their plan from the license (not Stripe), so plan
+ * selection and billing steps should be skipped during onboarding.
+ */
+export function isSelfHosted(): boolean {
+  return validateWebLicenseKey(process.env.WRAPS_LICENSE_KEY) !== null;
+}
+
 export type LimitCheckResult = {
   allowed: boolean;
   current: number;
