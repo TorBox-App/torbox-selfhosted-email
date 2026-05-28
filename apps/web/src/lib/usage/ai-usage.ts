@@ -2,6 +2,7 @@ import { db } from "@wraps/db";
 import { aiUsageLog, aiUsageMonthly } from "@wraps/db/schema/usage";
 import { and, eq, sql } from "drizzle-orm";
 import { getOrganizationPlanId } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 import { PLANS, type PlanId } from "@/lib/plans";
 
 /**
@@ -31,6 +32,10 @@ export function getCurrentPeriodKey(): string {
  * Returns -1 for unlimited
  */
 export function getAiMessageLimit(planId: PlanId | string): number {
+  // Self-hosted deployments are licensed, not metered — no AI generation cap.
+  if (isSelfHosted()) {
+    return -1;
+  }
   const plan = PLANS[planId as PlanId];
   return plan?.aiMessages ?? 50; // Default to starter limit
 }

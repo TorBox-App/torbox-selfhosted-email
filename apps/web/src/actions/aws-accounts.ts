@@ -40,6 +40,7 @@ import {
 } from "@/lib/forms/connect-aws-account";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
+import { isSelfHosted } from "@/lib/plan-limits";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 import { checkPermission } from "./shared/permissions";
 
@@ -234,7 +235,9 @@ export async function connectAWSAccountAction(
     });
 
     const planId = activeSubscription?.plan || "starter";
-    if (!canAddAwsAccount(planId, existingAccounts.length)) {
+    if (
+      !(isSelfHosted() || canAddAwsAccount(planId, existingAccounts.length))
+    ) {
       log.warn(
         { planId, existingCount: existingAccounts.length },
         "AWS account limit reached"

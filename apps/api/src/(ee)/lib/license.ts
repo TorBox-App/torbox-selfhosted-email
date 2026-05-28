@@ -72,3 +72,12 @@ export function validateLicenseKey(key: string | undefined): LicenseResult {
 
   return { valid: true, tier: tier as ValidTier };
 }
+
+/**
+ * True when running as a self-hosted deployment with a valid license key.
+ * Self-hosted deployments are licensed, not metered — feature gates, rate
+ * limits, and event limits are all lifted.
+ */
+export function isSelfHosted(): boolean {
+  return validateLicenseKey(process.env.WRAPS_LICENSE_KEY).valid;
+}

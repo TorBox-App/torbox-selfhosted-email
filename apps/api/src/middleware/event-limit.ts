@@ -15,6 +15,7 @@
 
 import { and, db, eq, eventUsageMonthly, sqlExpr as sql } from "@wraps/db";
 
+import { isSelfHosted } from "../(ee)/lib/license";
 import { log } from "../lib/logger";
 import { getAuthOptional } from "./auth";
 
@@ -106,6 +107,9 @@ export function getEventTTLExpiration(): Date {
 export async function enforceEventLimit(ctx: any) {
   const auth = getAuthOptional(ctx);
   if (!auth) return;
+
+  // Self-hosted deployments are licensed — no monthly event cap.
+  if (isSelfHosted()) return;
 
   const { set } = ctx;
   const { organizationId, planId } = auth;

@@ -8,6 +8,7 @@
 import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { Elysia } from "elysia";
 
+import { isSelfHosted } from "../(ee)/lib/license";
 import { awsDefaults } from "../lib/aws-defaults";
 import { log } from "../lib/logger";
 import { getAuthOptional } from "./auth";
@@ -31,6 +32,11 @@ export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).derive(
 
     if (!authContext) {
       // Auth middleware should have already set this
+      return {};
+    }
+
+    // Self-hosted deployments are licensed — no request rate limiting.
+    if (isSelfHosted()) {
       return {};
     }
 

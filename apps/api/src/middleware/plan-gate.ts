@@ -5,6 +5,7 @@
  */
 
 import { Elysia } from "elysia";
+import { isSelfHosted } from "../(ee)/lib/license";
 import { getAuthOptional } from "./auth";
 
 // Feature to minimum plan mapping (aligned with apps/web/src/lib/plans.ts)
@@ -41,6 +42,11 @@ export function planGateMiddleware(feature: Feature) {
     if (!authContext) {
       set.status = 401;
       throw new Error("Not authenticated");
+    }
+
+    // Self-hosted deployments are licensed — all features unlocked.
+    if (isSelfHosted()) {
+      return {};
     }
 
     const { planId } = authContext;

@@ -54,12 +54,15 @@ type OrganizationSettingsAwsAccountsProps = {
   };
   userRole: string;
   planId?: PlanId | string;
+  /** Self-hosted deployments are unlimited — no AWS account cap. */
+  unlimited?: boolean;
 };
 
 export function OrganizationSettingsAwsAccounts({
   organization,
   userRole,
   planId = "starter",
+  unlimited = false,
 }: OrganizationSettingsAwsAccountsProps) {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
@@ -73,8 +76,8 @@ export function OrganizationSettingsAwsAccounts({
   const [_refreshKey, setRefreshKey] = useState(0);
 
   const canEdit = userRole === "owner" || userRole === "admin";
-  const accountLimit = getAwsAccountLimit(planId);
-  const canAddMore = canAddAwsAccount(planId, accounts.length);
+  const accountLimit = unlimited ? -1 : getAwsAccountLimit(planId);
+  const canAddMore = unlimited || canAddAwsAccount(planId, accounts.length);
   const isAtLimit = !canAddMore && accountLimit !== -1;
 
   // Trigger a refresh

@@ -2,6 +2,7 @@ import { db } from "@wraps/db";
 import { eventUsageMonthly } from "@wraps/db/schema/usage";
 import { and, eq, sql } from "drizzle-orm";
 import { getOrganizationPlanId } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 import { getEventLimit, getEventUsageThreshold } from "@/lib/plans";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -61,8 +62,10 @@ export async function checkEventUsageLimit(organizationId: string): Promise<{
     getEventUsageCount(organizationId),
   ]);
 
-  const limit = getEventLimit(planId);
-  const threshold = getEventUsageThreshold(planId, currentUsage);
+  // Self-hosted deployments are licensed, not metered — no event cap.
+  const limit = isSelfHosted() ? -1 : getEventLimit(planId);
+  const threshold =
+    limit === -1 ? "normal" : getEventUsageThreshold(planId, currentUsage);
 
   // Allow if unlimited (-1) or below 125% (25% grace period)
   const allowed = limit === -1 || currentUsage < limit * 1.25;
@@ -226,10 +229,11 @@ export async function getEventUsageSummary(
     }),
   ]);
 
-  const limit = getEventLimit(planId);
+  const limit = isSelfHosted() ? -1 : getEventLimit(planId);
   const eventCount = usage?.eventCount ?? 0;
   const percentUsed = limit === -1 ? 0 : Math.round((eventCount / limit) * 100);
-  const threshold = getEventUsageThreshold(planId, eventCount);
+  const threshold =
+    limit === -1 ? "normal" : getEventUsageThreshold(planId, eventCount);
   const remaining = limit === -1 ? -1 : Math.max(0, limit - eventCount);
 
   return {

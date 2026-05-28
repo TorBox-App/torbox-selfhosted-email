@@ -5,6 +5,7 @@ import {
   getOrganizationPlanId,
   getOrganizationWithMembership,
 } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 
 type AwsAccountsPageProps = {
   params: Promise<{
@@ -47,6 +48,7 @@ export default async function AwsAccountsPage({
       <OrganizationSettingsAwsAccounts
         organization={orgWithMembership}
         planId={planId}
+        unlimited={isSelfHosted()}
         userRole={orgWithMembership.userRole}
       />
     </div>

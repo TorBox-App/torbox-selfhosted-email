@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
 type RouteContext = {
@@ -139,7 +140,12 @@ export async function POST(request: Request, context: RouteContext) {
         });
 
         const planId = activeSubscription?.plan || "starter";
-        if (!canAddAwsAccount(planId, existingAccountCount.length)) {
+        if (
+          !(
+            isSelfHosted() ||
+            canAddAwsAccount(planId, existingAccountCount.length)
+          )
+        ) {
           return NextResponse.json(
             {
               error: "AWS account limit reached",

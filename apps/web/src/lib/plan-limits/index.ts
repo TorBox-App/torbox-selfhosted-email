@@ -78,12 +78,21 @@ function validateWebLicenseKey(key: string | undefined): LicenseTier | null {
 }
 
 /**
+ * The plan tier granted by a valid self-hosted license key, or null when no
+ * valid license is present (i.e. cloud). This is the source of truth for a
+ * self-hosted org's plan — it overrides any Stripe subscription.
+ */
+export function getLicensedPlan(): PlanId | null {
+  return validateWebLicenseKey(process.env.WRAPS_LICENSE_KEY);
+}
+
+/**
  * True when running as a self-hosted deployment with a valid license key.
  * Self-hosted orgs get their plan from the license (not Stripe), so plan
  * selection and billing steps should be skipped during onboarding.
  */
 export function isSelfHosted(): boolean {
-  return validateWebLicenseKey(process.env.WRAPS_LICENSE_KEY) !== null;
+  return getLicensedPlan() !== null;
 }
 
 export type LimitCheckResult = {
@@ -110,7 +119,7 @@ export type FeatureCheckResult = {
 export async function getOrganizationPlan(
   organizationId: string
 ): Promise<PlanId> {
-  const licensedTier = validateWebLicenseKey(process.env.WRAPS_LICENSE_KEY);
+  const licensedTier = getLicensedPlan();
   if (licensedTier) {
     return licensedTier;
   }
@@ -152,7 +161,7 @@ export async function checkContactLimit(
     .where(eq(contact.organizationId, organizationId));
 
   const current = row?.count ?? 0;
-  const limit = plan.maxContacts;
+  const limit = isSelfHosted() ? -1 : plan.maxContacts;
   const allowed = limit === -1 || current < limit;
 
   return {
@@ -181,7 +190,7 @@ export async function checkAwsAccountLimit(
     .where(eq(awsAccount.organizationId, organizationId));
 
   const current = row?.count ?? 0;
-  const limit = plan.maxAwsAccounts;
+  const limit = isSelfHosted() ? -1 : plan.maxAwsAccounts;
   const allowed = limit === -1 || current < limit;
 
   return {
@@ -210,7 +219,7 @@ export async function checkWorkflowLimit(
     .where(eq(workflow.organizationId, organizationId));
 
   const current = row?.count ?? 0;
-  const limit = plan.maxWorkflows;
+  const limit = isSelfHosted() ? -1 : plan.maxWorkflows;
   const allowed = limit === -1 || current < limit;
 
   return {
@@ -233,7 +242,7 @@ export async function checkFeatureAccess(
 ): Promise<FeatureCheckResult> {
   const planId = await getOrganizationPlan(organizationId);
 
-  const allowed = hasFeature(planId, feature);
+  const allowed = isSelfHosted() || hasFeature(planId, feature);
   const requiredPlan = getRequiredPlan(feature);
 
   const featureNames: Record<PlanFeature, string> = {
@@ -274,7 +283,7 @@ export async function checkTeamMemberLimit(
     .where(eq(member.organizationId, organizationId));
 
   const current = row?.count ?? 0;
-  const limit = plan.maxTeamMembers;
+  const limit = isSelfHosted() ? -1 : plan.maxTeamMembers;
   const allowed = limit === -1 || current < limit;
 
   return {

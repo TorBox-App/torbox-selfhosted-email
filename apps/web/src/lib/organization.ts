@@ -2,6 +2,7 @@ import { db } from "@wraps/db";
 import { member, organization, subscription } from "@wraps/db/schema/auth";
 import { and, count, eq, or } from "drizzle-orm";
 import { cache } from "react";
+import { getLicensedPlan } from "@/lib/plan-limits";
 
 /**
  * Get organization by slug (cached for request)
@@ -152,6 +153,11 @@ export const getOrganizationSubscription = cache(
  */
 export const getOrganizationPlanId = cache(
   async (organizationId: string): Promise<string> => {
+    // Self-hosted: the license key is the source of truth, not Stripe.
+    const licensedTier = getLicensedPlan();
+    if (licensedTier) {
+      return licensedTier;
+    }
     const sub = await getOrganizationSubscription(organizationId);
     // Default to free tier if no active subscription
     return sub?.plan || "free";
