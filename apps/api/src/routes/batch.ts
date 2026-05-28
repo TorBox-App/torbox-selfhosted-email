@@ -19,10 +19,7 @@ import {
 } from "@wraps/db";
 import { t } from "elysia";
 
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 import { planGateMiddleware } from "../middleware/plan-gate";
 import { rateLimitMiddleware } from "../middleware/rate-limit";
 import { enqueueJob } from "../services/queue";
@@ -139,7 +136,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     "/",
     async (ctx) => {
       const { body, set } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Validate awsAccountId belongs to the authenticated organization
       const account = await findAwsAccountForOrg(
@@ -243,7 +240,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     "/:id",
     async (ctx) => {
       const { params, set } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const batch = await findBroadcast(params.id, authContext.organizationId);
 
@@ -296,7 +293,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     "/:id/send",
     async (ctx) => {
       const { body, params, set } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Load the batch scoped by (id, orgId) — without status filter so we can
       // distinguish 404 (no row in org) from 400 (row exists but not draft).
@@ -457,7 +454,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     "/:id",
     async (ctx) => {
       const { params, set } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Find the batch (scoped by organization)
       const batch = await findBroadcast(params.id, authContext.organizationId);
@@ -507,7 +504,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     "/:id/resume",
     async (ctx) => {
       const { params, body, set } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Kill switch — turn off without a redeploy if resume starts misbehaving.
       if (process.env.BROADCAST_RESUME_ENABLED === "false") {

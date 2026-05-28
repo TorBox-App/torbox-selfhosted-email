@@ -5,7 +5,7 @@
  */
 
 import { Elysia } from "elysia";
-import type { AuthContext } from "./auth";
+import { getAuthOptional } from "./auth";
 
 // Feature to minimum plan mapping (aligned with apps/web/src/lib/plans.ts)
 export const FEATURE_PLANS = {
@@ -35,7 +35,7 @@ type PlanId = keyof typeof PLAN_HIERARCHY;
 
 export function planGateMiddleware(feature: Feature) {
   return new Elysia({ name: `plan-gate:${feature}` }).derive(async (ctx) => {
-    const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+    const authContext = getAuthOptional(ctx);
     const { set } = ctx;
 
     if (!authContext) {

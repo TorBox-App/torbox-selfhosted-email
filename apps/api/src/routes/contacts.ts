@@ -37,10 +37,7 @@ import { sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../lib/logger";
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 import {
   checkSegmentEntry,
   checkSegmentExit,
@@ -268,7 +265,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/",
     async (ctx) => {
       const { query } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const page = Number.parseInt(query.page || "1", 10);
       const pageSize = Math.min(
@@ -340,7 +337,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/:id",
     async (ctx) => {
       const { params } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const result = await findContact(params.id, authContext.organizationId);
 
@@ -408,7 +405,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/",
     async (ctx) => {
       const { body } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Must have email or phone
       if (!(body.email || body.phone)) {
@@ -648,7 +645,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/:id",
     async (ctx) => {
       const { params, body } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const contactId = await resolveContactId(
         params.id,
@@ -988,7 +985,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/:id",
     async (ctx) => {
       const { params } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const resolvedId = await resolveContactId(
         params.id,
@@ -1029,7 +1026,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/",
     async (ctx) => {
       const { body } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       if (!body.ids || body.ids.length === 0) {
         ctx.set.status = 400;

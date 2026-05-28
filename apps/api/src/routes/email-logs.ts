@@ -1,14 +1,13 @@
 import { getEmailLogByMessageId, listEmailLogs } from "@wraps/db";
 import { t } from "elysia";
-import type { AuthContext } from "../middleware/auth";
-import { createAuthenticatedRoutes } from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 
 export const emailLogsRoutes = createAuthenticatedRoutes("/v1/email/logs")
 
   .get(
     "/",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { status, limit, cursor } = ctx.query;
 
       const result = await listEmailLogs(authContext.organizationId, {
@@ -51,7 +50,7 @@ export const emailLogsRoutes = createAuthenticatedRoutes("/v1/email/logs")
   .get(
     "/:messageId",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { messageId } = ctx.params;
 
       const log = await getEmailLogByMessageId(

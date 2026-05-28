@@ -10,7 +10,7 @@ import { Elysia } from "elysia";
 
 import { awsDefaults } from "../lib/aws-defaults";
 import { log } from "../lib/logger";
-import type { AuthContext } from "./auth";
+import { getAuthOptional } from "./auth";
 
 // Plan rate limits (requests)
 // Aligned with apps/web/src/lib/plans.ts
@@ -27,7 +27,7 @@ const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
 
 export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).derive(
   async (ctx) => {
-    const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+    const authContext = getAuthOptional(ctx);
 
     if (!authContext) {
       // Auth middleware should have already set this

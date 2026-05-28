@@ -12,10 +12,7 @@ import { and } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../../lib/logger";
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../../middleware/auth";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
@@ -57,7 +54,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     "/:workflowId/enable",
     async (ctx) => {
       const { params, body, set } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
 
       // Verify workflow belongs to this organization
       const isOwner = await verifyWorkflowOwnership(
@@ -115,7 +112,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     "/:workflowId/disable",
     async (ctx) => {
       const { params, set } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
 
       // Verify workflow belongs to this organization
       const isOwner = await verifyWorkflowOwnership(
@@ -163,7 +160,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     "/:workflowId",
     async (ctx) => {
       const { params, body, set } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
 
       // Verify workflow belongs to this organization
       const isOwner = await verifyWorkflowOwnership(

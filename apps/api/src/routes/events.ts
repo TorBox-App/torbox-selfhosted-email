@@ -39,10 +39,7 @@ function hashEmail(email: string): string {
   return createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
 }
 
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 import {
   enforceEventLimit,
   getEventTTLExpiration,
@@ -80,7 +77,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
     "/",
     async (ctx) => {
       const { body } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
       const {
         name,
         contactId,
@@ -291,7 +288,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
     "/batch",
     async (ctx) => {
       const { body } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
       const results = {
         processed: 0,
         workflowsTriggered: 0,

@@ -12,7 +12,7 @@ import { and, db, eq, template } from "@wraps/db";
 import { t } from "elysia";
 import { trackFirstResourceCreated } from "../lib/activation-tracking";
 import type { AuthContext } from "../middleware/auth";
-import { createAuthenticatedRoutes } from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 
 type DbOrTx =
   | typeof db
@@ -23,7 +23,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
   .post(
     "/push",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { body } = ctx;
 
       const result = await upsertTemplateFromCli(db, authContext, body);
@@ -112,7 +112,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
   .post(
     "/push/batch",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { body } = ctx;
 
       const results = await db.transaction(async (tx) => {
@@ -218,7 +218,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
   .get(
     "/pull",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const templates = await db
         .select({

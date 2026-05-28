@@ -67,6 +67,8 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("../middleware/auth", () => ({
+  getAuth: (ctx: { auth: unknown }) => ctx.auth,
+  getAuthOptional: (ctx: { auth: unknown }) => ctx.auth ?? null,
   createAuthenticatedRoutes: vi.fn((prefix: string) =>
     new Elysia({ prefix }).derive(() => ({
       auth: {

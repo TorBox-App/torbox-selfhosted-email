@@ -11,10 +11,7 @@ import { and, inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../../lib/logger";
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../../middleware/auth";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
 import {
   enqueueWorkflowStep,
@@ -52,7 +49,7 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     "/:workflowId/trigger",
     async (ctx) => {
       const { params, body } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
       const { workflowId } = params;
       const { contactId, contactEmail, data } = body;
 
@@ -198,7 +195,7 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     "/:workflowId/trigger/batch",
     async (ctx) => {
       const { params, body } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
       const { workflowId } = params;
       const { contacts, data } = body;
 
@@ -398,7 +395,7 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     "/executions/:executionId/retry",
     async (ctx) => {
       const { params } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
       const { executionId } = params;
 
       // Load execution with org scoping
@@ -572,7 +569,7 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     "/executions/:executionId/cancel",
     async (ctx) => {
       const { params } = ctx;
-      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+      const auth = getAuth(ctx);
 
       return cancelWorkflowExecution({
         executionId: params.executionId,

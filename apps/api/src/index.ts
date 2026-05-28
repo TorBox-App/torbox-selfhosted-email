@@ -14,7 +14,7 @@ import { workflowsRoutes } from "./(ee)/routes/workflows";
 import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
-import type { AuthContext } from "./middleware/auth";
+import { getAuthOptional } from "./middleware/auth";
 import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
@@ -127,7 +127,7 @@ export const app = new Elysia()
     requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
   }))
   .onAfterResponse(({ request, startTime, requestId, set, ...ctx }) => {
-    const auth = (ctx as unknown as { auth?: AuthContext }).auth;
+    const auth = getAuthOptional(ctx);
 
     set.headers["x-request-id"] = requestId;
 
@@ -150,7 +150,7 @@ export const app = new Elysia()
     });
   })
   .onError(({ error, request, code, set, requestId, ...ctx }) => {
-    const auth = (ctx as unknown as { auth?: AuthContext }).auth;
+    const auth = getAuthOptional(ctx);
     const url = new URL(request.url);
     const status =
       code === "NOT_FOUND"

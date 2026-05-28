@@ -24,7 +24,7 @@ import { inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 import { trackFirstResourceCreated } from "../../lib/activation-tracking";
 import type { AuthContext } from "../../middleware/auth";
-import { createAuthenticatedRoutes } from "../../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../../middleware/auth";
 
 type DbOrTx =
   | typeof db
@@ -39,7 +39,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
   .post(
     "/push",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { body } = ctx;
 
       // Resolve template slugs to IDs
@@ -166,7 +166,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
   .post(
     "/push/batch",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { body } = ctx;
 
       const results = await db.transaction(async (tx) => {
@@ -305,7 +305,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
   .get(
     "/pull",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const workflows = await db
         .select({

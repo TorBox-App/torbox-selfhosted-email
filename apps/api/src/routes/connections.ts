@@ -13,8 +13,7 @@ import { and, awsAccount, db, eq, sqlExpr } from "@wraps/db";
 import { count } from "drizzle-orm";
 import { t } from "elysia";
 import { log } from "../lib/logger";
-import type { AuthContext } from "../middleware/auth";
-import { createAuthenticatedRoutes } from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 
 // Plan limits for AWS accounts (matches apps/web/src/lib/plans.ts)
 const PLAN_AWS_ACCOUNT_LIMITS: Record<string, number> = {
@@ -40,7 +39,7 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
   .post(
     "/",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { body } = ctx;
 
       const maxAccounts = getMaxAwsAccounts(authContext.planId);
@@ -195,7 +194,7 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
   .get(
     "/",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       const connections = await db
         .select({
@@ -235,7 +234,7 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
   .delete(
     "/:id",
     async (ctx) => {
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
       const { id } = ctx.params;
 
       const [existing] = await db

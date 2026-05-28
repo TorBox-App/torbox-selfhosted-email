@@ -17,10 +17,7 @@ import { and, inArray } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../lib/logger";
-import {
-  type AuthContext,
-  createAuthenticatedRoutes,
-} from "../middleware/auth";
+import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 import {
   checkSegmentEntry,
   checkSegmentExit,
@@ -39,7 +36,7 @@ export const contactsTopicsRoutes = createAuthenticatedRoutes("/v1/contacts")
     "/:id/topics",
     async (ctx) => {
       const { params, body } = ctx;
-      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const authContext = getAuth(ctx);
 
       // Check contact exists
       const [existing] = await db

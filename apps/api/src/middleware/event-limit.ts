@@ -16,7 +16,7 @@
 import { and, db, eq, eventUsageMonthly, sqlExpr as sql } from "@wraps/db";
 
 import { log } from "../lib/logger";
-import type { AuthContext } from "./auth";
+import { getAuthOptional } from "./auth";
 
 // Tracked event limits per plan (tracked events per month)
 // Aligned with apps/web/src/lib/plans.ts
@@ -104,7 +104,7 @@ export function getEventTTLExpiration(): Date {
  */
 // biome-ignore lint/suspicious/noExplicitAny: ctx shape varies across Elysia route instances
 export async function enforceEventLimit(ctx: any) {
-  const auth = (ctx as { auth: AuthContext }).auth;
+  const auth = getAuthOptional(ctx);
   if (!auth) return;
 
   const { set } = ctx;

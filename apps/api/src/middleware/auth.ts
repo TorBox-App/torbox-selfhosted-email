@@ -20,6 +20,37 @@ export type AuthContext = {
   planId: string | null; // null if no valid subscription
 };
 
+/**
+ * Read the authenticated context off an Elysia handler context.
+ *
+ * Routes built with {@link createAuthenticatedRoutes} guarantee `auth` is set —
+ * `onBeforeHandle` returns 401 before any handler runs without it — but Elysia's
+ * derive typing doesn't surface `auth` on the handler `ctx`. This centralizes
+ * the one unavoidable cast and returns a non-null `AuthContext`.
+ *
+ * Throws if called from a context where auth was never derived, which is a
+ * programming error (e.g. a route not built via createAuthenticatedRoutes).
+ * For hooks that legitimately run before auth, use {@link getAuthOptional}.
+ */
+export function getAuth(ctx: unknown): AuthContext {
+  const auth = (ctx as { auth?: AuthContext | null }).auth;
+  if (!auth) {
+    throw new Error(
+      "getAuth() called on an unauthenticated context — use createAuthenticatedRoutes() or getAuthOptional()"
+    );
+  }
+  return auth;
+}
+
+/**
+ * Read auth that may be absent — for global hooks (onError, onAfterResponse)
+ * that run before authentication is guaranteed, or middleware that intentionally
+ * no-ops for unauthenticated requests. Returns null when auth isn't present.
+ */
+export function getAuthOptional(ctx: unknown): AuthContext | null {
+  return (ctx as { auth?: AuthContext | null }).auth ?? null;
+}
+
 // Hash function for API key verification
 function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
@@ -226,7 +257,7 @@ export function createAuthenticatedRoutes(prefix: string) {
   return new Elysia({ prefix })
     .derive(async (ctx) => {
       // Allow tests to inject mock auth by setting auth before .use()
-      const existingAuth = (ctx as unknown as { auth?: AuthContext }).auth;
+      const existingAuth = getAuthOptional(ctx);
       if (existingAuth) {
         return { auth: existingAuth, authError: null as string | null };
       }
