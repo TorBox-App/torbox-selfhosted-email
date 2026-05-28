@@ -133,6 +133,7 @@ function mockInsertChain() {
   mockOnConflictDoUpdate.mockResolvedValue([{ messageCount: 1 }]);
   mockInsertValues.mockReturnValue({
     onConflictDoUpdate: mockOnConflictDoUpdate,
+    onConflictDoNothing: vi.fn().mockResolvedValue([]),
   });
   mockDbInsert.mockReturnValue({ values: mockInsertValues });
 }
@@ -217,8 +218,9 @@ describe("webhook delivery counting", () => {
 
     expect(response.status).toBe(200);
 
-    // No insert should happen for Send events
-    expect(mockDbInsert).not.toHaveBeenCalled();
+    // message_usage_monthly should NOT be incremented for Send events
+    // (db.insert IS called to store the messageSend row, but not for usage_monthly)
+    expect(mockOnConflictDoUpdate).not.toHaveBeenCalled();
   });
 
   it("calls trackFirstEmailDelivered for SDK delivery", async () => {

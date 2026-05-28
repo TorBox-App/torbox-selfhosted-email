@@ -205,6 +205,26 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
     if (!message) {
       // Message not found — likely sent via SDK (direct SES).
+      // Store a minimal row for Send events so they appear in email logs.
+      if (eventType === "Send") {
+        const recipient = mail.destination?.[0];
+        if (recipient) {
+          await db
+            .insert(messageSend)
+            .values({
+              organizationId: account.organizationId,
+              awsAccountId: account.id,
+              channel: "email",
+              sourceType: "transactional",
+              recipient,
+              from: mail.source ?? null,
+              messageId,
+              status: "sent",
+              sentAt: mail.timestamp ? new Date(mail.timestamp) : new Date(),
+            })
+            .onConflictDoNothing();
+        }
+      }
       // Count delivery and track activation in parallel.
       if (eventType === "Delivery") {
         for (const r of await Promise.allSettled([

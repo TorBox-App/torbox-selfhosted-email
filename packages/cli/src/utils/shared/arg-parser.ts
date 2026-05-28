@@ -76,6 +76,11 @@ export type CliFlags = {
   vdmEngagement?: boolean;
   vdmInbox?: boolean;
 
+  // Email logs
+  status?: string;
+  limit?: string;
+  cursor?: string;
+
   // License
   tier?: string;
   expires?: string;
@@ -135,6 +140,9 @@ const STRING_FLAGS = [
   "neon-org-id",
   "license-key",
   "app-url",
+  "status",
+  "limit",
+  "cursor",
 ] as const;
 
 /**

@@ -328,6 +328,13 @@ export const messageSend = pgTable(
     uniqueIndex("message_send_message_id_idx").on(table.messageId),
     index("message_send_source_type_idx").on(table.sourceType),
     index("message_send_created_at_idx").on(table.createdAt),
+    // Composite index for email log pagination queries (org-scoped, sorted by createdAt)
+    // Created in production via packages/db/scripts/create-email-log-index.ts
+    // (CONCURRENTLY) — schema declared here as source of truth.
+    index("message_send_org_created_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
     // Dedup guard for SQS retries and DLQ replays. Partial on contactId because
     // transactional sends (workflows, cold emails) have no contactId.
     // Created in production via packages/db/scripts/create-broadcast-resume-indexes.ts

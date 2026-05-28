@@ -19,6 +19,7 @@ import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
 import { contactsTopicsRoutes } from "./routes/contacts-topics";
+import { emailLogsRoutes } from "./routes/email-logs";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
 import { preferenceEventsRoutes } from "./routes/preference-events";
@@ -78,6 +79,10 @@ const openApiDocumentation = {
     {
       name: "connections",
       description: "AWS account connection management",
+    },
+    {
+      name: "email-logs",
+      description: "Email delivery log inspection",
     },
     {
       name: "webhooks",
@@ -232,6 +237,7 @@ export const app = new Elysia()
   .use(wellKnownRoutes)
   .use(healthRoutes)
   .use(connectionsRoutes)
+  .use(emailLogsRoutes)
   .use(contactsRoutes)
   .use(contactsTopicsRoutes)
   .use(batchRoutes)

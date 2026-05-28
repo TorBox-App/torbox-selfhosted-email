@@ -41,6 +41,7 @@ import {
   inboundVerify,
 } from "./commands/email/inbound.js";
 import { init } from "./commands/email/init.js";
+import { emailLogsGet, emailLogsList } from "./commands/email/logs.js";
 import {
   replyDecode,
   replyDestroy,
@@ -998,6 +999,50 @@ async function run() {
               );
               throw new Error(
                 `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
+              );
+          }
+          break;
+        }
+
+        case "logs": {
+          const logsSubCommand = sub[2];
+
+          switch (logsSubCommand) {
+            case "list":
+              await emailLogsList({
+                status: flags.status,
+                limit: flags.limit,
+                cursor: flags.cursor,
+                json: flags.json,
+                token: flags.token,
+                region: flags.region,
+              });
+              break;
+
+            case "get": {
+              const messageId = sub[3];
+              if (!messageId) {
+                clack.log.error("Usage: wraps email logs get <message-id>");
+                throw new Error("Missing required argument: <message-id>");
+              }
+              await emailLogsGet({
+                messageId,
+                json: flags.json,
+                token: flags.token,
+                region: flags.region,
+              });
+              break;
+            }
+
+            default:
+              clack.log.error(
+                `Unknown logs command: ${logsSubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("list")}, ${pc.cyan("get <message-id>")}\n`
+              );
+              throw new Error(
+                `Unknown logs command: ${logsSubCommand || "(none)"}`
               );
           }
           break;
