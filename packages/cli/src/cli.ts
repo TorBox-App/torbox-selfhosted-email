@@ -272,7 +272,10 @@ function showHelp() {
     `  ${pc.cyan("selfhost upgrade")}     Rebuild and redeploy the self-hosted API`
   );
   console.log(
-    `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details\n`
+    `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost connect")}     Connect your AWS account to your self-hosted instance\n`
   );
   console.log("Local Development:");
   console.log(
@@ -1105,6 +1108,15 @@ async function run() {
         case "login":
           await selfhostLogin({
             region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "connect":
+          await platformConnect({
+            region: flags.region,
+            force: flags.force,
+            yes: flags.yes,
             json: flags.json,
           });
           break;
