@@ -141,6 +141,46 @@ describe("selfhostEnv", () => {
     });
   });
 
+  describe("OIDC instructions", () => {
+    it("outputs wildcard resource ARN for sts:AssumeRole, not selfhost account", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await selfhostEnv({ region: "us-east-1" });
+
+      const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      expect(output).toContain(
+        `"Resource": "arn:aws:iam::*:role/wraps-console-access-role"`
+      );
+      // Must NOT scope the resource to the selfhost account — customers live in other accounts
+      expect(output).not.toContain(
+        `"Resource": "arn:aws:iam::115690362111:role/wraps-console-access-role"`
+      );
+    });
+
+    it("outputs trust policy with AssumeRoleWithWebIdentity and sts.amazonaws.com audience", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await selfhostEnv({ region: "us-east-1" });
+
+      const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      expect(output).toContain(`"Action": "sts:AssumeRoleWithWebIdentity"`);
+      // Vercel OIDC tokens always use sts.amazonaws.com as the audience for AWS
+      expect(output).toContain(`"sts.amazonaws.com"`);
+      expect(output).not.toContain(`"https://vercel.com/`);
+    });
+
+    it("outputs trust policy federated principal scoped to selfhost account", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await selfhostEnv({ region: "us-east-1" });
+
+      const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      expect(output).toContain(
+        `"Federated": "arn:aws:iam::115690362111:oidc-provider/oidc.vercel.com/<team-slug>"`
+      );
+    });
+  });
+
   describe("missing deployment", () => {
     it("exits with error when no selfhost deployment exists", async () => {
       vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(null);

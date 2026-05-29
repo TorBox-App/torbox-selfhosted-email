@@ -96,7 +96,7 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   console.log("#");
   console.log("# 1. In Vercel: Project Settings → Cloud → Configure AWS");
   console.log(
-    "#    Copy the OIDC Provider URL (looks like https://oidc.vercel.com/<team-id>)"
+    "#    Copy the OIDC Provider URL (https://oidc.vercel.com/<team-slug>)"
   );
   console.log("#");
   console.log("# 2. In AWS IAM → Identity providers → Add provider:");
@@ -105,11 +105,45 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   console.log("#    Audience:      sts.amazonaws.com");
   console.log("#");
   console.log(
-    "# 3. Create an IAM role that trusts that OIDC provider, with this permission:"
+    "# 3. Create an IAM role in this account with the following trust policy,"
+  );
+  console.log("#    replacing <team-slug> with your Vercel team slug:");
+  console.log("#");
+  console.log("#    {");
+  console.log(`#      "Version": "2012-10-17",`);
+  console.log(`#      "Statement": [{`);
+  console.log(`#        "Effect": "Allow",`);
+  console.log(`#        "Principal": {`);
+  console.log(
+    `#          "Federated": "arn:aws:iam::${identity.accountId}:oidc-provider/oidc.vercel.com/<team-slug>"`
+  );
+  console.log("#        },");
+  console.log(`#        "Action": "sts:AssumeRoleWithWebIdentity",`);
+  console.log(`#        "Condition": {`);
+  console.log(`#          "StringEquals": {`);
+  console.log(
+    `#            "oidc.vercel.com/<team-slug>:aud": "sts.amazonaws.com",`
   );
   console.log(
-    `#    sts:AssumeRole on arn:aws:iam::${identity.accountId}:role/wraps-console-access-role`
+    `#            "oidc.vercel.com/<team-slug>:sub": "owner:<team-slug>:environment:production"`
   );
+  console.log("#          }");
+  console.log("#        }");
+  console.log("#      }]");
+  console.log("#    }");
+  console.log("#");
+  console.log("#    Attach this permission policy to the role:");
+  console.log("#");
+  console.log("#    {");
+  console.log(`#      "Version": "2012-10-17",`);
+  console.log(`#      "Statement": [{`);
+  console.log(`#        "Effect": "Allow",`);
+  console.log(`#        "Action": "sts:AssumeRole",`);
+  console.log(
+    `#        "Resource": "arn:aws:iam::*:role/wraps-console-access-role"`
+  );
+  console.log("#      }]");
+  console.log("#    }");
   console.log("#");
   console.log("# 4. Set AWS_ROLE_ARN to that role's ARN in Vercel:");
   console.log(
