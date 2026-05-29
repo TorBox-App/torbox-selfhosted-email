@@ -259,6 +259,8 @@ export async function POST(request: Request, context: RouteContext) {
           subject,
           html,
           text,
+          configurationSetName:
+            customerAwsAccount.features?.email?.configSetName ?? undefined,
           marketing:
             isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined,
           tags: [
