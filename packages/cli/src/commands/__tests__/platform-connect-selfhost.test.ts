@@ -18,6 +18,7 @@ vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
 vi.mock("../../utils/shared/pulumi.js");
 vi.mock("../../utils/shared/config.js");
+vi.mock("../../utils/shared/json-output.js");
 vi.mock("../../utils/shared/region-resolver.js");
 vi.mock("../../utils/shared/prompts.js");
 // Reconcile makes a live Lambda call; auto-mock keeps connect's unit test
@@ -31,6 +32,7 @@ import * as prompts from "@clack/prompts";
 import * as aws from "../../utils/shared/aws.js";
 import * as config from "../../utils/shared/config.js";
 import * as fsUtils from "../../utils/shared/fs.js";
+import * as jsonOutput from "../../utils/shared/json-output.js";
 import * as metadata from "../../utils/shared/metadata.js";
 import * as pulumiUtils from "../../utils/shared/pulumi.js";
 import * as regionResolver from "../../utils/shared/region-resolver.js";
@@ -112,6 +114,14 @@ describe("platform connect - selfhost trust policy", () => {
       },
     });
 
+    // Self-hosted connect resolves a per-instance session, not the SaaS slot.
+    vi.mocked(config.resolveSelfhostToken).mockResolvedValue("sh-token-123");
+    vi.mocked(config.readSelfhostAuth).mockResolvedValue({
+      token: "sh-token-123",
+      tokenType: "session" as const,
+      organizations: [{ id: "sh-org-1", name: "Self Org", slug: "self-org" }],
+    });
+
     vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
       SELFHOST_SMS_METADATA as any
     );
@@ -183,6 +193,18 @@ describe("platform connect - selfhost trust policy", () => {
     );
   });
 
+  it("uses the self-hosted session token and org, not the SaaS slot", async () => {
+    // Regression: a logged-in SaaS session must not leak into a selfhost
+    // connect. The org/token come from the per-instance self-hosted session.
+    await connect({ yes: true, selfhosted: true });
+
+    const fetchMock = vi.mocked(fetch);
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer sh-token-123");
+    expect(headers["X-Organization-Id"]).toBe("sh-org-1");
+  });
+
   it("aborts without registering when the self-hosted apiUrl is empty", async () => {
     // An interrupted `selfhost deploy` leaves the service present but with an
     // empty apiUrl — connecting must fail fast, not POST to a malformed URL.
@@ -221,8 +243,9 @@ describe("platform connect - selfhost trust policy", () => {
   });
 
   it("aborts a selfhost connect when no auth token is present", async () => {
-    // Self-hosted has no manual copy/paste fallback — it must require login.
-    vi.mocked(config.resolveTokenAsync).mockResolvedValue(null);
+    // Self-hosted has no manual copy/paste fallback — it must require login
+    // against the instance itself, independent of any SaaS session.
+    vi.mocked(config.resolveSelfhostToken).mockResolvedValue(null);
 
     const exitError = new Error("process.exit");
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
@@ -234,6 +257,29 @@ describe("platform connect - selfhost trust policy", () => {
     );
 
     expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+  });
+
+  it("emits a structured NOT_AUTHENTICATED error in JSON mode", async () => {
+    // `--json` consumers must get a parseable error, not human prose.
+    vi.mocked(config.resolveSelfhostToken).mockResolvedValue(null);
+    vi.mocked(jsonOutput.isJsonMode).mockReturnValue(true);
+
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw exitError;
+    }) as never);
+
+    await expect(
+      connect({ yes: true, selfhosted: true, json: true })
+    ).rejects.toBe(exitError);
+
+    expect(vi.mocked(jsonOutput.jsonError)).toHaveBeenCalledWith(
+      "platform.connect",
+      expect.objectContaining({ code: "NOT_AUTHENTICATED" })
+    );
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
 
     exitSpy.mockRestore();

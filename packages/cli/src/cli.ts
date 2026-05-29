@@ -73,6 +73,7 @@ import { updateRole } from "./commands/platform/update-role.js";
 import { selfhostDeploy } from "./commands/selfhost/deploy.js";
 import { selfhostEnv } from "./commands/selfhost/env.js";
 import { selfhostLogin } from "./commands/selfhost/login.js";
+import { selfhostLogout } from "./commands/selfhost/logout.js";
 import { selfhostStatus } from "./commands/selfhost/status.js";
 import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
@@ -268,6 +269,9 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("selfhost login")}       Sign in to your self-hosted Wraps instance`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost logout")}      Sign out of your self-hosted Wraps instance`
   );
   console.log(
     `  ${pc.cyan("selfhost upgrade")}     Rebuild and redeploy the self-hosted API`
@@ -1152,6 +1156,13 @@ async function run() {
 
         case "login":
           await selfhostLogin({
+            region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "logout":
+          await selfhostLogout({
             region: flags.region,
             json: flags.json,
           });

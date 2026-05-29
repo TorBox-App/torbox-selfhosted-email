@@ -29,6 +29,8 @@ import {
   getAppBaseUrl,
   type OrgInfo,
   readAuthConfig,
+  readSelfhostAuth,
+  resolveSelfhostToken,
   resolveTokenAsync,
 } from "../../utils/shared/config.js";
 import { sanitizeErrorMessage } from "../../utils/shared/errors.js";
@@ -527,12 +529,12 @@ async function updatePlatformRole(
 }
 
 /**
- * Select organization from stored config or prompt user
+ * Select an organization from the caller-provided list (SaaS or self-hosted),
+ * prompting when there's more than one.
  */
-async function resolveOrganization(): Promise<OrgInfo | null> {
-  const config = await readAuthConfig();
-  const orgs = config?.auth?.organizations;
-
+async function resolveOrganization(
+  orgs: OrgInfo[] | undefined
+): Promise<OrgInfo | null> {
   if (!orgs || orgs.length === 0) {
     return null;
   }
@@ -615,8 +617,8 @@ async function registerConnection(params: {
  * Authenticated platform connect — registers via API, no manual paste needed
  */
 async function authenticatedConnect(
-  token: string,
-  options: PlatformConnectOptions
+  options: PlatformConnectOptions,
+  saasToken: string | null
 ): Promise<void> {
   const startTime = Date.now();
   const selfhosted = options.selfhosted === true;
@@ -668,12 +670,54 @@ async function authenticatedConnect(
 
     const hasEmail = !!metadata.services.email?.config;
 
-    // 2. Resolve organization
-    const org = await resolveOrganization();
+    // 2. Resolve auth + organization from the right source. Self-hosted uses a
+    // per-instance session (from `wraps selfhost login`), never the SaaS slot —
+    // so a SaaS login can't accidentally register against the customer's plane.
+    let token: string;
+    let organizations: OrgInfo[] | undefined;
+    if (selfhosted) {
+      const instanceToken = await resolveSelfhostToken(dashboardUrl);
+      if (!instanceToken) {
+        progress.stop();
+        if (isJsonMode()) {
+          jsonError("platform.connect", {
+            code: "NOT_AUTHENTICATED",
+            message: "Not signed in to the self-hosted instance.",
+            suggestion: "Run `wraps selfhost login` first.",
+          });
+        } else {
+          log.error("You need to sign in to your self-hosted instance first.");
+          console.log(`\nRun ${pc.cyan("wraps selfhost login")} first.\n`);
+        }
+        process.exit(1);
+      }
+      token = instanceToken;
+      organizations = (await readSelfhostAuth(dashboardUrl))?.organizations;
+    } else {
+      if (!saasToken) {
+        progress.stop();
+        if (isJsonMode()) {
+          jsonError("platform.connect", {
+            code: "NOT_AUTHENTICATED",
+            message: "Not signed in.",
+            suggestion: "Run `wraps auth login` first.",
+          });
+        } else {
+          log.error("Not signed in. Run `wraps auth login` first.");
+        }
+        process.exit(1);
+      }
+      token = saasToken;
+      organizations = (await readAuthConfig())?.auth?.organizations;
+    }
+
+    const org = await resolveOrganization(organizations);
     if (!org) {
       progress.stop();
       log.error(
-        `No organizations found. Sign in at ${dashboardUrl} to create one.`
+        selfhosted
+          ? `No organizations found. Sign in at ${dashboardUrl} and run ${pc.cyan("wraps selfhost login")} again.`
+          : `No organizations found. Sign in at ${dashboardUrl} to create one.`
       );
       process.exit(1);
     }
@@ -865,28 +909,19 @@ async function authenticatedConnect(
  * Connect AWS infrastructure to Wraps Platform
  */
 export async function connect(options: PlatformConnectOptions): Promise<void> {
-  // Check for authentication — if logged in, use the streamlined authenticated flow
-  const token = await resolveTokenAsync();
-  if (token) {
-    await authenticatedConnect(token, options);
+  // Self-hosted always uses the authenticated flow: it resolves a per-instance
+  // session (from `wraps selfhost login`) after loading the deployment's
+  // metadata, never the SaaS token. There is no copy/paste fallback for it.
+  if (options.selfhosted) {
+    await authenticatedConnect(options, null);
     return;
   }
 
-  // Self-hosted requires an authenticated session against the customer's own
-  // instance — the manual copy/paste fallback only exists for the Wraps SaaS.
-  if (options.selfhosted) {
-    if (isJsonMode()) {
-      jsonError("platform.connect", {
-        code: "NOT_AUTHENTICATED",
-        message: "Not signed in to the self-hosted instance.",
-        suggestion: "Run `wraps selfhost login` first.",
-      });
-    } else {
-      intro(pc.bold("Connect to Self-Hosted Wraps"));
-      log.error("You need to sign in to your self-hosted instance first.");
-      console.log(`\nRun ${pc.cyan("wraps selfhost login")} first.\n`);
-    }
-    process.exit(1);
+  // SaaS: if logged in, use the streamlined authenticated flow.
+  const token = await resolveTokenAsync();
+  if (token) {
+    await authenticatedConnect(options, token);
+    return;
   }
 
   // Unauthenticated fallback — manual copy/paste flow

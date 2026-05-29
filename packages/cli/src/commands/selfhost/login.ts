@@ -7,7 +7,7 @@ import {
   fetchOrganizations,
 } from "../../utils/shared/auth-client.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
-import { saveAuthConfig } from "../../utils/shared/config.js";
+import { saveSelfhostAuth } from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
@@ -113,15 +113,13 @@ export async function selfhostLogin(
         tokenData.access_token
       );
 
-      await saveAuthConfig({
-        auth: {
-          token: tokenData.access_token,
-          tokenType: "session",
-          expiresAt: tokenData.expires_in
-            ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-            : undefined,
-          organizations: organizations.length > 0 ? organizations : undefined,
-        },
+      await saveSelfhostAuth(baseURL, {
+        token: tokenData.access_token,
+        tokenType: "session",
+        expiresAt: tokenData.expires_in
+          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+          : undefined,
+        organizations: organizations.length > 0 ? organizations : undefined,
       });
 
       trackCommand("selfhost:login", {
