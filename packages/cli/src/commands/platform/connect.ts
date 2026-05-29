@@ -25,6 +25,7 @@ import type { PlatformConnectOptions } from "../../types/index.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   getApiBaseUrl,
+  getAppBaseUrl,
   type OrgInfo,
   readAuthConfig,
   resolveTokenAsync,
@@ -34,7 +35,11 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
+import {
+  isJsonMode,
+  jsonError,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
 import type { ConnectionMetadata } from "../../utils/shared/metadata.js";
 import {
   buildEmailStackConfig,
@@ -557,6 +562,7 @@ async function resolveOrganization(): Promise<OrgInfo | null> {
  * Register connection via Wraps Platform API
  */
 async function registerConnection(params: {
+  baseURL: string;
   token: string;
   orgId: string;
   accountId: string;
@@ -571,9 +577,7 @@ async function registerConnection(params: {
   webhookEndpoint?: string;
   error?: string;
 }> {
-  const baseURL = getApiBaseUrl();
-
-  const response = await fetch(`${baseURL}/v1/connections`, {
+  const response = await fetch(`${params.baseURL}/v1/connections`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -614,9 +618,16 @@ async function authenticatedConnect(
   options: PlatformConnectOptions
 ): Promise<void> {
   const startTime = Date.now();
+  const selfhosted = options.selfhosted === true;
 
   if (!isJsonMode()) {
-    intro(pc.bold("Connect to Wraps Platform"));
+    intro(
+      pc.bold(
+        selfhosted
+          ? "Connect to Self-Hosted Wraps"
+          : "Connect to Wraps Platform"
+      )
+    );
   }
 
   const progress = new DeploymentProgress();
@@ -628,6 +639,28 @@ async function authenticatedConnect(
       progress
     );
 
+    // Self-hosted connects target the customer's own control plane, not the
+    // Wraps SaaS. Both URLs come from the selfhost deployment metadata.
+    // `apiUrl` is persisted empty before Pulumi runs, so an interrupted deploy
+    // leaves the service present but unusable — treat that as "not deployed".
+    const selfhostService = metadata.services.selfhost;
+    if (selfhosted && !selfhostService?.apiUrl) {
+      progress.stop();
+      log.error(
+        `No reachable self-hosted deployment found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
+      );
+      console.log(
+        `\nRun ${pc.cyan("wraps selfhost deploy")} to finish deploying the self-hosted control plane first.\n`
+      );
+      process.exit(1);
+    }
+    const apiBaseUrl =
+      selfhosted && selfhostService ? selfhostService.apiUrl : getApiBaseUrl();
+    const dashboardUrl =
+      selfhosted && selfhostService
+        ? selfhostService.config.appUrl
+        : getAppBaseUrl();
+
     const hasEmail = !!metadata.services.email?.config;
 
     // 2. Resolve organization
@@ -635,7 +668,7 @@ async function authenticatedConnect(
     if (!org) {
       progress.stop();
       log.error(
-        "No organizations found. Sign in at https://app.wraps.dev to create one."
+        `No organizations found. Sign in at ${dashboardUrl} to create one.`
       );
       process.exit(1);
     }
@@ -651,7 +684,9 @@ async function authenticatedConnect(
         if (!isJsonMode()) {
           progress.stop();
           log.warn(
-            "Event tracking must be enabled to connect to the Wraps Platform."
+            selfhosted
+              ? "Event tracking must be enabled to connect to your self-hosted instance."
+              : "Event tracking must be enabled to connect to the Wraps Platform."
           );
         }
 
@@ -699,9 +734,12 @@ async function authenticatedConnect(
     }
 
     const result = await progress.execute(
-      "Registering connection with Wraps Platform",
+      selfhosted
+        ? "Registering connection with your self-hosted instance"
+        : "Registering connection with Wraps Platform",
       async () =>
         registerConnection({
+          baseURL: apiBaseUrl,
           token,
           orgId: org.id,
           accountId: identity.accountId,
@@ -773,9 +811,16 @@ async function authenticatedConnect(
         organizationId: org.id,
         connectionId: result.connectionId,
         webhookConnected: true,
+        selfhosted,
       });
     } else {
-      outro(pc.green("Platform connection complete!"));
+      outro(
+        pc.green(
+          selfhosted
+            ? "Self-hosted connection complete!"
+            : "Platform connection complete!"
+        )
+      );
 
       console.log();
       console.log(
@@ -783,7 +828,7 @@ async function authenticatedConnect(
           "Events from your AWS infrastructure will stream to the dashboard."
         )
       );
-      console.log(`  Dashboard: ${pc.cyan("https://app.wraps.dev")}`);
+      console.log(`  Dashboard: ${pc.cyan(dashboardUrl)}`);
       console.log();
     }
 
@@ -820,6 +865,23 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
   if (token) {
     await authenticatedConnect(token, options);
     return;
+  }
+
+  // Self-hosted requires an authenticated session against the customer's own
+  // instance — the manual copy/paste fallback only exists for the Wraps SaaS.
+  if (options.selfhosted) {
+    if (isJsonMode()) {
+      jsonError("platform.connect", {
+        code: "NOT_AUTHENTICATED",
+        message: "Not signed in to the self-hosted instance.",
+        suggestion: "Run `wraps selfhost login` first.",
+      });
+    } else {
+      intro(pc.bold("Connect to Self-Hosted Wraps"));
+      log.error("You need to sign in to your self-hosted instance first.");
+      console.log(`\nRun ${pc.cyan("wraps selfhost login")} first.\n`);
+    }
+    process.exit(1);
   }
 
   // Unauthenticated fallback — manual copy/paste flow

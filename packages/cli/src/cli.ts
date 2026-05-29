@@ -1163,6 +1163,7 @@ async function run() {
             force: flags.force,
             yes: flags.yes,
             json: flags.json,
+            selfhosted: true,
           });
           break;
 

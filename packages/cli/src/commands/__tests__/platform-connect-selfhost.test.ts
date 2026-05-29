@@ -168,6 +168,73 @@ describe("platform connect - selfhost trust policy", () => {
     );
   });
 
+  it("registers the connection against the self-hosted API URL when selfhosted", async () => {
+    await connect({ yes: true, selfhosted: true });
+
+    const fetchMock = vi.mocked(fetch);
+    expect(fetchMock).toHaveBeenCalled();
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "https://abc123.lambda-url.us-east-1.on.aws/v1/connections"
+    );
+  });
+
+  it("aborts without registering when the self-hosted apiUrl is empty", async () => {
+    // An interrupted `selfhost deploy` leaves the service present but with an
+    // empty apiUrl — connecting must fail fast, not POST to a malformed URL.
+    vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+      ...SELFHOST_SMS_METADATA,
+      services: {
+        ...SELFHOST_SMS_METADATA.services,
+        selfhost: { ...SELFHOST_SMS_METADATA.services.selfhost, apiUrl: "" },
+      },
+    } as any);
+
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw exitError;
+    }) as never);
+
+    await expect(connect({ yes: true, selfhosted: true })).rejects.toBe(
+      exitError
+    );
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+  });
+
+  it("registers against the Wraps Platform API when not selfhosted", async () => {
+    vi.mocked(config.getApiBaseUrl).mockReturnValue("https://api.wraps.dev");
+
+    await connect({ yes: true });
+
+    const fetchMock = vi.mocked(fetch);
+    expect(fetchMock).toHaveBeenCalled();
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.wraps.dev/v1/connections");
+  });
+
+  it("aborts a selfhost connect when no auth token is present", async () => {
+    // Self-hosted has no manual copy/paste fallback — it must require login.
+    vi.mocked(config.resolveTokenAsync).mockResolvedValue(null);
+
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw exitError;
+    }) as never);
+
+    await expect(connect({ yes: true, selfhosted: true })).rejects.toBe(
+      exitError
+    );
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+  });
+
   it("uses customer account when updating trust policy on an existing role with selfhost metadata", async () => {
     // Role exists → UpdateAssumeRolePolicy path
     iamMock.on(GetRoleCommand).resolves({
