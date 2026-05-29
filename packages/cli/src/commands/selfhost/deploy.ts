@@ -310,17 +310,19 @@ export async function selfhostDeploy(
   savedMetadata.timestamp = deployedAt;
   await saveConnectionMetadata(savedMetadata); // baseline:allow-early-save — Neon orphan prevention
 
-  // 12. Run database migrations using bundled SQL files + Neon HTTP driver
+  // 12. Run database migrations using bundled SQL files + pg driver
   await progress.execute("Running database migrations", async () => {
-    const { neonConfig, Pool } = await import("@neondatabase/serverless");
-    const { drizzle } = await import("drizzle-orm/neon-serverless");
-    const { migrate } = await import("drizzle-orm/neon-serverless/migrator");
+    const { Pool } = await import("pg");
+    const { drizzle } = await import("drizzle-orm/node-postgres");
+    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
 
-    neonConfig.poolQueryViaFetch = true;
     const pool = new Pool({ connectionString: databaseUrl });
     const db = drizzle(pool);
-    await migrate(db, { migrationsFolder: bundledMigrationsDir });
-    await pool.end();
+    try {
+      await migrate(db, { migrationsFolder: bundledMigrationsDir });
+    } finally {
+      await pool.end();
+    }
   });
 
   const createStack = async () => {

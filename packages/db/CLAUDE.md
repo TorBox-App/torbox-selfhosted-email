@@ -166,7 +166,7 @@ import { contact, template } from "@wraps/db/schema";
 import { eq, and, desc } from "@wraps/db";  // Re-exported drizzle operators
 ```
 
-Connection uses `@neondatabase/serverless` with `poolQueryViaFetch = true` (serverless-optimized).
+Connection uses `pg` (node-postgres) via `drizzle-orm/node-postgres`.
 
 ## ⚠️ Production vs Dev Database
 

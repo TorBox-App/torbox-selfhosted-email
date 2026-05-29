@@ -6,13 +6,13 @@
  */
 
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { contact } from "./schema/contacts";
 import { type FilterCondition, segment } from "./schema/segments";
 import { buildConditionSQL } from "./segment-filter";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = NeonDatabase<any>;
+type DB = NodePgDatabase<any>;
 
 /**
  * Check if a single contact matches a segment condition via SQL.

@@ -59,8 +59,8 @@
   "author": "Wraps",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.1",
     "drizzle-orm": "catalog:",
+    "pg": "catalog:",
     "@aws-sdk/client-acm": "catalog:",
     "@aws-sdk/client-cloudformation": "catalog:",
     "@aws-sdk/client-cloudfront": "catalog:",
@@ -102,6 +102,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/pg": "catalog:",
     "@types/mailparser": "3.4.6",
     "@types/node": "catalog:",
     "@types/react": "19.2.4",

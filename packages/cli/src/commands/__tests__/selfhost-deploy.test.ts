@@ -5,20 +5,19 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock("@neondatabase/serverless", () => ({
-  neonConfig: {},
+const mockPoolEnd = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock("pg", () => ({
   Pool: class {
-    end() {
-      return Promise.resolve();
-    }
+    end = mockPoolEnd;
   },
 }));
 
-vi.mock("drizzle-orm/neon-serverless", () => ({
+vi.mock("drizzle-orm/node-postgres", () => ({
   drizzle: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("drizzle-orm/neon-serverless/migrator", () => ({
+vi.mock("drizzle-orm/node-postgres/migrator", () => ({
   migrate: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -49,6 +48,8 @@ vi.mock("../../utils/selfhost/neon.js", async () => {
 vi.mock("../../telemetry/events.js");
 
 import * as prompts from "@clack/prompts";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import * as neon from "../../utils/selfhost/neon.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
@@ -190,6 +191,53 @@ describe("selfhostDeploy", () => {
         })
       );
     });
+
+    it("runs migrations via drizzle-orm/node-postgres migrate()", async () => {
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      expect(migrate).toHaveBeenCalledWith(
+        vi.mocked(drizzle).mock.results[0]?.value,
+        { migrationsFolder: expect.stringContaining("selfhost-migrations") }
+      );
+    });
+
+    it("closes the pg.Pool connection after migration completes", async () => {
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      const migrateOrder = vi.mocked(migrate).mock.invocationCallOrder[0];
+      const poolEndOrder = mockPoolEnd.mock.invocationCallOrder[0];
+      expect(poolEndOrder).toBeGreaterThan(migrateOrder!);
+      expect(mockPoolEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes the pg.Pool connection even when migration throws", async () => {
+      vi.mocked(migrate).mockRejectedValueOnce(new Error("migration failed"));
+
+      await expect(
+        selfhostDeploy({
+          region: "us-east-1",
+          databaseUrl:
+            "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+          licenseKey: "v1.scale.2027-01-01.abc123",
+          appUrl: "https://app.torbox.app",
+          yes: true,
+        })
+      ).rejects.toThrow();
+
+      expect(mockPoolEnd).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("when --database-url is absent", () => {
@@ -204,7 +252,7 @@ describe("selfhostDeploy", () => {
 
       expect(neon.provisionNeonProject).toHaveBeenCalledWith(
         "neon_api_key_123",
-        expect.stringContaining("wraps-selfhost"),
+        "wraps-selfhost-123456789012-us-east-1",
         expect.any(Object)
       );
     });

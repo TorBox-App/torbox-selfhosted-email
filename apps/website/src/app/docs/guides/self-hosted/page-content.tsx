@@ -722,9 +722,7 @@ export default function SelfHostedPageContent() {
             requires an organization to exist before it can connect.
           </li>
           <li>
-            <span className="font-medium text-foreground">
-              Sign in the CLI
-            </span>{" "}
+            <span className="font-medium text-foreground">Sign in the CLI</span>{" "}
             — run the command below. It reads your deployment metadata to find
             the dashboard URL, then opens a browser for device authorization
             against your own instance.

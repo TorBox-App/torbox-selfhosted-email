@@ -33,6 +33,8 @@ catalog:
   '@react-email/components': 1.0.8
   '@react-email/render': 2.0.4
   '@types/node': 24.10.0
+  '@types/pg': ^8.11.14
+  pg: ^8.14.1
   '@vitest/coverage-v8': 4.0.18
   better-auth: 1.5.5
   dotenv: ^17.2.2

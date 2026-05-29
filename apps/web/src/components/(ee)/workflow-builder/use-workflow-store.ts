@@ -1,14 +1,13 @@
-import {
-  CASCADE_ENGAGEMENT_FIELD,
-  type CanvasViewport,
-  type CascadeChannelConfig,
-  type TriggerConfig,
-  type Workflow,
-  type WorkflowStep,
-  type WorkflowStepConfig,
-  type WorkflowStepType,
-  type WorkflowTransition,
-  type WorkflowTriggerType,
+import type {
+  CanvasViewport,
+  CascadeChannelConfig,
+  TriggerConfig,
+  Workflow,
+  WorkflowStep,
+  WorkflowStepConfig,
+  WorkflowStepType,
+  WorkflowTransition,
+  WorkflowTriggerType,
 } from "@wraps/db";
 import type {
   Connection,
@@ -33,6 +32,8 @@ import {
   validateWorkflow,
 } from "@/lib/(ee)/workflow-validation";
 import type { NodePaletteType } from "./node-palette";
+
+const CASCADE_ENGAGEMENT_FIELD = "engagement.status" as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES

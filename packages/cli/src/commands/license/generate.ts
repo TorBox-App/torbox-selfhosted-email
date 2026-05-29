@@ -27,21 +27,43 @@ export async function licenseGenerate(
   }
 
   let expires = options.expires;
+  if (expires === "never") {
+    expires = "9999-12-31";
+  }
   if (!expires) {
-    const answer = await clack.text({
-      message: "Expiry date (YYYY-MM-DD):",
-      placeholder: "2027-05-13",
-      validate: (v) => {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return "Use YYYY-MM-DD format";
-        const today = new Date().toISOString().slice(0, 10);
-        if (v <= today) return "Expiry date must be in the future";
-      },
+    const answer = await clack.select({
+      message: "Expiry:",
+      options: [
+        {
+          value: "never",
+          label: "Never",
+          hint: "9999-12-31 — for self-hosted customers",
+        },
+        { value: "custom", label: "Custom date", hint: "YYYY-MM-DD" },
+      ],
     });
     if (clack.isCancel(answer)) {
       clack.cancel("Cancelled.");
       process.exit(0);
     }
-    expires = answer as string;
+    if (answer === "never") {
+      expires = "9999-12-31";
+    } else {
+      const dateAnswer = await clack.text({
+        message: "Expiry date (YYYY-MM-DD):",
+        placeholder: "2027-05-13",
+        validate: (v) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return "Use YYYY-MM-DD format";
+          const today = new Date().toISOString().slice(0, 10);
+          if (v <= today) return "Expiry date must be in the future";
+        },
+      });
+      if (clack.isCancel(dateAnswer)) {
+        clack.cancel("Cancelled.");
+        process.exit(0);
+      }
+      expires = dateAnswer as string;
+    }
   }
 
   const key = generateLicenseKey(tier, expires);

@@ -1,11 +1,9 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
-import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
 import type { PgTransaction } from "drizzle-orm/pg-core";
+import { Pool } from "pg";
 import * as schema from "./schema";
-
-neonConfig.poolQueryViaFetch = true;
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL || "" });
 export const db = drizzle(pool, { schema });
@@ -13,7 +11,7 @@ export const db = drizzle(pool, { schema });
 export type DbOrTx =
   | typeof db
   | PgTransaction<
-      NeonQueryResultHKT,
+      NodePgQueryResultHKT,
       typeof schema,
       ExtractTablesWithRelations<typeof schema>
     >;

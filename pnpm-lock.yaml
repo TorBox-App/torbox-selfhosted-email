@@ -87,6 +87,9 @@ catalogs:
     '@types/node':
       specifier: 24.10.0
       version: 24.10.0
+    '@types/pg':
+      specifier: ^8.11.14
+      version: 8.16.0
     '@vitest/coverage-v8':
       specifier: 4.0.18
       version: 4.0.18
@@ -102,6 +105,9 @@ catalogs:
     handlebars:
       specifier: 4.7.9
       version: 4.7.9
+    pg:
+      specifier: ^8.14.1
+      version: 8.16.3
     posthog-node:
       specifier: ^5.29.2
       version: 5.29.2
@@ -1202,9 +1208,6 @@ importers:
       '@clack/prompts':
         specifier: ^0.11.0
         version: 0.11.0
-      '@neondatabase/serverless':
-        specifier: ^1.0.1
-        version: 1.0.2
       '@pulumi/aws':
         specifier: ^7.28.0
         version: 7.28.0(ts-node@10.9.1(@types/node@24.10.0)(typescript@5.9.3))(typescript@5.9.3)
@@ -1250,6 +1253,9 @@ importers:
       open:
         specifier: ^10.1.0
         version: 10.2.0
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.3
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -1272,6 +1278,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.0
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
       '@types/react':
         specifier: 19.2.4
         version: 19.2.4
@@ -1432,15 +1441,15 @@ importers:
 
   packages/db:
     dependencies:
-      '@neondatabase/serverless':
-        specifier: ^1.0.1
-        version: 1.0.2
       dotenv:
         specifier: 'catalog:'
         version: 17.2.3
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.13)(pg@8.16.3)
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.3
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -1454,6 +1463,12 @@ importers:
       '@aws-sdk/util-dynamodb':
         specifier: 'catalog:'
         version: 3.996.2(@aws-sdk/client-dynamodb@3.1030.0)
+      '@neondatabase/serverless':
+        specifier: ^1.0.1
+        version: 1.0.2
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
       drizzle-kit:
         specifier: ^0.31.2
         version: 0.31.8
@@ -22307,7 +22322,7 @@ snapshots:
 
   '@types/pg@8.16.0':
     dependencies:
-      '@types/node': 24.10.0
+      '@types/node': 25.6.0
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
