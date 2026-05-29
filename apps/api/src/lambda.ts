@@ -21,11 +21,10 @@ import type {
   SQSBatchResponse,
   SQSEvent,
 } from "aws-lambda";
-
+import { handler as workflowProcessorHandler } from "./(ee)/workers/workflow-processor";
 import { app } from "./index";
 import { flushLogger } from "./lib/logger";
 import { handler as batchSenderHandler } from "./workers/batch-sender";
-import { handler as workflowProcessorHandler } from "./(ee)/workers/workflow-processor";
 
 function isSQSEvent(event: unknown): event is SQSEvent {
   return (
@@ -42,7 +41,7 @@ function isSQSEvent(event: unknown): event is SQSEvent {
 export const handler = wrapHandler(async function handler(
   event: APIGatewayProxyEventV2 | SQSEvent,
   context: Context
-): Promise<APIGatewayProxyResultV2 | SQSBatchResponse | void> {
+): Promise<APIGatewayProxyResultV2 | SQSBatchResponse> {
   // Route SQS events to the appropriate worker
   if (isSQSEvent(event)) {
     const queueArn = event.Records[0].eventSourceARN ?? "";
@@ -50,7 +49,12 @@ export const handler = wrapHandler(async function handler(
       return workflowProcessorHandler(event);
     }
     // batchSenderHandler is typed as SQSHandler (callback-based) but is async
-    return (batchSenderHandler as unknown as (e: SQSEvent, c: Context) => Promise<void>)(event, context);
+    await (
+      batchSenderHandler as unknown as (
+        e: SQSEvent,
+        c: Context
+      ) => Promise<void>
+    )(event, context);
   }
 
   // HTTP event — serve via Elysia
