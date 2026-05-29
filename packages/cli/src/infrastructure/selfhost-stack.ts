@@ -184,7 +184,7 @@ export async function deploySelfhostStack(
     handler: "lambda.handler",
     role: role.arn,
     code: new pulumi.asset.FileArchive(config.lambdaZipPath),
-    timeout: 30,
+    timeout: 300,
     memorySize: 512,
     environment: {
       variables: {
