@@ -22,9 +22,14 @@ export const handler = wrapHandler(async function handler(
   _context: Context
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    // Convert API Gateway event to Request
+    // Convert API Gateway event to Request.
+    // Normalize rawPath: strip leading double-slashes before building the URL.
+    // A trailing slash on NEXT_PUBLIC_API_URL + /v1/path produces //v1/path.
+    // new URL("//v1/path", base) treats it as protocol-relative and resolves
+    // to https://v1/path — the wrong host and path — causing a 404 NOT_FOUND.
+    const safePath = `/${event.rawPath.replace(/^\/+/, "")}`;
     const url = new URL(
-      event.rawPath + (event.rawQueryString ? `?${event.rawQueryString}` : ""),
+      safePath + (event.rawQueryString ? `?${event.rawQueryString}` : ""),
       `https://${event.requestContext.domainName}`
     );
 
