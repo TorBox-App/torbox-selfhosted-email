@@ -2,6 +2,7 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { SelfhostStatusOptions } from "../../types/index.js";
+import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
@@ -83,10 +84,12 @@ export async function selfhostStatus(
 
   const selfhostService = metadata.services.selfhost;
   const config = selfhostService.config;
+  const apiUrl =
+    (await reconcileSelfhostApiUrl(metadata, region)) ?? selfhostService.apiUrl;
 
   const statusData = {
     region,
-    apiUrl: selfhostService.apiUrl,
+    apiUrl,
     deployedAt: selfhostService.deployedAt,
     neonProjectId: config.neonProjectId,
     appUrl: config.appUrl,

@@ -2,6 +2,7 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { SelfhostEnvOptions } from "../../types/index.js";
+import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
@@ -42,7 +43,8 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
     return;
   }
 
-  const { config, apiUrl } = metadata.services.selfhost;
+  const { config } = metadata.services.selfhost;
+  const apiUrl = await reconcileSelfhostApiUrl(metadata, region);
 
   if (!apiUrl) {
     clack.log.error(

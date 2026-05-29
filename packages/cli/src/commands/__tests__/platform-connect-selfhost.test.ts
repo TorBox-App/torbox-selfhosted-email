@@ -20,6 +20,10 @@ vi.mock("../../utils/shared/pulumi.js");
 vi.mock("../../utils/shared/config.js");
 vi.mock("../../utils/shared/region-resolver.js");
 vi.mock("../../utils/shared/prompts.js");
+// Reconcile makes a live Lambda call; auto-mock keeps connect's unit test
+// hermetic. A no-op mock leaves selfhostService.apiUrl exactly as the loaded
+// metadata sets it — so empty stays empty (abort) and a set URL stays set.
+vi.mock("../../utils/selfhost/api-url.js");
 vi.mock("../../infrastructure/email-stack.js");
 vi.mock("../../telemetry/events.js");
 

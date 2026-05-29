@@ -296,11 +296,16 @@ export async function selfhostDeploy(
     timestamp: deployedAt,
     services: {},
   };
+  // Preserve a previously-deployed API URL across re-deploys: the early save
+  // exists only to persist Neon/config before Pulumi runs. Hardcoding "" here
+  // would wipe a known-good URL, so an interrupted re-run would leave the
+  // deployment unreachable until step 16 (which never runs on failure).
+  const priorApiUrl = savedMetadata.services.selfhost?.apiUrl ?? "";
   savedMetadata.services.selfhost = {
     deployedAt,
     pulumiStackName: stackName,
     config: selfhostConfig,
-    apiUrl: "", // Updated with real URL after Pulumi succeeds
+    apiUrl: priorApiUrl, // Refreshed from Pulumi outputs after deploy succeeds
   };
   savedMetadata.timestamp = deployedAt;
   await saveConnectionMetadata(savedMetadata); // baseline:allow-early-save — Neon orphan prevention

@@ -22,6 +22,7 @@ import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import type { PlatformConnectOptions } from "../../types/index.js";
+import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   getApiBaseUrl,
@@ -642,8 +643,12 @@ async function authenticatedConnect(
     // Self-hosted connects target the customer's own control plane, not the
     // Wraps SaaS. Both URLs come from the selfhost deployment metadata.
     // `apiUrl` is persisted empty before Pulumi runs, so an interrupted deploy
-    // leaves the service present but unusable — treat that as "not deployed".
+    // can leave the service present but unusable — reconcile against the live
+    // Lambda Function URL first, then treat a still-empty URL as "not deployed".
     const selfhostService = metadata.services.selfhost;
+    if (selfhosted && selfhostService) {
+      await reconcileSelfhostApiUrl(metadata, region);
+    }
     if (selfhosted && !selfhostService?.apiUrl) {
       progress.stop();
       log.error(
