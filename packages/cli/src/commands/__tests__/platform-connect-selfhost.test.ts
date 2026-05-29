@@ -21,10 +21,14 @@ vi.mock("../../utils/shared/config.js");
 vi.mock("../../utils/shared/json-output.js");
 vi.mock("../../utils/shared/region-resolver.js");
 vi.mock("../../utils/shared/prompts.js");
-// Reconcile makes a live Lambda call; auto-mock keeps connect's unit test
-// hermetic. A no-op mock leaves selfhostService.apiUrl exactly as the loaded
-// metadata sets it — so empty stays empty (abort) and a set URL stays set.
-vi.mock("../../utils/selfhost/api-url.js");
+// Reconcile makes a live Lambda call; mock it to a no-op so connect's unit
+// test stays hermetic — leaving selfhostService.apiUrl exactly as the loaded
+// metadata sets it (empty stays empty → abort; a set URL stays set). Keep
+// normalizeApiUrl real so trailing-slash handling is exercised, not stubbed.
+vi.mock("../../utils/selfhost/api-url.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/selfhost/api-url.js")>()),
+  reconcileSelfhostApiUrl: vi.fn(),
+}));
 vi.mock("../../infrastructure/email-stack.js");
 vi.mock("../../telemetry/events.js");
 
@@ -105,6 +109,9 @@ describe("platform connect - selfhost trust policy", () => {
     vi.mocked(fsUtils.ensurePulumiWorkDir).mockResolvedValue(undefined);
     vi.mocked(fsUtils.getPulumiWorkDir).mockReturnValue("/mock/.wraps/pulumi");
 
+    // SaaS connects build their request URL from this; production always
+    // returns a real string, so give the auto-mock a sane default.
+    vi.mocked(config.getApiBaseUrl).mockReturnValue("https://api.wraps.dev");
     vi.mocked(config.resolveTokenAsync).mockResolvedValue("test-token-123");
     vi.mocked(config.readAuthConfig).mockResolvedValue({
       auth: {
@@ -187,6 +194,29 @@ describe("platform connect - selfhost trust policy", () => {
 
     const fetchMock = vi.mocked(fetch);
     expect(fetchMock).toHaveBeenCalled();
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "https://abc123.lambda-url.us-east-1.on.aws/v1/connections"
+    );
+  });
+
+  it("strips the trailing slash from a Lambda Function URL before appending the path", async () => {
+    // Regression: real Lambda Function URLs always end in `/`, so a naive
+    // `${apiUrl}/v1/connections` yields `//v1/connections` which Elysia 404s.
+    vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+      ...SELFHOST_SMS_METADATA,
+      services: {
+        ...SELFHOST_SMS_METADATA.services,
+        selfhost: {
+          ...SELFHOST_SMS_METADATA.services.selfhost,
+          apiUrl: "https://abc123.lambda-url.us-east-1.on.aws/",
+        },
+      },
+    } as any);
+
+    await connect({ yes: true, selfhosted: true });
+
+    const fetchMock = vi.mocked(fetch);
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe(
       "https://abc123.lambda-url.us-east-1.on.aws/v1/connections"

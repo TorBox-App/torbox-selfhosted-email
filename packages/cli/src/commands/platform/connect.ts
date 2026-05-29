@@ -22,7 +22,10 @@ import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import type { PlatformConnectOptions } from "../../types/index.js";
-import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
+import {
+  normalizeApiUrl,
+  reconcileSelfhostApiUrl,
+} from "../../utils/selfhost/api-url.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   getApiBaseUrl,
@@ -662,7 +665,9 @@ async function authenticatedConnect(
       process.exit(1);
     }
     const apiBaseUrl =
-      selfhosted && selfhostService ? selfhostService.apiUrl : getApiBaseUrl();
+      selfhosted && selfhostService
+        ? normalizeApiUrl(selfhostService.apiUrl)
+        : getApiBaseUrl();
     const dashboardUrl =
       selfhosted && selfhostService
         ? selfhostService.config.appUrl

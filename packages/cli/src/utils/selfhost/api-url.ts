@@ -9,6 +9,17 @@ import { saveConnectionMetadata } from "../shared/metadata.js";
 export const SELFHOST_API_FUNCTION_NAME = "wraps-selfhost-api";
 
 /**
+ * Strip trailing slashes from a base URL. Lambda Function URLs always carry a
+ * trailing slash (`https://….on.aws/`), which would produce a double slash
+ * (`//v1/connections`) when a path is appended — Elysia won't match that route
+ * and returns 404. Normalizing at the source keeps every consumer's path
+ * concatenation correct.
+ */
+export function normalizeApiUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+/**
  * Resolve the live API URL for the self-hosted control plane directly from AWS.
  * Returns null when the function (or its URL) does not exist in the
  * account/region, or when credentials don't permit the lookup — recovery is
@@ -27,7 +38,7 @@ export async function resolveSelfhostApiUrl(
         FunctionName: SELFHOST_API_FUNCTION_NAME,
       })
     );
-    return result.FunctionUrl ?? null;
+    return result.FunctionUrl ? normalizeApiUrl(result.FunctionUrl) : null;
     // baseline:allow-next-line no-swallowed-errors — recovery is best-effort
   } catch {
     return null;
@@ -52,7 +63,7 @@ export async function reconcileSelfhostApiUrl(
     return null;
   }
   if (selfhost.apiUrl) {
-    return selfhost.apiUrl;
+    return normalizeApiUrl(selfhost.apiUrl);
   }
 
   const recovered = await resolveSelfhostApiUrl(region);

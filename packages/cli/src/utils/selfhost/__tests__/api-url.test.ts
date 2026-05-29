@@ -19,7 +19,11 @@ vi.mock("../../shared/metadata.js", () => ({
     saveConnectionMetadata(metadata),
 }));
 
+// Lambda Function URLs always come back from AWS with a trailing slash;
+// callers must receive the normalized form (no trailing slash) so appended
+// paths don't double up.
 const FUNCTION_URL = "https://abc123.lambda-url.us-east-1.on.aws/";
+const NORMALIZED_URL = "https://abc123.lambda-url.us-east-1.on.aws";
 
 function selfhostMetadata(apiUrl: string): ConnectionMetadata {
   return {
@@ -57,7 +61,7 @@ describe("resolveSelfhostApiUrl", () => {
       })
       .resolves({ FunctionUrl: FUNCTION_URL });
 
-    expect(await resolveSelfhostApiUrl("us-east-1")).toBe(FUNCTION_URL);
+    expect(await resolveSelfhostApiUrl("us-east-1")).toBe(NORMALIZED_URL);
   });
 
   it("returns null when the function has no URL configured", async () => {
@@ -81,12 +85,12 @@ describe("reconcileSelfhostApiUrl", () => {
     saveConnectionMetadata.mockReset();
   });
 
-  it("returns the cached apiUrl without touching AWS or persisting", async () => {
+  it("returns the cached apiUrl (normalized) without touching AWS or persisting", async () => {
     const metadata = selfhostMetadata(FUNCTION_URL);
 
     const result = await reconcileSelfhostApiUrl(metadata, "us-east-1");
 
-    expect(result).toBe(FUNCTION_URL);
+    expect(result).toBe(NORMALIZED_URL);
     expect(lambdaMock.calls()).toHaveLength(0);
     expect(saveConnectionMetadata).not.toHaveBeenCalled();
   });
@@ -99,8 +103,8 @@ describe("reconcileSelfhostApiUrl", () => {
 
     const result = await reconcileSelfhostApiUrl(metadata, "us-east-1");
 
-    expect(result).toBe(FUNCTION_URL);
-    expect(metadata.services.selfhost?.apiUrl).toBe(FUNCTION_URL);
+    expect(result).toBe(NORMALIZED_URL);
+    expect(metadata.services.selfhost?.apiUrl).toBe(NORMALIZED_URL);
     expect(saveConnectionMetadata).toHaveBeenCalledWith(metadata);
   });
 
