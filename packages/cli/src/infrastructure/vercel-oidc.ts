@@ -55,7 +55,7 @@ export async function createVercelOIDC(
       "wraps-vercel-oidc",
       {
         url,
-        clientIdLists: ["sts.amazonaws.com"],
+        clientIdLists: [`https://vercel.com/${config.teamSlug}`],
         thumbprintLists: [
           // Vercel OIDC thumbprints
           "20032e77eca0785eece16b56b42c9b330b906320",
@@ -75,7 +75,7 @@ export async function createVercelOIDC(
   // Create new OIDC provider if it doesn't exist
   return new aws.iam.OpenIdConnectProvider("wraps-vercel-oidc", {
     url,
-    clientIdLists: ["sts.amazonaws.com"],
+    clientIdLists: [`https://vercel.com/${config.teamSlug}`],
     thumbprintLists: [
       // Vercel OIDC thumbprints
       "20032e77eca0785eece16b56b42c9b330b906320",

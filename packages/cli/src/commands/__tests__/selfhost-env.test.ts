@@ -157,16 +157,28 @@ describe("selfhostEnv", () => {
       );
     });
 
-    it("outputs trust policy with AssumeRoleWithWebIdentity and sts.amazonaws.com audience", async () => {
+    it("outputs trust policy with AssumeRoleWithWebIdentity and team-slug audience", async () => {
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
       await selfhostEnv({ region: "us-east-1" });
 
       const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
       expect(output).toContain(`"Action": "sts:AssumeRoleWithWebIdentity"`);
-      // Vercel OIDC tokens always use sts.amazonaws.com as the audience for AWS
-      expect(output).toContain(`"sts.amazonaws.com"`);
-      expect(output).not.toContain(`"https://vercel.com/`);
+      // Vercel OIDC audience is https://vercel.com/<team-slug> per Vercel docs
+      expect(output).toContain(`"https://vercel.com/<team-slug>"`);
+      expect(output).not.toContain(`"sts.amazonaws.com"`);
+    });
+
+    it("outputs sub claim with project segment", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await selfhostEnv({ region: "us-east-1" });
+
+      const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      // sub must include :project:<name>: — omitting it causes token mismatch
+      expect(output).toContain(
+        "owner:<team-slug>:project:<project-name>:environment:production"
+      );
     });
 
     it("outputs trust policy federated principal scoped to selfhost account", async () => {

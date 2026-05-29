@@ -94,15 +94,10 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
     "# ============================================================================="
   );
   console.log("#");
-  console.log("# 1. In Vercel: Project Settings → Cloud → Configure AWS");
-  console.log(
-    "#    Copy the OIDC Provider URL (https://oidc.vercel.com/<team-slug>)"
-  );
-  console.log("#");
-  console.log("# 2. In AWS IAM → Identity providers → Add provider:");
+  console.log("# 1. In AWS IAM → Identity providers → Add provider:");
   console.log("#    Provider type: OpenID Connect");
-  console.log("#    Provider URL:  <your Vercel OIDC URL from step 1>");
-  console.log("#    Audience:      sts.amazonaws.com");
+  console.log("#    Provider URL:  https://oidc.vercel.com/<team-slug>");
+  console.log("#    Audience:      https://vercel.com/<team-slug>");
   console.log("#");
   console.log(
     "# 3. Create an IAM role in this account with the following trust policy,"
@@ -122,10 +117,10 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   console.log(`#        "Condition": {`);
   console.log(`#          "StringEquals": {`);
   console.log(
-    `#            "oidc.vercel.com/<team-slug>:aud": "sts.amazonaws.com",`
+    `#            "oidc.vercel.com/<team-slug>:aud": "https://vercel.com/<team-slug>",`
   );
   console.log(
-    `#            "oidc.vercel.com/<team-slug>:sub": "owner:<team-slug>:environment:production"`
+    `#            "oidc.vercel.com/<team-slug>:sub": "owner:<team-slug>:project:<project-name>:environment:production"`
   );
   console.log("#          }");
   console.log("#        }");
