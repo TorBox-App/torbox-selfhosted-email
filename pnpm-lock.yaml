@@ -205,9 +205,6 @@ importers:
       knip:
         specifier: 5.86.0
         version: 5.86.0(@types/node@24.10.0)(typescript@5.9.3)
-      pnpm:
-        specifier: 10.28.2
-        version: 10.28.2
       react-email:
         specifier: 5.2.8
         version: 5.2.8
@@ -11719,11 +11716,6 @@ packages:
   pngjs@7.0.0:
     resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
     engines: {node: '>=14.19.0'}
-
-  pnpm@10.28.2:
-    resolution: {integrity: sha512-QYcvA3rSL3NI47Heu69+hnz9RI8nJtnPdMCPGVB8MdLI56EVJbmD/rwt9kC1Q43uYCPrsfhO1DzC1lTSvDJiZA==}
-    engines: {node: '>=18.12'}
-    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -26625,8 +26617,6 @@ snapshots:
   pngjs@6.0.0: {}
 
   pngjs@7.0.0: {}
-
-  pnpm@10.28.2: {}
 
   possible-typed-array-names@1.1.0: {}
 
