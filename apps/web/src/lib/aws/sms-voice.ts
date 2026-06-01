@@ -242,21 +242,8 @@ export async function getSMSPhoneNumbers(
     },
   });
 
-  try {
-    const response = await client.send(new DescribePhoneNumbersCommand({}));
-    return response.PhoneNumbers || [];
-  } catch (error) {
-    logger.error(
-      {
-        err: error,
-        awsAccountId,
-        accountId: account.accountId,
-      },
-      "Failed to fetch SMS phone numbers"
-    );
-    Sentry.captureException(error);
-    return [];
-  }
+  const response = await client.send(new DescribePhoneNumbersCommand({}));
+  return response.PhoneNumbers || [];
 }
 
 /**
