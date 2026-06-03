@@ -46,6 +46,7 @@ import { Download, Loader2, Search, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { bulkCreateContactsFromEmails } from "@/actions/contacts-bulk";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,11 +70,13 @@ export function EmailsTable({
   days,
   status,
 }: EmailsTableProps) {
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput, 400);
   const {
     data: emails = [],
     isLoading,
     isFetching,
-  } = useEmailsData(orgSlug, days, 100, status);
+  } = useEmailsData(orgSlug, days, 100, status, debouncedSearch || undefined);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
@@ -82,7 +85,6 @@ export function EmailsTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [globalFilter, setGlobalFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [createContactsDialogOpen, setCreateContactsDialogOpen] =
     useState(false);
@@ -113,36 +115,11 @@ export function EmailsTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: (row, _columnId, filterValue) => {
-      const search = filterValue.toLowerCase();
-
-      // Search in subject
-      const subject = row.original.subject?.toLowerCase() ?? "";
-      if (subject.includes(search)) {
-        return true;
-      }
-
-      // Search in recipient email addresses
-      const recipients = row.original.to;
-      if (recipients.some((email) => email.toLowerCase().includes(search))) {
-        return true;
-      }
-
-      // Search in from address
-      const from = row.original.from?.toLowerCase() ?? "";
-      if (from.includes(search)) {
-        return true;
-      }
-
-      return false;
-    },
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-      globalFilter,
     },
     getRowId: (row) => row.id,
     initialState: {
@@ -218,10 +195,10 @@ export function EmailsTable({
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9 pr-16"
-              onChange={(event) => setGlobalFilter(String(event.target.value))}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search emails"
               ref={searchInputRef}
-              value={globalFilter ?? ""}
+              value={searchInput}
             />
             <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 hidden sm:flex">
               ⌘F

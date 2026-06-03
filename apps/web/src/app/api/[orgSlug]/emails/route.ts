@@ -2,7 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
-import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, lte, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
@@ -58,6 +58,7 @@ export async function GET(request: Request, context: RouteContext) {
       rawStatus && (STATUS_PRIORITY as string[]).includes(rawStatus)
         ? (rawStatus as EmailStatus)
         : null;
+    const search = searchParams.get("search")?.trim() || null;
 
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
@@ -141,10 +142,20 @@ export async function GET(request: Request, context: RouteContext) {
 
     // Aggregate DynamoDB events — use a larger working set when filtering by status
     // so the post-enrichment filter has enough candidates before slicing to limit.
-    const workingLimit = status
+    const workingLimit = status || search
       ? Math.min(5000, allEvents.flat().length + 1000)
       : limit;
-    const emails = aggregateEmailEvents(allEvents).slice(0, workingLimit);
+    let emails = aggregateEmailEvents(allEvents).slice(0, workingLimit);
+
+    if (search) {
+      const q = search.toLowerCase();
+      emails = emails.filter(
+        (e) =>
+          e.subject?.toLowerCase().includes(q) ||
+          e.from?.toLowerCase().includes(q) ||
+          e.to.some((addr) => addr.toLowerCase().includes(q))
+      );
+    }
 
     // Query PostgreSQL for all messages in the time window.
     // Used to both enrich authoritative sentAt on DynamoDB records AND fill in
@@ -174,6 +185,13 @@ export async function GET(request: Request, context: RouteContext) {
             ? eq(
                 messageSend.status,
                 status as (typeof messageSend.status)["_"]["data"]
+              )
+            : undefined,
+          search
+            ? or(
+                ilike(messageSend.subject, `%${search}%`),
+                ilike(messageSend.recipient, `%${search}%`),
+                ilike(messageSend.from, `%${search}%`)
               )
             : undefined
         )
