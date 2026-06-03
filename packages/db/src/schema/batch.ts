@@ -342,6 +342,15 @@ export const messageSend = pgTable(
     uniqueIndex("message_send_dedup_idx")
       .on(table.batchSendId, table.contactId)
       .where(sql`contact_id IS NOT NULL`),
+    // Covers the /emails dashboard query: org + channel (email/sms) + time window + status filter.
+    // message_send_org_created_idx uses created_at but the query filters on sent_at — wrong column.
+    // Created in production via packages/db/scripts/create-email-sent-at-idx.ts
+    // (CONCURRENTLY) — schema declared here as source of truth.
+    index("message_send_org_channel_sent_at_idx").on(
+      table.organizationId,
+      table.channel,
+      table.sentAt
+    ),
   ]
 );
 
