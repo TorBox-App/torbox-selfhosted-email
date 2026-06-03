@@ -22,6 +22,7 @@ type EmailsPageProps = {
   }>;
   searchParams: Promise<{
     days?: string;
+    status?: string;
   }>;
 };
 
@@ -30,7 +31,7 @@ export default async function EmailsPage({
   searchParams,
 }: EmailsPageProps) {
   const { orgSlug } = await params;
-  const { days = "7" } = await searchParams;
+  const { days = "7", status } = await searchParams;
 
   const session = await auth.api.getSession({
     headers: await import("next/headers").then((mod) => mod.headers()),
@@ -102,6 +103,7 @@ export default async function EmailsPage({
           days={Number.parseInt(days, 10)}
           organizationId={orgWithMembership.id}
           orgSlug={orgSlug}
+          status={status}
         />
       </div>
     </>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateEmailEvents } from "../email-aggregation";
+import { aggregateEmailEvents, STATUS_PRIORITY } from "../email-aggregation";
 
 describe("aggregateEmailEvents", () => {
   it("excludes bot opens from hasOpened", () => {
@@ -227,6 +227,12 @@ describe("aggregateEmailEvents", () => {
 
     const result = aggregateEmailEvents([events]);
     expect(result[0].status).toBe("complained");
+  });
+
+  it("suppressed has higher priority than bounced so PG suppressed-via-bounce overrides DynamoDB raw Bounce", () => {
+    const suppressedIdx = STATUS_PRIORITY.indexOf("suppressed");
+    const bouncedIdx = STATUS_PRIORITY.indexOf("bounced");
+    expect(suppressedIdx).toBeLessThan(bouncedIdx);
   });
 
   it("suppressed maps correctly and beats delivered", () => {

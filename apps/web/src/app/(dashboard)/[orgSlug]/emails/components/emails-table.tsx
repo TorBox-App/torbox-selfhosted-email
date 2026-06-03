@@ -60,18 +60,20 @@ type EmailsTableProps = {
   orgSlug: string;
   organizationId: string;
   days: number;
+  status?: string;
 };
 
 export function EmailsTable({
   orgSlug,
   organizationId,
   days,
+  status,
 }: EmailsTableProps) {
   const {
     data: emails = [],
     isLoading,
     isFetching,
-  } = useEmailsData(orgSlug, days);
+  } = useEmailsData(orgSlug, days, 100, status);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
@@ -207,10 +209,6 @@ export function EmailsTable({
     });
   };
 
-  const statusFilter = table.getColumn("status")?.getFilterValue() as
-    | string[]
-    | undefined;
-
   return (
     <div className="w-full space-y-4">
       {/* Filters Bar */}
@@ -263,18 +261,11 @@ export function EmailsTable({
             </Select>
             <Select
               onValueChange={(value) => {
-                const column = table.getColumn("status");
-                if (value === "all") {
-                  column?.setFilterValue(undefined);
-                } else {
-                  column?.setFilterValue([value]);
-                }
+                const params = new URLSearchParams({ days: String(days) });
+                if (value !== "all") params.set("status", value);
+                router.push(`/${orgSlug}/emails?${params}`);
               }}
-              value={
-                statusFilter && statusFilter.length > 0
-                  ? statusFilter[0]
-                  : "all"
-              }
+              value={status ?? "all"}
             >
               <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-none border-r-0 focus:z-10">
                 <SelectValue placeholder="Status" />

@@ -1,4 +1,4 @@
-import { gateway } from "@ai-sdk/gateway";
+import { getAIModel } from "@/lib/ai/model";
 import { auth } from "@wraps/auth";
 import { db, segment, template, topic } from "@wraps/db";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
@@ -139,11 +139,10 @@ export async function POST(request: Request, context: RouteContext) {
       existingWorkflow,
     });
 
-    // Stream the response with Claude via AI Gateway
-    const MODEL_ID = "anthropic/claude-sonnet-4";
+    const { model, modelId: MODEL_ID } = getAIModel();
 
     const result = streamText({
-      model: gateway(MODEL_ID),
+      model,
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 8000,

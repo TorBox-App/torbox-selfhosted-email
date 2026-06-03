@@ -1,4 +1,4 @@
-import { gateway } from "@ai-sdk/gateway";
+import { getAIModel } from "@/lib/ai/model";
 import { auth } from "@wraps/auth";
 import {
   aiConversation,
@@ -204,11 +204,10 @@ export async function POST(request: Request, context: RouteContext) {
       hasImageReference: !!hasImage,
     });
 
-    // Use Claude Sonnet for code generation
-    const MODEL_ID = "anthropic/claude-sonnet-4";
+    const { model, modelId: MODEL_ID } = getAIModel();
 
     const result = streamText({
-      model: gateway(MODEL_ID),
+      model,
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 16_000,

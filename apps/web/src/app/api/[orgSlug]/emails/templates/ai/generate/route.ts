@@ -1,4 +1,3 @@
-import { gateway } from "@ai-sdk/gateway";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import { aiConversation, brandKit, db, templateVariable } from "@wraps/db";
@@ -6,6 +5,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { getAIModel } from "@/lib/ai/model";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { extractTipTapJson, validateTipTapJson } from "@/lib/ai/validator";
 import { createRequestLogger } from "@/lib/logger";
@@ -116,11 +116,10 @@ export async function POST(request: Request, context: RouteContext) {
         : undefined,
     });
 
-    // Stream the response with Claude and extended thinking via AI Gateway
-    const MODEL_ID = "xai/grok-code-fast-1";
+    const { model, modelId: MODEL_ID } = getAIModel("xai/grok-code-fast-1");
 
     const result = streamText({
-      model: gateway(MODEL_ID),
+      model,
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 16_000,

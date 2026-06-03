@@ -1,3 +1,7 @@
+import {
+  ListConfigurationSetsCommand,
+  SESv2Client,
+} from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
@@ -7,6 +11,29 @@ import { trackAwsConnected } from "@/lib/activation-tracking";
 import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+
+async function detectConfigSetName(
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken: string;
+  },
+  region: string
+): Promise<string | null> {
+  try {
+    const ses = new SESv2Client({ region, credentials });
+    const { ConfigurationSets } = await ses.send(
+      new ListConfigurationSetsCommand({})
+    );
+    const names = (ConfigurationSets ?? []).filter((n) =>
+      n.startsWith("wraps-email-")
+    );
+    // Prefer per-domain sets (wraps-email-<domain>) over legacy wraps-email-tracking
+    return names.find((n) => n !== "wraps-email-tracking") ?? names[0] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 type RouteContext = {
   params: Promise<{
@@ -84,11 +111,14 @@ export async function POST(request: Request, context: RouteContext) {
     try {
       // Validate AWS Credentials by assuming the role
       // Uses our helper that handles Vercel OIDC correctly
-      await assumeRole({
+      const credentials = await assumeRole({
         roleArn,
         externalId,
         sessionName: "WrapsOnboardingValidation",
       });
+
+      // Detect config set name from SES while we have fresh credentials
+      const configSetName = await detectConfigSetName(credentials, region);
 
       // Save to database
       // Check if this AWS account already exists for this org (by AWS account ID)
@@ -99,6 +129,16 @@ export async function POST(request: Request, context: RouteContext) {
             eq(table.accountId, accountId)
           ),
       });
+
+      const featuresUpdate = configSetName
+        ? {
+            ...existingAccount?.features,
+            email: {
+              ...(existingAccount?.features?.email ?? {}),
+              configSetName,
+            },
+          }
+        : undefined;
 
       if (existingAccount) {
         await db
@@ -112,6 +152,7 @@ export async function POST(request: Request, context: RouteContext) {
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),
+            ...(featuresUpdate && { features: featuresUpdate }),
           })
           .where(eq(awsAccount.id, existingAccount.id));
       } else {
@@ -125,6 +166,7 @@ export async function POST(request: Request, context: RouteContext) {
           isVerified: true,
           lastVerifiedAt: new Date(),
           createdBy: session.user.id,
+          ...(featuresUpdate && { features: featuresUpdate }),
         });
       }
 

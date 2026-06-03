@@ -53,6 +53,11 @@ export async function GET(request: Request, context: RouteContext) {
       500,
       Math.max(1, Number.parseInt(searchParams.get("limit") || "100", 10))
     );
+    const rawStatus = searchParams.get("status");
+    const status: EmailStatus | null =
+      rawStatus && (STATUS_PRIORITY as string[]).includes(rawStatus)
+        ? (rawStatus as EmailStatus)
+        : null;
 
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
@@ -134,8 +139,12 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    // Aggregate DynamoDB events
-    const emails = aggregateEmailEvents(allEvents).slice(0, limit);
+    // Aggregate DynamoDB events — use a larger working set when filtering by status
+    // so the post-enrichment filter has enough candidates before slicing to limit.
+    const workingLimit = status
+      ? Math.min(5000, allEvents.flat().length + 1000)
+      : limit;
+    const emails = aggregateEmailEvents(allEvents).slice(0, workingLimit);
 
     // Query PostgreSQL for all messages in the time window.
     // Used to both enrich authoritative sentAt on DynamoDB records AND fill in
@@ -160,7 +169,13 @@ export async function GET(request: Request, context: RouteContext) {
           eq(messageSend.channel, "email"),
           isNotNull(messageSend.sentAt),
           gte(messageSend.sentAt, startTime),
-          lte(messageSend.sentAt, endTime)
+          lte(messageSend.sentAt, endTime),
+          status
+            ? eq(
+                messageSend.status,
+                status as (typeof messageSend.status)["_"]["data"]
+              )
+            : undefined
         )
       )
       .orderBy(desc(messageSend.sentAt))
@@ -223,7 +238,11 @@ export async function GET(request: Request, context: RouteContext) {
       emails.sort((a, b) => b.sentAt - a.sentAt);
     }
 
-    return NextResponse.json(emails.slice(0, limit));
+    const filtered = status
+      ? emails.filter((email) => email.status === status)
+      : emails;
+
+    return NextResponse.json(filtered.slice(0, limit));
   } catch (error) {
     const log = createRequestLogger({
       path: "/api/[orgSlug]/emails",
