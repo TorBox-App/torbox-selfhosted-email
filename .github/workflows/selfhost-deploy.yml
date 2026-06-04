@@ -1,0 +1,60 @@
+name: Deploy self-hosted
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "upgrade (existing instance) or deploy (first time)"
+        required: true
+        default: upgrade
+        type: choice
+        options:
+          - upgrade
+          - deploy
+
+# OIDC — short-lived AWS credentials, no stored keys
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    # Only runs on forks — never on the upstream wraps-team/wraps repo
+    if: github.repository != 'wraps-team/wraps'
+    runs-on: ubuntu-latest
+    environment: production # requires manual approval if configured
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: First-time deploy
+        if: inputs.action == 'deploy'
+        run: |
+          pnpm selfhost:deploy \
+            --database-url "${{ secrets.DATABASE_URL }}" \
+            --license-key "${{ secrets.WRAPS_LICENSE_KEY }}" \
+            --yes
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Upgrade existing instance
+        if: inputs.action == 'upgrade'
+        run: pnpm selfhost:upgrade --yes
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}

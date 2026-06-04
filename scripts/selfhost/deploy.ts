@@ -75,6 +75,7 @@ export type DeployOptions = {
   region?: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  yes?: boolean;
 };
 
 export async function deploy(options: DeployOptions = {}): Promise<void> {
@@ -224,10 +225,12 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   await saveConnectionMetadata(metadata);
 
   if (metadata.services.email?.webhookSecret) {
-    const rerouteConfirmed = await clack.confirm({
-      message: `Reroute SES email events to your selfhost API (${pc.cyan(apiUrl)}) instead of the Wraps platform?`,
-      initialValue: false,
-    });
+    const rerouteConfirmed = options.yes
+      ? true
+      : await clack.confirm({
+          message: `Reroute SES email events to your selfhost API (${pc.cyan(apiUrl)}) instead of the Wraps platform?`,
+          initialValue: false,
+        });
 
     if (!clack.isCancel(rerouteConfirmed) && rerouteConfirmed) {
       clack.log.step("Rerouting email events to selfhost API...");
@@ -285,7 +288,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "web-domain",
       "ai-gateway-api-key",
     ],
+    boolean: ["yes"],
     alias: {
+      y: "yes",
       "database-url": "databaseUrl",
       "license-key": "licenseKey",
       "web-domain": "webDomain",

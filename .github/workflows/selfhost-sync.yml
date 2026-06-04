@@ -1,0 +1,75 @@
+name: Sync from upstream
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # every Monday at 9am UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    # Only runs on forks — never on the upstream wraps-team/wraps repo
+    if: github.repository != 'wraps-team/wraps'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/wraps-team/wraps.git
+          git fetch upstream main
+
+      - name: Check for new commits
+        id: check
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/main)
+          LOCAL_SHA=$(git rev-parse origin/main)
+          if [ "$UPSTREAM_SHA" = "$LOCAL_SHA" ]; then
+            echo "up_to_date=true" >> "$GITHUB_OUTPUT"
+          else
+            SHORT=$(git rev-parse --short upstream/main)
+            echo "up_to_date=false" >> "$GITHUB_OUTPUT"
+            echo "branch=sync/upstream-${SHORT}" >> "$GITHUB_OUTPUT"
+            echo "short_sha=${SHORT}" >> "$GITHUB_OUTPUT"
+            CHANGES=$(git log origin/main..upstream/main --oneline | head -20)
+            echo "changes<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$CHANGES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push sync branch
+        if: steps.check.outputs.up_to_date == 'false'
+        run: |
+          git checkout -b ${{ steps.check.outputs.branch }} upstream/main
+          git push origin ${{ steps.check.outputs.branch }} --force
+
+      - name: Open PR
+        if: steps.check.outputs.up_to_date == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Close any existing sync PRs to avoid stacking
+          gh pr list --head "sync/upstream-" --json number --jq '.[].number' | \
+            xargs -I{} gh pr close {} --comment "Superseded by newer sync PR" 2>/dev/null || true
+
+          gh pr create \
+            --title "chore: sync from upstream (${{ steps.check.outputs.short_sha }})" \
+            --body "$(cat <<'EOF'
+          Automated sync from [wraps-team/wraps](https://github.com/wraps-team/wraps) `main`.
+
+          **Review these changes before merging.** After merging, trigger the [Deploy workflow](../../actions/workflows/selfhost-deploy.yml) to apply updates to your self-hosted instance.
+
+          ### Commits included
+          ```
+          ${{ steps.check.outputs.changes }}
+          ```
+          EOF
+          )" \
+            --base main \
+            --head ${{ steps.check.outputs.branch }}
