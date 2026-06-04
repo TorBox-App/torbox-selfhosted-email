@@ -184,6 +184,12 @@ importers:
         specifier: ^4.1.17
         version: 4.1.18
     devDependencies:
+      '@aws-sdk/client-iam':
+        specifier: 'catalog:'
+        version: 3.1030.0
+      '@aws-sdk/client-sesv2':
+        specifier: 'catalog:'
+        version: 3.1030.0
       '@biomejs/biome':
         specifier: 2.3.4
         version: 2.3.4

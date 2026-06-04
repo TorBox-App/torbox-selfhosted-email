@@ -141,14 +141,6 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     SST_DIR
   );
 
-  clack.log.step("Bootstrapping SST state bucket...");
-  await runSubprocess(
-    "sst",
-    ["bootstrap", "--config", SST_CONFIG],
-    undefined,
-    SST_DIR
-  );
-
   clack.log.step("Deploying infrastructure (this may take 5-10 minutes)...");
   await runSubprocess(
     "sst",

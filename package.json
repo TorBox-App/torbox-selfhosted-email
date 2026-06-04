@@ -43,6 +43,8 @@
     "test:deploy:cfn": "./tests/deployment/run.sh cfn"
   },
   "devDependencies": {
+    "@aws-sdk/client-iam": "catalog:",
+    "@aws-sdk/client-sesv2": "catalog:",
     "@clack/prompts": "^0.11.0",
     "@pulumi/pulumi": "^3.216.0",
     "mri": "^1.2.0",
