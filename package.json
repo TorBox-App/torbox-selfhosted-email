@@ -32,6 +32,10 @@
     "sst:remove": "sst remove",
     "sync:skills": "./scripts/sync-skills.sh",
     "setup-worktree": "./scripts/setup-worktree.sh",
+    "selfhost:deploy": "tsx scripts/selfhost/deploy.ts",
+    "selfhost:upgrade": "tsx scripts/selfhost/upgrade.ts",
+    "selfhost:destroy": "tsx scripts/selfhost/destroy.ts",
+    "test:scripts": "vitest run --config scripts/vitest.config.ts",
     "test:deploy": "./tests/deployment/run.sh",
     "test:deploy:cli": "./tests/deployment/run.sh cli",
     "test:deploy:cdk": "./tests/deployment/run.sh cdk",
@@ -39,6 +43,10 @@
     "test:deploy:cfn": "./tests/deployment/run.sh cfn"
   },
   "devDependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@pulumi/pulumi": "^3.216.0",
+    "mri": "^1.2.0",
+    "picocolors": "^1.1.1",
     "@biomejs/biome": "2.3.4",
     "@react-email/preview-server": "5.2.8",
     "@sentry/cli": "3.3.5",
