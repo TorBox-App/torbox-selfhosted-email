@@ -34,13 +34,15 @@ jobs:
             echo "up_to_date=true" >> "$GITHUB_OUTPUT"
           else
             SHORT=$(git rev-parse --short upstream/main)
-            echo "up_to_date=false" >> "$GITHUB_OUTPUT"
-            echo "branch=sync/upstream-${SHORT}" >> "$GITHUB_OUTPUT"
-            echo "short_sha=${SHORT}" >> "$GITHUB_OUTPUT"
             CHANGES=$(git log origin/main..upstream/main --oneline | head -20)
-            echo "changes<<EOF" >> "$GITHUB_OUTPUT"
-            echo "$CHANGES" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            {
+              echo "up_to_date=false"
+              echo "branch=sync/upstream-${SHORT}"
+              echo "short_sha=${SHORT}"
+              echo "changes<<EOF"
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Push sync branch
@@ -53,6 +55,7 @@ jobs:
         if: steps.check.outputs.up_to_date == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGES: ${{ steps.check.outputs.changes }}
         run: |
           # Close any existing sync PRs to avoid stacking
           gh pr list --json number,headRefName \
@@ -60,15 +63,16 @@ jobs:
             xargs -I{} gh pr close {} --comment "Superseded by newer sync PR" 2>/dev/null || true
 
           DEPLOY_URL="${{ github.server_url }}/${{ github.repository }}/actions/workflows/selfhost-deploy.yml"
+          BODY_FILE=$(mktemp)
+          {
+            echo $'Automated sync from [wraps-team/wraps](https://github.com/wraps-team/wraps) `main`.\n'
+            printf '**Review these changes before merging.** After merging, trigger the [Deploy workflow](%s) to apply updates to your self-hosted instance.\n\n' "${DEPLOY_URL}"
+            printf '### Commits included\n'
+            printf $'```\n%s\n```\n' "${CHANGES}"
+          } > "${BODY_FILE}"
           gh pr create \
             --title "chore: sync from upstream (${{ steps.check.outputs.short_sha }})" \
-            --body "Automated sync from [wraps-team/wraps](https://github.com/wraps-team/wraps) \`main\`.
-
-**Review these changes before merging.** After merging, trigger the [Deploy workflow](${DEPLOY_URL}) to apply updates to your self-hosted instance.
-
-### Commits included
-\`\`\`
-${{ steps.check.outputs.changes }}
-\`\`\`" \
+            --body-file "${BODY_FILE}" \
             --base main \
             --head ${{ steps.check.outputs.branch }}
+          rm -f "${BODY_FILE}"
