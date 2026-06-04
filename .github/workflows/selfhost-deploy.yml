@@ -43,6 +43,49 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
+      # Upgrades run on a fresh runner with no .env.selfhost on disk.
+      # SST reads config from .env.selfhost (infra/selfhost.sst.config.ts line 35),
+      # so we reconstruct it from repository secrets before deploying.
+      # After your first local deploy, copy BETTER_AUTH_SECRET and UNSUBSCRIBE_SECRET
+      # from .env.selfhost into your repository secrets.
+      - name: Reconstruct .env.selfhost (upgrade)
+        if: inputs.action == 'upgrade'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          WRAPS_LICENSE_KEY: ${{ secrets.WRAPS_LICENSE_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
+          SELFHOST_WEB_DOMAIN: ${{ vars.SELFHOST_WEB_DOMAIN }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          WRAPS_EMAIL_ROLE_ARN: ${{ secrets.WRAPS_EMAIL_ROLE_ARN }}
+          AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
+          AUTH_EMAIL_CONFIGURATION_SET: ${{ secrets.AUTH_EMAIL_CONFIGURATION_SET }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          # Validate required secrets are present
+          missing=()
+          [ -z "${DATABASE_URL}" ]       && missing+=("DATABASE_URL")
+          [ -z "${WRAPS_LICENSE_KEY}" ]  && missing+=("WRAPS_LICENSE_KEY")
+          [ -z "${BETTER_AUTH_SECRET}" ] && missing+=("BETTER_AUTH_SECRET (copy from .env.selfhost after first deploy)")
+          [ -z "${UNSUBSCRIBE_SECRET}" ] && missing+=("UNSUBSCRIBE_SECRET (copy from .env.selfhost after first deploy)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets for upgrade: ${missing[*]}"
+            exit 1
+          fi
+
+          {
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "LICENSE_KEY=${WRAPS_LICENSE_KEY}"
+            echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}"
+            echo "UNSUBSCRIBE_SECRET=${UNSUBSCRIBE_SECRET}"
+            [ -n "${SELFHOST_WEB_DOMAIN}" ] && echo "SELFHOST_WEB_DOMAIN=${SELFHOST_WEB_DOMAIN}"
+            [ -n "${NEXT_PUBLIC_APP_URL}" ] && echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}"
+            [ -n "${WRAPS_EMAIL_ROLE_ARN}" ] && echo "WRAPS_EMAIL_ROLE_ARN=${WRAPS_EMAIL_ROLE_ARN}"
+            [ -n "${AUTH_EMAIL_FROM}" ] && echo "AUTH_EMAIL_FROM=${AUTH_EMAIL_FROM}"
+            [ -n "${AUTH_EMAIL_CONFIGURATION_SET}" ] && echo "AUTH_EMAIL_CONFIGURATION_SET=${AUTH_EMAIL_CONFIGURATION_SET}"
+            [ -n "${AI_GATEWAY_API_KEY}" ] && echo "AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}"
+          } > .env.selfhost
+
       - name: First-time deploy
         if: inputs.action == 'deploy'
         run: pnpm selfhost:deploy --yes

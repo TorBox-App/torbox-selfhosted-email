@@ -59,18 +59,16 @@ jobs:
             --jq '.[] | select(.headRefName | startswith("sync/upstream-")) | .number' | \
             xargs -I{} gh pr close {} --comment "Superseded by newer sync PR" 2>/dev/null || true
 
+          DEPLOY_URL="${{ github.server_url }}/${{ github.repository }}/actions/workflows/selfhost-deploy.yml"
           gh pr create \
             --title "chore: sync from upstream (${{ steps.check.outputs.short_sha }})" \
-            --body "$(cat <<'EOF'
-          Automated sync from [wraps-team/wraps](https://github.com/wraps-team/wraps) `main`.
+            --body "Automated sync from [wraps-team/wraps](https://github.com/wraps-team/wraps) \`main\`.
 
-          **Review these changes before merging.** After merging, trigger the [Deploy workflow](../../actions/workflows/selfhost-deploy.yml) to apply updates to your self-hosted instance.
+**Review these changes before merging.** After merging, trigger the [Deploy workflow](${DEPLOY_URL}) to apply updates to your self-hosted instance.
 
-          ### Commits included
-          ```
-          ${{ steps.check.outputs.changes }}
-          ```
-          EOF
-          )" \
+### Commits included
+\`\`\`
+${{ steps.check.outputs.changes }}
+\`\`\`" \
             --base main \
             --head ${{ steps.check.outputs.branch }}

@@ -887,6 +887,17 @@ pnpm install`,
               </span>{" "}
               and add the following:
             </p>
+            <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-3 text-sm">
+              <p className="font-medium">After your first deploy</p>
+              <p className="mt-1 text-muted-foreground">
+                Open <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code> and copy{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">BETTER_AUTH_SECRET</code> and{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">UNSUBSCRIBE_SECRET</code> into
+                repository secrets. The upgrade workflow reconstructs{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code> from secrets
+                on every run — without these, SST will overwrite your Lambda with empty env vars.
+              </p>
+            </div>
             <p className="mb-2 font-medium text-foreground text-sm">
               Repository secrets
             </p>
@@ -917,20 +928,94 @@ pnpm install`,
                         DATABASE_URL
                       </code>
                     </td>
-                    <td className="py-2 pr-4">First deploy only</td>
+                    <td className="py-2 pr-4 text-foreground">Always</td>
                     <td className="py-2">
-                      Postgres connection string — not needed for upgrades
+                      Postgres connection string — needed by SST on every deploy to set the Lambda env var
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b">
                     <td className="py-2 pr-4">
                       <code className="rounded bg-muted px-1.5 py-0.5">
                         WRAPS_LICENSE_KEY
                       </code>
                     </td>
-                    <td className="py-2 pr-4">First deploy only</td>
+                    <td className="py-2 pr-4 text-foreground">Always</td>
                     <td className="py-2">
-                      Your Wraps enterprise license key
+                      Your Wraps license key — needed by SST on every deploy
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        BETTER_AUTH_SECRET
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4 text-foreground">Always</td>
+                    <td className="py-2">
+                      Session signing secret — auto-generated on first deploy. Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+                      after initial deploy. Rotating this invalidates all active sessions
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        UNSUBSCRIBE_SECRET
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4 text-foreground">Always</td>
+                    <td className="py-2">
+                      HMAC secret for unsubscribe links — auto-generated on first deploy. Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+                      after initial deploy
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        WRAPS_EMAIL_ROLE_ARN
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      IAM role ARN for SES sending. Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+                      after running <code className="rounded bg-muted px-1.5 py-0.5">wraps email init</code>
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        AUTH_EMAIL_FROM
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      From address for transactional auth emails (password reset, magic links)
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        AUTH_EMAIL_CONFIGURATION_SET
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      SES configuration set for auth emails. Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+                      after running <code className="rounded bg-muted px-1.5 py-0.5">wraps email init</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        AI_GATEWAY_API_KEY
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      API key for the AI gateway — enables AI email template generation
                     </td>
                   </tr>
                 </tbody>
@@ -949,7 +1034,7 @@ pnpm install`,
                   </tr>
                 </thead>
                 <tbody className="text-muted-foreground">
-                  <tr>
+                  <tr className="border-b">
                     <td className="py-2 pr-4">
                       <code className="rounded bg-muted px-1.5 py-0.5">
                         AWS_REGION
@@ -960,7 +1045,25 @@ pnpm install`,
                         us-east-1
                       </code>
                     </td>
-                    <td className="py-2">AWS region for deployments</td>
+                    <td className="py-2">AWS region for deployments (note: must also match <code className="rounded bg-muted px-1.5 py-0.5">infra/selfhost.sst.config.ts</code>)</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        SELFHOST_WEB_DOMAIN
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">—</td>
+                    <td className="py-2">Custom domain for the dashboard (e.g. <code className="rounded bg-muted px-1.5 py-0.5">dashboard.yourdomain.com</code>). When set, SST configures CloudFront with this domain</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        NEXT_PUBLIC_APP_URL
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">—</td>
+                    <td className="py-2">Full URL of the dashboard. Set this to your CloudFront URL (or custom domain) after first deploy — required for correct auth redirects on upgrades if not using <code className="rounded bg-muted px-1.5 py-0.5">SELFHOST_WEB_DOMAIN</code></td>
                   </tr>
                 </tbody>
               </table>
