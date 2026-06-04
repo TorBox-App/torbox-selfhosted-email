@@ -4,7 +4,10 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
 import { and, desc, eq, gte, ilike, isNotNull, lte, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
+import type {
+  EmailListItem,
+  EmailStatus,
+} from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import {
   aggregateEmailEvents,
@@ -63,7 +66,103 @@ export async function GET(request: Request, context: RouteContext) {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Get all AWS accounts for this organization
+    // Search path: PostgreSQL-first using trigram indexes on recipient/subject/from.
+    // Skips the DynamoDB time-window scan entirely — PG is the authoritative record
+    // store and has all the fields needed to build EmailListItem responses.
+    // Run packages/db/scripts/create-email-search-indexes.ts to create the GIN indexes.
+    if (search) {
+      const log = createRequestLogger({
+        path: "/api/[orgSlug]/emails",
+        method: "GET",
+        orgSlug,
+      });
+
+      const searchResults = await db
+        .select({
+          id: messageSend.id,
+          messageId: messageSend.messageId,
+          from: messageSend.from,
+          recipient: messageSend.recipient,
+          subject: messageSend.subject,
+          status: messageSend.status,
+          sentAt: messageSend.sentAt,
+          deliveredAt: messageSend.deliveredAt,
+          openedAt: messageSend.openedAt,
+          clickedAt: messageSend.clickedAt,
+          bouncedAt: messageSend.bouncedAt,
+          complainedAt: messageSend.complainedAt,
+          suppressedAt: messageSend.suppressedAt,
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime),
+            status
+              ? eq(
+                  messageSend.status,
+                  status as (typeof messageSend.status)["_"]["data"]
+                )
+              : undefined,
+            or(
+              ilike(messageSend.subject, `%${search}%`),
+              ilike(messageSend.recipient, `%${search}%`),
+              ilike(messageSend.from, `%${search}%`)
+            )
+          )
+        )
+        .orderBy(desc(messageSend.sentAt))
+        .limit(limit);
+
+      const results: EmailListItem[] = searchResults
+        .filter((r) => r.sentAt != null)
+        .map((r) => {
+          const lastActivityAt = Math.max(
+            r.clickedAt?.getTime() ?? 0,
+            r.openedAt?.getTime() ?? 0,
+            r.bouncedAt?.getTime() ?? 0,
+            r.complainedAt?.getTime() ?? 0,
+            r.suppressedAt?.getTime() ?? 0,
+            r.deliveredAt?.getTime() ?? 0,
+            r.sentAt!.getTime()
+          );
+          // Approximated from PG timestamp columns — full event count requires
+          // DynamoDB lookup. Detail view will show the accurate value.
+          const eventCount = [
+            true,
+            !!r.deliveredAt,
+            !!r.openedAt,
+            !!r.clickedAt,
+            !!r.bouncedAt,
+            !!r.complainedAt,
+            !!r.suppressedAt,
+          ].filter(Boolean).length;
+          return {
+            id: r.messageId ?? r.id,
+            messageId: r.messageId ?? r.id,
+            from: r.from ?? "",
+            to: [r.recipient],
+            subject: r.subject ?? "(no subject)",
+            status: (r.status as EmailStatus) ?? "sent",
+            sentAt: r.sentAt!.getTime(),
+            lastActivityAt,
+            eventCount,
+            hasOpened: !!r.openedAt,
+            hasClicked: !!r.clickedAt,
+          };
+        });
+
+      log.info(
+        { resultCount: results.length, search },
+        "Email search complete"
+      );
+      return NextResponse.json(results);
+    }
+
+    // Non-search path: DynamoDB-first (authoritative for event history).
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, orgWithMembership.id),
     });
@@ -142,20 +241,10 @@ export async function GET(request: Request, context: RouteContext) {
 
     // Aggregate DynamoDB events — use a larger working set when filtering by status
     // so the post-enrichment filter has enough candidates before slicing to limit.
-    const workingLimit = status || search
+    const workingLimit = status
       ? Math.min(5000, allEvents.flat().length + 1000)
       : limit;
-    let emails = aggregateEmailEvents(allEvents).slice(0, workingLimit);
-
-    if (search) {
-      const q = search.toLowerCase();
-      emails = emails.filter(
-        (e) =>
-          e.subject?.toLowerCase().includes(q) ||
-          e.from?.toLowerCase().includes(q) ||
-          e.to.some((addr) => addr.toLowerCase().includes(q))
-      );
-    }
+    const emails = aggregateEmailEvents(allEvents).slice(0, workingLimit);
 
     // Query PostgreSQL for all messages in the time window.
     // Used to both enrich authoritative sentAt on DynamoDB records AND fill in
@@ -185,13 +274,6 @@ export async function GET(request: Request, context: RouteContext) {
             ? eq(
                 messageSend.status,
                 status as (typeof messageSend.status)["_"]["data"]
-              )
-            : undefined,
-          search
-            ? or(
-                ilike(messageSend.subject, `%${search}%`),
-                ilike(messageSend.recipient, `%${search}%`),
-                ilike(messageSend.from, `%${search}%`)
               )
             : undefined
         )

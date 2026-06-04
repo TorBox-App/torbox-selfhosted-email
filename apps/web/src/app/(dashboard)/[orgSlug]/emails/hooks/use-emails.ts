@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { EmailListItem } from "../types";
 
 export function useEmailsData(
@@ -26,5 +26,7 @@ export function useEmailsData(
       return response.json();
     },
     staleTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
+    retry: false,
   });
 }
