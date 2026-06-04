@@ -21,6 +21,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+
 import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
@@ -59,48 +60,6 @@ BETTER_AUTH_URL=https://dashboard.yourdomain.com
 WRAPS_EMAIL_ROLE_ARN=arn:aws:iam::123456789012:role/wraps-email-role
 AUTH_EMAIL_CONFIGURATION_SET=wraps-email-events
 AUTH_EMAIL_FROM=noreply@yourdomain.com`;
-
-const vercelEnvExample = `# From .env.selfhost — copy these into Vercel project settings:
-DATABASE_URL=postgres://user:pass@your-db.neon.tech/wraps
-NEXT_PUBLIC_APP_URL=https://dashboard.yourdomain.com
-NEXT_PUBLIC_API_URL=https://abc123.lambda-url.us-east-1.on.aws
-CORS_ORIGIN=https://dashboard.yourdomain.com
-BETTER_AUTH_SECRET=<from .env.selfhost>
-UNSUBSCRIBE_SECRET=<from .env.selfhost>
-WRAPS_LICENSE_KEY=wraps_lic_...
-AWS_BACKEND_ACCOUNT_ID=123456789012
-
-# Added after Step 5 (Vercel OIDC):
-AWS_ROLE_ARN=arn:aws:iam::123456789012:role/wraps-vercel-backend-role`;
-
-const oidcTrustPolicyExample = `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::YOUR_ACCOUNT_ID:oidc-provider/oidc.vercel.com/YOUR_TEAM_ID"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "oidc.vercel.com/YOUR_TEAM_ID:aud": "sts.amazonaws.com"
-        }
-      }
-    }
-  ]
-}`;
-
-const oidcPermissionsPolicyExample = `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "sts:AssumeRole",
-      "Resource": "arn:aws:iam::YOUR_ACCOUNT_ID:role/wraps-console-access-role"
-    }
-  ]
-}`;
 
 const githubOidcTrustPolicyExample = `{
   "Version": "2012-10-17",
@@ -166,11 +125,11 @@ export default function SelfHostedPageContent() {
       <section className="mb-12">
         <h2 className="mb-4 font-bold text-2xl">Overview</h2>
         <p className="mb-4 text-muted-foreground">
-          Self-hosting deploys the Wraps control plane as an AWS Lambda function
-          backed by your own Postgres database, using SST v3 for infrastructure
-          management. You fork the Wraps repository, configure a handful of
-          secrets, and run a single command. Your team's dashboard runs on Vercel
-          and connects to the Lambda directly — no Wraps SaaS in the loop.
+          Self-hosting deploys the full Wraps control plane — API Lambda,
+          dashboard, and supporting infrastructure — into your AWS account using
+          SST. You fork the Wraps repository, configure a handful of secrets,
+          and run a single command. Everything runs in your account; no Wraps
+          SaaS servers are in the critical path.
         </p>
         <Card>
           <CardContent className="p-6">
@@ -214,23 +173,24 @@ export default function SelfHostedPageContent() {
               <li className="flex items-start gap-3">
                 <Globe className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                 <div>
-                  <span className="font-medium">Dashboard on Vercel</span>
+                  <span className="font-medium">Dashboard on CloudFront</span>
                   <p className="text-muted-foreground text-sm">
-                    Deploy{" "}
+                    The{" "}
                     <code className="rounded bg-muted px-1.5 py-0.5">
                       apps/web
                     </code>{" "}
-                    from your fork to your own Vercel project
+                    dashboard is deployed automatically via SST into your AWS
+                    account — no separate hosting needed
                   </p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                 <div>
-                  <span className="font-medium">Zero stored credentials</span>
+                  <span className="font-medium">GitHub Actions OIDC for upgrades</span>
                   <p className="text-muted-foreground text-sm">
-                    Dashboard authenticates to AWS via Vercel OIDC federation —
-                    no static keys
+                    Automated upgrades use GitHub Actions OIDC to assume a
+                    short-lived AWS role — no stored keys required
                   </p>
                 </div>
               </li>
@@ -276,12 +236,6 @@ export default function SelfHostedPageContent() {
                     wraps.dev/contact
                   </Link>{" "}
                   to get one
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
-                <span>
-                  Vercel account and a project to deploy the dashboard
                 </span>
               </li>
               <li className="flex items-center gap-3">
@@ -425,7 +379,7 @@ pnpm install`,
             <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
             with auto-generated secrets
           </li>
-          <li>Run SST bootstrap and deploy the Lambda + supporting resources</li>
+          <li>Deploy the Lambda, dashboard, and supporting AWS resources via SST</li>
           <li>Run Drizzle migrations against your Postgres database</li>
           <li>
             Append the Lambda URL, app URL, and any email variables to{" "}
@@ -524,336 +478,6 @@ pnpm install`,
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
             4
           </div>
-          Deploy the Dashboard to Vercel
-        </h2>
-        <p className="mb-4 text-muted-foreground">
-          The Wraps dashboard lives in{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">apps/web</code> in
-          your fork. Connect it to a Vercel project and add the environment
-          variables from your{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
-          file.
-        </p>
-        <ol className="mb-4 list-decimal space-y-4 pl-6 text-muted-foreground">
-          <li>
-            <span className="font-medium text-foreground">
-              Create a Vercel project
-            </span>{" "}
-            — connect your fork in Vercel and set the root directory to{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">apps/web</code>.
-          </li>
-          <li>
-            <span className="font-medium text-foreground">
-              Add environment variables
-            </span>{" "}
-            — in Vercel → Project Settings → Environment Variables, add the
-            following (scoped to Production):
-            <div className="mt-3">
-              <CodeBlock
-                className="h-auto"
-                data={[
-                  {
-                    language: "bash",
-                    filename: "Vercel env vars",
-                    code: vercelEnvExample,
-                  },
-                ]}
-                defaultValue="bash"
-              >
-                <CodeBlockHeader>
-                  <CodeBlockFiles>
-                    {(item) => (
-                      <CodeBlockFilename
-                        key={item.language}
-                        value={item.language}
-                      >
-                        {item.filename}
-                      </CodeBlockFilename>
-                    )}
-                  </CodeBlockFiles>
-                  <CodeBlockCopyButton />
-                </CodeBlockHeader>
-                <CodeBlockBody>
-                  {(item) => (
-                    <CodeBlockItem
-                      key={item.language}
-                      lineNumbers={false}
-                      value={item.language}
-                    >
-                      <CodeBlockContent language={item.language}>
-                        {item.code}
-                      </CodeBlockContent>
-                    </CodeBlockItem>
-                  )}
-                </CodeBlockBody>
-              </CodeBlock>
-            </div>
-          </li>
-          <li>
-            <span className="font-medium text-foreground">
-              Trigger a deployment
-            </span>{" "}
-            — the dashboard will build successfully but cannot call AWS until
-            you complete Step 5.
-          </li>
-        </ol>
-      </section>
-
-      {/* Step 5 */}
-      <section className="mb-12">
-        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-            5
-          </div>
-          Set Up Vercel OIDC Authentication
-        </h2>
-        <p className="mb-4 text-muted-foreground">
-          The dashboard reads AWS resources (SES stats, CloudWatch, DynamoDB)
-          without any stored credentials. It uses Vercel OIDC federation to
-          obtain short-lived AWS tokens automatically.
-        </p>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Step 5a — Get your Vercel OIDC provider URL
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="mb-3 text-muted-foreground text-sm">
-              In Vercel: go to your team's{" "}
-              <span className="font-medium text-foreground">
-                Settings → Cloud → Configure AWS
-              </span>
-              . Copy the OIDC provider URL — it looks like{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                https://oidc.vercel.com/your-team-id
-              </code>
-              .
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Step 5b — Add an OIDC identity provider in AWS
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="mb-3 text-muted-foreground text-sm">
-              In the AWS Console, go to{" "}
-              <span className="font-medium text-foreground">
-                IAM → Identity providers → Add provider
-              </span>
-              :
-            </p>
-            <ul className="space-y-1 text-muted-foreground text-sm">
-              <li>
-                <span className="font-medium text-foreground">
-                  Provider type:
-                </span>{" "}
-                OpenID Connect
-              </li>
-              <li>
-                <span className="font-medium text-foreground">
-                  Provider URL:
-                </span>{" "}
-                paste your Vercel OIDC URL from 5a
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Audience:</span>{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">
-                  sts.amazonaws.com
-                </code>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Step 5c — Create an IAM role that trusts the OIDC provider
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="mb-3 text-muted-foreground text-sm">
-              Create a new IAM role named{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                wraps-vercel-backend-role
-              </code>{" "}
-              (or similar) with two distinct policies:
-            </p>
-            <p className="mb-2 font-medium text-foreground text-sm">
-              Trust policy (who can assume this role):
-            </p>
-            <p className="mb-2 text-muted-foreground text-sm">
-              Replace{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                YOUR_ACCOUNT_ID
-              </code>{" "}
-              and{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                YOUR_TEAM_ID
-              </code>{" "}
-              with your AWS account ID and Vercel team ID from Step 5a:
-            </p>
-            <CodeBlock
-              className="mb-4 h-auto"
-              data={[
-                {
-                  language: "json",
-                  filename: "trust-policy.json",
-                  code: oidcTrustPolicyExample,
-                },
-              ]}
-              defaultValue="json"
-            >
-              <CodeBlockHeader>
-                <CodeBlockFiles>
-                  {(item) => (
-                    <CodeBlockFilename
-                      key={item.language}
-                      value={item.language}
-                    >
-                      {item.filename}
-                    </CodeBlockFilename>
-                  )}
-                </CodeBlockFiles>
-                <CodeBlockCopyButton />
-              </CodeBlockHeader>
-              <CodeBlockBody>
-                {(item) => (
-                  <CodeBlockItem
-                    key={item.language}
-                    lineNumbers={false}
-                    value={item.language}
-                  >
-                    <CodeBlockContent language={item.language}>
-                      {item.code}
-                    </CodeBlockContent>
-                  </CodeBlockItem>
-                )}
-              </CodeBlockBody>
-            </CodeBlock>
-            <p className="mb-2 font-medium text-foreground text-sm">
-              Permissions policy (what this role can do):
-            </p>
-            <p className="mb-2 text-muted-foreground text-sm">
-              This allows the Vercel backend role to chain-assume{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                wraps-console-access-role
-              </code>
-              , which is created automatically in Step 6 when you run{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                wraps selfhost connect
-              </code>
-              :
-            </p>
-            <CodeBlock
-              className="mb-4 h-auto"
-              data={[
-                {
-                  language: "json",
-                  filename: "permissions-policy.json",
-                  code: oidcPermissionsPolicyExample,
-                },
-              ]}
-              defaultValue="json"
-            >
-              <CodeBlockHeader>
-                <CodeBlockFiles>
-                  {(item) => (
-                    <CodeBlockFilename
-                      key={item.language}
-                      value={item.language}
-                    >
-                      {item.filename}
-                    </CodeBlockFilename>
-                  )}
-                </CodeBlockFiles>
-                <CodeBlockCopyButton />
-              </CodeBlockHeader>
-              <CodeBlockBody>
-                {(item) => (
-                  <CodeBlockItem
-                    key={item.language}
-                    lineNumbers={false}
-                    value={item.language}
-                  >
-                    <CodeBlockContent language={item.language}>
-                      {item.code}
-                    </CodeBlockContent>
-                  </CodeBlockItem>
-                )}
-              </CodeBlockBody>
-            </CodeBlock>
-            <p className="text-muted-foreground text-sm">
-              Copy the ARN of the role you just created — it looks like{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                arn:aws:iam::YOUR_ACCOUNT_ID:role/wraps-vercel-backend-role
-              </code>
-              .
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Step 5d — Set AWS_ROLE_ARN in Vercel
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="mb-3 text-muted-foreground text-sm">
-              Add one more environment variable to your Vercel project using the
-              role ARN from 5c, then redeploy:
-            </p>
-            <CodeBlock
-              className="h-auto"
-              data={[
-                {
-                  language: "bash",
-                  filename: "Vercel env var",
-                  code: `AWS_ROLE_ARN=arn:aws:iam::YOUR_ACCOUNT_ID:role/wraps-vercel-backend-role`,
-                },
-              ]}
-              defaultValue="bash"
-            >
-              <CodeBlockHeader>
-                <CodeBlockFiles>
-                  {(item) => (
-                    <CodeBlockFilename
-                      key={item.language}
-                      value={item.language}
-                    >
-                      {item.filename}
-                    </CodeBlockFilename>
-                  )}
-                </CodeBlockFiles>
-                <CodeBlockCopyButton />
-              </CodeBlockHeader>
-              <CodeBlockBody>
-                {(item) => (
-                  <CodeBlockItem
-                    key={item.language}
-                    lineNumbers={false}
-                    value={item.language}
-                  >
-                    <CodeBlockContent language={item.language}>
-                      {item.code}
-                    </CodeBlockContent>
-                  </CodeBlockItem>
-                )}
-              </CodeBlockBody>
-            </CodeBlock>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Step 6 */}
-      <section className="mb-12">
-        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-            6
-          </div>
           Create Your Account and Connect
         </h2>
         <p className="mb-4 text-muted-foreground">
@@ -922,11 +546,11 @@ pnpm install`,
         </div>
       </section>
 
-      {/* Step 7 */}
+      {/* Step 5 */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-            7
+            5
           </div>
           Verify Your Deployment
         </h2>
@@ -1008,8 +632,8 @@ pnpm install`,
           </CodeBlock>
         </div>
         <p className="mb-8 text-muted-foreground text-sm">
-          After upgrading the Lambda, redeploy your Vercel dashboard project to
-          pick up any frontend changes.
+          The upgrade script redeploys both the Lambda and the dashboard in a
+          single run — no separate steps required.
         </p>
 
         <h3 className="mb-3 font-semibold text-lg">
@@ -1341,8 +965,8 @@ pnpm install`,
               <li className="flex gap-3">
                 <span className="font-bold text-foreground shrink-0">4.</span>
                 <span>
-                  Trigger a redeploy of your Vercel project to pick up any
-                  dashboard changes.
+                  The workflow redeploys the Lambda and dashboard together —
+                  once the job completes, your update is live.
                 </span>
               </li>
             </ol>
@@ -1427,11 +1051,11 @@ pnpm install`,
                 </td>
                 <td className="p-3 pr-4 align-top text-foreground">Yes</td>
                 <td className="p-3 align-top">
-                  Full URL of your Vercel dashboard deployment (e.g.{" "}
+                  Full URL of your dashboard (e.g.{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     https://dashboard.yourdomain.com
                   </code>
-                  ) — used for CORS and auth redirects
+                  ) — used for CORS and auth redirects. Set automatically after deploy
                 </td>
               </tr>
               <tr>
