@@ -97,22 +97,29 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   }
 
   clack.log.step("Deploying updated infrastructure...");
-  await runSubprocess("sst", ["deploy", "--config", SST_CONFIG, "--stage", "production"], undefined, SST_DIR);
+  await runSubprocess(
+    "sst",
+    ["deploy", "--config", SST_CONFIG, "--stage", "production"],
+    undefined,
+    SST_DIR
+  );
 
   const databaseUrl =
     metadata.services.selfhost?.config?.databaseUrl ||
     parseEnvFile(await readFile(ENV_PATH, "utf-8")).DATABASE_URL;
 
-  if (!databaseUrl) {
-    clack.log.warn(
-      "DATABASE_URL not found in metadata or .env.selfhost — skipping database migrations."
-    );
-  } else {
+  if (databaseUrl) {
     clack.log.step("Running database migrations...");
     const { Pool } = await import("pg");
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-    const migrationsFolder = join(REPO_ROOT, "packages", "db", "src", "migrations");
+    const migrationsFolder = join(
+      REPO_ROOT,
+      "packages",
+      "db",
+      "src",
+      "migrations"
+    );
     const pool = new Pool({ connectionString: databaseUrl });
     const db = drizzle(pool);
     try {
@@ -121,6 +128,10 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
       await pool.end();
     }
     clack.log.success("Database migrations applied.");
+  } else {
+    clack.log.warn(
+      "DATABASE_URL not found in metadata or .env.selfhost — skipping database migrations."
+    );
   }
 
   const outputs = JSON.parse(await readFile(OUTPUTS_PATH, "utf-8"));

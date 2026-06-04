@@ -7,6 +7,7 @@ node_modules/
 dist/
 build/
 .next/
+.open-next/
 out/
 **/lambda/**/*.mjs
 apps/api/lambda.zip
@@ -26,6 +27,8 @@ coverage/
 .env.*.local
 .env.test
 .env.sentry-build-plugin
+.env.selfhost
+.selfhost-outputs.json
 
 # Logs
 *.log

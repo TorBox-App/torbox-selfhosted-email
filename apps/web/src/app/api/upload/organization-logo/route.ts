@@ -25,6 +25,13 @@ function isVercelBlobUrl(url: string): boolean {
 }
 
 export async function POST(request: Request) {
+  if (!process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "Logo uploads not available in self-hosted mode" },
+      { status: 501 }
+    );
+  }
+
   try {
     // 1. Authenticate user
     const session = await auth.api.getSession({

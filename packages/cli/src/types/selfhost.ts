@@ -34,6 +34,14 @@ export type SelfhostConfig = {
   appUrl: string;
   unsubscribeSecret: string;
   betterAuthSecret: string;
+  webDomain?: string;
+  aiGatewayApiKey?: string;
+};
+
+export type SelfhostDestroyOptions = {
+  region?: string;
+  yes?: boolean;
+  force?: boolean;
 };
 
 export type SelfhostStackConfig = {

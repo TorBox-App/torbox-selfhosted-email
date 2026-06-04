@@ -36,8 +36,8 @@ export function Logo({ size = 24, className, ...props }: LogoProps) {
       priority
       src={logoSrc}
       style={{ display: "block", objectFit: "contain", width: "auto" }}
+      unoptimized
       width={size * 3}
-      // width={0} // Set width to 0 and w-auto in style to maintain aspect ratio
       {...props}
     />
   );

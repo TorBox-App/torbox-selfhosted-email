@@ -1283,7 +1283,7 @@ describe("cli router forwards --yes and --preview to init/upgrade commands", () 
 describe("cli router forwards --force and --preview to destroy commands", () => {
   test("all *Destroy calls in cli.ts pass force: flags.force", () => {
     // Destroy commands whose option types don't include preview? yet.
-    const PREVIEW_NOT_SUPPORTED = new Set<string>([]);
+    const PREVIEW_NOT_SUPPORTED = new Set<string>(["selfhostDestroy"]);
 
     const content = readFile("packages/cli/src/cli.ts");
     const lines = content.split("\n");

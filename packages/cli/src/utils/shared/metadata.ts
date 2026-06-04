@@ -78,9 +78,10 @@ export type ConnectionMetadata = {
     cdn?: ServiceConfig<WrapsCdnConfig, CdnConfigPreset>;
     selfhost?: {
       deployedAt: string;
-      pulumiStackName: string;
+      pulumiStackName?: string;
       config: SelfhostConfig;
       apiUrl: string;
+      webUrl?: string;
     };
   };
 };

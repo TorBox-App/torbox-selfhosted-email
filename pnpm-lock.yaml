@@ -187,6 +187,12 @@ importers:
       '@biomejs/biome':
         specifier: 2.3.4
         version: 2.3.4
+      '@clack/prompts':
+        specifier: ^0.11.0
+        version: 0.11.0
+      '@pulumi/pulumi':
+        specifier: ^3.216.0
+        version: 3.216.0(ts-node@10.9.1(@types/node@24.10.0)(typescript@5.9.3))(typescript@5.9.3)
       '@react-email/preview-server':
         specifier: 5.2.8
         version: 5.2.8(@opentelemetry/api@1.9.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -211,6 +217,12 @@ importers:
       knip:
         specifier: 5.86.0
         version: 5.86.0(@types/node@24.10.0)(typescript@5.9.3)
+      mri:
+        specifier: ^1.2.0
+        version: 1.2.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       react-email:
         specifier: 5.2.8
         version: 5.2.8

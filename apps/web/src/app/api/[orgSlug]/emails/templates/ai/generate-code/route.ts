@@ -1,4 +1,3 @@
-import { getAIModel } from "@/lib/ai/model";
 import { auth } from "@wraps/auth";
 import {
   aiConversation,
@@ -18,6 +17,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateCodeBodySchema } from "@/lib/ai/generate-code-schema";
 import { fetchAndProcessImage } from "@/lib/ai/image-utils";
+import { getAIModel } from "@/lib/ai/model";
 import { buildReactEmailSystemPrompt } from "@/lib/ai/react-email-system-prompt";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";

@@ -37,7 +37,8 @@ export class DeploymentProgress {
       return;
     }
     if (this.currentSpinner) {
-      this.currentSpinner.stop(message);
+      this.currentSpinner.stop("");
+      this.currentSpinner = null;
     }
     clack.log.success(message);
   }
@@ -50,7 +51,8 @@ export class DeploymentProgress {
       return;
     }
     if (this.currentSpinner) {
-      this.currentSpinner.stop(message);
+      this.currentSpinner.stop("");
+      this.currentSpinner = null;
     }
     clack.log.error(message);
   }

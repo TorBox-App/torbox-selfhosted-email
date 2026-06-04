@@ -71,6 +71,7 @@ import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
 // Self-hosted commands
 import { selfhostDeploy } from "./commands/selfhost/deploy.js";
+import { selfhostDestroy } from "./commands/selfhost/destroy.js";
 import { selfhostEnv } from "./commands/selfhost/env.js";
 import { selfhostLogin } from "./commands/selfhost/login.js";
 import { selfhostLogout } from "./commands/selfhost/logout.js";
@@ -1165,6 +1166,14 @@ async function run() {
           await selfhostLogout({
             region: flags.region,
             json: flags.json,
+          });
+          break;
+
+        case "destroy":
+          await selfhostDestroy({
+            region: flags.region,
+            yes: flags.yes,
+            force: flags.force,
           });
           break;
 

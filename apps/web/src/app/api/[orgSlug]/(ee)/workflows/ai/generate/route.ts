@@ -1,4 +1,3 @@
-import { getAIModel } from "@/lib/ai/model";
 import { auth } from "@wraps/auth";
 import { db, segment, template, topic } from "@wraps/db";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
@@ -6,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildWorkflowSystemPrompt } from "@/lib/ai/(ee)/workflow-system-prompt";
+import { getAIModel } from "@/lib/ai/model";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";

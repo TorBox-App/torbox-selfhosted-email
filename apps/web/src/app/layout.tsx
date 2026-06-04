@@ -77,8 +77,8 @@ export default async function RootLayout({
                 <SidebarConfigProvider>{children}</SidebarConfigProvider>
                 <Toaster />
               </ThemeProvider>
-              <Analytics />
-              <SpeedInsights />
+              {process.env.VERCEL && <Analytics />}
+              {process.env.VERCEL && <SpeedInsights />}
             </SessionProvider>
           </QueryProvider>
         </NuqsAdapter>
