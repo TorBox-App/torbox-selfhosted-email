@@ -45,12 +45,10 @@ jobs:
 
       - name: First-time deploy
         if: inputs.action == 'deploy'
-        run: |
-          pnpm selfhost:deploy \
-            --database-url "${{ secrets.DATABASE_URL }}" \
-            --license-key "${{ secrets.WRAPS_LICENSE_KEY }}" \
-            --yes
+        run: pnpm selfhost:deploy --yes
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          WRAPS_LICENSE_KEY: ${{ secrets.WRAPS_LICENSE_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Upgrade existing instance

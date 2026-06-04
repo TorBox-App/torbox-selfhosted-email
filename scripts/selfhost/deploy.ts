@@ -98,8 +98,8 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     process.env.AWS_DEFAULT_REGION ||
     "us-east-1";
 
-  let databaseUrl = options.databaseUrl;
-  let licenseKey = options.licenseKey;
+  let databaseUrl = options.databaseUrl || process.env.DATABASE_URL;
+  let licenseKey = options.licenseKey || process.env.WRAPS_LICENSE_KEY;
   if (!databaseUrl) {
     databaseUrl = (await clack.text({
       message: "Postgres connection string (DATABASE_URL):",
