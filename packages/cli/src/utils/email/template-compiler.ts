@@ -42,7 +42,7 @@ export async function loadWrapsConfig(wrapsDir: string): Promise<WrapsConfig> {
     write: false,
     format: "esm",
     platform: "node",
-    target: "node20",
+    target: "node24",
     alias: {
       "@wraps.dev/client": join(shimDir, "wraps-client-shim.mjs"),
     },
@@ -146,7 +146,7 @@ export async function compileForPreview(
     write: false,
     format: "esm",
     platform: "node",
-    target: "node20",
+    target: "node24",
     jsx: "automatic",
     nodePaths: cliNodeModules,
     banner: {

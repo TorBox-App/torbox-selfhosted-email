@@ -9,7 +9,7 @@ export default defineConfig({
   bundle: true,
   minify: false,
   sourcemap: true,
-  target: "node20",
+  target: "node24",
   outDir: "dist",
   noExternal: [/(.*)/], // Bundle everything for zero runtime deps
   esbuildOptions(options) {

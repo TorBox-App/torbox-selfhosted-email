@@ -565,7 +565,7 @@ async function deploySMSLambdaFunction(config: {
     "wraps-sms-event-processor",
     {
       name: "wraps-sms-event-processor",
-      runtime: "nodejs20.x",
+      runtime: "nodejs24.x",
       handler: "index.handler",
       role: lambdaRole.arn,
       code: new pulumi.asset.FileArchive(codeDir),

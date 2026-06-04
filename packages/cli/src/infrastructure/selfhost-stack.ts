@@ -180,7 +180,7 @@ export async function deploySelfhostStack(
   // 6. Lambda function (reads from pre-built zip)
   const lambdaFn = new aws.lambda.Function("wraps-selfhost-api", {
     name: "wraps-selfhost-api",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     handler: "lambda.handler",
     role: role.arn,
     code: new pulumi.asset.FileArchive(config.lambdaZipPath),

@@ -14,7 +14,7 @@ export const auditLogCleanupCron = new sst.aws.CronV2("AuditLogCleanup", {
   enabled: $app.stage === "production",
   job: {
     handler: "apps/api/src/workers/audit-log-cleanup.handler",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     timeout: "5 minutes",
     memory: "256 MB",
     environment: {

@@ -344,7 +344,7 @@ function durationToSeconds(duration) {
     write: false,
     format: "esm",
     platform: "node",
-    target: "node20",
+    target: "node24",
     alias: {
       "@wraps.dev/client": join(shimDir, "wraps-client-shim.mjs"),
     },

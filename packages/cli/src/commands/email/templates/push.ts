@@ -274,7 +274,7 @@ async function compileTemplate(
     write: false,
     format: "esm",
     platform: "node",
-    target: "node20",
+    target: "node24",
     jsx: "automatic",
     nodePaths: cliNodeModules,
     // Provide require() for CJS dependencies bundled into ESM output

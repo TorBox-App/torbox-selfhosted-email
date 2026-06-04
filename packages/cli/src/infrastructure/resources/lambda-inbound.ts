@@ -116,7 +116,7 @@ export async function deployInboundLambda(
   // Create inbound processor Lambda
   const lambdaFunction = new aws.lambda.Function(functionName, {
     name: functionName,
-    runtime: "nodejs20.x",
+    runtime: "nodejs24.x",
     handler: "index.handler",
     role: lambdaRole.arn,
     code: new pulumi.asset.FileArchive(inboundProcessorCode),

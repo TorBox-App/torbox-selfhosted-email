@@ -50,7 +50,7 @@ async function compileTemplateFromFile(filePath: string, slug: string) {
     write: false,
     format: "esm",
     platform: "node",
-    target: "node20",
+    target: "node24",
     jsx: "automatic",
     banner: {
       js: 'import { createRequire as __createRequire } from "node:module";\nconst require = __createRequire(import.meta.url);\n',

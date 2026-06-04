@@ -55,7 +55,7 @@ export const batchQueue = new sst.aws.Queue("BatchQueue", {
 batchDlq.subscribe(
   {
     handler: "apps/api/src/workers/batch-dlq-consumer.handler",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     timeout: "1 minute",
     memory: "256 MB",
     environment: {
@@ -91,7 +91,7 @@ batchDlq.subscribe(
 batchQueue.subscribe(
   {
     handler: "apps/api/src/workers/batch-sender.handler",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     timeout: "5 minutes",
     memory: "512 MB",
     environment: {
@@ -167,7 +167,7 @@ export const workflowDlq = new sst.aws.Queue("WorkflowDlq", {
 workflowDlq.subscribe(
   {
     handler: "apps/api/src/(ee)/workers/workflow-dlq-consumer.handler",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     timeout: "1 minute",
     memory: "256 MB",
     environment: {
@@ -210,7 +210,7 @@ export const workflowQueue = new sst.aws.Queue("WorkflowQueue", {
 workflowQueue.subscribe(
   {
     handler: "apps/api/src/(ee)/workers/workflow-processor.handler",
-    runtime: "nodejs22.x",
+    runtime: "nodejs24.x",
     timeout: "5 minutes",
     memory: "512 MB",
     environment: {

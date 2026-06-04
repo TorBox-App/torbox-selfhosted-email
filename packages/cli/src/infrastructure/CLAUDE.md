@@ -44,7 +44,7 @@ Every AWS resource MUST include the tag `ManagedBy: 'wraps-cli'`. This is how we
 ### Lambda Bundling
 Lambda functions are bundled at deploy time using esbuild. The `resources/lambda.ts` file:
 1. Takes a source file path (TypeScript entry point from `packages/core/`)
-2. Bundles with esbuild (target: `node20`, format: `esm`, external: `@aws-sdk/*`)
+2. Bundles with esbuild (target: `node24`, format: `esm`, external: `@aws-sdk/*`)
 3. Creates a Pulumi `AssetArchive` from the bundle output
 4. Deploys as a Lambda function with the appropriate IAM role
 

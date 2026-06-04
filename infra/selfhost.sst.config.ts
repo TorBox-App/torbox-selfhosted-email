@@ -172,7 +172,7 @@ export default $config({
     // API Lambda with function URL (no API Gateway — single-tenant, cost-free)
     const api = new sst.aws.Function("SelfhostApi", {
       handler: "../apps/api/src/lambda.handler",
-      runtime: "nodejs22.x",
+      runtime: "nodejs24.x",
       timeout: "30 seconds",
       memory: "512 MB",
       url: true,
@@ -277,7 +277,7 @@ export default $config({
     batchDlq.subscribe(
       {
         handler: "../apps/api/src/workers/batch-dlq-consumer.handler",
-        runtime: "nodejs22.x",
+        runtime: "nodejs24.x",
         timeout: "1 minute",
         memory: "256 MB",
         environment: {
@@ -307,7 +307,7 @@ export default $config({
     batchQueue.subscribe(
       {
         handler: "../apps/api/src/workers/batch-sender.handler",
-        runtime: "nodejs22.x",
+        runtime: "nodejs24.x",
         timeout: "5 minutes",
         memory: "512 MB",
         environment: {
@@ -343,7 +343,7 @@ export default $config({
     workflowDlq.subscribe(
       {
         handler: "../apps/api/src/(ee)/workers/workflow-dlq-consumer.handler",
-        runtime: "nodejs22.x",
+        runtime: "nodejs24.x",
         timeout: "1 minute",
         memory: "256 MB",
         environment: {
@@ -365,7 +365,7 @@ export default $config({
     workflowQueue.subscribe(
       {
         handler: "../apps/api/src/(ee)/workers/workflow-processor.handler",
-        runtime: "nodejs22.x",
+        runtime: "nodejs24.x",
         timeout: "5 minutes",
         memory: "512 MB",
         environment: {

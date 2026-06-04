@@ -48,7 +48,7 @@ async function buildLambda(name: string): Promise<void> {
     entryPoints: [sourcePath],
     bundle: true,
     platform: "node",
-    target: "node20",
+    target: "node24",
     format: "cjs",
     outfile: outFile,
     external: ["@aws-sdk/*", ...nodeBuiltins],
