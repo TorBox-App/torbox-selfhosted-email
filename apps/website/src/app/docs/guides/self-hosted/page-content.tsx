@@ -200,7 +200,9 @@ export default function SelfHostedPageContent() {
               <li className="flex items-start gap-3">
                 <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                 <div>
-                  <span className="font-medium">GitHub Actions OIDC for upgrades</span>
+                  <span className="font-medium">
+                    GitHub Actions OIDC for upgrades
+                  </span>
                   <p className="text-muted-foreground text-sm">
                     Automated upgrades use GitHub Actions OIDC to assume a
                     short-lived AWS role — no stored keys required
@@ -220,15 +222,13 @@ export default function SelfHostedPageContent() {
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
-                <span>
-                  Node.js 20+ and pnpm 10+ installed locally
-                </span>
+                <span>Node.js 20+ and pnpm 10+ installed locally</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
                 <span>
-                  AWS CLI configured with credentials that have IAM, Lambda,
-                  S3, CloudFormation, SSM, CloudFront, SQS, DynamoDB, EventBridge
+                  AWS CLI configured with credentials that have IAM, Lambda, S3,
+                  CloudFormation, SSM, CloudFront, SQS, DynamoDB, EventBridge
                   Scheduler, and CloudWatch Logs permissions
                 </span>
               </li>
@@ -236,10 +236,33 @@ export default function SelfHostedPageContent() {
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
                 <span>
                   Postgres database connection string —{" "}
-                  <a className="text-primary underline underline-offset-2" href="https://neon.tech" rel="noopener noreferrer" target="_blank">Neon</a>,{" "}
-                  <a className="text-primary underline underline-offset-2" href="https://supabase.com" rel="noopener noreferrer" target="_blank">Supabase</a>,{" "}
-                  <a className="text-primary underline underline-offset-2" href="https://railway.app" rel="noopener noreferrer" target="_blank">Railway</a>,{" "}
-                  or self-hosted Postgres all work
+                  <a
+                    className="text-primary underline underline-offset-2"
+                    href="https://neon.tech"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Neon
+                  </a>
+                  ,{" "}
+                  <a
+                    className="text-primary underline underline-offset-2"
+                    href="https://supabase.com"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Supabase
+                  </a>
+                  ,{" "}
+                  <a
+                    className="text-primary underline underline-offset-2"
+                    href="https://railway.app"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Railway
+                  </a>
+                  , or self-hosted Postgres all work
                 </span>
               </li>
               <li className="flex items-center gap-3">
@@ -257,9 +280,7 @@ export default function SelfHostedPageContent() {
               </li>
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
-                <span>
-                  GitHub account for forking the repository
-                </span>
+                <span>GitHub account for forking the repository</span>
               </li>
             </ul>
           </CardContent>
@@ -310,7 +331,10 @@ pnpm install`,
                 <CodeBlockHeader>
                   <CodeBlockFiles>
                     {(item) => (
-                      <CodeBlockFilename key={item.language} value={item.language}>
+                      <CodeBlockFilename
+                        key={item.language}
+                        value={item.language}
+                      >
                         {item.filename}
                       </CodeBlockFilename>
                     )}
@@ -390,27 +414,45 @@ pnpm install`,
         <p className="mb-4 text-muted-foreground">The script will:</p>
         <ol className="mb-4 list-decimal space-y-2 pl-6 text-muted-foreground">
           <li>Check your AWS credentials</li>
-          <li>Prompt for any missing values (database URL and license key) if not passed as flags</li>
+          <li>
+            Prompt for any missing values (database URL and license key) if not
+            passed as flags
+          </li>
           <li>
             Write{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              .env.selfhost
+            </code>{" "}
             with auto-generated secrets
           </li>
           <li>
-            Run <code className="rounded bg-muted px-1.5 py-0.5">sst install</code> then deploy the Lambda, dashboard, and supporting AWS resources via SST
+            Run{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">sst install</code>{" "}
+            then deploy the Lambda, dashboard, and supporting AWS resources via
+            SST
           </li>
           <li>
             Append the Lambda URL, app URL, and any email variables to{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              .env.selfhost
+            </code>
           </li>
         </ol>
         <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
-          <p className="font-medium text-sm">Run migrations after initial deploy</p>
+          <p className="font-medium text-sm">
+            Run migrations after initial deploy
+          </p>
           <p className="mt-2 text-muted-foreground text-sm">
-            <code className="rounded bg-muted px-1.5 py-0.5">selfhost:deploy</code> provisions
-            infrastructure but does not run database migrations. After your first deploy, run{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">pnpm selfhost:upgrade</code> to
-            apply all pending Drizzle migrations against your database. Upgrades always run migrations automatically.
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              selfhost:deploy
+            </code>{" "}
+            provisions infrastructure but does not run database migrations.
+            After your first deploy, run{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              pnpm selfhost:upgrade
+            </code>{" "}
+            to apply all pending Drizzle migrations against your database.
+            Upgrades always run migrations automatically.
           </p>
         </div>
         <p className="mb-4 text-muted-foreground">
@@ -471,17 +513,30 @@ pnpm install`,
             <code className="rounded bg-muted px-1.5 py-0.5">
               pnpm selfhost:upgrade
             </code>
-            . Without <code className="rounded bg-muted px-1.5 py-0.5">--web-domain</code>,{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">NEXT_PUBLIC_APP_URL</code> will be
-            a <code className="rounded bg-muted px-1.5 py-0.5">*.cloudfront.net</code> URL —
-            a custom domain can be configured any time by re-running with{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">--web-domain</code>.
+            . Without{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">--web-domain</code>
+            ,{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              NEXT_PUBLIC_APP_URL
+            </code>{" "}
+            will be a{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              *.cloudfront.net
+            </code>{" "}
+            URL — a custom domain can be configured any time by re-running with{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">--web-domain</code>
+            .
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             The SST stack always deploys to{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">us-east-1</code>. To target a
-            different region, edit the <code className="rounded bg-muted px-1.5 py-0.5">region</code> field
-            in <code className="rounded bg-muted px-1.5 py-0.5">infra/selfhost.sst.config.ts</code> before deploying.
+            <code className="rounded bg-muted px-1.5 py-0.5">us-east-1</code>.
+            To target a different region, edit the{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">region</code> field
+            in{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              infra/selfhost.sst.config.ts
+            </code>{" "}
+            before deploying.
           </p>
         </div>
       </section>
@@ -568,8 +623,8 @@ pnpm install`,
           <code className="rounded bg-muted px-1.5 py-0.5">
             wraps-console-access-role
           </code>{" "}
-          IAM role and enables event streaming from your email infrastructure
-          to the dashboard:
+          IAM role and enables event streaming from your email infrastructure to
+          the dashboard:
         </p>
         <div className="mb-4">
           <CLICommand command="wraps selfhost connect" />
@@ -586,13 +641,18 @@ pnpm install`,
         </p>
         <ul className="space-y-2 text-muted-foreground text-sm pl-4 list-disc">
           <li>
-            <code className="rounded bg-muted px-1.5 py-0.5">wraps selfhost env</code>{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps selfhost env
+            </code>{" "}
             — prints the environment variables needed to deploy{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">apps/web</code> against
-            your self-hosted control plane (useful for Vercel or any external hosting).
+            <code className="rounded bg-muted px-1.5 py-0.5">apps/web</code>{" "}
+            against your self-hosted control plane (useful for Vercel or any
+            external hosting).
           </li>
           <li>
-            <code className="rounded bg-muted px-1.5 py-0.5">wraps selfhost logout</code>{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps selfhost logout
+            </code>{" "}
             — removes the local session token for your self-hosted instance.
           </li>
         </ul>
@@ -642,8 +702,8 @@ pnpm install`,
 
         <h3 className="mb-3 font-semibold text-lg">Manual upgrade</h3>
         <p className="mb-4 text-muted-foreground">
-          Pull upstream changes into your fork, then run the upgrade script.
-          It re-deploys the SST stack and runs any pending database migrations
+          Pull upstream changes into your fork, then run the upgrade script. It
+          re-deploys the SST stack and runs any pending database migrations
           automatically.
         </p>
         <div className="mb-6">
@@ -692,28 +752,26 @@ pnpm install`,
           Automated upgrades with GitHub Actions
         </h3>
         <p className="mb-4 text-muted-foreground">
-          Your fork includes two pre-built workflows that handle the full
-          update loop hands-free:
+          Your fork includes two pre-built workflows that handle the full update
+          loop hands-free:
         </p>
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <Card>
             <CardContent className="p-5">
-              <p className="mb-1 font-medium text-sm">
-                selfhost-sync.yml
-              </p>
+              <p className="mb-1 font-medium text-sm">selfhost-sync.yml</p>
               <p className="text-muted-foreground text-sm">
-                Runs every Monday at 09:00 UTC (also manually triggerable). Fetches upstream{" "}
+                Runs every Monday at 09:00 UTC (also manually triggerable).
+                Fetches upstream{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5">main</code>,
-                opens a PR with up to 20 included commits. Any existing sync PR is automatically
-                closed and superseded. You review and merge when ready.
+                opens a PR with up to 20 included commits. Any existing sync PR
+                is automatically closed and superseded. You review and merge
+                when ready.
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-5">
-              <p className="mb-1 font-medium text-sm">
-                selfhost-deploy.yml
-              </p>
+              <p className="mb-1 font-medium text-sm">selfhost-deploy.yml</p>
               <p className="text-muted-foreground text-sm">
                 Manual trigger only. Runs{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5">
@@ -740,8 +798,7 @@ pnpm install`,
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-muted-foreground text-sm">
-              GitHub disables Actions on new forks by default. Go to your
-              fork's{" "}
+              GitHub disables Actions on new forks by default. Go to your fork's{" "}
               <span className="font-medium text-foreground">
                 Settings → Actions → General
               </span>{" "}
@@ -866,9 +923,11 @@ pnpm install`,
             </p>
             <p className="mt-2 text-muted-foreground text-sm">
               The deploy workflow already sets{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">permissions: id-token: write</code>{" "}
-              at the workflow level, which is required for OIDC token exchange. You do not
-              need to add this manually.
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                permissions: id-token: write
+              </code>{" "}
+              at the workflow level, which is required for OIDC token exchange.
+              You do not need to add this manually.
             </p>
           </CardContent>
         </Card>
@@ -890,12 +949,24 @@ pnpm install`,
             <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-3 text-sm">
               <p className="font-medium">After your first deploy</p>
               <p className="mt-1 text-muted-foreground">
-                Open <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code> and copy{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">BETTER_AUTH_SECRET</code> and{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">UNSUBSCRIBE_SECRET</code> into
-                repository secrets. The upgrade workflow reconstructs{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code> from secrets
-                on every run — without these, SST will overwrite your Lambda with empty env vars.
+                Open{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  .env.selfhost
+                </code>{" "}
+                and copy{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  BETTER_AUTH_SECRET
+                </code>{" "}
+                and{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  UNSUBSCRIBE_SECRET
+                </code>{" "}
+                into repository secrets. The upgrade workflow reconstructs{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  .env.selfhost
+                </code>{" "}
+                from secrets on every run — without these, SST will overwrite
+                your Lambda with empty env vars.
               </p>
             </div>
             <p className="mb-2 font-medium text-foreground text-sm">
@@ -930,7 +1001,8 @@ pnpm install`,
                     </td>
                     <td className="py-2 pr-4 text-foreground">Always</td>
                     <td className="py-2">
-                      Postgres connection string — needed by SST on every deploy to set the Lambda env var
+                      Postgres connection string — needed by SST on every deploy
+                      to set the Lambda env var
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -952,9 +1024,13 @@ pnpm install`,
                     </td>
                     <td className="py-2 pr-4 text-foreground">Always</td>
                     <td className="py-2">
-                      Session signing secret — auto-generated on first deploy. Copy from{" "}
-                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
-                      after initial deploy. Rotating this invalidates all active sessions
+                      Session signing secret — auto-generated on first deploy.
+                      Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        .env.selfhost
+                      </code>{" "}
+                      after initial deploy. Rotating this invalidates all active
+                      sessions
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -965,8 +1041,11 @@ pnpm install`,
                     </td>
                     <td className="py-2 pr-4 text-foreground">Always</td>
                     <td className="py-2">
-                      HMAC secret for unsubscribe links — auto-generated on first deploy. Copy from{" "}
-                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+                      HMAC secret for unsubscribe links — auto-generated on
+                      first deploy. Copy from{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        .env.selfhost
+                      </code>{" "}
                       after initial deploy
                     </td>
                   </tr>
@@ -979,8 +1058,13 @@ pnpm install`,
                     <td className="py-2 pr-4">Optional</td>
                     <td className="py-2">
                       IAM role ARN for SES sending. Copy from{" "}
-                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
-                      after running <code className="rounded bg-muted px-1.5 py-0.5">wraps email init</code>
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        .env.selfhost
+                      </code>{" "}
+                      after running{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        wraps email init
+                      </code>
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -991,7 +1075,8 @@ pnpm install`,
                     </td>
                     <td className="py-2 pr-4">Optional</td>
                     <td className="py-2">
-                      From address for transactional auth emails (password reset, magic links)
+                      From address for transactional auth emails (password
+                      reset, magic links)
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -1003,8 +1088,13 @@ pnpm install`,
                     <td className="py-2 pr-4">Optional</td>
                     <td className="py-2">
                       SES configuration set for auth emails. Copy from{" "}
-                      <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
-                      after running <code className="rounded bg-muted px-1.5 py-0.5">wraps email init</code>
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        .env.selfhost
+                      </code>{" "}
+                      after running{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        wraps email init
+                      </code>
                     </td>
                   </tr>
                   <tr>
@@ -1015,7 +1105,8 @@ pnpm install`,
                     </td>
                     <td className="py-2 pr-4">Optional</td>
                     <td className="py-2">
-                      API key for the AI gateway — enables AI email template generation
+                      API key for the AI gateway — enables AI email template
+                      generation
                     </td>
                   </tr>
                 </tbody>
@@ -1045,7 +1136,13 @@ pnpm install`,
                         us-east-1
                       </code>
                     </td>
-                    <td className="py-2">AWS region for deployments (note: must also match <code className="rounded bg-muted px-1.5 py-0.5">infra/selfhost.sst.config.ts</code>)</td>
+                    <td className="py-2">
+                      AWS region for deployments (note: must also match{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        infra/selfhost.sst.config.ts
+                      </code>
+                      )
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-2 pr-4">
@@ -1054,7 +1151,13 @@ pnpm install`,
                       </code>
                     </td>
                     <td className="py-2 pr-4">—</td>
-                    <td className="py-2">Custom domain for the dashboard (e.g. <code className="rounded bg-muted px-1.5 py-0.5">dashboard.yourdomain.com</code>). When set, SST configures CloudFront with this domain</td>
+                    <td className="py-2">
+                      Custom domain for the dashboard (e.g.{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        dashboard.yourdomain.com
+                      </code>
+                      ). When set, SST configures CloudFront with this domain
+                    </td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4">
@@ -1063,7 +1166,14 @@ pnpm install`,
                       </code>
                     </td>
                     <td className="py-2 pr-4">—</td>
-                    <td className="py-2">Full URL of the dashboard. Set this to your CloudFront URL (or custom domain) after first deploy — required for correct auth redirects on upgrades if not using <code className="rounded bg-muted px-1.5 py-0.5">SELFHOST_WEB_DOMAIN</code></td>
+                    <td className="py-2">
+                      Full URL of the dashboard. Set this to your CloudFront URL
+                      (or custom domain) after first deploy — required for
+                      correct auth redirects on upgrades if not using{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        SELFHOST_WEB_DOMAIN
+                      </code>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1107,8 +1217,11 @@ pnpm install`,
               <li className="flex gap-3">
                 <span className="font-bold text-foreground shrink-0">1.</span>
                 <span>
-                  Every Monday, <strong className="text-foreground">Sync from upstream</strong> opens a PR with
-                  the latest commits from{" "}
+                  Every Monday,{" "}
+                  <strong className="text-foreground">
+                    Sync from upstream
+                  </strong>{" "}
+                  opens a PR with the latest commits from{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     wraps-team/wraps
                   </code>
@@ -1123,7 +1236,9 @@ pnpm install`,
                     Actions → Deploy self-hosted → Run workflow
                   </span>
                   . Select{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5">upgrade</code>{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    upgrade
+                  </code>{" "}
                   (or{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">deploy</code>{" "}
                   for a first-time setup) and click Run.
@@ -1234,7 +1349,8 @@ pnpm install`,
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     https://dashboard.yourdomain.com
                   </code>
-                  ) — used for CORS and auth redirects. Set automatically after deploy
+                  ) — used for CORS and auth redirects. Set automatically after
+                  deploy
                 </td>
               </tr>
               <tr>
@@ -1433,12 +1549,14 @@ pnpm install`,
               <GitFork className="mb-3 h-5 w-5 text-primary" />
               <h3 className="mb-2 font-medium">Tear down</h3>
               <p className="mb-3 text-muted-foreground text-sm">
-                Remove the SST-managed control plane (Lambda, CloudFront, S3, SQS, DynamoDB,
-                EventBridge Scheduler) and clears local metadata. Email infrastructure
-                created by{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">wraps email init</code>{" "}
-                (SES config sets, IAM roles, EventBridge rules) is managed separately
-                and must be removed via the CLI or AWS Console.
+                Remove the SST-managed control plane (Lambda, CloudFront, S3,
+                SQS, DynamoDB, EventBridge Scheduler) and clears local metadata.
+                Email infrastructure created by{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                  wraps email init
+                </code>{" "}
+                (SES config sets, IAM roles, EventBridge rules) is managed
+                separately and must be removed via the CLI or AWS Console.
               </p>
               <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
                 pnpm selfhost:destroy
