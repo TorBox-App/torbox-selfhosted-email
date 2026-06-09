@@ -21,6 +21,7 @@ type VolumeDataPoint = {
   sent: number;
   delivered: number;
   bounced: number;
+  renderingFailures: number;
   opens: number;
   clicks: number;
 };

@@ -35,6 +35,12 @@ type Insight = {
 // Minimum sends in a period to trigger anomaly detection
 const MIN_VOLUME_FOR_ANOMALY = 50;
 
+// Delivery rate is a percentage-point comparison, so a handful of bounces or
+// rendering failures swings it double digits at low volume. Require a much
+// larger sample before a pp-delta alert is meaningful — and ignore tiny
+// dogfood/test traffic entirely.
+const MIN_VOLUME_FOR_DELIVERY_ANOMALY = 200;
+
 type AnomalyResult = {
   metric: string;
   current: number;
@@ -68,12 +74,13 @@ function computeAnomaly(
   return { metric, current, previous, multiplier, severity };
 }
 
-function detectVolumeAnomalies(
+export function detectVolumeAnomalies(
   emailData?: {
     date: string;
     sent: number;
     delivered?: number;
     bounced?: number;
+    renderingFailures?: number;
   }[],
   smsData?: {
     date: string;
@@ -114,12 +121,31 @@ function detectVolumeAnomalies(
           )
         );
       }
+    }
 
-      // Delivery rate anomaly
+    // Delivery rate anomaly. Rendering failures never left SES, so exclude
+    // them from the denominator to match the Overview card's delivery rate
+    // (Delivery / (Send − RenderingFailure)). Gate on effective volume — a
+    // pp-delta on a few dozen sends is noise, not a deliverability signal.
+    const prevRenderingFailures = prev.reduce(
+      (s, d) => s + (d.renderingFailures ?? 0),
+      0
+    );
+    const currRenderingFailures = curr.reduce(
+      (s, d) => s + (d.renderingFailures ?? 0),
+      0
+    );
+    const prevEffectiveSent = Math.max(0, prevSent - prevRenderingFailures);
+    const currEffectiveSent = Math.max(0, currSent - currRenderingFailures);
+
+    if (
+      prevEffectiveSent >= MIN_VOLUME_FOR_DELIVERY_ANOMALY &&
+      currEffectiveSent >= MIN_VOLUME_FOR_DELIVERY_ANOMALY
+    ) {
       const prevDelivered = prev.reduce((s, d) => s + (d.delivered ?? 0), 0);
       const currDelivered = curr.reduce((s, d) => s + (d.delivered ?? 0), 0);
-      const prevDeliveryRate = (prevDelivered / prevSent) * 100;
-      const currDeliveryRate = (currDelivered / currSent) * 100;
+      const prevDeliveryRate = (prevDelivered / prevEffectiveSent) * 100;
+      const currDeliveryRate = (currDelivered / currEffectiveSent) * 100;
       const deliveryDrop = prevDeliveryRate - currDeliveryRate;
 
       if (deliveryDrop > 10) {

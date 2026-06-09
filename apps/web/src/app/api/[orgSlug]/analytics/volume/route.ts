@@ -74,6 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
               SES_METRICS.SEND,
               SES_METRICS.DELIVERY,
               SES_METRICS.BOUNCE,
+              SES_METRICS.RENDERING_FAILURE,
             ],
             period,
             startTime,
@@ -89,7 +90,7 @@ export async function GET(request: Request, context: RouteContext) {
       })
     );
 
-    const keys = ["sent", "delivered", "bounced"] as const;
+    const keys = ["sent", "delivered", "bounced", "renderingFailures"] as const;
     const dailyMap = new Map<string, Record<(typeof keys)[number], number>>();
 
     for (const metrics of metricsResults) {
@@ -104,6 +105,7 @@ export async function GET(request: Request, context: RouteContext) {
           metrics[SES_METRICS.SEND]?.[0]?.Values || [],
           metrics[SES_METRICS.DELIVERY]?.[0]?.Values || [],
           metrics[SES_METRICS.BOUNCE]?.[0]?.Values || [],
+          metrics[SES_METRICS.RENDERING_FAILURE]?.[0]?.Values || [],
         ],
         [...keys],
         timezone
@@ -114,11 +116,14 @@ export async function GET(request: Request, context: RouteContext) {
           sent: 0,
           delivered: 0,
           bounced: 0,
+          renderingFailures: 0,
         };
         dailyMap.set(dateStr, {
           sent: existing.sent + values.sent,
           delivered: existing.delivered + values.delivered,
           bounced: existing.bounced + values.bounced,
+          renderingFailures:
+            existing.renderingFailures + values.renderingFailures,
         });
       }
     }
@@ -136,6 +141,7 @@ export async function GET(request: Request, context: RouteContext) {
           sent: m.sent,
           delivered: m.delivered,
           bounced: m.bounced,
+          renderingFailures: m.renderingFailures,
         });
       }
     }
@@ -145,11 +151,13 @@ export async function GET(request: Request, context: RouteContext) {
       sent: 0,
       delivered: 0,
       bounced: 0,
+      renderingFailures: 0,
     }).map((d) => ({
       ...d,
       sent: Math.round(d.sent),
       delivered: Math.round(d.delivered),
       bounced: Math.round(d.bounced),
+      renderingFailures: Math.round(d.renderingFailures),
     }));
 
     return NextResponse.json(dataPoints);
