@@ -107,10 +107,11 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
   },
   url: false, // We use API Gateway, not function URLs
   permissions: [
-    // Allow creating/deleting EventBridge Scheduler schedules
+    // Allow creating/updating/deleting EventBridge Scheduler schedules
     {
       actions: [
         "scheduler:CreateSchedule",
+        "scheduler:UpdateSchedule",
         "scheduler:DeleteSchedule",
         "scheduler:GetSchedule",
       ],

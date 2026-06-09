@@ -204,6 +204,7 @@ export default $config({
         {
           actions: [
             "scheduler:CreateSchedule",
+            "scheduler:UpdateSchedule",
             "scheduler:DeleteSchedule",
             "scheduler:GetSchedule",
           ],
