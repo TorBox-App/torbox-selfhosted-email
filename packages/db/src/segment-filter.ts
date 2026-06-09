@@ -110,14 +110,14 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
         if (values.length === 0) {
           return sql`FALSE`;
         }
-        return sql`properties->>${propertyKey} = ANY(${values})`;
+        return sql`properties->>${propertyKey} = ANY(${sql.param(values)})`;
       }
       case "notInList": {
         const values = value as string[];
         if (values.length === 0) {
           return sql`TRUE`;
         }
-        return sql`properties->>${propertyKey} != ALL(${values})`;
+        return sql`properties->>${propertyKey} != ALL(${sql.param(values)})`;
       }
       default:
         return null;
@@ -162,14 +162,14 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
       if (values.length === 0) {
         return sql`FALSE`;
       }
-      return sql`${col} = ANY(${values})`;
+      return sql`${col} = ANY(${sql.param(values)})`;
     }
     case "notInList": {
       const values = value as string[];
       if (values.length === 0) {
         return sql`TRUE`;
       }
-      return sql`${col} != ALL(${values})`;
+      return sql`${col} != ALL(${sql.param(values)})`;
     }
     case "within": {
       const interval = validateInterval(value, unit);

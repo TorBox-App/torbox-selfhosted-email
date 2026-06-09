@@ -5,7 +5,7 @@
  * Replaces the in-memory JS evaluator with a single SQL-based engine.
  */
 
-import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { contact } from "./schema/contacts";
 import { type FilterCondition, segment } from "./schema/segments";
@@ -72,7 +72,7 @@ export async function contactIdsMatchingCondition(
   }
 
   const whereClause = and(
-    sql`${contact.id} = ANY(${contactIds})`,
+    inArray(contact.id, contactIds),
     eq(contact.organizationId, organizationId),
     conditionSQL as SQL
   );
