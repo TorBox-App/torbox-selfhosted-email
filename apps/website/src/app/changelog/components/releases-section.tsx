@@ -49,6 +49,23 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "Workflow Engine v2",
+    date: "June 2026",
+    icon: ShieldCheck,
+    iconColor:
+      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    title: "Reliability & Security Hardening",
+    items: [
+      "Fix: editing a scheduled workflow's schedule no longer fails with AccessDenied in production",
+      "Cross-org IDOR prevention on engagement resume — every workflow path scoped by organization",
+      "Role-based access control enforced on all workflow mutations",
+      "Stuck-execution recovery — a reaper automatically detects and recovers executions that stall mid-run",
+      "Atomic execution claims and schedule updates eliminate duplicate runs and lost edits under concurrency",
+      "Idempotent counters and hardened dead-letter queue transactions prevent double-counting and data loss",
+      "Cycle detection rejects workflow definitions that would loop indefinitely",
+    ],
+  },
+  {
     version: "CLI v2.22.0",
     date: "May 2026",
     icon: Search,
