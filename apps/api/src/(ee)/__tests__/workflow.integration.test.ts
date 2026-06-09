@@ -449,7 +449,10 @@ function createUpdateContactWorkflow() {
   };
 }
 
-function createDelayWorkflow(delayMinutes: number) {
+function createDelayWorkflow(
+  delayMinutes: number,
+  overrides?: Partial<typeof workflow.$inferInsert>
+) {
   const triggerId = "trigger-1";
   const delayId = "delay-1";
   const exitId = "exit-1";
@@ -500,6 +503,7 @@ function createDelayWorkflow(delayMinutes: number) {
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: testUser.id,
+    ...overrides,
   };
 }
 
@@ -1451,7 +1455,14 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           // This test verifies the fix for the race condition bug where simultaneous
           // triggers could both pass the check-then-insert and create duplicate executions.
           // The fix uses INSERT ... ON CONFLICT DO NOTHING with a partial unique index.
-          const wf = createSimpleWorkflow({ allowReentry: false });
+          //
+          // Use a delay-first workflow so the execution PARKS in `paused` (a status
+          // the partial unique index covers) for the whole trigger window. A simple
+          // trigger->exit workflow completes instantly, which closes the dedup window
+          // the moment the first execution finishes — under load a late trigger then
+          // creates a second (terminal-state) execution and the count flakes to 2.
+          // Parking keeps all 5 concurrent triggers contending for the one active row.
+          const wf = createDelayWorkflow(60, { allowReentry: false });
           await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
           createdWorkflowIds.push(wf.id);
 

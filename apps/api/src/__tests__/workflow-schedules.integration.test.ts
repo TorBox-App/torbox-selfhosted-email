@@ -30,7 +30,7 @@ import {
   user,
   workflow,
 } from "@wraps/db";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 // -----------------------------------------------------------------------------
 // SST Output Loading
@@ -254,6 +254,12 @@ beforeAll(async () => {
     });
 
   // Defensive: ensure no leftover schedule from a prior failed run.
+  await deleteScheduleSafe(expectedScheduleName);
+});
+
+// Clean slate after every test: a failed test must not leak a schedule that
+// makes the next test's enable hit a "schedule already exists" 500 (cascade).
+afterEach(async () => {
   await deleteScheduleSafe(expectedScheduleName);
 });
 
