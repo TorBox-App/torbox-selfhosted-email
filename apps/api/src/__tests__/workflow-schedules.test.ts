@@ -17,9 +17,12 @@ import {
   vi,
 } from "vitest";
 
+const mockUpdateWorkflowSchedule = vi.hoisted(() => vi.fn());
+
 vi.mock("../(ee)/services/workflow-scheduler", () => ({
   createNextWorkflowSchedule: vi.fn(),
   deleteWorkflowSchedule: vi.fn(),
+  updateWorkflowSchedule: mockUpdateWorkflowSchedule,
 }));
 
 vi.mock("../lib/logger", () => ({
@@ -31,6 +34,7 @@ import { workflowScheduleRoutes } from "../(ee)/routes/workflow-schedules";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
+  updateWorkflowSchedule,
 } from "../(ee)/services/workflow-scheduler";
 import type { AuthContext } from "../middleware/auth";
 
@@ -255,13 +259,8 @@ describe("Workflow schedule routes", () => {
     expect(deleteWorkflowSchedule).toHaveBeenCalledWith(testWorkflow.id);
   });
 
-  it("update deletes the old schedule then creates a new one", async () => {
-    (deleteWorkflowSchedule as ReturnType<typeof vi.fn>).mockResolvedValue(
-      undefined
-    );
-    (createNextWorkflowSchedule as ReturnType<typeof vi.fn>).mockResolvedValue(
-      "wraps-wf-schedule-new"
-    );
+  it("update atomically replaces the schedule via updateWorkflowSchedule", async () => {
+    mockUpdateWorkflowSchedule.mockResolvedValue("wraps-wf-schedule-new");
 
     const res = await putUpdate(app, testWorkflow.id, {
       cronExpression: "0 12 * * *",
@@ -273,19 +272,43 @@ describe("Workflow schedule routes", () => {
     expect(body.success).toBe(true);
     expect(body.scheduleName).toBe("wraps-wf-schedule-new");
 
-    expect(deleteWorkflowSchedule).toHaveBeenCalledWith(testWorkflow.id);
-    expect(createNextWorkflowSchedule).toHaveBeenCalledWith({
+    expect(updateWorkflowSchedule).toHaveBeenCalledWith({
       workflowId: testWorkflow.id,
       organizationId: testOrg.id,
       cronExpression: "0 12 * * *",
       timezone: "UTC",
     });
-    // Ordering: delete before create
-    const deleteOrder = (deleteWorkflowSchedule as ReturnType<typeof vi.fn>)
-      .mock.invocationCallOrder[0];
-    const createOrder = (createNextWorkflowSchedule as ReturnType<typeof vi.fn>)
-      .mock.invocationCallOrder[0];
-    expect(deleteOrder).toBeLessThan(createOrder);
+    // Must NOT use delete+create (no gap)
+    expect(deleteWorkflowSchedule).not.toHaveBeenCalled();
+    expect(createNextWorkflowSchedule).not.toHaveBeenCalled();
+  });
+
+  // Unit 28: schedule update uses UpdateScheduleCommand — no delete+create gap
+  it("update sends UpdateScheduleCommand with new cron — no DeleteScheduleCommand emitted (Unit 28)", async () => {
+    mockUpdateWorkflowSchedule.mockResolvedValue("wraps-wf-schedule-updated");
+
+    const res = await putUpdate(app, testWorkflow.id, {
+      cronExpression: "0 15 * * *",
+      timezone: "Europe/London",
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.scheduleName).toBe("wraps-wf-schedule-updated");
+
+    // Must use atomic update — not delete+create
+    expect(updateWorkflowSchedule).toHaveBeenCalledWith({
+      workflowId: testWorkflow.id,
+      organizationId: testOrg.id,
+      cronExpression: "0 15 * * *",
+      timezone: "Europe/London",
+    });
+
+    // Must NOT call deleteWorkflowSchedule (no gap window)
+    expect(deleteWorkflowSchedule).not.toHaveBeenCalled();
+    // Must NOT call createNextWorkflowSchedule
+    expect(createNextWorkflowSchedule).not.toHaveBeenCalled();
   });
 
   it("returns 404 when workflow belongs to a different org", async () => {

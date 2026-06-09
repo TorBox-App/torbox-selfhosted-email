@@ -26,6 +26,7 @@ import {
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { z } from "zod";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger } from "@/lib/logger";
@@ -184,9 +185,10 @@ async function callWorkflowScheduleApi(
   action: "enable" | "disable" | "update",
   body?: { cronExpression: string; timezone?: string }
 ): Promise<{ success: boolean; error?: string }> {
+  const log = createActionLogger("callWorkflowScheduleApi", {});
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) {
-    console.error("[workflow-schedule] NEXT_PUBLIC_API_URL not configured");
+    log.error("[workflow-schedule] NEXT_PUBLIC_API_URL not configured");
     return { success: false, error: "API URL not configured" };
   }
 
@@ -232,8 +234,9 @@ async function callWorkflowScheduleApi(
 
     if (!response.ok) {
       const text = await response.text();
-      console.error(
-        `[workflow-schedule] API ${action} failed for ${workflowId}: ${response.status} ${text}`
+      log.error(
+        { action, workflowId, status: response.status },
+        "[workflow-schedule] API action failed"
       );
       return { success: false, error: text };
     }
@@ -379,6 +382,8 @@ export async function getWorkflow(
 /**
  * Create a new workflow
  */
+const uuidSchema = z.string().uuid();
+
 export async function createWorkflow(
   organizationId: string,
   data: {
@@ -745,6 +750,10 @@ export async function deleteWorkflow(
   workflowId: string,
   organizationId: string
 ): Promise<DeleteWorkflowResult> {
+  if (!uuidSchema.safeParse(workflowId).success) {
+    return { success: false, error: "Invalid workflow ID" };
+  }
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -754,7 +763,7 @@ export async function deleteWorkflow(
       };
     }
     const permError = checkPermission(access.role, "workflows", ["delete"]);
-    if (permError) return permError;
+    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -850,6 +859,10 @@ export async function enableWorkflow(
   workflowId: string,
   organizationId: string
 ): Promise<EnableWorkflowResult> {
+  if (!uuidSchema.safeParse(workflowId).success) {
+    return { success: false, error: "Invalid workflow ID" };
+  }
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -859,7 +872,7 @@ export async function enableWorkflow(
       };
     }
     const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
+    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1087,6 +1100,10 @@ export async function disableWorkflow(
   workflowId: string,
   organizationId: string
 ): Promise<EnableWorkflowResult> {
+  if (!uuidSchema.safeParse(workflowId).success) {
+    return { success: false, error: "Invalid workflow ID" };
+  }
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -1096,7 +1113,7 @@ export async function disableWorkflow(
       };
     }
     const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
+    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1118,6 +1135,24 @@ export async function disableWorkflow(
 
     if (!existing) {
       return { success: false, error: "Workflow not found" };
+    }
+
+    // If schedule trigger, delete pending EventBridge schedule FIRST (best effort).
+    // Symmetric to enableWorkflow (create schedule first, then write DB status).
+    // If schedule deletion fails, log.warn and continue — the reconciler will clean up.
+    // If DB write fails after deletion, the reconciler recreates the schedule (acceptable tradeoff).
+    if (existing.triggerType === "schedule") {
+      try {
+        await callWorkflowScheduleApi(workflowId, organizationId, "disable");
+      } catch (scheduleError) {
+        const log = createActionLogger("disableWorkflow", {
+          orgSlug: organizationId,
+        });
+        log.warn(
+          { err: scheduleError, workflowId },
+          "Failed to delete EventBridge schedule (continuing with DB update)"
+        );
+      }
     }
 
     // Pause workflow + audit log in one transaction
@@ -1148,11 +1183,6 @@ export async function disableWorkflow(
         })
       );
     });
-
-    // If schedule trigger, delete pending EventBridge schedule (best effort)
-    if (existing.triggerType === "schedule") {
-      await callWorkflowScheduleApi(workflowId, organizationId, "disable");
-    }
 
     // Revalidate
     revalidatePath(`/${access.orgSlug}/automations`, "page");

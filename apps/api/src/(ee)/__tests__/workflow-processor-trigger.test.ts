@@ -6,82 +6,13 @@
  * duplicate execution conflict, and happy-path creation + enqueue.
  */
 
-import type { SQSEvent } from "aws-lambda";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock data factories
-// ─────────────────────────────────────────────────────────────────────────────
-
-function makeWorkflow(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "wf-1",
-    organizationId: "org-1",
-    name: "Test Workflow",
-    status: "enabled",
-    triggerType: "event",
-    triggerConfig: {},
-    awsAccountId: "aws-1",
-    allowReentry: false,
-    reentryDelaySeconds: null,
-    contactCooldownSeconds: null,
-    maxConcurrentExecutions: null,
-    steps: [
-      { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
-      {
-        id: "step-1",
-        type: "webhook",
-        config: {
-          type: "webhook",
-          url: "https://hook.example.com",
-          method: "POST",
-          headers: {},
-          body: {},
-        },
-      },
-    ],
-    transitions: [
-      {
-        id: "t1",
-        fromStepId: "trigger-1",
-        toStepId: "step-1",
-        condition: null,
-      },
-    ],
-    defaultFrom: null,
-    defaultFromName: null,
-    defaultReplyTo: null,
-    defaultSenderId: null,
-    totalExecutions: 0,
-    activeExecutions: 0,
-    completedExecutions: 0,
-    failedExecutions: 0,
-    droppedExecutions: 0,
-    lastTriggeredAt: null,
-    ...overrides,
-  };
-}
-
-function makeSQSEvent(...bodies: Record<string, unknown>[]): SQSEvent {
-  return {
-    Records: bodies.map((body, i) => ({
-      messageId: `msg-${i}`,
-      receiptHandle: `rh-${i}`,
-      body: JSON.stringify(body),
-      attributes: {
-        ApproximateReceiveCount: "1",
-        SentTimestamp: "0",
-        SenderId: "test",
-        ApproximateFirstReceiveTimestamp: "0",
-      },
-      messageAttributes: {},
-      md5OfBody: "",
-      eventSource: "aws:sqs",
-      eventSourceARN: "arn:aws:sqs:us-east-1:000:test",
-      awsRegion: "us-east-1",
-    })),
-  };
-}
+import {
+  makeExecution,
+  makeSQSEvent,
+  makeWorkflow,
+} from "./fixtures/workflow-fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-level mocks (before handler import)
@@ -630,5 +561,70 @@ describe("triggerWorkflow", () => {
       source: "api",
       userId: "u-1",
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// processScheduleTrigger truncation warning
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("processScheduleTrigger — truncation warning", () => {
+  const scheduleJob = {
+    type: "schedule-trigger" as const,
+    workflowId: "wf-1",
+    organizationId: "org-1",
+  };
+
+  it("emits log.warn when contact count equals MAX_CONTACTS_PER_TRIGGER (1000)", async () => {
+    const { log: mockLog } = await import("../../lib/logger");
+
+    // Workflow with schedule trigger
+    const wf = makeWorkflow({
+      triggerType: "schedule",
+      triggerConfig: { schedule: "0 9 * * *" },
+    });
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // Load workflow
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      // contacts query: return exactly 1000 contacts
+      const contacts = Array.from({ length: 1000 }, (_, i) => ({
+        id: `c-${i}`,
+      }));
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(contacts),
+          }),
+        }),
+      };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    mockEnqueueWorkflowStepBatch.mockResolvedValue(undefined);
+    mockCreateNextWorkflowSchedule.mockResolvedValue(undefined);
+
+    await handler(makeSQSEvent(scheduleJob));
+
+    // log.warn must have been called with a message about truncation and the workflowId
+    expect(mockLog.warn).toHaveBeenCalledWith(
+      expect.stringContaining("truncat"),
+      expect.objectContaining({ workflowId: "wf-1", contactCount: 1000 })
+    );
   });
 });

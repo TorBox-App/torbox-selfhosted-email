@@ -124,7 +124,79 @@ function validateStructure(
     }
   }
 
+  // DFS cycle detection: WHITE/GRAY/BLACK node coloring.
+  // WHITE = not visited, GRAY = in current path, BLACK = fully explored.
+  // A back-edge (GRAY node encountered) indicates a cycle.
+  const cycleError = detectCycles(steps, transitions);
+  if (cycleError) {
+    errors.push(cycleError);
+  }
+
   return errors;
+}
+
+/**
+ * Detect cycles in the workflow graph using DFS with WHITE/GRAY/BLACK coloring.
+ * Returns a ValidationError if a cycle or self-loop is detected, null otherwise.
+ */
+function detectCycles(
+  steps: WorkflowStep[],
+  transitions: WorkflowTransition[]
+): ValidationError | null {
+  // Build adjacency list
+  const adjacency = new Map<string, string[]>();
+  for (const step of steps) {
+    adjacency.set(step.id, []);
+  }
+  for (const t of transitions) {
+    // Self-loop: detected immediately
+    if (t.fromStepId === t.toStepId) {
+      return {
+        message: `Workflow contains a self-loop on step "${t.fromStepId}"`,
+        severity: "error",
+      };
+    }
+    const neighbors = adjacency.get(t.fromStepId);
+    if (neighbors) {
+      neighbors.push(t.toStepId);
+    }
+  }
+
+  // WHITE=0, GRAY=1, BLACK=2
+  const color = new Map<string, 0 | 1 | 2>();
+  for (const step of steps) {
+    color.set(step.id, 0);
+  }
+
+  function dfs(nodeId: string): boolean {
+    color.set(nodeId, 1); // GRAY: node is in current path
+    for (const neighbor of adjacency.get(nodeId) ?? []) {
+      const neighborColor = color.get(neighbor);
+      if (neighborColor === 1) {
+        // Back-edge to a GRAY node — cycle found
+        return true;
+      }
+      // WHITE node: recurse
+      if (neighborColor === 0 && dfs(neighbor)) {
+        return true;
+      }
+      // BLACK node: already fully explored, safe to skip
+    }
+    color.set(nodeId, 2); // BLACK: fully explored
+    return false;
+  }
+
+  for (const step of steps) {
+    if (color.get(step.id) === 0 && dfs(step.id)) {
+      return {
+        message:
+          "Workflow contains a cycle — steps cannot loop back to a previous step",
+        severity: "error",
+      };
+    }
+  }
+
+  return null;
 }
 
 function getReachableNodeIds(

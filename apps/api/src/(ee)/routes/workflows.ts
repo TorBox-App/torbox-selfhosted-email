@@ -348,7 +348,10 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
             contactEmail: t.Optional(t.String({ maxLength: 255 })),
             data: t.Optional(t.Object({}, { additionalProperties: true })),
           }),
-          { description: "List of contacts to trigger the workflow for" }
+          {
+            description: "List of contacts to trigger the workflow for",
+            maxItems: 1000,
+          }
         ),
         data: t.Optional(
           t.Object(

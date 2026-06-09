@@ -168,6 +168,23 @@ export function buildClickEvent(
   };
 }
 
+export function buildRejectEvent(
+  overrides: BaseOverrides & {
+    reason?: string;
+  } = {}
+) {
+  return {
+    ...baseEnvelope(overrides),
+    detail: {
+      eventType: "Reject" as const,
+      mail: makeMail(overrides.mail),
+      reject: {
+        reason: overrides.reason ?? "Bad content",
+      },
+    },
+  };
+}
+
 export function buildSuppressionEvent(
   overrides: BaseOverrides & {
     reason?: string;

@@ -5,9 +5,18 @@ import {
   organizationExtension,
   template,
   user,
+  workflow,
 } from "@wraps/db";
 import { eq, inArray } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { checkWorkflowReadiness } from "../(ee)/workflow-readiness";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,6 +179,54 @@ afterAll(async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("checkWorkflowReadiness", () => {
+  // Template IDs are derived from the workflow's send_email steps in the DB
+  // (Issue #16 — never from the client payload). Tests must seed a real workflow
+  // with the templates wired into its steps.
+  const createdWorkflowIds: string[] = [];
+
+  async function seedWorkflowWithTemplates(
+    workflowOrgId: string,
+    templateIds: string[]
+  ): Promise<string> {
+    const [wf] = await db
+      .insert(workflow)
+      .values({
+        organizationId: workflowOrgId,
+        name: "Readiness Template Test",
+        status: "draft",
+        triggerType: "event",
+        triggerConfig: {},
+        steps: [
+          {
+            id: "trigger-step",
+            type: "trigger",
+            name: "Trigger",
+            position: { x: 0, y: 0 },
+            config: { type: "trigger", triggerType: "event" },
+          },
+          ...templateIds.map((tid, i) => ({
+            id: `email-step-${i}`,
+            type: "send_email" as const,
+            name: "Send Email",
+            position: { x: 0, y: 200 + i * 100 },
+            config: { type: "send_email" as const, templateId: tid },
+          })),
+        ],
+        transitions: [],
+        createdBy: testUser.id,
+      })
+      .returning();
+    createdWorkflowIds.push(wf!.id);
+    return wf!.id;
+  }
+
+  afterEach(async () => {
+    if (createdWorkflowIds.length > 0) {
+      await db.delete(workflow).where(inArray(workflow.id, createdWorkflowIds));
+      createdWorkflowIds.length = 0;
+    }
+  });
+
   it("returns success with empty checks when payload has no template IDs or fields", async () => {
     const result = await checkWorkflowReadiness("wf-any", testOrganization.id, {
       templateIds: [],
@@ -193,11 +250,14 @@ describe("checkWorkflowReadiness", () => {
 
   describe("template checks", () => {
     it("passes templates_exist when all template IDs are found", async () => {
-      const result = await checkWorkflowReadiness(
-        "wf-any",
-        testOrganization.id,
-        { templateIds: [publishedTemplate.id], conditionFields: [] }
-      );
+      const wfId = await seedWorkflowWithTemplates(testOrganization.id, [
+        publishedTemplate.id,
+      ]);
+
+      const result = await checkWorkflowReadiness(wfId, testOrganization.id, {
+        templateIds: [],
+        conditionFields: [],
+      });
 
       expect(result.success).toBe(true);
       if (!result.success) return;
@@ -207,11 +267,14 @@ describe("checkWorkflowReadiness", () => {
     });
 
     it("fails templates_exist when a template ID does not exist", async () => {
-      const result = await checkWorkflowReadiness(
-        "wf-any",
-        testOrganization.id,
-        { templateIds: ["non-existent-template-id"], conditionFields: [] }
-      );
+      const wfId = await seedWorkflowWithTemplates(testOrganization.id, [
+        "non-existent-template-id",
+      ]);
+
+      const result = await checkWorkflowReadiness(wfId, testOrganization.id, {
+        templateIds: [],
+        conditionFields: [],
+      });
 
       expect(result.success).toBe(true);
       if (!result.success) return;
@@ -222,11 +285,14 @@ describe("checkWorkflowReadiness", () => {
     });
 
     it("warns templates_published when a template is not published", async () => {
-      const result = await checkWorkflowReadiness(
-        "wf-any",
-        testOrganization.id,
-        { templateIds: [draftTemplate.id], conditionFields: [] }
-      );
+      const wfId = await seedWorkflowWithTemplates(testOrganization.id, [
+        draftTemplate.id,
+      ]);
+
+      const result = await checkWorkflowReadiness(wfId, testOrganization.id, {
+        templateIds: [],
+        conditionFields: [],
+      });
 
       expect(result.success).toBe(true);
       if (!result.success) return;
@@ -237,11 +303,14 @@ describe("checkWorkflowReadiness", () => {
     });
 
     it("passes templates_published when all templates are published", async () => {
-      const result = await checkWorkflowReadiness(
-        "wf-any",
-        testOrganization.id,
-        { templateIds: [publishedTemplate.id], conditionFields: [] }
-      );
+      const wfId = await seedWorkflowWithTemplates(testOrganization.id, [
+        publishedTemplate.id,
+      ]);
+
+      const result = await checkWorkflowReadiness(wfId, testOrganization.id, {
+        templateIds: [],
+        conditionFields: [],
+      });
 
       expect(result.success).toBe(true);
       if (!result.success) return;
@@ -251,8 +320,9 @@ describe("checkWorkflowReadiness", () => {
     });
 
     it("does not expose templates from a different organization (IDOR guard)", async () => {
-      // publishedTemplate belongs to testOrganization. Query with a different
-      // org ID — the template should appear as "not found" even though its ID is valid.
+      // publishedTemplate belongs to testOrganization. A workflow in a DIFFERENT
+      // org references it via a send_email step — the template must appear as
+      // "not found" because checkTemplates scopes the lookup to differentOrgId.
       const differentOrgId = "test-readiness-org-2";
       await db
         .insert(organization)
@@ -265,13 +335,6 @@ describe("checkWorkflowReadiness", () => {
           metadata: null,
         })
         .onConflictDoNothing();
-      await db
-        .insert(user)
-        .values(testUser)
-        .onConflictDoUpdate({
-          target: user.id,
-          set: { updatedAt: new Date() },
-        });
       await db
         .insert(member)
         .values({
@@ -287,8 +350,12 @@ describe("checkWorkflowReadiness", () => {
         .values({ organizationId: differentOrgId })
         .onConflictDoNothing();
 
-      const result = await checkWorkflowReadiness("wf-any", differentOrgId, {
-        templateIds: [publishedTemplate.id],
+      const wfId = await seedWorkflowWithTemplates(differentOrgId, [
+        publishedTemplate.id,
+      ]);
+
+      const result = await checkWorkflowReadiness(wfId, differentOrgId, {
+        templateIds: [],
         conditionFields: [],
       });
 
@@ -298,6 +365,69 @@ describe("checkWorkflowReadiness", () => {
       // Template belongs to testOrganization, not differentOrgId → not found
       const check = result.checks.find((c) => c.id === "templates_exist");
       expect(check?.status).toBe("fail");
+    });
+  });
+
+  // ─── Unit 22: Template IDs derived from DB, not client payload ────────────
+  describe("template ID derivation from DB (Issue #16)", () => {
+    it("ignores client-supplied templateIds and uses template IDs from workflow steps in DB", async () => {
+      // Create a workflow with a send_email step referencing publishedTemplate
+      const [wf] = await db
+        .insert(workflow)
+        .values({
+          organizationId: testOrganization.id,
+          name: "Readiness DB Derivation Test",
+          status: "draft",
+          triggerType: "event",
+          triggerConfig: {},
+          steps: [
+            {
+              id: "trigger-step",
+              type: "trigger",
+              name: "Trigger",
+              position: { x: 0, y: 0 },
+              config: { type: "trigger", triggerType: "event" },
+            },
+            {
+              id: "email-step",
+              type: "send_email",
+              name: "Send Email",
+              position: { x: 0, y: 200 },
+              config: {
+                type: "send_email",
+                templateId: publishedTemplate.id,
+              },
+            },
+          ],
+          transitions: [],
+          createdBy: testUser.id,
+        })
+        .returning();
+
+      try {
+        // Client supplies a DIFFERENT (non-existent) template ID in payload
+        // If derivation works from DB, this client-supplied ID should be IGNORED
+        const result = await checkWorkflowReadiness(
+          wf!.id,
+          testOrganization.id,
+          {
+            templateIds: ["client-spoofed-fake-template-id"],
+            conditionFields: [],
+          }
+        );
+
+        expect(result.success).toBe(true);
+        if (!result.success) return;
+
+        // templates_exist check should PASS because the DB-derived template exists
+        // (not fail because the client-supplied fake ID doesn't exist)
+        const existCheck = result.checks.find(
+          (c) => c.id === "templates_exist"
+        );
+        expect(existCheck?.status).toBe("pass");
+      } finally {
+        await db.delete(workflow).where(eq(workflow.id, wf!.id));
+      }
     });
   });
 

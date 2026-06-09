@@ -72,6 +72,26 @@ function isSESPermissionError(error: unknown): boolean {
   );
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const SENSITIVE_KEY_PATTERN =
+  /password|token|secret|api_key|apikey|credit_card|card_number|cvv|ssn|auth|authorization|bearer|private_key/i;
+
+function isTransientDbError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code ?? "";
+  // Postgres connection/shutdown/concurrency errors that are safe to retry
+  return (
+    code.startsWith("08") || // connection exceptions
+    code === "57P01" || // admin_shutdown
+    code === "57P02" || // crash_shutdown
+    code === "40001" || // serialization_failure
+    code === "40P01" // deadlock_detected
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SEND EMAIL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -458,23 +478,43 @@ export async function handleSendEmail(
     throw error;
   }
 
-  // Record the send in messageSend table
-  await db.insert(messageSend).values({
-    organizationId,
-    contactId: contactRecord.id,
-    awsAccountId: wf.awsAccountId,
-    channel: "email",
-    sourceType: "workflow",
-    workflowExecutionId: execution.id,
-    recipient: contactRecord.email,
-    subject,
-    from: fromAddress,
-    fromName: fromName || null,
-    emailTemplateId: config.templateId,
-    messageId,
-    status: "sent",
-    sentAt: new Date(),
-  });
+  // Record the send in messageSend table — retry only on transient DB errors
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await db.insert(messageSend).values({
+        organizationId,
+        contactId: contactRecord.id,
+        awsAccountId: wf.awsAccountId,
+        channel: "email",
+        sourceType: "workflow",
+        workflowExecutionId: execution.id,
+        recipient: contactRecord.email,
+        subject,
+        from: fromAddress,
+        fromName: fromName || null,
+        emailTemplateId: config.templateId,
+        messageId,
+        status: "sent",
+        sentAt: new Date(),
+      });
+      break;
+    } catch (dbError) {
+      if (attempt < 2 && isTransientDbError(dbError)) {
+        await sleep(100 * 2 ** attempt);
+      } else {
+        log.error(
+          "Workflow: failed to record messageSend after 3 attempts",
+          dbError,
+          {
+            executionId: execution.id,
+            messageId,
+            channel: "email",
+          }
+        );
+        throw dbError;
+      }
+    }
+  }
 
   // Track first email sent (must await in Lambda)
   await trackFirstEmailSent(
@@ -742,22 +782,42 @@ export async function handleSendSms(
     messageId: smsMessageId,
   });
 
-  // Record the send in messageSend table (parity with email sends)
-  await db.insert(messageSend).values({
-    organizationId,
-    contactId: contactRecord.id,
-    awsAccountId: wf.awsAccountId,
-    channel: "sms",
-    sourceType: "workflow",
-    workflowExecutionId: execution.id,
-    recipient: contactRecord.phone,
-    subject: null,
-    from: senderId || null,
-    fromName: null,
-    messageId: smsMessageId,
-    status: "sent",
-    sentAt: new Date(),
-  });
+  // Record the send in messageSend table (parity with email sends) — retry only on transient DB errors
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await db.insert(messageSend).values({
+        organizationId,
+        contactId: contactRecord.id,
+        awsAccountId: wf.awsAccountId,
+        channel: "sms",
+        sourceType: "workflow",
+        workflowExecutionId: execution.id,
+        recipient: contactRecord.phone,
+        subject: null,
+        from: senderId || null,
+        fromName: null,
+        messageId: smsMessageId,
+        status: "sent",
+        sentAt: new Date(),
+      });
+      break;
+    } catch (dbError) {
+      if (attempt < 2 && isTransientDbError(dbError)) {
+        await sleep(100 * 2 ** attempt);
+      } else {
+        log.error(
+          "Workflow: failed to record messageSend after 3 attempts",
+          dbError,
+          {
+            executionId: execution.id,
+            messageId: smsMessageId,
+            channel: "sms",
+          }
+        );
+        throw dbError;
+      }
+    }
+  }
 
   // Update contact SMS metrics
   await db
@@ -1087,11 +1147,28 @@ export async function handleWebhook(
     };
   }
 
+  const allProperties =
+    (contactRecord.properties as Record<string, unknown>) ?? {};
+  const droppedKeys = Object.keys(allProperties).filter((key) =>
+    SENSITIVE_KEY_PATTERN.test(key)
+  );
+  if (droppedKeys.length > 0) {
+    log.warn("Webhook: sensitive contact property keys omitted from payload", {
+      executionId: execution.id,
+      droppedKeys,
+    });
+  }
+  const filteredProperties = Object.fromEntries(
+    Object.entries(allProperties).filter(
+      ([key]) => !SENSITIVE_KEY_PATTERN.test(key)
+    )
+  );
+
   const body = {
     contact: {
       id: contactRecord.id,
       email: contactRecord.email,
-      properties: contactRecord.properties,
+      properties: filteredProperties,
     },
     execution: {
       id: execution.id,

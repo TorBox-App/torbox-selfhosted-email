@@ -161,7 +161,7 @@ describe("Webhook: unsupported event types", () => {
     setupWithMessage();
   });
 
-  it.each(["Send", "Reject", "DeliveryDelay"])(
+  it.each(["Send", "DeliveryDelay"])(
     "returns 200 ignored for '%s' event type",
     async (eventType) => {
       const event = buildUnsupportedEvent(eventType);

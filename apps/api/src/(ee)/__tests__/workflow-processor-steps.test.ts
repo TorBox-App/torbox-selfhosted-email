@@ -7,125 +7,14 @@
  * subscribe_topic, unsubscribe_topic.
  */
 
-import type { SQSEvent } from "aws-lambda";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock data factories
-// ─────────────────────────────────────────────────────────────────────────────
-
-function makeExecution(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "exec-1",
-    workflowId: "wf-1",
-    contactId: "contact-1",
-    organizationId: "org-1",
-    status: "active",
-    currentStepId: "step-1",
-    triggerData: {},
-    startedAt: new Date(),
-    completedAt: null,
-    error: null,
-    errorStepId: null,
-    allowReentry: false,
-    waitingForEvent: null,
-    waitTimeoutAt: null,
-    waitTimeoutSchedulerName: null,
-    delaySchedulerName: null,
-    nextStepScheduledAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeContact(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "contact-1",
-    email: "test@example.com",
-    phone: null,
-    firstName: "Test",
-    lastName: "User",
-    company: null,
-    jobTitle: null,
-    organizationId: "org-1",
-    emailStatus: "active",
-    status: "active",
-    properties: {},
-    preferredChannel: null,
-    ...overrides,
-  };
-}
-
-function makeWorkflow(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "wf-1",
-    organizationId: "org-1",
-    name: "Test Workflow",
-    status: "enabled",
-    triggerType: "event",
-    triggerConfig: {},
-    awsAccountId: "aws-1",
-    allowReentry: false,
-    reentryDelaySeconds: null,
-    contactCooldownSeconds: null,
-    maxConcurrentExecutions: null,
-    steps: [
-      { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
-      {
-        id: "step-1",
-        type: "webhook",
-        config: {
-          type: "webhook",
-          url: "https://hook.example.com",
-          method: "POST",
-          headers: {},
-          body: {},
-        },
-      },
-    ],
-    transitions: [
-      {
-        id: "t1",
-        fromStepId: "trigger-1",
-        toStepId: "step-1",
-        condition: null,
-      },
-    ],
-    defaultFrom: "noreply@test.com",
-    defaultFromName: "Test",
-    defaultReplyTo: null,
-    defaultSenderId: null,
-    totalExecutions: 0,
-    activeExecutions: 0,
-    completedExecutions: 0,
-    failedExecutions: 0,
-    droppedExecutions: 0,
-    lastTriggeredAt: null,
-    ...overrides,
-  };
-}
-
-function makeSQSEvent(...bodies: Record<string, unknown>[]): SQSEvent {
-  return {
-    Records: bodies.map((body, i) => ({
-      messageId: `msg-${i}`,
-      receiptHandle: `rh-${i}`,
-      body: JSON.stringify(body),
-      attributes: {
-        ApproximateReceiveCount: "1",
-        SentTimestamp: "0",
-        SenderId: "test",
-        ApproximateFirstReceiveTimestamp: "0",
-      },
-      messageAttributes: {},
-      md5OfBody: "",
-      eventSource: "aws:sqs",
-      eventSourceARN: "arn:aws:sqs:us-east-1:000:test",
-      awsRegion: "us-east-1",
-    })),
-  };
-}
+import {
+  makeContact,
+  makeExecution,
+  makeSQSEvent,
+  makeWorkflow,
+} from "./fixtures/workflow-fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-level mocks
@@ -294,7 +183,12 @@ function setupProcessStep(opts: {
   stepExecStatus?: string;
 }) {
   const exec = makeExecution(opts.execution);
-  const wf = makeWorkflow(opts.workflow);
+  // Steps tests need a valid defaultFrom for send_email/send_sms steps
+  const wf = makeWorkflow({
+    defaultFrom: "noreply@test.com",
+    defaultFromName: "Test",
+    ...opts.workflow,
+  });
   const ct = makeContact(opts.contact);
 
   mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
@@ -601,6 +495,8 @@ describe("handleSendEmail", () => {
     });
     const ct = makeContact(opts.contact);
     const wf = makeWorkflow({
+      defaultFrom: "noreply@test.com",
+      defaultFromName: "Test",
       steps: [
         { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
         emailStep,
@@ -2166,5 +2062,480 @@ describe("Topic handlers", () => {
       })
     );
     expect(mockDbUpdate).toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: messageSend INSERT retry logic
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("handleSendEmail — messageSend INSERT retry", () => {
+  const emailStep = {
+    id: "step-email",
+    type: "send_email",
+    config: {
+      type: "send_email",
+      templateId: "tmpl-1",
+      from: null,
+      fromName: null,
+      replyTo: null,
+    },
+  };
+
+  const emailJob = {
+    type: "execute" as const,
+    executionId: "exec-1",
+    stepId: "step-email",
+    organizationId: "org-1",
+  };
+
+  it("retries messageSend INSERT up to 3 times when DB throws on first attempt", async () => {
+    const exec = makeExecution({ currentStepId: "step-email" });
+    const ct = makeContact({});
+    const wf = makeWorkflow({
+      defaultFrom: "noreply@test.com",
+      defaultFromName: "Test",
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        emailStep,
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-email",
+          condition: null,
+        },
+      ],
+    });
+    const defaultTemplate = {
+      id: "tmpl-1",
+      name: "Welcome",
+      subject: "Hello {{firstName}}",
+      compiledHtml: "<h1>Hi {{firstName}}</h1>",
+      emailType: "marketing",
+      sesTemplateName: "ses-tmpl-1",
+    };
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      const chain = (rows: unknown[]) => ({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      });
+      switch (selectCallCount) {
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultFrom: wf.defaultFrom,
+              defaultFromName: wf.defaultFromName,
+              defaultReplyTo: wf.defaultReplyTo,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
+        case 5:
+          return chain([defaultTemplate]);
+        case 6:
+          return chain([{ name: "Test Org" }]);
+        default:
+          return chain([]);
+      }
+    });
+
+    // insert call 1: step execution claim (succeeds)
+    // insert call 2+: messageSend — fail first attempt, succeed on second
+    let insertCallCount = 0;
+    let messageSendAttempts = 0;
+    mockDbInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) {
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoUpdate: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-email",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      // messageSend insert: fail on first attempt, succeed on retry
+      messageSendAttempts++;
+      if (messageSendAttempts === 1) {
+        return {
+          values: vi
+            .fn()
+            .mockRejectedValue(
+              Object.assign(new Error("connection failure"), { code: "08006" })
+            ),
+        };
+      }
+      return { values: vi.fn().mockResolvedValue(undefined) };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([exec]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(emailJob));
+
+    // messageSend should have been attempted at least twice (1 failure + 1 success)
+    // and no more than 3 times (the max retry count)
+    expect(messageSendAttempts).toBeGreaterThanOrEqual(2);
+    expect(messageSendAttempts).toBeLessThanOrEqual(3);
+    // The step should ultimately complete (mockDbUpdate called for metrics update)
+    expect(sesSendCalls).toHaveLength(1);
+  });
+
+  it("calls log.error and rethrows after 3 failed messageSend INSERT attempts (retry exhaustion)", async () => {
+    const exec = makeExecution({ currentStepId: "step-email" });
+    const ct = makeContact({});
+    const wf = makeWorkflow({
+      defaultFrom: "noreply@test.com",
+      defaultFromName: "Test",
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        emailStep,
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-email",
+          condition: null,
+        },
+      ],
+    });
+    const defaultTemplate = {
+      id: "tmpl-1",
+      name: "Welcome",
+      subject: "Hello {{firstName}}",
+      compiledHtml: "<h1>Hi {{firstName}}</h1>",
+      emailType: "marketing",
+      sesTemplateName: "ses-tmpl-1",
+    };
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      const chain = (rows: unknown[]) => ({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      });
+      switch (selectCallCount) {
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultFrom: wf.defaultFrom,
+              defaultFromName: wf.defaultFromName,
+              defaultReplyTo: wf.defaultReplyTo,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
+        case 5:
+          return chain([defaultTemplate]);
+        case 6:
+          return chain([{ name: "Test Org" }]);
+        default:
+          return chain([]);
+      }
+    });
+
+    let insertCallCount = 0;
+    let messageSendAttempts = 0;
+    mockDbInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) {
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoUpdate: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-email",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      // All messageSend INSERT attempts fail with a transient Postgres error
+      messageSendAttempts++;
+      return {
+        values: vi
+          .fn()
+          .mockRejectedValue(
+            Object.assign(new Error("connection failure"), { code: "08006" })
+          ),
+      };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([exec]),
+        }),
+      }),
+    });
+
+    const { log: mockLog } = await import("../../lib/logger");
+    await handler(makeSQSEvent(emailJob));
+
+    // All 3 attempts must have been made
+    expect(messageSendAttempts).toBe(3);
+    // log.error must be called to record the permanent failure
+    expect(mockLog.error).toHaveBeenCalledWith(
+      expect.stringMatching(/messageSend.*3|3.*attempt|retry.*exhaust/i),
+      expect.anything(),
+      expect.objectContaining({ executionId: exec.id, channel: "email" })
+    );
+  });
+});
+
+describe("handleSendSms — messageSend INSERT retry", () => {
+  const smsStep = {
+    id: "step-sms",
+    type: "send_sms",
+    config: { type: "send_sms", body: "Hello!", senderId: null },
+  };
+
+  const smsJob = {
+    type: "execute" as const,
+    executionId: "exec-1",
+    stepId: "step-sms",
+    organizationId: "org-1",
+  };
+
+  it("retries messageSend INSERT up to 3 times when DB throws on first attempt", async () => {
+    const exec = makeExecution({ currentStepId: "step-sms" });
+    const ct = makeContact({ phone: "+15551234567" });
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        smsStep,
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-sms",
+          condition: null,
+        },
+      ],
+    });
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      const chain = (rows: unknown[]) => ({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      });
+      switch (selectCallCount) {
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultSenderId: wf.defaultSenderId,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
+        default:
+          return chain([]);
+      }
+    });
+
+    // insert call 1: step execution claim (succeeds)
+    // insert call 2+: messageSend — fail first attempt, succeed on second
+    let insertCallCount = 0;
+    let messageSendAttempts = 0;
+    mockDbInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) {
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoUpdate: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-sms",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      messageSendAttempts++;
+      if (messageSendAttempts === 1) {
+        return {
+          values: vi
+            .fn()
+            .mockRejectedValue(
+              Object.assign(new Error("connection failure"), { code: "08006" })
+            ),
+        };
+      }
+      return { values: vi.fn().mockResolvedValue(undefined) };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([exec]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(smsJob));
+
+    // messageSend should have been attempted at least twice (1 failure + 1 success)
+    // and no more than 3 times (the max retry count)
+    expect(messageSendAttempts).toBeGreaterThanOrEqual(2);
+    expect(messageSendAttempts).toBeLessThanOrEqual(3);
+    // SMS should have been sent
+    expect(smsSendCalls).toHaveLength(1);
+  });
+
+  it("calls log.error and rethrows after 3 failed messageSend INSERT attempts (retry exhaustion)", async () => {
+    const exec = makeExecution({ currentStepId: "step-sms" });
+    const ct = makeContact({ phone: "+15551234567" });
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        smsStep,
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-sms",
+          condition: null,
+        },
+      ],
+    });
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      const chain = (rows: unknown[]) => ({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      });
+      switch (selectCallCount) {
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultSenderId: wf.defaultSenderId,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
+        default:
+          return chain([]);
+      }
+    });
+
+    let insertCallCount = 0;
+    let messageSendAttempts = 0;
+    mockDbInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) {
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoUpdate: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-sms",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      // All messageSend INSERT attempts fail with a transient Postgres error
+      messageSendAttempts++;
+      return {
+        values: vi
+          .fn()
+          .mockRejectedValue(
+            Object.assign(new Error("connection failure"), { code: "08006" })
+          ),
+      };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([exec]),
+        }),
+      }),
+    });
+
+    const { log: mockLog } = await import("../../lib/logger");
+    await handler(makeSQSEvent(smsJob));
+
+    // All 3 attempts must have been made
+    expect(messageSendAttempts).toBe(3);
+    // log.error must be called to record the permanent failure
+    expect(mockLog.error).toHaveBeenCalledWith(
+      expect.stringMatching(/messageSend.*3|3.*attempt|retry.*exhaust/i),
+      expect.anything(),
+      expect.objectContaining({ executionId: exec.id, channel: "sms" })
+    );
   });
 });

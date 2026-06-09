@@ -16,6 +16,7 @@ import { createAuthenticatedRoutes, getAuth } from "../../middleware/auth";
 import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
+  updateWorkflowSchedule,
 } from "../services/workflow-scheduler";
 
 /**
@@ -173,11 +174,8 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
       }
 
       try {
-        // Delete old schedule first
-        await deleteWorkflowSchedule(params.workflowId);
-
-        // Create new schedule with updated cron
-        const scheduleName = await createNextWorkflowSchedule({
+        // Atomic update — no gap window between delete and create
+        const scheduleName = await updateWorkflowSchedule({
           workflowId: params.workflowId,
           organizationId: auth.organizationId,
           cronExpression: body.cronExpression,

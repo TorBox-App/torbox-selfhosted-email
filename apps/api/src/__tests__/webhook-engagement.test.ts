@@ -347,6 +347,63 @@ describe("Webhook: Engagement", () => {
     expect(deleteScheduledStep).toHaveBeenCalledTimes(1);
   });
 
+  // ─── Unit 23: org-scoped resumeWaitingExecutions (hardened) ──────────────
+  // The mock now returns BOTH same-org and cross-org executions (simulating the
+  // absence of a SQL WHERE clause). The application-level org filter in
+  // resumeWaitingExecutions must discard the cross-org row. Removing the
+  // application filter causes two enqueue calls → test fails.
+  it("resumes only executions belonging to the same organizationId (cross-org IDOR guard)", async () => {
+    const sameOrgExecution = {
+      id: "exec-same-org",
+      organizationId: mockAwsAccount.organizationId, // "org-1"
+      contactId: "contact-1",
+      status: "waiting",
+      waitingForEvent: "email_engagement:ses-msg-001",
+      waitTimeoutSchedulerName: null,
+    };
+    // A cross-org execution with the same waitingForEvent key — must never be resumed
+    const crossOrgExecution = {
+      id: "exec-cross-org",
+      organizationId: "org-ATTACKER",
+      contactId: "contact-attacker",
+      status: "waiting",
+      waitingForEvent: "email_engagement:ses-msg-001",
+      waitTimeoutSchedulerName: null,
+    };
+
+    // Mock returns BOTH executions — application-level filter must reject the cross-org one
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return selectChainLimited([mockAwsAccount]);
+      if (selectCallCount === 2)
+        return selectChainLimited([{ ...mockMessageSend }]);
+      // resumeWaitingExecutions: mock returns both orgs (bypasses SQL filter)
+      return selectChainUnlimited([sameOrgExecution, crossOrgExecution]);
+    });
+    mockDbUpdate.mockImplementation(() => updateChain());
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    const event = buildOpenEvent();
+    await sendWebhookEvent(app, event);
+
+    // Only the same-org execution must be resumed — cross-org execution discarded by app filter
+    expect(enqueueWorkflowStep).toHaveBeenCalledTimes(1);
+    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionId: "exec-same-org",
+        organizationId: mockAwsAccount.organizationId,
+      })
+    );
+    expect(enqueueWorkflowStep).not.toHaveBeenCalledWith(
+      expect.objectContaining({ executionId: "exec-cross-org" })
+    );
+  });
+
   it("does NOT call deleteScheduledStep when waitTimeoutSchedulerName is null (open event)", async () => {
     setupWebhookMocks({
       waitingExecutions: [

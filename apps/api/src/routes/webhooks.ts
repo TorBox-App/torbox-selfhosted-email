@@ -16,7 +16,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, inArray, isNull, sql } from "drizzle-orm";
+import { and, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { trackFirstEmailDelivered } from "../lib/activation-tracking";
 import { log } from "../lib/logger";
@@ -325,6 +325,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           await processOpen(
             message,
             messageId,
+            account.organizationId,
             event.detail.open?.timestamp,
             event.detail.open?.userAgent,
             event.detail.open?.ipAddress
@@ -335,6 +336,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           await processClick(
             message,
             messageId,
+            account.organizationId,
             event.detail.click?.timestamp,
             event.detail.click?.link,
             event.detail.click?.userAgent,
@@ -346,6 +348,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           await processBounce(
             message,
             messageId,
+            account.organizationId,
             event.detail.bounce?.bounceType,
             event.detail.bounce?.bounceSubType,
             event.detail.bounce?.timestamp
@@ -353,7 +356,12 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           break;
 
         case "Complaint":
-          await processComplaint(message, event.detail.complaint?.timestamp);
+          await processComplaint(
+            message,
+            messageId,
+            account.organizationId,
+            event.detail.complaint?.timestamp
+          );
           break;
 
         case "Suppressed":
@@ -366,9 +374,14 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             await resumeWaitingExecutions(
               messageId,
               message.contactId,
-              "bounced"
+              "bounced",
+              account.organizationId
             );
           }
+          break;
+
+        case "Reject":
+          await processReject(message, messageId, account.organizationId);
           break;
 
         case "Rendering Failure":
@@ -446,6 +459,16 @@ async function processDelivery(
   message: MessageRecord,
   timestamp?: string
 ): Promise<void> {
+  // Status precedence: bounced/complained cannot be overwritten by a delivery event
+  // (e.g., delayed delivery notification arriving after a bounce)
+  if (message.status === "bounced" || message.status === "complained") {
+    log.info("Webhook: delivery skipped — status precedence", {
+      messageId: message.id,
+      currentStatus: message.status,
+    });
+    return;
+  }
+
   const deliveredAt = timestamp ? new Date(timestamp) : new Date();
 
   // Update messageSend status
@@ -473,6 +496,7 @@ async function processDelivery(
 async function processOpen(
   message: MessageRecord,
   messageId: string,
+  organizationId: string,
   timestamp?: string,
   userAgent?: string,
   ipAddress?: string
@@ -525,7 +549,12 @@ async function processOpen(
       .where(eq(contact.id, message.contactId));
 
     // Resume waiting workflow executions
-    await resumeWaitingExecutions(messageId, message.contactId, "opened");
+    await resumeWaitingExecutions(
+      messageId,
+      message.contactId,
+      "opened",
+      organizationId
+    );
   }
 
   log.info("Webhook: message opened", { messageId: message.id });
@@ -534,6 +563,7 @@ async function processOpen(
 async function processClick(
   message: MessageRecord,
   messageId: string,
+  organizationId: string,
   timestamp?: string,
   link?: string,
   userAgent?: string,
@@ -588,7 +618,12 @@ async function processClick(
       .where(eq(contact.id, message.contactId));
 
     // Resume waiting workflow executions
-    await resumeWaitingExecutions(messageId, message.contactId, "clicked");
+    await resumeWaitingExecutions(
+      messageId,
+      message.contactId,
+      "clicked",
+      organizationId
+    );
   }
 
   log.info("Webhook: message clicked", { messageId: message.id });
@@ -597,6 +632,7 @@ async function processClick(
 async function processBounce(
   message: MessageRecord,
   messageId: string,
+  organizationId: string,
   bounceType?: string,
   bounceSubType?: string,
   timestamp?: string
@@ -604,7 +640,12 @@ async function processBounce(
   if (bounceSubType === "Suppressed") {
     await processSuppression(message, "Suppressed", timestamp);
     if (message.contactId) {
-      await resumeWaitingExecutions(messageId, message.contactId, "bounced");
+      await resumeWaitingExecutions(
+        messageId,
+        message.contactId,
+        "bounced",
+        organizationId
+      );
     }
     return;
   }
@@ -645,7 +686,12 @@ async function processBounce(
 
   // Resume waiting workflow executions (any bounce type)
   if (message.contactId) {
-    await resumeWaitingExecutions(messageId, message.contactId, "bounced");
+    await resumeWaitingExecutions(
+      messageId,
+      message.contactId,
+      "bounced",
+      organizationId
+    );
   }
 
   log.info("Webhook: message bounced", {
@@ -657,6 +703,8 @@ async function processBounce(
 
 async function processComplaint(
   message: MessageRecord,
+  messageId: string,
+  organizationId: string,
   timestamp?: string
 ): Promise<void> {
   const complainedAt = timestamp ? new Date(timestamp) : new Date();
@@ -691,7 +739,57 @@ async function processComplaint(
       .where(eq(contact.id, message.contactId));
   }
 
+  // Resume waiting workflow executions — complaint is treated like a bounce
+  if (message.contactId) {
+    await resumeWaitingExecutions(
+      messageId,
+      message.contactId,
+      "bounced",
+      organizationId
+    );
+  }
+
   log.info("Webhook: message complained", { messageId: message.id });
+}
+
+async function processReject(
+  message: MessageRecord,
+  messageId: string,
+  organizationId: string
+): Promise<void> {
+  // Status precedence: bounced/complained cannot be overwritten by a reject event
+  if (message.status === "bounced" || message.status === "complained") {
+    log.info("Webhook: reject skipped — status precedence", {
+      messageId: message.id,
+      currentStatus: message.status,
+    });
+    return;
+  }
+
+  // SES rejected the message before attempting delivery (e.g., bad content, account reputation)
+  await db
+    .update(messageSend)
+    .set({
+      status: "failed",
+    })
+    .where(
+      and(
+        eq(messageSend.id, message.id),
+        notInArray(messageSend.status, ["bounced", "complained"])
+      )
+    );
+
+  // Resume any workflow executions waiting for engagement on this message
+  if (message.contactId) {
+    await resumeWaitingExecutions(
+      messageId,
+      message.contactId,
+      "bounced",
+      organizationId
+    );
+  }
+
+  log.info("Webhook: message rejected by SES", { messageId: message.id });
 }
 
 async function processSuppression(
@@ -807,12 +905,14 @@ async function processRenderingFailure(
 }
 
 /**
- * Resume workflow executions waiting for email engagement
+ * Resume workflow executions waiting for email engagement.
+ * organizationId is required to prevent cross-org IDOR (Issue #17).
  */
 async function resumeWaitingExecutions(
   messageId: string,
   contactId: string,
-  branch: "opened" | "clicked" | "bounced"
+  branch: "opened" | "clicked" | "bounced",
+  organizationId: string
 ): Promise<void> {
   // Find executions waiting for this email engagement
   const waitingEvent = `email_engagement:${messageId}`;
@@ -822,13 +922,21 @@ async function resumeWaitingExecutions(
     .from(workflowExecution)
     .where(
       and(
+        eq(workflowExecution.organizationId, organizationId),
         eq(workflowExecution.contactId, contactId),
         eq(workflowExecution.status, "waiting"),
         eq(workflowExecution.waitingForEvent, waitingEvent)
       )
     );
 
-  for (const execution of waitingExecutions) {
+  // Defense-in-depth: filter by organizationId in application code as well as SQL.
+  // This prevents cross-org execution resumption even if the SQL WHERE clause is
+  // bypassed or future callers omit the org param.
+  const safeExecutions = waitingExecutions.filter(
+    (e) => e.organizationId === organizationId
+  );
+
+  for (const execution of safeExecutions) {
     log.info("Webhook: resuming workflow execution", {
       executionId: execution.id,
       branch,

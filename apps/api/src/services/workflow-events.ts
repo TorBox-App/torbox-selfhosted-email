@@ -19,7 +19,6 @@ import { and, inArray, sql } from "drizzle-orm";
 import { log } from "../lib/logger";
 import {
   deleteScheduledStep,
-  enqueueWorkflowStep,
   enqueueWorkflowStepBatch,
   type WorkflowJob,
 } from "./workflow-queue";
@@ -72,15 +71,16 @@ export async function emitWorkflowEvent(params: {
       )
     );
 
-  // Trigger each matching workflow
-  for (const wf of matchingWorkflows) {
-    await enqueueWorkflowStep({
+  // Trigger each matching workflow — batch to avoid N sequential SQS calls
+  if (matchingWorkflows.length > 0) {
+    const jobs: WorkflowJob[] = matchingWorkflows.map((wf) => ({
       type: "trigger",
       workflowId: wf.id,
       contactId,
       organizationId,
       eventData: eventData || {},
-    });
+    }));
+    await enqueueWorkflowStepBatch(jobs);
   }
 
   if (matchingWorkflows.length > 0) {
@@ -131,17 +131,15 @@ export async function emitContactCreated(params: {
       )
     );
 
-  for (const wf of matchingByTrigger) {
-    await enqueueWorkflowStep({
+  if (matchingByTrigger.length > 0) {
+    const jobs: WorkflowJob[] = matchingByTrigger.map((wf) => ({
       type: "trigger",
       workflowId: wf.id,
       contactId: params.contactId,
       organizationId: params.organizationId,
       eventData,
-    });
-  }
-
-  if (matchingByTrigger.length > 0) {
+    }));
+    await enqueueWorkflowStepBatch(jobs);
     log.info("contact_created trigger matched workflows", {
       contactId: params.contactId,
       workflowCount: matchingByTrigger.length,
@@ -193,17 +191,15 @@ export async function emitContactUpdated(params: {
       )
     );
 
-  for (const wf of matchingByTrigger) {
-    await enqueueWorkflowStep({
+  if (matchingByTrigger.length > 0) {
+    const jobs: WorkflowJob[] = matchingByTrigger.map((wf) => ({
       type: "trigger",
       workflowId: wf.id,
       contactId: params.contactId,
       organizationId: params.organizationId,
       eventData,
-    });
-  }
-
-  if (matchingByTrigger.length > 0) {
+    }));
+    await enqueueWorkflowStepBatch(jobs);
     log.info("contact_updated trigger matched workflows", {
       contactId: params.contactId,
       workflowCount: matchingByTrigger.length,
@@ -250,21 +246,20 @@ export async function emitTopicSubscribed(params: {
       )
     );
 
-  for (const wf of matchingByTrigger) {
-    await enqueueWorkflowStep({
+  if (matchingByTrigger.length > 0) {
+    const topicEventData = {
+      topicId: params.topicId,
+      topicName: params.topicName,
+      subscribedAt: new Date().toISOString(),
+    };
+    const jobs: WorkflowJob[] = matchingByTrigger.map((wf) => ({
       type: "trigger",
       workflowId: wf.id,
       contactId: params.contactId,
       organizationId: params.organizationId,
-      eventData: {
-        topicId: params.topicId,
-        topicName: params.topicName,
-        subscribedAt: new Date().toISOString(),
-      },
-    });
-  }
-
-  if (matchingByTrigger.length > 0) {
+      eventData: topicEventData,
+    }));
+    await enqueueWorkflowStepBatch(jobs);
     log.info("topic_subscribed trigger matched workflows", {
       workflowCount: matchingByTrigger.length,
     });
@@ -320,21 +315,20 @@ export async function emitTopicUnsubscribed(params: {
       )
     );
 
-  for (const wf of matchingByTrigger) {
-    await enqueueWorkflowStep({
+  if (matchingByTrigger.length > 0) {
+    const topicEventData = {
+      topicId: params.topicId,
+      topicName: params.topicName,
+      unsubscribedAt: new Date().toISOString(),
+    };
+    const jobs: WorkflowJob[] = matchingByTrigger.map((wf) => ({
       type: "trigger",
       workflowId: wf.id,
       contactId: params.contactId,
       organizationId: params.organizationId,
-      eventData: {
-        topicId: params.topicId,
-        topicName: params.topicName,
-        unsubscribedAt: new Date().toISOString(),
-      },
-    });
-  }
-
-  if (matchingByTrigger.length > 0) {
+      eventData: topicEventData,
+    }));
+    await enqueueWorkflowStepBatch(jobs);
     log.info("topic_unsubscribed trigger matched workflows", {
       workflowCount: matchingByTrigger.length,
     });

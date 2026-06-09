@@ -103,7 +103,12 @@ export async function enqueueWorkflowStep(job: WorkflowJob): Promise<void> {
 }
 
 /**
- * Enqueue multiple workflow steps in batch (up to 10 per SQS SendMessageBatch call)
+ * Enqueue multiple workflow steps in batch (up to 10 per SQS SendMessageBatch call).
+ *
+ * On partial failure, AWS returns HTTP 200 with Failed[] entries. Per AWS guidance:
+ * - SenderFault=true (permanent): bad message content — throw immediately, do not retry.
+ * - SenderFault=false (transient): retry only the failed entries with exponential backoff
+ *   rather than re-queuing the whole upstream message (which would duplicate successes).
  */
 export async function enqueueWorkflowStepBatch(
   jobs: WorkflowJob[]
@@ -122,24 +127,68 @@ export async function enqueueWorkflowStepBatch(
     return;
   }
 
-  // SQS SendMessageBatch supports max 10 messages per call — fire all chunks in parallel
-  const chunks: WorkflowJob[][] = [];
-  for (let i = 0; i < jobs.length; i += 10) {
-    chunks.push(jobs.slice(i, i + 10));
-  }
-  await Promise.all(
-    chunks.map((chunk, chunkIdx) =>
-      sqs.send(
+  // Send one chunk at a time, collecting transient failures for retry.
+  // Chunks are sent sequentially (not in parallel) so a partial failure in
+  // one chunk doesn't mask failures in another.
+  let pending = jobs;
+  const MAX_ATTEMPTS = 3;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, 100 * 2 ** (attempt - 1))
+      );
+    }
+
+    const transientRetry: WorkflowJob[] = [];
+
+    // Process in chunks of 10
+    for (let i = 0; i < pending.length; i += 10) {
+      const chunk = pending.slice(i, i + 10);
+      const result = await sqs.send(
         new SendMessageBatchCommand({
           QueueUrl: WORKFLOW_QUEUE_URL,
           Entries: chunk.map((job, idx) => ({
-            Id: String(chunkIdx * 10 + idx),
+            Id: String(idx),
             MessageBody: JSON.stringify(job),
           })),
         })
-      )
-    )
-  );
+      );
+
+      const failed = result.Failed ?? [];
+      if (failed.length === 0) continue;
+
+      const permanent = failed.filter((f) => f.SenderFault);
+      if (permanent.length > 0) {
+        throw new Error(
+          `SQS batch permanently failed: ${permanent.length} message(s) with sender fault. Codes: ${permanent.map((f) => f.Code).join(", ")}`
+        );
+      }
+
+      // Collect transient failures — map Id back to the job in this chunk
+      for (const f of failed) {
+        const job = chunk[Number(f.Id)];
+        if (job) transientRetry.push(job);
+      }
+    }
+
+    if (transientRetry.length === 0) return;
+
+    if (attempt === MAX_ATTEMPTS - 1) {
+      throw new Error(
+        `SQS batch failed after ${MAX_ATTEMPTS} attempts: ${transientRetry.length} transient error(s) unresolved`
+      );
+    }
+
+    log.warn(
+      "SQS batch partial failure (transient) — retrying failed entries",
+      {
+        attempt: attempt + 1,
+        retryCount: transientRetry.length,
+      }
+    );
+    pending = transientRetry;
+  }
 }
 
 /**

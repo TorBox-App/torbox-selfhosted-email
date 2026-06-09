@@ -17,7 +17,7 @@ import {
   workflowExecution,
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
-import { and, sql } from "drizzle-orm";
+import { and, desc, notInArray, sql } from "drizzle-orm";
 
 import { flushLogger, log } from "../../lib/logger";
 import type { WorkflowJob } from "../../services/workflow-queue";
@@ -118,6 +118,7 @@ async function handleTrigger(job: Extract<WorkflowJob, { type: "trigger" }>) {
         sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`
       )
     )
+    .orderBy(desc(workflowExecution.createdAt))
     .limit(1);
 
   if (executions[0]) {
@@ -189,40 +190,54 @@ async function handleScheduleTrigger(
  *
  * Duplicated from workflow-processor to avoid pulling in SES/Pinpoint/Handlebars
  * transitive dependencies into this lightweight Lambda.
+ *
+ * Both updates (execution status + workflow counter) run inside a transaction so
+ * they succeed or fail atomically — a partial failure cannot leave counters drifted.
  */
 async function failExecution(
   executionId: string,
   error: string,
   stepId: string
 ): Promise<void> {
-  const [execution] = await db
-    .update(workflowExecution)
-    .set({
-      status: "failed",
-      error,
-      errorStepId: stepId,
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(workflowExecution.id, executionId))
-    .returning();
-
-  if (execution) {
-    await db
-      .update(workflow)
+  await db.transaction(async (tx) => {
+    const [execution] = await tx
+      .update(workflowExecution)
       .set({
-        activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
-        failedExecutions: sql`${workflow.failedExecutions} + 1`,
+        status: "failed",
+        error,
+        errorStepId: stepId,
+        completedAt: new Date(),
+        updatedAt: new Date(),
       })
-      .where(eq(workflow.id, execution.workflowId));
+      .where(
+        and(
+          eq(workflowExecution.id, executionId),
+          notInArray(workflowExecution.status, [
+            "completed",
+            "failed",
+            "cancelled",
+          ])
+        )
+      )
+      .returning();
 
-    log.warn("DLQ: execution marked as failed", {
-      executionId,
-      workflowId: execution.workflowId,
-      error,
-      stepId,
-    });
-  } else {
-    log.warn("DLQ: failExecution returned no rows", { executionId });
-  }
+    if (execution) {
+      await tx
+        .update(workflow)
+        .set({
+          activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
+          failedExecutions: sql`${workflow.failedExecutions} + 1`,
+        })
+        .where(eq(workflow.id, execution.workflowId));
+
+      log.warn("DLQ: execution marked as failed", {
+        executionId,
+        workflowId: execution.workflowId,
+        error,
+        stepId,
+      });
+    } else {
+      log.warn("DLQ: failExecution returned no rows", { executionId });
+    }
+  });
 }

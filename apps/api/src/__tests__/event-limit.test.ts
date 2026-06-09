@@ -17,6 +17,7 @@ import {
 } from "@wraps/db";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -121,6 +122,11 @@ function postEvent(app: ReturnType<typeof createTestApp>) {
 }
 
 describe("event limit enforcement (real middleware, real DB)", () => {
+  // WRAPS_LICENSE_KEY in the shell env makes isSelfHosted() return true, bypassing limit checks.
+  // Stub it to empty so enforceEventLimit actually runs during these tests.
+  beforeEach(() => vi.stubEnv("WRAPS_LICENSE_KEY", ""));
+  afterEach(() => vi.unstubAllEnvs());
+
   beforeAll(async () => {
     await db
       .insert(user)

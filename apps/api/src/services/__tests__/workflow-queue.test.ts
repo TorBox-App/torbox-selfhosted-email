@@ -297,6 +297,75 @@ describe("enqueueWorkflowStepBatch behavior", () => {
       ])
     ).rejects.toThrow("WORKFLOW_QUEUE_URL not configured");
   });
+
+  it("should throw when SQS returns Failed[] with SenderFault: false (transient)", async () => {
+    process.env.WORKFLOW_QUEUE_URL =
+      "https://sqs.us-east-1.amazonaws.com/123/test-queue";
+    process.env.NODE_ENV = "production";
+
+    const mockSend = vi.fn().mockResolvedValue({
+      Successful: [],
+      Failed: [
+        {
+          Id: "0",
+          SenderFault: false,
+          Code: "InternalError",
+          Message: "SQS internal error",
+        },
+      ],
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+
+    await expect(
+      enqueueWorkflowStepBatch([
+        {
+          type: "trigger",
+          workflowId: "wf-1",
+          contactId: "c-1",
+          organizationId: "org-1",
+        },
+      ])
+    ).rejects.toThrow(/SQS batch.*failed/i);
+  });
+
+  it("should not throw when SQS returns all Successful entries", async () => {
+    process.env.WORKFLOW_QUEUE_URL =
+      "https://sqs.us-east-1.amazonaws.com/123/test-queue";
+    process.env.NODE_ENV = "production";
+
+    const mockSend = vi.fn().mockResolvedValue({
+      Successful: [{ Id: "0", MessageId: "msg-1", MD5OfMessageBody: "abc" }],
+      Failed: [],
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+
+    await expect(
+      enqueueWorkflowStepBatch([
+        {
+          type: "trigger",
+          workflowId: "wf-1",
+          contactId: "c-1",
+          organizationId: "org-1",
+        },
+      ])
+    ).resolves.toBeUndefined();
+  });
 });
 
 describe("scheduleWorkflowStep behavior", () => {
@@ -365,6 +434,295 @@ describe("scheduleWaitTimeout behavior", () => {
     });
 
     expect(name).toContain("wraps-wf-to");
+  });
+});
+
+// =============================================================================
+// enqueueWorkflowStepBatch — partial failure retry logic
+// =============================================================================
+
+describe("enqueueWorkflowStepBatch — partial failure retry logic", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    process.env = {
+      ...originalEnv,
+      WORKFLOW_QUEUE_URL:
+        "https://sqs.us-east-1.amazonaws.com/123456/test-queue",
+      NODE_ENV: "production",
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env = originalEnv;
+  });
+
+  it("throws immediately on permanent failure (SenderFault=true) without retrying", async () => {
+    const mockSend = vi.fn().mockResolvedValue({
+      Successful: [],
+      Failed: [
+        {
+          Id: "0",
+          SenderFault: true,
+          Code: "InvalidParameterValue",
+          Message: "Message is too large",
+        },
+      ],
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch([
+      {
+        type: "trigger",
+        workflowId: "wf-1",
+        contactId: "c-1",
+        organizationId: "org-1",
+      },
+    ]);
+    // Attach rejection handler before advancing timers to avoid unhandled rejection warning
+    const expectation = expect(promise).rejects.toThrow(/permanently failed/);
+    await vi.runAllTimersAsync();
+    await expectation;
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves without error when transient failure succeeds on first retry", async () => {
+    let callCount = 0;
+    const mockSend = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          Successful: [],
+          Failed: [{ Id: "0", SenderFault: false, Code: "InternalError" }],
+        });
+      }
+      return Promise.resolve({
+        Successful: [{ Id: "0", MessageId: "msg-ok" }],
+        Failed: [],
+      });
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch([
+      {
+        type: "trigger",
+        workflowId: "wf-1",
+        contactId: "c-1",
+        organizationId: "org-1",
+      },
+    ]);
+    await vi.runAllTimersAsync();
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws after exhausting all 3 attempts on persistent transient failure", async () => {
+    const mockSend = vi.fn().mockResolvedValue({
+      Successful: [],
+      Failed: [{ Id: "0", SenderFault: false, Code: "InternalError" }],
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch([
+      {
+        type: "trigger",
+        workflowId: "wf-1",
+        contactId: "c-1",
+        organizationId: "org-1",
+      },
+    ]);
+    // Attach rejection handler before advancing timers to avoid unhandled rejection warning
+    const expectation = expect(promise).rejects.toThrow(
+      /failed after 3 attempts/
+    );
+    await vi.runAllTimersAsync();
+    await expectation;
+    expect(mockSend).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries only the specific failed job IDs, not the successful ones", async () => {
+    const job1 = {
+      type: "trigger" as const,
+      workflowId: "wf-1",
+      contactId: "c-1",
+      organizationId: "org-1",
+    };
+    const job2 = {
+      type: "trigger" as const,
+      workflowId: "wf-2",
+      contactId: "c-2",
+      organizationId: "org-1",
+    };
+    const job3 = {
+      type: "trigger" as const,
+      workflowId: "wf-3",
+      contactId: "c-3",
+      organizationId: "org-1",
+    };
+
+    let callCount = 0;
+    const MockBatchCommand = vi.fn();
+    const mockSend = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) {
+        // job2 (index 1) fails transiently; job1 and job3 succeed
+        return Promise.resolve({
+          Successful: [
+            { Id: "0", MessageId: "msg-1" },
+            { Id: "2", MessageId: "msg-3" },
+          ],
+          Failed: [{ Id: "1", SenderFault: false, Code: "InternalError" }],
+        });
+      }
+      return Promise.resolve({
+        Successful: [{ Id: "0", MessageId: "msg-retry" }],
+        Failed: [],
+      });
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: MockBatchCommand,
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch([job1, job2, job3]);
+    await vi.runAllTimersAsync();
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(mockSend).toHaveBeenCalledTimes(2);
+
+    // The retry call (2nd constructor call) should contain only job2 — not job1 or job3
+    const retryParams = MockBatchCommand.mock.calls[1][0] as {
+      Entries: { Id: string; MessageBody: string }[];
+    };
+    expect(retryParams.Entries).toHaveLength(1);
+    expect(JSON.parse(retryParams.Entries[0].MessageBody)).toEqual(job2);
+  });
+
+  it("logs a warning with attempt number and retry count on transient retry", async () => {
+    const mockWarn = vi.fn();
+    vi.doMock("../../lib/logger", () => ({
+      log: { info: vi.fn(), warn: mockWarn, error: vi.fn() },
+    }));
+
+    let callCount = 0;
+    const mockSend = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          Successful: [],
+          Failed: [{ Id: "0", SenderFault: false, Code: "InternalError" }],
+        });
+      }
+      return Promise.resolve({
+        Successful: [{ Id: "0", MessageId: "msg-ok" }],
+        Failed: [],
+      });
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: vi.fn(),
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch([
+      {
+        type: "trigger",
+        workflowId: "wf-1",
+        contactId: "c-1",
+        organizationId: "org-1",
+      },
+    ]);
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.stringContaining("retrying"),
+      expect.objectContaining({ attempt: 1, retryCount: 1 })
+    );
+  });
+
+  it("chunks >10 jobs correctly and only retries failures from each chunk", async () => {
+    const jobs = Array.from({ length: 12 }, (_, i) => ({
+      type: "trigger" as const,
+      workflowId: `wf-${i}`,
+      contactId: `c-${i}`,
+      organizationId: "org-1",
+    }));
+
+    let callCount = 0;
+    const MockBatchCommand = vi.fn();
+    const mockSend = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) {
+        // First chunk (jobs 0-9): job at index 3 fails transiently
+        return Promise.resolve({
+          Successful: [0, 1, 2, 4, 5, 6, 7, 8, 9].map((i) => ({
+            Id: String(i),
+            MessageId: `msg-${i}`,
+          })),
+          Failed: [{ Id: "3", SenderFault: false, Code: "InternalError" }],
+        });
+      }
+      // Second chunk (jobs 10-11) and retry: all succeed
+      return Promise.resolve({
+        Successful: [{ Id: "0", MessageId: "msg-ok" }],
+        Failed: [],
+      });
+    });
+    vi.doMock("@aws-sdk/client-sqs", () => ({
+      SQSClient: class {
+        send = mockSend;
+      },
+      SendMessageBatchCommand: MockBatchCommand,
+      SendMessageCommand: vi.fn(),
+    }));
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    const promise = enqueueWorkflowStepBatch(jobs);
+    await vi.runAllTimersAsync();
+
+    await expect(promise).resolves.toBeUndefined();
+    // chunk1 + chunk2 + retry-of-failed = 3 SQS calls
+    expect(mockSend).toHaveBeenCalledTimes(3);
+
+    // The retry call (3rd constructor call) should contain only jobs[3]
+    const retryParams = MockBatchCommand.mock.calls[2][0] as {
+      Entries: { Id: string; MessageBody: string }[];
+    };
+    expect(retryParams.Entries).toHaveLength(1);
+    expect(JSON.parse(retryParams.Entries[0].MessageBody)).toEqual(jobs[3]);
   });
 });
 

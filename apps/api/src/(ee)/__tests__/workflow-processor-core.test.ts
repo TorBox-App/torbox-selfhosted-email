@@ -9,196 +9,20 @@
  *   4. Webhook step execution
  */
 
-import type { SQSEvent } from "aws-lambda";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock data factories
-// ─────────────────────────────────────────────────────────────────────────────
-
-function makeWorkflow(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "wf-1",
-    organizationId: "org-1",
-    name: "Test Workflow",
-    status: "enabled",
-    triggerType: "schedule",
-    triggerConfig: { schedule: "0 9 * * 1", timezone: "UTC" },
-    awsAccountId: "aws-1",
-    allowReentry: false,
-    reentryDelaySeconds: null,
-    contactCooldownSeconds: null,
-    maxConcurrentExecutions: null,
-    steps: [
-      { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
-      {
-        id: "step-1",
-        type: "webhook",
-        config: {
-          type: "webhook",
-          url: "https://hook.example.com",
-          method: "POST",
-          headers: {},
-          body: {},
-        },
-      },
-    ],
-    transitions: [
-      {
-        id: "t1",
-        fromStepId: "trigger-1",
-        toStepId: "step-1",
-        condition: null,
-      },
-    ],
-    defaultFrom: null,
-    defaultFromName: null,
-    defaultReplyTo: null,
-    defaultSenderId: null,
-    totalExecutions: 0,
-    activeExecutions: 0,
-    completedExecutions: 0,
-    failedExecutions: 0,
-    droppedExecutions: 0,
-    lastTriggeredAt: null,
-    ...overrides,
-  };
-}
-
-function makeExecution(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "exec-1",
-    workflowId: "wf-1",
-    contactId: "contact-1",
-    organizationId: "org-1",
-    status: "active",
-    currentStepId: "step-1",
-    triggerData: {},
-    startedAt: new Date(),
-    completedAt: null,
-    error: null,
-    errorStepId: null,
-    allowReentry: false,
-    waitingForEvent: null,
-    waitTimeoutAt: null,
-    waitTimeoutSchedulerName: null,
-    delaySchedulerName: null,
-    nextStepScheduledAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeContact(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "contact-1",
-    email: "test@example.com",
-    phone: null,
-    firstName: "Test",
-    lastName: "User",
-    company: null,
-    jobTitle: null,
-    organizationId: "org-1",
-    emailStatus: "active",
-    status: "active",
-    properties: {},
-    preferredChannel: null,
-    ...overrides,
-  };
-}
-
-function makeSQSEvent(...bodies: Record<string, unknown>[]): SQSEvent {
-  return {
-    Records: bodies.map((body, i) => ({
-      messageId: `msg-${i}`,
-      receiptHandle: `rh-${i}`,
-      body: JSON.stringify(body),
-      attributes: {
-        ApproximateReceiveCount: "1",
-        SentTimestamp: "0",
-        SenderId: "test",
-        ApproximateFirstReceiveTimestamp: "0",
-      },
-      messageAttributes: {},
-      md5OfBody: "",
-      eventSource: "aws:sqs",
-      eventSourceARN: "arn:aws:sqs:us-east-1:000:test",
-      awsRegion: "us-east-1",
-    })),
-  };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Drizzle chain helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** db.select().from().where().limit() */
-function selectChain(rows: unknown[]) {
-  return vi.fn().mockReturnValue({
-    from: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
-  });
-}
-
-/** db.select().from().where().orderBy().limit() */
-function selectOrderByChain(rows: unknown[]) {
-  return vi.fn().mockReturnValue({
-    from: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        orderBy: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue(rows),
-        }),
-        limit: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
-  });
-}
-
-/** db.update().set().where() — void return */
-function updateChainVoid() {
-  return vi.fn().mockReturnValue({
-    set: vi.fn().mockReturnValue({
-      where: vi.fn().mockResolvedValue(undefined),
-    }),
-  });
-}
-
-/** db.update().set().where().returning() */
-function updateChainReturning(rows: unknown[]) {
-  return vi.fn().mockReturnValue({
-    set: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
-  });
-}
-
-/** db.insert().values().onConflictDoNothing().returning() */
-function insertChainConflictDoNothing(rows: unknown[]) {
-  return vi.fn().mockReturnValue({
-    values: vi.fn().mockReturnValue({
-      onConflictDoNothing: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
-  });
-}
-
-/** db.insert().values().onConflictDoUpdate().returning() */
-function insertChainConflictDoUpdate(rows: unknown[]) {
-  return vi.fn().mockReturnValue({
-    values: vi.fn().mockReturnValue({
-      onConflictDoUpdate: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
-  });
-}
+import {
+  insertChainConflictDoNothing,
+  insertChainConflictDoUpdate,
+  makeContact,
+  makeExecution,
+  makeSQSEvent,
+  makeWorkflow,
+  selectChain,
+  selectOrderByChain,
+  updateChainReturning,
+  updateChainVoid,
+} from "./fixtures/workflow-fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-level mocks (before handler import)
@@ -352,7 +176,11 @@ describe("Schedule Trigger Fan-out", () => {
     wfOverrides: Record<string, unknown> = {},
     contacts: { id: string }[] = [{ id: "c-1" }, { id: "c-2" }, { id: "c-3" }]
   ) {
-    const wf = makeWorkflow(wfOverrides);
+    const wf = makeWorkflow({
+      triggerType: "schedule",
+      triggerConfig: { schedule: "0 9 * * 1", timezone: "UTC" },
+      ...wfOverrides,
+    });
 
     // 1st select: load workflow
     // 2nd select: load contacts
@@ -414,6 +242,7 @@ describe("Schedule Trigger Fan-out", () => {
 
     // Workflow with segment
     const wf = makeWorkflow({
+      triggerType: "schedule",
       triggerConfig: {
         schedule: "0 9 * * 1",
         timezone: "UTC",
@@ -1753,5 +1582,101 @@ describe("Step retry clears stale error", () => {
     ).set as Record<string, unknown>;
     expect(setObj).toHaveProperty("error", null);
     expect(setObj).toHaveProperty("completedAt", null);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: resumeExecution deleteScheduledStep resilience (Unit 12)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("resumeExecution deleteScheduledStep resilience", () => {
+  // Unit 12: resumeExecution completes successfully even when deleteScheduledStep throws
+  it("completes successfully even when deleteScheduledStep throws", async () => {
+    const { log } = await import("../../lib/logger");
+
+    // Full reset to eliminate any state from previous tests
+    vi.resetAllMocks();
+    mockDbTransaction.mockImplementation(async (callback: Function) =>
+      callback({
+        select: mockDbSelect,
+        update: mockDbUpdate,
+        insert: mockDbInsert,
+      })
+    );
+
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: { type: "webhook", url: "https://x.com", method: "POST" },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
+
+    const claimedExecution = makeExecution({
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: "sched-timeout-will-throw",
+    });
+
+    // Atomic claim succeeds
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([claimedExecution]),
+        }),
+      }),
+    }));
+
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    // deleteScheduledStep throws (simulates ResourceNotFoundException when schedule already deleted)
+    mockDeleteScheduledStep.mockImplementation(() => {
+      throw new Error("ResourceNotFoundException: Schedule not found");
+    });
+
+    // Should NOT throw — the try/catch must swallow the error
+    const result = await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "default",
+      })
+    );
+
+    // Handler must not report this as a batch item failure
+    expect(result.batchItemFailures).toEqual([]);
+
+    // deleteScheduledStep was attempted
+    expect(mockDeleteScheduledStep).toHaveBeenCalledWith(
+      "sched-timeout-will-throw"
+    );
+
+    // A warn log must have been emitted for the swallowed error
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /delete.*scheduler|scheduler.*fail|timeout.*scheduler/i
+      ),
+      expect.anything()
+    );
   });
 });

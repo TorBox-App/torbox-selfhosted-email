@@ -1073,3 +1073,57 @@ describe("Workflow Validation - Complex Workflows", () => {
     expect(result.isValid).toBe(true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CYCLE DETECTION TESTS (Chunk 2 — Items 16 & 17)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Workflow Validation - Cycle Detection", () => {
+  // Unit 16: validateWorkflow returns error when steps form a cycle A→B→C→A
+  it("returns an error when steps form a cycle A→B→C→A", () => {
+    const steps: WorkflowStep[] = [
+      createTriggerStep(),
+      createWebhookStep({ id: "step-a", name: "A" }),
+      createWebhookStep({ id: "step-b", name: "B" }),
+      createWebhookStep({ id: "step-c", name: "C" }),
+    ];
+    const transitions: WorkflowTransition[] = [
+      createTransition("trigger-1", "step-a"),
+      createTransition("step-a", "step-b"),
+      createTransition("step-b", "step-c"),
+      createTransition("step-c", "step-a"), // cycle: C → A
+    ];
+
+    const result = validateWorkflow(steps, transitions);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        severity: "error",
+        message: expect.stringMatching(/cycle|loop/i),
+      })
+    );
+  });
+
+  // Unit 17: validateWorkflow returns error for self-loop A→A
+  it("returns an error for self-loop A→A", () => {
+    const steps: WorkflowStep[] = [
+      createTriggerStep(),
+      createWebhookStep({ id: "step-a", name: "A" }),
+    ];
+    const transitions: WorkflowTransition[] = [
+      createTransition("trigger-1", "step-a"),
+      createTransition("step-a", "step-a"), // self-loop
+    ];
+
+    const result = validateWorkflow(steps, transitions);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        severity: "error",
+        message: expect.stringMatching(/cycle|loop|self/i),
+      })
+    );
+  });
+});

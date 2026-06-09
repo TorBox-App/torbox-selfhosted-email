@@ -12,10 +12,11 @@ import {
   DeleteScheduleCommand,
   GetScheduleCommand,
   SchedulerClient,
+  UpdateScheduleCommand,
 } from "@aws-sdk/client-scheduler";
 import { db, eq, type TriggerConfig, workflow } from "@wraps/db";
 import { Cron } from "croner";
-import { and } from "drizzle-orm";
+import { and, lt, sql } from "drizzle-orm";
 
 import { awsDefaults } from "../../lib/aws-defaults";
 import { log } from "../../lib/logger";
@@ -149,6 +150,95 @@ export async function deleteWorkflowSchedule(
 }
 
 /**
+ * Atomically update the cron expression for a pending workflow schedule.
+ *
+ * Uses UpdateScheduleCommand instead of delete+create to avoid the race window
+ * where no schedule exists between the two operations.
+ */
+export async function updateWorkflowSchedule(params: {
+  workflowId: string;
+  organizationId: string;
+  cronExpression: string;
+  timezone?: string;
+}): Promise<string | null> {
+  const { workflowId, organizationId, cronExpression, timezone } = params;
+
+  const cron = new Cron(cronExpression, { timezone: timezone || "UTC" });
+  const nextRun = cron.nextRun();
+
+  if (!nextRun) {
+    log.warn("Scheduler: no future run time, schedule not updated", {
+      workflowId,
+      cronExpression,
+    });
+    return null;
+  }
+
+  const scheduleName = getScheduleName(workflowId);
+
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
+    if (IS_PRODUCTION) {
+      throw new Error(
+        "EventBridge Scheduler not configured for workflow schedules"
+      );
+    }
+    log.warn("Scheduler: skipping schedule update, config not set", {
+      workflowId,
+      nextRun: nextRun.toISOString(),
+    });
+    return scheduleName;
+  }
+
+  const scheduleExpression = formatScheduleExpression(nextRun);
+
+  log.info("Scheduler: updating schedule", {
+    scheduleName,
+    workflowId,
+    nextRun: nextRun.toISOString(),
+  });
+
+  try {
+    await scheduler.send(
+      new UpdateScheduleCommand({
+        Name: scheduleName,
+        GroupName: SCHEDULE_GROUP,
+        ScheduleExpression: scheduleExpression,
+        ScheduleExpressionTimezone: "UTC",
+        FlexibleTimeWindow: { Mode: "OFF" },
+        ActionAfterCompletion: "DELETE",
+        Target: {
+          Arn: WORKFLOW_QUEUE_ARN,
+          RoleArn: SCHEDULER_ROLE_ARN,
+          Input: JSON.stringify({
+            type: "schedule-trigger",
+            workflowId,
+            organizationId,
+          } satisfies WorkflowJob),
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === "ResourceNotFoundException") {
+      // Schedule fired and self-deleted (ActionAfterCompletion=DELETE) before the
+      // update arrived. Fall back to creating the next schedule from scratch.
+      log.warn("Scheduler: schedule not found for update, recreating", {
+        scheduleName,
+        workflowId,
+      });
+      return createNextWorkflowSchedule({
+        workflowId,
+        organizationId,
+        cronExpression,
+        timezone,
+      });
+    }
+    throw error;
+  }
+
+  return scheduleName;
+}
+
+/**
  * Reconcile schedule chains for all enabled scheduled workflows.
  *
  * Checks EventBridge for each workflow's expected schedule. If missing
@@ -184,7 +274,12 @@ export async function reconcileScheduleChains(): Promise<{
     })
     .from(workflow)
     .where(
-      and(eq(workflow.status, "enabled"), eq(workflow.triggerType, "schedule"))
+      and(
+        eq(workflow.status, "enabled"),
+        eq(workflow.triggerType, "schedule"),
+        // Skip recently-updated workflows to avoid racing with in-flight enable/disable operations
+        lt(workflow.updatedAt, sql`NOW() - INTERVAL '5 minutes'`)
+      )
     );
 
   let repaired = 0;

@@ -7,101 +7,14 @@
  * - Terminal completion when no transitions leave the current step
  */
 
-import type { SQSEvent } from "aws-lambda";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function makeExecution(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "exec-1",
-    workflowId: "wf-1",
-    contactId: "contact-1",
-    organizationId: "org-1",
-    status: "active",
-    currentStepId: "step-cond",
-    triggerData: {},
-    startedAt: new Date(),
-    completedAt: null,
-    error: null,
-    errorStepId: null,
-    allowReentry: false,
-    waitingForEvent: null,
-    waitTimeoutAt: null,
-    waitTimeoutSchedulerName: null,
-    delaySchedulerName: null,
-    nextStepScheduledAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeContact(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "contact-1",
-    email: "test@example.com",
-    phone: null,
-    firstName: "Test",
-    lastName: "User",
-    company: null,
-    jobTitle: null,
-    organizationId: "org-1",
-    emailStatus: "active",
-    status: "active",
-    properties: {},
-    preferredChannel: null,
-    ...overrides,
-  };
-}
-
-function makeWorkflow(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "wf-1",
-    organizationId: "org-1",
-    name: "Transition Test Workflow",
-    status: "enabled",
-    triggerType: "event",
-    triggerConfig: {},
-    awsAccountId: "aws-1",
-    allowReentry: false,
-    reentryDelaySeconds: null,
-    contactCooldownSeconds: null,
-    maxConcurrentExecutions: null,
-    steps: [],
-    transitions: [],
-    defaultFrom: "noreply@test.com",
-    defaultFromName: "Test",
-    defaultReplyTo: null,
-    defaultSenderId: null,
-    totalExecutions: 0,
-    activeExecutions: 0,
-    completedExecutions: 0,
-    failedExecutions: 0,
-    droppedExecutions: 0,
-    lastTriggeredAt: null,
-    ...overrides,
-  };
-}
-
-function makeSQSEvent(...bodies: Record<string, unknown>[]): SQSEvent {
-  return {
-    Records: bodies.map((body, i) => ({
-      messageId: `msg-${i}`,
-      receiptHandle: `rh-${i}`,
-      body: JSON.stringify(body),
-      attributes: {
-        ApproximateReceiveCount: "1",
-        SentTimestamp: "0",
-        SenderId: "test",
-        ApproximateFirstReceiveTimestamp: "0",
-      },
-      messageAttributes: {},
-      md5OfBody: "",
-      eventSource: "aws:sqs",
-      eventSourceARN: "arn:aws:sqs:us-east-1:000:test",
-      awsRegion: "us-east-1",
-    })),
-  };
-}
+import {
+  makeContact,
+  makeExecution,
+  makeSQSEvent,
+  makeWorkflow,
+} from "./fixtures/workflow-fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-level mocks
@@ -511,5 +424,598 @@ describe("processNextStep transition routing", () => {
       ([arg]) => (arg as Record<string, unknown>)?.status === "completed"
     );
     expect(completedUpdate).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: Atomic claim guard on processStep (Chunk 2 Items 1 & 3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("processStep atomic claim guard", () => {
+  const executeJob = {
+    type: "execute" as const,
+    executionId: "exec-1",
+    stepId: "step-cond",
+    organizationId: "org-1",
+  };
+
+  // Unit 10: processStep exits without side effects when execution status is cancelled
+  it("exits without side effects when execution status is cancelled", async () => {
+    const { log } = await import("../../lib/logger");
+
+    // findFirst returns a cancelled execution
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(
+      makeExecution({ status: "cancelled", currentStepId: "step-cond" })
+    );
+
+    // The atomic UPDATE (WHERE ... AND status NOT IN ...) finds no row to claim
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+
+    // selects: workflow + contact available but should NOT be reached
+    mockDbSelect.mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([makeWorkflow()]),
+        }),
+      }),
+    }));
+
+    await handler(makeSQSEvent(executeJob));
+
+    // No step should have been enqueued
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+    expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
+    // log.info should be called (fast-path pre-flight for terminal execution)
+    expect(log.info).toHaveBeenCalledWith(
+      expect.stringMatching(/stale|cancelled|terminal|already|claimed/i),
+      expect.anything()
+    );
+  });
+
+  // Unit 11: processStep continues normally when execution status is paused
+  it("continues normally when execution status is paused", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-cond",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://hook.example.com",
+            method: "POST",
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-cond",
+          condition: null,
+        },
+      ],
+    });
+
+    // findFirst returns a paused execution (valid to resume via SQS message)
+    const pausedExecution = makeExecution({
+      status: "paused",
+      currentStepId: "step-cond",
+    });
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(pausedExecution);
+
+    // The atomic UPDATE succeeds — paused is not in the terminal exclusion list
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([pausedExecution]),
+        }),
+      }),
+    });
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi
+              .fn()
+              .mockReturnValue({ limit: vi.fn().mockResolvedValue([wf]) }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([makeContact()]),
+          }),
+        }),
+      };
+    });
+
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi
+            .fn()
+            .mockResolvedValue([{ id: "se-1", status: "executing" }]),
+        }),
+      }),
+    });
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(makeSQSEvent(executeJob));
+
+    // fetch should have been called — step executed
+    expect(mockFetch).toHaveBeenCalledOnce();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: Multi-step chain routing
+// Verifies that after completing step-A the processor routes to step-B,
+// not directly to step-C. This catches off-by-one bugs in transition lookup.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("multi-step chain routing", () => {
+  it("routes A→B when processing A, not A→C", async () => {
+    // Chain: trigger-1 → step-a (webhook) → step-b (webhook) → step-c (webhook)
+    setupProcessStep({
+      execution: { currentStepId: "step-a" },
+      workflow: {
+        steps: [
+          { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+          {
+            id: "step-a",
+            type: "webhook",
+            config: {
+              type: "webhook",
+              url: "https://a.example.com",
+              method: "POST",
+            },
+          },
+          {
+            id: "step-b",
+            type: "webhook",
+            config: {
+              type: "webhook",
+              url: "https://b.example.com",
+              method: "POST",
+            },
+          },
+          {
+            id: "step-c",
+            type: "webhook",
+            config: {
+              type: "webhook",
+              url: "https://c.example.com",
+              method: "POST",
+            },
+          },
+        ],
+        transitions: [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-a",
+            condition: null,
+          },
+          {
+            id: "t2",
+            fromStepId: "step-a",
+            toStepId: "step-b",
+            condition: null,
+          },
+          {
+            id: "t3",
+            fromStepId: "step-b",
+            toStepId: "step-c",
+            condition: null,
+          },
+        ],
+      },
+    });
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-a",
+        organizationId: "org-1",
+      })
+    );
+
+    // Should enqueue step-b only — NOT step-c
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "execute", stepId: "step-b" })
+    );
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-c" })
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: Condition with no matching transition → terminal completion
+// When a condition step resolves "yes" but only a "no" transition (and no
+// branchless fallback) exists, the execution has nowhere to go and must
+// complete rather than enqueue any step.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("condition step with no matching transition", () => {
+  it("completes execution when condition resolves yes but only no-branch transition exists", async () => {
+    setupProcessStep({
+      execution: { currentStepId: "step-cond" },
+      contact: { properties: { tier: "gold" } },
+      workflow: {
+        steps: [
+          { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+          {
+            id: "step-cond",
+            type: "condition",
+            config: {
+              type: "condition",
+              field: "tier",
+              operator: "equals",
+              value: "gold", // evaluates to "yes"
+            },
+          },
+          {
+            id: "step-no-path",
+            type: "webhook",
+            config: {
+              type: "webhook",
+              url: "https://no.example.com",
+              method: "POST",
+            },
+          },
+        ],
+        // Only "no" branch transition — condition evaluates "yes" so no match,
+        // and there is no branchless fallback either.
+        transitions: [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-cond",
+            condition: null,
+          },
+          {
+            id: "t2",
+            fromStepId: "step-cond",
+            toStepId: "step-no-path",
+            condition: { branch: "no" },
+          },
+        ],
+      },
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-cond",
+        organizationId: "org-1",
+      })
+    );
+
+    // No next step enqueued — dead end reached
+    const executeEnqueues = mockEnqueueWorkflowStep.mock.calls.filter(
+      (call) => (call[0] as { type?: string }).type === "execute"
+    );
+    expect(executeEnqueues).toHaveLength(0);
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-no-path" })
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: Definition snapshot fallback
+// When execution.definitionSnapshot is set, the processor uses snapshot
+// steps/transitions for routing instead of the live workflow definition.
+// This verifies in-flight executions are immune to live dashboard edits.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("definition snapshot fallback", () => {
+  it("uses snapshot steps and transitions, not live workflow definition", async () => {
+    // Live workflow has: trigger-1 → step-live (only one step)
+    // Snapshot has: trigger-1 → step-snap → step-after (two steps)
+    // Processing step-snap should route to step-after (snapshot), not dead-end (live).
+
+    const snapshot = {
+      version: 1,
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-snap",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://snap.example.com",
+            method: "POST",
+          },
+        },
+        {
+          id: "step-after",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://after.example.com",
+            method: "POST",
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-snap",
+          condition: null,
+        },
+        {
+          id: "t2",
+          fromStepId: "step-snap",
+          toStepId: "step-after",
+          condition: null,
+        },
+      ],
+    };
+
+    setupProcessStep({
+      execution: {
+        currentStepId: "step-snap",
+        definitionSnapshot: snapshot,
+      },
+      workflow: {
+        // Live definition has step-snap but NO outgoing transition from it
+        steps: [
+          { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+          {
+            id: "step-snap",
+            type: "webhook",
+            config: {
+              type: "webhook",
+              url: "https://snap.example.com",
+              method: "POST",
+            },
+          },
+        ],
+        transitions: [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-snap",
+            condition: null,
+          },
+          // Intentionally NO transition from step-snap — if live def is used, execution completes
+        ],
+      },
+    });
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-snap",
+        organizationId: "org-1",
+      })
+    );
+
+    // If snapshot is used → step-after enqueued
+    // If live def is used → no step enqueued (dead-end completion)
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "execute", stepId: "step-after" })
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite: Execution lifetime expiry
+// Executions older than 30 days must be failed when processStep runs on them.
+// The EXECUTION_LIFETIME_MS check happens after the atomic claim succeeds.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("execution lifetime expiry", () => {
+  it("fails execution when createdAt is more than 30 days ago", async () => {
+    const THIRTY_ONE_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
+    const staleCreatedAt = new Date(Date.now() - THIRTY_ONE_DAYS_MS);
+
+    // findFirst: pre-flight check returns the stale execution (not terminal)
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(
+      makeExecution({
+        status: "active",
+        currentStepId: "step-1",
+        createdAt: staleCreatedAt,
+      })
+    );
+
+    // Atomic claim UPDATE succeeds and returns the stale execution
+    const staleExec = makeExecution({
+      status: "active",
+      currentStepId: "step-1",
+      createdAt: staleCreatedAt,
+    });
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([staleExec]),
+        }),
+      }),
+    });
+
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([makeWorkflow()]),
+        }),
+      }),
+    });
+
+    // insert: step execution claim
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-1",
+            },
+          ]),
+        }),
+      }),
+    });
+
+    mockDbTransaction.mockImplementation(async (callback: Function) =>
+      callback({
+        select: mockDbSelect,
+        update: mockDbUpdate,
+        insert: mockDbInsert,
+      })
+    );
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-1",
+        organizationId: "org-1",
+      })
+    );
+
+    // failExecution was called: verify the execution status update to "failed"
+    // failExecution does a db.transaction with update.set({ status: "failed", ... })
+    const allSetCalls = mockDbUpdate.mock.results.flatMap(
+      (r) => r.value?.set?.mock?.calls ?? []
+    ) as unknown[][];
+    const failedUpdate = allSetCalls.find(
+      ([arg]) => (arg as Record<string, unknown>)?.status === "failed"
+    );
+    expect(failedUpdate).toBeDefined();
+
+    // No step should have been dispatched to the next step
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "execute" })
+    );
+  });
+
+  it("does not fail execution when createdAt is within the 30-day window", async () => {
+    const TWENTY_NINE_DAYS_MS = 29 * 24 * 60 * 60 * 1000;
+    const recentCreatedAt = new Date(Date.now() - TWENTY_NINE_DAYS_MS);
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(
+      makeExecution({
+        status: "active",
+        currentStepId: "step-1",
+        createdAt: recentCreatedAt,
+      })
+    );
+
+    // Atomic claim returns the recent execution
+    const recentExec = makeExecution({
+      status: "active",
+      currentStepId: "step-1",
+      createdAt: recentCreatedAt,
+    });
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([recentExec]),
+        }),
+      }),
+    });
+
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-1",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://hook.example.com",
+            method: "POST",
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-1",
+          condition: null,
+        },
+      ],
+    });
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      const rows = selectCount === 1 ? [wf] : [makeContact()];
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      };
+    });
+
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-1",
+            },
+          ]),
+        }),
+      }),
+    });
+
+    mockDbTransaction.mockImplementation(async (callback: Function) =>
+      callback({
+        select: mockDbSelect,
+        update: mockDbUpdate,
+        insert: mockDbInsert,
+      })
+    );
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-1",
+        organizationId: "org-1",
+      })
+    );
+
+    // Execution is still alive — step ran (fetch called)
+    expect(mockFetch).toHaveBeenCalledOnce();
+
+    // No "failed" status update
+    const allSetCalls = mockDbUpdate.mock.results.flatMap(
+      (r) => r.value?.set?.mock?.calls ?? []
+    ) as unknown[][];
+    const failedUpdate = allSetCalls.find(
+      ([arg]) => (arg as Record<string, unknown>)?.status === "failed"
+    );
+    expect(failedUpdate).toBeUndefined();
   });
 });

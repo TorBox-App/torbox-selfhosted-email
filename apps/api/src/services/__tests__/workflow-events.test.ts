@@ -23,10 +23,18 @@ const enqueuedSteps: Array<{
   eventData?: Record<string, unknown>;
 }> = [];
 
-// Mock enqueueWorkflowStep
+// Track batch-enqueued workflow steps
+const batchEnqueueCalls: Array<Array<(typeof enqueuedSteps)[0]>> = [];
+
+// Mock enqueueWorkflowStep and enqueueWorkflowStepBatch
 vi.mock("../workflow-queue", () => ({
   enqueueWorkflowStep: vi.fn().mockImplementation((step) => {
     enqueuedSteps.push(step);
+    return Promise.resolve();
+  }),
+  enqueueWorkflowStepBatch: vi.fn().mockImplementation((steps) => {
+    batchEnqueueCalls.push(steps);
+    for (const step of steps) enqueuedSteps.push(step);
     return Promise.resolve();
   }),
 }));
@@ -119,6 +127,7 @@ vi.mock("@wraps/db", () => ({
 }));
 
 // Import after mocking
+import { db } from "@wraps/db";
 import {
   checkSegmentEntry,
   emitContactCreated,
@@ -132,6 +141,7 @@ describe("Workflow Events Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enqueuedSteps.length = 0;
+    batchEnqueueCalls.length = 0;
     mockWorkflows.length = 0;
     mockSegments.length = 0;
   });
@@ -223,6 +233,51 @@ describe("Workflow Events Service", () => {
         orderId: "order-456",
         amount: 99.99,
       });
+    });
+
+    // R2 fix: emitWorkflowEvent used to loop enqueueWorkflowStep() N times instead of batching.
+    // This test FAILS before the fix and passes after.
+    it("calls enqueueWorkflowStepBatch once for 3 matching workflows (not N sequential enqueueWorkflowStep calls)", async () => {
+      const { enqueueWorkflowStep, enqueueWorkflowStepBatch } = await import(
+        "../workflow-queue"
+      );
+      mockWorkflows.push(
+        {
+          id: "wf-1",
+          organizationId: "org-1",
+          status: "enabled",
+          triggerType: "event",
+          triggerConfig: { eventName: "user.signed_up" },
+        },
+        {
+          id: "wf-2",
+          organizationId: "org-1",
+          status: "enabled",
+          triggerType: "event",
+          triggerConfig: { eventName: "user.signed_up" },
+        },
+        {
+          id: "wf-3",
+          organizationId: "org-1",
+          status: "enabled",
+          triggerType: "event",
+          triggerConfig: { eventName: "user.signed_up" },
+        }
+      );
+
+      await emitWorkflowEvent({
+        eventName: "user.signed_up",
+        contactId: "c-1",
+        organizationId: "org-1",
+        skipEventRecord: true,
+      });
+
+      // Must batch — NOT sequential individual enqueueWorkflowStep calls
+      expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+      expect(enqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);
+      const batchArg = (enqueueWorkflowStepBatch as ReturnType<typeof vi.fn>)
+        .mock.calls[0][0] as unknown[];
+      expect(batchArg).toHaveLength(3);
     });
   });
 
@@ -501,10 +556,193 @@ describe("Workflow Events Service", () => {
   });
 });
 
+describe("Workflow Events - Batch Consolidation", () => {
+  // The wrapper functions (emitContactCreated, etc.) call emitWorkflowEvent first
+  // (for event-type workflows), then query trigger-type workflows directly. In production
+  // the event-type query returns [] for these tests (the seeded workflows have
+  // triggerType "contact_created" etc., not "event"). The call-order mock below simulates
+  // this: first N selects → [] (pre-data calls), Nth+1 select → mockWorkflows (trigger path).
+  //
+  // emitContactCreated/Updated/TopicSubscribed: 1 pre-data call (emitWorkflowEvent)
+  // emitTopicUnsubscribed: 2 pre-data calls (cancelExecutions + emitWorkflowEvent)
+  let selectCallCount = 0;
+  let emptyCallsBeforeData = 1; // Tests can override for functions with more pre-calls
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    selectCallCount = 0;
+    emptyCallsBeforeData = 1; // Default: 1 pre-data call
+    vi.mocked(db.select).mockImplementation(() => {
+      selectCallCount++;
+      const rows = selectCallCount <= emptyCallsBeforeData ? [] : mockWorkflows;
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(rows),
+        }),
+      } as unknown as ReturnType<typeof db.select>;
+    });
+    enqueuedSteps.length = 0;
+    batchEnqueueCalls.length = 0;
+    mockWorkflows.length = 0;
+    mockSegments.length = 0;
+  });
+
+  it("emitContactCreated calls enqueueWorkflowStepBatch exactly once for 3 matching workflows", async () => {
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    mockWorkflows.push(
+      {
+        id: "wf-1",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_created",
+        triggerConfig: {},
+      },
+      {
+        id: "wf-2",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_created",
+        triggerConfig: {},
+      },
+      {
+        id: "wf-3",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_created",
+        triggerConfig: {},
+      }
+    );
+
+    await emitContactCreated({ contactId: "c-1", organizationId: "org-1" });
+
+    // enqueueWorkflowStepBatch must be called exactly once for the contact_created trigger-type workflows
+    expect(enqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);
+    const batchArg = (enqueueWorkflowStepBatch as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as unknown[];
+    expect(batchArg).toHaveLength(3);
+  });
+
+  it("emitContactUpdated calls enqueueWorkflowStepBatch exactly once for 3 matching workflows", async () => {
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    mockWorkflows.push(
+      {
+        id: "wf-1",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_updated",
+        triggerConfig: {},
+      },
+      {
+        id: "wf-2",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_updated",
+        triggerConfig: {},
+      },
+      {
+        id: "wf-3",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "contact_updated",
+        triggerConfig: {},
+      }
+    );
+
+    await emitContactUpdated({ contactId: "c-1", organizationId: "org-1" });
+
+    expect(enqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);
+    const batchArg = (enqueueWorkflowStepBatch as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as unknown[];
+    expect(batchArg).toHaveLength(3);
+  });
+
+  it("emitTopicSubscribed calls enqueueWorkflowStepBatch exactly once for 3 matching workflows", async () => {
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    mockWorkflows.push(
+      {
+        id: "wf-1",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_subscribed",
+        triggerConfig: { topicId: "t-1" },
+      },
+      {
+        id: "wf-2",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_subscribed",
+        triggerConfig: { topicId: "t-1" },
+      },
+      {
+        id: "wf-3",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_subscribed",
+        triggerConfig: { topicId: "t-1" },
+      }
+    );
+
+    await emitTopicSubscribed({
+      contactId: "c-1",
+      organizationId: "org-1",
+      topicId: "t-1",
+    });
+
+    expect(enqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);
+    const batchArg = (enqueueWorkflowStepBatch as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as unknown[];
+    expect(batchArg).toHaveLength(3);
+  });
+
+  it("emitTopicUnsubscribed calls enqueueWorkflowStepBatch exactly once for 3 matching workflows", async () => {
+    // emitTopicUnsubscribed calls cancelExecutionsForTopicUnsubscribe FIRST (1 pre-data select
+    // for topic_subscribed workflows) then emitWorkflowEvent (1 more pre-data select).
+    // Both should return [] so only the direct topic_unsubscribed trigger-type query batches.
+    emptyCallsBeforeData = 2;
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+    mockWorkflows.push(
+      {
+        id: "wf-1",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_unsubscribed",
+        triggerConfig: { topicId: "t-1" },
+      },
+      {
+        id: "wf-2",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_unsubscribed",
+        triggerConfig: { topicId: "t-1" },
+      },
+      {
+        id: "wf-3",
+        organizationId: "org-1",
+        status: "enabled",
+        triggerType: "topic_unsubscribed",
+        triggerConfig: { topicId: "t-1" },
+      }
+    );
+
+    await emitTopicUnsubscribed({
+      contactId: "c-1",
+      organizationId: "org-1",
+      topicId: "t-1",
+    });
+
+    expect(enqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);
+    const batchArg = (enqueueWorkflowStepBatch as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as unknown[];
+    expect(batchArg).toHaveLength(3);
+  });
+});
+
 describe("Workflow Events - Edge Cases", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enqueuedSteps.length = 0;
+    batchEnqueueCalls.length = 0;
     mockWorkflows.length = 0;
     mockSegments.length = 0;
   });

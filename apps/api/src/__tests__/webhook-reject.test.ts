@@ -1,16 +1,14 @@
 /**
- * Webhook Complaint Tests
+ * Webhook Reject Tests (Unit 30)
  *
- * Tests that SES "Complaint" events correctly:
- * - Update messageSend status to "complained"
- * - Mark contact emailStatus as "complained"
- * - Do NOT call resumeWaitingExecutions (documents current behavior gap —
- *   see hardening backlog; complaints should probably resume waiting execs
- *   similar to bounces, but today they don't).
+ * Tests that SES "Reject" events correctly:
+ * - Update messageSend status to "rejected"
+ *   (Note: mapped to "failed" since "rejected" is not in the current DB enum;
+ *    a DB migration can add "rejected" as a distinct value later)
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildComplaintEvent } from "./fixtures/ses-events";
+import { buildRejectEvent } from "./fixtures/ses-events";
 
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
@@ -41,7 +39,6 @@ vi.mock("@wraps/db", async () => {
 
 const { webhooksRoutes } = await import("../routes/webhooks");
 const { Elysia } = await import("elysia");
-const { enqueueWorkflowStep } = await import("../services/workflow-queue");
 
 const TEST_AWS_ACCOUNT_NUMBER = "123456789012";
 const TEST_WEBHOOK_SECRET = "test-secret-key";
@@ -56,6 +53,14 @@ function selectChain(rows: unknown[]) {
       where: vi.fn().mockReturnValue({
         limit: vi.fn().mockResolvedValue(rows),
       }),
+    }),
+  };
+}
+
+function selectChainNoLimit(rows: unknown[]) {
+  return {
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(rows),
     }),
   };
 }
@@ -99,18 +104,7 @@ const mockMessageSend = {
   clickedAt: null,
 };
 
-function selectChainNoLimit(rows: unknown[]) {
-  return {
-    from: vi.fn().mockReturnValue({
-      where: vi.fn().mockResolvedValue(rows),
-    }),
-  };
-}
-
-function setupWebhookMocks(
-  overrides: Partial<typeof mockMessageSend> = {},
-  waitingExecutions: Array<Record<string, unknown>> = []
-) {
+function setupWebhookMocks(overrides: Partial<typeof mockMessageSend> = {}) {
   const message = { ...mockMessageSend, ...overrides };
 
   let selectCallCount = 0;
@@ -119,7 +113,7 @@ function setupWebhookMocks(
     if (selectCallCount === 1) return selectChain([mockAwsAccount]);
     if (selectCallCount === 2) return selectChain([message]);
     // 3rd select: resumeWaitingExecutions (no .limit())
-    return selectChainNoLimit(waitingExecutions);
+    return selectChainNoLimit([]);
   });
 
   const updateCalls: ReturnType<typeof updateChain>[] = [];
@@ -132,7 +126,7 @@ function setupWebhookMocks(
   return { updateCalls };
 }
 
-describe("Webhook: Complaint", () => {
+describe("Webhook: Reject (Unit 30)", () => {
   let app: ReturnType<typeof createTestApp>;
 
   beforeEach(() => {
@@ -140,77 +134,40 @@ describe("Webhook: Complaint", () => {
     app = createTestApp();
   });
 
-  it("sets messageSend status to 'complained'", async () => {
+  it("sets messageSend status to 'rejected'", async () => {
     const { updateCalls } = setupWebhookMocks();
 
-    const event = buildComplaintEvent();
+    const event = buildRejectEvent({ reason: "Bad content" });
     const response = await sendWebhookEvent(app, event);
 
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.status).toBe("processed");
-    expect(body.eventType).toBe("Complaint");
+    expect(body.eventType).toBe("Reject");
 
+    // SES Reject maps to "failed" (closest existing enum value; a "rejected" enum
+    // value can be added in a future migration for more granular tracking)
     expect(updateCalls[0].set).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: "complained",
-        complainedAt: expect.any(Date),
+        status: "failed",
       })
     );
   });
 
-  it("marks contact emailStatus as 'complained'", async () => {
-    const { updateCalls } = setupWebhookMocks();
+  it("returns 200 when messageSend not found (idempotent)", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return selectChain([mockAwsAccount]);
+      return selectChain([]); // message not found
+    });
 
-    const event = buildComplaintEvent();
-    await sendWebhookEvent(app, event);
+    mockDbUpdate.mockImplementation(() => updateChain());
 
-    const contactUpdate = updateCalls.find(
-      (c) =>
-        (c.set.mock.calls[0]?.[0] as Record<string, unknown>)?.emailStatus ===
-        "complained"
-    );
-    expect(contactUpdate).toBeDefined();
-    expect(contactUpdate!.set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        emailStatus: "complained",
-        emailComplainedAt: expect.any(Date),
-      })
-    );
-  });
+    const event = buildRejectEvent();
+    const response = await sendWebhookEvent(app, event);
 
-  // Unit 31: complaint handler calls resumeWaitingExecutions for waiting executions
-  it("calls resumeWaitingExecutions for waiting executions (Unit 31)", async () => {
-    setupWebhookMocks({}, [
-      {
-        id: "exec-1",
-        organizationId: "org-1",
-        contactId: "contact-1",
-        status: "waiting",
-        waitingForEvent: "email_engagement:ses-msg-001",
-        waitTimeoutSchedulerName: null,
-      },
-    ]);
-
-    const event = buildComplaintEvent();
-    await sendWebhookEvent(app, event);
-
-    expect(enqueueWorkflowStep).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "resume",
-        executionId: "exec-1",
-        branch: "bounced",
-        organizationId: "org-1",
-      })
-    );
-  });
-
-  it("does not call resumeWaitingExecutions when no waiting executions", async () => {
-    setupWebhookMocks({}, []);
-
-    const event = buildComplaintEvent();
-    await sendWebhookEvent(app, event);
-
-    expect(enqueueWorkflowStep).not.toHaveBeenCalled();
+    // Should not fail — idempotent
+    expect(response.status).toBe(200);
   });
 });

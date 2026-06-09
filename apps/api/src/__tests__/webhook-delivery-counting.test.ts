@@ -281,6 +281,51 @@ describe("webhook delivery counting", () => {
     expect(response.status).toBe(500);
   });
 
+  // ─── Unit 24: Status precedence — bounced/complained not overwritten ───
+  it("does NOT overwrite messageSend.status when existing status is 'bounced'", async () => {
+    mockAccountLookup();
+    // Message already has bounced status
+    mockDbSelect.mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: () =>
+            Promise.resolve([
+              {
+                id: "msg-bounced",
+                status: "bounced", // Already bounced — must not be overwritten
+                batchSendId: null,
+                contactId: null,
+                openedAt: null,
+                clickedAt: null,
+              },
+            ]),
+        }),
+      }),
+    });
+    mockInsertChain();
+
+    const updateSpy = vi.fn();
+    mockDbUpdate.mockImplementation(() => ({
+      set: (data: Record<string, unknown>) => {
+        updateSpy(data);
+        return {
+          where: () => Promise.resolve({ rowCount: 1 }),
+        };
+      },
+    }));
+
+    const response = await sendWebhook(makeDeliveryEvent());
+
+    expect(response.status).toBe(200);
+
+    // The update should NOT have been called with status: 'delivered'
+    // because the existing status is 'bounced' (higher precedence)
+    const deliveryUpdateCall = updateSpy.mock.calls.find(
+      (call) => call[0]?.status === "delivered"
+    );
+    expect(deliveryUpdateCall).toBeUndefined();
+  });
+
   it("does NOT increment count if processDelivery fails", async () => {
     mockAccountLookup();
     mockMessageSendLookup(true);

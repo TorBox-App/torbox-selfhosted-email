@@ -1,3 +1,4 @@
+// baseline:allow-large-file
 /**
  * Workflow Processor Worker
  *
@@ -20,7 +21,7 @@ import {
   workflowStepExecution,
 } from "@wraps/db";
 import type { SQSBatchResponse, SQSEvent } from "aws-lambda";
-import { and, sql } from "drizzle-orm";
+import { and, notInArray, sql } from "drizzle-orm";
 
 import { flushLogger, log } from "../../lib/logger";
 
@@ -51,6 +52,12 @@ import type { WorkflowBranch } from "./workflow-utils";
  * and eligible for reclaim. Matches AWS Lambda max timeout (15 min).
  */
 export const STEP_EXECUTION_TIMEOUT_MINUTES = 15;
+
+/** Max execution lifetime in ms (30 days). Executions older than this are failed. */
+const EXECUTION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Execution statuses that are terminal — processStep must not advance them */
+const TERMINAL_STATUSES = ["cancelled", "completed", "failed"] as const;
 
 export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
   const results = await Promise.allSettled(
@@ -353,6 +360,13 @@ async function processScheduleTrigger(
     contactCount: contacts.length,
   });
 
+  if (contacts.length === MAX_CONTACTS_PER_TRIGGER) {
+    log.warn(
+      "Schedule trigger: contact list truncated — some contacts may not be triggered",
+      { workflowId, contactCount: contacts.length }
+    );
+  }
+
   // Batch enqueue trigger jobs for all contacts
   await enqueueWorkflowStepBatch(
     contacts.map((c) => ({
@@ -478,8 +492,14 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  if (execution.status === "cancelled" || execution.status === "completed") {
-    log.info("Execution already completed", {
+  if (
+    execution.status === "cancelled" ||
+    execution.status === "completed" ||
+    execution.status === "failed"
+  ) {
+    // Fast-path: skip heavy workflow/contact loads. The atomic claim below is
+    // the authoritative guard — this is a perf optimization only.
+    log.info("processStep: stale execution status, skipping", {
       executionId,
       status: execution.status,
     });
@@ -592,11 +612,41 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     });
   }
 
-  // Update execution current step
-  await db
+  // Atomic claim: update execution status only if it is NOT in a terminal state.
+  // This prevents cancelled/completed/failed executions from being resurrected
+  // by delayed or duplicate SQS messages.
+  const [claimedExecution] = await db
     .update(workflowExecution)
     .set({ currentStepId: stepId, status: "active", updatedAt: new Date() })
-    .where(eq(workflowExecution.id, executionId));
+    .where(
+      and(
+        eq(workflowExecution.id, executionId),
+        notInArray(workflowExecution.status, [...TERMINAL_STATUSES])
+      )
+    )
+    .returning();
+
+  if (!claimedExecution) {
+    log.warn("processStep: atomic claim failed — execution in terminal state", {
+      executionId,
+      stepId,
+    });
+    return;
+  }
+
+  // Execution lifetime check: fail executions older than 30 days
+  if (
+    claimedExecution.createdAt &&
+    Date.now() - new Date(claimedExecution.createdAt).getTime() >
+      EXECUTION_LIFETIME_MS
+  ) {
+    log.warn("processStep: execution lifetime exceeded, failing", {
+      executionId,
+      stepId,
+    });
+    await failExecution(executionId, "execution lifetime exceeded", stepId);
+    return;
+  }
 
   // Execute step based on type
   try {
@@ -823,9 +873,22 @@ async function resumeExecution(
     return;
   }
 
-  // Cancel the timeout scheduler if we were resumed by an engagement event
+  // Cancel the timeout scheduler if we were resumed by an engagement event.
+  // Wrap in try/catch — the schedule may have already fired and been deleted
+  // (e.g., ResourceNotFoundException). A cleanup failure must not abort the resume.
   if (branch !== "timeout" && claimed.waitTimeoutSchedulerName) {
-    await deleteScheduledStep(claimed.waitTimeoutSchedulerName);
+    try {
+      await deleteScheduledStep(claimed.waitTimeoutSchedulerName);
+    } catch (err) {
+      log.warn(
+        "resumeExecution: failed to delete timeout scheduler (continuing)",
+        {
+          executionId,
+          schedulerName: claimed.waitTimeoutSchedulerName,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      );
+    }
   }
 
   // Load workflow for infrastructure config (awsAccountId, sender defaults)
@@ -907,7 +970,12 @@ async function completeExecution(executionId: string): Promise<void> {
         completedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(workflowExecution.id, executionId))
+      .where(
+        and(
+          eq(workflowExecution.id, executionId),
+          notInArray(workflowExecution.status, [...TERMINAL_STATUSES])
+        )
+      )
       .returning();
 
     if (execution) {
@@ -918,6 +986,13 @@ async function completeExecution(executionId: string): Promise<void> {
           completedExecutions: sql`${workflow.completedExecutions} + 1`,
         })
         .where(eq(workflow.id, execution.workflowId));
+    } else {
+      log.warn(
+        "completeExecution: execution already in terminal state, skipping",
+        {
+          executionId,
+        }
+      );
     }
   });
 }
@@ -935,9 +1010,10 @@ async function incrementDroppedExecutions(workflowId: string): Promise<void> {
 }
 
 /**
- * Mark execution as failed
+ * Mark execution as failed.
+ * Exported for use by the workflow reaper Lambda.
  */
-async function failExecution(
+export async function failExecution(
   executionId: string,
   error: string,
   stepId: string
@@ -952,7 +1028,12 @@ async function failExecution(
         completedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(workflowExecution.id, executionId))
+      .where(
+        and(
+          eq(workflowExecution.id, executionId),
+          notInArray(workflowExecution.status, [...TERMINAL_STATUSES])
+        )
+      )
       .returning();
 
     if (execution) {
@@ -963,6 +1044,10 @@ async function failExecution(
           failedExecutions: sql`${workflow.failedExecutions} + 1`,
         })
         .where(eq(workflow.id, execution.workflowId));
+    } else {
+      log.warn("failExecution: execution already in terminal state, skipping", {
+        executionId,
+      });
     }
   });
 }

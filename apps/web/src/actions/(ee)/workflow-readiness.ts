@@ -1,6 +1,6 @@
 "use server";
 
-import { db, template } from "@wraps/db";
+import { db, template, type WorkflowStep, workflow } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { createActionLogger } from "@/lib/logger";
 import { verifyOrgAccess } from "../shared/verify-org-access";
@@ -118,6 +118,34 @@ function checkConditionFields(conditionFields: string[]): ReadinessCheck[] {
   ];
 }
 
+/**
+ * Derive template IDs from workflow step records in DB.
+ * Prevents client-supplied template ID spoofing (Issue #16).
+ */
+async function deriveTemplateIdsFromDb(
+  workflowId: string,
+  organizationId: string
+): Promise<string[]> {
+  const wf = await db.query.workflow.findFirst({
+    where: and(
+      eq(workflow.id, workflowId),
+      eq(workflow.organizationId, organizationId)
+    ),
+    columns: { steps: true },
+  });
+
+  if (!wf) return [];
+
+  const steps = wf.steps as WorkflowStep[];
+  const templateIds: string[] = [];
+  for (const step of steps) {
+    if (step.config.type === "send_email" && step.config.templateId) {
+      templateIds.push(step.config.templateId);
+    }
+  }
+  return templateIds;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ACTION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -139,10 +167,15 @@ export async function checkWorkflowReadiness(
       };
     }
 
-    const templateChecks = await checkTemplates(
-      organizationId,
-      payload.templateIds
+    // Derive template IDs from DB instead of trusting client payload (Issue #16).
+    // Never fall back to payload.templateIds — an attacker could supply a non-existent
+    // workflowId to force the fallback and check arbitrary template IDs.
+    const dbTemplateIds = await deriveTemplateIdsFromDb(
+      workflowId,
+      organizationId
     );
+
+    const templateChecks = await checkTemplates(organizationId, dbTemplateIds);
     const fieldChecks = checkConditionFields(payload.conditionFields);
 
     return { success: true, checks: [...templateChecks, ...fieldChecks] };

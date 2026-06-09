@@ -980,7 +980,7 @@ describe("Workflows Server Actions", () => {
 
     it("should return error for non-existent workflow", async () => {
       const result = await enableWorkflow(
-        "non-existent-id",
+        "00000000-0000-0000-0000-000000000000",
         testOrganization.id
       );
 
@@ -1043,7 +1043,7 @@ describe("Workflows Server Actions", () => {
 
     it("should return error for non-existent workflow", async () => {
       const result = await disableWorkflow(
-        "non-existent-id",
+        "00000000-0000-0000-0000-000000000000",
         testOrganization.id
       );
 
@@ -1139,7 +1139,7 @@ describe("Workflows Server Actions", () => {
 
     it("should return error for non-existent workflow", async () => {
       const result = await deleteWorkflow(
-        "non-existent-id",
+        "00000000-0000-0000-0000-000000000000",
         testOrganization.id
       );
 
@@ -1376,6 +1376,142 @@ describe("Workflows Server Actions", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.workflow.name).toBe("Updated by Member");
+      }
+    });
+
+    // ─── Unit 18: RBAC — enableWorkflow allows member role ───────────────────
+    it("should allow a member to enable a fully-configured workflow", async () => {
+      const createResult = await createWorkflow(testOrganization.id, {
+        name: "Enable RBAC Test",
+      });
+      expect(createResult.success).toBe(true);
+      if (!createResult.success) return;
+
+      // Fully configure as owner so enable passes readiness validation —
+      // otherwise enableWorkflow would fail on config, not RBAC.
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        awsAccountId: testAwsAccount.id,
+        defaultFrom: "test@example.com",
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Welcome",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: testTemplate.id },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
+
+      currentMockUserId = testMemberUser.id;
+
+      const result = await enableWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.workflow.status).toBe("enabled");
+      }
+    });
+
+    // ─── Unit 19: RBAC — disableWorkflow allows member role ──────────────────
+    it("should allow a member to disable an enabled workflow", async () => {
+      const createResult = await createWorkflow(testOrganization.id, {
+        name: "Disable RBAC Test",
+      });
+      expect(createResult.success).toBe(true);
+      if (!createResult.success) return;
+
+      // Fully configure and enable as owner so there's a real enabled workflow
+      // to disable. Gate on the enable succeeding.
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        awsAccountId: testAwsAccount.id,
+        defaultFrom: "test@example.com",
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Welcome",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: testTemplate.id },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
+      const enableResult = await enableWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+      expect(enableResult.success).toBe(true);
+
+      currentMockUserId = testMemberUser.id;
+
+      const result = await disableWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.workflow.status).toBe("paused");
+      }
+    });
+
+    // ─── Unit 20: RBAC — deleteWorkflow allows member role ───────────────────
+    it("should allow a member to delete a workflow", async () => {
+      const createResult = await createWorkflow(testOrganization.id, {
+        name: "Delete RBAC Test",
+      });
+      expect(createResult.success).toBe(true);
+      if (!createResult.success) return;
+
+      currentMockUserId = testMemberUser.id;
+
+      const result = await deleteWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(true);
+
+      // Verify the workflow is actually gone, not just a success:true no-op.
+      currentMockUserId = testUser.id;
+      const getResult = await getWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+      expect(getResult.success).toBe(false);
+    });
+
+    // ─── Unit 21: Zod — enableWorkflow rejects non-UUID workflowId ──────────
+    it("should reject a workflowId that fails UUID format validation", async () => {
+      const result = await enableWorkflow(
+        "not-a-valid-uuid!!!",
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toMatch(/invalid workflow id/i);
       }
     });
   });

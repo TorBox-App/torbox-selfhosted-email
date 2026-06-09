@@ -181,6 +181,13 @@ function createTestApp() {
   }));
 }
 
+// --- License key isolation ---
+// WRAPS_LICENSE_KEY may be set in the shell environment (self-hosted deployments).
+// Stub it to empty before each test so plan lookups come from the DB, not the license override.
+// The "License Key Override" describe re-stubs it for its own tests.
+beforeEach(() => vi.stubEnv("WRAPS_LICENSE_KEY", ""));
+afterEach(() => vi.unstubAllEnvs());
+
 // --- DB setup/teardown ---
 
 beforeAll(async () => {
@@ -220,14 +227,16 @@ beforeAll(async () => {
     ])
     .onConflictDoUpdate({ target: member.id, set: { role: "owner" } });
 
-  // Insert subscriptions
-  await db
-    .insert(subscription)
-    .values([testSubscriptionOrg1, testSubscriptionOrg2])
-    .onConflictDoUpdate({
-      target: subscription.id,
-      set: { updatedAt: new Date() },
-    });
+  // Insert subscriptions — upsert plan+status so stale rows from crashed runs don't persist wrong data
+  for (const sub of [testSubscriptionOrg1, testSubscriptionOrg2]) {
+    await db
+      .insert(subscription)
+      .values(sub)
+      .onConflictDoUpdate({
+        target: subscription.id,
+        set: { plan: sub.plan, status: sub.status, updatedAt: new Date() },
+      });
+  }
 
   // Insert API keys
   await db
