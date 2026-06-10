@@ -22,6 +22,10 @@ vi.mock("next/headers", () => ({
   headers: () => new Headers(),
 }));
 
+vi.mock("next/server", () => ({
+  after: vi.fn((fn: () => unknown) => fn()),
+}));
+
 vi.mock("@/actions/shared/verify-org-access", () => ({
   verifyOrgAccess: mockVerifyOrgAccess,
 }));
@@ -54,6 +58,7 @@ const mockTx = {
 vi.mock("@wraps/db", () => ({
   db: {
     query: { ssoProvider: { findFirst: mockFindFirst } },
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
     transaction: vi
       .fn()
       .mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) =>

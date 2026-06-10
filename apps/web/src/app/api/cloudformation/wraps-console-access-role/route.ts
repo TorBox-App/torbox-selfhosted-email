@@ -43,7 +43,6 @@ export async function GET() {
     return NextResponse.json(
       {
         error: "Failed to load CloudFormation template",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

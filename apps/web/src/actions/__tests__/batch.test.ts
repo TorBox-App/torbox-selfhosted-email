@@ -151,6 +151,10 @@ vi.mock("next/headers", () => ({
   headers: () => new Headers(),
 }));
 
+vi.mock("next/server", () => ({
+  after: vi.fn((fn: () => unknown) => fn()),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));

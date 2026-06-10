@@ -5,6 +5,7 @@ import { auth } from "@wraps/auth";
 import { and, auditLog, db, eq, ssoProvider, verification } from "@wraps/db";
 import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
@@ -87,9 +88,11 @@ export async function saveSsoProvider(
       headers: hdrs,
     });
 
-    getAuditContext()
-      .then((auditCtx) =>
-        db.insert(auditLog).values(
+    const auditCtx = await getAuditContext();
+    after(() =>
+      db
+        .insert(auditLog)
+        .values(
           auditLogEntry(auditCtx, {
             organizationId: orgId,
             actorId: access.userId,
@@ -99,8 +102,13 @@ export async function saveSsoProvider(
             metadata: { domain: data.domain, issuer: data.issuer },
           })
         )
-      )
-      .catch(() => {});
+        .catch((err) =>
+          createActionLogger("saveSsoProvider", { orgSlug: orgId }).warn(
+            { err },
+            "Best-effort audit log write failed"
+          )
+        )
+    );
 
     revalidatePath(`/${access.orgSlug}/settings/sso`);
     return { success: true };

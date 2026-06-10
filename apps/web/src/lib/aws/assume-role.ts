@@ -62,11 +62,17 @@ export async function assumeRole(
   let stsConfig: ConstructorParameters<typeof STSClient>[0];
 
   if (isUsingVercelOIDC) {
+    const roleArn = process.env.AWS_ROLE_ARN;
+    if (!roleArn) {
+      throw new Error(
+        "AWS_ROLE_ARN environment variable is required for Vercel OIDC credentials"
+      );
+    }
     // Use Vercel's OIDC credentials provider
     stsConfig = {
       region,
       credentials: awsCredentialsProvider({
-        roleArn: process.env.AWS_ROLE_ARN!,
+        roleArn,
       }),
     };
   } else if (
@@ -163,9 +169,15 @@ async function getAmbientCredentials(
   let credentialProvider: AwsCredentialIdentityProvider;
 
   if (isUsingVercelOIDC) {
+    const roleArn = process.env.AWS_ROLE_ARN;
+    if (!roleArn) {
+      throw new Error(
+        "AWS_ROLE_ARN environment variable is required for Vercel OIDC credentials"
+      );
+    }
     // Use Vercel's OIDC credentials provider
     credentialProvider = awsCredentialsProvider({
-      roleArn: process.env.AWS_ROLE_ARN!,
+      roleArn,
     });
   } else if (
     process.env.AWS_ACCESS_KEY_ID &&

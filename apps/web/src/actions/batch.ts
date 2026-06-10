@@ -27,6 +27,7 @@ import {
 } from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import { trackBroadcastCreated } from "@/lib/activation-tracking";
@@ -588,23 +589,30 @@ export async function createBatchSend(
     revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
 
     const auditCtx = await getAuditContext();
-    db.insert(auditLog)
-      .values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.sent",
-          resource: "broadcast",
-          resourceId: result.id,
-          metadata: {
-            broadcastId: result.id,
-            channel: data.channel ?? "email",
-            recipientCount,
-          },
-        })
-      )
-      .catch(() => {});
+    after(() =>
+      db
+        .insert(auditLog)
+        .values(
+          auditLogEntry(auditCtx, {
+            organizationId,
+            actorId: access.userId,
+            actorEmail: access.userEmail,
+            action: "broadcast.sent",
+            resource: "broadcast",
+            resourceId: result.id,
+            metadata: {
+              broadcastId: result.id,
+              channel: data.channel ?? "email",
+              recipientCount,
+            },
+          })
+        )
+        .catch((err) =>
+          createActionLogger("createBatchSend", {
+            orgSlug: organizationId,
+          }).warn({ err }, "Best-effort audit log write failed")
+        )
+    );
 
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: data.channel ?? "email",
@@ -993,23 +1001,30 @@ export async function promoteDraftToSend(
     revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
 
     const auditCtx = await getAuditContext();
-    db.insert(auditLog)
-      .values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.sent_from_draft",
-          resource: "broadcast",
-          resourceId: batchId,
-          metadata: {
-            broadcastId: batchId,
-            channel: merged.channel,
-            recipientCount,
-          },
-        })
-      )
-      .catch(() => {});
+    after(() =>
+      db
+        .insert(auditLog)
+        .values(
+          auditLogEntry(auditCtx, {
+            organizationId,
+            actorId: access.userId,
+            actorEmail: access.userEmail,
+            action: "broadcast.sent_from_draft",
+            resource: "broadcast",
+            resourceId: batchId,
+            metadata: {
+              broadcastId: batchId,
+              channel: merged.channel,
+              recipientCount,
+            },
+          })
+        )
+        .catch((err) =>
+          createActionLogger("promoteDraftToSend", {
+            orgSlug: organizationId,
+          }).warn({ err }, "Best-effort audit log write failed")
+        )
+    );
 
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: merged.channel,
