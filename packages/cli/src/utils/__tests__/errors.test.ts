@@ -960,6 +960,26 @@ describe("parsePulumiError", () => {
     expect(result.resourceName).toBeUndefined();
     expect(result.resourceType).toBeUndefined();
   });
+
+  it("should detect NOT_INSTALLED when pulumi binary is missing from PATH", () => {
+    const error = new Error(
+      "Command failed with ENOENT: pulumi version\nspawn pulumi ENOENT"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("NOT_INSTALLED");
+  });
+
+  it("should not report NOT_INSTALLED when a different binary is missing during a pulumi operation", () => {
+    const error = new Error(
+      "pulumi up failed: Command failed with ENOENT\nspawn docker ENOENT"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("PULUMI_ERROR");
+  });
 });
 
 describe("sanitizeErrorMessage", () => {

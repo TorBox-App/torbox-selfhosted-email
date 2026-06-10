@@ -202,6 +202,13 @@ export function parsePulumiError(error: Error): {
     return { code: "STACK_LOCKED" };
   }
 
+  // Pulumi binary missing from PATH (e.g. "spawn pulumi ENOENT") — match the
+  // ENOENT to the pulumi binary itself so a different missing binary during a
+  // Pulumi operation isn't misreported as "Pulumi CLI is not installed".
+  if (/ENOENT[:\s].*\bpulumi\b|spawn pulumi ENOENT/.test(message)) {
+    return { code: "NOT_INSTALLED" };
+  }
+
   return { code: "PULUMI_ERROR" };
 }
 
@@ -593,6 +600,8 @@ function pulumiErrorToWrapsError(
       );
     case "STACK_LOCKED":
       return errors.stackLocked();
+    case "NOT_INSTALLED":
+      return errors.pulumiNotInstalled();
     case "SES_PERMISSION_DENIED":
       return errors.sesPermissionDenied(iamAction || "unknown");
     case "DYNAMODB_PERMISSION_DENIED":

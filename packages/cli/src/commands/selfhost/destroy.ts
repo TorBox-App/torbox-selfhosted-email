@@ -12,7 +12,10 @@ import {
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
-import { withLockRetry } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  withLockRetry,
+} from "../../utils/shared/pulumi.js";
 import {
   DEFAULT_PULUMI_TIMEOUT_MS,
   withTimeout,
@@ -65,6 +68,17 @@ export async function selfhostDestroy(
       clack.cancel("Destruction cancelled.");
       process.exit(0);
     }
+  }
+
+  // After the early-exit guards so a user with no deployment doesn't sit
+  // through a Pulumi auto-install just to be told there's nothing to destroy.
+  const wasAutoInstalled = await progress.execute(
+    "Checking Pulumi CLI installation",
+    async () => await ensurePulumiInstalled()
+  );
+
+  if (wasAutoInstalled) {
+    progress.info("Pulumi CLI was automatically installed");
   }
 
   await progress.execute(

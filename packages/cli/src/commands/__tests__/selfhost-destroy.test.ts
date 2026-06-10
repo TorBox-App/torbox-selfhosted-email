@@ -13,6 +13,7 @@ vi.mock("@clack/prompts");
 vi.mock("../../utils/shared/aws.js");
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
   withLockRetry: vi.fn().mockImplementation((fn) => fn()),
 }));
 vi.mock("../../utils/shared/timeout.js", () => ({
@@ -120,6 +121,17 @@ describe("selfhostDestroy", () => {
     expect(mockStack.destroy).toHaveBeenCalledOnce();
   });
 
+  it("ensures Pulumi CLI is installed before destroying", async () => {
+    const { selfhostDestroy } = await import("../selfhost/destroy.js");
+
+    await selfhostDestroy({ region: "us-east-1", yes: true });
+
+    const ensureOrder = vi.mocked(pulumiUtils.ensurePulumiInstalled).mock
+      .invocationCallOrder[0]!;
+    const destroyOrder = mockStack.destroy.mock.invocationCallOrder[0]!;
+    expect(ensureOrder).toBeLessThan(destroyOrder);
+  });
+
   it("removes services.selfhost from metadata after successful destroy", async () => {
     const { selfhostDestroy } = await import("../selfhost/destroy.js");
 
@@ -194,6 +206,8 @@ describe("selfhostDestroy", () => {
 
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(mockStack.destroy).not.toHaveBeenCalled();
+    // No deployment means no Pulumi work — don't trigger an auto-install.
+    expect(pulumiUtils.ensurePulumiInstalled).not.toHaveBeenCalled();
 
     exitSpy.mockRestore();
   });
