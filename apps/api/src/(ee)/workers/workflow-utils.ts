@@ -5,8 +5,10 @@
  * and the main workflow processor orchestrator.
  */
 
+import { lookup as dnsLookup } from "node:dns";
 import { toPlainText } from "@react-email/render";
 import { renderTemplateStrict } from "@wraps/template-render";
+import { Agent } from "undici";
 
 import { log } from "../../lib/logger";
 
@@ -261,4 +263,53 @@ export async function validateWebhookUrl(url: string): Promise<void> {
       `Webhook URL resolves to blocked address (${blockedReason}): ${parsed.hostname} -> ${address}`
     );
   }
+}
+
+/**
+ * Validate that all resolved addresses are allowed (not blocked).
+ * Extracted as a pure function so it can be unit-tested directly
+ * without a live socket.
+ *
+ * @exported for testing
+ */
+export function assertResolvedIpAllowed(addresses: string[]): void {
+  for (const addr of addresses) {
+    const blocked = isBlockedIp(addr);
+    if (blocked) {
+      throw new Error(`Connection to blocked address (${blocked}): ${addr}`);
+    }
+  }
+}
+
+/**
+ * Build an undici dispatcher that validates the resolved IP of every
+ * connection (including redirect hops) against isBlockedIp() at connect
+ * time. This defeats DNS-rebinding TOCTOU: the IP that is connected to is
+ * the IP that is checked.
+ *
+ * @exported for testing
+ */
+export function createSsrfSafeDispatcher(): Agent {
+  return new Agent({
+    connect: {
+      lookup(hostname, options, callback) {
+        dnsLookup(hostname, options, (err, address, family) => {
+          if (err) {
+            callback(err, address as never, family);
+            return;
+          }
+          const addresses = Array.isArray(address)
+            ? address.map((a) => (typeof a === "string" ? a : a.address))
+            : [address];
+          try {
+            assertResolvedIpAllowed(addresses);
+          } catch (blockErr) {
+            callback(blockErr as Error, address as never, family);
+            return;
+          }
+          callback(null, address as never, family);
+        });
+      },
+    },
+  });
 }

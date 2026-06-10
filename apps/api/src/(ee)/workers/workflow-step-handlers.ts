@@ -54,6 +54,7 @@ import {
 } from "../../services/workflow-queue";
 
 import {
+  createSsrfSafeDispatcher,
   evaluateCondition,
   FIRST_CLASS_CONTACT_FIELDS,
   htmlToPlainText,
@@ -1181,6 +1182,30 @@ export async function handleUpdateContact(
 // WEBHOOK
 // ═══════════════════════════════════════════════════════════════════════════
 
+const FORBIDDEN_WEBHOOK_HEADERS = new Set([
+  "host",
+  "content-length",
+  "transfer-encoding",
+  "connection",
+]);
+
+/** @exported for testing */
+export function sanitizeWebhookHeaders(
+  custom: Record<string, string> | undefined
+): Record<string, string> {
+  const out: Record<string, string> = { "Content-Type": "application/json" };
+  for (const [key, value] of Object.entries(custom ?? {})) {
+    if (FORBIDDEN_WEBHOOK_HEADERS.has(key.toLowerCase())) {
+      continue;
+    }
+    if (/[\r\n\0]/.test(key) || /[\r\n\0]/.test(value)) {
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
 export async function handleWebhook(
   config: Extract<WorkflowStepConfig, { type: "webhook" }>,
   contactRecord: typeof contact.$inferSelect,
@@ -1230,23 +1255,33 @@ export async function handleWebhook(
     ...(config.body || {}),
   };
 
+  const dispatcher = createSsrfSafeDispatcher();
   try {
-    const response = await fetch(config.url, {
+    // Cast to include undici dispatcher — Node fetch accepts it; not in DOM types
+    const fetchOptions: RequestInit & { dispatcher: unknown } = {
       method: config.method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(config.headers || {}),
-      },
+      headers: sanitizeWebhookHeaders(config.headers),
       body: config.method !== "GET" ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(10_000),
-    });
+      redirect: "manual",
+      dispatcher,
+    };
+    const response = await fetch(config.url, fetchOptions);
+
+    if (response.status >= 300 && response.status < 400) {
+      log.warn("Webhook redirect blocked", {
+        url: config.url,
+        status: response.status,
+      });
+      return {
+        action: "next",
+        data: { error: "Webhook redirect blocked", blocked: true },
+      };
+    }
 
     return {
       action: "next",
-      data: {
-        status: response.status,
-        ok: response.ok,
-      },
+      data: { status: response.status, ok: response.ok },
     };
   } catch (error) {
     log.error("Webhook failed", error);
