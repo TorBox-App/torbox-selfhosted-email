@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "drizzle-kit studio",
     "build": "tsdown",
+    "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:push:test": "dotenv -e ../../apps/web/.env.test -- pnpm --filter=@wraps/db db:push",
     "db:studio": "drizzle-kit studio",
@@ -33,7 +34,8 @@
     "@types/pg": "catalog:",
     "drizzle-kit": "^0.31.2",
     "tsdown": "catalog:",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"
