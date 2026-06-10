@@ -32,8 +32,8 @@ catalog:
   '@react-email/render': 2.0.4
   '@types/node': 24.10.0
   '@types/pg': ^8.11.14
-  '@vitest/coverage-v8': 4.0.18
-  '@vitest/ui': 4.0.18
+  '@vitest/coverage-v8': 4.1.8
+  '@vitest/ui': 4.1.8
   better-auth: 1.5.5
   dotenv: ^17.2.2
   drizzle-orm: ^0.45.2
@@ -44,7 +44,7 @@ catalog:
   tsdown: ^0.15.5
   tsup: ^8.5.1
   typescript: ^5.9.3
-  vitest: 4.0.18
+  vitest: 4.1.8
   zod: ^4.1.12
 
 strictDepBuilds: true
