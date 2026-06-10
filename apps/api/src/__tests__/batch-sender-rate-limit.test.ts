@@ -127,7 +127,9 @@ vi.mock("@wraps/db", async () => {
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           onConflictDoNothing: vi.fn().mockReturnValue({
-            returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+            returning: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(mockClaimReturning)),
           }),
         }),
       }),

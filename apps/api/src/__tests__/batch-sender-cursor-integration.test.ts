@@ -201,11 +201,11 @@ vi.mock("@wraps/db", async () => {
         values: vi.fn().mockImplementation(() => ({
           onConflictDoNothing: vi.fn().mockReturnValue({
             // claim returns all 50 contacts as claimed
-            returning: vi.fn().mockImplementation(() =>
-              Promise.resolve(
-                mockContacts.map((c) => ({ contactId: c.id }))
-              )
-            ),
+            returning: vi
+              .fn()
+              .mockImplementation(() =>
+                Promise.resolve(mockContacts.map((c) => ({ contactId: c.id })))
+              ),
           }),
         })),
       }),

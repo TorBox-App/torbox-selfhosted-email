@@ -169,9 +169,9 @@ vi.mock("@wraps/db", async () => {
               // All updates support .returning() — only the re-claim UPDATE actually
               // calls it; other updates (batchSend status, post-send) do not.
               where: vi.fn().mockReturnValue({
-                returning: vi.fn().mockImplementation(() =>
-                  Promise.resolve(reclaimReturning)
-                ),
+                returning: vi
+                  .fn()
+                  .mockImplementation(() => Promise.resolve(reclaimReturning)),
               }),
             };
           }),
@@ -194,9 +194,15 @@ vi.mock("@wraps/db", async () => {
     },
     sql: (...args: unknown[]) => args,
     // Re-export eq/and/inArray so the worker can use them
-    get eq() { return actual.eq; },
-    get and() { return actual.and; },
-    get inArray() { return actual.inArray; },
+    get eq() {
+      return actual.eq;
+    },
+    get and() {
+      return actual.and;
+    },
+    get inArray() {
+      return actual.inArray;
+    },
   };
 });
 

@@ -87,7 +87,9 @@ vi.mock("./variable-mappings", () => ({
 let mockClaimReturning: Array<{ contactId: string }> = [];
 const mockDbInsertValues = vi.fn().mockImplementation(() => ({
   onConflictDoNothing: vi.fn().mockReturnValue({
-    returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+    returning: vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(mockClaimReturning)),
   }),
 }));
 const mockDbUpdateSet = vi.fn();

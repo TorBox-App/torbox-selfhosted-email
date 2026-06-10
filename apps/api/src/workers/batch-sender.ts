@@ -634,6 +634,29 @@ async function processJob(
             error.message.includes("rate exceeded"));
 
         if (isThrottle) {
+          // Release this invocation's unused claims BEFORE re-enqueueing.
+          // The redelivery lands in ~30s — far below the 15-minute staleness
+          // window — so still-queued rows claimed by THIS invocation would
+          // block both the redelivery's claim INSERT (unique-index conflict)
+          // and its re-claim UPDATE (not stale), stranding every unsent
+          // contact at 'queued' forever. Every contact in emailContacts was
+          // claimed by this invocation (post-claim filter guarantees it), and
+          // the status='queued' predicate skips rows already updated to
+          // sent/failed by earlier sub-batches of this loop. DELETE restores
+          // the exact pre-claim state so the redelivery's INSERT claim works
+          // unchanged.
+          await db.delete(messageSend).where(
+            and(
+              eq(messageSend.organizationId, organizationId),
+              eq(messageSend.batchSendId, batchId),
+              inArray(
+                messageSend.contactId,
+                emailContacts.map((c) => c.id)
+              ),
+              eq(messageSend.status, "queued")
+            )
+          );
+
           // Re-queue this chunk with a longer delay (30 seconds)
           log.warn("SES throttled, requeuing chunk with delay", {
             batchId,

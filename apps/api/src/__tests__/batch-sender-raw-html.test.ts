@@ -104,22 +104,26 @@ vi.mock("@wraps/db", async () => {
         };
       }),
       update: vi.fn().mockReturnValue({
-        set: vi.fn().mockImplementation((setValues: Record<string, unknown>) => {
-          const call: UpdateRecord = { setValues };
-          updateCalls.push(call);
-          return {
-            where: vi.fn().mockReturnValue({
-              returning: vi.fn().mockResolvedValue([]),
-            }),
-          };
-        }),
+        set: vi
+          .fn()
+          .mockImplementation((setValues: Record<string, unknown>) => {
+            const call: UpdateRecord = { setValues };
+            updateCalls.push(call);
+            return {
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([]),
+              }),
+            };
+          }),
       }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockImplementation((vals: unknown) => {
           claimInsertValues.push(vals);
           return {
             onConflictDoNothing: vi.fn().mockReturnValue({
-              returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+              returning: vi
+                .fn()
+                .mockImplementation(() => Promise.resolve(mockClaimReturning)),
             }),
           };
         }),
@@ -235,10 +239,7 @@ function makeSQSEvent() {
   };
 }
 
-function setupSelects(
-  batch: Record<string, unknown>,
-  contacts: unknown[]
-) {
+function setupSelects(batch: Record<string, unknown>, contacts: unknown[]) {
   // Set claim returning to all contacts by default
   mockClaimReturning = contacts.map((c) => ({
     contactId: (c as { id: string }).id,
@@ -327,9 +328,13 @@ describe("per-recipient rendering via raw HTML path", () => {
     expect(mockSendEmail).not.toHaveBeenCalled();
 
     // Render failure should result in a failed UPDATE on the claimed row
-    const failedUpdate = updateCalls.find((u) => u.setValues.status === "failed");
+    const failedUpdate = updateCalls.find(
+      (u) => u.setValues.status === "failed"
+    );
     expect(failedUpdate).toBeDefined();
-    expect(String(failedUpdate?.setValues.error)).toMatch(/Template rendering failed/);
+    expect(String(failedUpdate?.setValues.error)).toMatch(
+      /Template rendering failed/
+    );
   });
 
   it("resolves {{contact.firstName|there}} fallback syntax against recipient data", async () => {
@@ -392,7 +397,9 @@ describe("messageSend record update (claim-before-send)", () => {
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const failedUpdate = updateCalls.find((u) => u.setValues.status === "failed");
+    const failedUpdate = updateCalls.find(
+      (u) => u.setValues.status === "failed"
+    );
     expect(failedUpdate).toBeDefined();
     expect(failedUpdate?.setValues.status).toBe("failed");
     expect(failedUpdate?.setValues.error).toBe("MessageRejected: Bounced");
@@ -410,8 +417,12 @@ describe("messageSend record update (claim-before-send)", () => {
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const sentUpdates = updateCalls.filter((u) => u.setValues.status === "sent");
-    const failedUpdates = updateCalls.filter((u) => u.setValues.status === "failed");
+    const sentUpdates = updateCalls.filter(
+      (u) => u.setValues.status === "sent"
+    );
+    const failedUpdates = updateCalls.filter(
+      (u) => u.setValues.status === "failed"
+    );
 
     expect(sentUpdates).toHaveLength(1);
     expect(failedUpdates).toHaveLength(1);

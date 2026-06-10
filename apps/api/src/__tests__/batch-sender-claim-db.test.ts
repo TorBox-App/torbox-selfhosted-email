@@ -126,7 +126,7 @@ beforeAll(async () => {
         createdAt: now,
         updatedAt: now,
       },
-    ] as typeof contact.$inferInsert[])
+    ] as (typeof contact.$inferInsert)[])
     .onConflictDoNothing();
 
   // Seed the batchSend row (FK required by messageSend.batchSendId)

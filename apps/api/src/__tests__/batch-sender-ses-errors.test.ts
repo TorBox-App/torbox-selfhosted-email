@@ -79,6 +79,10 @@ let selectResults: unknown[][] = [];
 const updateSetCalls: Record<string, unknown>[] = [];
 // Contacts returned by claim INSERT
 let mockClaimReturning: Array<{ contactId: string }> = [];
+// Track DELETE calls (throttle claim-release). For each delete we record how
+// many SQS sends had happened at that moment — proves delete-before-re-enqueue.
+const deleteWhereCalls: unknown[] = [];
+const sqsCallsAtDelete: number[] = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -118,8 +122,17 @@ vi.mock("@wraps/db", async () => {
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           onConflictDoNothing: vi.fn().mockReturnValue({
-            returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+            returning: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(mockClaimReturning)),
           }),
+        }),
+      }),
+      delete: vi.fn().mockReturnValue({
+        where: vi.fn().mockImplementation((whereArg: unknown) => {
+          deleteWhereCalls.push(whereArg);
+          sqsCallsAtDelete.push(sqsSendCalls.length);
+          return Promise.resolve(undefined);
         }),
       }),
     },
@@ -240,6 +253,34 @@ function setupBulkSelects() {
   ];
 }
 
+/**
+ * Walk a Drizzle SQL tree (real `and`/`eq`/`inArray` objects — the mock spreads
+ * `...actual`) and collect every bound Param value. Lets us assert the DELETE's
+ * where clause carries the status='queued' predicate and the contact ids.
+ */
+function collectParamValues(node: unknown, out: unknown[] = []): unknown[] {
+  if (!node || typeof node !== "object") {
+    return out;
+  }
+  if (Array.isArray(node)) {
+    // inArray embeds a plain array of Param objects as a query chunk
+    for (const item of node) {
+      collectParamValues(item, out);
+    }
+    return out;
+  }
+  const record = node as Record<string, unknown>;
+  if ("value" in record && !("queryChunks" in record)) {
+    out.push(record.value);
+  }
+  if (Array.isArray(record.queryChunks)) {
+    for (const chunk of record.queryChunks) {
+      collectParamValues(chunk, out);
+    }
+  }
+  return out;
+}
+
 function makeSQSEvent(chunkIndex = 0) {
   return {
     Records: [
@@ -273,6 +314,8 @@ beforeEach(() => {
   selectResults = [];
   updateSetCalls.length = 0;
   mockClaimReturning = [];
+  deleteWhereCalls.length = 0;
+  sqsCallsAtDelete.length = 0;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -319,6 +362,38 @@ describe("SES throttle error", () => {
     // On throttle, we re-queue and return early — no post-send status updates
     const failedUpdates = updateSetCalls.filter((u) => u.status === "failed");
     expect(failedUpdates).toHaveLength(0);
+  });
+
+  it("releases unused claims (DELETE, status=queued) once BEFORE re-enqueueing", async () => {
+    setupBulkSelects();
+    sesErrorToThrow = Object.assign(new Error("Rate exceeded"), {
+      name: "Throttling",
+    });
+
+    await handler(makeSQSEvent(1), makeMockContext(), vi.fn());
+
+    // Exactly one DELETE — releases this invocation's still-queued claims so
+    // the 30s redelivery can re-claim them (rows would otherwise be stuck:
+    // claim INSERT conflicts, re-claim UPDATE sees fresh non-stale claimedAt).
+    expect(deleteWhereCalls).toHaveLength(1);
+
+    // The DELETE happened BEFORE the SQS re-enqueue (0 SQS sends at delete time)
+    expect(sqsCallsAtDelete[0]).toBe(0);
+
+    // The where clause targets the claimed contacts AND the queued status —
+    // never rows already updated to sent/failed by earlier sub-batches.
+    const paramValues = collectParamValues(deleteWhereCalls[0]).flat();
+    expect(paramValues).toContain("queued");
+    expect(paramValues).toContain("org-1");
+    expect(paramValues).toContain("batch-1");
+    expect(paramValues).toContain("contact-1");
+    expect(paramValues).toContain("contact-2");
+
+    // And the chunk is still re-enqueued with the SAME chunkIndex
+    expect(sqsSendCalls).toHaveLength(1);
+    const requeued = JSON.parse(sqsSendCalls[0].MessageBody);
+    expect(requeued.chunkIndex).toBe(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(30);
   });
 });
 
