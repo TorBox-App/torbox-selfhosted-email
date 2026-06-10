@@ -5,7 +5,16 @@ import type { PgTransaction } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || "" });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || "",
+  // Lambda freeze/thaw leaves sockets the Neon pooler has already closed;
+  // recycle aggressively so we rarely pick up a dead connection.
+  idleTimeoutMillis: 30_000,
+  maxLifetimeSeconds: 300,
+});
+// Errors on idle clients (e.g., pooler closing a frozen Lambda's socket)
+// crash the process if unhandled; the pool discards the client either way.
+pool.on("error", () => {});
 export const db = drizzle(pool, { schema });
 
 export type DbOrTx =
