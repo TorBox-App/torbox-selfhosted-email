@@ -82,10 +82,18 @@ vi.mock("./variable-mappings", () => ({
 // DB mock with per-call resolution
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Default: claim INSERT returns all contacts claimed (no conflicts).
+// Tests that need partial claims should reassign mockClaimReturning.
+let mockClaimReturning: Array<{ contactId: string }> = [];
 const mockDbInsertValues = vi.fn().mockImplementation(() => ({
-  onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+  onConflictDoNothing: vi.fn().mockReturnValue({
+    returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+  }),
 }));
-const mockDbUpdateSetWhere = vi.fn().mockResolvedValue(undefined);
+const mockDbUpdateSet = vi.fn();
+const mockDbUpdateSetWhere = vi.fn().mockReturnValue({
+  returning: vi.fn().mockResolvedValue([]),
+});
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
@@ -115,8 +123,9 @@ vi.mock("@wraps/db", async () => {
         };
       }),
       update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
+        set: mockDbUpdateSet.mockReturnValue({
           where: mockDbUpdateSetWhere,
+          returning: vi.fn().mockResolvedValue([]),
         }),
       }),
       insert: vi.fn().mockReturnValue({
@@ -184,13 +193,15 @@ function makeSQSEvent() {
 }
 
 /**
- * DB select call order in processJob:
- * 1. batchSend record
- * 2. contacts (getContactsChunk) — uses .where().orderBy().limit()
+ * DB select call order in processJob (claim-before-send contract):
+ * 0. batchSend record
+ * 1. contacts (getContactsChunk) — uses .where().orderBy().limit()
+ * 2. aws account features (config set lookup)
  * 3. template (from Promise.all)
  * 4. organization (from Promise.all)
- * 5. alreadySent contactIds (dedup query)
- * 6. organizationExtension (only when batch.from is null)
+ * 5. organizationExtension (only when batch.from is null)
+ *
+ * The old dedup SELECT (slot 5) is gone — replaced by INSERT claim + UPDATE re-claim.
  */
 function setupSelects(opts: {
   batch: Record<string, unknown>;
@@ -208,6 +219,9 @@ function setupSelects(opts: {
     createdAt: new Date("2026-01-15T10:00:00Z"),
   };
 
+  // Claim INSERT returns contact-1 as claimed (successful claim)
+  mockClaimReturning = [{ contactId: "contact-1" }];
+
   const results: unknown[][] = [
     [opts.batch], // 0: batchSend
     [contact], // 1: contacts (getContactsChunk)
@@ -220,7 +234,6 @@ function setupSelects(opts: {
       },
     ], // 3: template
     [{ name: "Test Org" }], // 4: organization
-    [], // 5: alreadySent (dedup — empty = no prior sends)
   ];
 
   // organizationExtension is only queried when batch.from is null
@@ -241,6 +254,12 @@ describe("batch-sender from address resolution", () => {
     sesSendCalls.length = 0;
     selectCallIndex = 0;
     selectResults = [];
+    mockClaimReturning = [{ contactId: "contact-1" }];
+    // Re-wire mockDbUpdateSet after clearAllMocks clears its return value
+    mockDbUpdateSet.mockReturnValue({
+      where: mockDbUpdateSetWhere,
+      returning: vi.fn().mockResolvedValue([]),
+    });
     process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
   });
 
@@ -307,14 +326,15 @@ describe("batch-sender from address resolution", () => {
     // Only GetAccountCommand — no email send attempted
     expect(sesSendCalls).toHaveLength(1);
 
-    // Should insert failed message_send records
-    expect(mockDbInsertValues).toHaveBeenCalled();
-    const insertedRecords = mockDbInsertValues.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >[];
-    expect(insertedRecords[0].status).toBe("failed");
-    expect(insertedRecords[0].error).toContain("No sender email configured");
+    // Should UPDATE claimed rows to failed (claim-before-send: rows were already inserted)
+    expect(mockDbUpdateSet).toHaveBeenCalled();
+    const failedUpdate = mockDbUpdateSet.mock.calls.find(
+      (call) => (call[0] as Record<string, unknown>).status === "failed"
+    );
+    expect(failedUpdate).toBeDefined();
+    expect((failedUpdate![0] as Record<string, unknown>).error).toContain(
+      "No sender email configured"
+    );
   });
 
   it("fails when org extension has no record at all", async () => {
@@ -326,12 +346,15 @@ describe("batch-sender from address resolution", () => {
 
     // Only GetAccountCommand — no email send attempted
     expect(sesSendCalls).toHaveLength(1);
-    expect(mockDbInsertValues).toHaveBeenCalled();
-    const insertedRecords = mockDbInsertValues.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >[];
-    expect(insertedRecords[0].status).toBe("failed");
-    expect(insertedRecords[0].error).toContain("No sender email configured");
+
+    // Should UPDATE claimed rows to failed
+    expect(mockDbUpdateSet).toHaveBeenCalled();
+    const failedUpdate = mockDbUpdateSet.mock.calls.find(
+      (call) => (call[0] as Record<string, unknown>).status === "failed"
+    );
+    expect(failedUpdate).toBeDefined();
+    expect((failedUpdate![0] as Record<string, unknown>).error).toContain(
+      "No sender email configured"
+    );
   });
 });

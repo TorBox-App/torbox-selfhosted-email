@@ -75,7 +75,10 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
-const insertValuesCalls: unknown[] = [];
+// Track UPDATE set calls for post-send status assertions
+const updateSetCalls: Record<string, unknown>[] = [];
+// Contacts returned by claim INSERT
+let mockClaimReturning: Array<{ contactId: string }> = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -103,14 +106,20 @@ vi.mock("@wraps/db", async () => {
         };
       }),
       update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn().mockImplementation((vals: Record<string, unknown>) => {
+          updateSetCalls.push(vals);
+          return {
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([]),
+            }),
+          };
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockImplementation((vals: unknown) => {
-          insertValuesCalls.push(vals);
-          return { onConflictDoNothing: vi.fn().mockResolvedValue(undefined) };
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+          }),
         }),
       }),
     },
@@ -213,7 +222,9 @@ function makeContacts() {
   ];
 }
 
-function setupBulkSelects(existingSendRecords: unknown[] = []) {
+function setupBulkSelects() {
+  // Default: both contacts claimed by INSERT
+  mockClaimReturning = makeContacts().map((c) => ({ contactId: c.id }));
   selectResults = [
     [makeBulkBatch()],
     makeContacts(),
@@ -226,7 +237,6 @@ function setupBulkSelects(existingSendRecords: unknown[] = []) {
       },
     ],
     [{ name: "Test Org" }],
-    existingSendRecords,
   ];
 }
 
@@ -261,7 +271,8 @@ beforeEach(() => {
   sqsSendCalls.length = 0;
   selectCallIndex = 0;
   selectResults = [];
-  insertValuesCalls.length = 0;
+  updateSetCalls.length = 0;
+  mockClaimReturning = [];
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +308,7 @@ describe("SES throttle error", () => {
     expect(sqsSendCalls[0]?.DelaySeconds).toBe(30);
   });
 
-  it("does NOT insert any messageSend records when throttled (chunk will retry)", async () => {
+  it("does NOT update messageSend rows with error status when throttled (chunk will retry)", async () => {
     setupBulkSelects();
     sesErrorToThrow = Object.assign(new Error("Rate limit exceeded"), {
       name: "Throttling",
@@ -305,14 +316,9 @@ describe("SES throttle error", () => {
 
     await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
 
-    const sendInserts = (insertValuesCalls as unknown[][]).filter(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    );
-    expect(sendInserts).toHaveLength(0);
+    // On throttle, we re-queue and return early — no post-send status updates
+    const failedUpdates = updateSetCalls.filter((u) => u.status === "failed");
+    expect(failedUpdates).toHaveLength(0);
   });
 });
 
@@ -321,7 +327,7 @@ describe("SES throttle error", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("SES permission error", () => {
-  it("inserts failed messageSend records for all recipients before re-throwing", async () => {
+  it("updates claimed rows to failed for all recipients before re-throwing", async () => {
     setupBulkSelects();
     sesErrorToThrow = Object.assign(
       new Error("User is not authorized to perform: ses:SendBulkEmail"),
@@ -332,17 +338,11 @@ describe("SES permission error", () => {
       handler(makeSQSEvent(0), makeMockContext(), vi.fn())
     ).rejects.toThrow();
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-
-    expect(sendInsert).toBeDefined();
-    expect(sendInsert).toHaveLength(2);
-    expect(sendInsert?.every((r) => r.status === "failed")).toBe(true);
+    // Permission error path updates claimed rows to failed via a single UPDATE
+    // with inArray for all recipients in the batch
+    const failedUpdate = updateSetCalls.find((u) => u.status === "failed");
+    expect(failedUpdate).toBeDefined();
+    expect(failedUpdate?.status).toBe("failed");
   });
 
   it("error message mentions IAM role and instructs how to fix it", async () => {

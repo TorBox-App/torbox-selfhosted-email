@@ -192,12 +192,21 @@ vi.mock("@wraps/db", async () => {
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockImplementation(() => ({
-          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            // claim returns all 50 contacts as claimed
+            returning: vi.fn().mockImplementation(() =>
+              Promise.resolve(
+                mockContacts.map((c) => ({ contactId: c.id }))
+              )
+            ),
+          }),
         })),
       }),
     },

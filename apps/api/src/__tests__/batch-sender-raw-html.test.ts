@@ -60,16 +60,23 @@ vi.mock("@aws-sdk/client-sqs", () => ({
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DB mock — index-based select, tracks inserts
+// DB mock — index-based select, tracks claim inserts + post-send updates
 // Raw HTML path select order (batch.from != null, emailTemplateId null):
 //   0: batch
 //   1: contacts (from getContactsChunk)
-//   2: existingSendRecords (dedup)
+//   (dedup SELECT removed — replaced by INSERT claim + UPDATE re-claim)
 // ─────────────────────────────────────────────────────────────────────────────
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
-const insertValuesCalls: unknown[] = [];
+
+// Track the claim INSERT's values (the initial claimed rows before send)
+const claimInsertValues: unknown[] = [];
+// Track all UPDATE set calls (re-claim + post-send status updates)
+type UpdateRecord = { setValues: Record<string, unknown>; contactId?: string };
+const updateCalls: UpdateRecord[] = [];
+// Contacts returned by the claim INSERT — default to all contacts claimed
+let mockClaimReturning: Array<{ contactId: string }> = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -97,14 +104,24 @@ vi.mock("@wraps/db", async () => {
         };
       }),
       update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn().mockImplementation((setValues: Record<string, unknown>) => {
+          const call: UpdateRecord = { setValues };
+          updateCalls.push(call);
+          return {
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([]),
+            }),
+          };
         }),
       }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockImplementation((vals: unknown) => {
-          insertValuesCalls.push(vals);
-          return { onConflictDoNothing: vi.fn().mockResolvedValue(undefined) };
+          claimInsertValues.push(vals);
+          return {
+            onConflictDoNothing: vi.fn().mockReturnValue({
+              returning: vi.fn().mockImplementation(() => Promise.resolve(mockClaimReturning)),
+            }),
+          };
         }),
       }),
     },
@@ -220,17 +237,22 @@ function makeSQSEvent() {
 
 function setupSelects(
   batch: Record<string, unknown>,
-  contacts: unknown[],
-  existingRecords: unknown[] = []
+  contacts: unknown[]
 ) {
-  selectResults = [[batch], contacts, existingRecords];
+  // Set claim returning to all contacts by default
+  mockClaimReturning = contacts.map((c) => ({
+    contactId: (c as { id: string }).id,
+  }));
+  selectResults = [[batch], contacts];
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   selectCallIndex = 0;
   selectResults = [];
-  insertValuesCalls.length = 0;
+  claimInsertValues.length = 0;
+  updateCalls.length = 0;
+  mockClaimReturning = [];
   mockSendEmail.mockReset();
 });
 
@@ -263,14 +285,11 @@ describe("per-recipient rendering via raw HTML path", () => {
 
     expect(mockSendEmail.mock.calls[0]?.[0]?.subject).toBe("A gift for Alice");
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-    expect(sendInsert?.[0]?.subject).toBe("A gift for Alice");
+    // Post-send update carries the rendered subject
+    const sentUpdate = updateCalls.find(
+      (u) => u.setValues.status === "sent" && u.setValues.subject !== undefined
+    );
+    expect(sentUpdate?.setValues.subject).toBe("A gift for Alice");
   });
 
   it("evaluates {{#if}} conditionals against recipient data", async () => {
@@ -307,15 +326,10 @@ describe("per-recipient rendering via raw HTML path", () => {
 
     expect(mockSendEmail).not.toHaveBeenCalled();
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-    expect(sendInsert?.[0]?.status).toBe("failed");
-    expect(String(sendInsert?.[0]?.error)).toMatch(/Template rendering failed/);
+    // Render failure should result in a failed UPDATE on the claimed row
+    const failedUpdate = updateCalls.find((u) => u.setValues.status === "failed");
+    expect(failedUpdate).toBeDefined();
+    expect(String(failedUpdate?.setValues.error)).toMatch(/Template rendering failed/);
   });
 
   it("resolves {{contact.firstName|there}} fallback syntax against recipient data", async () => {
@@ -358,52 +372,33 @@ describe("per-recipient rendering via raw HTML path", () => {
 // messageSend record insertion
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("messageSend record insertion", () => {
-  it("inserts status='sent' record with messageId when sendEmail fulfills", async () => {
+describe("messageSend record update (claim-before-send)", () => {
+  it("updates claimed row with status='sent' and messageId when sendEmail fulfills", async () => {
     setupSelects(makeRawBatch(), [makeContact("c1", "alice@example.com")]);
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-abc" });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-
-    expect(sendInsert).toBeDefined();
-    const record = sendInsert?.[0];
-    expect(record?.status).toBe("sent");
-    expect(record?.messageId).toBe("msg-abc");
-    expect(record?.contactId).toBe("c1");
-    expect(record?.recipient).toBe("alice@example.com");
+    // Post-send UPDATE should set status=sent and messageId
+    const sentUpdate = updateCalls.find((u) => u.setValues.status === "sent");
+    expect(sentUpdate).toBeDefined();
+    expect(sentUpdate?.setValues.status).toBe("sent");
+    expect(sentUpdate?.setValues.messageId).toBe("msg-abc");
   });
 
-  it("inserts status='failed' record with error message when sendEmail rejects", async () => {
+  it("updates claimed row with status='failed' and error message when sendEmail rejects", async () => {
     setupSelects(makeRawBatch(), [makeContact("c1", "alice@example.com")]);
     mockSendEmail.mockRejectedValueOnce(new Error("MessageRejected: Bounced"));
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
-
-    expect(sendInsert).toBeDefined();
-    const record = sendInsert?.[0];
-    expect(record?.status).toBe("failed");
-    expect(record?.error).toBe("MessageRejected: Bounced");
-    expect(record?.contactId).toBe("c1");
-    expect(record?.messageId).toBeUndefined();
+    const failedUpdate = updateCalls.find((u) => u.setValues.status === "failed");
+    expect(failedUpdate).toBeDefined();
+    expect(failedUpdate?.setValues.status).toBe("failed");
+    expect(failedUpdate?.setValues.error).toBe("MessageRejected: Bounced");
   });
 
-  it("inserts both sent and failed records in one batch when some contacts fail (allSettled)", async () => {
+  it("updates both sent and failed rows when some contacts fail (allSettled)", async () => {
     setupSelects(makeRawBatch({ totalRecipients: 2 }), [
       makeContact("c1", "alice@example.com", "Alice"),
       makeContact("c2", "bob@example.com", "Bob"),
@@ -415,25 +410,14 @@ describe("messageSend record insertion", () => {
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const sendInsert = (insertValuesCalls as unknown[][]).find(
-      (vals) =>
-        Array.isArray(vals) &&
-        vals.some(
-          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
-        )
-    ) as Record<string, unknown>[] | undefined;
+    const sentUpdates = updateCalls.filter((u) => u.setValues.status === "sent");
+    const failedUpdates = updateCalls.filter((u) => u.setValues.status === "failed");
 
-    expect(sendInsert).toBeDefined();
-    expect(sendInsert).toHaveLength(2);
+    expect(sentUpdates).toHaveLength(1);
+    expect(failedUpdates).toHaveLength(1);
 
-    const sentRecord = sendInsert?.find((r) => r.contactId === "c1");
-    const failedRecord = sendInsert?.find((r) => r.contactId === "c2");
-
-    expect(sentRecord?.status).toBe("sent");
-    expect(sentRecord?.messageId).toBe("msg-alice");
-
-    expect(failedRecord?.status).toBe("failed");
-    expect(failedRecord?.error).toBe("SMTP error");
+    expect(sentUpdates[0]?.setValues.messageId).toBe("msg-alice");
+    expect(failedUpdates[0]?.setValues.error).toBe("SMTP error");
   });
 
   it("calls sendEmail once per contact (not once for the whole batch)", async () => {

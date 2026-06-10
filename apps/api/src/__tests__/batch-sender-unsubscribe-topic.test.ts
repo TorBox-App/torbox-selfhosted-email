@@ -91,6 +91,7 @@ vi.mock("./variable-mappings", () => ({
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
+let mockClaimReturning: Array<{ contactId: string }> = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -119,13 +120,19 @@ vi.mock("@wraps/db", async () => {
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockImplementation(() => ({
-          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-        })),
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockImplementation(() =>
+              Promise.resolve(mockClaimReturning)
+            ),
+          }),
+        }),
       }),
     },
     sql: (...args: unknown[]) => args,
@@ -212,6 +219,10 @@ function makeSQSEvent() {
 }
 
 function setupSelects(batch: Record<string, unknown>) {
+  const contacts = makeContacts();
+  mockClaimReturning = contacts.map((c) => ({ contactId: c.id }));
+
+  const awsAccountFeatures = [{}];
   const template = [
     {
       sesTemplateName: "wraps-tmpl-1",
@@ -220,19 +231,19 @@ function setupSelects(batch: Record<string, unknown>) {
     },
   ];
   const org = [{ name: "Test Org" }];
-  const dedup: unknown[] = [];
 
-  // getContactsChunk injects an extra db.select() per audience type:
-  //   topic   — contactTopic subquery via exists()
-  //   segment — segment row lookup (awaited)
+  // getContactsChunk select order:
+  //   topic   — db.select() for correlated subquery (exists()), then contacts
+  //   segment — segment row lookup (1 select), then contacts
+  //   all     — contacts only
   if (batch.audienceType === "topic") {
     selectResults = [
       [batch],
-      [], // contactTopic subquery (unused, but consumes a select call)
-      makeContacts(),
+      [], // contactTopic correlated subquery (db.select() is called to build it; slot consumed)
+      contacts,
+      awsAccountFeatures,
       template,
       org,
-      dedup,
     ];
   } else if (batch.audienceType === "segment") {
     selectResults = [
@@ -250,13 +261,13 @@ function setupSelects(batch: Record<string, unknown>) {
           },
         },
       ],
-      makeContacts(),
+      contacts,
+      awsAccountFeatures,
       template,
       org,
-      dedup,
     ];
   } else {
-    selectResults = [[batch], makeContacts(), template, org, dedup];
+    selectResults = [[batch], contacts, awsAccountFeatures, template, org];
   }
 }
 
@@ -266,6 +277,7 @@ describe("Batch sender unsubscribe token scope", () => {
     generateUnsubscribeTokenMock.mockClear();
     selectCallIndex = 0;
     selectResults = [];
+    mockClaimReturning = [];
   });
 
   it("passes topicId to generateUnsubscribeToken when audienceType=topic", async () => {
