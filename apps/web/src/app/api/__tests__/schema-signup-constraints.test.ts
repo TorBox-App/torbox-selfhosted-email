@@ -25,7 +25,9 @@ describe("Schema Signup Constraints", () => {
       .where(eq(organizationExtension.organizationId, testSignupOrgId));
     await db.delete(organization).where(eq(organization.id, testSignupOrgId));
     // Also clean up by slug in case there's a leftover from previous test run
-    await db.delete(organization).where(eq(organization.slug, "test-org"));
+    await db
+      .delete(organization)
+      .where(eq(organization.slug, "signup-test-org"));
     await db.delete(user).where(eq(user.id, testSignupUserId));
   });
 
@@ -201,7 +203,7 @@ describe("Schema Signup Constraints", () => {
     await db.insert(organization).values({
       id: testSignupOrgId,
       name: "Test Org",
-      slug: "test-org",
+      slug: "signup-test-org",
       createdAt: new Date(),
     });
 

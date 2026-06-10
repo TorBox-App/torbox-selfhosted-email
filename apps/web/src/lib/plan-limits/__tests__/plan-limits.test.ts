@@ -53,6 +53,12 @@ const testOrg = {
 
 describe("Plan Limits", () => {
   beforeAll(async () => {
+    // A real license key in the developer's environment would override every
+    // plan lookup with the licensed tier — remove it so tests are hermetic.
+    // License-override tests stub their own values via vi.stubEnv.
+    delete process.env.WRAPS_LICENSE_KEY;
+    delete process.env.WRAPS_LICENSE_PUBLIC_KEY_PEM;
+
     // Clean up any existing test data
     await db
       .delete(subscription)
