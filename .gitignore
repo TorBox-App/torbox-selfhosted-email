@@ -90,3 +90,6 @@ tests/deployment/pulumi/app/package-lock.json
 
 # Video package (local Remotion compositions)
 packages/video/
+
+# improve skill
+plans/
