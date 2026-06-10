@@ -22,6 +22,16 @@ import { rateLimitTable } from "./tables";
 
 // API Gateway with Elysia Lambda handler
 export const api = new sst.aws.ApiGatewayV2("Api", {
+  // Wildcard is intentional: this is a public API for customer apps. Auth is
+  // Authorization: Bearer only (never cookies), so browsers cannot attach a
+  // victim's credentials cross-origin. allowCredentials must stay false —
+  // adding cookie-based auth to this API would require revisiting this.
+  cors: {
+    allowOrigins: ["*"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    maxAge: "1 day",
+  },
   // Custom domain for production (DNS managed in Cloudflare)
   domain:
     $app.stage === "production"

@@ -1,0 +1,6 @@
+# Wraps does not operate a paid bug bounty program.
+# We appreciate responsible disclosure and credit valid reports.
+Contact: mailto:jarod@wraps.dev
+Expires: 2027-06-09T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://wraps.dev/.well-known/security.txt

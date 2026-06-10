@@ -111,15 +111,13 @@ const openApiDocumentation = {
 };
 
 /**
- * CORS origin allowlist.
- * Production: app.wraps.dev + wraps.dev
- * Dev/staging: also includes NEXT_PUBLIC_APP_URL (e.g. http://localhost:3000)
+ * CORS is intentionally wildcard: this is a public API for customer apps,
+ * authenticated via Authorization: Bearer only (never cookies), so browsers
+ * cannot attach a victim's credentials cross-origin. Matches the API Gateway
+ * CORS config in infra/api.ts, which overrides these headers when deployed.
+ * Credentials must stay disabled — wildcard + credentials is rejected by
+ * browsers, and cookie auth on this API would require an allowlist instead.
  */
-const allowedOrigins = ["https://app.wraps.dev", "https://wraps.dev"];
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-if (appUrl && !allowedOrigins.includes(appUrl)) {
-  allowedOrigins.push(appUrl);
-}
 
 export const app = new Elysia()
   .derive(({ request }) => ({
@@ -222,7 +220,8 @@ export const app = new Elysia()
   })
   .use(
     cors({
-      origin: allowedOrigins,
+      origin: true,
+      credentials: false,
       allowedHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     })
