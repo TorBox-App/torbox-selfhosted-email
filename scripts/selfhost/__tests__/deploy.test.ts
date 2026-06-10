@@ -199,7 +199,7 @@ describe("scripts/selfhost/deploy", () => {
     );
   });
 
-  it("runs sst bootstrap then sst deploy, with .env.selfhost written before bootstrap", async () => {
+  it("runs sst install then sst deploy, with .env.selfhost written before install", async () => {
     const { deploy } = await import("../deploy.js");
     await deploy({
       databaseUrl: "postgres://user:pass@host/db",
@@ -208,17 +208,16 @@ describe("scripts/selfhost/deploy", () => {
     });
 
     const calls = mockRunSubprocess.mock.calls as [string, string[]][];
-    const bootstrapIdx = calls.findIndex(([, args]) =>
-      args.includes("bootstrap")
-    );
+    const installIdx = calls.findIndex(([, args]) => args.includes("install"));
     const deployIdx = calls.findIndex(([, args]) => args.includes("deploy"));
-    expect(bootstrapIdx).toBeGreaterThanOrEqual(0);
+    expect(installIdx).toBeGreaterThanOrEqual(0);
     expect(deployIdx).toBeGreaterThanOrEqual(0);
+    expect(installIdx).toBeLessThan(deployIdx);
 
     const writeCallOrder = mockWriteFile.mock.invocationCallOrder[0]!;
-    const bootstrapCallOrder =
-      mockRunSubprocess.mock.invocationCallOrder[bootstrapIdx]!;
-    expect(writeCallOrder).toBeLessThan(bootstrapCallOrder);
+    const installCallOrder =
+      mockRunSubprocess.mock.invocationCallOrder[installIdx]!;
+    expect(writeCallOrder).toBeLessThan(installCallOrder);
   });
 
   it("throws with a clear error when sst deploy subprocess exits non-zero", async () => {
