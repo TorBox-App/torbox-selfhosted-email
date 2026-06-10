@@ -80,12 +80,14 @@ export function normalizePlainTextMustaches(
 export function extractCanonicalVars(html: string): Set<string> {
   const vars = new Set<string>();
   for (const m of html.matchAll(/\{\{([a-zA-Z0-9_.]+)(?:\|[^}]*)?\}\}/g)) {
-    vars.add(m[1]);
+    if (m[1]) {
+      vars.add(m[1]);
+    }
   }
   for (const m of html.matchAll(
     /\{\{[#/][a-zA-Z]+\s+([a-zA-Z0-9_.\s]+?)\s*\}\}/g
   )) {
-    for (const arg of m[1].split(/\s+/)) {
+    for (const arg of (m[1] ?? "").split(/\s+/)) {
       if (arg) {
         vars.add(arg);
       }

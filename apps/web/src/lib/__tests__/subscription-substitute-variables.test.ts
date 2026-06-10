@@ -6,13 +6,11 @@
  * recipient's variable dict before SES sends the email. The previous
  * implementation was a pure regex substituter that left `{{#if}}` blocks
  * untouched. After the consolidation onto `@wraps/template-render`, block
- * helpers evaluate correctly — but the canonical renderer also swallows
- * compile errors and returns the raw template, which means a malformed
- * confirmation template would silently ship raw `{{#if}}` to a real inbox.
- *
- * The function detects that bail and emits a `console.info` line via the
- * service's `structuredLog` so we have a paper trail. These tests pin
- * that contract.
+ * helpers evaluate correctly — and a compile or runtime failure THROWS
+ * (after a `console.info` paper trail via the service's `structuredLog`)
+ * so a malformed custom template never ships raw `{{#if}}` to a real
+ * inbox; the caller falls back to the default confirmation email. These
+ * tests pin that contract.
  *
  * Lives in apps/web because packages/email has no vitest setup; the
  * `@wraps/email/lib/*` export pattern lets us import the deep path
@@ -61,20 +59,20 @@ describe("subscription substituteVariables — render failure observability", ()
     expect(infoSpy).not.toHaveBeenCalled();
   });
 
-  it("logs when a malformed template causes the renderer to bail", () => {
-    // Unclosed {{#if}} — Handlebars compile throws, renderer returns raw.
+  it("logs and throws when a malformed template fails to compile", () => {
+    // Unclosed {{#if}} — Handlebars compile throws; the mailer must NOT
+    // ship raw Handlebars to a subscriber, so substituteVariables rethrows
+    // and the caller falls back to the default confirmation email.
     const malformed = "Hi {{#if firstName}}{{firstName}}";
 
-    const result = substituteVariables(malformed, { firstName: "Jane" });
-
-    // Renderer returns the raw template — that's the contract.
-    expect(result).toBe(malformed);
-    // The mailer MUST log so we can detect malformed confirmation templates
-    // before they ship raw Handlebars to a real subscriber.
+    expect(() => substituteVariables(malformed, { firstName: "Jane" })).toThrow(
+      /Template rendering failed/
+    );
+    // The log is the paper trail for detecting malformed confirmation
+    // templates in production.
     expect(infoSpy).toHaveBeenCalledTimes(1);
     const logLine = String(infoSpy.mock.calls[0][0]);
     expect(logLine).toMatch(/render failed/);
-    expect(logLine).toMatch(/raw template/);
   });
 
   it("does not log when a well-formed template references a missing variable", () => {
