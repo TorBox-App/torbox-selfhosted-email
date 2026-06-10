@@ -1,9 +1,11 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig({
+export default defineConfig((options) => ({
   entry: ["src/cli.ts"],
   format: ["esm"],
-  clean: true,
+  // Cleaning in watch mode deletes dist on startup, breaking consumers
+  // that resolve dist/ during turbo dev
+  clean: !options.watch,
   shims: true,
   splitting: false,
   bundle: true,
@@ -25,4 +27,4 @@ export default defineConfig({
       fs.chmod("dist/cli.js", 0o755)
     );
   },
-});
+}));
