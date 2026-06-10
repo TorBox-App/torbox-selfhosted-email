@@ -36,6 +36,7 @@ vi.mock("fs/promises", async () => {
   const actual = await vi.importActual("fs/promises");
   return {
     ...actual,
+    chmod: vi.fn(),
     readFile: vi.fn(),
     writeFile: vi.fn(),
     unlink: vi.fn(),

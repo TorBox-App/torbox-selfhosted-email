@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { access, chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
 import {
@@ -131,6 +131,7 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     envLines.push(`AI_GATEWAY_API_KEY=${options.aiGatewayApiKey}`);
 
   await writeFile(ENV_PATH, `${envLines.join("\n")}\n`, "utf-8");
+  await chmod(ENV_PATH, 0o600);
   clack.log.info("Wrote .env.selfhost");
 
   clack.log.step("Installing SST providers...");
@@ -182,6 +183,7 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     `${currentEnv.trimEnd()}\n${envAppend.join("\n")}\n`,
     "utf-8"
   );
+  await chmod(ENV_PATH, 0o600);
 
   const now = new Date().toISOString();
   const metadata = (await loadConnectionMetadata(

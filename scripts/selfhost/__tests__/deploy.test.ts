@@ -20,10 +20,12 @@ const mockReadFile = vi.hoisted(() =>
   )
 );
 const mockAccess = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockChmod = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("node:fs/promises", () => ({
   writeFile: mockWriteFile,
   readFile: mockReadFile,
   access: mockAccess,
+  chmod: mockChmod,
 }));
 
 // ── clack mock ───────────────────────────────────────────────────────────────

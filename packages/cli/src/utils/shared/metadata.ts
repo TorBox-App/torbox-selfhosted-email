@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   AdditionalDomain,
@@ -274,6 +274,7 @@ async function saveConnectionMetadataLocal(
 
   const content = JSON.stringify(metadata, null, 2);
   await writeFile(metadataPath, content, "utf-8");
+  await chmod(metadataPath, 0o600);
 }
 
 /**
@@ -288,6 +289,7 @@ export async function saveConnectionMetadata(
   try {
     const content = JSON.stringify(metadata, null, 2);
     await writeFile(metadataPath, content, "utf-8");
+    await chmod(metadataPath, 0o600);
   } catch (error) {
     console.error(
       "Error saving connection metadata:",
