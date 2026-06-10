@@ -21,6 +21,14 @@ import { contact, topic } from "./contacts";
 /** Magic field name for cascade engagement conditions */
 export const CASCADE_ENGAGEMENT_FIELD = "engagement.status" as const;
 
+/**
+ * Maximum number of times a failed execution may be retried. Once
+ * `workflowExecution.retryCount` reaches this, the retry route rejects further
+ * attempts and the dashboard stops offering the Retry button — a permanently
+ * broken execution shouldn't loop forever.
+ */
+export const MAX_WORKFLOW_RETRIES = 5;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES (for JSONB columns)
 // ═══════════════════════════════════════════════════════════════════════════

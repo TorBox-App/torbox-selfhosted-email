@@ -1,5 +1,5 @@
 import { auth } from "@wraps/auth";
-import type { WorkflowStep } from "@wraps/db";
+import { MAX_WORKFLOW_RETRIES, type WorkflowStep } from "@wraps/db";
 import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Card,
@@ -13,6 +13,7 @@ import { notFound, redirect } from "next/navigation";
 import { getWorkflowExecution } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import {
+  classifyWorkflowError,
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
 } from "@/lib/(ee)/workflows";
@@ -27,6 +28,25 @@ const CANCELLABLE_STATUSES = new Set([
   "paused",
   "waiting",
 ]);
+
+// Resolve the failed step's type from the snapshot so RetryButton can warn
+// before re-sending an email/SMS. Kept out of the page component to hold its
+// cognitive complexity under the lint ceiling.
+function getErrorStepType(
+  steps: WorkflowStep[],
+  errorStepId: string | null
+): string | undefined {
+  if (!errorStepId) {
+    return;
+  }
+  return steps.find((s) => s.id === errorStepId)?.type;
+}
+
+// Offer Retry only for failed executions that haven't exhausted the ceiling —
+// past it the API rejects the retry, so showing the button would just dead-end.
+function canOfferRetry(status: string, retryCount: number | null): boolean {
+  return status === "failed" && (retryCount ?? 0) < MAX_WORKFLOW_RETRIES;
+}
 
 type ExecutionDetailPageProps = {
   params: Promise<{
@@ -81,6 +101,10 @@ export default async function ExecutionDetailPage({
 
   const stepNameMap = new Map(snapshotSteps.map((s) => [s.id, s.name]));
 
+  // The step that failed — used to warn before re-sending email/SMS on retry.
+  const errorStepType = getErrorStepType(snapshotSteps, execution.errorStepId);
+  const contactEmail = execution.contact?.email;
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       {/* Header */}
@@ -109,8 +133,10 @@ export default async function ExecutionDetailPage({
           </div>
           <p className="text-muted-foreground">{contactName}</p>
         </div>
-        {execution.status === "failed" && (
+        {canOfferRetry(execution.status, execution.retryCount) && (
           <RetryButton
+            contactEmail={contactEmail}
+            errorStepType={errorStepType}
             executionId={execution.id}
             organizationId={orgWithMembership.id}
           />
@@ -146,8 +172,16 @@ export default async function ExecutionDetailPage({
               Error Details
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p>{execution.error}</p>
+          <CardContent className="space-y-3">
+            <p className="font-medium text-sm">
+              {classifyWorkflowError(execution.error).remediation}
+            </p>
+            <details className="text-muted-foreground text-sm">
+              <summary className="cursor-pointer select-none">
+                Show error detail
+              </summary>
+              <p className="mt-2 font-mono text-xs">{execution.error}</p>
+            </details>
           </CardContent>
         </Card>
       )}

@@ -50,6 +50,7 @@ vi.mock("@wraps/db", () => {
       activeExecutions: "active_executions",
       failedExecutions: "failed_executions",
     },
+    MAX_WORKFLOW_RETRIES: 5,
     contact: {
       id: "id",
       organizationId: "organization_id",
@@ -143,6 +144,82 @@ describe("Workflow Execution Retry", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith({
+      type: "execute",
+      executionId: "exec-123",
+      stepId: "step-789",
+      organizationId: "org-123",
+    });
+  });
+
+  it("rejects retry when retryCount has reached the ceiling of 5", async () => {
+    mockSelectLimit.mockResolvedValueOnce([
+      {
+        id: "exec-123",
+        workflowId: "wf-456",
+        organizationId: "org-123",
+        status: "failed",
+        errorStepId: "step-789",
+        error: "Template not found",
+        retryCount: 5,
+      },
+    ]);
+
+    const app = createApp();
+    const response = await app.handle(
+      new Request("http://localhost/v1/workflows/executions/exec-123/retry", {
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe(
+      "Max retries reached (5). Fix the underlying issue before retrying."
+    );
+    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("allows retry at the boundary when retryCount is 4 (still under ceiling)", async () => {
+    mockSelectLimit.mockResolvedValueOnce([
+      {
+        id: "exec-123",
+        workflowId: "wf-456",
+        organizationId: "org-123",
+        status: "failed",
+        errorStepId: "step-789",
+        error: "Template not found",
+        retryCount: 4,
+      },
+    ]);
+    mockTransaction.mockImplementation(async (cb: Function) => {
+      const txMock = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn(() => [{ id: "exec-123" }]),
+            })),
+          })),
+        })),
+      };
+      return cb(txMock);
+    });
+    mockEnqueueWorkflowStep.mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    const response = await app.handle(
+      new Request("http://localhost/v1/workflows/executions/exec-123/retry", {
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.error).toBeUndefined();
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith({
       type: "execute",
       executionId: "exec-123",

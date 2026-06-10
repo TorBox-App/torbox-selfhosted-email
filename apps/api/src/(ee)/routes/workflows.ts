@@ -6,7 +6,14 @@
  * by external systems or customer code.
  */
 
-import { contact, db, eq, workflow, workflowExecution } from "@wraps/db";
+import {
+  contact,
+  db,
+  eq,
+  MAX_WORKFLOW_RETRIES,
+  workflow,
+  workflowExecution,
+} from "@wraps/db";
 import { and, inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 
@@ -426,6 +433,13 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
 
       if (!exec.errorStepId) {
         return { success: false, error: "No error step to retry from" };
+      }
+
+      if ((exec.retryCount ?? 0) >= MAX_WORKFLOW_RETRIES) {
+        return {
+          success: false,
+          error: `Max retries reached (${MAX_WORKFLOW_RETRIES}). Fix the underlying issue before retrying.`,
+        };
       }
 
       const errorStepId = exec.errorStepId;

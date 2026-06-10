@@ -63,6 +63,65 @@ export const STEP_STATUS_COLORS: Record<WorkflowStepExecutionStatus, string> = {
   skipped: "bg-gray-100 text-gray-500",
 };
 
+// Ordered error-message patterns mapped to a stable code and a user-facing
+// remediation hint. These mirror the errors thrown by the step handlers
+// (see apps/api workflow-step-handlers.ts). Order matters: template_empty is
+// checked before template_deleted so a compiled-HTML error never falls through
+// to the broader "not found" match.
+const WORKFLOW_ERROR_PATTERNS: ReadonlyArray<{
+  code: string;
+  test: RegExp;
+  remediation: string;
+}> = [
+  {
+    code: "aws_account_missing",
+    test: /AWS account.*not found/i,
+    remediation: "Reconnect your AWS account in Settings → AWS Accounts",
+  },
+  {
+    code: "template_empty",
+    test: /Template.*no compiled HTML/i,
+    remediation: "Publish the email template before retrying",
+  },
+  {
+    code: "template_deleted",
+    test: /Template.*not found/i,
+    remediation: "Restore or recreate the email template, then retry",
+  },
+  {
+    code: "ses_permission",
+    // Matches the send handler's "…does not have permission to send emails…"
+    // plus generic IAM/authorization wording. Deliberately avoids bare "SES"
+    // so retryable contract errors (e.g. "SES SendEmail returned no
+    // MessageId") still fall through to transient.
+    test: /does not have permission|permission to send|not authorized|access denied|SES.*permission/i,
+    remediation: "Check SES send permissions for your AWS IAM role",
+  },
+];
+
+/**
+ * Classify a workflow execution error string into a stable code plus a
+ * user-facing remediation hint so the execution detail page can tell the user
+ * what to do instead of only showing the raw error. Matching is
+ * case-insensitive and falls back to "transient" — a safe default that nudges
+ * the user to just retry.
+ */
+export function classifyWorkflowError(error: string): {
+  code: string;
+  remediation: string;
+} {
+  for (const { code, test, remediation } of WORKFLOW_ERROR_PATTERNS) {
+    if (test.test(error)) {
+      return { code, remediation };
+    }
+  }
+
+  return {
+    code: "transient",
+    remediation: "This looks like a transient error — safe to retry",
+  };
+}
+
 /**
  * Get the number of steps in a workflow (excluding trigger)
  */
