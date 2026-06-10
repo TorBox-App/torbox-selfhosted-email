@@ -822,3 +822,143 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     });
   });
 });
+
+describe("activation-tracking: template variable props on first-milestone events", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.WRAPS_API_KEY = "test-wraps-api-key";
+    mockDbWhere.mockResolvedValue([{ count: 1 }]);
+  });
+
+  it("activation.first_contact includes contactName from first/last name", async () => {
+    await trackContactCreated(
+      "user@example.com",
+      "org-123",
+      {},
+      { firstName: "Ada", lastName: "Lovelace", email: "ada@example.com" }
+    );
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_contact", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        contactName: "Ada Lovelace",
+      }),
+    });
+  });
+
+  it("activation.first_contact falls back to email local-part for contactName", async () => {
+    await trackContactCreated(
+      "user@example.com",
+      "org-123",
+      {},
+      { email: "ada.l@example.com" }
+    );
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_contact", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({ contactName: "ada.l" }),
+    });
+  });
+
+  it("activation.first_contact omits contactName when no contact info given", async () => {
+    await trackContactCreated("user@example.com", "org-123");
+
+    const call = mockTrack.mock.calls.find(
+      ([event]: unknown[]) => event === "activation.first_contact"
+    ) as unknown as [string, { properties: Record<string, unknown> }];
+    expect(call).toBeDefined();
+    expect(call[1].properties.contactName).toBeUndefined();
+  });
+
+  it("activation.first_contact from imports includes contactName from first imported contact", async () => {
+    await trackContactsImported("user@example.com", "org-123", {
+      count: 5,
+      firstContact: { email: "first.import@example.com" },
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_contact", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({ contactName: "first.import" }),
+    });
+  });
+
+  it("activation.first_automation includes workflowName", async () => {
+    await trackWorkflowCreated("user@example.com", "org-123", {
+      workflowName: "Welcome Sequence",
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_automation", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        workflowName: "Welcome Sequence",
+      }),
+    });
+  });
+
+  it("activation.first_template includes templateName", async () => {
+    await trackTemplateCreated("user@example.com", "org-123", {
+      templateName: "Welcome Email",
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_template", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        templateName: "Welcome Email",
+      }),
+    });
+  });
+
+  it("template.published includes templateName", async () => {
+    await trackTemplatePublished("user@example.com", "org-123", {
+      templateName: "Welcome Email",
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith("template.published", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        templateName: "Welcome Email",
+      }),
+    });
+  });
+
+  it("activation.first_broadcast includes stringified recipientCount and templateName", async () => {
+    // First db call: countBatchSends → 1, second: template name lookup
+    mockDbWhere
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ name: "Product Launch" }]);
+
+    await trackBroadcastCreated("user@example.com", "org-123", {
+      channel: "email",
+      recipientCount: 1240,
+      templateId: "tpl-1",
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_broadcast", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        channel: "email",
+        recipientCount: "1240",
+        templateName: "Product Launch",
+      }),
+    });
+  });
+
+  it("activation.first_broadcast omits templateName when no templateId given", async () => {
+    await trackBroadcastCreated("user@example.com", "org-123", {
+      channel: "email",
+      recipientCount: 10,
+    });
+
+    const call = mockTrack.mock.calls.find(
+      ([event]: unknown[]) => event === "activation.first_broadcast"
+    ) as unknown as [string, { properties: Record<string, unknown> }];
+    expect(call).toBeDefined();
+    expect(call[1].properties.recipientCount).toBe("10");
+    expect(call[1].properties.templateName).toBeUndefined();
+  });
+});

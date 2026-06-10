@@ -260,7 +260,8 @@ export async function trackFirstResourceCreated(
   organizationId: string,
   resource: "template" | "workflow",
   source: "cli" | "dashboard",
-  userId?: string | null
+  userId?: string | null,
+  resourceName?: string | null
 ) {
   try {
     const table = resource === "template" ? template : workflow;
@@ -296,11 +297,15 @@ export async function trackFirstResourceCreated(
         ? "activation.first_template"
         : "activation.first_automation";
 
-    const props = {
+    const props: Record<string, string> = {
       organization_id: organizationId,
       resource,
       source,
     };
+    if (resourceName) {
+      props[resource === "template" ? "templateName" : "workflowName"] =
+        resourceName;
+    }
 
     const posthog = getPostHogClient();
     posthog.capture({

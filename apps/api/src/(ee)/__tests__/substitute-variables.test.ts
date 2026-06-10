@@ -13,6 +13,7 @@
  * Fix: Use Handlebars library to properly evaluate the conditional syntax.
  */
 
+import { transformVariablesForSes } from "@wraps/email";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { log } from "../../lib/logger";
@@ -101,15 +102,48 @@ describe("substituteVariables with Handlebars conditionals", () => {
     });
   });
 
+  describe("authoring syntax via transformVariablesForSes (the send-path composition)", () => {
+    // The step handlers render transformVariablesForSes(template) — never the
+    // raw stored template. Raw {{var|fallback}} is a Handlebars parse error,
+    // and dotted {{contact.firstName}} can't resolve against flat data; both
+    // are exactly what the transform converts. This pins the composition.
+    it("renders fallback syntax after transform instead of throwing", () => {
+      const stored = "Hello {{firstName|there}}";
+
+      expect(() => substituteVariables(stored, {})).toThrow(
+        /Template rendering failed/
+      );
+
+      const transformed = transformVariablesForSes(stored);
+      expect(substituteVariables(transformed, {})).toBe("Hello there");
+      expect(substituteVariables(transformed, { firstName: "Jane" })).toBe(
+        "Hello Jane"
+      );
+    });
+
+    it("resolves dotted paths against flat replacement data after transform", () => {
+      const transformed = transformVariablesForSes("Hi {{contact.firstName}}");
+      expect(
+        substituteVariables(transformed, { contactFirstName: "Jane" })
+      ).toBe("Hi Jane");
+    });
+  });
+
   describe("HTML escaping", () => {
-    it("should escape HTML in variable values", () => {
+    it("escapes HTML in variable values when escapeHtml is set (HTML bodies)", () => {
       const template = "Hello {{firstName}}!";
       const data = { firstName: "<script>alert('xss')</script>" };
-      const result = substituteVariables(template, data);
+      const result = substituteVariables(template, data, { escapeHtml: true });
 
-      // Handlebars escapes HTML by default
       expect(result).not.toContain("<script>");
       expect(result).toContain("&lt;script&gt;");
+    });
+
+    it("leaves plain text unescaped by default (subjects, SMS bodies)", () => {
+      const result = substituteVariables("Hi {{company}}", {
+        company: "O'Brien & Sons",
+      });
+      expect(result).toBe("Hi O'Brien & Sons");
     });
   });
 
@@ -145,58 +179,66 @@ describe("substituteVariables with Handlebars conditionals", () => {
     });
   });
 
-  describe("Render failure observability", () => {
-    // Why this exists: the previous regex-fallback implementation logged a
-    // warning when Handlebars threw. The consolidation onto
-    // @wraps/template-render dropped that log because the renderer swallows
-    // errors and returns the raw template string. Without observability, a
-    // malformed template silently ships raw `{{#if}}` to a paying customer's
-    // recipients on the workflow send path. This regression test asserts the
-    // worker still emits a warning when the renderer bails so on-call can
-    // detect and remediate.
-    let warnSpy: ReturnType<typeof vi.spyOn>;
+  describe("Render failure blocks the send", () => {
+    // Why this exists: the renderer used to swallow compile errors and
+    // return the raw template string, and the worker only logged a warning —
+    // so malformed templates shipped literal `{{#if firstName}}` subject
+    // lines to real recipients (Apr–Jun 2026, 22 recipients). The contract is
+    // now: a render failure THROWS, failing the workflow step, so the send is
+    // blocked and the execution surfaces a retryable error instead.
+    let errorSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      warnSpy = vi.spyOn(log, "warn").mockImplementation(() => {
+      errorSpy = vi.spyOn(log, "error").mockImplementation(() => {
         // intentionally silent in tests
       });
     });
 
     afterEach(() => {
-      warnSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
-    it("logs a warning when the template fails to compile", () => {
+    it("throws when the template fails to compile", () => {
       // Unclosed {{#if}} block — Handlebars compile throws.
       const malformed = "Hi {{#if firstName}}{{firstName}}";
 
-      const result = substituteVariables(malformed, { firstName: "Jane" });
-
-      // Renderer falls back to raw template — that's the contract.
-      expect(result).toBe(malformed);
-      // The worker MUST log a warning so we can detect this in production.
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      const [msg] = warnSpy.mock.calls[0];
-      expect(String(msg).toLowerCase()).toMatch(/template|render|substitute/);
+      expect(() =>
+        substituteVariables(malformed, { firstName: "Jane" })
+      ).toThrow(/Template rendering failed/);
+      // The worker logs the failure so on-call can find the broken template.
+      expect(errorSpy).toHaveBeenCalledTimes(1);
     });
 
-    it("does not log on a successful render", () => {
+    it("never returns input containing unconsumed block markers", () => {
+      const malformed = "Hi {{#if firstName}}{{firstName}}";
+
+      let result: string | undefined;
+      try {
+        result = substituteVariables(malformed, {});
+      } catch {
+        // expected
+      }
+      // Whatever happens, raw {{#if must not be handed to a send path.
+      expect(result?.includes("{{#if")).not.toBe(true);
+    });
+
+    it("does not throw or log on a successful render", () => {
       const result = substituteVariables("Hi {{firstName}}", {
         firstName: "Jane",
       });
 
       expect(result).toBe("Hi Jane");
-      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
-    it("does not log when a well-formed template references a missing variable", () => {
+    it("does not throw when a well-formed template references a missing variable", () => {
       // Missing variables resolve to empty string — that's normal Handlebars
-      // behavior, not a render failure. The warning is reserved for actual
-      // compile/runtime failures so on-call doesn't drown in false positives.
+      // behavior, not a render failure. Throwing is reserved for actual
+      // compile/runtime failures so retries aren't burned on false positives.
       const result = substituteVariables("Hi {{firstName}}!", {});
 
       expect(result).toBe("Hi !");
-      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
     });
   });
 });

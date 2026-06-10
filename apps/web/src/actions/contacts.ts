@@ -427,7 +427,12 @@ export async function createContact(
     revalidateContacts(orgSlug);
 
     // Track activation event (fire-and-forget)
-    trackContactCreated(access.userEmail, organizationId);
+    trackContactCreated(
+      access.userEmail,
+      organizationId,
+      {},
+      { firstName: data.firstName, lastName: data.lastName, email }
+    );
 
     // Return the created contact
     return await getContact(newContact.id, organizationId);

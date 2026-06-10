@@ -1,3 +1,7 @@
+// Subpath import on purpose: this file runs in the browser, and the package
+// root re-exports the Handlebars-backed renderer. mustache-case is
+// dependency-free regex code — the only part safe to ship client-side.
+import { normalizePlainTextForSes } from "@wraps/template-render/mustache-case";
 import { transform } from "sucrase";
 import { HANDLEBARS_KEYWORDS } from "./handlebars";
 
@@ -92,9 +96,15 @@ export async function compileTemplate(source: string): Promise<CompileResult> {
   const { render } = await import("@react-email/render");
   const element = Component(props);
   const compiledHtml = await render(element as React.ReactElement);
-  const compiledText = await render(element as React.ReactElement, {
-    plainText: true,
-  });
+  // normalizePlainTextForSes: the plain-text render uppercases heading
+  // content, corrupting {{#if firstName}} into {{#IF FIRSTNAME}} — SES
+  // rejects that text part at send time.
+  const compiledText = normalizePlainTextForSes(
+    await render(element as React.ReactElement, {
+      plainText: true,
+    }),
+    compiledHtml
+  );
 
   // Step 6: Extract variables from both rendered HTML and Proxy-tracked accesses
   const variables = mergeVariables(

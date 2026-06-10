@@ -1,9 +1,7 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
-  - 'wraps'
-
-strictDepBuilds: true
+  - apps/*
+  - packages/*
+  - wraps
 
 catalog:
   '@aws-sdk/client-acm': 3.1030.0
@@ -34,12 +32,12 @@ catalog:
   '@react-email/render': 2.0.4
   '@types/node': 24.10.0
   '@types/pg': ^8.11.14
-  pg: ^8.14.1
   '@vitest/coverage-v8': 4.0.18
   better-auth: 1.5.5
   dotenv: ^17.2.2
   drizzle-orm: ^0.45.2
   handlebars: 4.7.9
+  pg: ^8.14.1
   posthog-node: ^5.29.2
   stripe: ^19.1.0
   tsdown: ^0.15.5
@@ -47,3 +45,5 @@ catalog:
   typescript: ^5.9.3
   vitest: 4.0.18
   zod: ^4.1.12
+
+strictDepBuilds: true

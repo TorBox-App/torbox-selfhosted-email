@@ -38,10 +38,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function FirstWorkflowEmail({
-  workflowName,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstWorkflowEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -64,7 +61,11 @@ export default function FirstWorkflowEmail({
               </Heading>
               <Text className="m-0 mb-6 text-base leading-relaxed text-gray-600">
                 {"{{#if firstName}}{{firstName}}, you{{else}}You{{/if}}"} just
-                created your first workflow: <strong>{workflowName}</strong>.
+                created your first workflow
+                {"{{#if workflowName}}: {{else}}.{{/if}}"}
+                <strong>
+                  {"{{#if workflowName}}{{workflowName}}.{{/if}}"}
+                </strong>{" "}
                 Once you enable it, emails will send themselves.
               </Text>
               {/* Visual workflow representation */}

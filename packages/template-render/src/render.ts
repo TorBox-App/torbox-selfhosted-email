@@ -50,6 +50,28 @@ export function renderTemplate(
 }
 
 /**
+ * Like `renderTemplate`, but compile and runtime errors propagate instead
+ * of falling back to the raw template string. Send paths must use this
+ * variant: a renderer that silently returns the input would deliver raw
+ * `{{#if}}` blocks to a real inbox. Preview panes keep using the
+ * swallowing variants above.
+ *
+ * `noEscape: true` disables Handlebars HTML-entity escaping of variable
+ * values. Use it for any output that is NOT HTML — email subjects, SMS
+ * bodies, plain-text parts — where `O'Brien` must stay `O'Brien`, not
+ * become `O&#x27;Brien`. HTML bodies must keep the default escaping.
+ */
+export function renderTemplateStrict(
+  html: string,
+  data: Record<string, unknown>,
+  options: { noEscape?: boolean } = {}
+): string {
+  return Handlebars.compile(html, { noEscape: options.noEscape ?? false })(
+    data
+  );
+}
+
+/**
  * Convert a flat dict whose keys may use dot notation into a Handlebars-
  * friendly nested object that supports both forms.
  *

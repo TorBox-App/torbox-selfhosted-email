@@ -5,8 +5,11 @@
  * contact gets an individual `sendEmail` call via Promise.allSettled.
  *
  * Covers:
- *   - transformVariablesForSes: dot-notation and fallback-syntax transforms
- *   - fulfilled sends → messageSend with status='sent' and messageId
+ *   - per-recipient rendering: variables substituted into html AND subject
+ *     before sending (this path has no SES template, so we are the renderer)
+ *   - render failures BLOCK the send (failed record, sendEmail never called)
+ *   - fulfilled sends → messageSend with status='sent', messageId, and the
+ *     rendered subject (never raw {{...}} syntax)
  *   - rejected sends → messageSend with status='failed' and error message
  *   - mixed fulfilled/rejected in same chunk → both records in single insert
  *   - fallback HTML when batch.htmlContent is null
@@ -235,8 +238,8 @@ beforeEach(() => {
 // transformVariablesForSes
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("transformVariablesForSes via raw HTML path", () => {
-  it("transforms {{contact.firstName}} → {{contactFirstName}} before sending", async () => {
+describe("per-recipient rendering via raw HTML path", () => {
+  it("substitutes {{contact.firstName}} with the recipient's value before sending", async () => {
     setupSelects(
       makeRawBatch({ htmlContent: "<p>Hi {{contact.firstName}}!</p>" }),
       [makeContact("c1", "alice@example.com")]
@@ -246,21 +249,96 @@ describe("transformVariablesForSes via raw HTML path", () => {
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
     const htmlSent = mockSendEmail.mock.calls[0]?.[0]?.html;
-    expect(htmlSent).toBe("<p>Hi {{contactFirstName}}!</p>");
+    expect(htmlSent).toBe("<p>Hi Alice!</p>");
   });
 
-  it("transforms {{contact.firstName|there}} → Handlebars conditional", async () => {
-    setupSelects(makeRawBatch({ htmlContent: "{{contact.firstName|there}}" }), [
-      makeContact("c1", "alice@example.com"),
-    ]);
+  it("substitutes variables in the subject and records the rendered subject", async () => {
+    setupSelects(
+      makeRawBatch({ subject: "A gift for {{contact.firstName}}" }),
+      [makeContact("c1", "alice@example.com")]
+    );
     mockSendEmail.mockResolvedValueOnce({ messageId: "msg-1" });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    const htmlSent = mockSendEmail.mock.calls[0]?.[0]?.html;
-    expect(htmlSent).toBe(
-      "{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}"
+    expect(mockSendEmail.mock.calls[0]?.[0]?.subject).toBe("A gift for Alice");
+
+    const sendInsert = (insertValuesCalls as unknown[][]).find(
+      (vals) =>
+        Array.isArray(vals) &&
+        vals.some(
+          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
+        )
+    ) as Record<string, unknown>[] | undefined;
+    expect(sendInsert?.[0]?.subject).toBe("A gift for Alice");
+  });
+
+  it("evaluates {{#if}} conditionals against recipient data", async () => {
+    setupSelects(
+      makeRawBatch({
+        htmlContent:
+          "{{#if contactFirstName}}Hey {{contactFirstName}}{{else}}Hey there{{/if}}",
+        totalRecipients: 2,
+      }),
+      [
+        makeContact("c1", "alice@example.com", "Alice"),
+        makeContact("c2", "bob@example.com", ""),
+      ]
     );
+    mockSendEmail
+      .mockResolvedValueOnce({ messageId: "msg-1" })
+      .mockResolvedValueOnce({ messageId: "msg-2" });
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    const htmls = mockSendEmail.mock.calls.map(
+      (args) => (args[0] as Record<string, unknown>)?.html
+    );
+    expect(htmls).toEqual(["Hey Alice", "Hey there"]);
+  });
+
+  it("blocks the send when the template cannot render (never ships raw {{...}})", async () => {
+    // Unclosed {{#if}} — Handlebars compile throws.
+    setupSelects(makeRawBatch({ htmlContent: "Hi {{#if contactFirstName}}" }), [
+      makeContact("c1", "alice@example.com"),
+    ]);
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
+
+    const sendInsert = (insertValuesCalls as unknown[][]).find(
+      (vals) =>
+        Array.isArray(vals) &&
+        vals.some(
+          (r) => (r as Record<string, unknown>)?.batchSendId === "batch-1"
+        )
+    ) as Record<string, unknown>[] | undefined;
+    expect(sendInsert?.[0]?.status).toBe("failed");
+    expect(String(sendInsert?.[0]?.error)).toMatch(/Template rendering failed/);
+  });
+
+  it("resolves {{contact.firstName|there}} fallback syntax against recipient data", async () => {
+    setupSelects(
+      makeRawBatch({
+        htmlContent: "{{contact.firstName|there}}",
+        totalRecipients: 2,
+      }),
+      [
+        makeContact("c1", "alice@example.com"),
+        makeContact("c2", "bob@example.com", ""),
+      ]
+    );
+    mockSendEmail
+      .mockResolvedValueOnce({ messageId: "msg-1" })
+      .mockResolvedValueOnce({ messageId: "msg-2" });
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    const htmls = mockSendEmail.mock.calls.map(
+      (args) => (args[0] as Record<string, unknown>)?.html
+    );
+    expect(htmls).toEqual(["Alice", "there"]);
   });
 
   it("falls back to '<p>Hello from Wraps!</p>' when htmlContent is null", async () => {

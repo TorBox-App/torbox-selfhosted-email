@@ -70,7 +70,8 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
           authContext.organizationId,
           "workflow",
           "cli",
-          authContext.userId
+          authContext.userId,
+          body.name
         );
       }
 
@@ -222,12 +223,15 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
         };
       }
 
-      if (results.some((r) => r.created)) {
+      const createdWorkflow = results.find((r) => r.created);
+      if (createdWorkflow) {
         await trackFirstResourceCreated(
           authContext.organizationId,
           "workflow",
           "cli",
-          authContext.userId
+          authContext.userId,
+          body.workflows.find((w) => w.slug === createdWorkflow.slug)?.name ??
+            createdWorkflow.slug
         );
       }
 

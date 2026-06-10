@@ -149,6 +149,7 @@ export async function bulkCreateContactsFromEmails(
     if (created > 0) {
       trackContactsImported(access.userEmail, organizationId, {
         count: created,
+        firstContact: { email: toInsert[0]?.email },
       });
     }
 

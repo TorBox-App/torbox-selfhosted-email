@@ -8,13 +8,19 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
+    },
+    "./mustache-case": {
+      "types": "./dist/mustache-case.d.ts",
+      "default": "./src/mustache-case.ts"
     }
   },
   "scripts": {
     "build": "tsdown",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gate:ses": "tsx scripts/test-render-all.mjs",
+    "repair:ses-text": "tsx scripts/repair-ses-text-parts.mjs"
   },
   "devDependencies": {
     "tsdown": "catalog:",

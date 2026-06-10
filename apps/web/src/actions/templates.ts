@@ -11,6 +11,7 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
+import { normalizePlainTextForSes } from "@wraps/template-render";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -200,7 +201,13 @@ export async function publishTemplateToSES(
     // {{contact.email}} → {{contactEmail}}
     // {{contact.firstName|there}} → {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
     const sesHtml = transformVariablesForSes(rawHtml);
-    const sesText = transformVariablesForSes(rawText);
+    // normalizePlainTextForSes: html-to-text uppercases heading content,
+    // corrupting {{#if firstName}} into {{#IF FIRSTNAME}} — SES rejects the
+    // text part at send time. Normalizing here also repairs templates whose
+    // stored compiledText predates the fix.
+    const sesText = transformVariablesForSes(
+      normalizePlainTextForSes(rawText, rawHtml)
+    );
     const sesSubject = transformVariablesForSes(templateData.subject);
 
     // Generate SES template name
@@ -272,7 +279,9 @@ export async function publishTemplateToSES(
     try {
       const session = await auth.api.getSession({ headers: await headers() });
       if (session?.user?.email) {
-        await trackTemplatePublished(session.user.email, organizationId);
+        await trackTemplatePublished(session.user.email, organizationId, {
+          templateName: templateData.name,
+        });
       }
     } catch {
       // tracking should never fail the publish
@@ -720,7 +729,10 @@ export async function convertTiptapTemplate(
     );
 
     const compiledHtml = await render(emailComponent);
-    const compiledText = toPlainText(compiledHtml);
+    const compiledText = normalizePlainTextForSes(
+      toPlainText(compiledHtml),
+      compiledHtml
+    );
 
     // Extract variables from rendered HTML ({{variableName}} or {{name|fallback}})
     const variableRegex = /\{\{([^}|]+?)(?:\|([^}]*))?\}\}/g;

@@ -10,7 +10,7 @@ import {
   template,
 } from "@wraps/db";
 import { sendEmail } from "@wraps/email-send";
-import { renderTemplate } from "@wraps/template-render";
+import { renderTemplateStrict } from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -133,13 +133,21 @@ export async function POST(request: Request, context: RouteContext) {
     function renderForSend(data: Record<string, unknown>): {
       html: string;
       text: string;
+      subject: string;
     } {
       // Use the canonical Wraps Handlebars renderer so test sends evaluate
       // the same block helpers ({{#if}}, {{#each}}, etc.) that SES would
-      // evaluate at broadcast send time. The previous regex-only substituter
-      // here shipped raw `{{#if firstName}}...{{/if}}` to inboxes.
-      const html = renderTemplate(compiledHtml, data);
-      return { html, text: toPlainText(html) };
+      // evaluate at broadcast send time. Strict: a malformed template fails
+      // the test send with a clear error instead of shipping raw {{...}} —
+      // the whole point of a test send is to catch that before a broadcast.
+      // The subject renders too (noEscape: it's a plain-text header), so
+      // {{firstName}} typed into the subject field behaves like production.
+      const html = renderTemplateStrict(compiledHtml, data);
+      return {
+        html,
+        text: toPlainText(html),
+        subject: renderTemplateStrict(subject, data, { noEscape: true }),
+      };
     }
 
     // For marketing templates, look up an existing contact and generate
@@ -250,13 +258,17 @@ export async function POST(request: Request, context: RouteContext) {
           }
         }
 
-        const { html, text } = renderForSend(recipientData);
+        const {
+          html,
+          text,
+          subject: renderedSubject,
+        } = renderForSend(recipientData);
 
         const result = await sendEmail({
           client: sesClient,
           from: fromAddress,
           to: recipient,
-          subject,
+          subject: renderedSubject,
           html,
           text,
           configurationSetName:

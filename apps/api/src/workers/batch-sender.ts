@@ -29,8 +29,12 @@ import {
   segment,
   template,
 } from "@wraps/db";
-import { transformVariablesForSes } from "@wraps/email";
+import { toSesVariableName, transformVariablesForSes } from "@wraps/email";
 import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
+import {
+  extractCanonicalVars,
+  renderTemplateStrict,
+} from "@wraps/template-render";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
@@ -398,12 +402,26 @@ async function processJob(
     // SES bulk email limit is 50 recipients per API call
     const BULK_BATCH_SIZE = 50;
 
+    // Pre-compute canonical vars that the SES template references so we can
+    // pad TemplateData with empty-string fallbacks. SES hard-fails rendering
+    // (RenderingFailure → silent non-delivery) when a bare {{var}} is absent
+    // from TemplateData. Empty string is falsy for {{#if}} so conditionals
+    // still work correctly. We scan both subject and body; use the original
+    // compiledHtml since it retains the {{dot.notation}} form that
+    // extractCanonicalVars was designed to match.
+    const templateCanonicalVars = extractCanonicalVars(
+      `${batch.subject ?? ""}\n${templateHtml ?? ""}`
+    );
+
     // Process in batches of 50
     for (let i = 0; i < emailContacts.length; i += BULK_BATCH_SIZE) {
       const recipientBatch = emailContacts.slice(i, i + BULK_BATCH_SIZE);
 
-      // Build bulk email entries
-      const bulkEntries: BulkEmailEntry[] = await Promise.all(
+      // Build bulk email entries, keeping the per-recipient rendered subject
+      // alongside each entry so messageSend records what the recipient sees
+      // (SES renders server-side; recording batch.subject raw put literal
+      // {{#if firstName}} into email logs).
+      const prepared = await Promise.all(
         recipientBatch.map(async (recipient) => {
           // Generate unsubscribe URLs for marketing emails
           let unsubscribeUrl: string | undefined;
@@ -419,62 +437,26 @@ async function processJob(
             preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
           }
 
-          // Build replacement data for SES template
-          // IMPORTANT: Only include non-empty values!
-          // SES Handlebars treats empty strings as truthy, so {{#if firstName}}
-          // would be true even with firstName: "". Omitting the key entirely
-          // makes {{#if firstName}} false, allowing fallbacks to work.
-          const replacementData: Record<string, string> = {};
-
-          // Helper to add non-empty values
-          const addIfPresent = (
-            key: string,
-            value: string | null | undefined
-          ) => {
-            if (value) {
-              replacementData[key] = value;
-            }
-          };
-
-          // Always include email (required)
-          replacementData.email = recipient.email!;
-          replacementData.contactEmail = recipient.email!;
-
-          // Short names (for templates using {{firstName}})
-          addIfPresent("firstName", recipient.firstName);
-          addIfPresent("lastName", recipient.lastName);
-          addIfPresent("company", recipient.company);
-          addIfPresent("jobTitle", recipient.jobTitle);
-
-          // Full names with prefix (for templates using {{contact.firstName}})
-          addIfPresent("contactFirstName", recipient.firstName);
-          addIfPresent("contactLastName", recipient.lastName);
-          addIfPresent("contactCompany", recipient.company);
-          addIfPresent("contactJobTitle", recipient.jobTitle);
-
-          // Organization and URLs
-          addIfPresent("organizationName", orgName);
-          addIfPresent("unsubscribeUrl", unsubscribeUrl);
-          addIfPresent("preferencesUrl", preferencesUrl);
-
-          // Add custom properties with flattened names (only non-empty)
-          if (recipient.properties) {
-            for (const [key, value] of Object.entries(recipient.properties)) {
-              const strValue = value != null ? String(value) : null;
-              if (strValue) {
-                replacementData[key] = strValue;
-                const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-                replacementData[flatKey] = strValue;
-              }
-            }
-          }
-
           // Apply user-configured variable mappings
           const finalData = applyVariableMappings(
-            replacementData,
+            buildRecipientReplacementData(recipient, {
+              orgName,
+              unsubscribeUrl,
+              preferencesUrl,
+            }),
             batch.variableMappings ?? undefined,
             recipient
           );
+
+          // Pad missing vars so SES never encounters an absent variable.
+          // SES hard-fails rendering when a bare {{var}} is missing from
+          // ReplacementTemplateData. Empty string is falsy for {{#if}}.
+          for (const rawVar of templateCanonicalVars) {
+            const sesKey = toSesVariableName(rawVar);
+            if (!(sesKey in finalData)) {
+              finalData[sesKey] = "";
+            }
+          }
 
           const entry: BulkEmailEntry = {
             Destination: {
@@ -501,9 +483,13 @@ async function processJob(
             ];
           }
 
-          return entry;
+          return {
+            entry,
+            renderedSubject: renderSubjectForRecord(batch.subject, finalData),
+          };
         })
       );
+      const bulkEntries: BulkEmailEntry[] = prepared.map((p) => p.entry);
 
       // Build default template data (required by SES as fallback)
       const defaultTemplateData: Record<string, string> = {
@@ -521,6 +507,15 @@ async function processJob(
         unsubscribeUrl: "",
         preferencesUrl: "",
       };
+
+      // Pad DefaultContent.TemplateData with the same missing vars.
+      // SES uses this as a fallback when a recipient entry lacks a key.
+      for (const rawVar of templateCanonicalVars) {
+        const sesKey = toSesVariableName(rawVar);
+        if (!(sesKey in defaultTemplateData)) {
+          defaultTemplateData[sesKey] = "";
+        }
+      }
 
       try {
         const result = await sesClient.send(
@@ -562,7 +557,7 @@ async function processJob(
               batchSendId: batchId,
               sourceType: "batch",
               recipient: recipient.email!,
-              subject: batch.subject,
+              subject: prepared[j].renderedSubject,
               from: batch.from,
               fromName: batch.fromName,
               emailTemplateId: batch.emailTemplateId,
@@ -586,7 +581,7 @@ async function processJob(
               batchSendId: batchId,
               sourceType: "batch",
               recipient: recipient.email!,
-              subject: batch.subject,
+              subject: prepared[j].renderedSubject,
               from: batch.from,
               fromName: batch.fromName,
               emailTemplateId: batch.emailTemplateId,
@@ -697,13 +692,16 @@ async function processJob(
     }
   } else {
     // Fallback: individual sends for raw HTML (parallel with concurrency limit)
-    // Transform variables to SES format as a safety net
+    // Transform variables to SES format so the local renderer sees the same
+    // {{contactFirstName}}-style names SES templates use.
     // Note: templateHtml (from compiledHtml) should already be transformed by publish
     // but batch.htmlContent might contain untransformed variables
     const rawHtml =
       templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
-    const html = transformVariablesForSes(rawHtml);
-    const subject = batch.subject ?? "Message from Wraps";
+    const htmlTemplate = transformVariablesForSes(rawHtml);
+    const subjectTemplate = transformVariablesForSes(
+      batch.subject ?? "Message from Wraps"
+    );
     const CONCURRENCY = 10;
 
     for (let i = 0; i < emailContacts.length; i += CONCURRENCY) {
@@ -713,6 +711,7 @@ async function processJob(
         recipientBatch.map(async (recipient) => {
           // Generate unsubscribe URLs for marketing emails
           let unsubscribeUrl: string | undefined;
+          let preferencesUrl: string | undefined;
 
           if (isMarketing) {
             const unsubscribeToken = await generateUnsubscribeToken(
@@ -721,7 +720,27 @@ async function processJob(
               unsubscribeTopicId
             );
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+            preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
           }
+
+          // On this path WE are the rendering engine (no SES template), so
+          // substitute per recipient. A render failure throws and the send is
+          // recorded as failed — never deliver raw {{...}} syntax.
+          const finalData = applyVariableMappings(
+            buildRecipientReplacementData(recipient, {
+              orgName,
+              unsubscribeUrl,
+              preferencesUrl,
+            }),
+            batch.variableMappings ?? undefined,
+            recipient
+          );
+          const html = renderForSend(htmlTemplate, finalData);
+          // noEscape: subjects are plain-text headers — "O'Brien" must not
+          // become "O&#x27;Brien"
+          const subject = renderForSend(subjectTemplate, finalData, {
+            noEscape: true,
+          });
 
           const result = await sendEmail({
             client: sesClient,
@@ -743,7 +762,7 @@ async function processJob(
             ],
           });
 
-          return { recipient, messageId: result.messageId };
+          return { recipient, messageId: result.messageId, subject };
         })
       );
 
@@ -762,7 +781,7 @@ async function processJob(
             batchSendId: batchId,
             sourceType: "batch",
             recipient: recipient.email!,
-            subject: batch.subject,
+            subject: result.value.subject,
             from: batch.from,
             fromName: batch.fromName,
             emailTemplateId: batch.emailTemplateId,
@@ -977,6 +996,120 @@ export async function getContactsChunk(
  */
 function htmlToPlainText(html: string): string {
   return toPlainText(html);
+}
+
+type BatchRecipient = {
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  jobTitle: string | null;
+  properties: Record<string, unknown> | null;
+};
+
+/**
+ * Build per-recipient replacement data for template rendering.
+ * Only includes non-empty values: SES treats both absent and "" as falsy
+ * in {{#if}} (verified via test-render), and the local Handlebars renderer
+ * treats "" as falsy too, so omitting empties keeps both engines agreeing
+ * on conditional branches. Bare {{var}} references to a missing key are
+ * the dangerous case — SES hard-fails rendering — which is why the bulk
+ * send's DefaultContent.TemplateData supplies every standard key as "".
+ */
+function buildRecipientReplacementData(
+  recipient: BatchRecipient,
+  urls: {
+    orgName: string | null | undefined;
+    unsubscribeUrl: string | undefined;
+    preferencesUrl: string | undefined;
+  }
+): Record<string, string> {
+  const replacementData: Record<string, string> = {};
+
+  const addIfPresent = (key: string, value: string | null | undefined) => {
+    if (value) {
+      replacementData[key] = value;
+    }
+  };
+
+  // Always include email (required)
+  replacementData.email = recipient.email!;
+  replacementData.contactEmail = recipient.email!;
+
+  // Short names (for templates using {{firstName}})
+  addIfPresent("firstName", recipient.firstName);
+  addIfPresent("lastName", recipient.lastName);
+  addIfPresent("company", recipient.company);
+  addIfPresent("jobTitle", recipient.jobTitle);
+
+  // Full names with prefix (for templates using {{contact.firstName}})
+  addIfPresent("contactFirstName", recipient.firstName);
+  addIfPresent("contactLastName", recipient.lastName);
+  addIfPresent("contactCompany", recipient.company);
+  addIfPresent("contactJobTitle", recipient.jobTitle);
+
+  // Organization and URLs
+  addIfPresent("organizationName", urls.orgName);
+  addIfPresent("unsubscribeUrl", urls.unsubscribeUrl);
+  addIfPresent("preferencesUrl", urls.preferencesUrl);
+
+  // Add custom properties with flattened names (only non-empty)
+  if (recipient.properties) {
+    for (const [key, value] of Object.entries(recipient.properties)) {
+      const strValue = value != null ? String(value) : null;
+      if (strValue) {
+        replacementData[key] = strValue;
+        const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+        replacementData[flatKey] = strValue;
+      }
+    }
+  }
+
+  return replacementData;
+}
+
+/**
+ * Render a batch subject for the messageSend record on the SES-template
+ * path. SES does the authoritative render server-side; this local render
+ * exists so email logs show what the recipient saw instead of raw
+ * {{...}} syntax. Best-effort: a render failure falls back to the raw
+ * subject rather than blocking a send SES may handle fine.
+ */
+function renderSubjectForRecord(
+  subject: string | null,
+  data: Record<string, string>
+): string | null {
+  if (!subject) {
+    return subject;
+  }
+  try {
+    return renderTemplateStrict(transformVariablesForSes(subject), data, {
+      noEscape: true,
+    });
+  } catch {
+    return subject;
+  }
+}
+
+/**
+ * Render a template string for the raw-HTML send path, where WE are the
+ * rendering engine (no SES template involved). A failure throws — the
+ * per-recipient send is recorded as failed instead of delivering raw
+ * {{...}} template syntax to a real inbox.
+ */
+function renderForSend(
+  template: string,
+  data: Record<string, string>,
+  options: { noEscape?: boolean } = {}
+): string {
+  try {
+    return renderTemplateStrict(template, data, options);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Template rendering failed: ${reason}. Send blocked so the recipient does not receive raw {{...}} template syntax.`
+    );
+  }
 }
 
 async function enqueueNextChunk(

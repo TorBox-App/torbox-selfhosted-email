@@ -118,3 +118,121 @@ describe("wraps/templates/*.tsx plain-text smoke test", () => {
     });
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render contract: every part of every template must render to a clean
+// string — no literal `{{`/`}}` survives — with BOTH an empty data dict
+// (worst-case: contact has nothing, trigger event carried nothing) and the
+// template's own testData. This is the CI tripwire for the bug class that
+// delivered "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}."
+// records and RenderingFailure non-deliveries in production (Apr–Jun 2026).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("wraps/templates/*.tsx render contract", () => {
+  if (!existsSync(TEMPLATES_DIR)) {
+    it.skip("templates directory not present — skipping", () => {
+      // warning already emitted by the smoke suite above
+    });
+    return;
+  }
+
+  const templateFiles = readdirSync(TEMPLATES_DIR).filter((f) =>
+    f.endsWith(".tsx")
+  );
+
+  // The standard variable set every send path guarantees (workflow
+  // replacementData / batch defaultTemplateData). Empty strings on purpose:
+  // {{#if}} must treat them as falsy and bare {{var}} must render empty.
+  const EMPTY_DATA = {};
+
+  for (const file of templateFiles) {
+    const slug = file.replace(/\.tsx$/, "");
+
+    it(`${slug}: subject, preview, html, and text render clean with empty data and testData`, async () => {
+      const Handlebars = (await import("handlebars")).default;
+      const modPath = join(TEMPLATES_DIR, file);
+      const rendered = await compileTemplateFromFile(modPath, slug);
+
+      // Re-import the compiled module for its metadata exports
+      const tmpPath = join(
+        TEMPLATES_DIR,
+        "..",
+        "..",
+        "node_modules",
+        ".wraps-compiled",
+        `${slug}.smoke.mjs`
+      );
+      const mod = await import(`${tmpPath}?meta=${Date.now()}`);
+      const testData = (mod.testData ?? {}) as Record<string, unknown>;
+
+      const parts: Array<[string, string]> = [
+        ["subject", String(mod.subject ?? "")],
+        ["previewText", String(mod.previewText ?? "")],
+        ["html", rendered.html],
+        ["text", rendered.text],
+      ];
+
+      for (const [partName, content] of parts) {
+        for (const data of [EMPTY_DATA, testData]) {
+          // Strict compile: a template SES or our renderer can't parse is a
+          // failure here, not at send time.
+          const out = Handlebars.compile(content)(data);
+          expect(
+            out.includes("{{"),
+            `${slug} ${partName}: rendered output contains literal {{ with data=${JSON.stringify(
+              Object.keys(data)
+            )}`
+          ).toBe(false);
+          expect(
+            out.includes("}}"),
+            `${slug} ${partName}: rendered output contains literal }} with data=${JSON.stringify(
+              Object.keys(data)
+            )}`
+          ).toBe(false);
+        }
+      }
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workflow → template referential integrity: every sendEmail step in
+// wraps/workflows must reference a template file that exists. A renamed or
+// deleted template otherwise fails at send time, not review time.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("wraps/workflows sendEmail template references", () => {
+  const WORKFLOWS_DIR = resolve(TEMPLATES_DIR, "..", "workflows");
+
+  if (!(existsSync(WORKFLOWS_DIR) && existsSync(TEMPLATES_DIR))) {
+    it.skip("workflows or templates directory not present — skipping", () => {
+      // no-op
+    });
+    return;
+  }
+
+  it("every template slug referenced by a workflow has a matching template file", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const templateSlugs = new Set(
+      readdirSync(TEMPLATES_DIR)
+        .filter((f) => f.endsWith(".tsx"))
+        .map((f) => f.replace(/\.tsx$/, ""))
+    );
+
+    const missing: string[] = [];
+    for (const file of readdirSync(WORKFLOWS_DIR).filter((f) =>
+      f.endsWith(".ts")
+    )) {
+      const source = await readFile(join(WORKFLOWS_DIR, file), "utf-8");
+      for (const match of source.matchAll(
+        /template:\s*["']([a-z0-9-]+)["']/g
+      )) {
+        if (!templateSlugs.has(match[1])) {
+          missing.push(`${file} → ${match[1]}`);
+        }
+      }
+    }
+
+    expect(missing, `workflow steps reference missing templates`).toEqual([]);
+  });
+});

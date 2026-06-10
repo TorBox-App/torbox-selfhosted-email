@@ -38,10 +38,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function FirstTemplatePublishedEmail({
-  templateName,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstTemplatePublishedEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -94,7 +91,9 @@ export default function FirstTemplatePublishedEmail({
                     color: "rgba(255,255,255,0.85)",
                   }}
                 >
-                  &ldquo;{templateName}&rdquo; has been published to AWS SES
+                  {
+                    "{{#if templateName}}“{{templateName}}” has been{{else}}Your template has been{{/if}} published to AWS SES"
+                  }
                 </Text>
               </div>
               <div style={{ padding: "32px" }}>

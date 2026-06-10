@@ -84,11 +84,20 @@ vi.mock("@react-email/render", () => ({
   toPlainText: vi.fn().mockReturnValue("plain text fallback"),
 }));
 
-vi.mock("@wraps/email", () => ({
-  generateSESTemplateName: vi.fn().mockReturnValue("ses-tmpl-name"),
-  transformVariablesForSes: vi.fn((s: string) => s),
-  upsertSESTemplate: vi.fn(),
-}));
+vi.mock("@wraps/email", async () => {
+  // Real implementations for the pure transforms: the send paths now depend
+  // on transformVariablesForSes converting authoring syntax ({{var|fallback}},
+  // dotted paths) before local rendering — an identity mock would hide a
+  // regression where untransformed syntax reaches the renderer.
+  const actual =
+    await vi.importActual<typeof import("@wraps/email")>("@wraps/email");
+  return {
+    generateSESTemplateName: vi.fn().mockReturnValue("ses-tmpl-name"),
+    transformVariablesForSes: vi.fn(actual.transformVariablesForSes),
+    toSesVariableName: vi.fn(actual.toSesVariableName),
+    upsertSESTemplate: vi.fn(),
+  };
+});
 
 vi.mock("handlebars", () => ({
   default: {
@@ -715,6 +724,42 @@ describe("handleSendEmail", () => {
     expect(content.Simple).toBeDefined();
   });
 
+  it("transforms authoring syntax before local rendering on the raw path", async () => {
+    // {{firstName|there}} is the documented fallback syntax. Handlebars can't
+    // parse the pipe — if it reaches the renderer untransformed, the strict
+    // renderer throws and the send is blocked even though the template is
+    // valid. The handler must run transformVariablesForSes first.
+    const { upsertSESTemplate } = await import("@wraps/email");
+    (upsertSESTemplate as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("SES error")
+    );
+
+    setupEmailTest({
+      template: {
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Hello {{firstName|there}}",
+        compiledHtml: "<h1>Hi {{contact.firstName|friend}}</h1>",
+        emailType: "marketing",
+        sesTemplateName: null,
+      },
+    });
+
+    await handler(makeSQSEvent(emailJob));
+
+    const Handlebars = (await import("handlebars")).default;
+    const compiledTemplates = vi
+      .mocked(Handlebars.compile)
+      .mock.calls.map((c) => String(c[0]));
+    expect(
+      compiledTemplates.some((t) =>
+        t.includes("{{#if firstName}}{{firstName}}{{else}}there{{/if}}")
+      )
+    ).toBe(true);
+    // The raw pipe syntax must never reach the renderer.
+    expect(compiledTemplates.some((t) => t.includes("|"))).toBe(false);
+  });
+
   it("adds List-Unsubscribe headers for marketing", async () => {
     setupEmailTest();
     await handler(makeSQSEvent(emailJob));
@@ -786,6 +831,46 @@ describe("handleSendEmail", () => {
     expect(templateData.tier).toBe("gold");
     expect(templateData.source).toBe("api");
     expect(templateData.plan).toBe("pro");
+  });
+
+  it("pads TemplateData with empty strings for vars present in template but absent from trigger data", async () => {
+    // Template references {{workflowName}} but the trigger event does not supply it.
+    // Without padding, SES hard-fails rendering (RenderingFailure) — silent non-delivery.
+    // The fix: after building replacementData, extract all canonical vars from subject+html
+    // and ensure every var that is referenced but missing gets set to "".
+    setupEmailTest({
+      template: {
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Welcome to {{workflowName}}",
+        compiledHtml: "<h1>Hi {{firstName}}, welcome to {{workflowName}}</h1>",
+        emailType: "marketing",
+        sesTemplateName: "ses-tmpl-1",
+      },
+      // triggerData does NOT contain workflowName
+      execution: {
+        triggerData: { source: "api" },
+        currentStepId: "step-email",
+      },
+      contact: { firstName: "Jane" },
+    });
+    await handler(makeSQSEvent(emailJob));
+    expect(sesSendCalls).toHaveLength(1);
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
+    const tmplContent = content.Template as Record<string, unknown>;
+    const templateData = JSON.parse(
+      tmplContent.TemplateData as string
+    ) as Record<string, unknown>;
+    // Known var from trigger data should remain
+    expect(templateData.source).toBe("api");
+    // Contact field should remain
+    expect(templateData.firstName).toBe("Jane");
+    // Missing var referenced in subject+html must be padded to "" (not absent)
+    expect(
+      Object.prototype.hasOwnProperty.call(templateData, "workflowName")
+    ).toBe(true);
+    expect(templateData.workflowName).toBe("");
   });
 
   it("uses step-level subject override instead of template subject", async () => {

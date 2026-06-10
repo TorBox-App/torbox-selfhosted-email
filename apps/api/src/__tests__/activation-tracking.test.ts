@@ -41,6 +41,10 @@ vi.mock("@wraps/db", () => ({
   template: {
     organizationId: "template.organization_id",
   },
+  user: {
+    id: "user.id",
+    email: "user.email",
+  },
   workflow: {
     organizationId: "workflow.organization_id",
   },
@@ -124,7 +128,13 @@ describe("activation tracking", () => {
   it("emits first template activation with CLI source", async () => {
     queueSelectResults([{ count: 1 }]);
 
-    await trackFirstResourceCreated("org-template", "template", "cli");
+    await trackFirstResourceCreated(
+      "org-template",
+      "template",
+      "cli",
+      null,
+      "welcome-email"
+    );
 
     expect(mockCapture).toHaveBeenCalledWith({
       distinctId: "org-template",
@@ -133,6 +143,7 @@ describe("activation tracking", () => {
         organization_id: "org-template",
         resource: "template",
         source: "cli",
+        templateName: "welcome-email",
       },
       groups: { organization: "org-template" },
     });
@@ -151,7 +162,13 @@ describe("activation tracking", () => {
   it("emits first workflow activation with dashboard source", async () => {
     queueSelectResults([{ count: 1 }]);
 
-    await trackFirstResourceCreated("org-workflow", "workflow", "dashboard");
+    await trackFirstResourceCreated(
+      "org-workflow",
+      "workflow",
+      "dashboard",
+      null,
+      "Welcome Sequence"
+    );
 
     expect(mockCapture).toHaveBeenCalledWith({
       distinctId: "org-workflow",
@@ -160,6 +177,7 @@ describe("activation tracking", () => {
         organization_id: "org-workflow",
         resource: "workflow",
         source: "dashboard",
+        workflowName: "Welcome Sequence",
       },
       groups: { organization: "org-workflow" },
     });
@@ -173,6 +191,48 @@ describe("activation tracking", () => {
     });
     // No userId provided → emit() is skipped (no userEmail to resolve)
     expect(mockPlatformPost).not.toHaveBeenCalled();
+  });
+
+  it("includes resource name in the platform event when userId resolves to an email", async () => {
+    queueSelectResults([{ count: 1 }], [{ email: "owner@example.com" }]);
+
+    await trackFirstResourceCreated(
+      "org-named",
+      "template",
+      "cli",
+      "user-1",
+      "welcome-email"
+    );
+
+    expect(mockPlatformPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "activation.first_template",
+        contactEmail: "owner@example.com",
+        properties: {
+          organization_id: "org-named",
+          resource: "template",
+          source: "cli",
+          templateName: "welcome-email",
+        },
+      },
+    });
+  });
+
+  it("omits resource name props when no name is provided", async () => {
+    queueSelectResults([{ count: 1 }]);
+
+    await trackFirstResourceCreated("org-noname", "workflow", "cli");
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "activation_first_automation",
+        properties: {
+          organization_id: "org-noname",
+          resource: "workflow",
+          source: "cli",
+        },
+      })
+    );
   });
 
   it("does not emit resource activation after the first resource", async () => {

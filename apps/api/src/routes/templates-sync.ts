@@ -43,7 +43,8 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
           authContext.organizationId,
           "template",
           "cli",
-          authContext.userId
+          authContext.userId,
+          body.slug
         );
       }
 
@@ -159,12 +160,14 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
         };
       }
 
-      if (results.some((r) => r.created)) {
+      const createdTemplate = results.find((r) => r.created);
+      if (createdTemplate) {
         await trackFirstResourceCreated(
           authContext.organizationId,
           "template",
           "cli",
-          authContext.userId
+          authContext.userId,
+          createdTemplate.slug
         );
       }
 

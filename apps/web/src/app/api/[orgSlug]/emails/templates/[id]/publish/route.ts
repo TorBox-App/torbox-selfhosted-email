@@ -7,6 +7,7 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
+import { normalizePlainTextForSes } from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -110,7 +111,13 @@ export async function POST(_request: Request, context: RouteContext) {
     // Transform variables for SES compatibility
     // {{contact.email}} → {{contactEmail}}
     const sesHtml = transformVariablesForSes(rawHtml);
-    const sesText = transformVariablesForSes(rawText);
+    // normalizePlainTextForSes: html-to-text uppercases heading content,
+    // corrupting {{#if firstName}} into {{#IF FIRSTNAME}} — SES rejects the
+    // text part at send time. Normalizing here also repairs templates whose
+    // stored compiledText predates the fix.
+    const sesText = transformVariablesForSes(
+      normalizePlainTextForSes(rawText, rawHtml)
+    );
     const sesSubject = transformVariablesForSes(templateData.subject);
 
     // Generate SES template name

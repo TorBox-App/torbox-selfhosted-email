@@ -31,6 +31,25 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+type ContactNameInfo = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+};
+
+/** Derive a display name from first/last name, falling back to email local-part. */
+function deriveContactName(info?: ContactNameInfo): string | null {
+  if (!info) {
+    return null;
+  }
+  const name = [info.firstName, info.lastName].filter(Boolean).join(" ").trim();
+  if (name) {
+    return name;
+  }
+  const localPart = info.email?.split("@")[0]?.trim();
+  return localPart || null;
+}
+
 /** Fire-and-forget PostHog capture. Never throws. */
 function capture(
   distinctId: string,
@@ -212,6 +231,26 @@ async function countBatchSends(organizationId: string): Promise<number> {
   return r?.count ?? 0;
 }
 
+async function lookupTemplateName(
+  organizationId: string,
+  templateId: string
+): Promise<string | null> {
+  try {
+    const [r] = await db
+      .select({ name: template.name })
+      .from(template)
+      .where(
+        and(
+          eq(template.organizationId, organizationId),
+          eq(template.id, templateId)
+        )
+      );
+    return r?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function countApiKeys(organizationId: string): Promise<number> {
   const [r] = await db
     .select({ count: count() })
@@ -389,7 +428,8 @@ export async function trackOnboardingCompleted(
 export async function trackContactCreated(
   userId: string,
   organizationId: string,
-  properties: Record<string, unknown> = {}
+  properties: Record<string, unknown> = {},
+  contactInfo?: ContactNameInfo
 ) {
   try {
     const existing = await countContacts(organizationId);
@@ -401,7 +441,11 @@ export async function trackContactCreated(
     capture(userId, "contact_created", props);
     await emit(userId, "contact.created", props);
     if (existing === 1) {
-      const firstProps = { organization_id: organizationId };
+      const contactName = deriveContactName(contactInfo);
+      const firstProps: Record<string, unknown> = {
+        organization_id: organizationId,
+        ...(contactName && { contactName }),
+      };
       capture(userId, "activation_first_contact", firstProps);
       await emit(userId, "activation.first_contact", firstProps);
     }
@@ -414,7 +458,7 @@ export async function trackContactCreated(
 export async function trackContactsImported(
   userId: string,
   organizationId: string,
-  properties: { count: number }
+  properties: { count: number; firstContact?: ContactNameInfo }
 ) {
   try {
     const existing = await countContacts(organizationId);
@@ -422,7 +466,11 @@ export async function trackContactsImported(
     capture(userId, "contacts_imported", props);
     await emit(userId, "contacts.imported", props);
     if (existing <= properties.count) {
-      const firstProps = { organization_id: organizationId };
+      const contactName = deriveContactName(properties.firstContact);
+      const firstProps: Record<string, unknown> = {
+        organization_id: organizationId,
+        ...(contactName && { contactName }),
+      };
       capture(userId, "activation_first_contact", firstProps);
       await emit(userId, "activation.first_contact", firstProps);
     }
@@ -443,7 +491,13 @@ export async function trackWorkflowCreated(
     capture(userId, "workflow_created", props);
     await emit(userId, "workflow.created", props);
     if (existing === 1) {
-      const firstProps = { organization_id: organizationId };
+      const firstProps: Record<string, unknown> = {
+        organization_id: organizationId,
+        ...(typeof properties.workflowName === "string" &&
+          properties.workflowName && {
+            workflowName: properties.workflowName,
+          }),
+      };
       capture(userId, "activation_first_automation", firstProps);
       await emit(userId, "activation.first_automation", firstProps);
     }
@@ -465,7 +519,13 @@ export async function trackTemplateCreated(
     capture(userId, "template_created", props);
     await emit(userId, "template.created", props);
     if (existing === 1) {
-      const firstProps = { organization_id: organizationId };
+      const firstProps: Record<string, unknown> = {
+        organization_id: organizationId,
+        ...(typeof properties.templateName === "string" &&
+          properties.templateName && {
+            templateName: properties.templateName,
+          }),
+      };
       capture(userId, "activation_first_template", firstProps);
       await emit(userId, "activation.first_template", firstProps);
     }
@@ -496,7 +556,7 @@ export async function trackTemplatePublished(
 export async function trackBroadcastCreated(
   userId: string,
   organizationId: string,
-  properties: { channel: string; recipientCount: number }
+  properties: { channel: string; recipientCount: number; templateId?: string }
 ) {
   try {
     const existing = await countBatchSends(organizationId);
@@ -508,9 +568,14 @@ export async function trackBroadcastCreated(
     capture(userId, "broadcast_created", props);
     await emit(userId, "broadcast.created", props);
     if (existing === 1) {
-      const firstProps = {
+      const templateName = properties.templateId
+        ? await lookupTemplateName(organizationId, properties.templateId)
+        : null;
+      const firstProps: Record<string, unknown> = {
         organization_id: organizationId,
         channel: properties.channel,
+        recipientCount: String(properties.recipientCount),
+        ...(templateName && { templateName }),
       };
       capture(userId, "activation_first_broadcast", firstProps);
       await emit(userId, "activation.first_broadcast", firstProps);

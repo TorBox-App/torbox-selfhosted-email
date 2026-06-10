@@ -6,7 +6,7 @@
  */
 
 import { toPlainText } from "@react-email/render";
-import { renderTemplate } from "@wraps/template-render";
+import { renderTemplateStrict } from "@wraps/template-render";
 
 import { log } from "../../lib/logger";
 
@@ -33,44 +33,42 @@ export type WorkflowBranch =
  * Delegates to the canonical `@wraps/template-render` so workflow sends
  * render templates exactly the same way as the dashboard preview, the
  * test-send endpoint, and the subscription confirmation mailer. The
- * package handles `{{var}}`, `{{#if}}/{{else}}/{{/if}}`, dot paths, and
- * silently falls back to the raw template on parse errors.
+ * package handles `{{var}}`, `{{#if}}/{{else}}/{{/if}}`, and dot paths.
  *
- * Handlebars automatically escapes HTML in `{{variable}}` expressions
- * for safety — the canonical renderer keeps that default.
+ * Pass `escapeHtml: true` when the output is an HTML body — variable
+ * values get entity-escaped so contact data can't inject markup. Leave it
+ * off for non-HTML output (subjects, SMS bodies): those are plain text,
+ * where escaping turns `Smith & Co` into `Smith &amp; Co` on a phone
+ * screen or in a subject line.
  *
- * Detection: when the renderer bails (compile or runtime error), it
- * returns the raw template string unchanged. We detect that by checking
- * whether Handlebars block markers survived the render — if the input
- * contained `{{#` or `{{/` and the output is byte-identical, the renderer
- * didn't evaluate the block helpers. Log a warning so on-call can detect
- * malformed workflow templates in production. The previous regex-based
- * implementation logged on every Handlebars throw; we preserve that
- * observability through the consolidated renderer.
- *
- * The `_options` parameter is retained for backward compatibility with
- * existing callers; it has no effect today.
+ * Uses the strict renderer: a compile or runtime failure THROWS instead of
+ * returning the raw template, which fails the workflow step and blocks the
+ * send. The swallowing renderer shipped literal `{{#if firstName}}` subject
+ * lines to 22 recipients (Apr–Jun 2026) — a blocked send is recoverable via
+ * retry; a delivered template-soup email is not.
  *
  * @exported for testing
  */
 export function substituteVariables(
   text: string,
   data: Record<string, string>,
-  _options: { escapeHtml?: boolean } = {}
+  options: { escapeHtml?: boolean } = {}
 ): string {
-  const rendered = renderTemplate(text, data);
-
-  // Renderer bailed if the output equals the input AND the input had block
-  // markers that should have been consumed. Bare `{{var}}` substitution
-  // doesn't trigger this — a no-op render of a static string is normal.
-  if (rendered === text && /\{\{[#/]/.test(text)) {
-    log.warn("Workflow: template render failed, raw template returned", {
+  try {
+    return renderTemplateStrict(text, data, {
+      noEscape: !options.escapeHtml,
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    log.error("Workflow: template render failed, send blocked", {
       textPreview: text.slice(0, 200),
       dataKeys: Object.keys(data),
+      reason,
     });
+    throw new Error(
+      `Template rendering failed: ${reason}. Send blocked so the recipient does not receive raw {{...}} template syntax — fix the template, then retry.`
+    );
   }
-
-  return rendered;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -82,16 +80,17 @@ export function substituteVariables(
  * - Removes newlines to prevent header injection
  * - Collapses whitespace
  * - Truncates to reasonable length (998 chars per RFC 2822)
+ *
+ * Deliberately does NOT entity-escape: a subject is a plain-text header,
+ * not HTML. Escaping here delivered subjects like "Smith &amp; Co" to
+ * real inboxes (double-escaped when the renderer had already escaped).
+ * Escaping for display belongs in the UI layer.
  */
 export function sanitizeEmailSubject(subject: string): string {
   return subject
     .replace(/[\r\n]+/g, " ") // Remove newlines (header injection prevention)
     .replace(/\s+/g, " ") // Collapse whitespace
     .trim()
-    .replace(/&/g, "&amp;") // Escape & first (before other entities)
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
     .slice(0, 998); // RFC 2822 max line length
 }
 

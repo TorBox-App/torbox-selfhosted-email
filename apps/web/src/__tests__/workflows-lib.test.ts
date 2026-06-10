@@ -12,7 +12,17 @@ const HANDLER_ERRORS = {
     "Your IAM role does not have permission to send emails. " +
     "Fix: update your CloudFormation stack to the latest version, " +
     "or run `wraps platform update-role` in the CLI.",
+  templateRender:
+    "Template rendering failed: Parse error on line 1. Send blocked so the " +
+    "recipient does not receive raw {{...}} template syntax — fix the " +
+    "template, then retry.",
 } as const;
+
+// SES reports rendering failures asynchronously through configuration-set
+// events; this is the real wording stored on failed sends (see the Apr 2026
+// reengagement-activate-account failures).
+const SES_ASYNC_RENDER_ERROR =
+  "Rendering failure: Attribute 'IF' is not present in the rendering data.";
 
 describe("classifyWorkflowError", () => {
   it("classifies a missing AWS account error with reconnect remediation", () => {
@@ -52,6 +62,17 @@ describe("classifyWorkflowError", () => {
     const result = classifyWorkflowError("aws account xyz NOT FOUND");
     expect(result.code).toBe("aws_account_missing");
     expect(result.remediation).toMatch(/Reconnect your AWS account/i);
+  });
+
+  it("classifies the worker's blocked-send render error as template_render", () => {
+    const result = classifyWorkflowError(HANDLER_ERRORS.templateRender);
+    expect(result.code).toBe("template_render");
+    expect(result.remediation).toMatch(/Handlebars syntax|missing variables/i);
+  });
+
+  it("classifies SES's async rendering-failure event wording as template_render", () => {
+    const result = classifyWorkflowError(SES_ASYNC_RENDER_ERROR);
+    expect(result.code).toBe("template_render");
   });
 
   it("falls back to transient for an unrecognized error", () => {

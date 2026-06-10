@@ -393,6 +393,7 @@ export async function importContacts(
     if (created > 0) {
       trackContactsImported(access.userEmail, organizationId, {
         count: created,
+        firstContact: data.contacts[0],
       });
     }
 

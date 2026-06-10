@@ -278,6 +278,10 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             channel: "email",
             sourceType: "transactional",
             recipient,
+            // SES includes original headers when the configuration set event
+            // destination is configured with includeOriginalHeaders — without
+            // this, invite/transactional sends show no subject in email logs.
+            subject: mail.commonHeaders?.subject ?? null,
             from: mail.source ?? null,
             messageId,
             sentAt: mail.timestamp ? new Date(mail.timestamp) : new Date(),

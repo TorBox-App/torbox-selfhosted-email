@@ -238,15 +238,15 @@ describe("sanitizeEmailSubject", () => {
     expect(sanitizeEmailSubject("   \n\r\t   ")).toBe("");
   });
 
-  it("should escape HTML entities to prevent XSS in email clients", () => {
+  it("does NOT entity-escape — subjects are plain-text headers, not HTML", () => {
+    // Escaping here double-encoded subjects ("Smith & Co" arrived as
+    // "Smith &amp; Co" in real inboxes). Display-layer escaping is the
+    // dashboard's job; the send path must deliver the literal characters.
     expect(sanitizeEmailSubject("Price < $10 & save > 20%")).toBe(
-      "Price &lt; $10 &amp; save &gt; 20%"
-    );
-    expect(sanitizeEmailSubject('<script>alert("xss")</script>')).toBe(
-      "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+      "Price < $10 & save > 20%"
     );
     expect(sanitizeEmailSubject('Test "quotes" & ampersand')).toBe(
-      "Test &quot;quotes&quot; &amp; ampersand"
+      'Test "quotes" & ampersand'
     );
   });
 
@@ -399,21 +399,23 @@ describe("substituteVariables", () => {
   });
 
   describe("HTML escaping", () => {
-    it("should escape HTML in variable values", () => {
-      const result = substituteVariables("Hello {{name}}!", {
-        name: "<script>alert('xss')</script>",
-      });
+    it("escapes HTML in variable values when escapeHtml is set (HTML bodies)", () => {
+      const result = substituteVariables(
+        "Hello {{name}}!",
+        { name: "<script>alert('xss')</script>" },
+        { escapeHtml: true }
+      );
       expect(result).not.toContain("<script>");
       expect(result).toContain("&lt;script&gt;");
     });
 
-    it("should escape special characters", () => {
-      const result = substituteVariables("Test: {{content}}", {
-        content: "< > & \" '",
+    it("does NOT escape by default — subjects and SMS bodies are plain text", () => {
+      // "Smith & Co" in a subject line must arrive as "Smith & Co",
+      // not "Smith &amp; Co". HTML callers opt in via escapeHtml: true.
+      const result = substituteVariables("Welcome to {{company}}", {
+        company: "Smith & Co",
       });
-      expect(result).toContain("&lt;");
-      expect(result).toContain("&gt;");
-      expect(result).toContain("&amp;");
+      expect(result).toBe("Welcome to Smith & Co");
     });
   });
 

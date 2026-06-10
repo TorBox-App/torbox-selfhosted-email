@@ -8,7 +8,13 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { compileTemplate, nestKeys, renderTemplate } from "../render";
+import { normalizePlainTextForSes } from "../mustache-case";
+import {
+  compileTemplate,
+  nestKeys,
+  renderTemplate,
+  renderTemplateStrict,
+} from "../render";
 
 describe("renderTemplate", () => {
   it("substitutes a simple `{{var}}` placeholder", () => {
@@ -145,5 +151,60 @@ describe("nestKeys", () => {
       })
     );
     expect(out).toBe("Hi Jane, welcome to Acme.");
+  });
+});
+
+describe("renderTemplateStrict", () => {
+  it("renders exactly like renderTemplate on valid input", () => {
+    const tpl =
+      "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}.";
+    expect(renderTemplateStrict(tpl, { firstName: "Jane" })).toBe(
+      "The setup just got easier, Jane."
+    );
+    expect(renderTemplateStrict(tpl, {})).toBe("The setup just got easier.");
+  });
+
+  it("throws on a malformed template instead of returning the raw string", () => {
+    // renderTemplate swallows this and returns the input — acceptable for a
+    // preview pane, fatal for a send path. Strict must throw so callers can
+    // block the send.
+    const malformed = "Hi {{#if firstName}}{{firstName}}";
+    expect(() => renderTemplateStrict(malformed, {})).toThrow();
+    expect(renderTemplate(malformed, {})).toBe(malformed);
+  });
+
+  it("escapes HTML entities by default, not with noEscape", () => {
+    const tpl = "Hi {{name}}";
+    const data = { name: "O'Brien & Sons" };
+    // Default: safe for HTML bodies.
+    expect(renderTemplateStrict(tpl, data)).toBe("Hi O&#x27;Brien &amp; Sons");
+    // noEscape: required for subjects, SMS, and plain-text parts.
+    expect(renderTemplateStrict(tpl, data, { noEscape: true })).toBe(
+      "Hi O'Brien & Sons"
+    );
+  });
+});
+
+describe("normalizePlainTextForSes", () => {
+  it("restores Handlebars casing destroyed by the heading uppercase in html-to-text", () => {
+    // @react-email/render's plainText path uppercases <h1> content, so
+    // {{#if firstName}} becomes {{#IF FIRSTNAME}} — SES rejects that as a
+    // missing 'IF' attribute at send time (the reengagement-activate-account
+    // production failure).
+    const html =
+      "<h1>{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup</h1>";
+    const corruptedText =
+      "{{#IF FIRSTNAME}}HEY {{FIRSTNAME}}, THE{{ELSE}}THE{{/IF}} SETUP";
+
+    expect(normalizePlainTextForSes(corruptedText, html)).toBe(
+      "{{#if firstName}}HEY {{firstName}}, THE{{else}}THE{{/if}} SETUP"
+    );
+  });
+
+  it("leaves text without uppercased mustaches unchanged", () => {
+    const html = "<p>Hi {{firstName}}</p>";
+    expect(normalizePlainTextForSes("Hi {{firstName}}", html)).toBe(
+      "Hi {{firstName}}"
+    );
   });
 });

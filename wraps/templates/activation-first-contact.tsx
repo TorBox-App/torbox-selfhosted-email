@@ -40,10 +40,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function FirstContactEmail({
-  contactName,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstContactEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -96,10 +93,16 @@ export default function FirstContactEmail({
                 }
               </Heading>
               <Text className="m-0 mb-5 text-base leading-relaxed text-gray-600">
-                You just added <strong>{contactName}</strong> as your first
-                contact. That&apos;s the foundation of everything &mdash;
-                broadcasts, automations, and targeted campaigns all start with
-                your contact list.
+                You just added{" "}
+                <strong>
+                  {
+                    "{{#if contactName}}{{contactName}}{{else}}your first contact{{/if}}"
+                  }
+                </strong>
+                {"{{#if contactName}} as your first contact{{/if}}"}.
+                That&apos;s the foundation of everything &mdash; broadcasts,
+                automations, and targeted campaigns all start with your contact
+                list.
               </Text>
               <Hr className="my-6 border-gray-200" />
               <Text className="m-0 mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">

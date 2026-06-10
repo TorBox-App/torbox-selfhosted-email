@@ -89,6 +89,15 @@ const WORKFLOW_ERROR_PATTERNS: ReadonlyArray<{
     remediation: "Restore or recreate the email template, then retry",
   },
   {
+    code: "template_render",
+    // Matches both the worker's local render guard ("Template rendering
+    // failed: ...") and SES's async event wording ("Rendering failure:
+    // Attribute 'x' is not present in the rendering data.")
+    test: /Template rendering failed|Rendering failure/i,
+    remediation:
+      "Fix the template's Handlebars syntax or missing variables, then retry",
+  },
+  {
     code: "ses_permission",
     // Matches the send handler's "…does not have permission to send emails…"
     // plus generic IAM/authorization wording. Deliberately avoids bare "SES"

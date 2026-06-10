@@ -827,7 +827,7 @@ importers:
         version: 19.2.3(@types/react@19.2.4)
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.18(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))
+        version: 4.0.18(vitest@4.0.18)
       '@vitest/ui':
         specifier: 4.0.8
         version: 4.0.8(vitest@4.0.18)
@@ -1307,7 +1307,7 @@ importers:
         version: 10.0.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.18(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))
+        version: 4.0.18(vitest@4.0.18)
       '@wraps.dev/email-check':
         specifier: workspace:*
         version: link:../email-check
@@ -1320,6 +1320,9 @@ importers:
       aws-sdk-client-mock-vitest:
         specifier: 7.0.1
         version: 7.0.1(@smithy/types@4.14.0)(aws-sdk-client-mock@4.1.0)(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))
+      handlebars:
+        specifier: 'catalog:'
+        version: 4.7.9
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.14)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.4)
@@ -1544,7 +1547,7 @@ importers:
         version: 24.10.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.18(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))
+        version: 4.0.18(vitest@4.0.18)
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.14)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.4)
@@ -22603,20 +22606,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))':
-    dependencies:
-      '@bcoe/v8-coverage': 1.0.2
-      '@vitest/utils': 4.0.18
-      ast-v8-to-istanbul: 0.3.12
-      istanbul-lib-coverage: 3.2.2
-      istanbul-lib-report: 3.0.1
-      istanbul-reports: 3.2.0
-      magicast: 0.5.2
-      obug: 2.1.1
-      std-env: 3.10.0
-      tinyrainbow: 3.1.0
-      vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4)
-
   '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@25.6.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -22630,6 +22619,20 @@ snapshots:
       std-env: 3.10.0
       tinyrainbow: 3.1.0
       vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@25.6.0)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4)
+
+  '@vitest/coverage-v8@4.0.18(vitest@4.0.18)':
+    dependencies:
+      '@bcoe/v8-coverage': 1.0.2
+      '@vitest/utils': 4.0.18
+      ast-v8-to-istanbul: 0.3.12
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      magicast: 0.5.2
+      obug: 2.1.1
+      std-env: 3.10.0
+      tinyrainbow: 3.1.0
+      vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(terser@5.46.2)(tsx@4.20.6)(yaml@2.8.4)
 
   '@vitest/expect@4.0.18':
     dependencies:
@@ -26786,7 +26789,7 @@ snapshots:
       jiti: 1.21.7
       postcss: 8.5.10
       semver: 7.7.4
-      webpack: 5.105.0
+      webpack: 5.105.0(esbuild@0.25.12)
     transitivePeerDependencies:
       - typescript
 
@@ -28223,7 +28226,7 @@ snapshots:
 
   style-loader@4.0.0(webpack@5.105.0):
     dependencies:
-      webpack: 5.105.0
+      webpack: 5.105.0(esbuild@0.25.12)
 
   style-mod@4.1.3: {}
 
@@ -28324,7 +28327,7 @@ snapshots:
       minizlib: 3.1.0
       yallist: 5.0.0
 
-  terser-webpack-plugin@5.5.0(esbuild@0.25.12)(webpack@5.105.0(esbuild@0.25.12)):
+  terser-webpack-plugin@5.5.0(esbuild@0.25.12)(webpack@5.105.0):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
@@ -28333,14 +28336,6 @@ snapshots:
       webpack: 5.105.0(esbuild@0.25.12)
     optionalDependencies:
       esbuild: 0.25.12
-
-  terser-webpack-plugin@5.5.0(webpack@5.105.0):
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      jest-worker: 27.5.1
-      schema-utils: 4.3.3
-      terser: 5.46.2
-      webpack: 5.105.0
 
   terser@5.46.2:
     dependencies:
@@ -29062,38 +29057,6 @@ snapshots:
 
   webpack-sources@3.4.1: {}
 
-  webpack@5.105.0:
-    dependencies:
-      '@types/eslint-scope': 3.7.7
-      '@types/estree': 1.0.8
-      '@types/json-schema': 7.0.15
-      '@webassemblyjs/ast': 1.14.1
-      '@webassemblyjs/wasm-edit': 1.14.1
-      '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.16.0
-      acorn-import-phases: 1.0.4(acorn@8.16.0)
-      browserslist: 4.28.2
-      chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.21.0
-      es-module-lexer: 2.1.0
-      eslint-scope: 5.1.1
-      events: 3.3.0
-      glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.11
-      json-parse-even-better-errors: 2.3.1
-      loader-runner: 4.3.2
-      mime-types: 2.1.35
-      neo-async: 2.6.2
-      schema-utils: 4.3.3
-      tapable: 2.3.3
-      terser-webpack-plugin: 5.5.0(webpack@5.105.0)
-      watchpack: 2.5.1
-      webpack-sources: 3.4.1
-    transitivePeerDependencies:
-      - '@swc/core'
-      - esbuild
-      - uglify-js
-
   webpack@5.105.0(esbuild@0.25.12):
     dependencies:
       '@types/eslint-scope': 3.7.7
@@ -29118,7 +29081,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
-      terser-webpack-plugin: 5.5.0(esbuild@0.25.12)(webpack@5.105.0(esbuild@0.25.12))
+      terser-webpack-plugin: 5.5.0(esbuild@0.25.12)(webpack@5.105.0)
       watchpack: 2.5.1
       webpack-sources: 3.4.1
     transitivePeerDependencies:

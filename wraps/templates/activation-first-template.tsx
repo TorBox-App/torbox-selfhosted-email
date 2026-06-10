@@ -38,10 +38,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function FirstTemplateEmail({
-  templateName,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstTemplateEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -88,7 +85,9 @@ export default function FirstTemplateEmail({
                     fontWeight: 700,
                   }}
                 >
-                  {templateName}
+                  {
+                    "{{#if templateName}}{{templateName}}{{else}}Your first template{{/if}}"
+                  }
                 </Text>
               </div>
               <Heading className="m-0 mb-4 text-2xl font-semibold text-gray-800">

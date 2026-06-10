@@ -250,7 +250,9 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     // Track activation event (fire-and-forget)
-    trackTemplateCreated(session.user.email, orgWithMembership.id);
+    trackTemplateCreated(session.user.email, orgWithMembership.id, {
+      templateName: newTemplate.name,
+    });
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error) {

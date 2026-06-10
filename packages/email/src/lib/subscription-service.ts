@@ -17,7 +17,7 @@ import {
   template,
   topicSettings,
 } from "@wraps/db";
-import { nestKeys, renderTemplate } from "@wraps/template-render";
+import { nestKeys, renderTemplateStrict } from "@wraps/template-render";
 import { WrapsEmail } from "@wraps.dev/email";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
@@ -38,29 +38,35 @@ const structuredLog = (msg: string, data?: Record<string, unknown>) =>
  * is nested via `nestKeys` so Handlebars can resolve `{{topic.name}}` as
  * a path lookup on `data.topic.name`.
  *
- * Detection: when the renderer bails (compile or runtime error), it
- * returns the raw template string unchanged. We detect that by checking
- * whether Handlebars block markers survived the render — if the input
- * contained `{{#` or `{{/` and the output is byte-identical, the renderer
- * didn't evaluate the block helpers. Log so we have a paper trail when a
- * malformed confirmation template ships raw to a real inbox.
+ * Strict: a compile or runtime failure THROWS instead of returning the raw
+ * template — the caller falls back to the default confirmation email, so a
+ * malformed custom template never ships raw `{{...}}` to a subscriber and
+ * never blocks the double-opt-in confirmation either.
+ *
+ * Pass `escapeHtml: true` for HTML bodies; subjects and plain-text parts
+ * must stay unescaped (`Smith & Co`, not `Smith &amp; Co`).
  *
  * @internal Exported for testing — not part of the public package surface.
  */
 export function substituteVariables(
   content: string,
-  variables: Record<string, string | undefined>
+  variables: Record<string, string | undefined>,
+  options: { escapeHtml?: boolean } = {}
 ): string {
-  const rendered = renderTemplate(content, nestKeys(variables));
-
-  if (rendered === content && /\{\{[#/]/.test(content)) {
-    structuredLog("subscription template render failed, raw template sent", {
+  try {
+    return renderTemplateStrict(content, nestKeys(variables), {
+      noEscape: !options.escapeHtml,
+    });
+  } catch (error) {
+    structuredLog("subscription template render failed", {
       contentPreview: content.slice(0, 200),
       variableKeys: Object.keys(variables),
+      reason: error instanceof Error ? error.message : String(error),
     });
+    throw new Error(
+      `Template rendering failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-
-  return rendered;
 }
 
 /**
@@ -261,11 +267,31 @@ export async function sendTopicConfirmationEmail(
         "organization.name": org?.name ?? undefined,
       };
 
-      subject = substituteVariables(customTemplate.subject, variables);
-      html = substituteVariables(customTemplate.compiledHtml, variables);
-      text = customTemplate.compiledText
-        ? substituteVariables(customTemplate.compiledText, variables)
-        : htmlToPlainText(html);
+      try {
+        subject = substituteVariables(customTemplate.subject, variables);
+        html = substituteVariables(customTemplate.compiledHtml, variables, {
+          escapeHtml: true,
+        });
+        text = customTemplate.compiledText
+          ? substituteVariables(customTemplate.compiledText, variables)
+          : htmlToPlainText(html);
+      } catch {
+        // A malformed custom template must neither ship raw {{...}} nor
+        // block the double-opt-in — fall back to the default confirmation.
+        structuredLog(
+          "Confirmation email: custom template failed to render, using default",
+          { templateId: settings.confirmationTemplateId }
+        );
+        const defaultEmail = generateTopicConfirmationEmail({
+          url: confirmationUrl,
+          topicName,
+          topicDescription,
+          organizationName: org?.name,
+        });
+        subject = defaultEmail.subject;
+        html = defaultEmail.html;
+        text = defaultEmail.text;
+      }
     } else {
       structuredLog(
         "Confirmation email: custom template not found, using default",

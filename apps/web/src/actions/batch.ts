@@ -609,6 +609,7 @@ export async function createBatchSend(
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: data.channel ?? "email",
       recipientCount,
+      templateId: data.templateId,
     });
 
     return await getBatchSend(result.id, organizationId);
@@ -1013,6 +1014,7 @@ export async function promoteDraftToSend(
     await trackBroadcastCreated(access.userEmail, organizationId, {
       channel: merged.channel,
       recipientCount,
+      templateId: merged.templateId,
     });
 
     return loadBatchWithMeta(batchId, organizationId);

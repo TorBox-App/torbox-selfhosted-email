@@ -33,10 +33,15 @@ import {
 } from "@wraps/db";
 import {
   generateSESTemplateName,
+  toSesVariableName,
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
 import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
+import {
+  extractCanonicalVars,
+  normalizePlainTextForSes,
+} from "@wraps/template-render";
 import { and, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { awsDefaults } from "../../lib/aws-defaults";
@@ -378,12 +383,43 @@ export async function handleSendEmail(
   // SES-template path uses the AWS SDK's upper-case shape via `emailTags`.
   const sharedTags = emailTags.map((t) => ({ name: t.Name, value: t.Value }));
 
+  // Pad replacementData so SES never encounters an absent variable.
+  // SES hard-fails template rendering (RenderingFailure → silent non-delivery)
+  // when a bare {{var}} is referenced but missing from TemplateData. Empty
+  // string is falsy for {{#if}}, so conditionals still work correctly.
+  // We do this for all vars extracted from subject + html regardless of which
+  // send path ends up being used (the raw-HTML path ignores the extras; the
+  // SES-template path needs them).
+  const canonicalVars = extractCanonicalVars(
+    `${tmpl.subject ?? ""}\n${tmpl.compiledHtml}`
+  );
+  for (const rawVar of canonicalVars) {
+    const sesKey = toSesVariableName(rawVar);
+    if (!(sesKey in replacementData)) {
+      replacementData[sesKey] = "";
+    }
+  }
+
   try {
     if (sesTemplateName && !config.subject) {
       // Use SES template - let SES handle variable substitution
       // (SES templates have their own subject baked in, so only use this path
       // when there's no step-level override)
-      subject = sanitizeEmailSubject(tmpl.subject || "Message");
+      //
+      // Render the subject locally anyway: messageSend must record what the
+      // recipient sees (not raw {{...}} syntax), and an unrenderable subject
+      // must block the send here rather than surface as an async SES
+      // rendering failure after the send is already recorded.
+      // transformVariablesForSes first: stored subjects may use the authoring
+      // syntax ({{firstName|there}}, {{contact.firstName}}) which Handlebars
+      // can't parse / resolve against our flat replacementData — the SES copy
+      // was transformed at publish, so the local render must match.
+      subject = sanitizeEmailSubject(
+        substituteVariables(
+          transformVariablesForSes(tmpl.subject || "Message"),
+          replacementData
+        )
+      );
 
       const response = await sesClient.send(
         new SendEmailCommand({
@@ -414,12 +450,20 @@ export async function handleSendEmail(
       });
     } else if (sesTemplateName && config.subject) {
       // SES template exists but step has a subject override — send as raw HTML
-      // so we can apply the overridden subject
-      const html = substituteVariables(tmpl.compiledHtml, replacementData, {
-        escapeHtml: true,
-      });
+      // so we can apply the overridden subject.
+      // transformVariablesForSes first: authoring syntax ({{var|fallback}},
+      // dotted paths) must become the flat #if form our renderer and
+      // replacementData understand.
+      const html = substituteVariables(
+        transformVariablesForSes(tmpl.compiledHtml),
+        replacementData,
+        { escapeHtml: true }
+      );
 
-      const rawSubject = substituteVariables(baseSubject, replacementData);
+      const rawSubject = substituteVariables(
+        transformVariablesForSes(baseSubject),
+        replacementData
+      );
       subject = sanitizeEmailSubject(rawSubject);
 
       const result = await sendEmail({
@@ -441,12 +485,17 @@ export async function handleSendEmail(
       });
     } else {
       // Fallback: Apply variable substitution locally and send raw HTML
-      const html = substituteVariables(tmpl.compiledHtml, replacementData, {
-        escapeHtml: true,
-      });
+      const html = substituteVariables(
+        transformVariablesForSes(tmpl.compiledHtml),
+        replacementData,
+        { escapeHtml: true }
+      );
 
       // Build subject with variable substitution
-      const rawSubject = substituteVariables(baseSubject, replacementData);
+      const rawSubject = substituteVariables(
+        transformVariablesForSes(baseSubject),
+        replacementData
+      );
       subject = sanitizeEmailSubject(rawSubject);
 
       const result = await sendEmail({
@@ -573,7 +622,10 @@ async function autoPublishTemplate(
     // We need to transform to {{contactFirstName}} format for SES
     // Also handles fallbacks: {{name|fallback}} → {{#if name}}{{name}}{{else}}fallback{{/if}}
     const sesHtml = transformVariablesForSes(tmpl.compiledHtml);
-    const sesText = htmlToPlainText(sesHtml);
+    // normalizePlainTextForSes: html-to-text uppercases heading content,
+    // turning {{#if firstName}} into {{#IF FIRSTNAME}} — SES rejects that
+    // as a missing 'IF' attribute and the send never delivers.
+    const sesText = normalizePlainTextForSes(htmlToPlainText(sesHtml), sesHtml);
     const sesSubject = transformVariablesForSes(tmpl.subject || "Message");
 
     // 2. Generate template name and publish to SES

@@ -41,11 +41,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function FirstBroadcastEmail({
-  recipientCount,
-  templateName,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstBroadcastEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -89,7 +85,9 @@ export default function FirstBroadcastEmail({
                     color: "rgba(255,255,255,0.9)",
                   }}
                 >
-                  Your first email just landed in {recipientCount} inboxes
+                  {
+                    "Your first email just landed in {{#if recipientCount}}{{recipientCount}} inboxes{{else}}your contacts' inboxes{{/if}}"
+                  }
                 </Text>
               </div>
               <div style={{ padding: "32px" }}>
@@ -97,8 +95,9 @@ export default function FirstBroadcastEmail({
                   {
                     "{{#if firstName}}Congrats {{firstName}}! You{{else}}Congrats! You{{/if}}"
                   }{" "}
-                  just sent &ldquo;{templateName}
-                  &rdquo; to {recipientCount} contacts. SES is processing
+                  {
+                    "just sent {{#if templateName}}“{{templateName}}”{{else}}your first broadcast{{/if}} to {{#if recipientCount}}{{recipientCount}} contacts{{else}}your contacts{{/if}}. SES is processing"
+                  }{" "}
                   deliveries now &mdash; results will appear in your dashboard
                   within minutes.
                 </Text>
@@ -120,7 +119,9 @@ export default function FirstBroadcastEmail({
                           color: "#ea580c",
                         }}
                       >
-                        {recipientCount}
+                        {
+                          "{{#if recipientCount}}{{recipientCount}}{{else}}—{{/if}}"
+                        }
                       </Text>
                       <Text
                         style={{

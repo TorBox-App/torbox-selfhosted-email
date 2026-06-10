@@ -191,6 +191,40 @@ describe("webhook SDK send storage", () => {
     );
   });
 
+  it("records the subject from mail.commonHeaders when present", async () => {
+    mockAccountLookup();
+    mockMessageSendLookup(false);
+    mockInsertChain();
+
+    const event = makeSendEvent("ses-sdk-subject-001");
+    (event.detail.mail as Record<string, unknown>).commonHeaders = {
+      subject: "You've been invited to join Rinya on Wraps",
+    };
+    await sendWebhook(event);
+
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: "ses-sdk-subject-001",
+        subject: "You've been invited to join Rinya on Wraps",
+      })
+    );
+  });
+
+  it("records a null subject when the event has no commonHeaders", async () => {
+    mockAccountLookup();
+    mockMessageSendLookup(false);
+    mockInsertChain();
+
+    await sendWebhook(makeSendEvent("ses-sdk-nosubject-001"));
+
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: "ses-sdk-nosubject-001",
+        subject: null,
+      })
+    );
+  });
+
   it("Send insert uses onConflictDoNothing — idempotent on duplicate", async () => {
     mockAccountLookup();
     mockMessageSendLookup(false);
