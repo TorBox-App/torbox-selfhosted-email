@@ -26,18 +26,18 @@ export function Logo({ size = 24, className, ...props }: LogoProps) {
   }, [theme]);
 
   const logoSrc =
-    resolvedTheme === "dark" ? "/wraps-dark.png" : "/wraps-light.png";
+    resolvedTheme === "dark" ? "/wraps-dark-logo.png" : "/wraps-light-logo.png";
 
   return (
     <Image
       alt="Wraps Logo"
       className={className}
-      height={size}
+      height={300}
       priority
       src={logoSrc}
-      style={{ display: "block", objectFit: "contain", width: "auto" }}
+      style={{ display: "block", height: "auto", width: size * 3 }}
       unoptimized
-      width={size * 3}
+      width={980}
       {...props}
     />
   );

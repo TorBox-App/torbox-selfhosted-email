@@ -13,7 +13,7 @@ export default function OnboardingLayout({ children }: PropsWithChildren) {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex items-center px-4 py-4">
-          <Logo className="h-8" />
+          <Logo size={32} />
         </div>
       </header>
 
