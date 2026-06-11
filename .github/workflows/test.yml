@@ -112,6 +112,9 @@ jobs:
           BETTER_AUTH_SECRET: test-secret-key-for-testing-only
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           CORS_ORIGIN: http://localhost:3000
+          STRIPE_SECRET_KEY: sk_test_fake_key_for_ci_only
+          STRIPE_WEBHOOK_SECRET: whsec_fake_secret_for_ci_only
+          STRIPE_GROWTH_PRICE_ID: price_fake_growth_for_ci_only
 
       - name: Run email-send tests
         run: pnpm --filter @wraps/email-send test
