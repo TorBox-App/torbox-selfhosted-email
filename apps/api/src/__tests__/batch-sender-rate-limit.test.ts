@@ -84,12 +84,13 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DB mock — bulk path select order:
-//   0: batch  1: contacts  2: template  3: org  4: dedup
+// DB mock — bulk path select order (claim-before-send contract):
+//   0: batch  1: contacts  2: aws account  3: template  4: org
 // ─────────────────────────────────────────────────────────────────────────────
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
+let mockClaimReturning: Array<{ contactId: string }> = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -118,12 +119,18 @@ vi.mock("@wraps/db", async () => {
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
-          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(mockClaimReturning)),
+          }),
         }),
       }),
     },
@@ -215,9 +222,12 @@ function makeContacts(count = 50) {
 }
 
 function setupSelects() {
+  // Claim INSERT returns all 50 contacts claimed
+  mockClaimReturning = makeContacts(50).map((c) => ({ contactId: c.id }));
   selectResults = [
     [makeBatch()],
     makeContacts(50),
+    [{}], // aws account features
     [
       {
         sesTemplateName: "wraps-tmpl-1",
@@ -226,7 +236,6 @@ function setupSelects() {
       },
     ],
     [{ name: "Test Org" }],
-    [], // dedup: no existing records
   ];
 }
 
@@ -261,6 +270,7 @@ beforeEach(() => {
   sqsSendCalls.length = 0;
   selectCallIndex = 0;
   selectResults = [];
+  mockClaimReturning = [];
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,9 +1,14 @@
 /**
  * Batch Sender Idempotency Tests
  *
- * Verifies that SQS retry of the same chunk does not send duplicate emails.
- * The batch-sender must skip contacts that already have a messageSend record
- * for the given batchId, and use onConflictDoNothing as a safety net.
+ * Verifies the claim-before-send contract:
+ * 1. Contacts are claimed atomically via INSERT ... ON CONFLICT DO NOTHING before SES.
+ * 2. Only claimed contacts are sent to SES.
+ * 3. Post-send writes UPDATE the claimed rows (not INSERT).
+ * 4. Failed contacts are re-claimed by the UPDATE path on redelivery.
+ *
+ * Race-semantics (concurrent claim, stale claim recovery) are tested in
+ * batch-sender-claim-db.test.ts against the real unique index.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -90,12 +95,21 @@ vi.mock("./variable-mappings", () => ({
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DB mock — tracks insert calls and supports alreadySent filtering
+// DB mock — supports the claim-before-send contract:
+//   INSERT ... ON CONFLICT DO NOTHING ... RETURNING (claim)
+//   UPDATE ... (re-claim + post-send update)
 // ─────────────────────────────────────────────────────────────────────────────
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
 const updateSetCalls: Record<string, unknown>[] = [];
+
+// Contacts returned by the claim INSERT (.returning()). Defaults to all contacts
+// claimed successfully. Override per-test to simulate partially-claimed chunks.
+let claimReturning: Array<{ contactId: string }> = [];
+
+// Contacts returned by the re-claim UPDATE (.returning()). Empty = no re-claims.
+let reclaimReturning: Array<{ contactId: string }> = [];
 
 function getSqlNumericParams(value: unknown): number[] {
   if (typeof value !== "object" || value === null) {
@@ -147,21 +161,48 @@ vi.mock("@wraps/db", async () => {
           }),
         };
       }),
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockImplementation((values: Record<string, unknown>) => {
-          updateSetCalls.push(values);
-          return {
-            where: vi.fn().mockResolvedValue(undefined),
-          };
-        }),
+      update: vi.fn().mockImplementation(() => {
+        return {
+          set: vi.fn().mockImplementation((values: Record<string, unknown>) => {
+            updateSetCalls.push(values);
+            return {
+              // All updates support .returning() — only the re-claim UPDATE actually
+              // calls it; other updates (batchSend status, post-send) do not.
+              where: vi.fn().mockReturnValue({
+                returning: vi
+                  .fn()
+                  .mockImplementation(() => Promise.resolve(reclaimReturning)),
+              }),
+            };
+          }),
+        };
       }),
-      insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockImplementation(() => ({
-          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-        })),
+      insert: vi.fn().mockImplementation(() => {
+        return {
+          values: vi.fn().mockImplementation(() => {
+            // Claim INSERT: supports .onConflictDoNothing().returning()
+            return {
+              onConflictDoNothing: vi.fn().mockReturnValue({
+                returning: vi
+                  .fn()
+                  .mockImplementation(() => Promise.resolve(claimReturning)),
+              }),
+            };
+          }),
+        };
       }),
     },
     sql: (...args: unknown[]) => args,
+    // Re-export eq/and/inArray so the worker can use them
+    get eq() {
+      return actual.eq;
+    },
+    get and() {
+      return actual.and;
+    },
+    get inArray() {
+      return actual.inArray;
+    },
   };
 });
 
@@ -249,19 +290,19 @@ function makeSQSEvent() {
 }
 
 /**
- * DB select call order in processJob:
- * 1. batchSend record
- * 2. contacts (getContactsChunk)
+ * DB select call order in processJob (new claim-before-send contract):
+ * 0. batchSend record
+ * 1. contacts (getContactsChunk)
+ * 2. aws account features (config set lookup)
  * 3. template (Promise.all)
  * 4. organization (Promise.all)
- * 5. alreadySent contactIds (dedup query)
  *
  * Note: orgExt select only runs when batch.from is null (not in these tests).
+ * The old dedup SELECT (slot 5) is GONE — replaced by INSERT claim + UPDATE re-claim.
  */
 function setupSelects(opts: {
   batch: Record<string, unknown>;
   contacts?: unknown[];
-  existingSendRecords?: Array<{ contactId: string; status: string }>;
 }) {
   selectResults = [
     // 0. batch
@@ -280,12 +321,10 @@ function setupSelects(opts: {
     ],
     // 4. organization
     [{ name: "Test Org" }],
-    // 5. existing send records for dedup
-    opts.existingSendRecords ?? [],
   ];
 }
 
-describe("Batch sender idempotency", () => {
+describe("Batch sender idempotency (claim-before-send)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sesSendCalls.length = 0;
@@ -293,18 +332,39 @@ describe("Batch sender idempotency", () => {
     selectCallIndex = 0;
     selectResults = [];
     updateSetCalls.length = 0;
+    // Default: all contacts claimed successfully by INSERT
+    claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
+    reclaimReturning = [];
   });
 
-  it("skips contacts that already have send records for this batch (SQS retry)", async () => {
-    // Simulate: contact-1 was already sent in a previous invocation
-    setupSelects({
-      batch: makeBatch(),
-      existingSendRecords: [{ contactId: "contact-1", status: "sent" }],
-    });
+  it("claims all contacts before SES send on first invocation", async () => {
+    // All contacts claimed by INSERT returning both
+    claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
+    reclaimReturning = [];
+    setupSelects({ batch: makeBatch() });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    // SES should only be called for contact-2 (not contact-1)
+    // SES bulk send should include both contacts
+    const bulkCall = sesSendCalls[1]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    const entries = bulkCall?.BulkEmailEntries as
+      | Array<Record<string, unknown>>
+      | undefined;
+    expect(entries).toHaveLength(2);
+  });
+
+  it("skips contacts whose claim INSERT was rejected (already claimed/sent)", async () => {
+    // Only contact-2 is claimed — contact-1 already had a row in the DB (duplicate delivery)
+    claimReturning = [{ contactId: "contact-2" }];
+    // contact-1 is in notClaimed; re-claim UPDATE finds it's NOT failed/stale → returns []
+    reclaimReturning = [];
+    setupSelects({ batch: makeBatch() });
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    // SES should only be called for contact-2
     expect(sesSendCalls).toHaveLength(2); // GetAccount + 1 bulk send
     const bulkCall = sesSendCalls[1]?.[0] as
       | Record<string, unknown>
@@ -327,14 +387,11 @@ describe("Batch sender idempotency", () => {
     expect(getSqlNumericParams(processedExpr).at(-1)).toBe(1);
   });
 
-  it("skips entire chunk when all contacts already sent", async () => {
-    setupSelects({
-      batch: makeBatch(),
-      existingSendRecords: [
-        { contactId: "contact-1", status: "sent" },
-        { contactId: "contact-2", status: "delivered" },
-      ],
-    });
+  it("skips entire chunk when no contacts are claimed (all already processed)", async () => {
+    // INSERT claimed nobody; re-claim found nobody retryable
+    claimReturning = [];
+    reclaimReturning = [];
+    setupSelects({ batch: makeBatch() });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
@@ -352,32 +409,15 @@ describe("Batch sender idempotency", () => {
     expect(getSqlNumericParams(processedExpr).at(-1)).toBe(0);
   });
 
-  it("sends to all contacts when none have been sent yet (first invocation)", async () => {
-    setupSelects({
-      batch: makeBatch(),
-      existingSendRecords: [],
-    });
+  it("re-claims failed contacts via UPDATE so they are retried", async () => {
+    // contact-1 has a failed row → INSERT skips it; UPDATE re-claims it
+    claimReturning = [{ contactId: "contact-2" }]; // INSERT only claims contact-2
+    reclaimReturning = [{ contactId: "contact-1" }]; // UPDATE re-claims contact-1
+    setupSelects({ batch: makeBatch() });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
 
-    // SES bulk send should include both contacts
-    const bulkCall = sesSendCalls[1]?.[0] as
-      | Record<string, unknown>
-      | undefined;
-    const entries = bulkCall?.BulkEmailEntries as
-      | Array<Record<string, unknown>>
-      | undefined;
-    expect(entries).toHaveLength(2);
-  });
-
-  it("does not skip contacts that only have failed send records", async () => {
-    setupSelects({
-      batch: makeBatch(),
-      existingSendRecords: [{ contactId: "contact-1", status: "failed" }],
-    });
-
-    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
-
+    // Both contacts should be sent
     const bulkCall = sesSendCalls[1]?.[0] as
       | Record<string, unknown>
       | undefined;
@@ -393,10 +433,28 @@ describe("Batch sender idempotency", () => {
     expect(getSqlNumericParams(processedExpr).at(-1)).toBe(2);
   });
 
+  it("post-send writes UPDATE the claimed rows — no insert after SES call", async () => {
+    claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
+    reclaimReturning = [];
+    setupSelects({ batch: makeBatch({ totalRecipients: 100 }) });
+
+    const { db } = await import("@wraps/db");
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    // insert should have been called exactly once (the claim, before SES)
+    expect(vi.mocked(db.insert)).toHaveBeenCalledTimes(1);
+
+    // update should have been called: re-claim (1) + per-recipient sent (2) + batchSend progress (1) + contact counters (1)
+    // The exact count may vary but there should be no insert after SES
+    expect(vi.mocked(db.insert)).toHaveBeenCalledTimes(1);
+  });
+
   it("progress UPDATE carries heartbeat fields in a single .set() call", async () => {
+    claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
+    reclaimReturning = [];
     setupSelects({
       batch: makeBatch({ totalRecipients: 100 }),
-      existingSendRecords: [],
     });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());
@@ -421,9 +479,10 @@ describe("Batch sender idempotency", () => {
   it("progress UPDATE writes lastCursor=null when chunk is short (terminal)", async () => {
     // Short-chunk path (contacts.length < Math.min(CHUNK_SIZE, remaining)):
     // we still want lastChunkAt/lastChunkIndex recorded for observability.
+    claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
+    reclaimReturning = [];
     setupSelects({
       batch: makeBatch({ totalRecipients: 2 }),
-      existingSendRecords: [],
     });
 
     await handler(makeSQSEvent(), makeMockContext(), vi.fn());

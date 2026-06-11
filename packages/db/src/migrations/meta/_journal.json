@@ -414,6 +414,13 @@
       "when": 1748908800000,
       "tag": "0058_email_log_sent_at_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1781130531557,
+      "tag": "0059_message_send_claimed_at",
+      "breakpoints": true
     }
   ]
 }

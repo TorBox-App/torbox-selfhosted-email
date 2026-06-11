@@ -81,7 +81,7 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
 
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
-const insertValuesCalls: unknown[] = [];
+let mockClaimReturning: Array<{ contactId: string }> = [];
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -110,13 +110,18 @@ vi.mock("@wraps/db", async () => {
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockImplementation((vals: unknown) => {
-          insertValuesCalls.push(vals);
-          return { onConflictDoNothing: vi.fn().mockResolvedValue(undefined) };
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi
+              .fn()
+              .mockImplementation(() => Promise.resolve(mockClaimReturning)),
+          }),
         }),
       }),
     },
@@ -236,6 +241,7 @@ function makeSQSEvent() {
  * not part of the standard contact-field set.
  */
 function setupBulkSelects() {
+  mockClaimReturning = [{ contactId: "contact-pad-1" }];
   selectResults = [
     [makeBulkBatch()],
     [makeContact()],
@@ -249,7 +255,6 @@ function setupBulkSelects() {
       },
     ],
     [{ name: "Test Org" }],
-    [], // existingSendRecords (dedup — empty)
   ];
 }
 
@@ -259,7 +264,7 @@ beforeEach(() => {
   sesBulkSendInputs.length = 0;
   selectCallIndex = 0;
   selectResults = [];
-  insertValuesCalls.length = 0;
+  mockClaimReturning = [];
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

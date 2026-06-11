@@ -53,7 +53,7 @@ vi.mock("@react-email/render", () => ({
 
 let regionSelectIdx = 0;
 const regionSelectResults: unknown[][] = [
-  // 1. batch
+  // 0. batch
   [
     {
       id: "batch-1",
@@ -75,7 +75,7 @@ const regionSelectResults: unknown[][] = [
       variableMappings: null,
     },
   ],
-  // 2. contacts
+  // 1. contacts
   [
     {
       id: "contact-1",
@@ -89,6 +89,8 @@ const regionSelectResults: unknown[][] = [
       createdAt: new Date("2026-01-15T10:00:00Z"),
     },
   ],
+  // 2. aws account features
+  [{}],
   // 3. template
   [
     {
@@ -99,8 +101,6 @@ const regionSelectResults: unknown[][] = [
   ],
   // 4. organization
   [{ name: "Test Org" }],
-  // 5. dedup (empty = no prior sends)
-  [],
 ];
 
 function regionThenable(rows: unknown[]) {
@@ -129,12 +129,16 @@ vi.mock("@wraps/db", async () => {
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockImplementation(() => ({
-          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ contactId: "contact-1" }]),
+          }),
         })),
       }),
     },

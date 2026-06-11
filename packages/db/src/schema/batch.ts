@@ -309,6 +309,11 @@ export const messageSend = pgTable(
     clickIpAddress: text("click_ip_address"),
 
     // ═══════════════════════════════════════════════════════════════════════
+    // CLAIM TRACKING (idempotency — set on claim-insert and re-claim)
+    // ═══════════════════════════════════════════════════════════════════════
+    claimedAt: timestamp("claimed_at"), // set on claim-insert and on every re-claim; staleness gate for crash recovery
+
+    // ═══════════════════════════════════════════════════════════════════════
     // ERROR TRACKING
     // ═══════════════════════════════════════════════════════════════════════
     error: text("error"),

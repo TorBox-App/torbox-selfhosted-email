@@ -36,7 +36,7 @@ import {
   renderTemplateStrict,
 } from "@wraps/template-render";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
-import { and, exists, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, exists, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
@@ -49,15 +49,10 @@ import { applyVariableMappings } from "./variable-mappings";
 const CHUNK_SIZE = 50; // SES SendBulkEmail limit per API call
 const DEFAULT_RATE_LIMIT = 14; // Fallback emails/sec if can't fetch from AWS
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
-const dedupStatuses = new Set<string>([
-  "sent",
-  "delivered",
-  "opened",
-  "clicked",
-  "bounced",
-  "complained",
-  "suppressed",
-] as const);
+// Staleness threshold: 3× the Lambda timeout (infra/queues.ts:95 = 5 min).
+// A live execution's claim can never be older than 15 minutes; anything older
+// means the Lambda crashed before completing, so reclaim is safe.
+const CLAIM_STALE_MINUTES = 15;
 
 // Below this remaining-time floor, re-enqueue the chunk instead of racing
 // the invocation timeout. Above receiveCount=2, fall through — processing
@@ -294,40 +289,79 @@ async function processJob(
   // Filter email contacts
   let emailContacts = contacts.filter((c) => channel === "email" && c.email);
 
-  // Dedup: skip contacts that already have a send record for this batch
-  // (protects against SQS duplicate delivery)
-  if (emailContacts.length > 0) {
-    const existingSendRecords = await db
-      .select({
-        contactId: messageSend.contactId,
-        status: messageSend.status,
-      })
-      .from(messageSend)
+  // Claim contacts atomically BEFORE sending. The partial unique index
+  // message_send_dedup_idx (batchSendId, contactId) makes the insert a
+  // race-safe claim: concurrent duplicate deliveries of this chunk each
+  // try to INSERT, only one wins per contact. NOTE: bare onConflictDoNothing()
+  // — Drizzle cannot target a partial unique index.
+  const now = new Date();
+  const claimRows = emailContacts.map((c) => ({
+    organizationId,
+    contactId: c.id,
+    awsAccountId,
+    channel: "email" as const,
+    batchSendId: batchId,
+    sourceType: "batch" as const,
+    recipient: c.email ?? "",
+    subject: batch.subject,
+    from: batch.from,
+    fromName: batch.fromName,
+    emailTemplateId: batch.emailTemplateId,
+    status: "queued" as const,
+    claimedAt: now,
+  }));
+  const claimed = claimRows.length
+    ? await db
+        .insert(messageSend)
+        .values(claimRows)
+        .onConflictDoNothing()
+        .returning({ contactId: messageSend.contactId })
+    : [];
+  const claimedIds = new Set(claimed.map((r) => r.contactId));
+
+  // Re-claim retryable rows the insert skipped (failed rows + stale crashed claims).
+  // The UPDATE serializes on each row under READ COMMITTED: the loser re-evaluates
+  // after the winner commits and sees status='queued' with a fresh claimedAt — so
+  // it matches zero rows and the race is closed. NEVER use a blanket
+  // `status NOT IN dedupStatuses` here: 'queued' would be outside that set and
+  // the predicate would steal FRESH claims from a live concurrent execution,
+  // reintroducing the duplicate-send race this whole block is meant to prevent.
+  const notClaimed = emailContacts
+    .filter((c) => !claimedIds.has(c.id))
+    .map((c) => c.id);
+  if (notClaimed.length > 0) {
+    const reclaimed = await db
+      .update(messageSend)
+      .set({ status: "queued", error: null, claimedAt: new Date() })
       .where(
         and(
           eq(messageSend.organizationId, organizationId),
           eq(messageSend.batchSendId, batchId),
-          inArray(
-            messageSend.contactId,
-            emailContacts.map((c) => c.id)
+          inArray(messageSend.contactId, notClaimed),
+          or(
+            eq(messageSend.status, "failed"),
+            and(
+              eq(messageSend.status, "queued"),
+              sql`${messageSend.claimedAt} < now() - interval '${sql.raw(String(CLAIM_STALE_MINUTES))} minutes'`
+            )
           )
         )
-      );
-
-    const sentIds = new Set(
-      existingSendRecords
-        .filter((record) => dedupStatuses.has(record.status))
-        .map((record) => record.contactId)
-    );
-
-    if (sentIds.size > 0) {
-      emailContacts = emailContacts.filter((c) => !sentIds.has(c.id));
-      log.info("Batch dedup: skipped already-sent contacts", {
-        batchId,
-        skipped: sentIds.size,
-        remaining: emailContacts.length,
-      });
+      )
+      .returning({ contactId: messageSend.contactId });
+    for (const r of reclaimed) {
+      claimedIds.add(r.contactId);
     }
+  }
+
+  emailContacts = emailContacts.filter((c) => claimedIds.has(c.id));
+
+  if (claimedIds.size < claimRows.length) {
+    log.info("Batch claim: skipped already-claimed contacts", {
+      batchId,
+      total: claimRows.length,
+      claimed: claimedIds.size,
+      skipped: claimRows.length - claimedIds.size,
+    });
   }
 
   const chunkProcessedRecipients = emailContacts.length;
@@ -356,25 +390,25 @@ async function processJob(
       batchId,
       organizationId,
     });
-    // Mark all contacts in this chunk as failed
-    const failedRecords = emailContacts.map((recipient) => ({
-      organizationId,
-      contactId: recipient.id,
-      awsAccountId,
-      channel: "email" as const,
-      batchSendId: batchId,
-      sourceType: "batch" as const,
-      recipient: recipient.email ?? "",
-      subject: batch.subject,
-      from: batch.from,
-      fromName: batch.fromName,
-      emailTemplateId: batch.emailTemplateId,
-      status: "failed" as const,
-      error:
-        "No sender email configured. Set a default sender in Settings > Sender Defaults.",
-    }));
-    if (failedRecords.length > 0) {
-      await db.insert(messageSend).values(failedRecords).onConflictDoNothing();
+    // Mark all claimed contacts in this chunk as failed
+    if (emailContacts.length > 0) {
+      await db
+        .update(messageSend)
+        .set({
+          status: "failed",
+          error:
+            "No sender email configured. Set a default sender in Settings > Sender Defaults.",
+        })
+        .where(
+          and(
+            eq(messageSend.organizationId, organizationId),
+            eq(messageSend.batchSendId, batchId),
+            inArray(
+              messageSend.contactId,
+              emailContacts.map((c) => c.id)
+            )
+          )
+        );
     }
     await db
       .update(batchSend)
@@ -542,63 +576,55 @@ async function processJob(
           })
         );
 
-        // Collect all send records for batch insert
-        const sendRecords: (typeof messageSend.$inferInsert)[] = [];
-        for (let j = 0; j < recipientBatch.length; j++) {
-          const recipient = recipientBatch[j];
-          const bulkResult = result.BulkEmailEntryResults?.[j];
-
-          if (bulkResult?.Status === "SUCCESS") {
-            sendRecords.push({
-              organizationId,
-              contactId: recipient.id,
-              awsAccountId,
-              channel: "email",
-              batchSendId: batchId,
-              sourceType: "batch",
-              recipient: recipient.email!,
-              subject: prepared[j].renderedSubject,
-              from: batch.from,
-              fromName: batch.fromName,
-              emailTemplateId: batch.emailTemplateId,
-              messageId: bulkResult.MessageId ?? "",
-              status: "sent",
-              sentAt: new Date(),
-            });
-            sent++;
-            sentContactIds.push(recipient.id);
-          } else {
-            log.error("Bulk send failed for recipient", bulkResult?.Error, {
-              email: recipient.email,
-              batchId,
-              organizationId,
-            });
-            sendRecords.push({
-              organizationId,
-              contactId: recipient.id,
-              awsAccountId,
-              channel: "email",
-              batchSendId: batchId,
-              sourceType: "batch",
-              recipient: recipient.email!,
-              subject: prepared[j].renderedSubject,
-              from: batch.from,
-              fromName: batch.fromName,
-              emailTemplateId: batch.emailTemplateId,
-              status: "failed",
-              error: bulkResult?.Error ?? "Unknown error",
-            });
-            failed++;
-          }
-        }
-
-        // Batch insert all send records
-        if (sendRecords.length > 0) {
-          await db
-            .insert(messageSend)
-            .values(sendRecords)
-            .onConflictDoNothing();
-        }
+        // Update claimed rows with send results. Each row was claimed before the
+        // SES call — we UPDATE by (organizationId, batchSendId, contactId).
+        // messageId rule: unique index on messageId; write null (not "") so Postgres
+        // allows multiple NULL values without a uniqueness collision.
+        const sentAt = new Date();
+        await Promise.all(
+          recipientBatch.map(async (recipient, j) => {
+            const bulkResult = result.BulkEmailEntryResults?.[j];
+            if (bulkResult?.Status === "SUCCESS") {
+              await db
+                .update(messageSend)
+                .set({
+                  status: "sent",
+                  messageId: bulkResult.MessageId || null,
+                  subject: prepared[j].renderedSubject,
+                  sentAt,
+                })
+                .where(
+                  and(
+                    eq(messageSend.organizationId, organizationId),
+                    eq(messageSend.batchSendId, batchId),
+                    eq(messageSend.contactId, recipient.id)
+                  )
+                );
+              sent++;
+              sentContactIds.push(recipient.id);
+            } else {
+              log.error("Bulk send failed for recipient", bulkResult?.Error, {
+                email: recipient.email,
+                batchId,
+                organizationId,
+              });
+              await db
+                .update(messageSend)
+                .set({
+                  status: "failed",
+                  error: bulkResult?.Error ?? "Unknown error",
+                })
+                .where(
+                  and(
+                    eq(messageSend.organizationId, organizationId),
+                    eq(messageSend.batchSendId, batchId),
+                    eq(messageSend.contactId, recipient.id)
+                  )
+                );
+              failed++;
+            }
+          })
+        );
       } catch (error) {
         // Check if this is a throttle error
         const isThrottle =
@@ -608,6 +634,29 @@ async function processJob(
             error.message.includes("rate exceeded"));
 
         if (isThrottle) {
+          // Release this invocation's unused claims BEFORE re-enqueueing.
+          // The redelivery lands in ~30s — far below the 15-minute staleness
+          // window — so still-queued rows claimed by THIS invocation would
+          // block both the redelivery's claim INSERT (unique-index conflict)
+          // and its re-claim UPDATE (not stale), stranding every unsent
+          // contact at 'queued' forever. Every contact in emailContacts was
+          // claimed by this invocation (post-claim filter guarantees it), and
+          // the status='queued' predicate skips rows already updated to
+          // sent/failed by earlier sub-batches of this loop. DELETE restores
+          // the exact pre-claim state so the redelivery's INSERT claim works
+          // unchanged.
+          await db.delete(messageSend).where(
+            and(
+              eq(messageSend.organizationId, organizationId),
+              eq(messageSend.batchSendId, batchId),
+              inArray(
+                messageSend.contactId,
+                emailContacts.map((c) => c.id)
+              ),
+              eq(messageSend.status, "queued")
+            )
+          );
+
           // Re-queue this chunk with a longer delay (30 seconds)
           log.warn("SES throttled, requeuing chunk with delay", {
             batchId,
@@ -638,29 +687,25 @@ async function processJob(
             batchId,
             organizationId,
           });
-          const failedRecords = recipientBatch.map((recipient) => ({
-            organizationId,
-            contactId: recipient.id,
-            awsAccountId,
-            channel: "email" as const,
-            batchSendId: batchId,
-            sourceType: "batch" as const,
-            recipient: recipient.email ?? "",
-            subject: batch.subject,
-            from: batch.from,
-            fromName: batch.fromName,
-            emailTemplateId: batch.emailTemplateId,
-            status: "failed" as const,
-            error: permError,
-          }));
-          await db
-            .insert(messageSend)
-            .values(failedRecords)
-            .onConflictDoNothing();
+          if (recipientBatch.length > 0) {
+            await db
+              .update(messageSend)
+              .set({ status: "failed", error: permError })
+              .where(
+                and(
+                  eq(messageSend.organizationId, organizationId),
+                  eq(messageSend.batchSendId, batchId),
+                  inArray(
+                    messageSend.contactId,
+                    recipientBatch.map((r) => r.id)
+                  )
+                )
+              );
+          }
           throw new Error(permError);
         }
 
-        // Non-throttle error: mark recipients as failed
+        // Non-throttle error: mark claimed recipients as failed
         log.error("Bulk send failed for chunk", error, {
           batchId,
           chunkOffset: i,
@@ -668,25 +713,21 @@ async function processJob(
         });
         const errorMessage =
           error instanceof Error ? error.message : "Bulk send failed";
-        const failedRecords = recipientBatch.map((recipient) => ({
-          organizationId,
-          contactId: recipient.id,
-          awsAccountId,
-          channel: "email" as const,
-          batchSendId: batchId,
-          sourceType: "batch" as const,
-          recipient: recipient.email ?? "",
-          subject: batch.subject,
-          from: batch.from,
-          fromName: batch.fromName,
-          emailTemplateId: batch.emailTemplateId,
-          status: "failed" as const,
-          error: errorMessage,
-        }));
-        await db
-          .insert(messageSend)
-          .values(failedRecords)
-          .onConflictDoNothing();
+        if (recipientBatch.length > 0) {
+          await db
+            .update(messageSend)
+            .set({ status: "failed", error: errorMessage })
+            .where(
+              and(
+                eq(messageSend.organizationId, organizationId),
+                eq(messageSend.batchSendId, batchId),
+                inArray(
+                  messageSend.contactId,
+                  recipientBatch.map((r) => r.id)
+                )
+              )
+            );
+        }
         failed += recipientBatch.length;
       }
     }
@@ -766,63 +807,57 @@ async function processJob(
         })
       );
 
-      // Collect send records for batch insert
-      const sendRecords: (typeof messageSend.$inferInsert)[] = [];
-      for (let j = 0; j < results.length; j++) {
-        const result = results[j];
-        const recipient = recipientBatch[j];
-
-        if (result.status === "fulfilled") {
-          sendRecords.push({
-            organizationId,
-            contactId: recipient.id,
-            awsAccountId,
-            channel: "email",
-            batchSendId: batchId,
-            sourceType: "batch",
-            recipient: recipient.email!,
-            subject: result.value.subject,
-            from: batch.from,
-            fromName: batch.fromName,
-            emailTemplateId: batch.emailTemplateId,
-            messageId: result.value.messageId,
-            status: "sent",
-            sentAt: new Date(),
-          });
-          sent++;
-          sentContactIds.push(recipient.id);
-        } else {
-          log.error("Individual send failed", result.reason, {
-            email: recipient.email,
-            batchId,
-            organizationId,
-          });
-          sendRecords.push({
-            organizationId,
-            contactId: recipient.id,
-            awsAccountId,
-            channel: "email",
-            batchSendId: batchId,
-            sourceType: "batch",
-            recipient: recipient.email!,
-            subject: batch.subject,
-            from: batch.from,
-            fromName: batch.fromName,
-            emailTemplateId: batch.emailTemplateId,
-            status: "failed",
-            error:
-              result.reason instanceof Error
-                ? result.reason.message
-                : "Send failed",
-          });
-          failed++;
-        }
-      }
-
-      // Batch insert all send records
-      if (sendRecords.length > 0) {
-        await db.insert(messageSend).values(sendRecords).onConflictDoNothing();
-      }
+      // Update claimed rows with send results (raw-HTML individual-send path).
+      // messageId rule: use || null (not ?? "") — unique index prohibits duplicate
+      // non-NULL values; multiple NULLs are allowed.
+      const sentAt = new Date();
+      await Promise.all(
+        results.map(async (result, j) => {
+          const recipient = recipientBatch[j];
+          if (result.status === "fulfilled") {
+            await db
+              .update(messageSend)
+              .set({
+                status: "sent",
+                messageId: result.value.messageId || null,
+                subject: result.value.subject,
+                sentAt,
+              })
+              .where(
+                and(
+                  eq(messageSend.organizationId, organizationId),
+                  eq(messageSend.batchSendId, batchId),
+                  eq(messageSend.contactId, recipient.id)
+                )
+              );
+            sent++;
+            sentContactIds.push(recipient.id);
+          } else {
+            log.error("Individual send failed", result.reason, {
+              email: recipient.email,
+              batchId,
+              organizationId,
+            });
+            await db
+              .update(messageSend)
+              .set({
+                status: "failed",
+                error:
+                  result.reason instanceof Error
+                    ? result.reason.message
+                    : "Send failed",
+              })
+              .where(
+                and(
+                  eq(messageSend.organizationId, organizationId),
+                  eq(messageSend.batchSendId, batchId),
+                  eq(messageSend.contactId, recipient.id)
+                )
+              );
+            failed++;
+          }
+        })
+      );
     }
   }
 

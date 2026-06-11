@@ -1,0 +1,1 @@
+ALTER TABLE "message_send" ADD COLUMN "claimed_at" timestamp;
