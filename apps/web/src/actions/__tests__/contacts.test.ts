@@ -1049,6 +1049,28 @@ describe("Contacts Server Actions", () => {
         expect(result.analytics.totalContacts).toBe(2);
       }
     });
+
+    it("should compute growthPercent from current and previous period counts", async () => {
+      // 5 contacts in current period (days 0-6), 4 in previous period (days 7-13)
+      await insertContactAt("growth-curr1@test.com", daysAgo(2));
+      await insertContactAt("growth-curr2@test.com", daysAgo(2));
+      await insertContactAt("growth-curr3@test.com", daysAgo(2));
+      await insertContactAt("growth-curr4@test.com", daysAgo(2));
+      await insertContactAt("growth-curr5@test.com", daysAgo(2));
+      await insertContactAt("growth-prev1@test.com", daysAgo(10));
+      await insertContactAt("growth-prev2@test.com", daysAgo(10));
+      await insertContactAt("growth-prev3@test.com", daysAgo(10));
+      await insertContactAt("growth-prev4@test.com", daysAgo(10));
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.newContactsThisPeriod).toBe(5);
+        // (5 - 4) / 4 * 100 = 25, rounded to 1 decimal
+        expect(result.analytics.growthPercent).toBe(25);
+      }
+    });
   });
 });
 

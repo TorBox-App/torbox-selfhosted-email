@@ -340,39 +340,77 @@ export async function getContactAnalytics(
     const tzLiteral = sql.raw(`'${tz}'`);
     const createdAtLocal = sql`${contact.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE ${tzLiteral}`;
 
-    // Get total contacts
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(contact)
-      .where(eq(contact.organizationId, organizationId));
+    // Run all five independent queries concurrently
+    const [
+      [totalResult],
+      [newContactsResult],
+      [previousPeriodResult],
+      [engagementResult],
+      dailyGrowthData,
+    ] = await Promise.all([
+      // Total contacts
+      db
+        .select({ count: count() })
+        .from(contact)
+        .where(eq(contact.organizationId, organizationId)),
+
+      // New contacts in this period
+      db
+        .select({ count: count() })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.organizationId, organizationId),
+            sql`DATE(${createdAtLocal}) >= ${startStr}::date`
+          )
+        ),
+
+      // New contacts in previous period for growth calculation
+      db
+        .select({ count: count() })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.organizationId, organizationId),
+            sql`DATE(${createdAtLocal}) >= ${prevStartStr}::date`,
+            sql`DATE(${createdAtLocal}) < ${startStr}::date`
+          )
+        ),
+
+      // Average open and click rates
+      db
+        .select({
+          totalSent: sql<number>`COALESCE(SUM(${contact.emailsSent}), 0)`,
+          totalOpened: sql<number>`COALESCE(SUM(${contact.emailsOpened}), 0)`,
+          totalClicked: sql<number>`COALESCE(SUM(${contact.emailsClicked}), 0)`,
+        })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.organizationId, organizationId),
+            sql`${contact.emailsSent} > 0`
+          )
+        ),
+
+      // Daily growth data for chart, grouped by user's local date
+      db
+        .select({
+          date: sql<string>`DATE(${createdAtLocal})::text`,
+          count: count(),
+        })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.organizationId, organizationId),
+            sql`DATE(${createdAtLocal}) >= ${startStr}::date`
+          )
+        )
+        .groupBy(sql`DATE(${createdAtLocal})`)
+        .orderBy(sql`DATE(${createdAtLocal})`),
+    ]);
 
     const totalContacts = totalResult?.count ?? 0;
-
-    // Get new contacts in this period
-    const [newContactsResult] = await db
-      .select({ count: count() })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      );
-
     const newContactsThisPeriod = newContactsResult?.count ?? 0;
-
-    // Get new contacts in previous period for growth calculation
-    const [previousPeriodResult] = await db
-      .select({ count: count() })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${prevStartStr}::date`,
-          sql`DATE(${createdAtLocal}) < ${startStr}::date`
-        )
-      );
-
     const previousPeriodContacts = previousPeriodResult?.count ?? 0;
 
     // Calculate growth percent
@@ -385,43 +423,12 @@ export async function getContactAnalytics(
           ? 100
           : 0;
 
-    // Get average open and click rates
-    const [engagementResult] = await db
-      .select({
-        totalSent: sql<number>`COALESCE(SUM(${contact.emailsSent}), 0)`,
-        totalOpened: sql<number>`COALESCE(SUM(${contact.emailsOpened}), 0)`,
-        totalClicked: sql<number>`COALESCE(SUM(${contact.emailsClicked}), 0)`,
-      })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          sql`${contact.emailsSent} > 0`
-        )
-      );
-
     const totalSent = Number(engagementResult?.totalSent ?? 0);
     const totalOpened = Number(engagementResult?.totalOpened ?? 0);
     const totalClicked = Number(engagementResult?.totalClicked ?? 0);
 
     const avgOpenRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
     const avgClickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
-
-    // Get daily growth data for chart, grouped by user's local date
-    const dailyGrowthData = await db
-      .select({
-        date: sql<string>`DATE(${createdAtLocal})::text`,
-        count: count(),
-      })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          sql`DATE(${createdAtLocal}) >= ${startStr}::date`
-        )
-      )
-      .groupBy(sql`DATE(${createdAtLocal})`)
-      .orderBy(sql`DATE(${createdAtLocal})`);
 
     // Fill in missing dates with 0 counts
     const dailyGrowth: Array<{ date: string; count: number }> = [];
