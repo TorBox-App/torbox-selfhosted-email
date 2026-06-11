@@ -2737,7 +2737,20 @@
         },
         "message_send_dedup_idx": {
           "name": "message_send_dedup_idx",
-          "columns": ["batch_send_id", "contact_id"],
+          "columns": [
+            {
+              "expression": "batch_send_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "contact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
           "isUnique": true,
           "concurrently": false,
           "method": "btree",
@@ -3250,7 +3263,26 @@
         },
         "contact_keyset_idx": {
           "name": "contact_keyset_idx",
-          "columns": ["organization_id", "created_at", "id"],
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
@@ -6673,5 +6705,9 @@
   "roles": {},
   "policies": {},
   "views": {},
-  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
 }
