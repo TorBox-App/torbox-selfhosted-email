@@ -3,7 +3,7 @@
 // dependency-free regex code — the only part safe to ship client-side.
 import { normalizePlainTextForSes } from "@wraps/template-render/mustache-case";
 import { transform } from "sucrase";
-import { HANDLEBARS_KEYWORDS } from "./handlebars";
+import { extractHandlebarsVariables } from "./handlebars";
 
 export type CompileResult = {
   compiledHtml: string;
@@ -139,21 +139,7 @@ export function coerceTestDataExport(value: unknown): Record<string, unknown> {
 export function extractVariables(
   html: string
 ): Array<{ name: string; fallback?: string }> {
-  const vars: Array<{ name: string; fallback?: string }> = [];
-  const seen = new Set<string>();
-  const regex = /\{\{([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}\}/g;
-  let match = regex.exec(html);
-
-  while (match !== null) {
-    const name = match[1];
-    if (!(seen.has(name) || HANDLEBARS_KEYWORDS.has(name))) {
-      seen.add(name);
-      vars.push({ name, fallback: match[2]?.trim() });
-    }
-    match = regex.exec(html);
-  }
-
-  return vars;
+  return extractHandlebarsVariables(html);
 }
 
 // Props accessed by React internals or JS runtime — not user template variables

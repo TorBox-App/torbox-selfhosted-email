@@ -121,6 +121,8 @@ vi.mock("@wraps/email", () => ({
   upsertSESTemplate: mockUpsertSESTemplate,
   deleteSESTemplate: mockDeleteSESTemplate,
   generateSESTemplateName: vi.fn((id: string, _name: string) => `wraps-${id}`),
+  testRenderSESTemplate: vi.fn(async () => ({ status: "ok" as const })),
+  toSesVariableName: vi.fn((name: string) => name),
   transformVariablesForSes: vi.fn((text: string) => text),
 }));
 

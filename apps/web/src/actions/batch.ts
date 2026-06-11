@@ -54,7 +54,10 @@ import type {
   UpdateDraftBatchResult,
   VariableMapping,
 } from "@/lib/batch";
-import { HANDLEBARS_KEYWORDS } from "@/lib/handlebars";
+import {
+  extractHandlebarsVariables,
+  HANDLEBARS_KEYWORDS,
+} from "@/lib/handlebars";
 import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import { checkPermission } from "./shared/permissions";
@@ -247,19 +250,14 @@ async function assessVariableCoverage(
 
   // Also parse variables from the subject line — these aren't stored in
   // templateData.variables (which is extracted from body HTML only)
-  const subjectVarRegex = /\{\{([^}|]+?)(?:\|([^}]*))?\}\}/g;
   const subjectVarsSeen = new Set(storedVars.map((v) => v.name));
   const allVars: StoredVar[] = [...storedVars];
   if (templateData.subject) {
-    let m = subjectVarRegex.exec(templateData.subject);
-    while (m !== null) {
-      const name = m[1].trim();
-      const fallback = m[2]?.trim();
-      if (!subjectVarsSeen.has(name)) {
-        subjectVarsSeen.add(name);
-        allVars.push(fallback ? { name, fallback } : { name });
+    for (const v of extractHandlebarsVariables(templateData.subject)) {
+      if (!subjectVarsSeen.has(v.name)) {
+        subjectVarsSeen.add(v.name);
+        allVars.push(v);
       }
-      m = subjectVarRegex.exec(templateData.subject);
     }
   }
 

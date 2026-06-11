@@ -8,16 +8,22 @@ import { auditLog, awsAccount, brandKit, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
   generateSESTemplateName,
+  testRenderSESTemplate,
+  toSesVariableName,
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
-import { normalizePlainTextForSes } from "@wraps/template-render";
+import {
+  extractCanonicalVars,
+  normalizePlainTextForSes,
+} from "@wraps/template-render";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
+import { extractHandlebarsVariables } from "@/lib/handlebars";
 import { createActionLogger } from "@/lib/logger";
 import {
   tiptapToReactEmail,
@@ -215,6 +221,59 @@ export async function publishTemplateToSES(
       templateData.id,
       templateData.name
     );
+
+    // Smoke-check that SES can actually render this template before touching
+    // the live one. SES's Handlebars dialect is not handlebars.js — a
+    // template our renderer accepts can still hard-fail in SES at send time
+    // (RenderingFailure event → silent non-delivery). TestRenderEmailTemplate
+    // only renders by name, so publish to a probe name first; a failed
+    // publish never overwrites the live template a broadcast may be using.
+    // Pad every referenced variable with "" exactly like the batch sender
+    // pads TemplateData: bare {{var}} resolves, {{#if}} treats "" as falsy.
+    const renderProbeData: Record<string, string> = {};
+    for (const rawVar of extractCanonicalVars(
+      `${sesSubject}\n${sesHtml}\n${sesText}`
+    )) {
+      renderProbeData[toSesVariableName(rawVar)] = "";
+    }
+    const probeName =
+      `wraps-probe-${templateData.id.replace(/[^a-zA-Z0-9-_]/g, "-")}`.substring(
+        0,
+        64
+      );
+    await upsertSESTemplate(credentials, customerAwsAccount.region, {
+      templateName: probeName,
+      subject: sesSubject,
+      htmlPart: sesHtml,
+      textPart: sesText,
+    });
+    const renderCheck = await testRenderSESTemplate(
+      credentials,
+      customerAwsAccount.region,
+      { templateName: probeName, templateData: renderProbeData }
+    );
+    await deleteSESTemplate(
+      credentials,
+      customerAwsAccount.region,
+      probeName
+    ).catch(() => {}); // Best-effort cleanup; probe templates are inert
+
+    if (renderCheck.status === "render-failed") {
+      log.error(
+        { templateId, reason: renderCheck.reason },
+        "SES test render failed; publish blocked"
+      );
+      return {
+        success: false,
+        error: `SES cannot render this template: ${renderCheck.reason}. Fix the template syntax and publish again.`,
+      };
+    }
+    if (renderCheck.status === "skipped") {
+      log.warn(
+        { templateId, reason: renderCheck.reason },
+        "SES test render check skipped"
+      );
+    }
 
     // Clean up old SES template if name changed (e.g. after a rename)
     if (
@@ -735,20 +794,7 @@ export async function convertTiptapTemplate(
     );
 
     // Extract variables from rendered HTML ({{variableName}} or {{name|fallback}})
-    const variableRegex = /\{\{([^}|]+?)(?:\|([^}]*))?\}\}/g;
-    const variables: Array<{ name: string; fallback?: string }> = [];
-    const seen = new Set<string>();
-    let match = variableRegex.exec(compiledHtml);
-
-    while (match !== null) {
-      const name = match[1].trim();
-      const fallback = match[2]?.trim();
-      if (!seen.has(name)) {
-        seen.add(name);
-        variables.push(fallback ? { name, fallback } : { name });
-      }
-      match = variableRegex.exec(compiledHtml);
-    }
+    const variables = extractHandlebarsVariables(compiledHtml);
 
     // Update template + write audit log in one transaction
     await db.transaction(async (tx) => {

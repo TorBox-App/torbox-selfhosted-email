@@ -133,17 +133,44 @@ vi.mock("@/lib/aws/credential-cache", () => ({
   })),
 }));
 
-const { mockDeleteSESTemplate, mockUpsertSESTemplate } = vi.hoisted(() => ({
-  mockDeleteSESTemplate: vi.fn(async () => {}),
-  mockUpsertSESTemplate: vi.fn(async () => {}),
+const {
+  mockDeleteSESTemplate,
+  mockTestRenderSESTemplate,
+  mockUpsertSESTemplate,
+} = vi.hoisted(() => ({
+  mockDeleteSESTemplate: vi.fn(async (..._args: unknown[]) => {}),
+  mockTestRenderSESTemplate: vi.fn(async (..._args: unknown[]) => ({
+    status: "ok" as const,
+  })),
+  mockUpsertSESTemplate: vi.fn(async (..._args: unknown[]) => {}),
 }));
 
-vi.mock("@wraps/email", () => ({
-  deleteSESTemplate: mockDeleteSESTemplate,
-  generateSESTemplateName: vi.fn((id: string, _name: string) => `wraps-${id}`),
-  transformVariablesForSes: vi.fn((text: string) => text),
-  upsertSESTemplate: mockUpsertSESTemplate,
-}));
+// Third positional arg of upsertSESTemplate / testRenderSESTemplate calls
+function sesCallParams<T>(
+  mock: { mock: { calls: unknown[][] } },
+  index: number
+): T {
+  return mock.mock.calls.at(index)?.[2] as T;
+}
+
+vi.mock("@wraps/email", async () => {
+  // Use the REAL variable transforms (pure functions, no AWS calls) so these
+  // tests exercise actual publish behavior — an identity mock here would let
+  // a transform that mangles {{#if}} blocks slip through unnoticed.
+  const sesVars = await vi.importActual<
+    typeof import("@wraps/email/lib/ses-variables")
+  >("@wraps/email/lib/ses-variables");
+  return {
+    deleteSESTemplate: mockDeleteSESTemplate,
+    generateSESTemplateName: vi.fn(
+      (id: string, _name: string) => `wraps-${id}`
+    ),
+    testRenderSESTemplate: mockTestRenderSESTemplate,
+    toSesVariableName: sesVars.toSesVariableName,
+    transformVariablesForSes: sesVars.transformVariablesForSes,
+    upsertSESTemplate: mockUpsertSESTemplate,
+  };
+});
 
 vi.mock("@react-email/render", () => ({
   render: vi.fn(async () => "<html><body>Test</body></html>"),
@@ -714,8 +741,16 @@ describe("publishTemplateToSES - SMS Channel", () => {
       expect(result.sesTemplateName).not.toBe("");
     }
 
-    // SES SHOULD have been called
-    expect(mockUpsertSESTemplate).toHaveBeenCalledTimes(1);
+    // SES SHOULD have been called: once for the render probe, once live
+    expect(mockUpsertSESTemplate).toHaveBeenCalledTimes(2);
+    expect(
+      sesCallParams<{ templateName: string }>(mockUpsertSESTemplate, 0)
+        .templateName
+    ).toContain("wraps-probe-");
+    expect(
+      sesCallParams<{ templateName: string }>(mockUpsertSESTemplate, 1)
+        .templateName
+    ).toBe(`wraps-${id}`);
 
     // Template should be PUBLISHED in the DB with sesTemplateName
     const updated = await db.query.template.findFirst({
@@ -723,6 +758,133 @@ describe("publishTemplateToSES - SMS Channel", () => {
     });
     expect(updated?.status).toBe("PUBLISHED");
     expect(updated?.sesTemplateName).not.toBeNull();
+  });
+});
+
+describe("publishTemplateToSES - Handlebars conditionals and render check", () => {
+  const conditionalSubject =
+    "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}.";
+
+  it("publishes a conditional subject to SES unmangled", async () => {
+    mockUpsertSESTemplate.mockClear();
+    mockTestRenderSESTemplate.mockClear();
+
+    const id = await createTestTemplate({
+      name: "Conditional Subject",
+      channel: "email",
+      subject: conditionalSubject,
+      status: "DRAFT",
+      sourceFormat: "react-email",
+      compiledHtml:
+        "<html><body>{{#if firstName}}Hey {{firstName}}{{else}}Hey there{{/if}} — {{contact.company|your team}}</body></html>",
+      compiledText: "Hey",
+    });
+
+    const result = await publishTemplateToSES(id, testOrganization.id);
+    expect(result.success).toBe(true);
+
+    // The live SES template (last upsert call) must carry the authored
+    // conditional through the transform byte-for-byte.
+    const liveCall = sesCallParams<{ subject: string; htmlPart: string }>(
+      mockUpsertSESTemplate,
+      -1
+    );
+    expect(liveCall.subject).toBe(conditionalSubject);
+    // Inner dotted variables flatten; the block structure survives
+    expect(liveCall.htmlPart).toContain("{{#if firstName}}");
+    expect(liveCall.htmlPart).toContain(
+      "{{#if contactCompany}}{{contactCompany}}{{else}}your team{{/if}}"
+    );
+    expect(liveCall.htmlPart).not.toContain("{{contact.company");
+  });
+
+  it("pads the render probe's TemplateData with every referenced variable", async () => {
+    mockTestRenderSESTemplate.mockClear();
+
+    const id = await createTestTemplate({
+      name: "Probe Padding",
+      channel: "email",
+      subject: conditionalSubject,
+      status: "DRAFT",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body>{{dashboardUrl}}</body></html>",
+      compiledText: "x",
+    });
+
+    await publishTemplateToSES(id, testOrganization.id);
+
+    expect(mockTestRenderSESTemplate).toHaveBeenCalledTimes(1);
+    const probeParams = sesCallParams<{
+      templateName: string;
+      templateData: Record<string, string>;
+    }>(mockTestRenderSESTemplate, 0);
+    expect(probeParams.templateName).toBe(`wraps-probe-${id}`.substring(0, 64));
+    // Bare {{var}} absent from TemplateData hard-fails SES rendering, so the
+    // probe must supply every referenced variable (as "" — falsy for {{#if}}).
+    expect(probeParams.templateData).toMatchObject({
+      firstName: "",
+      dashboardUrl: "",
+    });
+  });
+
+  it("blocks the publish and preserves the live template when SES cannot render", async () => {
+    mockUpsertSESTemplate.mockClear();
+    mockTestRenderSESTemplate.mockResolvedValueOnce({
+      status: "render-failed",
+      reason: "Attribute 'IF' is not present in the rendering data",
+    } as never);
+
+    const id = await createTestTemplate({
+      name: "Unrenderable",
+      channel: "email",
+      subject: "Broken {{#IF FIRSTNAME}}x{{/IF}}",
+      status: "DRAFT",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body>hi</body></html>",
+      compiledText: "hi",
+    });
+
+    const result = await publishTemplateToSES(id, testOrganization.id);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error).toMatch(/SES cannot render/i);
+
+    // Only the probe was upserted — the live template name was never touched
+    expect(mockUpsertSESTemplate).toHaveBeenCalledTimes(1);
+    expect(
+      sesCallParams<{ templateName: string }>(mockUpsertSESTemplate, 0)
+        .templateName
+    ).toContain("wraps-probe-");
+
+    // And the template stays unpublished in the DB
+    const after = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(after?.status).toBe("DRAFT");
+    expect(after?.publishedAt).toBeNull();
+  });
+
+  it("still publishes when the render check is skipped (e.g. missing IAM permission)", async () => {
+    mockTestRenderSESTemplate.mockResolvedValueOnce({
+      status: "skipped",
+      reason: "IAM role is missing ses:TestRenderEmailTemplate",
+    } as never);
+
+    const id = await createTestTemplate({
+      name: "Skipped Check",
+      channel: "email",
+      subject: "Hello",
+      status: "DRAFT",
+    });
+
+    const result = await publishTemplateToSES(id, testOrganization.id);
+    expect(result.success).toBe(true);
+
+    const after = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(after?.status).toBe("PUBLISHED");
   });
 });
 

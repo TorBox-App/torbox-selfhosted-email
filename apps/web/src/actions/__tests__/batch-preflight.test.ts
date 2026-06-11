@@ -329,6 +329,44 @@ describe("checkTemplateVariableCoverage — no custom variables", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Unit 2b: handlebars block tags in the subject are not treated as variables
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("checkTemplateVariableCoverage — handlebars conditionals in subject", () => {
+  it("does not report {{#if}}/{{/if}} block tags as missing variables", async () => {
+    // Regression: the subject parser captured "#if firstName" and "/if" as
+    // variable names, so every contact was reported as missing them.
+    const conditionalTemplate = {
+      ...templateNoCustomVars,
+      id: `preflight-tmpl-cond-${RUN_ID}`,
+      name: "Conditional Subject Template",
+      subject:
+        "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}.",
+      variables: [],
+      sesTemplateName: `wraps-org-preflight-cond-${RUN_ID}`,
+    };
+
+    await db.insert(template).values(conditionalTemplate).onConflictDoNothing();
+
+    try {
+      const result = await checkTemplateVariableCoverage(
+        testOrganization.id,
+        conditionalTemplate.id,
+        { audienceType: "all" }
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.allFail).toBe(false);
+      expect(result.missingCount).toBe(0);
+      expect(result.missingVariables).toHaveLength(0);
+    } finally {
+      await db.delete(template).where(eq(template.id, conditionalTemplate.id));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Unit 3: warning when SOME contacts are missing a custom variable
 // ─────────────────────────────────────────────────────────────────────────────
 

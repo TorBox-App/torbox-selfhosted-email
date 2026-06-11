@@ -11,7 +11,12 @@
 
 import Handlebars from "handlebars";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HANDLEBARS_KEYWORDS, nestKeys, renderForPreview } from "../handlebars";
+import {
+  extractHandlebarsVariables,
+  HANDLEBARS_KEYWORDS,
+  nestKeys,
+  renderForPreview,
+} from "../handlebars";
 
 describe("HANDLEBARS_KEYWORDS", () => {
   it("contains the Handlebars block-helper keyword `else`", () => {
@@ -62,6 +67,60 @@ describe("HANDLEBARS_KEYWORDS", () => {
       "firstName",
       "unsubscribeUrl",
     ]);
+  });
+});
+
+describe("extractHandlebarsVariables", () => {
+  it("never extracts block helper tags as variables", () => {
+    // The literal regression: the broadcast pre-flight check parsed the
+    // subject line with a loose regex and reported "#if firstName" and
+    // "/if" as missing contact attributes.
+    const subject =
+      "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}.";
+    const vars = extractHandlebarsVariables(subject);
+    expect(vars).toEqual([{ name: "firstName" }]);
+  });
+
+  it("skips {{else}}, {{this}}, and block open/close tags", () => {
+    const vars = extractHandlebarsVariables(
+      "{{#if plan}}{{plan}}{{else}}free{{/if}} {{#each items}}{{this}}{{/each}}"
+    );
+    expect(vars).toEqual([{ name: "plan" }]);
+  });
+
+  it("extracts plain variables, fallbacks, and dotted paths", () => {
+    const vars = extractHandlebarsVariables(
+      "Hi {{firstName|there}}, from {{contact.company}}"
+    );
+    expect(vars).toEqual([
+      { name: "firstName", fallback: "there" },
+      { name: "contact.company" },
+    ]);
+  });
+
+  it("dedupes repeated variables", () => {
+    const vars = extractHandlebarsVariables("{{name}} and {{name}} again");
+    expect(vars).toEqual([{ name: "name" }]);
+  });
+
+  it("tolerates whitespace, matching transformVariablesForSes", () => {
+    // {{ firstName }} publishes and renders fine (the SES transform accepts
+    // it), so the extraction layer must see it too — otherwise it silently
+    // skips the coverage check and variable mapper.
+    const vars = extractHandlebarsVariables(
+      "Hi {{ firstName }}, from {{ company | Acme }}"
+    );
+    expect(vars).toEqual([
+      { name: "firstName" },
+      { name: "company", fallback: "Acme" },
+    ]);
+  });
+
+  it("still skips block tags when they contain whitespace", () => {
+    const vars = extractHandlebarsVariables(
+      "{{ #if firstName }}{{ firstName }}{{ /if }}"
+    );
+    expect(vars).toEqual([{ name: "firstName" }]);
   });
 });
 

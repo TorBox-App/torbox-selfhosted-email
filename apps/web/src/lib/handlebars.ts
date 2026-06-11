@@ -32,6 +32,40 @@ import {
 export const HANDLEBARS_KEYWORDS = new Set(["else", "this"]);
 
 /**
+ * Extract `{{variable}}` / `{{variable|fallback}}` placeholders from a
+ * template string (subject line, compiled HTML, etc.).
+ *
+ * The name pattern is restricted to `[a-zA-Z0-9_.]+` ON PURPOSE: block
+ * helper tags like `{{#if firstName}}` and `{{/if}}` must never be
+ * extracted as variables (`#` and `/` don't match), and HANDLEBARS_KEYWORDS
+ * above is sized to that contract. Don't loosen the pattern.
+ *
+ * Whitespace tolerance matches transformVariablesForSes: `{{ firstName }}`
+ * publishes and renders fine, so it must be visible to the coverage check
+ * and variable mapper too.
+ */
+export function extractHandlebarsVariables(
+  source: string
+): Array<{ name: string; fallback?: string }> {
+  const vars: Array<{ name: string; fallback?: string }> = [];
+  const seen = new Set<string>();
+  const regex = /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*?))?\s*\}\}/g;
+  let match = regex.exec(source);
+
+  while (match !== null) {
+    const name = match[1];
+    if (!(seen.has(name) || HANDLEBARS_KEYWORDS.has(name))) {
+      seen.add(name);
+      const fallback = match[2]?.trim();
+      vars.push(fallback ? { name, fallback } : { name });
+    }
+    match = regex.exec(source);
+  }
+
+  return vars;
+}
+
+/**
  * Re-export the canonical `nestKeys` from `@wraps/template-render`. This
  * file used to ship its own copy; the canonical version is now the single
  * source of truth and the dashboard preview, the broadcast variable mapper,

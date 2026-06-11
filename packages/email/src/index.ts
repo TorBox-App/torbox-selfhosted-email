@@ -10,11 +10,16 @@ export {
   verifyConfirmationToken,
 } from "./lib/confirmation-token";
 // SES templates
-export type { SESCredentials, SESTemplateParams } from "./lib/ses-templates";
+export type {
+  SESCredentials,
+  SESTemplateParams,
+  SESTestRenderOutcome,
+} from "./lib/ses-templates";
 export {
   deleteSESTemplate,
   generateSESTemplateName,
   templateExists,
+  testRenderSESTemplate,
   upsertSESTemplate,
 } from "./lib/ses-templates";
 // SES variable transformation

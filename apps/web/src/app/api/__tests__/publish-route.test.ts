@@ -124,6 +124,8 @@ const { mockDeleteSESTemplate, mockUpsertSESTemplate } = vi.hoisted(() => ({
 vi.mock("@wraps/email", () => ({
   deleteSESTemplate: mockDeleteSESTemplate,
   generateSESTemplateName: vi.fn((id: string, _name: string) => `wraps-${id}`),
+  testRenderSESTemplate: vi.fn(async () => ({ status: "ok" as const })),
+  toSesVariableName: vi.fn((name: string) => name),
   transformVariablesForSes: vi.fn((text: string) => text),
   upsertSESTemplate: mockUpsertSESTemplate,
 }));

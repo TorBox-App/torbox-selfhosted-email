@@ -3,6 +3,7 @@ import {
   DeleteEmailTemplateCommand,
   GetEmailTemplateCommand,
   SESv2Client,
+  TestRenderEmailTemplateCommand,
   UpdateEmailTemplateCommand,
 } from "@aws-sdk/client-sesv2";
 
@@ -108,6 +109,73 @@ export async function upsertSESTemplate(
     } else {
       throw error;
     }
+  }
+}
+
+export type SESTestRenderOutcome =
+  | { status: "ok" }
+  | { status: "render-failed"; reason: string }
+  | { status: "skipped"; reason: string };
+
+/**
+ * Smoke-check that SES can actually render a just-published template.
+ *
+ * SES's Handlebars dialect is not handlebars.js — a template our local
+ * renderer accepts can still hard-fail in SES at send time, which surfaces
+ * as a RenderingFailure event and silent non-delivery. Calling
+ * TestRenderEmailTemplate at publish time turns that into an immediate,
+ * fixable error.
+ *
+ * Outcomes:
+ * - "ok"            — SES rendered the template with the given data
+ * - "render-failed" — SES rejected the template (BadRequestException);
+ *                     the caller should fail the publish
+ * - "skipped"       — permission or transient API error; the check could
+ *                     not run. Callers should log and continue: older
+ *                     customer roles may lack ses:TestRenderEmailTemplate,
+ *                     and a throttle must not block publishing.
+ */
+export async function testRenderSESTemplate(
+  credentials: SESCredentials,
+  region: string,
+  params: { templateName: string; templateData: Record<string, string> }
+): Promise<SESTestRenderOutcome> {
+  const ses = createSESClient(credentials, region);
+
+  try {
+    await ses.send(
+      new TestRenderEmailTemplateCommand({
+        TemplateName: params.templateName,
+        TemplateData: JSON.stringify(params.templateData),
+      })
+    );
+    return { status: "ok" };
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    const message = err.message ?? "Unknown SES error";
+
+    // BadRequestException is SES's "this template cannot render" signal
+    // (AWS SDK v3 error names are unreliable — check the message too).
+    if (
+      err.name === "BadRequestException" ||
+      message.includes("BadRequest") ||
+      message.includes("Attribute")
+    ) {
+      return { status: "render-failed", reason: message };
+    }
+
+    if (
+      err.name === "AccessDeniedException" ||
+      message.includes("is not authorized to perform")
+    ) {
+      return {
+        status: "skipped",
+        reason:
+          "IAM role is missing ses:TestRenderEmailTemplate — run: wraps platform update-role",
+      };
+    }
+
+    return { status: "skipped", reason: message };
   }
 }
 

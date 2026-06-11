@@ -8,7 +8,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { normalizePlainTextForSes } from "../mustache-case";
+import {
+  extractCanonicalVars,
+  normalizePlainTextForSes,
+} from "../mustache-case";
 import {
   compileTemplate,
   nestKeys,
@@ -182,6 +185,52 @@ describe("renderTemplateStrict", () => {
     expect(renderTemplateStrict(tpl, data, { noEscape: true })).toBe(
       "Hi O'Brien & Sons"
     );
+  });
+});
+
+describe("extractCanonicalVars", () => {
+  // This extractor drives two safety mechanisms: SES TemplateData padding in
+  // the batch sender (a bare {{var}} absent from TemplateData hard-fails the
+  // SES render → silent non-delivery) and plain-text casing repair. Missing a
+  // variable form here means a padding hole at send time.
+
+  it("extracts bare variables and dot paths", () => {
+    const vars = extractCanonicalVars("{{firstName}} at {{contact.company}}");
+    expect(vars).toEqual(new Set(["firstName", "contact.company"]));
+  });
+
+  it("extracts the variable name from {{var|fallback}} syntax", () => {
+    const vars = extractCanonicalVars("Hi {{firstName|there}}");
+    expect(vars).toEqual(new Set(["firstName"]));
+  });
+
+  it("extracts block-helper arguments: {{#if firstName}} yields firstName", () => {
+    const vars = extractCanonicalVars(
+      "The setup just got easier{{#if firstName}}, {{firstName}}{{/if}}."
+    );
+    expect(vars).toEqual(new Set(["firstName"]));
+  });
+
+  it("extracts args from #unless, #each, and #with blocks", () => {
+    const vars = extractCanonicalVars(
+      "{{#unless optedOut}}x{{/unless}} {{#each items}}y{{/each}} {{#with contact.address}}z{{/with}}"
+    );
+    expect(vars).toEqual(new Set(["optedOut", "items", "contact.address"]));
+  });
+
+  it("does not extract helper names or close tags as variables", () => {
+    const vars = extractCanonicalVars("{{#if a}}{{else}}{{/if}}");
+    expect(vars.has("if")).toBe(false);
+    expect(vars.has("/if")).toBe(false);
+    expect(vars.has("#if")).toBe(false);
+    expect(vars.has("a")).toBe(true);
+  });
+
+  it("scans subject and body together (batch sender composes them with newline)", () => {
+    const vars = extractCanonicalVars(
+      "{{#if firstName}}Hey {{firstName}}{{/if}}\n<p>{{dashboardUrl}}</p>"
+    );
+    expect(vars).toEqual(new Set(["firstName", "dashboardUrl"]));
   });
 });
 
