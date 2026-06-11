@@ -17,7 +17,8 @@
       "**/*.jsx",
       "**/*.json",
       "**/*.jsonc",
-      "!packages/core/lambda/*/index.js"
+      "!packages/core/lambda/*/index.js",
+      "!packages/db/src/migrations/meta"
     ]
   },
   "assist": {
