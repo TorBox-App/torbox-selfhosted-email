@@ -165,6 +165,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check migration snapshot integrity
+        run: pnpm --filter @wraps/db exec drizzle-kit check
+
       - name: Run db tests
         run: pnpm --filter @wraps/db test
         env:

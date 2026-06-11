@@ -15,9 +15,10 @@ trap 'rm -rf "$LOGDIR"' EXIT
 export TURBO_UI=stream
 
 typeset -a STEPS CMDS
-STEPS=(lint typecheck baseline build test)
+STEPS=(lint migrations typecheck baseline build test)
 CMDS=(
   "pnpm check:errors"
+  "pnpm --filter @wraps/db exec drizzle-kit check"
   "pnpm typecheck"
   "pnpm test:baseline"
   "pnpm build"
