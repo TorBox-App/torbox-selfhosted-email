@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkAWSAccountAccess } from "../check-access";
 import { grantAWSAccountAccess } from "../grant-access";
-import { testAWSAccount, testOrganization, testUser, testUser2 } from "./setup";
+import { setupPermissionFixtures } from "./setup";
+
+const { testUser, testUser2, testOrganization, testAWSAccount } =
+  setupPermissionFixtures("check");
 
 describe("checkAWSAccountAccess", () => {
   // Clean up after each test within this suite

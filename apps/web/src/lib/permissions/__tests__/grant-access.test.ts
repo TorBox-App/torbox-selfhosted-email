@@ -1,7 +1,10 @@
 import { db } from "@wraps/db";
 import { describe, expect, it } from "vitest";
 import { grantAWSAccountAccess } from "../grant-access";
-import { testAWSAccount, testUser, testUser2 } from "./setup";
+import { setupPermissionFixtures } from "./setup";
+
+const { testUser, testUser2, testAWSAccount } =
+  setupPermissionFixtures("grant");
 
 describe("grantAWSAccountAccess", () => {
   it("should create new permission when none exists", async () => {

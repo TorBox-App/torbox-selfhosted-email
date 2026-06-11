@@ -2,7 +2,10 @@ import { db } from "@wraps/db";
 import { describe, expect, it } from "vitest";
 import { grantAWSAccountAccess } from "../grant-access";
 import { revokeAWSAccountAccess } from "../revoke-access";
-import { testAWSAccount, testUser, testUser2 } from "./setup";
+import { setupPermissionFixtures } from "./setup";
+
+const { testUser, testUser2, testAWSAccount } =
+  setupPermissionFixtures("revoke");
 
 describe("revokeAWSAccountAccess", () => {
   it("should delete permission grant", async () => {

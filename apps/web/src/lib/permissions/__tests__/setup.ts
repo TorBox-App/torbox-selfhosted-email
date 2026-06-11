@@ -1,12 +1,5 @@
-import {
-  awsAccount,
-  awsAccountPermission,
-  db,
-  member,
-  organization,
-  user,
-} from "@wraps/db";
-import { eq } from "drizzle-orm";
+import { awsAccount, db, member, organization, user } from "@wraps/db";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, vi } from "vitest";
 
 // Global mock: prevent activation-tracking from emitting real events to production.
@@ -32,113 +25,90 @@ vi.mock("@/lib/activation-tracking", () => ({
   updateActivationScore: vi.fn(noop),
 }));
 
-// Test data - we'll insert these into the real database
-export const testUser = {
-  id: "test-user-123",
-  email: "test@example.com",
-  name: "Test User",
-  emailVerified: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  image: null,
-  twoFactorEnabled: false,
-};
+// Test files run in parallel vitest workers against one shared database, and
+// concurrent CI runs share that database too. Fixtures must therefore be
+// unique per file AND per run — a fixed ID lets another worker's cleanup
+// delete rows this file just created.
+export function setupPermissionFixtures(filePrefix: string) {
+  const prefix = `test-${filePrefix}-${crypto.randomUUID().slice(0, 8)}`;
 
-export const testUser2 = {
-  id: "test-user-456",
-  email: "test2@example.com",
-  name: "Test User 2",
-  emailVerified: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  image: null,
-  twoFactorEnabled: false,
-};
+  const testUser = {
+    id: `${prefix}-user-1`,
+    email: `${prefix}-1@example.com`,
+    name: "Test User",
+    emailVerified: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    image: null,
+    twoFactorEnabled: false,
+  };
 
-export const testOrganization = {
-  id: "test-org-123",
-  name: "Test Org",
-  slug: "test-org",
-  createdAt: new Date(),
-  logo: null,
-  metadata: null,
-};
+  const testUser2 = {
+    id: `${prefix}-user-2`,
+    email: `${prefix}-2@example.com`,
+    name: "Test User 2",
+    emailVerified: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    image: null,
+    twoFactorEnabled: false,
+  };
 
-export const testAWSAccount = {
-  id: "test-aws-123",
-  organizationId: "test-org-123",
-  name: "Production",
-  accountId: "123456789012",
-  region: "us-east-1",
-  roleArn: "arn:aws:iam::123456789012:role/test",
-  externalId: "external-123",
-  isVerified: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  status: "active" as const,
-  verificationMethod: null,
-};
+  const testOrganization = {
+    id: `${prefix}-org`,
+    name: "Test Org",
+    slug: `${prefix}-org`,
+    createdAt: new Date(),
+    logo: null,
+    metadata: null,
+  };
 
-export const testMemberOwner = {
-  id: "test-member-owner",
-  organizationId: "test-org-123",
-  userId: "test-user-123",
-  role: "owner" as const,
-  createdAt: new Date(),
-};
+  const testAWSAccount = {
+    id: `${prefix}-aws`,
+    organizationId: testOrganization.id,
+    name: "Production",
+    accountId: "123456789012",
+    region: "us-east-1",
+    roleArn: "arn:aws:iam::123456789012:role/test",
+    externalId: `${prefix}-external`,
+    isVerified: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    status: "active" as const,
+    verificationMethod: null,
+  };
 
-export const testMemberRegular = {
-  id: "test-member-regular",
-  organizationId: "test-org-123",
-  userId: "test-user-456",
-  role: "member" as const,
-  createdAt: new Date(),
-};
+  const testMemberOwner = {
+    id: `${prefix}-member-owner`,
+    organizationId: testOrganization.id,
+    userId: testUser.id,
+    role: "owner" as const,
+    createdAt: new Date(),
+  };
 
-// Set up test database with initial data
-beforeAll(async () => {
-  // Use onConflictDoUpdate to handle existing records
-  await db
-    .insert(user)
-    .values([testUser, testUser2])
-    .onConflictDoUpdate({
-      target: user.id,
-      set: { updatedAt: new Date() },
-    });
+  const testMemberRegular = {
+    id: `${prefix}-member-regular`,
+    organizationId: testOrganization.id,
+    userId: testUser2.id,
+    role: "member" as const,
+    createdAt: new Date(),
+  };
 
-  await db
-    .insert(organization)
-    .values(testOrganization)
-    .onConflictDoUpdate({
-      target: organization.id,
-      set: { name: testOrganization.name },
-    });
+  beforeAll(async () => {
+    await db.insert(user).values([testUser, testUser2]);
+    await db.insert(organization).values(testOrganization);
+    await db.insert(awsAccount).values(testAWSAccount);
+    await db.insert(member).values([testMemberOwner, testMemberRegular]);
+  });
 
-  await db
-    .insert(awsAccount)
-    .values(testAWSAccount)
-    .onConflictDoUpdate({
-      target: awsAccount.id,
-      set: { updatedAt: new Date() },
-    });
+  afterAll(async () => {
+    // Org first: cascades awsAccount -> awsAccountPermission, which must be
+    // gone before deleting users (permission.grantedBy has no cascade).
+    await db
+      .delete(organization)
+      .where(eq(organization.id, testOrganization.id));
+    await db.delete(user).where(inArray(user.id, [testUser.id, testUser2.id]));
+  });
 
-  await db
-    .insert(member)
-    .values([testMemberOwner, testMemberRegular])
-    .onConflictDoUpdate({
-      target: member.id,
-      set: { role: member.role },
-    });
-
-  // Clean up any existing permissions for our test users from previous runs
-  await db
-    .delete(awsAccountPermission)
-    .where(eq(awsAccountPermission.awsAccountId, testAWSAccount.id));
-});
-
-// Clean up after all tests in the suite complete
-afterAll(async () => {
-  await db
-    .delete(awsAccountPermission)
-    .where(eq(awsAccountPermission.awsAccountId, testAWSAccount.id));
-});
+  return { testUser, testUser2, testOrganization, testAWSAccount };
+}

@@ -1,8 +1,11 @@
 import { db, subscription } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { testOrganization } from "@/lib/permissions/__tests__/setup";
+import { setupPermissionFixtures } from "@/lib/permissions/__tests__/setup";
 import { checkFeatureAccess } from "@/lib/plan-limits";
+
+const { testOrganization } = setupPermissionFixtures("plan-limits");
+const testSubscriptionId = `${testOrganization.id}-sub`;
 
 describe("checkFeatureAccess - sso", () => {
   it("returns { allowed: false } when no subscription exists (free plan)", async () => {
@@ -13,7 +16,7 @@ describe("checkFeatureAccess - sso", () => {
   describe("with scale subscription", () => {
     beforeEach(async () => {
       await db.insert(subscription).values({
-        id: "sso-plan-test-sub",
+        id: testSubscriptionId,
         plan: "scale",
         referenceId: testOrganization.id,
         status: "active",
@@ -25,7 +28,7 @@ describe("checkFeatureAccess - sso", () => {
     afterEach(async () => {
       await db
         .delete(subscription)
-        .where(eq(subscription.id, "sso-plan-test-sub"));
+        .where(eq(subscription.id, testSubscriptionId));
     });
 
     it("returns { allowed: true } when org has active scale subscription", async () => {

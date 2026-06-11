@@ -1,7 +1,10 @@
 import { auth } from "@wraps/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requireAWSAccountAccess } from "../middleware";
-import { testAWSAccount, testOrganization, testUser, testUser2 } from "./setup";
+import { setupPermissionFixtures } from "./setup";
+
+const { testUser, testUser2, testOrganization, testAWSAccount } =
+  setupPermissionFixtures("middleware");
 
 vi.mock("@wraps/auth");
 
