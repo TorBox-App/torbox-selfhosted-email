@@ -112,6 +112,7 @@
     "@wraps/email": "workspace:*",
     "@wraps/email-send": "workspace:*",
     "@wraps/template-render": "workspace:*",
+    "@wraps/unsubscribe-token": "workspace:*",
     "@wraps/ui": "workspace:*",
     "@xyflow/react": "12.10.2",
     "ai": "5.0.108",
