@@ -1,6 +1,6 @@
 import {
-  verifyUnsubscribeToken as verifyCore,
   type UnsubscribeTokenPayload,
+  verifyUnsubscribeToken as verifyCore,
 } from "@wraps/unsubscribe-token";
 import { log } from "./logger";
 
