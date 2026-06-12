@@ -13,7 +13,9 @@
     "./hooks/use-theme": "./src/hooks/use-theme.ts",
     "./hooks/use-circular-transition": "./src/hooks/use-circular-transition.ts",
     "./hooks/use-mobile": "./src/hooks/use-mobile.ts",
-    "./styles/*": "./src/styles/*"
+    "./styles/*": "./src/styles/*",
+    "./theme-presets/tweakcn-theme-presets": "./src/theme-presets/tweakcn-theme-presets.ts",
+    "./theme-presets/shadcn-ui-theme-presets": "./src/theme-presets/shadcn-ui-theme-presets.ts"
   },
   "scripts": {
     "dev": "tsc --noEmit --watch",
