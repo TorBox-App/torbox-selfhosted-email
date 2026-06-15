@@ -1,7 +1,9 @@
 "use client";
 
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useNodeId } from "@xyflow/react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useWorkflowStore } from "../use-workflow-store";
 
 type BaseNodeProps = {
   icon: React.ReactNode;
@@ -30,6 +32,19 @@ export function BaseNode({
   selected,
   children,
 }: BaseNodeProps) {
+  const nodeId = useNodeId();
+  const updateNodeName = useWorkflowStore((s) => s.updateNodeName);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (nodeId && trimmed && trimmed !== label) {
+      updateNodeName(nodeId, trimmed);
+    }
+    setIsEditing(false);
+  };
+
   return (
     <div
       className={cn(
@@ -57,9 +72,37 @@ export function BaseNode({
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium text-foreground text-sm">
-            {label}
-          </div>
+          {isEditing ? (
+            <input
+              aria-label="Node name"
+              autoFocus
+              className="nodrag w-full rounded border bg-background px-1 font-medium text-foreground text-sm outline-none"
+              onBlur={commit}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  commit();
+                } else if (e.key === "Escape") {
+                  setDraft(label);
+                  setIsEditing(false);
+                }
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              value={draft}
+            />
+          ) : (
+            <div
+              className="truncate font-medium text-foreground text-sm"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setDraft(label);
+                setIsEditing(true);
+              }}
+              title="Double-click to rename"
+            >
+              {label}
+            </div>
+          )}
           {description && (
             <div className="truncate text-muted-foreground text-xs">
               {description}
