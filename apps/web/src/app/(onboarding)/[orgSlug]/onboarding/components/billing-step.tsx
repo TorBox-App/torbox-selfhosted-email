@@ -80,8 +80,8 @@ export function BillingStep({
   const handlePlanChange = (newPlan: PlanId) => {
     setSelectedPlan(newPlan);
     posthog.capture("onboarding_plan_selected", {
-      step: 2,
-      step_name: "Billing",
+      step: 1,
+      step_name: "Choose Plan",
       organization_id: organizationId,
       plan: newPlan,
       billing_interval: billingInterval,
@@ -93,8 +93,8 @@ export function BillingStep({
   const handleIntervalChange = (newInterval: BillingInterval) => {
     setBillingInterval(newInterval);
     posthog.capture("onboarding_billing_interval_changed", {
-      step: 2,
-      step_name: "Billing",
+      step: 1,
+      step_name: "Choose Plan",
       organization_id: organizationId,
       billing_interval: newInterval,
       plan: selectedPlan,
@@ -103,8 +103,8 @@ export function BillingStep({
 
   const handleBack = () => {
     posthog.capture("onboarding_step_back", {
-      step: 2,
-      step_name: "Billing",
+      step: 1,
+      step_name: "Choose Plan",
       organization_id: organizationId,
     });
     onBack();
@@ -116,8 +116,8 @@ export function BillingStep({
     // Free tier - create subscription record and continue
     if (selectedPlan === "free") {
       posthog.capture("onboarding_free_tier_selected", {
-        step: 2,
-        step_name: "Billing",
+        step: 1,
+        step_name: "Choose Plan",
         organization_id: organizationId,
         plan: "free",
       });
@@ -130,18 +130,34 @@ export function BillingStep({
         return;
       }
 
+      posthog.capture("onboarding_step_completed", {
+        step: 1,
+        step_name: "Choose Plan",
+        organization_id: organizationId,
+        plan: "free",
+      });
       onNext();
       return;
     }
 
     // Track subscription checkout started
     posthog.capture("onboarding_subscription_started", {
-      step: 2,
-      step_name: "Billing",
+      step: 1,
+      step_name: "Choose Plan",
       organization_id: organizationId,
       plan: selectedPlan,
       billing_interval: billingInterval,
       monthly_price: getPriceByInterval(plan, billingInterval),
+    });
+
+    // Fire step_completed before Stripe redirect — the paid path leaves via redirect
+    // and never reaches onNext(), so the event must fire at commit-time
+    posthog.capture("onboarding_step_completed", {
+      step: 1,
+      step_name: "Choose Plan",
+      organization_id: organizationId,
+      plan: selectedPlan,
+      billing_interval: billingInterval,
     });
 
     try {
