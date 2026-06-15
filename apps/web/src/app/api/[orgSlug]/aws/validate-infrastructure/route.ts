@@ -5,7 +5,11 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { assumeRole } from "@/lib/aws/assume-role";
+import {
+  AssumeRoleError,
+  type AssumeRoleErrorCode,
+  assumeRole,
+} from "@/lib/aws/assume-role";
 import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
@@ -261,25 +265,29 @@ export async function POST(request: Request, context: RouteContext) {
     } catch (error: unknown) {
       log.error({ err: error }, "Error validating infrastructure");
 
-      // Provide user-friendly error messages
-      let errorMessage = "Failed to validate AWS connection";
+      const code: AssumeRoleErrorCode =
+        error instanceof AssumeRoleError ? error.code : "UNKNOWN";
 
-      if (error instanceof Error) {
-        if (error.name === "AccessDenied") {
-          errorMessage =
-            "Access denied. The Wraps backend is not authorized to assume this role. " +
-            "Please verify the CloudFormation stack deployed successfully.";
-        } else if (error.name === "InvalidClientTokenId") {
-          errorMessage =
-            "Invalid credentials. Please check your AWS configuration.";
-        } else if (error.message?.includes("not authorized to perform")) {
-          errorMessage =
-            "The role trust policy does not allow Wraps to assume it. " +
-            "Please redeploy the CloudFormation stack.";
-        }
-      }
+      const remediationByCode: Record<AssumeRoleErrorCode, string> = {
+        ACCESS_DENIED:
+          "Open the CloudFormation stack in your AWS Console and confirm it finished with status CREATE_COMPLETE, then copy the ConsoleRoleArn and ExternalId from the Outputs tab again.",
+        INVALID_TRUST_POLICY:
+          "The IAM role's trust policy is not allowing Wraps to assume it. Re-deploy the CloudFormation stack — do not edit the role's trust policy by hand.",
+        INVALID_BACKEND_CREDENTIALS:
+          "This is a temporary Wraps-side issue. Wait a moment and click Validate Connection again. If it persists, book a setup call.",
+        UNKNOWN:
+          "Double-check the Console Role ARN and External ID match the CloudFormation Outputs tab exactly. If the problem continues, book a setup call and we'll connect it with you.",
+      };
 
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
+      const message =
+        error instanceof AssumeRoleError
+          ? error.message
+          : "Failed to validate AWS connection.";
+
+      return NextResponse.json(
+        { error: message, code, remediation: remediationByCode[code] },
+        { status: 400 }
+      );
     }
   } catch (error) {
     const log = createRequestLogger({

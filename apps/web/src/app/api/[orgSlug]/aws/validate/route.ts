@@ -4,7 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { assumeRole } from "@/lib/aws/assume-role";
+import { AssumeRoleError, assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { isSelfHosted } from "@/lib/plan-limits";
@@ -176,28 +176,19 @@ export async function POST(request: Request, context: RouteContext) {
         accountId,
         roleName,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error({ err: error }, "Error assuming role");
 
-      // Provide user-friendly error messages
-      // The assumeRole helper wraps AWS errors with descriptive messages
       let errorMessage = "Failed to validate AWS connection";
-
-      if (
-        error.name === "AccessDenied" ||
-        error.message?.toLowerCase().includes("access denied")
-      ) {
+      if (error instanceof AssumeRoleError) {
         errorMessage =
-          "Access denied. Please verify the External ID matches the CloudFormation stack output.";
-      } else if (
-        error.name === "InvalidClientTokenId" ||
-        error.message?.includes("Invalid AWS credentials")
-      ) {
-        errorMessage =
-          "Invalid credentials. Please check your AWS configuration.";
-      } else if (error.message?.includes("not authorized to perform")) {
-        errorMessage =
-          "The role does not have permission to be assumed. Please check the trust policy.";
+          error.code === "ACCESS_DENIED"
+            ? "Access denied. Please verify the External ID matches the CloudFormation stack output."
+            : error.code === "INVALID_TRUST_POLICY"
+              ? "The role does not have permission to be assumed. Please check the trust policy."
+              : error.code === "INVALID_BACKEND_CREDENTIALS"
+                ? "We could not validate your connection right now. Please try again shortly."
+                : error.message;
       }
 
       return NextResponse.json({ error: errorMessage }, { status: 400 });
