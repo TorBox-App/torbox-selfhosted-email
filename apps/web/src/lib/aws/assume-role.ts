@@ -2,6 +2,49 @@ import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { logger } from "@/lib/logger";
 
+export type AssumeRoleErrorCode =
+  | "ACCESS_DENIED"
+  | "INVALID_TRUST_POLICY"
+  | "INVALID_BACKEND_CREDENTIALS"
+  | "UNKNOWN";
+
+export class AssumeRoleError extends Error {
+  code: AssumeRoleErrorCode;
+  constructor(code: AssumeRoleErrorCode, message: string) {
+    super(message);
+    this.name = "AssumeRoleError";
+    this.code = code;
+  }
+}
+
+// Classify on BOTH name and message — AWS SDK v3 error `name` is unreliable
+// (it sometimes arrives as "Error" with the real code only in `.message`).
+// Exported so unit tests can exercise it directly.
+export function classifyAssumeRoleError(error: unknown): AssumeRoleErrorCode {
+  if (!(error instanceof Error)) {
+    return "UNKNOWN";
+  }
+  const name = error.name;
+  const msg = error.message || "";
+  if (name === "InvalidClientTokenId" || msg.includes("InvalidClientTokenId")) {
+    return "INVALID_BACKEND_CREDENTIALS";
+  }
+  if (
+    msg.includes("is not authorized to perform") ||
+    msg.includes("not authorized to perform")
+  ) {
+    return "INVALID_TRUST_POLICY";
+  }
+  if (
+    name === "AccessDenied" ||
+    name === "AccessDeniedException" ||
+    msg.includes("AccessDenied")
+  ) {
+    return "ACCESS_DENIED";
+  }
+  return "UNKNOWN";
+}
+
 // Types for AWS credentials - compatible with AWS SDK v3
 type AwsCredentialIdentity = {
   accessKeyId: string;
@@ -130,24 +173,15 @@ export async function assumeRole(
       expiration: response.Credentials.Expiration,
     };
   } catch (error) {
-    // Enhance error message for common failures
-    if (error instanceof Error) {
-      if (
-        error.message.includes("AccessDenied") ||
-        error.message.includes("is not authorized to perform")
-      ) {
-        throw new Error(
-          "Access denied when assuming role. Check that the IAM role trust policy allows your backend account and that the external ID matches."
-        );
-      }
-      if (error.message.includes("InvalidClientTokenId")) {
-        throw new Error(
-          "Invalid AWS credentials. Check your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
-        );
-      }
-      throw new Error(`Failed to assume role: ${error.message}`);
-    }
-    throw error;
+    const code = classifyAssumeRoleError(error);
+    const original = error instanceof Error ? error.message : String(error);
+    const message =
+      code === "ACCESS_DENIED" || code === "INVALID_TRUST_POLICY"
+        ? "Wraps could not assume the IAM role. Check that the CloudFormation stack deployed successfully and that the External ID matches the stack output."
+        : code === "INVALID_BACKEND_CREDENTIALS"
+          ? "Wraps could not authenticate to AWS to validate your connection. This is a Wraps-side issue — please try again shortly."
+          : `Failed to assume role: ${original}`;
+    throw new AssumeRoleError(code, message);
   }
 }
 
