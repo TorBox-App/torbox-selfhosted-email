@@ -137,6 +137,11 @@ export function CliDeployConnectStep({
   // Manual connection check
   const [isChecking, setIsChecking] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [validationError, setValidationError] = useState<{
+    error: string;
+    code: string;
+    remediation: string;
+  } | null>(null);
 
   const handleCheckConnection = async () => {
     setIsChecking(true);
@@ -193,12 +198,21 @@ export function CliDeployConnectStep({
         }
       );
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to validate AWS connection");
+        const body = await response.json().catch(() => ({}));
+        const err = new Error(
+          body.error || "Failed to validate AWS connection"
+        );
+        (err as Error & { details?: unknown }).details = {
+          code: body.code ?? "UNKNOWN",
+          remediation: body.remediation ?? "",
+        };
+        throw err;
       }
       return response.json();
     },
+    onMutate: () => setValidationError(null),
     onSuccess: () => {
+      setValidationError(null);
       toast.success("Infrastructure connected successfully!");
       queryClient.invalidateQueries({
         queryKey: ["onboarding-status", organizationId],
@@ -213,8 +227,20 @@ export function CliDeployConnectStep({
         onConnected();
       }
     },
-    onError: (error: Error) => {
+    onError: (
+      error: Error & { details?: { code?: string; remediation?: string } }
+    ) => {
+      const code = error.details?.code ?? "UNKNOWN";
+      const remediation = error.details?.remediation ?? "";
+      setValidationError({ error: error.message, code, remediation });
       toast.error(error.message || "Failed to validate connection");
+      posthog.capture("onboarding_connection_failed", {
+        step: 4,
+        step_name: "Deploy & Connect",
+        organization_id: organizationId,
+        method: "cloudformation",
+        error_code: code,
+      });
     },
   });
 
@@ -381,6 +407,30 @@ export function CliDeployConnectStep({
                   </div>
                 )}
               </form.Field>
+
+              {validationError && (
+                <div
+                  className="space-y-1 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm"
+                  role="alert"
+                >
+                  <p className="font-medium text-destructive">
+                    {validationError.error}
+                  </p>
+                  {validationError.remediation && (
+                    <p className="text-muted-foreground">
+                      {validationError.remediation}
+                    </p>
+                  )}
+                  <a
+                    className="inline-block text-primary text-xs underline underline-offset-4"
+                    href={CAL_BOOKING_URL}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Book a setup call
+                  </a>
+                </div>
+              )}
 
               <form.Subscribe>
                 {(state) => (
