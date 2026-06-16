@@ -9,11 +9,12 @@ import {
   contactTopic,
   db,
   eq,
+  fetchTopicsForSubscription,
   resolveTopicSlugs,
   topic,
 } from "@wraps/db";
 import { sendTopicConfirmationEmail } from "@wraps/email";
-import { and, inArray } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import { t } from "elysia";
 
 import { log } from "../lib/logger";
@@ -98,21 +99,11 @@ export const contactsTopicsRoutes = createAuthenticatedRoutes("/v1/contacts")
       // Add new subscriptions with double opt-in check
       const pendingTopics: string[] = [];
       if (topicIds.length > 0) {
-        // Get topic info to check for double opt-in
-        const topicInfos = await db
-          .select({
-            id: topic.id,
-            name: topic.name,
-            description: topic.description,
-            doubleOptIn: topic.doubleOptIn,
-          })
-          .from(topic)
-          .where(
-            and(
-              eq(topic.organizationId, authContext.organizationId),
-              inArray(topic.id, topicIds)
-            )
-          );
+        // Get topic info to check for double opt-in (org-scoped helper)
+        const topicInfos = await fetchTopicsForSubscription(
+          topicIds,
+          authContext.organizationId
+        );
 
         const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
         const ownedTopicIds = topicIds.filter((id) => topicMap.has(id));

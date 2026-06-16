@@ -16,7 +16,6 @@ import {
   contact,
   deleteContact,
   fetchContactSubscriptions,
-  fetchTopicNamesByIds,
   fetchTopicsForSubscription,
   findContact,
   findContactByEmailHash,
@@ -492,13 +491,18 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       // Add to topics if specified
       const pendingTopics: string[] = [];
+      let ownedTopicIds: string[] = [];
+      const immediateTopicNames = new Map<string, string>();
       if (topicIds.length > 0) {
         const topicInfos = await fetchTopicsForSubscription(
           topicIds,
           authContext.organizationId
         );
         const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
-        const ownedTopicIds = topicIds.filter((id) => topicMap.has(id));
+        ownedTopicIds = topicIds.filter((id) => topicMap.has(id));
+        for (const id of ownedTopicIds) {
+          immediateTopicNames.set(id, topicMap.get(id)!.name);
+        }
         const now = new Date();
 
         await insertContactTopics(
@@ -542,32 +546,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             })
           );
         }
-
-        // Emit topic subscription events for immediate subscriptions (non-pending)
-        const immediateTopics = ownedTopicIds.filter(
-          (tid) => !pendingTopics.includes(tid)
-        );
-        if (immediateTopics.length > 0) {
-          const topicNameMap = await fetchTopicNamesByIds(
-            immediateTopics,
-            authContext.organizationId
-          );
-
-          await Promise.all(
-            immediateTopics.map((topicId) =>
-              emitTopicSubscribed({
-                contactId: newContact.id,
-                organizationId: authContext.organizationId,
-                topicId,
-                topicName: topicNameMap.get(topicId),
-              }).catch((err) => {
-                log.error("Failed to emit topic_subscribed event", err, {
-                  organizationId: authContext.organizationId,
-                });
-              })
-            )
-          );
-        }
       }
 
       // Emit contact_created event to trigger workflows
@@ -598,6 +576,27 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           organizationId: authContext.organizationId,
         });
       });
+
+      // Emit topic subscription events for immediate subscriptions (non-pending)
+      if (ownedTopicIds.length > 0) {
+        const immediateTopics = ownedTopicIds.filter(
+          (tid) => !pendingTopics.includes(tid)
+        );
+        await Promise.all(
+          immediateTopics.map((topicId) =>
+            emitTopicSubscribed({
+              contactId: newContact.id,
+              organizationId: authContext.organizationId,
+              topicId,
+              topicName: immediateTopicNames.get(topicId),
+            }).catch((err) => {
+              log.error("Failed to emit topic_subscribed event", err, {
+                organizationId: authContext.organizationId,
+              });
+            })
+          )
+        );
+      }
 
       ctx.set.status = 201;
       return {

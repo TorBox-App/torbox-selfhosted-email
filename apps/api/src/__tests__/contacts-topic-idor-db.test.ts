@@ -6,8 +6,6 @@
  * org-owned topics before writing contact_topic rows. A foreign-org
  * topic UUID must be silently dropped, never persisted.
  *
- * Also tests fetchTopicNamesByIds org-scoping at the repository level.
- *
  * File suffix `-db.test.ts` = real Neon test branch (no mocks for DB).
  */
 
@@ -15,7 +13,6 @@ import {
   contact,
   contactTopic,
   db,
-  fetchTopicNamesByIds,
   member,
   organization,
   topic,
@@ -35,6 +32,7 @@ import {
 
 import { contactsRoutes } from "../routes/contacts";
 import { contactsTopicsRoutes } from "../routes/contacts-topics";
+import { emitTopicSubscribed } from "../services/workflow-events";
 
 // ─── Boundary mocks ─────────────────────────────────────────────────────────
 
@@ -252,6 +250,20 @@ describe("Cross-org topic IDOR — POST /v1/contacts (site 1)", () => {
         )
       );
     expect(foreignSubs).toHaveLength(0);
+
+    // Characterization: the immediate-subscription event carries the owned
+    // topic's name (sourced from fetchTopicsForSubscription, no extra query),
+    // and is never emitted for the foreign topic.
+    expect(emitTopicSubscribed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactId: created.id,
+        topicId: ownTopic.id,
+        topicName: ownTopic.name,
+      })
+    );
+    expect(emitTopicSubscribed).not.toHaveBeenCalledWith(
+      expect.objectContaining({ topicId: foreignTopic.id })
+    );
   });
 });
 
@@ -341,19 +353,5 @@ describe("Cross-org topic IDOR — PUT /v1/contacts/:id/topics (site 3)", () => 
         )
       );
     expect(foreignSubs).toHaveLength(0);
-  });
-});
-
-describe("fetchTopicNamesByIds org-scoping (repository)", () => {
-  it("returns empty map when foreign topic UUID is queried against org-a", async () => {
-    const result = await fetchTopicNamesByIds([foreignTopic.id], orgA.id);
-    expect(result.size).toBe(0);
-    expect(result.has(foreignTopic.id)).toBe(false);
-  });
-
-  it("returns name for own-org topic", async () => {
-    const result = await fetchTopicNamesByIds([ownTopic.id], orgA.id);
-    expect(result.size).toBe(1);
-    expect(result.get(ownTopic.id)).toBe(ownTopic.name);
   });
 });
