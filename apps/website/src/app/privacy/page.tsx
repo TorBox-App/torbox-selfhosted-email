@@ -6,11 +6,11 @@ import { LandingNavbar } from "@/app/landing/components/navbar";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Learn how Wraps collects, uses, and protects your data. Our privacy policy covers CLI telemetry, website analytics, and data handling.",
+    "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, and the contact and campaign data we process to run platform features.",
   openGraph: {
     title: "Privacy Policy | Wraps",
     description:
-      "Learn how Wraps collects, uses, and protects your data. Our privacy policy covers CLI telemetry, website analytics, and data handling.",
+      "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, and the contact and campaign data we process to run platform features.",
     type: "website",
     url: "https://wraps.dev/privacy",
   },
@@ -31,7 +31,7 @@ export default function PrivacyPolicy() {
         <article className="prose prose-gray dark:prose-invert max-w-none">
           <h1>Privacy Policy</h1>
           <p className="text-muted-foreground">
-            <strong>Last Updated:</strong> January 8, 2026
+            <strong>Last Updated:</strong> June 16, 2026
           </p>
 
           <p className="lead">
@@ -122,7 +122,9 @@ export default function PrivacyPolicy() {
           </ul>
 
           <p>
-            <strong>We DO NOT collect:</strong>
+            <strong>
+              We do not send the following to our analytics provider:
+            </strong>
           </p>
           <ul>
             <li>Email content or template body text</li>
@@ -131,22 +133,69 @@ export default function PrivacyPolicy() {
             <li>Session recordings or screen captures</li>
             <li>Keystrokes or form field contents (except authentication)</li>
           </ul>
+          <p className="text-muted-foreground text-sm">
+            This list describes our analytics tooling only. Contact and campaign
+            data you create in the dashboard is processed separately to run
+            platform features &mdash; see Section 1.4.
+          </p>
 
-          <h3>1.3 Infrastructure Metadata</h3>
+          <h3>1.3 Infrastructure (Your AWS Account)</h3>
           <p>
-            Your infrastructure runs entirely in{" "}
-            <strong>your AWS account</strong>. We do not have access to:
+            The sending infrastructure Wraps deploys runs entirely in{" "}
+            <strong>your AWS account</strong>. For this layer, we do not have
+            access to:
           </p>
           <ul>
-            <li>Your AWS resources or data</li>
+            <li>
+              Your AWS credentials (we use short-lived OIDC and IAM roles, never
+              stored keys)
+            </li>
             <li>Emails sent through your SES</li>
-            <li>Event data stored in your DynamoDB</li>
-            <li>Any customer data</li>
+            <li>Your full delivery event history, stored in your DynamoDB</li>
           </ul>
-
           <p>
-            All email sending, event tracking, and data storage occurs in your
-            AWS account. We never see or store your data.
+            Sending and event-history storage happen in your AWS account. If you
+            stop using Wraps, this infrastructure and its data keep running and
+            remain yours.
+          </p>
+
+          <h3>1.4 Platform Data (Contacts &amp; Campaigns)</h3>
+          <p>
+            To run the Wraps dashboard and platform features (contacts,
+            audiences and segments, templates, broadcasts, and workflows), we
+            store and process the underlying data on our own infrastructure.
+            This is necessary: we cannot build an audience or send a campaign on
+            your behalf without processing your contacts. For this data, Wraps
+            acts as a <strong>data processor</strong> and you remain the{" "}
+            <strong>data controller</strong>, the same arrangement you have with
+            any email service provider.
+          </p>
+          <p>
+            <strong>This includes:</strong>
+          </p>
+          <ul>
+            <li>
+              Contact records you create or import: email address, phone number,
+              name, and any custom properties you add
+            </li>
+            <li>Audience, segment, and topic (subscription) definitions</li>
+            <li>Email templates and campaign content (subject and body)</li>
+            <li>
+              A send ledger: recipient address, the merge variables used to
+              personalize each message, and delivery and engagement status
+              (sent, delivered, opened, clicked, bounced, complained)
+            </li>
+          </ul>
+          <p>
+            This data is stored in a managed PostgreSQL database (Neon) hosted
+            in the United States. It is scoped to your organization and is never
+            shared with other customers. You can export or delete it at any time
+            (see Section 5). If your use requires a Data Processing Agreement,
+            contact{" "}
+            <a className="text-primary" href="mailto:privacy@wraps.dev">
+              privacy@wraps.dev
+            </a>
+            .
           </p>
 
           <h2>2. How We Use Your Information</h2>
@@ -207,6 +256,19 @@ export default function PrivacyPolicy() {
               ) - Website and API hosting
             </li>
             <li>
+              <strong>Neon</strong> (
+              <a
+                className="text-primary"
+                href="https://neon.tech/privacy-policy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacy Policy
+              </a>
+              ) - Managed PostgreSQL hosting (US) for platform data: contacts,
+              audiences, templates, and the send ledger
+            </li>
+            <li>
               <strong>AWS</strong> (
               <a
                 className="text-primary"
@@ -258,6 +320,11 @@ export default function PrivacyPolicy() {
             <li>
               <strong>Account data:</strong> Retained while your account is
               active
+            </li>
+            <li>
+              <strong>Platform data (contacts, campaigns, send ledger):</strong>{" "}
+              Retained while your account is active; deleted on request or after
+              account closure
             </li>
             <li>
               <strong>Server logs:</strong> Retained for 7 days
@@ -345,6 +412,10 @@ export DO_NOT_TRACK=1`}
             . Note that:
           </p>
           <ul>
+            <li>
+              Platform data (contacts, audiences, templates, and the send
+              ledger) is permanently deleted from our systems
+            </li>
             <li>
               Telemetry data is anonymous and cannot be linked back to you
             </li>
