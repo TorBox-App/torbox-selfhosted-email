@@ -1,6 +1,11 @@
 "use server";
 
-import { auditLog, contactTopic, db } from "@wraps/db";
+import {
+  auditLog,
+  contactTopic,
+  db,
+  fetchTopicsForSubscription,
+} from "@wraps/db";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -29,6 +34,13 @@ export async function subscribeContactToTopics(
     if (permError) return permError;
     orgSlug = access.orgSlug;
 
+    // Filter topicIds to only those owned by this org (silently drop foreign topics)
+    const ownedTopics = await fetchTopicsForSubscription(
+      topicIds,
+      organizationId
+    );
+    const ownedTopicIds = ownedTopics.map((t) => t.id);
+
     // Verify contact exists
     const existing = await db.query.contact.findFirst({
       where: (c, { and, eq }) =>
@@ -49,8 +61,8 @@ export async function subscribeContactToTopics(
         .map((t) => t.topicId)
     );
 
-    // Filter to only new subscriptions
-    const newTopicIds = topicIds.filter((id) => !currentTopicIds.has(id));
+    // Filter to only new subscriptions (from the org-owned list)
+    const newTopicIds = ownedTopicIds.filter((id) => !currentTopicIds.has(id));
 
     if (newTopicIds.length === 0) {
       return { success: true };
@@ -106,7 +118,7 @@ export async function subscribeContactToTopics(
           action: "contact.topic_subscribed",
           resource: "contact",
           resourceId: contactId,
-          metadata: { contactId, topicIds },
+          metadata: { contactId, topicIds: ownedTopicIds },
         })
       );
     });
@@ -148,6 +160,13 @@ export async function bulkSubscribeContactsToTopics(
     ]);
     if (bulkSubPermError) return bulkSubPermError;
 
+    // Filter topicIds to only those owned by this org (silently drop foreign topics)
+    const ownedTopics = await fetchTopicsForSubscription(
+      topicIds,
+      organizationId
+    );
+    const ownedTopicIds = ownedTopics.map((t) => t.id);
+
     // Batch-fetch all contacts + their topic subscriptions in one query
     const existingContacts = await db.query.contact.findMany({
       where: (c, { and, eq }) =>
@@ -171,7 +190,9 @@ export async function bulkSubscribeContactsToTopics(
             .map((t) => t.topicId)
         );
 
-        const newTopicIds = topicIds.filter((id) => !currentTopicIds.has(id));
+        const newTopicIds = ownedTopicIds.filter(
+          (id) => !currentTopicIds.has(id)
+        );
         if (newTopicIds.length === 0) continue;
 
         const previousSubs = existing.topics
@@ -218,7 +239,7 @@ export async function bulkSubscribeContactsToTopics(
           actorEmail: access.userEmail,
           action: "contact.topics_bulk_subscribed",
           resource: "contact",
-          metadata: { contactCount: subscribed, topicIds },
+          metadata: { contactCount: subscribed, topicIds: ownedTopicIds },
         })
       );
     });

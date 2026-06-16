@@ -498,12 +498,13 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           authContext.organizationId
         );
         const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+        const ownedTopicIds = topicIds.filter((id) => topicMap.has(id));
         const now = new Date();
 
         await insertContactTopics(
-          topicIds.map((topicId) => {
-            const topicInfo = topicMap.get(topicId);
-            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+          ownedTopicIds.map((topicId) => {
+            const topicInfo = topicMap.get(topicId)!;
+            const requiresConfirmation = topicInfo.doubleOptIn;
             if (requiresConfirmation) pendingTopics.push(topicId);
             return {
               contactId: newContact.id,
@@ -541,6 +542,32 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             })
           );
         }
+
+        // Emit topic subscription events for immediate subscriptions (non-pending)
+        const immediateTopics = ownedTopicIds.filter(
+          (tid) => !pendingTopics.includes(tid)
+        );
+        if (immediateTopics.length > 0) {
+          const topicNameMap = await fetchTopicNamesByIds(
+            immediateTopics,
+            authContext.organizationId
+          );
+
+          await Promise.all(
+            immediateTopics.map((topicId) =>
+              emitTopicSubscribed({
+                contactId: newContact.id,
+                organizationId: authContext.organizationId,
+                topicId,
+                topicName: topicNameMap.get(topicId),
+              }).catch((err) => {
+                log.error("Failed to emit topic_subscribed event", err, {
+                  organizationId: authContext.organizationId,
+                });
+              })
+            )
+          );
+        }
       }
 
       // Emit contact_created event to trigger workflows
@@ -571,29 +598,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           organizationId: authContext.organizationId,
         });
       });
-
-      // Emit topic subscription events for immediate subscriptions (non-pending)
-      if (topicIds.length > 0) {
-        const immediateTopics = topicIds.filter(
-          (tid) => !pendingTopics.includes(tid)
-        );
-        const topicNameMap = await fetchTopicNamesByIds(immediateTopics);
-
-        await Promise.all(
-          immediateTopics.map((topicId) =>
-            emitTopicSubscribed({
-              contactId: newContact.id,
-              organizationId: authContext.organizationId,
-              topicId,
-              topicName: topicNameMap.get(topicId),
-            }).catch((err) => {
-              log.error("Failed to emit topic_subscribed event", err, {
-                organizationId: authContext.organizationId,
-              });
-            })
-          )
-        );
-      }
 
       ctx.set.status = 201;
       return {
@@ -739,13 +743,16 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           const resubTopicMap = new Map(
             topicInfosForResub.map((t) => [t.id, t])
           );
+          const ownedResubIds = resubscribeTopicIds.filter((id) =>
+            resubTopicMap.has(id)
+          );
 
           const directResubscribeIds: string[] = [];
           const pendingResubscribeIds: string[] = [];
 
-          for (const topicId of resubscribeTopicIds) {
-            const topicInfo = resubTopicMap.get(topicId);
-            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+          for (const topicId of ownedResubIds) {
+            const topicInfo = resubTopicMap.get(topicId)!;
+            const requiresConfirmation = topicInfo.doubleOptIn;
             const previouslyConfirmed = confirmedTopics.has(topicId);
 
             if (requiresConfirmation && !previouslyConfirmed) {
@@ -816,12 +823,13 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             authContext.organizationId
           );
           const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+          const ownedNewTopicIds = newTopicIds.filter((id) => topicMap.has(id));
           const now = new Date();
 
           await insertContactTopics(
-            newTopicIds.map((topicId) => {
-              const topicInfo = topicMap.get(topicId);
-              const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+            ownedNewTopicIds.map((topicId) => {
+              const topicInfo = topicMap.get(topicId)!;
+              const requiresConfirmation = topicInfo.doubleOptIn;
               const previouslyConfirmed = confirmedTopics.has(topicId);
               const needsConfirmation =
                 requiresConfirmation && !previouslyConfirmed;
@@ -868,7 +876,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             );
           }
 
-          const immediateTopics = newTopicIds.filter(
+          const immediateTopics = ownedNewTopicIds.filter(
             (tid) => !pendingTopics.includes(tid)
           );
 

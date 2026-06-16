@@ -328,13 +328,16 @@ export async function setPendingContactSubscriptions(
 
 export async function fetchTopicNamesByIds(
   topicIds: string[],
+  organizationId: string,
   dbClient: DbClient = db
 ): Promise<Map<string, string>> {
   if (topicIds.length === 0) return new Map();
   const rows = await dbClient
     .select({ id: topic.id, name: topic.name })
     .from(topic)
-    .where(inArray(topic.id, topicIds));
+    .where(
+      and(eq(topic.organizationId, organizationId), inArray(topic.id, topicIds))
+    );
   return new Map(rows.map((t) => [t.id, t.name]));
 }
 

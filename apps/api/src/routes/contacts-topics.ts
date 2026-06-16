@@ -115,6 +115,7 @@ export const contactsTopicsRoutes = createAuthenticatedRoutes("/v1/contacts")
           );
 
         const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+        const ownedTopicIds = topicIds.filter((id) => topicMap.has(id));
         const now = new Date();
 
         // Get contact email for confirmation emails
@@ -125,9 +126,9 @@ export const contactsTopicsRoutes = createAuthenticatedRoutes("/v1/contacts")
           .limit(1);
 
         await db.insert(contactTopic).values(
-          topicIds.map((topicId) => {
-            const topicInfo = topicMap.get(topicId);
-            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+          ownedTopicIds.map((topicId) => {
+            const topicInfo = topicMap.get(topicId)!;
+            const requiresConfirmation = topicInfo.doubleOptIn;
             const previouslyConfirmed = confirmedTopics.has(topicId);
 
             // Skip confirmation if previously confirmed (re-subscription)
@@ -179,7 +180,7 @@ export const contactsTopicsRoutes = createAuthenticatedRoutes("/v1/contacts")
         }
 
         // Emit topic_subscribed events for newly subscribed topics (not pending, not previously subscribed)
-        const newlySubscribedTopics = topicIds.filter(
+        const newlySubscribedTopics = ownedTopicIds.filter(
           (tid) => !(pendingTopics.includes(tid) || existingTopicIds.has(tid))
         );
 
