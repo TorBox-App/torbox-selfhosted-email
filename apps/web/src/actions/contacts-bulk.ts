@@ -1,46 +1,37 @@
 "use server";
 
 import {
-  auditLog,
-  db,
   bulkDeleteContacts as dbBulkDeleteContacts,
   findContactByEmailHash,
   findContactsByEmailHashes,
   insertContact,
 } from "@wraps/db";
 import { trackContactsImported } from "@/lib/activation-tracking";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { revalidateContacts } from "./contacts";
 import { hashEmail } from "./shared/hash";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 /**
  * Bulk create contacts from email addresses
  * Used to create contacts from email recipients
  */
-export async function bulkCreateContactsFromEmails(
-  organizationId: string,
-  emails: string[]
-): Promise<
-  | { success: true; created: number; skipped: number; errors: string[] }
-  | { success: false; error: string }
-> {
-  let orgSlug: string | undefined;
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["write"]);
-    if (permError) return permError;
-    orgSlug = access.orgSlug;
-
+export const bulkCreateContactsFromEmails = orgAction(
+  {
+    name: "bulkCreateContactsFromEmails",
+    resource: "contacts",
+    permission: ["write"],
+    orgId: (organizationId: string, _emails: string[]) => organizationId,
+    onError: "Failed to create contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    emails: string[]
+  ): Promise<
+    | { success: true; created: number; skipped: number; errors: string[] }
+    | { success: false; error: string }
+  > => {
     if (emails.length === 0) {
       return { success: false, error: "No email addresses provided" };
     }
@@ -74,8 +65,6 @@ export async function bulkCreateContactsFromEmails(
       };
     }
 
-    const auditCtx = await getAuditContext();
-
     let created = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -104,88 +93,76 @@ export async function bulkCreateContactsFromEmails(
     }
 
     // Insert all valid new contacts + audit in one transaction
-    await db.transaction(async (tx) => {
-      for (const { email, emailHash } of toInsert) {
-        try {
-          const result = await insertContact(
-            {
-              organizationId,
-              email,
-              emailHash,
-              emailStatus: "active",
-              emailVerifiedAt: new Date(),
-              status: "active",
-              confirmedAt: new Date(),
-              createdBy: access.userId,
-            },
-            tx
-          );
-          if (result) {
-            created++;
-          } else {
-            skipped++;
+    await ctx.audited(
+      async (tx) => {
+        for (const { email, emailHash } of toInsert) {
+          try {
+            const result = await insertContact(
+              {
+                organizationId,
+                email,
+                emailHash,
+                emailStatus: "active",
+                emailVerifiedAt: new Date(),
+                status: "active",
+                confirmedAt: new Date(),
+                createdBy: ctx.access.userId,
+              },
+              tx
+            );
+            if (result) {
+              created++;
+            } else {
+              skipped++;
+            }
+          } catch (_err) {
+            errors.push(`Failed to create contact for ${email}`);
           }
-        } catch (_err) {
-          errors.push(`Failed to create contact for ${email}`);
         }
-      }
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.created_bulk",
-          resource: "contact",
-          metadata: { count: emails.length },
-        })
-      );
-    });
+        return { count: emails.length };
+      },
+      (r) => ({
+        action: "contact.created_bulk" as const,
+        resource: "contact",
+        metadata: { count: r.count },
+      })
+    );
 
     // Revalidate
-    revalidateContacts(orgSlug);
+    revalidateContacts(ctx.access.orgSlug);
 
     // Track activation event (fire-and-forget)
     if (created > 0) {
-      trackContactsImported(access.userEmail, organizationId, {
+      trackContactsImported(ctx.access.userEmail, organizationId, {
         count: created,
         firstContact: { email: toInsert[0]?.email },
       });
     }
 
     return { success: true, created, skipped, errors };
-  } catch (error) {
-    const log = createActionLogger("bulkCreateContactsFromEmails", { orgSlug });
-    log.error(
-      { err: error, emailCount: emails.length },
-      "Failed to bulk create contacts"
-    );
-    return { success: false, error: "Failed to create contacts" };
   }
-}
+);
 
 /**
  * Check if email addresses already exist as contacts
  * Returns a map of email -> contactId for existing contacts
  */
-export async function checkExistingContacts(
-  organizationId: string,
-  emails: string[]
-): Promise<
-  | { success: true; existing: Record<string, string> }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const checkExistingContacts = orgAction(
+  {
+    name: "checkExistingContacts",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _emails: string[]) => organizationId,
+    onError: "Failed to check contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    emails: string[]
+  ): Promise<
+    | { success: true; existing: Record<string, string> }
+    | { success: false; error: string }
+  > => {
     if (emails.length === 0) {
       return { success: true, existing: {} };
     }
@@ -209,73 +186,47 @@ export async function checkExistingContacts(
     }
 
     return { success: true, existing };
-  } catch (error) {
-    const log = createActionLogger("checkExistingContacts", {
-      orgSlug: organizationId,
-    });
-    log.error(
-      { err: error, emailCount: emails.length },
-      "Failed to check existing contacts"
-    );
-    return { success: false, error: "Failed to check contacts" };
   }
-}
+);
 
 /**
  * Bulk delete contacts
  */
-export async function bulkDeleteContacts(
-  organizationId: string,
-  contactIds: string[]
-): Promise<
-  { success: true; count: number } | { success: false; error: string }
-> {
-  let orgSlug: string | undefined;
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    orgSlug = access.orgSlug;
-
-    const permError = checkPermission(access.role, "contacts", ["delete"]);
-    if (permError) return permError;
-
+export const bulkDeleteContacts = orgAction(
+  {
+    name: "bulkDeleteContacts",
+    resource: "contacts",
+    permission: ["delete"],
+    orgId: (organizationId: string, _contactIds: string[]) => organizationId,
+    onError: "Failed to delete contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    contactIds: string[]
+  ): Promise<
+    { success: true; count: number } | { success: false; error: string }
+  > => {
     if (contactIds.length === 0) {
       return { success: false, error: "No contacts selected" };
     }
 
-    const auditCtx = await getAuditContext();
-
     // Delete contacts + write audit log in one transaction
-    await db.transaction(async (tx) => {
-      await dbBulkDeleteContacts(contactIds, organizationId, tx);
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.deleted_bulk",
-          resource: "contact",
-          metadata: { count: contactIds.length },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await dbBulkDeleteContacts(contactIds, organizationId, tx);
+        return { count: contactIds.length };
+      },
+      (r) => ({
+        action: "contact.deleted_bulk" as const,
+        resource: "contact",
+        metadata: { count: r.count },
+      })
+    );
 
     // Revalidate
-    revalidateContacts(orgSlug);
+    revalidateContacts(ctx.access.orgSlug);
 
     return { success: true, count: contactIds.length };
-  } catch (error) {
-    const log = createActionLogger("bulkDeleteContacts", { orgSlug });
-    log.error(
-      { err: error, count: contactIds.length },
-      "Failed to bulk delete contacts"
-    );
-    return { success: false, error: "Failed to delete contacts" };
   }
-}
+);

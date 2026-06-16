@@ -1,8 +1,6 @@
 "use server";
 
 import {
-  auditLog,
-  db,
   deleteContact as dbDeleteContact,
   fetchTopicsForSubscription,
   findContactByEmailHash,
@@ -17,7 +15,6 @@ import {
 } from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { trackContactCreated } from "@/lib/activation-tracking";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import type {
   ContactStatus,
   CreateContactResult,
@@ -29,11 +26,9 @@ import type {
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
-import { createActionLogger } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 import { hashEmail, hashPhone } from "./shared/hash";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 // Re-export types for convenience
 export type {
@@ -56,32 +51,64 @@ export async function revalidateContacts(orgSlug: string): Promise<void> {
   revalidatePath(`/${orgSlug}/contacts`, "page");
 }
 
+type ListContactsOptions = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  emailStatus?: EmailStatus;
+  /** @deprecated Use emailStatus instead */
+  status?: ContactStatus;
+  topicId?: string;
+};
+
+type CreateContactData = {
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  jobTitle?: string;
+  preferredChannel?: PreferredChannel | null;
+  emailStatus?: EmailStatus;
+  smsStatus?: SmsStatus;
+  properties?: Record<string, unknown>;
+  topicIds?: string[];
+  /** @deprecated Use emailStatus instead */
+  status?: ContactStatus;
+};
+
+type UpdateContactData = {
+  email?: string;
+  phone?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  company?: string | null;
+  jobTitle?: string | null;
+  preferredChannel?: PreferredChannel | null;
+  emailStatus?: EmailStatus;
+  smsStatus?: SmsStatus;
+  properties?: Record<string, unknown>;
+  /** @deprecated Use emailStatus instead */
+  status?: ContactStatus;
+};
+
 /**
  * List contacts for an organization with pagination and search
  */
-export async function listContacts(
-  organizationId: string,
-  options: {
-    page?: number;
-    pageSize?: number;
-    search?: string;
-    emailStatus?: EmailStatus;
-    /** @deprecated Use emailStatus instead */
-    status?: ContactStatus;
-    topicId?: string;
-  } = {}
-): Promise<ListContactsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const listContacts = orgAction(
+  {
+    name: "listContacts",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _options?: ListContactsOptions) =>
+      organizationId,
+    onError: "Failed to fetch contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: ListContactsOptions = {}
+  ): Promise<ListContactsResult> => {
     const {
       page = 1,
       pageSize = 50,
@@ -155,32 +182,26 @@ export async function listContacts(
       page,
       pageSize,
     };
-  } catch (error) {
-    const log = createActionLogger("listContacts", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to list contacts");
-    return { success: false, error: "Failed to fetch contacts" };
   }
-}
+);
 
 /**
  * Get a single contact by ID
  */
-export async function getContact(
-  contactId: string,
-  organizationId: string
-): Promise<GetContactResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
-    const c = await findContactWithRelations(contactId, organizationId);
+export const getContact = orgAction(
+  {
+    name: "getContact",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (_contactId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch contact",
+  },
+  async (
+    ctx,
+    contactId: string,
+    _organizationId: string
+  ): Promise<GetContactResult> => {
+    const c = await findContactWithRelations(contactId, ctx.organizationId);
 
     if (!c) {
       return { success: false, error: "Contact not found" };
@@ -240,47 +261,25 @@ export async function getContact(
         complainedAt: c.complainedAt,
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getContact", { orgSlug: organizationId });
-    log.error({ err: error, contactId }, "Failed to get contact");
-    return { success: false, error: "Failed to fetch contact" };
   }
-}
+);
 
 /**
  * Create a new contact
  */
-export async function createContact(
-  organizationId: string,
-  data: {
-    email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
-    company?: string;
-    jobTitle?: string;
-    preferredChannel?: PreferredChannel | null;
-    emailStatus?: EmailStatus;
-    smsStatus?: SmsStatus;
-    properties?: Record<string, unknown>;
-    topicIds?: string[];
-    /** @deprecated Use emailStatus instead */
-    status?: ContactStatus;
-  }
-): Promise<CreateContactResult> {
-  let orgSlug: string | undefined;
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["write"]);
-    if (permError) return permError;
-    orgSlug = access.orgSlug;
-
+export const createContact = orgAction(
+  {
+    name: "createContact",
+    resource: "contacts",
+    permission: ["write"],
+    orgId: (organizationId: string, _data: CreateContactData) => organizationId,
+    onError: "Failed to create contact",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: CreateContactData
+  ): Promise<CreateContactResult> => {
     // Check contact limit
     const limitCheck = await checkContactLimit(organizationId);
     if (!limitCheck.allowed) {
@@ -353,9 +352,6 @@ export async function createContact(
       data.status ||
       (emailStatus === "active" ? "active" : "pending_confirmation");
 
-    // Fetch audit context before the transaction (headers() may not work inside)
-    const auditCtx = await getAuditContext();
-
     // Verify topic ownership before transaction
     let ownedTopicIds: string[] = [];
     if (data.topicIds && data.topicIds.length > 0) {
@@ -368,67 +364,65 @@ export async function createContact(
 
     // Create contact + subscribe to topics + write audit log in one transaction
     const channel = email ? "email" : "sms";
-    const newContact = await db.transaction(async (tx) => {
-      const inserted = await insertContact(
-        {
-          organizationId,
-          // Email fields
-          email: email || null,
-          emailHash: emailHashValue,
-          emailStatus,
-          emailVerifiedAt: emailStatus === "active" ? new Date() : null,
-          // Phone fields
-          phone: phone || null,
-          phoneHash: phoneHashValue,
-          smsStatus,
-          smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
-          // Contact details
-          firstName: data.firstName || null,
-          lastName: data.lastName || null,
-          company: data.company || null,
-          jobTitle: data.jobTitle || null,
-          preferredChannel: data.preferredChannel ?? null,
-          // Shared
-          properties: data.properties || {},
-          createdBy: access.userId,
-          // Legacy fields
-          status: legacyStatus,
-          confirmedAt: legacyStatus === "active" ? new Date() : null,
-        } as InsertContactData,
-        tx
-      );
+    const newContact = await ctx.audited(
+      async (tx) => {
+        const inserted = await insertContact(
+          {
+            organizationId,
+            // Email fields
+            email: email || null,
+            emailHash: emailHashValue,
+            emailStatus,
+            emailVerifiedAt: emailStatus === "active" ? new Date() : null,
+            // Phone fields
+            phone: phone || null,
+            phoneHash: phoneHashValue,
+            smsStatus,
+            smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
+            // Contact details
+            firstName: data.firstName || null,
+            lastName: data.lastName || null,
+            company: data.company || null,
+            jobTitle: data.jobTitle || null,
+            preferredChannel: data.preferredChannel ?? null,
+            // Shared
+            properties: data.properties || {},
+            createdBy: ctx.access.userId,
+            // Legacy fields
+            status: legacyStatus,
+            confirmedAt: legacyStatus === "active" ? new Date() : null,
+          } as InsertContactData,
+          tx
+        );
 
-      if (!inserted) return null;
+        if (!inserted) {
+          throw new Error("Failed to create contact");
+        }
 
-      if (ownedTopicIds.length > 0) {
-        await subscribeContactToTopicsOnCreate(inserted.id, ownedTopicIds, tx);
-      }
+        if (ownedTopicIds.length > 0) {
+          await subscribeContactToTopicsOnCreate(
+            inserted.id,
+            ownedTopicIds,
+            tx
+          );
+        }
 
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.created",
-          resource: "contact",
-          resourceId: inserted.id,
-          metadata: { contactId: inserted.id, email: email ?? null, channel },
-        })
-      );
-
-      return inserted;
-    });
-
-    if (!newContact) {
-      return { success: false, error: "Failed to create contact" };
-    }
+        return inserted;
+      },
+      (inserted) => ({
+        action: "contact.created" as const,
+        resource: "contact",
+        resourceId: inserted.id,
+        metadata: { contactId: inserted.id, email: email ?? null, channel },
+      })
+    );
 
     // Revalidate
-    revalidateContacts(orgSlug);
+    revalidateContacts(ctx.access.orgSlug);
 
     // Track activation event (fire-and-forget)
     trackContactCreated(
-      access.userEmail,
+      ctx.access.userEmail,
       organizationId,
       {},
       { firstName: data.firstName, lastName: data.lastName, email }
@@ -436,47 +430,30 @@ export async function createContact(
 
     // Return the created contact
     return await getContact(newContact.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("createContact", { orgSlug });
-    log.error({ err: error }, "Failed to create contact");
-    return { success: false, error: "Failed to create contact" };
   }
-}
+);
 
 /**
  * Update a contact
  */
-export async function updateContact(
-  contactId: string,
-  organizationId: string,
-  data: {
-    email?: string;
-    phone?: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    company?: string | null;
-    jobTitle?: string | null;
-    preferredChannel?: PreferredChannel | null;
-    emailStatus?: EmailStatus;
-    smsStatus?: SmsStatus;
-    properties?: Record<string, unknown>;
-    /** @deprecated Use emailStatus instead */
-    status?: ContactStatus;
-  }
-): Promise<UpdateContactResult> {
-  let orgSlug: string | undefined;
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["write"]);
-    if (permError) return permError;
-    orgSlug = access.orgSlug;
-
+export const updateContact = orgAction(
+  {
+    name: "updateContact",
+    resource: "contacts",
+    permission: ["write"],
+    orgId: (
+      _contactId: string,
+      organizationId: string,
+      _data: UpdateContactData
+    ) => organizationId,
+    onError: "Failed to update contact",
+  },
+  async (
+    ctx,
+    contactId: string,
+    organizationId: string,
+    data: UpdateContactData
+  ): Promise<UpdateContactResult> => {
     // Verify contact exists
     const existing = await findContactById(contactId, organizationId);
 
@@ -646,65 +623,53 @@ export async function updateContact(
       };
     }
 
-    const auditCtx = await getAuditContext();
     const updatedFields = Object.keys(data).filter(
       (k) => data[k as keyof typeof data] !== undefined
     );
 
     // Update contact + write audit log in one transaction
-    await db.transaction(async (tx) => {
-      await updateContactFields(
-        contactId,
-        organizationId,
-        updateData as Partial<InsertContactData> & Record<string, unknown>,
-        tx
-      );
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
+    await ctx.audited(
+      async (tx) => {
+        await updateContactFields(
+          contactId,
           organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.updated",
-          resource: "contact",
-          resourceId: contactId,
-          metadata: { contactId, fields: updatedFields },
-        })
-      );
-    });
+          updateData as Partial<InsertContactData> & Record<string, unknown>,
+          tx
+        );
+        return { contactId };
+      },
+      () => ({
+        action: "contact.updated" as const,
+        resource: "contact",
+        resourceId: contactId,
+        metadata: { contactId, fields: updatedFields },
+      })
+    );
 
     // Revalidate
-    revalidateContacts(orgSlug);
+    revalidateContacts(ctx.access.orgSlug);
 
     // Return updated contact
     return await getContact(contactId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("updateContact", { orgSlug });
-    log.error({ err: error, contactId }, "Failed to update contact");
-    return { success: false, error: "Failed to update contact" };
   }
-}
+);
 
 /**
  * Delete a contact
  */
-export async function deleteContact(
-  contactId: string,
-  organizationId: string
-): Promise<DeleteContactResult> {
-  let orgSlug: string | undefined;
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["delete"]);
-    if (permError) return permError;
-    orgSlug = access.orgSlug;
-
+export const deleteContact = orgAction(
+  {
+    name: "deleteContact",
+    resource: "contacts",
+    permission: ["delete"],
+    orgId: (_contactId: string, organizationId: string) => organizationId,
+    onError: "Failed to delete contact",
+  },
+  async (
+    ctx,
+    contactId: string,
+    organizationId: string
+  ): Promise<DeleteContactResult> => {
     // Verify contact exists
     const existing = await findContactById(contactId, organizationId);
 
@@ -712,32 +677,23 @@ export async function deleteContact(
       return { success: false, error: "Contact not found" };
     }
 
-    const auditCtx = await getAuditContext();
-
     // Delete contact + write audit log in one transaction
-    await db.transaction(async (tx) => {
-      await dbDeleteContact(contactId, organizationId, tx);
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "contact.deleted",
-          resource: "contact",
-          resourceId: contactId,
-          metadata: { contactId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await dbDeleteContact(contactId, organizationId, tx);
+        return { contactId };
+      },
+      () => ({
+        action: "contact.deleted" as const,
+        resource: "contact",
+        resourceId: contactId,
+        metadata: { contactId },
+      })
+    );
 
     // Revalidate
-    revalidateContacts(orgSlug);
+    revalidateContacts(ctx.access.orgSlug);
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteContact", { orgSlug });
-    log.error({ err: error, contactId }, "Failed to delete contact");
-    return { success: false, error: "Failed to delete contact" };
   }
-}
+);
