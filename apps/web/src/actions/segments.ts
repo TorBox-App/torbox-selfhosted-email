@@ -1,10 +1,8 @@
 "use server";
 
-import { auditLog, buildConditionSQL, contact, db, segment } from "@wraps/db";
+import { buildConditionSQL, contact, db, segment } from "@wraps/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
   type CreateSegmentResult,
@@ -16,8 +14,7 @@ import {
   type UpdateSegmentResult,
   validateCondition,
 } from "@/lib/segments";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 // Re-export types for convenience
 export type {
@@ -33,20 +30,15 @@ export type {
 /**
  * List all segments for an organization
  */
-export async function listSegments(
-  organizationId: string
-): Promise<ListSegmentsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "segments", ["read"]);
-    if (permError) return permError;
-
+export const listSegments = orgAction(
+  {
+    name: "listSegments",
+    resource: "segments",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch segments",
+  },
+  async (ctx, organizationId: string): Promise<ListSegmentsResult> => {
     const segments = await db
       .select()
       .from(segment)
@@ -68,31 +60,25 @@ export async function listSegments(
         createdBy: null, // TODO: join with user table if needed
       })),
     };
-  } catch (error) {
-    const log = createActionLogger("listSegments", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to list segments");
-    return { success: false, error: "Failed to fetch segments" };
   }
-}
+);
 
 /**
  * Get a single segment by ID
  */
-export async function getSegment(
-  segmentId: string,
-  organizationId: string
-): Promise<GetSegmentResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "segments", ["read"]);
-    if (permError) return permError;
-
+export const getSegment = orgAction(
+  {
+    name: "getSegment",
+    resource: "segments",
+    permission: ["read"],
+    orgId: (_segmentId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch segment",
+  },
+  async (
+    ctx,
+    segmentId: string,
+    organizationId: string
+  ): Promise<GetSegmentResult> => {
     const [s] = await db
       .select()
       .from(segment)
@@ -123,37 +109,38 @@ export async function getSegment(
         createdBy: null, // TODO: join with user table if needed
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getSegment", { orgSlug: organizationId });
-    log.error({ err: error, segmentId }, "Failed to get segment");
-    return { success: false, error: "Failed to fetch segment" };
   }
-}
+);
 
 /**
  * Create a new segment
  */
-export async function createSegment(
-  organizationId: string,
-  data: {
-    name: string;
-    description?: string;
-    condition: FilterCondition;
-    trackMembership?: boolean;
-  }
-): Promise<CreateSegmentResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const createSegment = orgAction(
+  {
+    name: "createSegment",
+    resource: "segments",
+    permission: ["write"],
+    orgId: (
+      organizationId: string,
+      _data: {
+        name: string;
+        description?: string;
+        condition: FilterCondition;
+        trackMembership?: boolean;
+      }
+    ) => organizationId,
+    onError: "Failed to create segment",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: {
+      name: string;
+      description?: string;
+      condition: FilterCondition;
+      trackMembership?: boolean;
     }
-
-    const segWriteError = checkPermission(access.role, "segments", ["write"]);
-    if (segWriteError) return segWriteError;
-
+  ): Promise<CreateSegmentResult> => {
     // Check if segments feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "segments");
     if (!featureCheck.allowed) {
@@ -186,80 +173,75 @@ export async function createSegment(
       memberCount = countResult?.count ?? 0;
     }
 
-    const auditCtx = await getAuditContext();
-
     // Create segment
-    const [newSegment] = await db.transaction(async (tx) => {
-      const [r] = await tx
-        .insert(segment)
-        .values({
-          organizationId,
-          name: data.name.trim(),
-          description: data.description?.trim() || null,
-          condition: data.condition,
-          trackMembership: data.trackMembership ?? false,
-          memberCount,
-          lastComputedAt: new Date(),
-          createdBy: access.userId,
-        })
-        .returning();
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "segment.created",
-          resource: "segment",
-          resourceId: r.id,
-          metadata: { segmentId: r.id, name: r.name },
-        })
-      );
-      return [r];
-    });
+    const [newSegment] = await ctx.audited(
+      async (tx) => {
+        const [r] = await tx
+          .insert(segment)
+          .values({
+            organizationId,
+            name: data.name.trim(),
+            description: data.description?.trim() || null,
+            condition: data.condition,
+            trackMembership: data.trackMembership ?? false,
+            memberCount,
+            lastComputedAt: new Date(),
+            createdBy: ctx.access.userId,
+          })
+          .returning();
+        return [r];
+      },
+      ([r]) => ({
+        action: "segment.created" as const,
+        resource: "segment",
+        resourceId: r.id,
+        metadata: { segmentId: r.id, name: r.name },
+      })
+    );
 
     if (!newSegment) {
       return { success: false, error: "Failed to create segment" };
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/segments`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/segments`, "page");
 
     // Return the created segment
     return await getSegment(newSegment.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("createSegment", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to create segment");
-    return { success: false, error: "Failed to create segment" };
   }
-}
+);
 
 /**
  * Update a segment
  */
-export async function updateSegment(
-  segmentId: string,
-  organizationId: string,
-  data: {
-    name?: string;
-    description?: string | null;
-    condition?: FilterCondition;
-    trackMembership?: boolean;
-  }
-): Promise<UpdateSegmentResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const updateSegment = orgAction(
+  {
+    name: "updateSegment",
+    resource: "segments",
+    permission: ["write"],
+    orgId: (
+      _segmentId: string,
+      organizationId: string,
+      _data: {
+        name?: string;
+        description?: string | null;
+        condition?: FilterCondition;
+        trackMembership?: boolean;
+      }
+    ) => organizationId,
+    onError: "Failed to update segment",
+  },
+  async (
+    ctx,
+    segmentId: string,
+    organizationId: string,
+    data: {
+      name?: string;
+      description?: string | null;
+      condition?: FilterCondition;
+      trackMembership?: boolean;
     }
-
-    const segWriteError = checkPermission(access.role, "segments", ["write"]);
-    if (segWriteError) return segWriteError;
-
+  ): Promise<UpdateSegmentResult> => {
     // Verify segment exists
     const [existing] = await db
       .select()
@@ -315,65 +297,51 @@ export async function updateSegment(
       updateData.trackMembership = data.trackMembership;
     }
 
-    const auditCtx = await getAuditContext();
-
     // Update segment
-    await db.transaction(async (tx) => {
-      await tx
-        .update(segment)
-        .set(updateData)
-        .where(
-          and(
-            eq(segment.id, segmentId),
-            eq(segment.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "segment.updated",
-          resource: "segment",
-          resourceId: segmentId,
-          metadata: { segmentId, name: updateData.name ?? existing.name },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(segment)
+          .set(updateData)
+          .where(
+            and(
+              eq(segment.id, segmentId),
+              eq(segment.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "segment.updated" as const,
+        resource: "segment",
+        resourceId: segmentId,
+        metadata: { segmentId, name: updateData.name ?? existing.name },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/segments`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/segments`, "page");
 
     // Return updated segment
     return await getSegment(segmentId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("updateSegment", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, segmentId }, "Failed to update segment");
-    return { success: false, error: "Failed to update segment" };
   }
-}
+);
 
 /**
  * Delete a segment
  */
-export async function deleteSegment(
-  segmentId: string,
-  organizationId: string
-): Promise<DeleteSegmentResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const segWriteError = checkPermission(access.role, "segments", ["delete"]);
-    if (segWriteError) return segWriteError;
-
+export const deleteSegment = orgAction(
+  {
+    name: "deleteSegment",
+    resource: "segments",
+    permission: ["delete"],
+    orgId: (_segmentId: string, organizationId: string) => organizationId,
+    onError: "Failed to delete segment",
+  },
+  async (
+    ctx,
+    segmentId: string,
+    organizationId: string
+  ): Promise<DeleteSegmentResult> => {
     // Verify segment exists
     const [existing] = await db
       .select()
@@ -390,62 +358,50 @@ export async function deleteSegment(
       return { success: false, error: "Segment not found" };
     }
 
-    const auditCtx = await getAuditContext();
-
     // Delete segment
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(segment)
-        .where(
-          and(
-            eq(segment.id, segmentId),
-            eq(segment.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "segment.deleted",
-          resource: "segment",
-          resourceId: segmentId,
-          metadata: { segmentId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(segment)
+          .where(
+            and(
+              eq(segment.id, segmentId),
+              eq(segment.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "segment.deleted" as const,
+        resource: "segment",
+        resourceId: segmentId,
+        metadata: { segmentId },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/segments`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/segments`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteSegment", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, segmentId }, "Failed to delete segment");
-    return { success: false, error: "Failed to delete segment" };
   }
-}
+);
 
 /**
  * Preview segment - count matching contacts and return sample emails
  */
-export async function previewSegment(
-  organizationId: string,
-  condition: FilterCondition
-): Promise<PreviewSegmentResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "segments", ["read"]);
-    if (permError) return permError;
-
+export const previewSegment = orgAction(
+  {
+    name: "previewSegment",
+    resource: "segments",
+    permission: ["read"],
+    orgId: (organizationId: string, _condition: FilterCondition) =>
+      organizationId,
+    onError: "Failed to preview segment",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    condition: FilterCondition
+  ): Promise<PreviewSegmentResult> => {
     // Validate condition
     const conditionError = validateCondition(condition);
     if (conditionError) {
@@ -480,14 +436,8 @@ export async function previewSegment(
         .map((s) => s.email)
         .filter((e): e is string => e !== null),
     };
-  } catch (error) {
-    const log = createActionLogger("previewSegment", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to preview segment");
-    return { success: false, error: "Failed to preview segment" };
   }
-}
+);
 
 /**
  * Get unique property keys from contacts
@@ -496,20 +446,15 @@ export type GetPropertyKeysResult =
   | { success: true; keys: string[] }
   | { success: false; error: string };
 
-export async function getPropertyKeys(
-  organizationId: string
-): Promise<GetPropertyKeysResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "segments", ["read"]);
-    if (permError) return permError;
-
+export const getPropertyKeys = orgAction(
+  {
+    name: "getPropertyKeys",
+    resource: "segments",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to get property keys",
+  },
+  async (ctx, organizationId: string): Promise<GetPropertyKeysResult> => {
     const rows = await db.execute<{ key: string }>(
       sql`SELECT DISTINCT json_object_keys(${contact.properties}) AS key
           FROM ${contact}
@@ -520,32 +465,24 @@ export async function getPropertyKeys(
     const keys = rows.rows.map((r) => r.key).sort();
 
     return { success: true, keys };
-  } catch (error) {
-    const log = createActionLogger("getPropertyKeys", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to get property keys");
-    return { success: true, keys: [] };
   }
-}
+);
 
 /**
  * Recompute segment member counts (can be called periodically or on-demand)
  */
-export async function recomputeSegmentCounts(
-  organizationId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "segments", ["read"]);
-    if (permError) return permError;
-
+export const recomputeSegmentCounts = orgAction(
+  {
+    name: "recomputeSegmentCounts",
+    resource: "segments",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to recompute segment counts",
+  },
+  async (
+    ctx,
+    organizationId: string
+  ): Promise<{ success: boolean; error?: string }> => {
     // Get all segments for org
     const segments = await db
       .select()
@@ -573,14 +510,8 @@ export async function recomputeSegmentCounts(
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/segments`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/segments`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("recomputeSegmentCounts", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to recompute segment counts");
-    return { success: false, error: "Failed to recompute segment counts" };
   }
-}
+);

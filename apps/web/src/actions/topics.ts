@@ -1,10 +1,8 @@
 "use server";
 
-import { auditLog, contactTopic, db, topic } from "@wraps/db";
+import { contactTopic, db, topic } from "@wraps/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
-import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
   type CreateTopicResult,
@@ -14,8 +12,7 @@ import {
   type ListTopicsResult,
   type UpdateTopicResult,
 } from "@/lib/topics";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 // Re-export types for convenience
 export type {
@@ -27,23 +24,34 @@ export type {
   UpdateTopicResult,
 } from "@/lib/topics";
 
+type CreateTopicData = {
+  name: string;
+  slug?: string;
+  description?: string;
+  public?: boolean;
+  doubleOptIn?: boolean;
+};
+
+type UpdateTopicData = {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  public?: boolean;
+  doubleOptIn?: boolean;
+};
+
 /**
  * List all topics for an organization
  */
-export async function listTopics(
-  organizationId: string
-): Promise<ListTopicsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "topics", ["read"]);
-    if (permError) return permError;
-
+export const listTopics = orgAction(
+  {
+    name: "listTopics",
+    resource: "topics",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch topics",
+  },
+  async (ctx, organizationId: string): Promise<ListTopicsResult> => {
     const topics = await db.query.topic.findMany({
       where: (t, { eq }) => eq(t.organizationId, organizationId),
       with: {
@@ -94,34 +102,31 @@ export async function listTopics(
         createdBy: t.createdByUser,
       })),
     };
-  } catch (error) {
-    const log = createActionLogger("listTopics", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to list topics");
-    return { success: false, error: "Failed to fetch topics" };
   }
-}
+);
 
 /**
  * Get a single topic by ID
  */
-export async function getTopic(
-  topicId: string,
-  organizationId: string
-): Promise<GetTopicResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "topics", ["read"]);
-    if (permError) return permError;
-
+export const getTopic = orgAction(
+  {
+    name: "getTopic",
+    resource: "topics",
+    permission: ["read"],
+    orgId: (_topicId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch topic",
+  },
+  async (
+    ctx,
+    topicId: string,
+    _organizationId: string
+  ): Promise<GetTopicResult> => {
     const t = await db.query.topic.findFirst({
       where: (topic, { and, eq }) =>
-        and(eq(topic.id, topicId), eq(topic.organizationId, organizationId)),
+        and(
+          eq(topic.id, topicId),
+          eq(topic.organizationId, ctx.organizationId)
+        ),
       with: {
         createdByUser: {
           columns: {
@@ -163,38 +168,25 @@ export async function getTopic(
         createdBy: t.createdByUser,
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getTopic", { orgSlug: organizationId });
-    log.error({ err: error, topicId }, "Failed to get topic");
-    return { success: false, error: "Failed to fetch topic" };
   }
-}
+);
 
 /**
  * Create a new topic
  */
-export async function createTopic(
-  organizationId: string,
-  data: {
-    name: string;
-    slug?: string;
-    description?: string;
-    public?: boolean;
-    doubleOptIn?: boolean;
-  }
-): Promise<CreateTopicResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
-    if (topicWriteError) return topicWriteError;
-
+export const createTopic = orgAction(
+  {
+    name: "createTopic",
+    resource: "topics",
+    permission: ["write"],
+    orgId: (organizationId: string, _data: CreateTopicData) => organizationId,
+    onError: "Failed to create topic",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: CreateTopicData
+  ): Promise<CreateTopicResult> => {
     // Check if topics feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "topics");
     if (!featureCheck.allowed) {
@@ -228,78 +220,61 @@ export async function createTopic(
       return { success: false, error: "A topic with this slug already exists" };
     }
 
-    const auditCtx = await getAuditContext();
-
     // Create topic
-    const [newTopic] = await db.transaction(async (tx) => {
-      const [r] = await tx
-        .insert(topic)
-        .values({
-          organizationId,
-          name: data.name.trim(),
-          slug,
-          description: data.description?.trim() || null,
-          public: data.public ?? true,
-          doubleOptIn: data.doubleOptIn ?? false,
-          createdBy: access.userId,
-        })
-        .returning();
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "topic.created",
-          resource: "topic",
-          resourceId: r.id,
-          metadata: { topicId: r.id, name: r.name, slug: r.slug },
-        })
-      );
-      return [r];
-    });
+    const newTopic = await ctx.audited(
+      async (tx) => {
+        const [r] = await tx
+          .insert(topic)
+          .values({
+            organizationId,
+            name: data.name.trim(),
+            slug,
+            description: data.description?.trim() || null,
+            public: data.public ?? true,
+            doubleOptIn: data.doubleOptIn ?? false,
+            createdBy: ctx.access.userId,
+          })
+          .returning();
+        return r;
+      },
+      (r) => ({
+        action: "topic.created" as const,
+        resource: "topic",
+        resourceId: r.id,
+        metadata: { topicId: r.id, name: r.name, slug: r.slug },
+      })
+    );
 
     if (!newTopic) {
       return { success: false, error: "Failed to create topic" };
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/topics`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/topics`, "page");
 
     // Return the created topic
     return await getTopic(newTopic.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("createTopic", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to create topic");
-    return { success: false, error: "Failed to create topic" };
   }
-}
+);
 
 /**
  * Update a topic
  */
-export async function updateTopic(
-  topicId: string,
-  organizationId: string,
-  data: {
-    name?: string;
-    slug?: string;
-    description?: string | null;
-    public?: boolean;
-    doubleOptIn?: boolean;
-  }
-): Promise<UpdateTopicResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const topicWriteError = checkPermission(access.role, "topics", ["write"]);
-    if (topicWriteError) return topicWriteError;
-
+export const updateTopic = orgAction(
+  {
+    name: "updateTopic",
+    resource: "topics",
+    permission: ["write"],
+    orgId: (_topicId: string, organizationId: string, _data: UpdateTopicData) =>
+      organizationId,
+    onError: "Failed to update topic",
+  },
+  async (
+    ctx,
+    topicId: string,
+    organizationId: string,
+    data: UpdateTopicData
+  ): Promise<UpdateTopicResult> => {
     // Verify topic exists
     const existing = await db.query.topic.findFirst({
       where: (t, { and, eq }) =>
@@ -360,60 +335,48 @@ export async function updateTopic(
       updateData.doubleOptIn = data.doubleOptIn;
     }
 
-    const auditCtx = await getAuditContext();
-
     // Update topic
-    await db.transaction(async (tx) => {
-      await tx
-        .update(topic)
-        .set(updateData)
-        .where(
-          and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "topic.updated",
-          resource: "topic",
-          resourceId: topicId,
-          metadata: { topicId, name: updateData.name ?? existing.name },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(topic)
+          .set(updateData)
+          .where(
+            and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+          );
+      },
+      () => ({
+        action: "topic.updated" as const,
+        resource: "topic",
+        resourceId: topicId,
+        metadata: { topicId, name: updateData.name ?? existing.name },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/topics`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/topics`, "page");
 
     // Return updated topic
     return await getTopic(topicId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("updateTopic", { orgSlug: organizationId });
-    log.error({ err: error, topicId }, "Failed to update topic");
-    return { success: false, error: "Failed to update topic" };
   }
-}
+);
 
 /**
  * Delete a topic
  */
-export async function deleteTopic(
-  topicId: string,
-  organizationId: string
-): Promise<DeleteTopicResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const topicWriteError = checkPermission(access.role, "topics", ["delete"]);
-    if (topicWriteError) return topicWriteError;
-
+export const deleteTopic = orgAction(
+  {
+    name: "deleteTopic",
+    resource: "topics",
+    permission: ["delete"],
+    orgId: (_topicId: string, organizationId: string) => organizationId,
+    onError: "Failed to delete topic",
+  },
+  async (
+    ctx,
+    topicId: string,
+    organizationId: string
+  ): Promise<DeleteTopicResult> => {
     // Verify topic exists
     const existing = await db.query.topic.findFirst({
       where: (t, { and, eq }) =>
@@ -424,75 +387,72 @@ export async function deleteTopic(
       return { success: false, error: "Topic not found" };
     }
 
-    const auditCtx = await getAuditContext();
-
     // Delete topic (cascades to contact_topic)
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(topic)
-        .where(
-          and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "topic.deleted",
-          resource: "topic",
-          resourceId: topicId,
-          metadata: { topicId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(topic)
+          .where(
+            and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+          );
+      },
+      () => ({
+        action: "topic.deleted" as const,
+        resource: "topic",
+        resourceId: topicId,
+        metadata: { topicId },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/topics`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/topics`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteTopic", { orgSlug: organizationId });
-    log.error({ err: error, topicId }, "Failed to delete topic");
-    return { success: false, error: "Failed to delete topic" };
   }
-}
+);
 
 /**
  * Get topic subscribers (paginated)
  */
-export async function getTopicSubscribers(
-  topicId: string,
-  organizationId: string,
-  options: {
+export const getTopicSubscribers = orgAction(
+  {
+    name: "getTopicSubscribers",
+    resource: "topics",
+    permission: ["read"],
+    orgId: (
+      _topicId: string,
+      organizationId: string,
+      _options?: {
+        page?: number;
+        pageSize?: number;
+        status?: "subscribed" | "unsubscribed";
+      }
+    ) => organizationId,
+    onError: "Failed to fetch subscribers",
+  },
+  async (
+    ctx,
+    topicId: string,
+    organizationId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+      status?: "subscribed" | "unsubscribed";
+    } = {}
+  ): Promise<{
+    success: boolean;
+    subscribers?: Array<{
+      contactId: string;
+      email: string;
+      status: string;
+      subscribedAt: Date | null;
+      unsubscribedAt: Date | null;
+    }>;
+    total?: number;
     page?: number;
     pageSize?: number;
-    status?: "subscribed" | "unsubscribed";
-  } = {}
-): Promise<{
-  success: boolean;
-  subscribers?: Array<{
-    contactId: string;
-    email: string;
-    status: string;
-    subscribedAt: Date | null;
-    unsubscribedAt: Date | null;
-  }>;
-  total?: number;
-  page?: number;
-  pageSize?: number;
-  error?: string;
-}> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "topics", ["read"]);
-    if (permError) return permError;
-
+    error?: string;
+  }> => {
     const { page = 1, pageSize = 50, status } = options;
     const offset = (page - 1) * pageSize;
 
@@ -548,11 +508,5 @@ export async function getTopicSubscribers(
       page,
       pageSize,
     };
-  } catch (error) {
-    const log = createActionLogger("getTopicSubscribers", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, topicId }, "Failed to get topic subscribers");
-    return { success: false, error: "Failed to fetch subscribers" };
   }
-}
+);

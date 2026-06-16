@@ -55,6 +55,7 @@ export const logger = createLogger();
 export type RequestContext = {
   requestId?: string;
   orgSlug?: string;
+  organizationId?: string;
   userId?: string;
   accountId?: string;
   path?: string;
