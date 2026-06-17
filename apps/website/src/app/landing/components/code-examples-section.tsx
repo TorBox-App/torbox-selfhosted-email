@@ -10,12 +10,12 @@ const codeExamples: Record<string, string> = {
   "Next.js App": `// app/actions/email.ts
 'use server';
 
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export async function sendWelcomeEmail(email: string) {
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to: email,
     subject: 'Welcome to our app!',
@@ -44,9 +44,9 @@ export default function SignupPage() {
 }`,
   "Next.js Pages": `// pages/api/send-email.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export default async function handler(
   req: NextApiRequest,
@@ -58,7 +58,7 @@ export default async function handler(
 
   const { to, subject, html } = req.body;
 
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to,
     subject,
@@ -72,10 +72,10 @@ export default async function handler(
   }
 }`,
   Express: `import express from 'express';
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
 const app = express();
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 app.use(express.json());
 
@@ -83,7 +83,7 @@ app.post('/api/send-email', async (req, res) => {
   try {
     const { to, subject, html } = req.body;
 
-    const result = await wraps.emails.send({
+    const result = await wraps.send({
       from: 'hello@yourdomain.com',
       to,
       subject,
@@ -112,15 +112,15 @@ app.post('/api/send-email', async (req, res) => {
 app.listen(3000);`,
   Remix: `// app/routes/signup.tsx
 import { json, type ActionFunctionArgs } from '@remix-run/node';
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const email = formData.get('email') as string;
 
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to: email,
     subject: 'Welcome to our app!',
@@ -143,10 +143,10 @@ export default function Signup() {
   );
 }`,
   "Vercel Edge": `// api/send-email.ts
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
 // Automatically uses Vercel OIDC token
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -155,7 +155,7 @@ export default async function handler(req: Request) {
 
   const { to, subject, html } = await req.json();
 
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to,
     subject,
@@ -168,16 +168,16 @@ export default async function handler(req: Request) {
 export const config = {
   runtime: 'edge',
 };`,
-  Lambda: `import { Wraps } from '@wraps.dev/email';
+  Lambda: `import { WrapsEmail } from '@wraps.dev/email';
 import type { APIGatewayProxyHandler } from 'aws-lambda';
 
 // Automatically uses Lambda IAM role
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { to, subject, html } = JSON.parse(event.body || '{}');
 
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to,
     subject,

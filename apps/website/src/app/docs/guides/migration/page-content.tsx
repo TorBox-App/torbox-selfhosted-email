@@ -56,11 +56,11 @@ await resend.emails.send({
   html: '<h1>Hello!</h1>',
 });`;
 
-const wrapsCode = `import { Wraps } from '@wraps.dev/email';
+const wrapsCode = `import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   to: 'user@example.com',
   from: 'hello@yourapp.com',
   subject: 'Welcome!',

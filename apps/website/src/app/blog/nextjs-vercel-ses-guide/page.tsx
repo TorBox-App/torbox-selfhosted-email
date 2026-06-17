@@ -505,14 +505,14 @@ export default function Page() {
                   Here&apos;s a Next.js API route that sends a welcome email:
                 </p>
                 <CodeBlock
-                  code={`import { Wraps } from '@wraps.dev/email';
+                  code={`import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export async function POST(request: Request) {
   const { email, name } = await request.json();
 
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: 'hello@yourdomain.com',
     to: email,
     subject: \`Welcome to the team, \${name}!\`,
@@ -536,12 +536,12 @@ export async function POST(request: Request) {
                 <CodeBlock
                   code={`'use server';
 
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 export async function sendWelcomeEmail(email: string, name: string) {
-  return await wraps.emails.send({
+  return await wraps.send({
     from: 'hello@yourdomain.com',
     to: email,
     subject: \`Welcome, \${name}!\`,
@@ -640,11 +640,11 @@ export async function sendWelcomeEmail(email: string, name: string) {
                   Simple Send
                 </h3>
                 <CodeBlock
-                  code={`import { Wraps } from '@wraps.dev/email';
+                  code={`import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Hello!',
@@ -659,7 +659,7 @@ await wraps.emails.send({
                   With All Options
                 </h3>
                 <CodeBlock
-                  code={`await wraps.emails.send({
+                  code={`await wraps.send({
   from: 'Team <hello@yourdomain.com>',
   to: ['user1@example.com', 'user2@example.com'],
   cc: 'manager@example.com',
@@ -681,7 +681,7 @@ await wraps.emails.send({
                   With Attachments
                 </h3>
                 <CodeBlock
-                  code={`await wraps.emails.send({
+                  code={`await wraps.send({
   from: 'invoices@yourdomain.com',
   to: 'customer@example.com',
   subject: 'Your Invoice',
@@ -753,7 +753,7 @@ await wraps.emails.send({
                 SES&apos;s mailbox simulator addresses:
               </p>
               <CodeBlock
-                code={`await wraps.emails.send({
+                code={`await wraps.send({
   from: 'test@yourdomain.com',
   to: 'success@simulator.amazonses.com', // Always succeeds
   subject: 'Test email',

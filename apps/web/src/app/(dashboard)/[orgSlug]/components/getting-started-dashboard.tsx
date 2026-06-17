@@ -66,11 +66,11 @@ type GettingStartedDashboardProps = {
   awsAccount: AwsAccountData;
 };
 
-const SDK_CODE = `import { Wraps } from '@wraps.dev/email';
+const SDK_CODE = `import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome!',

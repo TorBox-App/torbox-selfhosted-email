@@ -318,11 +318,11 @@ await resend.emails.send({
   react: <WelcomeEmail />,
 });`;
 
-const wrapsCode = `import { Wraps } from "@wraps.dev/email";
+const wrapsCode = `import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: "hello@example.com",
   to: "user@example.com",
   subject: "Welcome",

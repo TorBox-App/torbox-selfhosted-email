@@ -329,11 +329,11 @@ await client.sendEmail({
   HtmlBody: "<p>Hi</p>",
 });`;
 
-const wrapsCode = `import { Wraps } from "@wraps.dev/email";
+const wrapsCode = `import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: "you@example.com",
   to: "user@example.com",
   subject: "Hello",

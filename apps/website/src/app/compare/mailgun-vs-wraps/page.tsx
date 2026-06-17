@@ -309,11 +309,11 @@ await mg.messages.create("mg.example.com", {
   html: "<h1>Welcome to the app</h1>",
 });`;
 
-const wrapsCode = `import { Wraps } from "@wraps.dev/email";
+const wrapsCode = `import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: "hello@example.com",
   to: "user@example.com",
   subject: "Welcome",

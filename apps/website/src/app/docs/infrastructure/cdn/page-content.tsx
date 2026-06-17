@@ -42,24 +42,33 @@ const architectureDiagram = `# CDN Asset Hosting Architecture
 #                              +
 #                        Custom Domain
 #
-# 1. Assets uploaded to private S3 bucket via SDK or CLI
+# 1. Assets uploaded to private S3 bucket via AWS SDK or CLI
 # 2. CloudFront serves assets from 400+ global edge locations
 # 3. OAI ensures S3 is only accessible through CloudFront
 # 4. Optional custom domain with auto-validated ACM certificate`;
 
-const uploadExample = `import { Wraps } from '@wraps.dev/email';
+const uploadExample = `import { readFile } from 'node:fs/promises';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+// The CDN is a plain S3 bucket + CloudFront. Upload with the AWS SDK —
+// your OIDC role or IAM credentials already have access.
+const s3 = new S3Client({ region: 'us-east-1' });
 
-// Upload an image to the CDN
-const url = await wraps.cdn.upload({
-  file: './logo.png',
-  path: 'images/logo.png',
-  contentType: 'image/png',
-});
+await s3.send(new PutObjectCommand({
+  Bucket: 'wraps-cdn-123456789012', // from \`wraps cdn status\`
+  Key: 'images/logo.png',
+  Body: await readFile('./logo.png'),
+  ContentType: 'image/png',
+  CacheControl: 'public, max-age=31536000, immutable',
+}));
 
-// Use the CDN URL in your emails
-const result = await wraps.emails.send({
+const url = 'https://cdn.yourdomain.com/images/logo.png';
+
+// Reference the CDN URL in your emails
+const wraps = new WrapsEmail();
+
+const result = await wraps.send({
   from: 'hello@yourapp.com',
   to: 'user@example.com',
   subject: 'Welcome!',
@@ -306,8 +315,8 @@ export default function InfrastructureCdnPageContent() {
           Usage Example
         </h2>
         <p className="mb-4 text-muted-foreground">
-          After deploying, use the SDK to upload assets and reference them in
-          your emails.
+          After deploying, use the AWS SDK to upload assets and reference them
+          in your emails.
         </p>
         <CodeBlock
           className="h-auto"

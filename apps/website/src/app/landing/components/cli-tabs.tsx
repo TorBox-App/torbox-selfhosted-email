@@ -87,11 +87,11 @@ npx @wraps.dev/cli email init
 npx @wraps.dev/cli email domains add -d yourdomain.com
 npx @wraps.dev/cli email domains verify -d yourdomain.com`;
 
-const sdkExample = `import { Wraps } from '@wraps.dev/email';
+const sdkExample = `import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-const result = await wraps.emails.send({
+const result = await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome to our app!',

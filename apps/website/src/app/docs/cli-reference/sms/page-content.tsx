@@ -666,19 +666,17 @@ export default function CLIReferenceSMSPageContent() {
                 {
                   language: "typescript",
                   filename: "send-sms.ts",
-                  code: `import { Wraps } from '@wraps.dev/sms';
+                  code: `import { WrapsSMS } from '@wraps.dev/sms';
 
-const wraps = new Wraps();
+const wraps = new WrapsSMS();
 
 // Send a transactional SMS
-const result = await wraps.sms.send({
+const result = await wraps.send({
   to: '+14155551234',
   message: 'Your verification code is 123456',
 });
 
-if (result.success) {
-  console.log('SMS sent:', result.data.messageId);
-}`,
+console.log('SMS sent:', result.messageId);`,
                 },
               ]}
               defaultValue="typescript"

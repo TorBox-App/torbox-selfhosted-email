@@ -462,7 +462,7 @@ export const COMPONENT_SPECS: ComponentSpec[] = [
       {
         prompt: "Add a code example",
         output:
-          '{"type":"emailCodeBlock","attrs":{"code":"const wraps = new Wraps();\\nawait wraps.emails.send({ to: \'user@example.com\' });","language":"javascript","showLineNumbers":true}}',
+          '{"type":"emailCodeBlock","attrs":{"code":"const wraps = new WrapsEmail();\\nawait wraps.send({ to: \'user@example.com\' });","language":"javascript","showLineNumbers":true}}',
       },
     ],
     emailClientNotes:

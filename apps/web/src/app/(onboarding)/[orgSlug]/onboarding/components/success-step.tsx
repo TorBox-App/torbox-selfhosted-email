@@ -249,11 +249,11 @@ wraps platform connect`}</code>
           <h3 className="font-semibold text-sm">Quick Start Example</h3>
           <pre className="overflow-x-auto rounded-lg bg-secondary p-4">
             <code className="text-xs">
-              {`import { Wraps } from '@wraps.dev/email';
+              {`import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: 'hello@yourapp.com',
   to: 'user@example.com',
   subject: 'Welcome!',

@@ -616,11 +616,11 @@ export function CodeTabs() {
   const tabs: Record<string, { label: string; code: string }> = {
     send: {
       label: "Send Email",
-      code: `import { Wraps } from '@wraps.dev/email';
+      code: `import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome!',
@@ -629,14 +629,17 @@ await wraps.emails.send({
     },
     batch: {
       label: "Batch Send",
-      code: `import { Wraps } from '@wraps.dev/email';
+      code: `import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.batch.send({
-  subject: 'Product Update',
-  templateId: 'tmpl_xxx',
+// Unique content per recipient, one SES call (max 100)
+await wraps.sendBatch({
   from: 'updates@yourdomain.com',
+  entries: [
+    { to: 'alice@example.com', subject: 'Product Update', html: '<h1>Hi Alice</h1>' },
+    { to: 'bob@example.com', subject: 'Product Update', html: '<h1>Hi Bob</h1>' },
+  ],
 });`,
     },
     events: {

@@ -37,13 +37,13 @@ const installCommands = {
   bun: "bun add @wraps.dev/email",
 };
 
-const sendEmailCode = `import { Wraps } from '@wraps.dev/email';
+const sendEmailCode = `import { WrapsEmail } from '@wraps.dev/email';
 
 // Initialize the client
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 // Send an email
-const result = await wraps.emails.send({
+const result = await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome to Wraps!',

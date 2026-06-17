@@ -19,9 +19,9 @@ npm install @wraps.dev/email
 \`\`\`
 
 \`\`\`typescript
-import { Wraps } from '@wraps.dev/email';
-const wraps = new Wraps();
-await wraps.emails.send({
+import { WrapsEmail } from '@wraps.dev/email';
+const wraps = new WrapsEmail();
+await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome!',
@@ -90,11 +90,11 @@ npm install @wraps.dev/email
 ## Step 3: Send Your First Email
 
 \`\`\`typescript
-import { Wraps } from '@wraps.dev/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-const result = await wraps.emails.send({
+const result = await wraps.send({
   from: 'hello@yourdomain.com',
   to: 'user@example.com',
   subject: 'Welcome to Wraps!',
@@ -164,9 +164,9 @@ npm install @wraps.dev/email
 ## Step 3: Write the Agent Tool
 
 \`\`\`typescript
-import { Wraps } from "@wraps.dev/email";
+import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 // Works for any agent framework:
 // LangGraph: register as a tool. Vercel AI SDK: pass to tool({}).
@@ -176,7 +176,7 @@ export async function sendEmailTool(input: {
   subject: string;
   html: string;
 }) {
-  const result = await wraps.emails.send({
+  const result = await wraps.send({
     from: "agent@yourdomain.com",
     to: input.to,
     subject: input.subject,

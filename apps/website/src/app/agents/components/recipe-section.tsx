@@ -14,13 +14,13 @@ import {
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
 
-const sendFromAgent = `import { Wraps } from "@wraps.dev/email";
+const sendFromAgent = `import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
 // The agent already has the rest — it knows the user,
 // the message, and when to send. It just needs a sender.
-await wraps.emails.send({
+await wraps.send({
   from: "agent@yourdomain.com",
   to: userEmail,
   subject: reportSubject,

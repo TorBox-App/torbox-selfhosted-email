@@ -331,11 +331,11 @@ await sgMail.send({
   html: "<p>World</p>",
 });`;
 
-const wrapsCode = `import { Wraps } from "@wraps.dev/email";
+const wrapsCode = `import { WrapsEmail } from "@wraps.dev/email";
 
-const wraps = new Wraps();
+const wraps = new WrapsEmail();
 
-await wraps.emails.send({
+await wraps.send({
   to: "user@example.com",
   from: "you@company.com",
   subject: "Hello",
