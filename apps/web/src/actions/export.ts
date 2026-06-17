@@ -17,34 +17,37 @@ import type {
   SmsStatus,
 } from "@/lib/contacts";
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
-import { createActionLogger } from "@/lib/logger";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 const MAX_EXPORT_ROWS = 50_000;
 
-export async function exportAllContacts(
-  organizationId: string,
-  options: {
-    search?: string;
-    emailStatus?: EmailStatus;
-    topicId?: string;
-  } = {}
-): Promise<
-  | { success: true; contacts: ContactWithMeta[]; total: number }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["export"]);
-    if (permError) return permError;
-
+export const exportAllContacts = orgAction(
+  {
+    name: "exportAllContacts",
+    resource: "contacts",
+    permission: ["export"],
+    orgId: (
+      organizationId: string,
+      _options?: {
+        search?: string;
+        emailStatus?: EmailStatus;
+        topicId?: string;
+      }
+    ) => organizationId,
+    onError: "Failed to export contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: {
+      search?: string;
+      emailStatus?: EmailStatus;
+      topicId?: string;
+    } = {}
+  ): Promise<
+    | { success: true; contacts: ContactWithMeta[]; total: number }
+    | { success: false; error: string }
+  > => {
     const { search, emailStatus, topicId } = options;
 
     // Build where conditions
@@ -153,33 +156,28 @@ export async function exportAllContacts(
       })),
       total: contacts.length,
     };
-  } catch (error) {
-    const log = createActionLogger("exportAllContacts", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to export contacts");
-    return { success: false, error: "Failed to export contacts" };
   }
-}
+);
 
-export async function exportAllEvents(
-  organizationId: string,
-  options: Omit<ListEventsOptions, "page" | "pageSize"> = {}
-): Promise<
-  | { success: true; events: EventWithContact[]; total: number }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "events", ["export"]);
-    if (permError) return permError;
-
+export const exportAllEvents = orgAction(
+  {
+    name: "exportAllEvents",
+    resource: "events",
+    permission: ["export"],
+    orgId: (
+      organizationId: string,
+      _options?: Omit<ListEventsOptions, "page" | "pageSize">
+    ) => organizationId,
+    onError: "Failed to export events",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: Omit<ListEventsOptions, "page" | "pageSize"> = {}
+  ): Promise<
+    | { success: true; events: EventWithContact[]; total: number }
+    | { success: false; error: string }
+  > => {
     const events = await exportContactEvents(
       organizationId,
       options as EventFilters,
@@ -191,11 +189,5 @@ export async function exportAllEvents(
       events: events as EventWithContact[],
       total: events.length,
     };
-  } catch (error) {
-    const log = createActionLogger("exportAllEvents", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to export events");
-    return { success: false, error: "Failed to export events" };
   }
-}
+);

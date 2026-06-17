@@ -70,7 +70,10 @@ describe("sendDesktopLink", () => {
 
     const result = await sendDesktopLink("org-123");
 
-    expect(result).toEqual({ success: false, error: "No access" });
+    expect(result).toEqual({
+      success: false,
+      error: "You don't have access to this organization",
+    });
     expect(mockSendTemplate).not.toHaveBeenCalled();
   });
 

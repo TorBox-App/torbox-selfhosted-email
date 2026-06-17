@@ -18,9 +18,7 @@ import type {
   ListEventsOptions,
   ListEventsResult,
 } from "@/lib/events";
-import { createActionLogger } from "@/lib/logger";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 // Re-export types for convenience
 export type {
@@ -31,21 +29,20 @@ export type {
   ListEventsResult,
 } from "@/lib/events";
 
-export async function listEvents(
-  organizationId: string,
-  options: ListEventsOptions = {}
-): Promise<ListEventsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const listEvents = orgAction(
+  {
+    name: "listEvents",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _options?: ListEventsOptions) =>
+      organizationId,
+    onError: "Failed to fetch events",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: ListEventsOptions = {}
+  ): Promise<ListEventsResult> => {
     const { page = 1, pageSize = 50, ...filters } = options;
     const { events, total } = await listContactEvents(
       organizationId,
@@ -60,28 +57,22 @@ export async function listEvents(
       page,
       pageSize,
     };
-  } catch (error) {
-    const log = createActionLogger("listEvents", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to list events");
-    return { success: false, error: "Failed to fetch events" };
   }
-}
+);
 
-export async function getEvent(
-  eventId: string,
-  organizationId: string
-): Promise<GetEventResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const getEvent = orgAction(
+  {
+    name: "getEvent",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (_eventId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch event",
+  },
+  async (
+    ctx,
+    eventId: string,
+    organizationId: string
+  ): Promise<GetEventResult> => {
     const event = await getContactEvent(eventId, organizationId);
 
     if (!event) {
@@ -92,38 +83,23 @@ export async function getEvent(
       success: true,
       event: event as EventWithContact,
     };
-  } catch (error) {
-    const log = createActionLogger("getEvent", { orgSlug: organizationId });
-    log.error({ err: error, eventId }, "Failed to get event");
-    return { success: false, error: "Failed to fetch event" };
   }
-}
+);
 
-export async function getEventNames(
-  organizationId: string
-): Promise<GetEventNamesResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const getEventNames = orgAction(
+  {
+    name: "getEventNames",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch event names",
+  },
+  async (ctx, organizationId: string): Promise<GetEventNamesResult> => {
     const eventNames = await listDistinctEventNames(organizationId);
 
     return { success: true, eventNames };
-  } catch (error) {
-    const log = createActionLogger("getEventNames", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to get event names");
-    return { success: false, error: "Failed to fetch event names" };
   }
-}
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANALYTICS
@@ -142,22 +118,21 @@ export type GetEventAnalyticsResult =
   | { success: true; analytics: EventAnalytics }
   | { success: false; error: string };
 
-export async function getEventAnalytics(
-  organizationId: string,
-  days: 7 | 30 = 30,
-  timezone = "UTC"
-): Promise<GetEventAnalyticsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const getEventAnalytics = orgAction(
+  {
+    name: "getEventAnalytics",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _days?: 7 | 30, _timezone?: string) =>
+      organizationId,
+    onError: "Failed to fetch event analytics",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    days: 7 | 30 = 30,
+    timezone = "UTC"
+  ): Promise<GetEventAnalyticsResult> => {
     const now = new Date();
 
     // Validate timezone — fall back to UTC if invalid
@@ -223,11 +198,5 @@ export async function getEventAnalytics(
         topEventNames: topEventNamesData,
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getEventAnalytics", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, days }, "Failed to get event analytics");
-    return { success: false, error: "Failed to fetch event analytics" };
   }
-}
+);

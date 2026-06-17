@@ -12,10 +12,8 @@ import {
   workflow,
 } from "@wraps/db";
 import { and, eq, ilike, or } from "drizzle-orm";
-import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 export type SearchEntityType =
   | "contact"
@@ -42,21 +40,20 @@ export type UniversalSearchResult =
 /**
  * Universal search across all Wraps entities
  */
-export async function universalSearch(
-  organizationId: string,
-  query: string
-): Promise<UniversalSearchResult> {
-  const log = createActionLogger("universalSearch", {});
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "Unauthorized" };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
-    const { orgSlug } = access;
+export const universalSearch = orgAction(
+  {
+    name: "universalSearch",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _query: string) => organizationId,
+    onError: "Search failed",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    query: string
+  ): Promise<UniversalSearchResult> => {
+    const { orgSlug } = ctx.access;
     const escaped = escapeIlike(query.trim());
     const pattern = `%${escaped}%`;
 
@@ -282,8 +279,5 @@ export async function universalSearch(
     };
 
     return { success: true, results };
-  } catch (error) {
-    log.error({ err: error }, "Universal search failed");
-    return { success: false, error: "Search failed" };
   }
-}
+);

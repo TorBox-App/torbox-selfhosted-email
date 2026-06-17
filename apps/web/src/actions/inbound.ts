@@ -1,11 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
-export async function revalidateInboundEmails(organizationId: string) {
-  const access = await verifyOrgAccess(organizationId);
-  if (!access) return { success: false as const, error: "No access" };
-  revalidatePath(`/${access.orgSlug}/emails/inbound`, "page");
-  return { success: true as const };
-}
+export const revalidateInboundEmails = orgAction(
+  {
+    name: "revalidateInboundEmails",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to revalidate inbound emails",
+  },
+  async (ctx, organizationId: string) => {
+    revalidatePath(`/${ctx.access.orgSlug}/emails/inbound`, "page");
+    return { success: true as const };
+  }
+);

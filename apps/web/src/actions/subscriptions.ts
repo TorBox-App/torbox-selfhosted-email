@@ -4,8 +4,7 @@ import {
   createFreeSubscription as dbCreateFreeSubscription,
   getActiveSubscription,
 } from "@wraps/db";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 export type SubscriptionData = {
   id: string;
@@ -43,13 +42,18 @@ export type CreateFreeSubscriptionResult =
  * Create a free subscription for an organization.
  * Used during onboarding when user selects the free plan.
  */
-export async function createFreeSubscription(
-  organizationId: string
-): Promise<CreateFreeSubscriptionResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) return { success: false, error: "No access" };
-
+export const createFreeSubscription = orgAction(
+  {
+    name: "createFreeSubscription",
+    resource: "billing",
+    permission: ["write"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to create subscription",
+  },
+  async (
+    ctx,
+    organizationId: string
+  ): Promise<CreateFreeSubscriptionResult> => {
     const existingSub = await getActiveSubscription(organizationId);
     if (existingSub) {
       return { success: true, subscription: toSubscriptionData(existingSub) };
@@ -57,33 +61,28 @@ export async function createFreeSubscription(
 
     const created = await dbCreateFreeSubscription(
       organizationId,
-      access.userId
+      ctx.access.userId
     );
     return { success: true, subscription: toSubscriptionData(created) };
-  } catch (error) {
-    return { success: false, error: "Failed to create subscription" };
   }
-}
+);
 
-export async function getOrganizationSubscription(
-  organizationId: string
-): Promise<GetSubscriptionResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) return { success: false, error: "No access" };
-
-    const permError = checkPermission(access.role, "billing", ["read"]);
-    if (permError) return permError;
-
+export const getOrganizationSubscription = orgAction(
+  {
+    name: "getOrganizationSubscription",
+    resource: "billing",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch subscription",
+  },
+  async (ctx, organizationId: string): Promise<GetSubscriptionResult> => {
     const sub = await getActiveSubscription(organizationId);
     return {
       success: true,
       subscription: sub ? toSubscriptionData(sub) : null,
     };
-  } catch (error) {
-    return { success: false, error: "Failed to fetch subscription" };
   }
-}
+);
 
 function toSubscriptionData(sub: {
   id: string;

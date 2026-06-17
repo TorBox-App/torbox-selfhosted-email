@@ -10,9 +10,7 @@ import {
   workflowExecution,
 } from "@wraps/db";
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { createActionLogger } from "@/lib/logger";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIMELINE TYPES
@@ -65,22 +63,24 @@ export type GetContactTimelineResult =
 /**
  * Get timeline events for a contact
  */
-export async function getContactTimeline(
-  contactId: string,
-  organizationId: string,
-  options: { limit?: number; offset?: number } = {}
-): Promise<GetContactTimelineResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const getContactTimeline = orgAction(
+  {
+    name: "getContactTimeline",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (
+      _contactId: string,
+      organizationId: string,
+      _options?: { limit?: number; offset?: number }
+    ) => organizationId,
+    onError: "Failed to fetch timeline",
+  },
+  async (
+    ctx,
+    contactId: string,
+    organizationId: string,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<GetContactTimelineResult> => {
     const { limit = 20, offset = 0 } = options;
     const events: TimelineEvent[] = [];
 
@@ -267,14 +267,8 @@ export async function getContactTimeline(
       events: paginatedEvents,
       hasMore,
     };
-  } catch (error) {
-    const log = createActionLogger("getContactTimeline", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, contactId }, "Failed to get contact timeline");
-    return { success: false, error: "Failed to fetch timeline" };
   }
-}
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANALYTICS
@@ -296,22 +290,21 @@ export type GetContactAnalyticsResult =
 /**
  * Get contact analytics for an organization
  */
-export async function getContactAnalytics(
-  organizationId: string,
-  days: 7 | 30 = 30,
-  timezone = "UTC"
-): Promise<GetContactAnalyticsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "contacts", ["read"]);
-    if (permError) return permError;
-
+export const getContactAnalytics = orgAction(
+  {
+    name: "getContactAnalytics",
+    resource: "contacts",
+    permission: ["read"],
+    orgId: (organizationId: string, _days?: 7 | 30, _timezone?: string) =>
+      organizationId,
+    onError: "Failed to fetch contact analytics",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    days: 7 | 30 = 30,
+    timezone = "UTC"
+  ): Promise<GetContactAnalyticsResult> => {
     const now = new Date();
 
     // Validate timezone — fall back to UTC if invalid
@@ -465,11 +458,5 @@ export async function getContactAnalytics(
         dailyGrowth,
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getContactAnalytics", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, days }, "Failed to get contact analytics");
-    return { success: false, error: "Failed to fetch contact analytics" };
   }
-}
+);

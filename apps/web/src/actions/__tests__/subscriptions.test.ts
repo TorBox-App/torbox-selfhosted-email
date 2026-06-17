@@ -167,14 +167,16 @@ describe("getOrganizationSubscription", () => {
     mockUserId = null;
     const result = await getOrganizationSubscription(testOrg.id);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toBe("No access");
+    if (!result.success)
+      expect(result.error).toBe("You don't have access to this organization");
   });
 
   it("returns error when user is not a member of the org (IDOR)", async () => {
     mockUserId = otherUser.id;
     const result = await getOrganizationSubscription(testOrg.id);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toBe("No access");
+    if (!result.success)
+      expect(result.error).toBe("You don't have access to this organization");
   });
 
   it("returns error when member role lacks billing read permission", async () => {
@@ -225,20 +227,23 @@ describe("createFreeSubscription", () => {
     mockUserId = null;
     const result = await createFreeSubscription(testOrg.id);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toBe("No access");
+    if (!result.success)
+      expect(result.error).toBe("You don't have access to this organization");
   });
 
   it("returns error when user is not a member of the org (IDOR)", async () => {
     mockUserId = otherUser.id;
     const result = await createFreeSubscription(testOrg.id);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toBe("No access");
+    if (!result.success)
+      expect(result.error).toBe("You don't have access to this organization");
   });
 
-  it("allows member role to create a free subscription (no billing:write required)", async () => {
+  it("blocks member role from creating a free subscription (billing:write required)", async () => {
     mockUserId = memberUser.id;
     const result = await createFreeSubscription(testOrg.id);
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain("permission");
   });
 
   it("creates a free subscription and returns it", async () => {
