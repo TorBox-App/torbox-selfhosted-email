@@ -751,16 +751,12 @@ describe("Contacts Server Actions", () => {
 
   describe("bulkSubscribeContactsToTopics", () => {
     it("should subscribe multiple contacts to a topic", async () => {
-      // Create test contacts
-      const contact1 = await createContact(testOrganization.id, {
-        email: "bulk1@example.com",
-      });
-      const contact2 = await createContact(testOrganization.id, {
-        email: "bulk2@example.com",
-      });
-      const contact3 = await createContact(testOrganization.id, {
-        email: "bulk3@example.com",
-      });
+      // Create test contacts (independent — run concurrently)
+      const [contact1, contact2, contact3] = await Promise.all([
+        createContact(testOrganization.id, { email: "bulk1@example.com" }),
+        createContact(testOrganization.id, { email: "bulk2@example.com" }),
+        createContact(testOrganization.id, { email: "bulk3@example.com" }),
+      ]);
       expect(contact1.success && contact2.success && contact3.success).toBe(
         true
       );
@@ -783,9 +779,11 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
       expect(result.count).toBe(3);
 
-      // Verify each contact is subscribed
-      for (const id of contactIds) {
-        const contactResult = await getContact(id, testOrganization.id);
+      // Verify each contact is subscribed (independent reads — run concurrently)
+      const contactResults = await Promise.all(
+        contactIds.map((id) => getContact(id, testOrganization.id))
+      );
+      for (const contactResult of contactResults) {
         expect(contactResult.success).toBe(true);
         if (contactResult.success) {
           expect(contactResult.contact.topics).toHaveLength(1);
