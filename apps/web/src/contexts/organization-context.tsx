@@ -26,31 +26,48 @@ const OrganizationContext = createContext<OrganizationContextValue | undefined>(
   undefined
 );
 
-export function OrganizationProvider({ children }: { children: ReactNode }) {
+type Org = InferSelectModel<typeof organization>;
+
+// Normalize org shape from either better-auth client responses (string dates,
+// possibly nested under `.organization`) or server-rendered Drizzle rows.
+function mapOrg(item: any): Org {
+  return {
+    id: item.id,
+    name: item.name,
+    slug: item.slug || null,
+    logo: item.logo || null,
+    brandColor: item.brandColor || null,
+    metadata: item.metadata || null,
+    stripeOrganizationId: item.stripeOrganizationId || null,
+    createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+  } as Org;
+}
+
+export function OrganizationProvider({
+  children,
+  initialOrganizations = [],
+  initialActiveOrganization = null,
+  initialUserRole = null,
+}: {
+  children: ReactNode;
+  initialOrganizations?: Org[];
+  initialActiveOrganization?: Org | null;
+  initialUserRole?: string | null;
+}) {
   const router = useRouter();
   const params = useParams<{ orgSlug?: string }>();
   const { data: activeOrgData, isPending } = authClient.useActiveOrganization();
-  const [organizations, setOrganizations] = useState<
-    InferSelectModel<typeof organization>[]
-  >([]);
+  const [organizations, setOrganizations] =
+    useState<Org[]>(initialOrganizations);
   const autoSetAttempted = useRef(false);
 
-  // Fetch all user's organizations
+  // Refresh the org list in the background; seeded from server data so the
+  // switcher renders immediately without waiting on this request.
   useEffect(() => {
     const fetchOrganizations = async () => {
       const { data } = await authClient.organization.list();
       if (data) {
-        const orgs = data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          slug: item.slug || null,
-          logo: item.logo || null,
-          brandColor: item.brandColor || null,
-          metadata: item.metadata || null,
-          stripeOrganizationId: item.stripeOrganizationId || null,
-          createdAt: new Date(item.createdAt),
-        }));
-        setOrganizations(orgs);
+        setOrganizations(data.map(mapOrg));
       }
     };
 
@@ -97,31 +114,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Map better-auth organization to our format
-  const activeOrg = activeOrgData
-    ? (() => {
-        const orgData = (activeOrgData as any).organization || activeOrgData;
-        return {
-          id: orgData.id,
-          name: orgData.name,
-          slug: orgData.slug || null,
-          logo: orgData.logo || null,
-          brandColor: orgData.brandColor || null,
-          metadata: orgData.metadata || null,
-          stripeOrganizationId: orgData.stripeOrganizationId || null,
-          createdAt: orgData.createdAt
-            ? new Date(orgData.createdAt)
-            : new Date(),
-        };
-      })()
+  // Prefer live client data; fall back to server-rendered initial data so the
+  // switcher paints real content on first load instead of a skeleton.
+  const liveActiveOrg = activeOrgData
+    ? mapOrg((activeOrgData as any).organization || activeOrgData)
     : null;
+  const activeOrg = liveActiveOrg ?? initialActiveOrganization;
 
   const value: OrganizationContextValue = {
     activeOrganization: activeOrg,
-    isLoading: isPending,
+    // Only "loading" when we have neither client nor server data yet.
+    isLoading: !activeOrg && isPending,
     setActiveOrganization,
     organizations,
-    userRole: ((activeOrgData as any)?.role ?? null) as
+    userRole: ((activeOrgData as any)?.role ?? initialUserRole ?? null) as
       | "owner"
       | "admin"
       | "member"

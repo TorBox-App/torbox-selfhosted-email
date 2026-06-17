@@ -119,6 +119,22 @@ export const getOrganizationWithDashboardData = cache(
 );
 
 /**
+ * Get all organizations the user is a member of, with their role.
+ * Used to seed the org switcher with server-rendered data (no client waterfall).
+ */
+export const getUserOrganizations = cache(async (userId: string) => {
+  const memberships = await db.query.member.findMany({
+    where: eq(member.userId, userId),
+    with: { organization: true },
+  });
+
+  return memberships.map((m) => ({
+    organization: m.organization,
+    role: m.role,
+  }));
+});
+
+/**
  * Check if user has access to organization
  */
 export async function checkOrganizationAccess(
