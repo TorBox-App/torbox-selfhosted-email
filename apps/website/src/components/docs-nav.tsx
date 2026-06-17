@@ -95,6 +95,10 @@ const navItems: NavSection[] = [
           { title: "Next.js", href: "/docs/quickstart/email/nextjs" },
           { title: "Express", href: "/docs/quickstart/email/express" },
           { title: "Remix", href: "/docs/quickstart/email/remix" },
+          {
+            title: "Cloudflare Workers",
+            href: "/docs/quickstart/email/cloudflare",
+          },
           { title: "Inbound", href: "/docs/quickstart/email/inbound" },
           { title: "Templates", href: "/docs/quickstart/email/templates" },
           { title: "Workflows", href: "/docs/quickstart/email/workflows" },
