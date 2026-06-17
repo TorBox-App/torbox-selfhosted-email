@@ -25,15 +25,19 @@ export const sendDesktopLink = orgAction(
       return { success: false as const, error: "Failed to send email" };
     }
 
-    const posthog = getPostHogClient();
-    posthog.capture({
-      distinctId: ctx.access.userId,
-      event: "mobile_signup_rescue_sent",
-      properties: {
-        organization_id: organizationId,
-        org_slug: ctx.access.orgSlug,
-      },
-    });
+    try {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: ctx.access.userId,
+        event: "mobile_signup_rescue_sent",
+        properties: {
+          organization_id: organizationId,
+          org_slug: ctx.access.orgSlug,
+        },
+      });
+    } catch (err) {
+      ctx.log.error({ err }, "Failed to capture mobile rescue analytics");
+    }
 
     return { success: true as const };
   }

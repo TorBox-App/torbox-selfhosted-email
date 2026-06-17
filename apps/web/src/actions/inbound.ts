@@ -12,7 +12,11 @@ export const revalidateInboundEmails = orgAction(
     onError: "Failed to revalidate inbound emails",
   },
   async (ctx, organizationId: string) => {
-    revalidatePath(`/${ctx.access.orgSlug}/emails/inbound`, "page");
+    try {
+      revalidatePath(`/${ctx.access.orgSlug}/emails/inbound`, "page");
+    } catch (err) {
+      ctx.log.error({ err }, "Failed to revalidate inbound emails");
+    }
     return { success: true as const };
   }
 );
