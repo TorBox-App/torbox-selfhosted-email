@@ -27,13 +27,12 @@ const wranglerConfig = `{
   "name": "email-worker",
   "main": "src/index.ts",
   "compatibility_date": "2026-06-16",
-  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "AWS_REGION": "us-east-1"
   }
 }`;
 
-const workerCode = `import { SESError, ValidationError, WrapsEmail } from '@wraps.dev/email';
+const workerCode = `import { SESError, ValidationError, WrapsEmail } from '@wraps.dev/email/workers';
 
 type Env = {
   AWS_ACCESS_KEY_ID: string;
@@ -240,38 +239,41 @@ export default function CloudflareQuickstartPageContent() {
         </div>
       </section>
 
-      {/* Step 4: Enable Node.js Compatibility */}
+      {/* Step 4: Configure Wrangler */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
             4
           </div>
-          Enable Node.js Compatibility
+          Configure Wrangler
         </h2>
         <p className="mb-4 text-muted-foreground">
-          The SDK uses the AWS SDK v3 under the hood, which relies on Node.js
-          built-ins. Add the{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">nodejs_compat</code>{" "}
-          flag to your Wrangler config and set a region variable:
+          The{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            @wraps.dev/email/workers
+          </code>{" "}
+          entry uses Web Crypto and{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">fetch</code> — no
+          Node.js APIs — so you don&apos;t need{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">nodejs_compat</code>.
+          Just set a region variable in your Wrangler config:
         </p>
         <FileCode
           code={wranglerConfig}
           filename="wrangler.jsonc"
           language="json"
         />
-        <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
-          <p className="font-medium text-sm">Required Flag</p>
+        <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">No Node.js Compat Needed</p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Without{" "}
+            The <code className="rounded bg-muted px-1.5 py-0.5">/workers</code>{" "}
+            entry is self-contained (~5 KB bundled) and runs on plain workerd
+            with no polyfills. Drop the{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               nodejs_compat
             </code>{" "}
-            the Worker will fail to bundle or throw at runtime when the AWS SDK
-            reaches for Node APIs. Your{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">
-              compatibility_date
-            </code>{" "}
-            must be 2024-09-23 or later for the flag to take effect.
+            flag entirely — it&apos;s not required and adds unnecessary
+            overhead.
           </p>
         </div>
       </section>
