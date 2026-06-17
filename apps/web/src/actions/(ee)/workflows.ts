@@ -4,7 +4,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { auth } from "@wraps/auth";
 import {
-  auditLog,
   type CanvasViewport,
   contact,
   db,
@@ -28,11 +27,9 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
-import { checkPermission } from "../shared/permissions";
-import { verifyOrgAccess } from "../shared/verify-org-access";
+import { orgAction } from "../shared/org-action";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -258,26 +255,32 @@ async function callWorkflowScheduleApi(
 /**
  * List workflows for an organization with pagination
  */
-export async function listWorkflows(
-  organizationId: string,
-  options: {
-    page?: number;
-    pageSize?: number;
-    search?: string;
-    status?: Workflow["status"];
-  } = {}
-): Promise<ListWorkflowsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const listWorkflows = orgAction(
+  {
+    name: "listWorkflows",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _options: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+        status?: Workflow["status"];
+      } = {}
+    ) => organizationId,
+    onError: "Failed to fetch workflows",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: Workflow["status"];
+    } = {}
+  ): Promise<ListWorkflowsResult> => {
     const { page = 1, pageSize = 50, search, status } = options;
     const offset = (page - 1) * pageSize;
 
@@ -324,33 +327,25 @@ export async function listWorkflows(
       page,
       pageSize,
     };
-  } catch (error) {
-    const log = createActionLogger("listWorkflows", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to list workflows");
-    return { success: false, error: "Failed to fetch workflows" };
   }
-}
+);
 
 /**
  * Get a single workflow by ID
  */
-export async function getWorkflow(
-  workflowId: string,
-  organizationId: string
-): Promise<GetWorkflowResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const getWorkflow = orgAction(
+  {
+    name: "getWorkflow",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<GetWorkflowResult> => {
     const w = await db.query.workflow.findFirst({
       where: and(
         eq(workflow.id, workflowId),
@@ -372,38 +367,40 @@ export async function getWorkflow(
     }
 
     return { success: true, workflow: w as WorkflowWithMeta };
-  } catch (error) {
-    const log = createActionLogger("getWorkflow", { orgSlug: organizationId });
-    log.error({ err: error, workflowId }, "Failed to get workflow");
-    return { success: false, error: "Failed to fetch workflow" };
   }
-}
+);
 
 /**
  * Create a new workflow
  */
 const uuidSchema = z.string().uuid();
 
-export async function createWorkflow(
-  organizationId: string,
-  data: {
-    name: string;
-    description?: string;
-    awsAccountId?: string;
-    topicId?: string;
-  }
-): Promise<CreateWorkflowResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const createWorkflow = orgAction(
+  {
+    name: "createWorkflow",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (
+      organizationId: string,
+      _data: {
+        name: string;
+        description?: string;
+        awsAccountId?: string;
+        topicId?: string;
+      }
+    ) => organizationId,
+    onError: "Failed to create workflow",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: {
+      name: string;
+      description?: string;
+      awsAccountId?: string;
+      topicId?: string;
     }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
-
+  ): Promise<CreateWorkflowResult> => {
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
     if (!featureCheck.allowed) {
@@ -442,104 +439,110 @@ export async function createWorkflow(
       },
     ];
 
-    const auditCtx = await getAuditContext();
-    const [newWorkflow] = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(workflow)
-        .values({
-          organizationId,
-          name: data.name.trim(),
-          description: data.description?.trim() || null,
-          awsAccountId: data.awsAccountId || null,
-          topicId: data.topicId || null,
-          status: "draft",
-          triggerType: "event",
-          triggerConfig: {},
-          steps: defaultSteps,
-          transitions: [],
-          createdBy: access.userId,
-        })
-        .returning();
-      if (!created) return [undefined];
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.created",
-          resource: "workflow",
-          resourceId: created.id,
-          metadata: { workflowId: created.id, name: created.name },
-        })
-      );
-      return [created];
-    });
+    const [newWorkflow] = await ctx.audited(
+      async (tx) => {
+        const [created] = await tx
+          .insert(workflow)
+          .values({
+            organizationId,
+            name: data.name.trim(),
+            description: data.description?.trim() || null,
+            awsAccountId: data.awsAccountId || null,
+            topicId: data.topicId || null,
+            status: "draft",
+            triggerType: "event",
+            triggerConfig: {},
+            steps: defaultSteps,
+            transitions: [],
+            createdBy: ctx.access.userId,
+          })
+          .returning();
+        return [created];
+      },
+      ([created]) => ({
+        action: "workflow.created" as const,
+        resource: "workflow",
+        resourceId: created?.id,
+        metadata: { workflowId: created?.id, name: created?.name },
+      })
+    );
 
     if (!newWorkflow) {
       return { success: false, error: "Failed to create workflow" };
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
 
     // Track activation event
-    await trackWorkflowCreated(access.userEmail, organizationId, {
+    await trackWorkflowCreated(ctx.access.userEmail, organizationId, {
       workflowName: newWorkflow.name,
     }).catch((err) => {
-      const log = createActionLogger("createWorkflow", {
-        orgSlug: organizationId,
-      });
-      log.error({ err }, "Failed to track workflow created");
+      ctx.log.error({ err }, "Failed to track workflow created");
     });
 
     return await getWorkflow(newWorkflow.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("createWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to create workflow");
-    return { success: false, error: "Failed to create workflow" };
   }
-}
+);
 
 /**
  * Update a workflow
  */
-export async function updateWorkflow(
-  workflowId: string,
-  organizationId: string,
-  data: {
-    name?: string;
-    description?: string;
-    awsAccountId?: string | null;
-    topicId?: string | null;
-    triggerType?: WorkflowTriggerType;
-    triggerConfig?: TriggerConfig;
-    steps?: WorkflowStep[];
-    transitions?: WorkflowTransition[];
-    canvasViewport?: CanvasViewport;
-    allowReentry?: boolean;
-    reentryDelaySeconds?: number | null;
-    maxConcurrentExecutions?: number;
-    contactCooldownSeconds?: number | null;
-    // Sender defaults
-    defaultFrom?: string | null;
-    defaultFromName?: string | null;
-    defaultReplyTo?: string | null;
-    defaultSenderId?: string | null;
-  }
-): Promise<UpdateWorkflowResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const updateWorkflow = orgAction(
+  {
+    name: "updateWorkflow",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (
+      _workflowId: string,
+      organizationId: string,
+      _data: {
+        name?: string;
+        description?: string;
+        awsAccountId?: string | null;
+        topicId?: string | null;
+        triggerType?: WorkflowTriggerType;
+        triggerConfig?: TriggerConfig;
+        steps?: WorkflowStep[];
+        transitions?: WorkflowTransition[];
+        canvasViewport?: CanvasViewport;
+        allowReentry?: boolean;
+        reentryDelaySeconds?: number | null;
+        maxConcurrentExecutions?: number;
+        contactCooldownSeconds?: number | null;
+        defaultFrom?: string | null;
+        defaultFromName?: string | null;
+        defaultReplyTo?: string | null;
+        defaultSenderId?: string | null;
+      }
+    ) => organizationId,
+    onError: "Failed to update workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string,
+    data: {
+      name?: string;
+      description?: string;
+      awsAccountId?: string | null;
+      topicId?: string | null;
+      triggerType?: WorkflowTriggerType;
+      triggerConfig?: TriggerConfig;
+      steps?: WorkflowStep[];
+      transitions?: WorkflowTransition[];
+      canvasViewport?: CanvasViewport;
+      allowReentry?: boolean;
+      reentryDelaySeconds?: number | null;
+      maxConcurrentExecutions?: number;
+      contactCooldownSeconds?: number | null;
+      // Sender defaults
+      defaultFrom?: string | null;
+      defaultFromName?: string | null;
+      defaultReplyTo?: string | null;
+      defaultSenderId?: string | null;
     }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
-
+  ): Promise<UpdateWorkflowResult> => {
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
     if (!featureCheck.allowed) {
@@ -662,32 +665,29 @@ export async function updateWorkflow(
     }
 
     // Update workflow + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .update(workflow)
-        .set(updateData)
-        .where(
-          and(
-            eq(workflow.id, workflowId),
-            eq(workflow.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.updated",
-          resource: "workflow",
-          resourceId: workflowId,
-          metadata: {
-            workflowId,
-            name: updateData.name ?? existing.name,
-          },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(workflow)
+          .set(updateData)
+          .where(
+            and(
+              eq(workflow.id, workflowId),
+              eq(workflow.organizationId, organizationId)
+            )
+          );
+        return updateData.name ?? existing.name;
+      },
+      (effectiveName) => ({
+        action: "workflow.updated" as const,
+        resource: "workflow",
+        resourceId: workflowId,
+        metadata: {
+          workflowId,
+          name: effectiveName,
+        },
+      })
+    );
 
     // Handle schedule changes for enabled workflows
     if (existing.status === "enabled") {
@@ -730,40 +730,32 @@ export async function updateWorkflow(
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
-    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("updateWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to update workflow");
-    return { success: false, error: "Failed to update workflow" };
   }
-}
+);
 
 /**
  * Delete a workflow
  */
-export async function deleteWorkflow(
-  workflowId: string,
-  organizationId: string
-): Promise<DeleteWorkflowResult> {
-  if (!uuidSchema.safeParse(workflowId).success) {
-    return { success: false, error: "Invalid workflow ID" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const deleteWorkflow = orgAction(
+  {
+    name: "deleteWorkflow",
+    resource: "workflows",
+    permission: ["delete"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to delete workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<DeleteWorkflowResult> => {
+    if (!uuidSchema.safeParse(workflowId).success) {
+      return { success: false, error: "Invalid workflow ID" };
     }
-    const permError = checkPermission(access.role, "workflows", ["delete"]);
-    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -816,63 +808,51 @@ export async function deleteWorkflow(
     }
 
     // Delete workflow (cascades to executions) + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(workflow)
-        .where(
-          and(
-            eq(workflow.id, workflowId),
-            eq(workflow.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.deleted",
-          resource: "workflow",
-          resourceId: workflowId,
-          metadata: { workflowId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(workflow)
+          .where(
+            and(
+              eq(workflow.id, workflowId),
+              eq(workflow.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "workflow.deleted" as const,
+        resource: "workflow",
+        resourceId: workflowId,
+        metadata: { workflowId },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to delete workflow");
-    return { success: false, error: "Failed to delete workflow" };
   }
-}
+);
 
 /**
  * Enable a workflow (make it active and start accepting triggers)
  */
-export async function enableWorkflow(
-  workflowId: string,
-  organizationId: string
-): Promise<EnableWorkflowResult> {
-  if (!uuidSchema.safeParse(workflowId).success) {
-    return { success: false, error: "Invalid workflow ID" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const enableWorkflow = orgAction(
+  {
+    name: "enableWorkflow",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to enable workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<EnableWorkflowResult> => {
+    if (!uuidSchema.safeParse(workflowId).success) {
+      return { success: false, error: "Invalid workflow ID" };
     }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1052,68 +1032,56 @@ export async function enableWorkflow(
     }
 
     // Enable workflow (schedule already created if needed) + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .update(workflow)
-        .set({
-          status: "enabled",
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(workflow.id, workflowId),
-            eq(workflow.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.enabled",
-          resource: "workflow",
-          resourceId: workflowId,
-          metadata: { workflowId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(workflow)
+          .set({
+            status: "enabled",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(workflow.id, workflowId),
+              eq(workflow.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "workflow.enabled" as const,
+        resource: "workflow",
+        resourceId: workflowId,
+        metadata: { workflowId },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
-    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("enableWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to enable workflow");
-    return { success: false, error: "Failed to enable workflow" };
   }
-}
+);
 
 /**
  * Disable a workflow (stop accepting new triggers, existing executions continue)
  */
-export async function disableWorkflow(
-  workflowId: string,
-  organizationId: string
-): Promise<EnableWorkflowResult> {
-  if (!uuidSchema.safeParse(workflowId).success) {
-    return { success: false, error: "Invalid workflow ID" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const disableWorkflow = orgAction(
+  {
+    name: "disableWorkflow",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to disable workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<EnableWorkflowResult> => {
+    if (!uuidSchema.safeParse(workflowId).success) {
+      return { success: false, error: "Invalid workflow ID" };
     }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return { success: false, error: "Insufficient permissions" };
 
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
@@ -1145,10 +1113,7 @@ export async function disableWorkflow(
       try {
         await callWorkflowScheduleApi(workflowId, organizationId, "disable");
       } catch (scheduleError) {
-        const log = createActionLogger("disableWorkflow", {
-          orgSlug: organizationId,
-        });
-        log.warn(
+        ctx.log.warn(
           { err: scheduleError, workflowId },
           "Failed to delete EventBridge schedule (continuing with DB update)"
         );
@@ -1156,66 +1121,54 @@ export async function disableWorkflow(
     }
 
     // Pause workflow + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .update(workflow)
-        .set({
-          status: "paused",
-          lastEditedFrom: "dashboard",
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(workflow.id, workflowId),
-            eq(workflow.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.disabled",
-          resource: "workflow",
-          resourceId: workflowId,
-          metadata: { workflowId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(workflow)
+          .set({
+            status: "paused",
+            lastEditedFrom: "dashboard",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(workflow.id, workflowId),
+              eq(workflow.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "workflow.disabled" as const,
+        resource: "workflow",
+        resourceId: workflowId,
+        metadata: { workflowId },
+      })
+    );
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
-    revalidatePath(`/${access.orgSlug}/automations/${workflowId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations/${workflowId}`, "page");
 
     return await getWorkflow(workflowId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("disableWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to disable workflow");
-    return { success: false, error: "Failed to disable workflow" };
   }
-}
+);
 
 /**
  * Duplicate a workflow
  */
-export async function duplicateWorkflow(
-  workflowId: string,
-  organizationId: string
-): Promise<DuplicateWorkflowResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
-
+export const duplicateWorkflow = orgAction(
+  {
+    name: "duplicateWorkflow",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to duplicate workflow",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<DuplicateWorkflowResult> => {
     // Check if workflows feature is available for this plan
     const featureCheck = await checkFeatureAccess(organizationId, "workflows");
     if (!featureCheck.allowed) {
@@ -1275,90 +1228,77 @@ export async function duplicateWorkflow(
     );
 
     // Create duplicate workflow + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    const [newWorkflow] = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(workflow)
-        .values({
-          organizationId,
-          name: `${original.name} (copy)`,
-          description: original.description,
-          awsAccountId: original.awsAccountId,
-          topicId: original.topicId,
-          status: "draft", // Always start as draft
-          triggerType: original.triggerType,
-          triggerConfig: original.triggerConfig,
-          steps: newSteps,
-          transitions: newTransitions,
-          canvasViewport: original.canvasViewport,
-          allowReentry: original.allowReentry,
-          reentryDelaySeconds: original.reentryDelaySeconds,
-          maxConcurrentExecutions: original.maxConcurrentExecutions,
-          contactCooldownSeconds: original.contactCooldownSeconds,
-          createdBy: access.userId,
-        })
-        .returning();
-      if (!created) return [undefined];
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "workflow.duplicated",
-          resource: "workflow",
-          resourceId: created.id,
-          metadata: { workflowId: created.id, sourceId: workflowId },
-        })
-      );
-      return [created];
-    });
+    const [newWorkflow] = await ctx.audited(
+      async (tx) => {
+        const [created] = await tx
+          .insert(workflow)
+          .values({
+            organizationId,
+            name: `${original.name} (copy)`,
+            description: original.description,
+            awsAccountId: original.awsAccountId,
+            topicId: original.topicId,
+            status: "draft", // Always start as draft
+            triggerType: original.triggerType,
+            triggerConfig: original.triggerConfig,
+            steps: newSteps,
+            transitions: newTransitions,
+            canvasViewport: original.canvasViewport,
+            allowReentry: original.allowReentry,
+            reentryDelaySeconds: original.reentryDelaySeconds,
+            maxConcurrentExecutions: original.maxConcurrentExecutions,
+            contactCooldownSeconds: original.contactCooldownSeconds,
+            createdBy: ctx.access.userId,
+          })
+          .returning();
+        return [created];
+      },
+      ([created]) => ({
+        action: "workflow.duplicated" as const,
+        resource: "workflow",
+        resourceId: created?.id,
+        metadata: { workflowId: created?.id, sourceId: workflowId },
+      })
+    );
 
     if (!newWorkflow) {
       return { success: false, error: "Failed to duplicate workflow" };
     }
 
     // Revalidate
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
 
     return await getWorkflow(newWorkflow.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("duplicateWorkflow", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to duplicate workflow");
-    return { success: false, error: "Failed to duplicate workflow" };
   }
-}
+);
 
 /**
  * Get workflow execution statistics
  */
-export async function getWorkflowStats(
-  workflowId: string,
-  organizationId: string
-): Promise<
-  | {
-      success: true;
-      stats: {
-        total: number;
-        active: number;
-        completed: number;
-        failed: number;
-      };
-    }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const getWorkflowStats = orgAction(
+  {
+    name: "getWorkflowStats",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to get workflow stats",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<
+    | {
+        success: true;
+        stats: {
+          total: number;
+          active: number;
+          completed: number;
+          failed: number;
+        };
+      }
+    | { success: false; error: string }
+  > => {
     // Verify workflow exists
     const existing = await db.query.workflow.findFirst({
       where: and(
@@ -1386,38 +1326,38 @@ export async function getWorkflowStats(
         failed: existing.failedExecutions,
       },
     };
-  } catch (error) {
-    const log = createActionLogger("getWorkflowStats", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to get workflow stats");
-    return { success: false, error: "Failed to get workflow stats" };
   }
-}
+);
 
 /**
  * List workflow executions with pagination and optional status filter
  */
-export async function listWorkflowExecutions(
-  workflowId: string,
-  organizationId: string,
-  options: {
-    page?: number;
-    pageSize?: number;
-    status?: WorkflowExecutionStatus;
-  } = {}
-): Promise<ListWorkflowExecutionsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const listWorkflowExecutions = orgAction(
+  {
+    name: "listWorkflowExecutions",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (
+      _workflowId: string,
+      organizationId: string,
+      _options: {
+        page?: number;
+        pageSize?: number;
+        status?: WorkflowExecutionStatus;
+      } = {}
+    ) => organizationId,
+    onError: "Failed to list workflow executions",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+      status?: WorkflowExecutionStatus;
+    } = {}
+  ): Promise<ListWorkflowExecutionsResult> => {
     const { page = 1, pageSize = 50, status } = options;
     const offset = (page - 1) * pageSize;
 
@@ -1466,33 +1406,25 @@ export async function listWorkflowExecutions(
       page,
       pageSize,
     };
-  } catch (error) {
-    const log = createActionLogger("listWorkflowExecutions", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to list workflow executions");
-    return { success: false, error: "Failed to list workflow executions" };
   }
-}
+);
 
 /**
  * Get a single workflow execution with step trace and contact info
  */
-export async function getWorkflowExecution(
-  executionId: string,
-  organizationId: string
-): Promise<GetWorkflowExecutionResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const getWorkflowExecution = orgAction(
+  {
+    name: "getWorkflowExecution",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (_executionId: string, organizationId: string) => organizationId,
+    onError: "Failed to get workflow execution",
+  },
+  async (
+    ctx,
+    executionId: string,
+    organizationId: string
+  ): Promise<GetWorkflowExecutionResult> => {
     const exec = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.id, executionId),
@@ -1591,14 +1523,8 @@ export async function getWorkflowExecution(
       success: true,
       execution: { ...exec, stepEngagement } as ExecutionDetail,
     };
-  } catch (error) {
-    const log = createActionLogger("getWorkflowExecution", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, executionId }, "Failed to get workflow execution");
-    return { success: false, error: "Failed to get workflow execution" };
   }
-}
+);
 
 export type RetryWorkflowExecutionResult =
   | { success: true }
@@ -1607,21 +1533,19 @@ export type RetryWorkflowExecutionResult =
 /**
  * Retry a failed workflow execution from the step where it failed
  */
-export async function retryWorkflowExecution(
-  executionId: string,
-  organizationId: string
-): Promise<RetryWorkflowExecutionResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
-
+export const retryWorkflowExecution = orgAction(
+  {
+    name: "retryWorkflowExecution",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (_executionId: string, organizationId: string) => organizationId,
+    onError: "Failed to retry execution",
+  },
+  async (
+    ctx,
+    executionId: string,
+    organizationId: string
+  ): Promise<RetryWorkflowExecutionResult> => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       return { success: false, error: "API URL not configured" };
@@ -1653,17 +1577,11 @@ export async function retryWorkflowExecution(
       return { success: false, error: result.error ?? "Retry failed" };
     }
 
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("retryWorkflowExecution", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, executionId }, "Failed to retry execution");
-    return { success: false, error: "Failed to retry execution" };
   }
-}
+);
 
 export type CancelWorkflowExecutionResult =
   | { success: true }
@@ -1672,21 +1590,19 @@ export type CancelWorkflowExecutionResult =
 /**
  * Cancel an active workflow execution
  */
-export async function cancelWorkflowExecution(
-  executionId: string,
-  organizationId: string
-): Promise<CancelWorkflowExecutionResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["write"]);
-    if (permError) return permError;
-
+export const cancelWorkflowExecution = orgAction(
+  {
+    name: "cancelWorkflowExecution",
+    resource: "workflows",
+    permission: ["write"],
+    orgId: (_executionId: string, organizationId: string) => organizationId,
+    onError: "Failed to cancel execution",
+  },
+  async (
+    ctx,
+    executionId: string,
+    organizationId: string
+  ): Promise<CancelWorkflowExecutionResult> => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       return { success: false, error: "API URL not configured" };
@@ -1718,17 +1634,11 @@ export async function cancelWorkflowExecution(
       return { success: false, error: result.error ?? "Cancel failed" };
     }
 
-    revalidatePath(`/${access.orgSlug}/automations`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/automations`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("cancelWorkflowExecution", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, executionId }, "Failed to cancel execution");
-    return { success: false, error: "Failed to cancel execution" };
   }
-}
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NODE STATS
@@ -1757,21 +1667,19 @@ export type GetWorkflowNodeStatsResult =
 /**
  * Get per-node execution stats for a workflow (aggregated by stepId)
  */
-export async function getWorkflowNodeStats(
-  workflowId: string,
-  organizationId: string
-): Promise<GetWorkflowNodeStatsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "workflows", ["read"]);
-    if (permError) return permError;
-
+export const getWorkflowNodeStats = orgAction(
+  {
+    name: "getWorkflowNodeStats",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (_workflowId: string, organizationId: string) => organizationId,
+    onError: "Failed to get node stats",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string
+  ): Promise<GetWorkflowNodeStatsResult> => {
     // Verify workflow ownership (prevents cross-org IDOR)
     const existing = await db.query.workflow.findFirst({
       where: and(
@@ -1946,11 +1854,5 @@ export async function getWorkflowNodeStats(
     }
 
     return { success: true, stats: statsMap };
-  } catch (error) {
-    const log = createActionLogger("getWorkflowNodeStats", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to get node stats");
-    return { success: false, error: "Failed to get node stats" };
   }
-}
+);

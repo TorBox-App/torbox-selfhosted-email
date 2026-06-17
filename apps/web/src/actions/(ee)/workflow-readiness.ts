@@ -2,8 +2,7 @@
 
 import { db, template, type WorkflowStep, workflow } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { createActionLogger } from "@/lib/logger";
-import { verifyOrgAccess } from "../shared/verify-org-access";
+import { orgAction } from "../shared/org-action";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -150,23 +149,30 @@ async function deriveTemplateIdsFromDb(
 // ACTION
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function checkWorkflowReadiness(
-  workflowId: string,
-  organizationId: string,
-  payload: {
-    templateIds: string[];
-    conditionFields: string[];
-  }
-): Promise<ReadinessResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const checkWorkflowReadiness = orgAction(
+  {
+    name: "checkWorkflowReadiness",
+    resource: "workflows",
+    permission: ["read"],
+    orgId: (
+      _workflowId: string,
+      organizationId: string,
+      _payload: {
+        templateIds: string[];
+        conditionFields: string[];
+      }
+    ) => organizationId,
+    onError: "Failed to check workflow readiness",
+  },
+  async (
+    ctx,
+    workflowId: string,
+    organizationId: string,
+    payload: {
+      templateIds: string[];
+      conditionFields: string[];
     }
-
+  ): Promise<ReadinessResult> => {
     // Derive template IDs from DB instead of trusting client payload (Issue #16).
     // Never fall back to payload.templateIds — an attacker could supply a non-existent
     // workflowId to force the fallback and check arbitrary template IDs.
@@ -179,11 +185,5 @@ export async function checkWorkflowReadiness(
     const fieldChecks = checkConditionFields(payload.conditionFields);
 
     return { success: true, checks: [...templateChecks, ...fieldChecks] };
-  } catch (error) {
-    const log = createActionLogger("checkWorkflowReadiness", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, workflowId }, "Failed to check workflow readiness");
-    return { success: false, error: "Failed to check workflow readiness" };
   }
-}
+);
