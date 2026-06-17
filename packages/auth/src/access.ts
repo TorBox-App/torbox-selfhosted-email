@@ -90,11 +90,20 @@ export const readOnlyRole = ac.newRole({
   members: ["read"],
 });
 
-// billing: billing operations + read-only org context
+// billing: billing write + read-only access to all content + org context
 export const billingRole = ac.newRole({
-  billing: ["read", "write"],
+  contacts: ["read"],
+  templates: ["read"],
+  broadcasts: ["read"],
+  events: ["read"],
+  workflows: ["read"],
+  segments: ["read"],
+  topics: ["read"],
+  apiKeys: ["read"],
+  awsAccounts: ["read"],
   members: ["read"],
   orgSettings: ["read"],
+  billing: ["read", "write"],
 });
 
 export const roles = {

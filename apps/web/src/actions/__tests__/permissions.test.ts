@@ -230,16 +230,32 @@ describe("billing", () => {
     denied("billing", "orgSettings", ["write"]);
   });
 
-  it("has no access to content resources", () => {
-    denied("billing", "contacts", ["read"]);
-    denied("billing", "templates", ["read"]);
-    denied("billing", "broadcasts", ["read"]);
-    denied("billing", "events", ["read"]);
-    denied("billing", "workflows", ["read"]);
-    denied("billing", "segments", ["read"]);
-    denied("billing", "topics", ["read"]);
-    denied("billing", "apiKeys", ["read"]);
-    denied("billing", "awsAccounts", ["read"]);
+  it("can read all content resources", () => {
+    allowed("billing", "contacts", ["read"]);
+    allowed("billing", "templates", ["read"]);
+    allowed("billing", "broadcasts", ["read"]);
+    allowed("billing", "events", ["read"]);
+    allowed("billing", "workflows", ["read"]);
+    allowed("billing", "segments", ["read"]);
+    allowed("billing", "topics", ["read"]);
+    allowed("billing", "apiKeys", ["read"]);
+    allowed("billing", "awsAccounts", ["read"]);
+  });
+
+  it("cannot mutate content resources or export contacts", () => {
+    denied("billing", "contacts", ["write"]);
+    denied("billing", "contacts", ["delete"]);
+    denied("billing", "contacts", ["export"]);
+    denied("billing", "templates", ["write"]);
+    denied("billing", "broadcasts", ["send"]);
+    denied("billing", "workflows", ["write"]);
+    denied("billing", "segments", ["write"]);
+    denied("billing", "topics", ["write"]);
+    denied("billing", "apiKeys", ["write"]);
+    denied("billing", "awsAccounts", ["write"]);
+  });
+
+  it("still has no access to sso", () => {
     denied("billing", "sso", ["read"]);
   });
 });
