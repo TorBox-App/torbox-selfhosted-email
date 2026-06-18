@@ -24,13 +24,11 @@ import { trackTemplatePublished } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { extractHandlebarsVariables } from "@/lib/handlebars";
-import { createActionLogger } from "@/lib/logger";
 import {
   tiptapToReactEmail,
   toBrandKitColors,
 } from "@/lib/serializers/tiptap-to-react-email";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 export type PublishTemplateResult =
   | { success: true; sesTemplateName: string }
@@ -75,31 +73,28 @@ function revalidateTemplates(orgSlug: string): void {
  * - The publish API route (for manual publish from UI)
  * - The createBatchSend action (for auto-publish before sending)
  */
-export async function publishTemplateToSES(
-  templateId: string,
-  organizationId: string,
-  options: {
-    brandKitId?: string;
-  } = {}
-): Promise<PublishTemplateResult> {
-  // Verify caller has access to this organization
-  const access = await verifyOrgAccess(organizationId);
-  if (!access) {
-    return {
-      success: false,
-      error: "You don't have access to this organization",
-    };
-  }
-  const permError = checkPermission(access.role, "templates", ["write"]);
-  if (permError) return permError;
-
-  const log = createActionLogger("publishTemplateToSES", {
-    orgSlug: access.orgSlug,
-  });
-
-  const auditCtx = await getAuditContext();
-
-  try {
+export const publishTemplateToSES = orgAction(
+  {
+    name: "publishTemplateToSES",
+    resource: "templates",
+    permission: ["write"],
+    orgId: (
+      _templateId: string,
+      organizationId: string,
+      _options?: {
+        brandKitId?: string;
+      }
+    ) => organizationId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (
+    ctx,
+    templateId: string,
+    organizationId: string,
+    options: {
+      brandKitId?: string;
+    } = {}
+  ): Promise<PublishTemplateResult> => {
     // Fetch template
     const templateData = await db.query.template.findFirst({
       where: and(
@@ -259,7 +254,7 @@ export async function publishTemplateToSES(
     ).catch(() => {}); // Best-effort cleanup; probe templates are inert
 
     if (renderCheck.status === "render-failed") {
-      log.error(
+      ctx.log.error(
         { templateId, reason: renderCheck.reason },
         "SES test render failed; publish blocked"
       );
@@ -269,7 +264,7 @@ export async function publishTemplateToSES(
       };
     }
     if (renderCheck.status === "skipped") {
-      log.warn(
+      ctx.log.warn(
         { templateId, reason: renderCheck.reason },
         "SES test render check skipped"
       );
@@ -297,42 +292,38 @@ export async function publishTemplateToSES(
 
     // Update template in our database + audit log in one transaction
     const now = new Date();
-    await db.transaction(async (tx) => {
-      await tx
-        .update(template)
-        .set({
-          status: "PUBLISHED",
-          sesTemplateName,
-          publishedAt: now,
-          compiledHtml: sesHtml, // Store SES-compatible HTML
-          compiledText: sesText,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(template.id, templateId),
-            eq(template.organizationId, organizationId)
-          )
-        );
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(template)
+          .set({
+            status: "PUBLISHED",
+            sesTemplateName,
+            publishedAt: now,
+            compiledHtml: sesHtml, // Store SES-compatible HTML
+            compiledText: sesText,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(template.id, templateId),
+              eq(template.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "template.published" as const,
+        resource: "template",
+        resourceId: templateId,
+        metadata: {
+          templateId,
+          name: templateData.name,
+          type: templateData.emailType,
+        },
+      })
+    );
 
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "template.published",
-          resource: "template",
-          resourceId: templateId,
-          metadata: {
-            templateId,
-            name: templateData.name,
-            type: templateData.emailType,
-          },
-        })
-      );
-    });
-
-    log.info({ templateId, sesTemplateName }, "Template published to SES");
+    ctx.log.info({ templateId, sesTemplateName }, "Template published to SES");
 
     // Track activation event (fire-and-forget)
     try {
@@ -347,14 +338,8 @@ export async function publishTemplateToSES(
     }
 
     return { success: true, sesTemplateName };
-  } catch (error) {
-    log.error({ err: error, templateId }, "Failed to publish template to SES");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BULK ACTIONS
@@ -365,25 +350,19 @@ export async function publishTemplateToSES(
  *
  * Also deletes from AWS SES for any templates that were published.
  */
-export async function bulkDeleteTemplates(
-  organizationId: string,
-  templateIds: string[]
-): Promise<BulkDeleteResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const log = createActionLogger("bulkDeleteTemplates", {
-      orgSlug: access.orgSlug,
-    });
-
-    const permError = checkPermission(access.role, "templates", ["delete"]);
-    if (permError) return permError;
-
+export const bulkDeleteTemplates = orgAction(
+  {
+    name: "bulkDeleteTemplates",
+    resource: "templates",
+    permission: ["delete"],
+    orgId: (organizationId: string, _templateIds: string[]) => organizationId,
+    onError: "Failed to delete templates",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateIds: string[]
+  ): Promise<BulkDeleteResult> => {
     if (templateIds.length === 0) {
       return { success: false, error: "No templates selected" };
     }
@@ -424,12 +403,12 @@ export async function bulkDeleteTemplates(
                 customerAwsAccount.region,
                 t.sesTemplateName!
               );
-              log.info(
+              ctx.log.info(
                 { templateId: t.id, sesTemplateName: t.sesTemplateName },
                 "Deleted template from SES"
               );
             } catch (err) {
-              log.warn(
+              ctx.log.warn(
                 { err, templateId: t.id },
                 "Failed to delete template from SES"
               );
@@ -440,64 +419,52 @@ export async function bulkDeleteTemplates(
     }
 
     // Delete templates from database + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(template)
-        .where(
-          and(
-            eq(template.organizationId, organizationId),
-            inArray(template.id, templateIds)
-          )
-        );
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "template.deleted",
-          resource: "template",
-          metadata: { count: templateIds.length, templateIds },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(template)
+          .where(
+            and(
+              eq(template.organizationId, organizationId),
+              inArray(template.id, templateIds)
+            )
+          );
+      },
+      () => ({
+        action: "template.deleted" as const,
+        resource: "template",
+        metadata: { count: templateIds.length, templateIds },
+      })
+    );
 
     // Revalidate
-    revalidateTemplates(access.orgSlug);
+    revalidateTemplates(ctx.access.orgSlug);
 
     return { success: true, count: templateIds.length };
-  } catch (error) {
-    const log = createActionLogger("bulkDeleteTemplates", {
-      orgSlug: organizationId,
-    });
-    log.error(
-      { err: error, count: templateIds.length },
-      "Failed to bulk delete templates"
-    );
-    return { success: false, error: "Failed to delete templates" };
   }
-}
+);
 
 /**
  * Bulk update template email type (marketing/transactional)
  */
-export async function bulkUpdateTemplateType(
-  organizationId: string,
-  templateIds: string[],
-  emailType: EmailType
-): Promise<BulkUpdateTypeResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "templates", ["write"]);
-    if (permError) return permError;
-
+export const bulkUpdateTemplateType = orgAction(
+  {
+    name: "bulkUpdateTemplateType",
+    resource: "templates",
+    permission: ["write"],
+    orgId: (
+      organizationId: string,
+      _templateIds: string[],
+      _emailType: EmailType
+    ) => organizationId,
+    onError: "Failed to update templates",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateIds: string[],
+    emailType: EmailType
+  ): Promise<BulkUpdateTypeResult> => {
     if (templateIds.length === 0) {
       return { success: false, error: "No templates selected" };
     }
@@ -508,48 +475,34 @@ export async function bulkUpdateTemplateType(
     }
 
     // Update templates + audit log in one transaction
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx
-        .update(template)
-        .set({
-          emailType,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(template.organizationId, organizationId),
-            inArray(template.id, templateIds)
-          )
-        );
-
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "template.type_updated",
-          resource: "template",
-          metadata: { count: templateIds.length, newType: emailType },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(template)
+          .set({
+            emailType,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(template.organizationId, organizationId),
+              inArray(template.id, templateIds)
+            )
+          );
+      },
+      () => ({
+        action: "template.type_updated" as const,
+        resource: "template",
+        metadata: { count: templateIds.length, newType: emailType },
+      })
+    );
 
     // Revalidate
-    revalidateTemplates(access.orgSlug);
+    revalidateTemplates(ctx.access.orgSlug);
 
     return { success: true, count: templateIds.length };
-  } catch (error) {
-    const log = createActionLogger("bulkUpdateTemplateType", {
-      orgSlug: organizationId,
-    });
-    log.error(
-      { err: error, count: templateIds.length, emailType },
-      "Failed to bulk update template type"
-    );
-    return { success: false, error: "Failed to update templates" };
   }
-}
+);
 
 /**
  * Bulk update template status (DRAFT/PUBLISHED/ARCHIVED)
@@ -557,22 +510,24 @@ export async function bulkUpdateTemplateType(
  * When status = "PUBLISHED", templates are also published to AWS SES.
  * Templates without subjects are skipped for SES publishing.
  */
-export async function bulkUpdateTemplateStatus(
-  organizationId: string,
-  templateIds: string[],
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
-): Promise<BulkUpdateStatusResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "templates", ["write"]);
-    if (permError) return permError;
-
+export const bulkUpdateTemplateStatus = orgAction(
+  {
+    name: "bulkUpdateTemplateStatus",
+    resource: "templates",
+    permission: ["write"],
+    orgId: (
+      organizationId: string,
+      _templateIds: string[],
+      _status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
+    ) => organizationId,
+    onError: "Failed to update templates",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateIds: string[],
+    status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
+  ): Promise<BulkUpdateStatusResult> => {
     if (templateIds.length === 0) {
       return {
         success: false,
@@ -605,8 +560,8 @@ export async function bulkUpdateTemplateStatus(
         await tx.insert(auditLog).values(
           auditLogEntry(auditCtx, {
             organizationId,
-            actorId: access.userId,
-            actorEmail: access.userEmail,
+            actorId: ctx.access.userId,
+            actorEmail: ctx.access.userEmail,
             action: "template.status_updated",
             resource: "template",
             metadata: { count: templateIds.length, newStatus: status },
@@ -614,7 +569,7 @@ export async function bulkUpdateTemplateStatus(
         );
       });
 
-      revalidateTemplates(access.orgSlug);
+      revalidateTemplates(ctx.access.orgSlug);
 
       return {
         success: true,
@@ -687,15 +642,15 @@ export async function bulkUpdateTemplateStatus(
     await db.insert(auditLog).values(
       auditLogEntry(auditCtx, {
         organizationId,
-        actorId: access.userId,
-        actorEmail: access.userEmail,
+        actorId: ctx.access.userId,
+        actorEmail: ctx.access.userEmail,
         action: "template.status_updated",
         resource: "template",
         metadata: { count: templates.length, newStatus: status },
       })
     );
 
-    revalidateTemplates(access.orgSlug);
+    revalidateTemplates(ctx.access.orgSlug);
 
     return {
       success: true,
@@ -704,17 +659,8 @@ export async function bulkUpdateTemplateStatus(
       skipped,
       errors,
     };
-  } catch (error) {
-    const log = createActionLogger("bulkUpdateTemplateStatus", {
-      orgSlug: organizationId,
-    });
-    log.error(
-      { err: error, count: templateIds.length, status },
-      "Failed to bulk update template status"
-    );
-    return { success: false, error: "Failed to update templates" };
   }
-}
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPTAP → REACT-EMAIL CONVERSION (JIT on template open)
@@ -733,24 +679,19 @@ export type ConvertTemplateResult =
  *
  * Idempotent: no-ops if already converted or not a TipTap email template.
  */
-export async function convertTiptapTemplate(
-  organizationId: string,
-  templateId: string
-): Promise<ConvertTemplateResult> {
-  const access = await verifyOrgAccess(organizationId);
-  if (!access) {
-    return { success: false, error: "No access" };
-  }
-  const permError = checkPermission(access.role, "templates", ["write"]);
-  if (permError) return permError;
-
-  const log = createActionLogger("convertTiptapTemplate", {
-    orgSlug: access.orgSlug,
-  });
-
-  const auditCtx = await getAuditContext();
-
-  try {
+export const convertTiptapTemplate = orgAction(
+  {
+    name: "convertTiptapTemplate",
+    resource: "templates",
+    permission: ["write"],
+    orgId: (organizationId: string, _templateId: string) => organizationId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateId: string
+  ): Promise<ConvertTemplateResult> => {
     const templateData = await db.query.template.findFirst({
       where: and(
         eq(template.id, templateId),
@@ -797,43 +738,33 @@ export async function convertTiptapTemplate(
     const variables = extractHandlebarsVariables(compiledHtml);
 
     // Update template + write audit log in one transaction
-    await db.transaction(async (tx) => {
-      await tx
-        .update(template)
-        .set({
-          sourceFormat: "react-email",
-          compiledHtml,
-          compiledText,
-          variables,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(template.id, templateId),
-            eq(template.organizationId, organizationId)
-          )
-        );
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(template)
+          .set({
+            sourceFormat: "react-email",
+            compiledHtml,
+            compiledText,
+            variables,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(template.id, templateId),
+              eq(template.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "template.converted" as const,
+        resource: "template",
+        resourceId: templateId,
+        metadata: { templateId },
+      })
+    );
 
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "template.converted",
-          resource: "template",
-          resourceId: templateId,
-          metadata: { templateId },
-        })
-      );
-    });
-
-    log.info({ templateId }, "Converted TipTap template to react-email");
+    ctx.log.info({ templateId }, "Converted TipTap template to react-email");
     return { success: true };
-  } catch (error) {
-    log.error({ err: error, templateId }, "Failed to convert TipTap template");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
