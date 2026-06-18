@@ -204,7 +204,10 @@ describe("SSO Actions", () => {
     it("returns error when unauthorized", async () => {
       mockVerifyOrgAccess.mockResolvedValue(null);
       const result = await requestDomainVerification(TEST_ORG_ID, "provider-1");
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
+      expect(result).toEqual({
+        success: false,
+        error: "You don't have access to this organization",
+      });
     });
 
     it("returns error when provider not found in org", async () => {
