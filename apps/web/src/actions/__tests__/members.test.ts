@@ -451,7 +451,7 @@ describe("inviteMember — non-member org returns No access", () => {
     );
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toBe("No access");
+      expect(result.error).toBe("You don't have access to this organization");
     }
   });
 });
@@ -466,7 +466,7 @@ describe("updateMemberRole — non-member org returns No access", () => {
     );
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toBe("No access");
+      expect(result.error).toBe("You don't have access to this organization");
     }
   });
 });

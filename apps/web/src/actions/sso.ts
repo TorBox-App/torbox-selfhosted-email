@@ -11,6 +11,7 @@ import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger } from "@/lib/logger";
 import { checkPermission } from "./shared/permissions";
+import { orgAction } from "./shared/org-action";
 
 type SsoScimApi = {
   registerSSOProvider(opts: {
@@ -63,16 +64,19 @@ export type SaveSsoProviderResult =
   | { success: true }
   | { success: false; error: string };
 
-export async function saveSsoProvider(
-  orgId: string,
-  data: SaveSsoProviderInput
-): Promise<SaveSsoProviderResult> {
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
-    if (ssoWriteError) return ssoWriteError;
-
+export const saveSsoProvider = orgAction(
+  {
+    name: "saveSsoProvider",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _data: SaveSsoProviderInput) => orgId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (
+    ctx,
+    orgId: string,
+    data: SaveSsoProviderInput
+  ): Promise<SaveSsoProviderResult> => {
     const hdrs = await import("next/headers").then((m) => m.headers());
     await ssoApi.registerSSOProvider({
       body: {
@@ -95,8 +99,8 @@ export async function saveSsoProvider(
         .values(
           auditLogEntry(auditCtx, {
             organizationId: orgId,
-            actorId: access.userId,
-            actorEmail: access.userEmail,
+            actorId: ctx.access.userId,
+            actorEmail: ctx.access.userEmail,
             action: "sso.provider_saved",
             resource: "sso_provider",
             metadata: { domain: data.domain, issuer: data.issuer },
@@ -110,32 +114,28 @@ export async function saveSsoProvider(
         )
     );
 
-    revalidatePath(`/${access.orgSlug}/settings/sso`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("saveSsoProvider", { orgSlug: orgId });
-    log.error({ err: error }, "Failed to save SSO provider");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
 
 export type DeleteSsoProviderResult =
   | { success: true }
   | { success: false; error: string };
 
-export async function deleteSsoProvider(
-  orgId: string,
-  providerId: string
-): Promise<DeleteSsoProviderResult> {
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
-    if (ssoWriteError) return ssoWriteError;
-
+export const deleteSsoProvider = orgAction(
+  {
+    name: "deleteSsoProvider",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _providerId: string) => orgId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (
+    ctx,
+    orgId: string,
+    providerId: string
+  ): Promise<DeleteSsoProviderResult> => {
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
 
@@ -145,47 +145,38 @@ export async function deleteSsoProvider(
       headers: hdrs,
     });
 
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId: orgId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "sso.provider_deleted",
-          resource: "sso_provider",
-          resourceId: providerId,
-          metadata: { providerId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (_tx) => undefined,
+      () => ({
+        action: "sso.provider_deleted" as const,
+        resource: "sso_provider",
+        resourceId: providerId,
+        metadata: { providerId },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/sso`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteSsoProvider", { orgSlug: orgId });
-    log.error({ err: error }, "Failed to delete SSO provider");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
 
 export type RequestDomainVerificationResult =
   | { success: true; token: string; expiresAt: string }
   | { success: false; error: string };
 
-export async function requestDomainVerification(
-  orgId: string,
-  providerId: string
-): Promise<RequestDomainVerificationResult> {
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const permError = checkPermission(access.role, "sso", ["write"]);
-    if (permError) return permError;
-
+export const requestDomainVerification = orgAction(
+  {
+    name: "requestDomainVerification",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _providerId: string) => orgId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (
+    ctx,
+    orgId: string,
+    providerId: string
+  ): Promise<RequestDomainVerificationResult> => {
     const provider = await requireProviderOwnership(orgId, providerId);
     if (!provider) return { success: false, error: "Provider not found" };
 
@@ -195,52 +186,37 @@ export async function requestDomainVerification(
       headers: hdrs,
     });
 
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId: orgId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "sso.domain_verification_requested",
-          resource: "sso_provider",
-          resourceId: providerId,
-          metadata: { domain: provider.domain },
-        })
-      );
-    });
+    await ctx.audited(
+      async (_tx) => undefined,
+      () => ({
+        action: "sso.domain_verification_requested" as const,
+        resource: "sso_provider",
+        resourceId: providerId,
+        metadata: { domain: provider.domain },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/sso`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     ).toISOString();
     return { success: true, token: result.domainVerificationToken, expiresAt };
-  } catch (error) {
-    const log = createActionLogger("requestDomainVerification", {
-      orgSlug: orgId,
-    });
-    log.error({ err: error }, "Failed to request domain verification");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
 
 export type VerifyDomainResult =
   | { success: true }
   | { success: false; error: string };
 
-export async function verifyDomain(
-  orgId: string,
-  providerId: string
-): Promise<VerifyDomainResult> {
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const permError = checkPermission(access.role, "sso", ["write"]);
-    if (permError) return permError;
-
+export const verifyDomain = orgAction(
+  {
+    name: "verifyDomain",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _providerId: string) => orgId,
+    onError: "Something went wrong. Please try again.",
+  },
+  async (ctx, orgId: string, providerId: string): Promise<VerifyDomainResult> => {
     const provider = await requireProviderOwnership(orgId, providerId);
     if (!provider) return { success: false, error: "Provider not found" };
 
@@ -250,32 +226,20 @@ export async function verifyDomain(
       headers: hdrs,
     });
 
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId: orgId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "sso.domain_verified",
-          resource: "sso_provider",
-          resourceId: providerId,
-          metadata: { domain: provider.domain },
-        })
-      );
-    });
+    await ctx.audited(
+      async (_tx) => undefined,
+      () => ({
+        action: "sso.domain_verified" as const,
+        resource: "sso_provider",
+        resourceId: providerId,
+        metadata: { domain: provider.domain },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/sso`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("verifyDomain", { orgSlug: orgId });
-    log.error({ err: error }, "Failed to verify domain");
-    return {
-      success: false,
-      error: "Something went wrong. Please try again.",
-    };
   }
-}
+);
 
 export type GetExistingVerificationTokenResult = {
   token: string;
@@ -306,17 +270,19 @@ export type VerifyDomainViaSESResult =
   | { success: true }
   | { success: false; error: string };
 
-export async function verifyDomainViaSES(
-  orgId: string,
-  providerId: string
-): Promise<VerifyDomainViaSESResult> {
-  const log = createActionLogger("verifyDomainViaSES", { orgSlug: orgId });
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const permError = checkPermission(access.role, "sso", ["write"]);
-    if (permError) return permError;
-
+export const verifyDomainViaSES = orgAction(
+  {
+    name: "verifyDomainViaSES",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _providerId: string) => orgId,
+    onError: "Failed to verify domain via SES",
+  },
+  async (
+    ctx,
+    orgId: string,
+    providerId: string
+  ): Promise<VerifyDomainViaSESResult> => {
     const provider = await requireProviderOwnership(orgId, providerId);
     if (!provider) return { success: false, error: "Provider not found" };
     if (provider.domainVerified)
@@ -360,11 +326,11 @@ export async function verifyDomainViaSES(
                 eq(ssoProvider.organizationId, orgId)
               )
             );
-          revalidatePath(`/${access.orgSlug}/settings/sso`);
+          revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
           return { success: true };
         }
       } catch (err) {
-        log.warn(
+        ctx.log.warn(
           { err, accountId: account.id },
           "SES identity check failed for account"
         );
@@ -375,32 +341,26 @@ export async function verifyDomainViaSES(
       success: false,
       error: `${provider.domain} is not verified in any connected AWS account`,
     };
-  } catch (error) {
-    log.error({ err: error }, "Failed to verify domain via SES");
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to verify domain via SES",
-    };
   }
-}
+);
 
 export type GenerateScimTokenResult =
   | { success: true; token: string }
   | { success: false; error: string };
 
-export async function generateScimToken(
-  orgId: string,
-  providerId: string
-): Promise<GenerateScimTokenResult> {
-  try {
-    const access = await verifyOrgAccess(orgId);
-    if (!access) return { success: false, error: "Unauthorized" };
-    const ssoWriteError = checkPermission(access.role, "sso", ["write"]);
-    if (ssoWriteError) return ssoWriteError;
-
+export const generateScimToken = orgAction(
+  {
+    name: "generateScimToken",
+    resource: "sso",
+    permission: ["write"],
+    orgId: (orgId: string, _providerId: string) => orgId,
+    onError: "Failed to generate SCIM token",
+  },
+  async (
+    ctx,
+    orgId: string,
+    providerId: string
+  ): Promise<GenerateScimTokenResult> => {
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
 
@@ -410,32 +370,17 @@ export async function generateScimToken(
       headers: hdrs,
     });
 
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId: orgId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "sso.scim_token_generated",
-          resource: "sso_provider",
-          resourceId: providerId,
-          metadata: {},
-        })
-      );
-    });
+    await ctx.audited(
+      async (_tx) => undefined,
+      () => ({
+        action: "sso.scim_token_generated" as const,
+        resource: "sso_provider",
+        resourceId: providerId,
+        metadata: {},
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/sso`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
     return { success: true, token: result.scimToken };
-  } catch (error) {
-    const log = createActionLogger("generateScimToken", { orgSlug: orgId });
-    log.error({ err: error }, "Failed to generate SCIM token");
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to generate SCIM token",
-    };
   }
-}
+);

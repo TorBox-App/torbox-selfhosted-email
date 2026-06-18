@@ -1,7 +1,6 @@
 "use server";
 
 import {
-  auditLog,
   awsAccount,
   contact,
   db,
@@ -13,11 +12,9 @@ import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
-import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger } from "@/lib/logger";
 import { VALID_ROLES } from "@/lib/preset-roles";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 
 export type MemberWithUser = {
   id: string;
@@ -58,15 +55,15 @@ export type ListMembersResult =
 /**
  * List all members and pending invitations for an organization
  */
-export async function listMembers(
-  organizationId: string
-): Promise<ListMembersResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "No access" };
-    }
-
+export const listMembers = orgAction(
+  {
+    name: "listMembers",
+    resource: "members",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch members",
+  },
+  async (_ctx, organizationId: string): Promise<ListMembersResult> => {
     // Fetch all members with user info using join instead of with
     const membersData = await db
       .select({
@@ -131,15 +128,8 @@ export async function listMembers(
         },
       })),
     };
-  } catch (error) {
-    const log = createActionLogger("listMembers", { orgSlug: organizationId });
-    log.error({ err: error }, "Failed to list members");
-    return {
-      success: false,
-      error: "Failed to fetch members",
-    };
   }
-}
+);
 
 export type UpdateMemberRoleResult =
   | {
@@ -153,25 +143,24 @@ export type UpdateMemberRoleResult =
 /**
  * Update a member's role (only owners and admins can do this)
  */
-export async function updateMemberRole(
-  memberId: string,
-  newRole: string,
-  organizationId: string
-): Promise<UpdateMemberRoleResult> {
-  if (!VALID_ROLES.has(newRole)) {
-    return { success: false, error: "Invalid role" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "No access" };
+export const updateMemberRole = orgAction(
+  {
+    name: "updateMemberRole",
+    resource: "members",
+    permission: ["changeRole"],
+    orgId: (_memberId: string, _newRole: string, organizationId: string) =>
+      organizationId,
+    onError: "Failed to update member role",
+  },
+  async (
+    ctx,
+    memberId: string,
+    newRole: string,
+    organizationId: string
+  ): Promise<UpdateMemberRoleResult> => {
+    if (!VALID_ROLES.has(newRole)) {
+      return { success: false, error: "Invalid role" };
     }
-
-    const changeRoleError = checkPermission(access.role, "members", [
-      "changeRole",
-    ]);
-    if (changeRoleError) return changeRoleError;
 
     // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
@@ -190,7 +179,7 @@ export async function updateMemberRole(
 
     // Prevent non-owners from changing owner roles or making someone an owner
     if (
-      access.role !== "owner" &&
+      ctx.access.role !== "owner" &&
       (targetMember.role === "owner" || newRole === "owner")
     ) {
       return {
@@ -200,57 +189,41 @@ export async function updateMemberRole(
     }
 
     // Prevent users from changing their own role
-    if (targetMember.userId === access.userId) {
+    if (targetMember.userId === ctx.access.userId) {
       return {
         success: false,
         error: "You cannot change your own role",
       };
     }
 
-    const auditCtx = await getAuditContext();
     // Update the role (scoped to org to prevent cross-org IDOR)
-    await db.transaction(async (tx) => {
-      await tx
-        .update(member)
-        .set({ role: newRole })
-        .where(
-          and(
-            eq(member.id, memberId),
-            eq(member.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "member.role_changed",
-          resource: "member",
-          resourceId: targetMember.userId,
-          metadata: { oldRole: targetMember.role, newRole },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .update(member)
+          .set({ role: newRole })
+          .where(
+            and(
+              eq(member.id, memberId),
+              eq(member.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "member.role_changed" as const,
+        resource: "member",
+        resourceId: targetMember.userId,
+        metadata: { oldRole: targetMember.role, newRole },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/members`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/members`);
 
     return {
       success: true,
     };
-  } catch (error) {
-    const log = createActionLogger("updateMemberRole", {
-      orgSlug: organizationId,
-    });
-    log.error(
-      { err: error, memberId, newRole },
-      "Failed to update member role"
-    );
-    return {
-      success: false,
-      error: "Failed to update member role",
-    };
   }
-}
+);
 
 export type InviteMemberResult =
   | {
@@ -267,33 +240,34 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /**
  * Invite a new member to the organization
  */
-export async function inviteMember(
-  email: string,
-  role: string,
-  organizationId: string
-): Promise<InviteMemberResult> {
-  if (!VALID_ROLES.has(role)) {
-    return { success: false, error: "Invalid role" };
-  }
-  if (role === "owner") {
-    return {
-      success: false,
-      error: "Owner role cannot be assigned via invitation",
-    };
-  }
+export const inviteMember = orgAction(
+  {
+    name: "inviteMember",
+    resource: "members",
+    permission: ["invite"],
+    orgId: (_email: string, _role: string, organizationId: string) =>
+      organizationId,
+    onError: "Failed to send invitation",
+  },
+  async (
+    ctx,
+    email: string,
+    role: string,
+    organizationId: string
+  ): Promise<InviteMemberResult> => {
+    if (!VALID_ROLES.has(role)) {
+      return { success: false, error: "Invalid role" };
+    }
+    if (role === "owner") {
+      return {
+        success: false,
+        error: "Owner role cannot be assigned via invitation",
+      };
+    }
 
-  try {
     if (!(email && EMAIL_REGEX.test(email.trim()))) {
       return { success: false, error: "Invalid email address" };
     }
-
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "No access" };
-    }
-
-    const inviteError = checkPermission(access.role, "members", ["invite"]);
-    if (inviteError) return inviteError;
 
     // Check if user is already a member
     const existingUser = await db.query.user.findFirst({
@@ -344,35 +318,31 @@ export async function inviteMember(
       };
     }
 
-    const auditCtx = await getAuditContext();
     // Create the invitation + audit log atomically
-    const newInvitation = await db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(invitation)
-        .values({
-          id: crypto.randomUUID(),
-          organizationId,
-          email,
-          role,
-          status: "pending",
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          inviterId: access.userId,
-        })
-        .returning();
-      if (!inserted) return null;
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "member.invited",
-          resource: "invitation",
-          resourceId: inserted.id,
-          metadata: { inviteeEmail: email, role },
-        })
-      );
-      return inserted;
-    });
+    const newInvitation = await ctx.audited(
+      async (tx) => {
+        const [inserted] = await tx
+          .insert(invitation)
+          .values({
+            id: crypto.randomUUID(),
+            organizationId,
+            email,
+            role,
+            status: "pending",
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            inviterId: ctx.access.userId,
+          })
+          .returning();
+        if (!inserted) return null;
+        return inserted;
+      },
+      (r) => ({
+        action: "member.invited" as const,
+        resource: "invitation",
+        resourceId: r?.id ?? null,
+        metadata: { inviteeEmail: email, role },
+      })
+    );
 
     if (!newInvitation) {
       return {
@@ -426,7 +396,7 @@ export async function inviteMember(
         inviteLink: `${appUrl}/invitations/${newInvitation.id}/accept`,
         declineLink: `${appUrl}/invitations/${newInvitation.id}/decline`,
         organizationName: org.name,
-        inviterName: access.userName ?? access.userEmail,
+        inviterName: ctx.access.userName ?? ctx.access.userEmail,
         role,
         workspaceContext: {
           templateCount: templateResult[0]?.count ?? 0,
@@ -444,26 +414,19 @@ export async function inviteMember(
       // Continue even if email fails - the invitation is still created
     }
 
-    await trackTeammateInvited(access.userId, organizationId, {
+    await trackTeammateInvited(ctx.access.userId, organizationId, {
       invitedEmail: email,
       role,
     });
 
-    revalidatePath(`/${access.orgSlug}/settings/members`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/members`);
 
     return {
       success: true,
       invitationId: newInvitation.id,
     };
-  } catch (error) {
-    const log = createActionLogger("inviteMember", { orgSlug: organizationId });
-    log.error({ err: error, email, role }, "Failed to invite member");
-    return {
-      success: false,
-      error: "Failed to send invitation",
-    };
   }
-}
+);
 
 export type RemoveMemberResult =
   | {
@@ -477,19 +440,19 @@ export type RemoveMemberResult =
 /**
  * Remove a member from the organization
  */
-export async function removeMember(
-  memberId: string,
-  organizationId: string
-): Promise<RemoveMemberResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "No access" };
-    }
-
-    const removeError = checkPermission(access.role, "members", ["remove"]);
-    if (removeError) return removeError;
-
+export const removeMember = orgAction(
+  {
+    name: "removeMember",
+    resource: "members",
+    permission: ["remove"],
+    orgId: (_memberId: string, organizationId: string) => organizationId,
+    onError: "Failed to remove member",
+  },
+  async (
+    ctx,
+    memberId: string,
+    organizationId: string
+  ): Promise<RemoveMemberResult> => {
     // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
       where: and(
@@ -506,7 +469,7 @@ export async function removeMember(
     }
 
     // Prevent non-owners from removing owners
-    if (access.role !== "owner" && targetMember.role === "owner") {
+    if (ctx.access.role !== "owner" && targetMember.role === "owner") {
       return {
         success: false,
         error: "Only owners can remove other owners",
@@ -514,51 +477,40 @@ export async function removeMember(
     }
 
     // Prevent users from removing themselves
-    if (targetMember.userId === access.userId) {
+    if (targetMember.userId === ctx.access.userId) {
       return {
         success: false,
         error: "You cannot remove yourself from the organization",
       };
     }
 
-    const auditCtx = await getAuditContext();
     // Remove the member (scoped to org to prevent cross-org IDOR)
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(member)
-        .where(
-          and(
-            eq(member.id, memberId),
-            eq(member.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "member.removed",
-          resource: "member",
-          resourceId: targetMember.userId,
-          metadata: { role: targetMember.role },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(member)
+          .where(
+            and(
+              eq(member.id, memberId),
+              eq(member.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "member.removed" as const,
+        resource: "member",
+        resourceId: targetMember.userId,
+        metadata: { role: targetMember.role },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/members`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/members`);
 
     return {
       success: true,
     };
-  } catch (error) {
-    const log = createActionLogger("removeMember", { orgSlug: organizationId });
-    log.error({ err: error, memberId }, "Failed to remove member");
-    return {
-      success: false,
-      error: "Failed to remove member",
-    };
   }
-}
+);
 
 export type CancelInvitationResult =
   | {
@@ -572,21 +524,19 @@ export type CancelInvitationResult =
 /**
  * Cancel a pending invitation
  */
-export async function cancelInvitation(
-  invitationId: string,
-  organizationId: string
-): Promise<CancelInvitationResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return { success: false, error: "No access" };
-    }
-
-    const cancelInviteError = checkPermission(access.role, "members", [
-      "invite",
-    ]);
-    if (cancelInviteError) return cancelInviteError;
-
+export const cancelInvitation = orgAction(
+  {
+    name: "cancelInvitation",
+    resource: "members",
+    permission: ["invite"],
+    orgId: (_invitationId: string, organizationId: string) => organizationId,
+    onError: "Failed to cancel invitation",
+  },
+  async (
+    ctx,
+    invitationId: string,
+    organizationId: string
+  ): Promise<CancelInvitationResult> => {
     // Verify invitation belongs to this org before deleting (prevent cross-org IDOR)
     const targetInvitation = await db.query.invitation.findFirst({
       where: and(
@@ -602,43 +552,30 @@ export async function cancelInvitation(
       };
     }
 
-    const auditCtx = await getAuditContext();
     // Delete the invitation + audit log atomically
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(invitation)
-        .where(
-          and(
-            eq(invitation.id, invitationId),
-            eq(invitation.organizationId, organizationId)
-          )
-        );
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "member.invite_cancelled",
-          resource: "invitation",
-          resourceId: invitationId,
-          metadata: { inviteeEmail: targetInvitation.email },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await tx
+          .delete(invitation)
+          .where(
+            and(
+              eq(invitation.id, invitationId),
+              eq(invitation.organizationId, organizationId)
+            )
+          );
+      },
+      () => ({
+        action: "member.invite_cancelled" as const,
+        resource: "invitation",
+        resourceId: invitationId,
+        metadata: { inviteeEmail: targetInvitation.email },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/settings/members`);
+    revalidatePath(`/${ctx.access.orgSlug}/settings/members`);
 
     return {
       success: true,
     };
-  } catch (error) {
-    const log = createActionLogger("cancelInvitation", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, invitationId }, "Failed to cancel invitation");
-    return {
-      success: false,
-      error: "Failed to cancel invitation",
-    };
   }
-}
+);
