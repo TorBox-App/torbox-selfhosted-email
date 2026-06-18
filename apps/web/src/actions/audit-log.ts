@@ -108,7 +108,10 @@ export const listAuditLogs = orgAction(
     const last = data.at(-1);
     const nextCursor =
       hasMore && last
-        ? JSON.stringify({ createdAt: last.createdAt.toISOString(), id: last.id })
+        ? JSON.stringify({
+            createdAt: last.createdAt.toISOString(),
+            id: last.id,
+          })
         : null;
 
     return { success: true, data, nextCursor };

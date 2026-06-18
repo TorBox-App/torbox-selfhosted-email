@@ -295,7 +295,9 @@ describe("listAuditLogs", () => {
 
     expect(result.success).toBe(false);
     if (result.success) return;
-    expect(result.error).toBe("You don't have permission to perform this action");
+    expect(result.error).toBe(
+      "You don't have permission to perform this action"
+    );
 
     // Cleanup
     await db.delete(member).where(eq(member.id, "audit-test-member-role"));

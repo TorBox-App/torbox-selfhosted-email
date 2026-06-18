@@ -10,8 +10,8 @@ import { verifyOrgAccess } from "@/actions/shared/verify-org-access";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger } from "@/lib/logger";
-import { checkPermission } from "./shared/permissions";
 import { orgAction } from "./shared/org-action";
+import { checkPermission } from "./shared/permissions";
 
 type SsoScimApi = {
   registerSSOProvider(opts: {
@@ -146,7 +146,7 @@ export const deleteSsoProvider = orgAction(
     });
 
     await ctx.audited(
-      async (_tx) => undefined,
+      async (_tx) => {},
       () => ({
         action: "sso.provider_deleted" as const,
         resource: "sso_provider",
@@ -187,7 +187,7 @@ export const requestDomainVerification = orgAction(
     });
 
     await ctx.audited(
-      async (_tx) => undefined,
+      async (_tx) => {},
       () => ({
         action: "sso.domain_verification_requested" as const,
         resource: "sso_provider",
@@ -216,7 +216,11 @@ export const verifyDomain = orgAction(
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Something went wrong. Please try again.",
   },
-  async (ctx, orgId: string, providerId: string): Promise<VerifyDomainResult> => {
+  async (
+    ctx,
+    orgId: string,
+    providerId: string
+  ): Promise<VerifyDomainResult> => {
     const provider = await requireProviderOwnership(orgId, providerId);
     if (!provider) return { success: false, error: "Provider not found" };
 
@@ -227,7 +231,7 @@ export const verifyDomain = orgAction(
     });
 
     await ctx.audited(
-      async (_tx) => undefined,
+      async (_tx) => {},
       () => ({
         action: "sso.domain_verified" as const,
         resource: "sso_provider",
@@ -371,7 +375,7 @@ export const generateScimToken = orgAction(
     });
 
     await ctx.audited(
-      async (_tx) => undefined,
+      async (_tx) => {},
       () => ({
         action: "sso.scim_token_generated" as const,
         resource: "sso_provider",
