@@ -60,8 +60,7 @@ import {
 } from "@/lib/handlebars";
 import { createActionLogger } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
-import { checkPermission } from "./shared/permissions";
-import { verifyOrgAccess } from "./shared/verify-org-access";
+import { orgAction } from "./shared/org-action";
 import { publishTemplateToSES } from "./templates";
 
 // UUID validation schema for input sanitization
@@ -84,26 +83,32 @@ export type {
 /**
  * List batch sends for an organization
  */
-export async function listBatchSends(
-  organizationId: string,
-  options: {
-    page?: number;
-    pageSize?: number;
-    status?: BatchStatus;
-    channel?: Channel;
-  } = {}
-): Promise<ListBatchesResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const listBatchSends = orgAction(
+  {
+    name: "listBatchSends",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _options: {
+        page?: number;
+        pageSize?: number;
+        status?: BatchStatus;
+        channel?: Channel;
+      } = {}
+    ) => organizationId,
+    onError: "Failed to fetch batch sends",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+      status?: BatchStatus;
+      channel?: Channel;
+    } = {}
+  ): Promise<ListBatchesResult> => {
     const { batches, total } = await listBroadcasts(organizationId, options);
 
     return {
@@ -139,50 +144,36 @@ export async function listBatchSends(
       })),
       total,
     };
-  } catch (error) {
-    const log = createActionLogger("listBatchSends", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to list batch sends");
-    return { success: false, error: "Failed to fetch batch sends" };
   }
-}
+);
 
 /**
  * Get a single batch send by ID
  */
-export async function getBatchSend(
-  batchId: string,
-  organizationId: string
-): Promise<GetBatchResult> {
-  // Validate UUID format before any database operations
-  if (!uuidSchema.safeParse(batchId).success) {
-    return { success: false, error: "Invalid batch ID" };
-  }
-  if (!uuidSchema.safeParse(organizationId).success) {
-    return { success: false, error: "Invalid organization ID" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const getBatchSend = orgAction(
+  {
+    name: "getBatchSend",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (_batchId: string, organizationId: string) => organizationId,
+    onError: "Failed to fetch batch send",
+  },
+  async (
+    ctx,
+    batchId: string,
+    organizationId: string
+  ): Promise<GetBatchResult> => {
+    // Validate UUID format before any database operations
+    if (!uuidSchema.safeParse(batchId).success) {
+      return { success: false, error: "Invalid batch ID" };
     }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
+    if (!uuidSchema.safeParse(organizationId).success) {
+      return { success: false, error: "Invalid organization ID" };
+    }
 
     return loadBatchWithMeta(batchId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("getBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, batchId }, "Failed to get batch send");
-    return { success: false, error: "Failed to fetch batch send" };
   }
-}
+);
 
 // =============================================================================
 // TEMPLATE VARIABLE COVERAGE
@@ -320,23 +311,26 @@ async function assessVariableCoverage(
  * for the selected audience. Returned data drives a warning banner in the
  * broadcast form (review step) before the user clicks Send.
  */
-export async function checkTemplateVariableCoverage(
-  organizationId: string,
-  templateId: string,
-  recipientFilter: RecipientFilter,
-  variableMappings?: VariableMapping[]
-): Promise<CheckTemplateVariableCoverageResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const checkTemplateVariableCoverage = orgAction(
+  {
+    name: "checkTemplateVariableCoverage",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _templateId: string,
+      _recipientFilter: RecipientFilter,
+      _variableMappings?: VariableMapping[]
+    ) => organizationId,
+    onError: "Failed to check template variable coverage",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateId: string,
+    recipientFilter: RecipientFilter,
+    variableMappings?: VariableMapping[]
+  ): Promise<CheckTemplateVariableCoverageResult> => {
     const coverage = await assessVariableCoverage(
       organizationId,
       templateId,
@@ -345,17 +339,8 @@ export async function checkTemplateVariableCoverage(
     );
 
     return { success: true, ...coverage };
-  } catch (error) {
-    const log = createActionLogger("checkTemplateVariableCoverage", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, templateId }, "Failed to assess variable coverage");
-    return {
-      success: false,
-      error: "Failed to check template variable coverage",
-    };
   }
-}
+);
 
 /**
  * Shared pre-send validation.
@@ -494,22 +479,19 @@ async function validateAndPrepareSend(
 /**
  * Create a new batch send by calling the API (direct-send path).
  */
-export async function createBatchSend(
-  organizationId: string,
-  data: CreateBatchInput
-): Promise<CreateBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const permError = checkPermission(access.role, "broadcasts", ["send"]);
-    if (permError) return permError;
-
+export const createBatchSend = orgAction(
+  {
+    name: "createBatchSend",
+    resource: "broadcasts",
+    permission: ["send"],
+    orgId: (organizationId: string, _data: CreateBatchInput) => organizationId,
+    onError: "Failed to create batch send",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: CreateBatchInput
+  ): Promise<CreateBatchResult> => {
     const prep = await validateAndPrepareSend(organizationId, {
       awsAccountId: data.awsAccountId,
       channel: data.channel,
@@ -584,7 +566,7 @@ export async function createBatchSend(
 
     const result = (await response.json()) as { id: string };
 
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
 
     const auditCtx = await getAuditContext();
     after(() =>
@@ -593,8 +575,8 @@ export async function createBatchSend(
         .values(
           auditLogEntry(auditCtx, {
             organizationId,
-            actorId: access.userId,
-            actorEmail: access.userEmail,
+            actorId: ctx.access.userId,
+            actorEmail: ctx.access.userEmail,
             action: "broadcast.sent",
             resource: "broadcast",
             resourceId: result.id,
@@ -612,41 +594,33 @@ export async function createBatchSend(
         )
     );
 
-    await trackBroadcastCreated(access.userEmail, organizationId, {
+    await trackBroadcastCreated(ctx.access.userEmail, organizationId, {
       channel: data.channel ?? "email",
       recipientCount,
       templateId: data.templateId,
     });
 
     return await getBatchSend(result.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("createBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to create batch send");
-    return { success: false, error: "Failed to create batch send" };
   }
-}
+);
 
 /**
  * Save a broadcast as a draft.
  */
-export async function saveDraftBatchSend(
-  organizationId: string,
-  data: CreateDraftBatchInput
-): Promise<SaveDraftBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const permError = checkPermission(access.role, "broadcasts", ["write"]);
-    if (permError) return permError;
-
+export const saveDraftBatchSend = orgAction(
+  {
+    name: "saveDraftBatchSend",
+    resource: "broadcasts",
+    permission: ["write"],
+    orgId: (organizationId: string, _data: CreateDraftBatchInput) =>
+      organizationId,
+    onError: "Failed to save draft",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    data: CreateDraftBatchInput
+  ): Promise<SaveDraftBatchResult> => {
     const featureCheck = await checkFeatureAccess(organizationId, "batch");
     if (!featureCheck.allowed) {
       return {
@@ -657,66 +631,52 @@ export async function saveDraftBatchSend(
       };
     }
 
-    const auditCtx = await getAuditContext();
-    const newBatch = await db.transaction(async (tx) => {
-      const inserted = await insertDraftBroadcast(
-        {
-          organizationId,
-          status: "draft",
-          channel: data.channel ?? "email",
-          name: data.name ?? null,
-          subject: data.subject ?? null,
-          previewText: data.previewText ?? null,
-          from: data.from ?? null,
-          fromName: data.fromName ?? null,
-          replyTo: data.replyTo ?? null,
-          emailTemplateId: data.templateId ?? null,
-          htmlContent: data.htmlContent ?? null,
-          variableMappings: data.variableMappings ?? null,
-          body: data.body ?? null,
-          senderId: data.senderId ?? null,
-          audienceType: data.recipientFilter?.audienceType ?? "all",
-          topicId: data.recipientFilter?.topicId ?? null,
-          segmentId: data.recipientFilter?.segmentId ?? null,
-          awsAccountId: data.awsAccountId ?? null,
-          scheduledFor: data.scheduledFor ?? null,
-          createdBy: access.userId,
-        },
-        tx
-      );
-      if (!inserted) return null;
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.draft_saved",
-          resource: "broadcast",
-          resourceId: inserted.id,
-          metadata: {
-            broadcastId: inserted.id,
+    const newBatch = await ctx.audited(
+      async (tx) => {
+        const inserted = await insertDraftBroadcast(
+          {
+            organizationId,
+            status: "draft",
             channel: data.channel ?? "email",
+            name: data.name ?? null,
+            subject: data.subject ?? null,
+            previewText: data.previewText ?? null,
+            from: data.from ?? null,
+            fromName: data.fromName ?? null,
+            replyTo: data.replyTo ?? null,
+            emailTemplateId: data.templateId ?? null,
+            htmlContent: data.htmlContent ?? null,
+            variableMappings: data.variableMappings ?? null,
+            body: data.body ?? null,
+            senderId: data.senderId ?? null,
+            audienceType: data.recipientFilter?.audienceType ?? "all",
+            topicId: data.recipientFilter?.topicId ?? null,
+            segmentId: data.recipientFilter?.segmentId ?? null,
+            awsAccountId: data.awsAccountId ?? null,
+            scheduledFor: data.scheduledFor ?? null,
+            createdBy: ctx.access.userId,
           },
-        })
-      );
-      return inserted;
-    });
+          tx
+        );
+        if (!inserted) throw new Error("Broadcast insert returned null");
+        return inserted;
+      },
+      (inserted) => ({
+        action: "broadcast.draft_saved" as const,
+        resource: "broadcast",
+        resourceId: inserted.id,
+        metadata: {
+          broadcastId: inserted.id,
+          channel: data.channel ?? "email",
+        },
+      })
+    );
 
-    if (!newBatch) {
-      return { success: false, error: "Failed to save draft" };
-    }
-
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
 
     return loadBatchWithMeta(newBatch.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("saveDraftBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to save draft batch");
-    return { success: false, error: "Failed to save draft" };
   }
-}
+);
 
 /**
  * Internal helper: load a batch by (id, orgId) shaped as BatchSendWithMeta.
@@ -768,23 +728,24 @@ async function loadBatchWithMeta(
 /**
  * Update an existing draft broadcast. Fails if the row is not a draft.
  */
-export async function updateDraftBatchSend(
-  batchId: string,
-  organizationId: string,
-  data: UpdateDraftBatchInput
-): Promise<UpdateDraftBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const permError = checkPermission(access.role, "broadcasts", ["write"]);
-    if (permError) return permError;
-
+export const updateDraftBatchSend = orgAction(
+  {
+    name: "updateDraftBatchSend",
+    resource: "broadcasts",
+    permission: ["write"],
+    orgId: (
+      _batchId: string,
+      organizationId: string,
+      _data: UpdateDraftBatchInput
+    ) => organizationId,
+    onError: "Failed to update draft",
+  },
+  async (
+    ctx,
+    batchId: string,
+    organizationId: string,
+    data: UpdateDraftBatchInput
+  ): Promise<UpdateDraftBatchResult> => {
     const existing = await findBroadcastStatus(batchId, organizationId);
 
     if (!existing) {
@@ -828,55 +789,49 @@ export async function updateDraftBatchSend(
       updateData.segmentId = data.recipientFilter.segmentId ?? null;
     }
 
-    const auditCtx = await getAuditContext();
-    await db.transaction(async (tx) => {
-      await updateDraftBroadcast(batchId, organizationId, updateData, tx);
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.draft_updated",
-          resource: "broadcast",
-          resourceId: batchId,
-          metadata: { broadcastId: batchId },
-        })
-      );
-    });
+    await ctx.audited(
+      async (tx) => {
+        await updateDraftBroadcast(batchId, organizationId, updateData, tx);
+      },
+      () => ({
+        action: "broadcast.draft_updated" as const,
+        resource: "broadcast",
+        resourceId: batchId,
+        metadata: { broadcastId: batchId },
+      })
+    );
 
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(
+      `/${ctx.access.orgSlug}/emails/broadcasts/${batchId}`,
+      "page"
+    );
 
     return loadBatchWithMeta(batchId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("updateDraftBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, batchId }, "Failed to update draft batch");
-    return { success: false, error: "Failed to update draft" };
   }
-}
+);
 
 /**
  * Promote a draft broadcast to a real send.
  */
-export async function promoteDraftToSend(
-  batchId: string,
-  organizationId: string,
-  data: UpdateDraftBatchInput & { scheduledFor?: Date }
-): Promise<PromoteDraftBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const permError = checkPermission(access.role, "broadcasts", ["send"]);
-    if (permError) return permError;
-
+export const promoteDraftToSend = orgAction(
+  {
+    name: "promoteDraftToSend",
+    resource: "broadcasts",
+    permission: ["send"],
+    orgId: (
+      _batchId: string,
+      organizationId: string,
+      _data: UpdateDraftBatchInput & { scheduledFor?: Date }
+    ) => organizationId,
+    onError: "Failed to send broadcast",
+  },
+  async (
+    ctx,
+    batchId: string,
+    organizationId: string,
+    data: UpdateDraftBatchInput & { scheduledFor?: Date }
+  ): Promise<PromoteDraftBatchResult> => {
     const existing = await findDraftBroadcast(batchId, organizationId);
 
     if (!existing) {
@@ -995,8 +950,11 @@ export async function promoteDraftToSend(
       }
     }
 
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(
+      `/${ctx.access.orgSlug}/emails/broadcasts/${batchId}`,
+      "page"
+    );
 
     const auditCtx = await getAuditContext();
     after(() =>
@@ -1005,8 +963,8 @@ export async function promoteDraftToSend(
         .values(
           auditLogEntry(auditCtx, {
             organizationId,
-            actorId: access.userId,
-            actorEmail: access.userEmail,
+            actorId: ctx.access.userId,
+            actorEmail: ctx.access.userEmail,
             action: "broadcast.sent_from_draft",
             resource: "broadcast",
             resourceId: batchId,
@@ -1024,97 +982,72 @@ export async function promoteDraftToSend(
         )
     );
 
-    await trackBroadcastCreated(access.userEmail, organizationId, {
+    await trackBroadcastCreated(ctx.access.userEmail, organizationId, {
       channel: merged.channel,
       recipientCount,
       templateId: merged.templateId,
     });
 
     return loadBatchWithMeta(batchId, organizationId);
-  } catch (error) {
-    const log = createActionLogger("promoteDraftToSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, batchId }, "Failed to promote draft");
-    return { success: false, error: "Failed to send broadcast" };
   }
-}
+);
 
 /**
  * Hard-delete a draft broadcast.
  */
-export async function deleteDraftBatchSend(
-  batchId: string,
-  organizationId: string
-): Promise<DeleteDraftBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const deleteDraftBatchSend = orgAction(
+  {
+    name: "deleteDraftBatchSend",
+    resource: "broadcasts",
+    permission: ["write"],
+    orgId: (_batchId: string, organizationId: string) => organizationId,
+    onError: "Failed to delete draft",
+  },
+  async (
+    ctx,
+    batchId: string,
+    organizationId: string
+  ): Promise<DeleteDraftBatchResult> => {
+    // Pre-check: verify the draft exists and is in draft status
+    const existing = await findBroadcastStatus(batchId, organizationId);
+    if (!existing || existing.status !== "draft") {
+      return { success: false, error: "Draft not found or already sent" };
     }
 
-    const permError = checkPermission(access.role, "broadcasts", ["write"]);
-    if (permError) return permError;
+    await ctx.audited(
+      async (tx) => {
+        await deleteDraftBroadcast(batchId, organizationId, tx);
+      },
+      () => ({
+        action: "broadcast.draft_deleted" as const,
+        resource: "broadcast",
+        resourceId: batchId,
+        metadata: { broadcastId: batchId },
+      })
+    );
 
-    const auditCtx = await getAuditContext();
-    const deleted = await db.transaction(async (tx) => {
-      const rows = await deleteDraftBroadcast(batchId, organizationId, tx);
-      if (rows.length === 0) return rows;
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
-          organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.draft_deleted",
-          resource: "broadcast",
-          resourceId: batchId,
-          metadata: { broadcastId: batchId },
-        })
-      );
-      return rows;
-    });
-
-    if (deleted.length === 0) {
-      return {
-        success: false,
-        error: "Draft not found or already sent",
-      };
-    }
-
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("deleteDraftBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, batchId }, "Failed to delete draft batch");
-    return { success: false, error: "Failed to delete draft" };
   }
-}
+);
 
 /**
  * Duplicate a broadcast: clone its config as a new draft row.
  */
-export async function duplicateBatchSend(
-  sourceBatchId: string,
-  organizationId: string
-): Promise<DuplicateBatchResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-
-    const permError = checkPermission(access.role, "broadcasts", ["write"]);
-    if (permError) return permError;
-
+export const duplicateBatchSend = orgAction(
+  {
+    name: "duplicateBatchSend",
+    resource: "broadcasts",
+    permission: ["write"],
+    orgId: (_sourceBatchId: string, organizationId: string) => organizationId,
+    onError: "Failed to duplicate broadcast",
+  },
+  async (
+    ctx,
+    sourceBatchId: string,
+    organizationId: string
+  ): Promise<DuplicateBatchResult> => {
     const featureCheck = await checkFeatureAccess(organizationId, "batch");
     if (!featureCheck.allowed) {
       return {
@@ -1131,70 +1064,53 @@ export async function duplicateBatchSend(
       return { success: false, error: "Broadcast not found" };
     }
 
-    const auditCtx = await getAuditContext();
-    const newBatch = await db.transaction(async (tx) => {
-      const inserted = await duplicateBroadcast(
-        source,
-        organizationId,
-        access.userId,
-        tx
-      );
-      if (!inserted) return null;
-      await tx.insert(auditLog).values(
-        auditLogEntry(auditCtx, {
+    const newBatch = await ctx.audited(
+      async (tx) => {
+        const inserted = await duplicateBroadcast(
+          source,
           organizationId,
-          actorId: access.userId,
-          actorEmail: access.userEmail,
-          action: "broadcast.duplicated",
-          resource: "broadcast",
-          resourceId: inserted.id,
-          metadata: { broadcastId: inserted.id, sourceId: sourceBatchId },
-        })
-      );
-      return inserted;
-    });
+          ctx.access.userId,
+          tx
+        );
+        if (!inserted) throw new Error("Broadcast duplicate returned null");
+        return inserted;
+      },
+      (inserted) => ({
+        action: "broadcast.duplicated" as const,
+        resource: "broadcast",
+        resourceId: inserted.id,
+        metadata: { broadcastId: inserted.id, sourceId: sourceBatchId },
+      })
+    );
 
-    if (!newBatch) {
-      return { success: false, error: "Failed to duplicate broadcast" };
-    }
-
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
 
     return loadBatchWithMeta(newBatch.id, organizationId);
-  } catch (error) {
-    const log = createActionLogger("duplicateBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, sourceBatchId }, "Failed to duplicate broadcast");
-    return { success: false, error: "Failed to duplicate broadcast" };
   }
-}
+);
 
 /**
  * Cancel a batch send
  */
-export async function cancelBatchSend(
-  batchId: string,
-  organizationId: string
-): Promise<CancelBatchResult> {
-  if (!uuidSchema.safeParse(batchId).success) {
-    return { success: false, error: "Invalid batch ID" };
-  }
-  if (!uuidSchema.safeParse(organizationId).success) {
-    return { success: false, error: "Invalid organization ID" };
-  }
-
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
+export const cancelBatchSend = orgAction(
+  {
+    name: "cancelBatchSend",
+    resource: "broadcasts",
+    permission: ["write"],
+    orgId: (_batchId: string, organizationId: string) => organizationId,
+    onError: "Failed to cancel batch send",
+  },
+  async (
+    ctx,
+    batchId: string,
+    organizationId: string
+  ): Promise<CancelBatchResult> => {
+    if (!uuidSchema.safeParse(batchId).success) {
+      return { success: false, error: "Invalid batch ID" };
     }
-
-    const permError = checkPermission(access.role, "broadcasts", ["write"]);
-    if (permError) return permError;
+    if (!uuidSchema.safeParse(organizationId).success) {
+      return { success: false, error: "Invalid organization ID" };
+    }
 
     const batch = await findBroadcast(batchId, organizationId);
 
@@ -1250,8 +1166,8 @@ export async function cancelBatchSend(
     await db.insert(auditLog).values(
       auditLogEntry(auditCtx, {
         organizationId,
-        actorId: access.userId,
-        actorEmail: access.userEmail,
+        actorId: ctx.access.userId,
+        actorEmail: ctx.access.userEmail,
         action: "broadcast.cancelled",
         resource: "broadcast",
         resourceId: batchId,
@@ -1259,40 +1175,39 @@ export async function cancelBatchSend(
       })
     );
 
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts`, "page");
-    revalidatePath(`/${access.orgSlug}/emails/broadcasts/${batchId}`, "page");
+    revalidatePath(`/${ctx.access.orgSlug}/emails/broadcasts`, "page");
+    revalidatePath(
+      `/${ctx.access.orgSlug}/emails/broadcasts/${batchId}`,
+      "page"
+    );
 
     return { success: true };
-  } catch (error) {
-    const log = createActionLogger("cancelBatchSend", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, batchId }, "Failed to cancel batch send");
-    return { success: false, error: "Failed to cancel batch send" };
   }
-}
+);
 
 /**
  * Get recipient preview count for batch send form
  */
-export async function getRecipientCount(
-  organizationId: string,
-  channel: Channel = "email",
-  filter?: RecipientFilter
-): Promise<
-  { success: true; count: number } | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const getRecipientCount = orgAction(
+  {
+    name: "getRecipientCount",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _channel?: Channel,
+      _filter?: RecipientFilter
+    ) => organizationId,
+    onError: "Failed to count recipients",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    channel: Channel = "email",
+    filter?: RecipientFilter
+  ): Promise<
+    { success: true; count: number } | { success: false; error: string }
+  > => {
     const count = await countBroadcastRecipients(
       organizationId,
       channel,
@@ -1305,35 +1220,32 @@ export async function getRecipientCount(
         : undefined
     );
     return { success: true, count };
-  } catch (error) {
-    const log = createActionLogger("getRecipientCount", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to get recipient count");
-    return { success: false, error: "Failed to count recipients" };
   }
-}
+);
 
 /**
  * Get sample contacts for audience preview
  */
-export async function getSampleContacts(
-  organizationId: string,
-  channel: Channel = "email",
-  filter?: RecipientFilter,
-  limit = 5
-): Promise<GetSampleContactsResult> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const getSampleContacts = orgAction(
+  {
+    name: "getSampleContacts",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _channel?: Channel,
+      _filter?: RecipientFilter,
+      _limit?: number
+    ) => organizationId,
+    onError: "Failed to fetch sample contacts",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    channel: Channel = "email",
+    filter?: RecipientFilter,
+    limit = 5
+  ): Promise<GetSampleContactsResult> => {
     const { contacts, totalCount } = await getSampleBroadcastRecipients(
       organizationId,
       channel,
@@ -1352,118 +1264,94 @@ export async function getSampleContacts(
       contacts: contacts as SampleContact[],
       totalCount,
     };
-  } catch (error) {
-    const log = createActionLogger("getSampleContacts", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to get sample contacts");
-    return { success: false, error: "Failed to fetch sample contacts" };
   }
-}
+);
 
 /**
  * List templates for batch send form
  */
-export async function listTemplatesForBatch(organizationId: string): Promise<
-  | {
-      success: true;
-      templates: Array<{
-        id: string;
-        name: string;
-        subject: string | null;
-        previewText: string | null;
-      }>;
-    }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const listTemplatesForBatch = orgAction(
+  {
+    name: "listTemplatesForBatch",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch templates",
+  },
+  async (
+    ctx,
+    organizationId: string
+  ): Promise<
+    | {
+        success: true;
+        templates: Array<{
+          id: string;
+          name: string;
+          subject: string | null;
+          previewText: string | null;
+        }>;
+      }
+    | { success: false; error: string }
+  > => {
     const templates = await listPublishedTemplates(organizationId);
 
     return { success: true, templates };
-  } catch (error) {
-    const log = createActionLogger("listTemplatesForBatch", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to list templates");
-    return { success: false, error: "Failed to fetch templates" };
   }
-}
+);
 
 /**
  * List topics for batch send recipient selection
  */
-export async function listTopicsForBatch(organizationId: string): Promise<
-  | {
-      success: true;
-      topics: Array<{ id: string; name: string; subscriberCount: number }>;
-    }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const listTopicsForBatch = orgAction(
+  {
+    name: "listTopicsForBatch",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch topics",
+  },
+  async (
+    ctx,
+    organizationId: string
+  ): Promise<
+    | {
+        success: true;
+        topics: Array<{ id: string; name: string; subscriberCount: number }>;
+      }
+    | { success: false; error: string }
+  > => {
     const topics = await listTopicsWithSubscriberCounts(organizationId);
 
     return { success: true, topics };
-  } catch (error) {
-    const log = createActionLogger("listTopicsForBatch", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to list topics");
-    return { success: false, error: "Failed to fetch topics" };
   }
-}
+);
 
 /**
  * List segments for batch send recipient selection
  */
-export async function listSegmentsForBatch(organizationId: string): Promise<
-  | {
-      success: true;
-      segments: Array<{ id: string; name: string; memberCount: number }>;
-    }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const listSegmentsForBatch = orgAction(
+  {
+    name: "listSegmentsForBatch",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (organizationId: string) => organizationId,
+    onError: "Failed to fetch segments",
+  },
+  async (
+    ctx,
+    organizationId: string
+  ): Promise<
+    | {
+        success: true;
+        segments: Array<{ id: string; name: string; memberCount: number }>;
+      }
+    | { success: false; error: string }
+  > => {
     const segments = await listSegmentsForBroadcast(organizationId);
 
     return { success: true, segments };
-  } catch (error) {
-    const log = createActionLogger("listSegmentsForBatch", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error }, "Failed to list segments");
-    return { success: false, error: "Failed to fetch segments" };
   }
-}
+);
 
 // =============================================================================
 // TEMPLATE VARIABLE EXTRACTION
@@ -1479,24 +1367,22 @@ type JSONContent = {
 /**
  * Extract all variables from a template's JSON content
  */
-export async function extractTemplateVariables(
-  organizationId: string,
-  templateId: string
-): Promise<
-  | { success: true; variables: ExtractedVariable[] }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const extractTemplateVariables = orgAction(
+  {
+    name: "extractTemplateVariables",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (organizationId: string, _templateId: string) => organizationId,
+    onError: "Failed to extract template variables",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateId: string
+  ): Promise<
+    | { success: true; variables: ExtractedVariable[] }
+    | { success: false; error: string }
+  > => {
     const templateData = await findTemplateVariables(
       templateId,
       organizationId
@@ -1626,42 +1512,34 @@ export async function extractTemplateVariables(
     });
 
     return { success: true, variables: extractedVariables };
-  } catch (error) {
-    const log = createActionLogger("extractTemplateVariables", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, templateId }, "Failed to extract variables");
-    return { success: false, error: "Failed to extract template variables" };
   }
-}
+);
 
 /**
  * Get template content for preview rendering
  */
-export async function getTemplateContent(
-  organizationId: string,
-  templateId: string
-): Promise<
-  | {
-      success: true;
-      content: unknown;
-      subject: string | null;
-      compiledHtml: string | null;
-      sourceFormat: string | null;
-    }
-  | { success: false; error: string }
-> {
-  try {
-    const access = await verifyOrgAccess(organizationId);
-    if (!access) {
-      return {
-        success: false,
-        error: "You don't have access to this organization",
-      };
-    }
-    const permError = checkPermission(access.role, "broadcasts", ["read"]);
-    if (permError) return permError;
-
+export const getTemplateContent = orgAction(
+  {
+    name: "getTemplateContent",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (organizationId: string, _templateId: string) => organizationId,
+    onError: "Failed to fetch template content",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    templateId: string
+  ): Promise<
+    | {
+        success: true;
+        content: unknown;
+        subject: string | null;
+        compiledHtml: string | null;
+        sourceFormat: string | null;
+      }
+    | { success: false; error: string }
+  > => {
     const templateData = await findTemplateContent(templateId, organizationId);
 
     if (!templateData) {
@@ -1675,11 +1553,5 @@ export async function getTemplateContent(
       compiledHtml: templateData.compiledHtml,
       sourceFormat: templateData.sourceFormat,
     };
-  } catch (error) {
-    const log = createActionLogger("getTemplateContent", {
-      orgSlug: organizationId,
-    });
-    log.error({ err: error, templateId }, "Failed to get template content");
-    return { success: false, error: "Failed to fetch template content" };
   }
-}
+);
