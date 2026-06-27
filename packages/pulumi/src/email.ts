@@ -9,6 +9,7 @@ import {
   createEventTracking,
   createHTTPSTracking,
   createIAMRole,
+  createMailManagerArchive,
   createSESResources,
   createSMTPCredentials,
   createVercelOIDCProvider,
@@ -381,8 +382,26 @@ export class WrapsEmail extends pulumi.ComponentResource {
         )
       : pulumi.output(undefined);
 
-    // Archiving outputs (Mail Manager not yet supported in Pulumi)
-    this.archiveArn = pulumi.output(undefined);
+    // ============================================
+    // 7. CREATE MAIL MANAGER ARCHIVE (if configured)
+    // ============================================
+    let archiveResult: ReturnType<typeof createMailManagerArchive> | undefined;
+
+    if (config.archiving?.enabled) {
+      archiveResult = createMailManagerArchive(
+        name,
+        config,
+        sesResult.configSet.name ?? "wraps-email-tracking",
+        region.name,
+        tags,
+        { parent: this }
+      );
+    }
+
+    // Archiving outputs
+    this.archiveArn = archiveResult
+      ? archiveResult.archiveArn
+      : pulumi.output(undefined);
     this.archivingEnabled = pulumi.output(config.archiving?.enabled ?? false);
 
     // SMTP outputs
