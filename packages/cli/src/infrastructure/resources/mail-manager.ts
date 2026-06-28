@@ -113,8 +113,15 @@ export async function createMailManagerArchive(
       );
       archiveArn = getResult.ArchiveArn;
     }
-  } catch {
-    // Fall through to creation
+  } catch (error) {
+    // An empty result set does NOT throw — ListArchives returns no Archives —
+    // so any error here is a real failure (throttling, AccessDenied, network).
+    // Surface it rather than silently falling through to create, which could
+    // create a duplicate archive when an ACTIVE one already exists.
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to list existing Mail Manager archives in ${region}: ${detail}`
+    );
   }
 
   // 2. Create a new archive if no active one was found.
@@ -148,11 +155,13 @@ export async function createMailManagerArchive(
 
         break;
       } catch (error) {
-        if (
+        // AWS SDK v3 sometimes reports the error name as "Error" with the
+        // real exception type only in the message — check both.
+        const isConflict =
           error instanceof Error &&
-          error.name === "ConflictException" &&
-          attempt < MAX_NAME_ATTEMPTS
-        ) {
+          (error.name === "ConflictException" ||
+            error.message.includes("ConflictException"));
+        if (isConflict && attempt < MAX_NAME_ATTEMPTS) {
           continue;
         }
         throw error;

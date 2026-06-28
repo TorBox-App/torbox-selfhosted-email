@@ -218,6 +218,26 @@ describe("mailManagerArchiveProvider.create() — reuse existing active archive"
 });
 
 // ===========================================================================
+// 3b. create() — ListArchives failure surfaces instead of silently creating
+// ===========================================================================
+describe("mailManagerArchiveProvider.create() — ListArchives error", () => {
+  it("throws (does not fall through to create) when ListArchives fails", async () => {
+    // ListArchives → real API failure (e.g. AccessDenied / throttling)
+    mockMMSend.mockRejectedValueOnce(new Error("AccessDenied: not authorized"));
+
+    await expect(
+      mailManagerArchiveProvider.create!(baseInputs)
+    ).rejects.toThrow(/Failed to list existing Mail Manager archives/i);
+
+    // Must NOT have attempted to create a (possibly duplicate) archive.
+    const { CreateArchiveCommand } = await import(
+      "@aws-sdk/client-mailmanager"
+    );
+    expect(vi.mocked(CreateArchiveCommand).mock.calls).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
 // 4. create() — ConflictException on first attempt → retries with suffix -2
 // ===========================================================================
 describe("mailManagerArchiveProvider.create() — ConflictException retry", () => {
@@ -250,6 +270,31 @@ describe("mailManagerArchiveProvider.create() — ConflictException retry", () =
     const attempt2 = createCalls[1][0] as { ArchiveName: string };
     expect(attempt1.ArchiveName).toBe("wraps-test-archive");
     expect(attempt2.ArchiveName).toBe("wraps-test-archive-2");
+  });
+
+  it("detects ConflictException by message when the error name is generic (AWS SDK v3 quirk)", async () => {
+    mockMMSend.mockResolvedValueOnce({ Archives: [] });
+    // name stays the default "Error"; the type only appears in the message.
+    mockMMSend.mockRejectedValueOnce(
+      new Error("ConflictException: Archive name already in use")
+    );
+    mockMMSend.mockResolvedValueOnce({ ArchiveId: "arc-msg-789" });
+    mockMMSend.mockResolvedValueOnce({
+      ArchiveArn:
+        "arn:aws:ses:us-east-1:123456789012:mailmanager-archive/arc-msg-789",
+    });
+    mockSESSend.mockResolvedValueOnce({});
+
+    await mailManagerArchiveProvider.create!(baseInputs);
+
+    const { CreateArchiveCommand } = await import(
+      "@aws-sdk/client-mailmanager"
+    );
+    const createCalls = vi.mocked(CreateArchiveCommand).mock.calls;
+    expect(createCalls).toHaveLength(2);
+    expect((createCalls[1][0] as { ArchiveName: string }).ArchiveName).toBe(
+      "wraps-test-archive-2"
+    );
   });
 });
 
@@ -295,6 +340,15 @@ describe("mailManagerArchiveProvider.diff()", () => {
     await expect(
       mailManagerArchiveProvider.diff!("arc-existing-123", oldProps, newProps)
     ).rejects.toThrow(/retention cannot be changed after creation/i);
+  });
+
+  it("throws a hard error when region changes (archive is region-bound)", async () => {
+    const oldProps = { ...baseOutputs, region: "us-east-1" };
+    const newProps = { ...baseInputs, region: "eu-west-1" };
+
+    await expect(
+      mailManagerArchiveProvider.diff!("arc-existing-123", oldProps, newProps)
+    ).rejects.toThrow(/region cannot be changed after creation/i);
   });
 
   it("does not emit replaces when only configSetName changes", async () => {

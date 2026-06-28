@@ -129,8 +129,15 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
         );
         archiveArn = getResult.ArchiveArn;
       }
-    } catch {
-      // Fall through to creation
+    } catch (error) {
+      // An empty result set does NOT throw — ListArchives returns no Archives —
+      // so any error here is a real failure (throttling, AccessDenied, network).
+      // Surface it rather than silently falling through to create, which could
+      // create a duplicate archive when an ACTIVE one already exists.
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to list existing Mail Manager archives in ${region}: ${detail}`
+      );
     }
 
     // 2. Create a new archive if no active one was found.
@@ -173,11 +180,13 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
 
           break;
         } catch (error) {
-          if (
+          // AWS SDK v3 sometimes reports the error name as "Error" with the
+          // real exception type only in the message — check both.
+          const isConflict =
             error instanceof Error &&
-            error.name === "ConflictException" &&
-            attempt < MAX_NAME_ATTEMPTS
-          ) {
+            (error.name === "ConflictException" ||
+              error.message.includes("ConflictException"));
+          if (isConflict && attempt < MAX_NAME_ATTEMPTS) {
             continue;
           }
           throw error;
@@ -255,6 +264,17 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
       );
     }
 
+    // The archive lives in the region where it was created. Changing region
+    // would orphan the archived mail (and a replace would delete it), so we
+    // reject it the same way as a retention change rather than silently no-op.
+    if (olds.region !== news.region) {
+      throw new Error(
+        "Mail Manager archive region cannot be changed after creation " +
+          `(current: "${olds.region}", requested: "${news.region}"). ` +
+          "To archive in a different region, manually create a new archive there."
+      );
+    }
+
     const changes: string[] = [];
     if (olds.configSetName !== news.configSetName) {
       changes.push("configSetName");
@@ -263,7 +283,7 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
     return {
       changes: changes.length > 0,
       replaces: [],
-      stables: ["archiveId", "archiveArn", "retention", "name"],
+      stables: ["archiveId", "archiveArn", "retention", "name", "region"],
       deleteBeforeReplace: false,
     };
   },

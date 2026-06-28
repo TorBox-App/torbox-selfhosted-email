@@ -116,6 +116,16 @@ function create*(
 ): ResultType
 ```
 
+**Exception — dynamic-provider resources** (e.g. `resources/mail-manager.ts`):
+these legitimately diverge from the signature above. They take additional
+runtime `pulumi.Input`/`Output` parameters that are NOT on `ResolvedConfig`
+(e.g. `configSetName` from a created SES config set, the resolved AWS `region`)
+and omit `transform?` (dynamic resources don't accept the same transform args).
+Don't "normalize" them back to the standard shape. Also: the provider's
+`create`/`delete`/`diff`/`update` methods MUST `await import("@aws-sdk/*")`
+inside each method body — module-scope SDK imports break Pulumi closure
+serialization.
+
 ## Default Values
 
 | Setting | Default |
