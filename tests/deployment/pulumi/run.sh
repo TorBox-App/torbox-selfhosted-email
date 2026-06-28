@@ -53,6 +53,7 @@ printf "${YELLOW}Phase 1: Base deploy (domain only)${NC}\n"
 
 (cd "$APP_DIR" && pulumi config set events false)
 (cd "$APP_DIR" && pulumi config set smtp false)
+(cd "$APP_DIR" && pulumi config set archiving false)
 (cd "$APP_DIR" && pulumi up --yes)
 
 reset_counters
@@ -131,9 +132,27 @@ verify_console_access_role
 
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
 
-# ─── Phase 5: Idempotent re-deploy ───────────────────────────────────
+# ─── Phase 5: Add archiving ──────────────────────────────────────────
 
-printf "\n${YELLOW}Phase 5: Idempotent re-deploy (same config)${NC}\n"
+printf "\n${YELLOW}Phase 5: Add archiving${NC}\n"
+
+(cd "$APP_DIR" && pulumi config set archiving true)
+(cd "$APP_DIR" && pulumi up --yes)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+verify_archiving
+verify_console_access_role
+
+summary || { printf "${RED}Phase 5 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 6: Idempotent re-deploy ───────────────────────────────────
+
+printf "\n${YELLOW}Phase 6: Idempotent re-deploy (same config)${NC}\n"
 
 (cd "$APP_DIR" && pulumi up --yes)
 
@@ -143,9 +162,10 @@ verify_events "$REGION"
 verify_iam_events_policy
 verify_smtp
 verify_webhook "$REGION"
+verify_archiving
 verify_console_access_role
 
-summary || { printf "${RED}Phase 5 FAILED${NC}\n"; exit 1; }
+summary || { printf "${RED}Phase 6 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 

@@ -63,12 +63,18 @@ export function retentionToAWSPeriod(
 
 const MAX_NAME_ATTEMPTS = 10;
 
+// Fixed AWS archive name. Like every other resource in this package
+// (`wraps-email-role`, `wraps-email-tracking`, …) the archive uses the fixed
+// `wraps-email-` service prefix — NOT the component's logical name — so it
+// matches the CLI (`email-stack.ts` passes `name: "email"`) and the shared
+// deployment-verification harness (`tests/deployment/verify.sh`).
+const ARCHIVE_NAME = "wraps-email-archive";
+
 // ============================================
 // DYNAMIC PROVIDER TYPES
 // ============================================
 
 type MailManagerArchiveInputs = {
-  name: string;
   retention: string;
   configSetName: string;
   region: string;
@@ -96,8 +102,8 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
   async create(
     inputs: MailManagerArchiveInputs
   ): Promise<pulumi.dynamic.CreateResult> {
-    const { region, name, retention, configSetName, tags } = inputs;
-    const baseArchiveName = `wraps-${name}-archive`;
+    const { region, retention, configSetName, tags } = inputs;
+    const baseArchiveName = ARCHIVE_NAME;
     const namePattern = new RegExp(`^${baseArchiveName}(-\\d+)?$`);
 
     // Dynamic import required — module-scope imports break Pulumi serialization.
@@ -283,7 +289,7 @@ export const mailManagerArchiveProvider: pulumi.dynamic.ResourceProvider = {
     return {
       changes: changes.length > 0,
       replaces: [],
-      stables: ["archiveId", "archiveArn", "retention", "name", "region"],
+      stables: ["archiveId", "archiveArn", "retention", "region"],
       deleteBeforeReplace: false,
     };
   },
@@ -331,7 +337,6 @@ class MailManagerArchiveResource extends pulumi.dynamic.Resource {
   constructor(
     name: string,
     props: {
-      name: pulumi.Input<string>;
       retention: pulumi.Input<string>;
       configSetName: pulumi.Input<string>;
       region: pulumi.Input<string>;
@@ -360,8 +365,8 @@ class MailManagerArchiveResource extends pulumi.dynamic.Resource {
 /**
  * Create a Mail Manager archive for storing full email content.
  *
- * Implements idempotent create-or-reuse: if an ACTIVE archive matching
- * `wraps-{name}-archive` already exists it is reused rather than creating
+ * Implements idempotent create-or-reuse: if an ACTIVE archive named
+ * `wraps-email-archive` already exists it is reused rather than creating
  * a duplicate. On `ConflictException` (archive name blocked by one in
  * `PENDING_DELETION`) the provider retries with suffix `-2`, `-3`, … (up
  * to 10 attempts).
@@ -370,7 +375,7 @@ class MailManagerArchiveResource extends pulumi.dynamic.Resource {
  * undefined this function returns disabled placeholder outputs without
  * creating any AWS resources.
  *
- * @param name - Component name (used to derive archive name: `wraps-{name}-archive`)
+ * @param name - Component logical name (used only for the Pulumi resource node name; the AWS archive is always `wraps-email-archive`)
  * @param config - Resolved component configuration (reads `config.archiving`)
  * @param configSetName - SES configuration set to associate the archive with
  * @param region - AWS region
@@ -399,7 +404,6 @@ export function createMailManagerArchive(
   const archive = new MailManagerArchiveResource(
     `${name}-mail-manager-archive`,
     {
-      name,
       retention,
       configSetName,
       region,

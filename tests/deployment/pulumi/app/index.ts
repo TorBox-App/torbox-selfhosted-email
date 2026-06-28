@@ -5,6 +5,7 @@ const config = new pulumi.Config();
 const domain = config.require("domain");
 const enableEvents = config.getBoolean("events") ?? false;
 const enableSmtp = config.getBoolean("smtp") ?? false;
+const enableArchiving = config.getBoolean("archiving") ?? false;
 const webhookSecret = config.get("webhookSecret");
 const webhookAccountId = config.get("webhookAccountId");
 
@@ -17,6 +18,7 @@ const email = new WrapsEmail("test", {
       }
     : undefined,
   smtp: enableSmtp ? { enabled: true } : undefined,
+  archiving: enableArchiving ? { enabled: true } : undefined,
   webhook:
     webhookSecret && webhookAccountId
       ? {
@@ -31,3 +33,4 @@ export const configSetName = email.configSetName;
 export const tableName = email.tableName;
 export const queueUrl = email.queueUrl;
 export const smtpEndpoint = email.smtpEndpoint;
+export const archiveArn = email.archiveArn;

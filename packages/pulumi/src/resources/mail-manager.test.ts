@@ -53,7 +53,6 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
 // Shared test inputs
 // ---------------------------------------------------------------------------
 const baseInputs = {
-  name: "test",
   retention: "1year",
   configSetName: "wraps-email-tracking",
   region: "us-east-1",
@@ -141,13 +140,13 @@ describe("mailManagerArchiveProvider.create() — new archive", () => {
       ArchiveName: string;
       Tags: Array<{ Key: string; Value: string }>;
     };
-    expect(createArgs.ArchiveName).toBe("wraps-test-archive");
+    expect(createArgs.ArchiveName).toBe("wraps-email-archive");
 
     const managedByTag = createArgs.Tags.find((t) => t.Key === "ManagedBy");
     expect(managedByTag?.Value).toBe("wraps-pulumi");
 
     const nameTag = createArgs.Tags.find((t) => t.Key === "Name");
-    expect(nameTag?.Value).toBe("wraps-test-archive");
+    expect(nameTag?.Value).toBe("wraps-email-archive");
 
     const retentionTag = createArgs.Tags.find((t) => t.Key === "Retention");
     expect(retentionTag?.Value).toBe("1year");
@@ -192,7 +191,7 @@ describe("mailManagerArchiveProvider.create() — reuse existing active archive"
       Archives: [
         {
           ArchiveId: "arc-existing-123",
-          ArchiveName: "wraps-test-archive",
+          ArchiveName: "wraps-email-archive",
           ArchiveState: "ACTIVE",
         },
       ],
@@ -268,8 +267,8 @@ describe("mailManagerArchiveProvider.create() — ConflictException retry", () =
 
     const attempt1 = createCalls[0][0] as { ArchiveName: string };
     const attempt2 = createCalls[1][0] as { ArchiveName: string };
-    expect(attempt1.ArchiveName).toBe("wraps-test-archive");
-    expect(attempt2.ArchiveName).toBe("wraps-test-archive-2");
+    expect(attempt1.ArchiveName).toBe("wraps-email-archive");
+    expect(attempt2.ArchiveName).toBe("wraps-email-archive-2");
   });
 
   it("detects ConflictException by message when the error name is generic (AWS SDK v3 quirk)", async () => {
@@ -293,7 +292,7 @@ describe("mailManagerArchiveProvider.create() — ConflictException retry", () =
     const createCalls = vi.mocked(CreateArchiveCommand).mock.calls;
     expect(createCalls).toHaveLength(2);
     expect((createCalls[1][0] as { ArchiveName: string }).ArchiveName).toBe(
-      "wraps-test-archive-2"
+      "wraps-email-archive-2"
     );
   });
 });
