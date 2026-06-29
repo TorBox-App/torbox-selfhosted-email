@@ -118,7 +118,8 @@ summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
 printf "\n${YELLOW}Phase 4: Add webhook${NC}\n"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-(cd "$APP_DIR" && pulumi config set webhookSecret test-webhook-secret-key)
+# --secret: newer Pulumi refuses to store a secret-looking value in plaintext config
+(cd "$APP_DIR" && pulumi config set --secret webhookSecret test-webhook-secret-key)
 (cd "$APP_DIR" && pulumi config set webhookAccountId "$AWS_ACCOUNT_ID")
 (cd "$APP_DIR" && pulumi up --yes)
 

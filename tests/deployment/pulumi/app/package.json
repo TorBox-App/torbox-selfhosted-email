@@ -5,7 +5,9 @@
   "dependencies": {
     "@wraps.dev/pulumi": "file:../../../../packages/pulumi",
     "@pulumi/pulumi": "^3.0.0",
-    "@pulumi/aws": "^6.0.0"
+    "@pulumi/aws": "^6.0.0",
+    "@aws-sdk/client-mailmanager": "^3.1030.0",
+    "@aws-sdk/client-sesv2": "^3.1030.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
