@@ -270,7 +270,15 @@ export default function SignUpForm({
                   )}
                 </form.Field>
 
-                <form.Field name="email">
+                <form.Field
+                  name="email"
+                  validators={{
+                    onBlur: ({ value }) =>
+                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+                        ? undefined
+                        : "Invalid email address",
+                  }}
+                >
                   {(field) => (
                     <div className="grid gap-2">
                       <Label htmlFor={field.name}>Email</Label>
@@ -283,19 +291,32 @@ export default function SignUpForm({
                         type="email"
                         value={field.state.value}
                       />
-                      {field.state.meta.errors.map((error) => (
-                        <p
-                          className="text-destructive text-sm"
-                          key={error?.message}
-                        >
-                          {error?.message}
-                        </p>
-                      ))}
+                      {[
+                        ...new Set(
+                          field.state.meta.errors.map((error) =>
+                            typeof error === "string" ? error : error?.message
+                          )
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .map((msg) => (
+                          <p className="text-destructive text-sm" key={msg}>
+                            {msg}
+                          </p>
+                        ))}
                     </div>
                   )}
                 </form.Field>
 
-                <form.Field name="password">
+                <form.Field
+                  name="password"
+                  validators={{
+                    onBlur: ({ value }) =>
+                      value.length < 6
+                        ? "Password must be at least 6 characters"
+                        : undefined,
+                  }}
+                >
                   {(field) => (
                     <div className="grid gap-2">
                       <Label htmlFor={field.name}>Password</Label>
@@ -310,14 +331,19 @@ export default function SignUpForm({
                       <p className="text-muted-foreground text-xs">
                         Minimum 6 characters. Choose a strong, unique password.
                       </p>
-                      {field.state.meta.errors.map((error) => (
-                        <p
-                          className="text-destructive text-sm"
-                          key={error?.message}
-                        >
-                          {error?.message}
-                        </p>
-                      ))}
+                      {[
+                        ...new Set(
+                          field.state.meta.errors.map((error) =>
+                            typeof error === "string" ? error : error?.message
+                          )
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .map((msg) => (
+                          <p className="text-destructive text-sm" key={msg}>
+                            {msg}
+                          </p>
+                        ))}
                     </div>
                   )}
                 </form.Field>
