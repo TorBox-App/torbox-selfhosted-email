@@ -2,8 +2,18 @@
 
 import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
-import { apiKey, auditLog, db } from "@wraps/db";
-import { and, eq } from "drizzle-orm";
+import {
+  type apiKey,
+  auditLog,
+  db,
+  deleteApiKeyForOrg,
+  findApiKeyByHash,
+  findApiKeyForOrg,
+  insertApiKey,
+  listApiKeysForOrg,
+  touchApiKeyLastUsed,
+  updateApiKeyForOrg,
+} from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackApiKeyCreated } from "@/lib/activation-tracking";
@@ -87,19 +97,7 @@ export async function listApiKeys(
     if (permError) return permError;
 
     // Fetch all API keys for this organization
-    const keys = await db.query.apiKey.findMany({
-      where: (k, { eq }) => eq(k.organizationId, organizationId),
-      with: {
-        createdByUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: (keys, { desc }) => [desc(keys.createdAt)],
-    });
+    const keys = await listApiKeysForOrg(organizationId);
 
     return {
       success: true,
@@ -195,9 +193,8 @@ export async function createApiKey(
     const auditCtx = await getAuditContext();
     // Create in database + audit log atomically
     const newKey = await db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(apiKey)
-        .values({
+      const inserted = await insertApiKey(
+        {
           organizationId,
           name: options.name.trim(),
           keyHash: hash,
@@ -205,8 +202,9 @@ export async function createApiKey(
           permissions,
           expiresAt,
           createdBy: session.user.id,
-        })
-        .returning();
+        },
+        tx
+      );
       if (!inserted) return null;
       await tx.insert(auditLog).values(
         auditLogEntry(auditCtx, {
@@ -300,19 +298,7 @@ export async function updateApiKey(
     if (apiKeyWriteError) return apiKeyWriteError;
 
     // Verify API key belongs to this organization
-    const existingKey = await db.query.apiKey.findFirst({
-      where: (k, { and, eq }) =>
-        and(eq(k.id, apiKeyId), eq(k.organizationId, organizationId)),
-      with: {
-        createdByUser: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const existingKey = await findApiKeyForOrg(apiKeyId, organizationId);
 
     if (!existingKey) {
       return { success: false, error: "API key not found" };
@@ -332,13 +318,11 @@ export async function updateApiKey(
     }
 
     // Update in database
-    const [updatedKey] = await db
-      .update(apiKey)
-      .set(updateData)
-      .where(
-        and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId))
-      )
-      .returning();
+    const updatedKey = await updateApiKeyForOrg(
+      apiKeyId,
+      organizationId,
+      updateData
+    );
 
     if (!updatedKey) {
       return { success: false, error: "Failed to update API key" };
@@ -405,10 +389,7 @@ export async function deleteApiKey(
     if (apiKeyWriteError) return apiKeyWriteError;
 
     // Verify API key belongs to this organization
-    const existingKey = await db.query.apiKey.findFirst({
-      where: (k, { and, eq }) =>
-        and(eq(k.id, apiKeyId), eq(k.organizationId, organizationId)),
-    });
+    const existingKey = await findApiKeyForOrg(apiKeyId, organizationId);
 
     if (!existingKey) {
       return { success: false, error: "API key not found" };
@@ -417,14 +398,7 @@ export async function deleteApiKey(
     const auditCtx = await getAuditContext();
     // Delete from database + audit log atomically
     await db.transaction(async (tx) => {
-      await tx
-        .delete(apiKey)
-        .where(
-          and(
-            eq(apiKey.id, apiKeyId),
-            eq(apiKey.organizationId, organizationId)
-          )
-        );
+      await deleteApiKeyForOrg(apiKeyId, organizationId, tx);
       await tx.insert(auditLog).values(
         auditLogEntry(auditCtx, {
           organizationId,
@@ -469,9 +443,7 @@ export async function verifyApiKey(key: string): Promise<{
     const keyHash = hashApiKey(key);
 
     // Find the key in database
-    const foundKey = await db.query.apiKey.findFirst({
-      where: (k, { eq }) => eq(k.keyHash, keyHash),
-    });
+    const foundKey = await findApiKeyByHash(keyHash);
 
     if (!foundKey) {
       return { valid: false, error: "Invalid API key" };
@@ -483,17 +455,10 @@ export async function verifyApiKey(key: string): Promise<{
     }
 
     // Update last used timestamp
-    await db
-      .update(apiKey)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(apiKey.id, foundKey.id))
-      .catch((err) => {
-        const log = createActionLogger("verifyApiKey", {});
-        log.error(
-          { err, apiKeyId: foundKey.id },
-          "Failed to update lastUsedAt"
-        );
-      });
+    await touchApiKeyLastUsed(foundKey.id).catch((err) => {
+      const log = createActionLogger("verifyApiKey", {});
+      log.error({ err, apiKeyId: foundKey.id }, "Failed to update lastUsedAt");
+    });
 
     return {
       valid: true,
