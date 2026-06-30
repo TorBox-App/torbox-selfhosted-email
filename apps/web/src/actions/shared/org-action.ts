@@ -6,6 +6,8 @@ import {
   getAuditContext,
 } from "@/lib/audit";
 import { createActionLogger, type Logger, serializeError } from "@/lib/logger";
+import { checkFeatureAccess } from "@/lib/plan-limits";
+import type { PlanFeature } from "@/lib/plans";
 import { checkPermission } from "./permissions";
 import { type OrgAccess, verifyOrgAccess } from "./verify-org-access";
 
@@ -39,6 +41,7 @@ export function orgAction<TArgs extends unknown[], TResult>(
     permission: string[];
     orgId: (...args: TArgs) => string;
     onError: string;
+    feature?: PlanFeature;
   },
   handler: (ctx: OrgActionCtx, ...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult | Failure> {
@@ -57,6 +60,20 @@ export function orgAction<TArgs extends unknown[], TResult>(
       );
       if (permError) {
         return permError;
+      }
+
+      if (opts.feature) {
+        const featureAccess = await checkFeatureAccess(
+          organizationId,
+          opts.feature
+        );
+        if (!featureAccess.allowed) {
+          return {
+            success: false,
+            error:
+              featureAccess.message ?? "This feature requires a plan upgrade.",
+          };
+        }
       }
 
       const audited: OrgActionCtx["audited"] = async (fn, fields) => {

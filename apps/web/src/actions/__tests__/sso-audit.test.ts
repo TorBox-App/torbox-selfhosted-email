@@ -79,6 +79,12 @@ const testProvider = {
 
 // --- Mocks ---
 
+vi.mock("@/lib/plan-limits", () => ({
+  checkFeatureAccess: vi
+    .fn()
+    .mockResolvedValue({ allowed: true, requiredPlan: null }),
+}));
+
 vi.mock("next/headers", () => ({
   headers: () => new Headers(),
 }));

@@ -26,6 +26,12 @@ vi.mock("next/server", () => ({
   after: vi.fn((fn: () => unknown) => fn()),
 }));
 
+vi.mock("@/lib/plan-limits", () => ({
+  checkFeatureAccess: vi
+    .fn()
+    .mockResolvedValue({ allowed: true, requiredPlan: null }),
+}));
+
 vi.mock("@/actions/shared/verify-org-access", () => ({
   verifyOrgAccess: mockVerifyOrgAccess,
 }));

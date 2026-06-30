@@ -71,6 +71,7 @@ export const saveSsoProvider = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _data: SaveSsoProviderInput) => orgId,
     onError: "Something went wrong. Please try again.",
+    feature: "sso",
   },
   async (
     ctx,
@@ -130,6 +131,7 @@ export const deleteSsoProvider = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Something went wrong. Please try again.",
+    feature: "sso",
   },
   async (
     ctx,
@@ -171,6 +173,7 @@ export const requestDomainVerification = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Something went wrong. Please try again.",
+    feature: "sso",
   },
   async (
     ctx,
@@ -215,6 +218,7 @@ export const verifyDomain = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Something went wrong. Please try again.",
+    feature: "sso",
   },
   async (
     ctx,
@@ -281,6 +285,7 @@ export const verifyDomainViaSES = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Failed to verify domain via SES",
+    feature: "sso",
   },
   async (
     ctx,
@@ -359,6 +364,7 @@ export const generateScimToken = orgAction(
     permission: ["write"],
     orgId: (orgId: string, _providerId: string) => orgId,
     onError: "Failed to generate SCIM token",
+    feature: "sso",
   },
   async (
     ctx,
