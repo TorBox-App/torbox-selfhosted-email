@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/cli.ts"],
   format: ["esm"],
-  dts: true,
+  dts: false, // bin-only package (no types/exports) — declaration emit is unused
   clean: false, // Don't clean - console UI and Lambda bundles are already built here
   shims: true,
   splitting: false,

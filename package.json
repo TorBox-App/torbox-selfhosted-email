@@ -45,11 +45,9 @@
   "devDependencies": {
     "@aws-sdk/client-iam": "catalog:",
     "@aws-sdk/client-sesv2": "catalog:",
-    "@clack/prompts": "^0.11.0",
-    "@pulumi/pulumi": "^3.216.0",
-    "mri": "^1.2.0",
-    "picocolors": "^1.1.1",
     "@biomejs/biome": "2.3.4",
+    "@clack/prompts": "^0.11.0",
+    "@pulumi/pulumi": "^3.247.0",
     "@react-email/preview-server": "5.2.8",
     "@sentry/cli": "3.3.5",
     "@types/aws-lambda": "8.10.157",
@@ -58,9 +56,11 @@
     "dotenv": "catalog:",
     "dotenv-cli": "11.0.0",
     "knip": "5.86.0",
+    "mri": "^1.2.0",
+    "picocolors": "^1.1.1",
     "react-email": "5.2.8",
     "sst": "4.2.4",
-    "turbo": "^2.9.9",
+    "turbo": "^2.9.18",
     "ultracite": "6.3.2",
     "vitest": "catalog:"
   },
@@ -129,6 +129,11 @@
       "qs": "^6.14.2",
       "markdown-it": "^14.1.1",
       "seroval": "^1.4.1",
+      "stage-js": "1.0.0-alpha.17",
+      "zod@>=4": "4.3.6",
+      "@better-fetch/fetch": "1.1.21",
+      "better-call": "1.3.2",
+      "@better-auth/utils": "0.3.1",
       "react-router": "^7.12.0",
       "undici": "^7.24.0",
       "diff@<5": "^4.0.4",
@@ -168,6 +173,6 @@
   },
   "dependencies": {
     "@react-email/components": "catalog:",
-    "tailwindcss": "^4.1.17"
+    "tailwindcss": "^4.3.1"
   }
 }

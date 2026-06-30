@@ -4,47 +4,47 @@ packages:
   - wraps
 
 catalog:
-  '@aws-sdk/client-acm': 3.1030.0
-  '@aws-sdk/client-cloudformation': 3.1030.0
-  '@aws-sdk/client-cloudfront': 3.1030.0
-  '@aws-sdk/client-cloudwatch': 3.1030.0
-  '@aws-sdk/client-cloudwatch-logs': 3.1030.0
-  '@aws-sdk/client-dynamodb': 3.1030.0
-  '@aws-sdk/client-eventbridge': 3.1030.0
-  '@aws-sdk/client-iam': 3.1030.0
-  '@aws-sdk/client-lambda': 3.1030.0
-  '@aws-sdk/client-mailmanager': 3.1030.0
-  '@aws-sdk/client-pinpoint-sms-voice-v2': 3.1030.0
-  '@aws-sdk/client-route-53': 3.1030.0
-  '@aws-sdk/client-s3': 3.1030.0
-  '@aws-sdk/client-scheduler': 3.1030.0
-  '@aws-sdk/client-ses': 3.1030.0
-  '@aws-sdk/client-sesv2': 3.1030.0
-  '@aws-sdk/client-sns': 3.1030.0
-  '@aws-sdk/client-sqs': 3.1030.0
-  '@aws-sdk/client-ssm': 3.1030.0
-  '@aws-sdk/client-sts': 3.1030.0
-  '@aws-sdk/credential-providers': 3.1030.0
-  '@aws-sdk/lib-dynamodb': 3.1030.0
-  '@aws-sdk/s3-request-presigner': 3.1030.0
-  '@aws-sdk/util-dynamodb': 3.996.2
-  '@react-email/components': 1.0.8
-  '@react-email/render': 2.0.4
+  '@aws-sdk/client-acm': 3.1074.0
+  '@aws-sdk/client-cloudformation': 3.1074.0
+  '@aws-sdk/client-cloudfront': 3.1074.0
+  '@aws-sdk/client-cloudwatch': 3.1074.0
+  '@aws-sdk/client-cloudwatch-logs': 3.1074.0
+  '@aws-sdk/client-dynamodb': 3.1074.0
+  '@aws-sdk/client-eventbridge': 3.1074.0
+  '@aws-sdk/client-iam': 3.1074.0
+  '@aws-sdk/client-lambda': 3.1074.0
+  '@aws-sdk/client-mailmanager': 3.1074.0
+  '@aws-sdk/client-pinpoint-sms-voice-v2': 3.1074.0
+  '@aws-sdk/client-route-53': 3.1074.0
+  '@aws-sdk/client-s3': 3.1074.0
+  '@aws-sdk/client-scheduler': 3.1074.0
+  '@aws-sdk/client-ses': 3.1074.0
+  '@aws-sdk/client-sesv2': 3.1074.0
+  '@aws-sdk/client-sns': 3.1074.0
+  '@aws-sdk/client-sqs': 3.1074.0
+  '@aws-sdk/client-ssm': 3.1074.0
+  '@aws-sdk/client-sts': 3.1074.0
+  '@aws-sdk/credential-providers': 3.1074.0
+  '@aws-sdk/lib-dynamodb': 3.1074.0
+  '@aws-sdk/s3-request-presigner': 3.1074.0
+  '@aws-sdk/util-dynamodb': 3.996.5
+  '@react-email/components': 1.0.12
+  '@react-email/render': 2.0.9
   '@types/node': 24.10.0
-  '@types/pg': ^8.11.14
-  '@vitest/coverage-v8': 4.1.8
-  '@vitest/ui': 4.1.8
+  '@types/pg': ^8.20.0
+  '@vitest/coverage-v8': 4.1.9
+  '@vitest/ui': 4.1.9
   better-auth: 1.5.5
-  dotenv: ^17.2.2
+  dotenv: ^17.4.2
   drizzle-orm: ^0.45.2
   handlebars: 4.7.9
-  pg: ^8.14.1
-  posthog-node: ^5.29.2
-  stripe: ^19.1.0
-  tsdown: ^0.15.5
+  pg: ^8.22.0
+  posthog-node: ^5.38.2
+  stripe: ^19.3.0
+  tsdown: ^0.15.12
   tsup: ^8.5.1
   typescript: ^5.9.3
-  vitest: 4.1.8
-  zod: ^4.1.12
+  vitest: 4.1.9
+  zod: ^4.3.6
 
 strictDepBuilds: true

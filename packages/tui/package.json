@@ -16,12 +16,12 @@
     "@aws-sdk/client-sesv2": "catalog:",
     "@aws-sdk/client-sts": "catalog:",
     "@aws-sdk/util-dynamodb": "catalog:",
-    "@opentui/core": "latest",
-    "@opentui/react": "latest",
-    "react": "^19.2.5"
+    "@opentui/core": "0.1.97",
+    "@opentui/react": "0.1.97",
+    "react": "^19.2.7"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
+    "@types/react": "19.2.4",
     "typescript": "catalog:"
   }
 }
