@@ -5,13 +5,12 @@ import {
   contact,
   db,
   invitation,
-  messageSend,
   organizationExtension,
   template,
   workflow,
 } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { logger } from "./logger";
 import { getPostHogClient } from "./posthog-server";
 
@@ -275,17 +274,39 @@ async function countInvitations(organizationId: string): Promise<number> {
   return r?.count ?? 0;
 }
 
-async function countSentMessages(organizationId: string): Promise<number> {
-  const [r] = await db
-    .select({ count: count() })
-    .from(messageSend)
-    .where(
-      and(
-        eq(messageSend.organizationId, organizationId),
-        eq(messageSend.status, "sent")
-      )
-    );
-  return r?.count ?? 0;
+/**
+ * Atomically claim the one-time "first email sent" activation for an org.
+ * Returns true for exactly one caller per org — the winner emits
+ * `activation_first_email_sent`. Shares the `activation_first_email_tracked_at`
+ * flag with the API so web broadcasts, workflow sends, and SDK deliveries all
+ * fire the milestone exactly once per org. Upserts the extension row.
+ */
+async function claimFirstEmailTracked(
+  organizationId: string
+): Promise<boolean> {
+  // Cheap PK read first: once the org is tracked, later calls short-circuit
+  // here with no write and no row lock on organization_extension.
+  const [existing] = await db
+    .select({ trackedAt: organizationExtension.activationFirstEmailTrackedAt })
+    .from(organizationExtension)
+    .where(eq(organizationExtension.organizationId, organizationId));
+  if (existing?.trackedAt) {
+    return false;
+  }
+
+  // First-time path: atomic claim. The `IS NULL` setWhere makes concurrent
+  // first-fires safe — exactly one upsert wins.
+  const now = new Date();
+  const claimed = await db
+    .insert(organizationExtension)
+    .values({ organizationId, activationFirstEmailTrackedAt: now })
+    .onConflictDoUpdate({
+      target: organizationExtension.organizationId,
+      set: { activationFirstEmailTrackedAt: now, updatedAt: now },
+      setWhere: isNull(organizationExtension.activationFirstEmailTrackedAt),
+    })
+    .returning({ organizationId: organizationExtension.organizationId });
+  return claimed.length > 0;
 }
 
 // ─── Tracking Helpers ────────────────────────────────────────────────────────
@@ -370,8 +391,8 @@ export async function trackFirstEmailSent(
   }
 ) {
   try {
-    const existing = await countSentMessages(organizationId);
-    if (existing <= 1) {
+    const isFirst = await claimFirstEmailTracked(organizationId);
+    if (isFirst) {
       const props = {
         organization_id: organizationId,
         channel: properties.channel,
@@ -385,7 +406,7 @@ export async function trackFirstEmailSent(
     await updateActivationScore(
       userId,
       organizationId,
-      existing <= 1 ? { hasSentEmail: true } : undefined
+      isFirst ? { hasSentEmail: true } : undefined
     );
   } catch {
     // never throw from tracking
@@ -633,6 +654,41 @@ export async function trackTeammateInvited(
       });
     }
     await updateActivationScore(userId, organizationId);
+  } catch {
+    // never throw from tracking
+  }
+}
+
+export async function trackInvitationAccepted(
+  userEmail: string,
+  organizationId: string,
+  properties: { organizationName: string; inviterName: string; role: string }
+) {
+  try {
+    capture(userEmail, "invitation_accepted", {
+      organization_id: organizationId,
+      organization_name: properties.organizationName,
+      inviter_name: properties.inviterName,
+      role: properties.role,
+    });
+
+    // Mark the contact as an invited member BEFORE emitting the event, so the
+    // owner-centric onboarding workflows can gate it out and the member
+    // onboarding workflow can read it when its trigger evaluates.
+    await setContactProperties(userEmail, { accountType: "invited" });
+
+    // camelCase keys here feed SES template substitution in member-* emails
+    await emit(
+      userEmail,
+      "invitation.accepted",
+      {
+        organization_id: organizationId,
+        organizationName: properties.organizationName,
+        inviterName: properties.inviterName,
+        role: properties.role,
+      },
+      { createIfMissing: true }
+    );
   } catch {
     // never throw from tracking
   }

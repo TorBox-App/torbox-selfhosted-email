@@ -38,6 +38,10 @@ export const organizationExtension = pgTable("organization_extension", {
 
   // Activation tracking
   activationScore: integer("activation_score").default(0).notNull(),
+  // Set once, atomically, the first time we emit `activation_first_email_sent`
+  // for this org. Gates the event so it fires exactly once per org regardless
+  // of which path (web broadcast, workflow, or SDK delivery) observes it first.
+  activationFirstEmailTrackedAt: timestamp("activation_first_email_tracked_at"),
 
   // Sender Defaults (pre-fill for new workflows/broadcasts)
   defaultAwsAccountId: text("default_aws_account_id").references(

@@ -1,14 +1,7 @@
-import {
-  db,
-  messageSend,
-  organizationExtension,
-  template,
-  user,
-  workflow,
-} from "@wraps/db";
+import { db, organizationExtension, template, user, workflow } from "@wraps/db";
 import { member } from "@wraps/db/schema/auth";
 import { createPlatformClient } from "@wraps.dev/client";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { log } from "./logger";
 import { getPostHogClient } from "./posthog";
 
@@ -36,6 +29,45 @@ async function emit(
 }
 
 /**
+ * Atomically claim the one-time "first email sent" activation for an org.
+ * Returns true for exactly one caller per org — the winner emits
+ * `activation_first_email_sent`; every later/concurrent caller gets false.
+ * Upserts the extension row so orgs without one are still handled, and the
+ * `IS NULL` setWhere makes the claim a real single-shot guard (no count
+ * window that re-opens on every send).
+ */
+async function claimFirstEmailTracked(
+  organizationId: string
+): Promise<boolean> {
+  // Cheap PK read first: this runs on every Delivery webhook, so once the org
+  // is tracked every later call short-circuits here with no write and no row
+  // lock on organization_extension.
+  const [existing] = await db
+    .select({ trackedAt: organizationExtension.activationFirstEmailTrackedAt })
+    .from(organizationExtension)
+    .where(eq(organizationExtension.organizationId, organizationId))
+    .limit(1);
+  if (existing?.trackedAt) {
+    return false;
+  }
+
+  // First-time path: atomic claim. The `IS NULL` setWhere makes concurrent
+  // first-fires safe — two callers both read null above, but exactly one wins
+  // the upsert.
+  const now = new Date();
+  const claimed = await db
+    .insert(organizationExtension)
+    .values({ organizationId, activationFirstEmailTrackedAt: now })
+    .onConflictDoUpdate({
+      target: organizationExtension.organizationId,
+      set: { activationFirstEmailTrackedAt: now, updatedAt: now },
+      setWhere: isNull(organizationExtension.activationFirstEmailTrackedAt),
+    })
+    .returning({ organizationId: organizationExtension.organizationId });
+  return claimed.length > 0;
+}
+
+/**
  * Track first email sent for an organization.
  * Called after messageSend records are inserted with status "sent".
  * MUST be awaited in Lambda — fire-and-forget = dead code.
@@ -46,45 +78,37 @@ export async function trackFirstEmailSent(
   contactEmail?: string
 ) {
   try {
-    const [r] = await db
-      .select({ count: count() })
-      .from(messageSend)
-      .where(
-        and(
-          eq(messageSend.organizationId, organizationId),
-          eq(messageSend.status, "sent")
-        )
-      );
+    // Fire exactly once per org. The atomic claim replaces the old
+    // `count(status='sent') BETWEEN 1 AND 50` window, which re-fired on every
+    // workflow run because workflow sends never land as status='sent'.
+    if (!(await claimFirstEmailTracked(organizationId))) {
+      return;
+    }
 
-    const total = r?.count ?? 0;
+    const props = {
+      organization_id: organizationId,
+      channel: properties.channel,
+      source: properties.source,
+    };
 
-    // Fire activation event only for the first batch of sent messages
-    if (total > 0 && total <= 50) {
-      const props = {
-        organization_id: organizationId,
-        channel: properties.channel,
-        source: properties.source,
-      };
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: organizationId,
+      event: "activation_first_email_sent",
+      properties: props,
+      groups: { organization: organizationId },
+    });
+    posthog.groupIdentify({
+      groupType: "organization",
+      groupKey: organizationId,
+      properties: {
+        activation_first_email_sent: true,
+      },
+    });
 
-      const posthog = getPostHogClient();
-      posthog.capture({
-        distinctId: organizationId,
-        event: "activation_first_email_sent",
-        properties: props,
-        groups: { organization: organizationId },
-      });
-      posthog.groupIdentify({
-        groupType: "organization",
-        groupKey: organizationId,
-        properties: {
-          activation_first_email_sent: true,
-        },
-      });
-
-      // Also emit to Wraps platform for workflow triggers
-      if (contactEmail) {
-        await emit(contactEmail, "activation.first_email_sent", props);
-      }
+    // Also emit to Wraps platform for workflow triggers
+    if (contactEmail) {
+      await emit(contactEmail, "activation.first_email_sent", props);
     }
   } catch {
     // never throw from tracking
@@ -102,34 +126,10 @@ export async function trackFirstEmailDelivered(
   source: "sdk" | "platform"
 ) {
   try {
-    // Fast path: check if org already has activation score > 0 with email tracked
-    const [ext] = await db
-      .select({ activationScore: organizationExtension.activationScore })
-      .from(organizationExtension)
-      .where(eq(organizationExtension.organizationId, organizationId))
-      .limit(1);
-
-    // If activation score >= 7, the org is already well-activated — skip
-    if (ext && ext.activationScore >= 7) {
-      return;
-    }
-
-    // Check whether we've already tracked this activation via messageSend records
-    const [r] = await db
-      .select({ count: count() })
-      .from(messageSend)
-      .where(
-        and(
-          eq(messageSend.organizationId, organizationId),
-          eq(messageSend.status, "sent")
-        )
-      );
-
-    // For platform sends, trackFirstEmailSent already handles this path
-    // Only fire here if there are zero messageSend records (pure SDK send)
-    // or if we've never fired the activation event before
-    const hasPlatformSends = (r?.count ?? 0) > 0;
-    if (source === "platform" && hasPlatformSends) {
+    // Shares the same one-time claim as trackFirstEmailSent, so platform sends
+    // already tracked there won't double-fire here, and pure SDK sends (no
+    // messageSend records) still get caught from the webhook.
+    if (!(await claimFirstEmailTracked(organizationId))) {
       return;
     }
 

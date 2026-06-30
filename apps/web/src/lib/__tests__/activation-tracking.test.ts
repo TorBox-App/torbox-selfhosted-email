@@ -62,6 +62,10 @@ const mockDbWhere = vi.fn(
   (): Promise<unknown[]> => Promise.resolve([{ count: 1 }])
 );
 const mockDbInsertOnConflict = vi.fn(() => Promise.resolve());
+// Drives the atomic first-email claim: non-empty array = this caller won.
+// Defaults to "won" so first-email tests fire; override per-test to simulate
+// an already-tracked org.
+const mockClaimResult = vi.fn((): unknown[] => [{ organizationId: "org" }]);
 const mockFindManyAwsAccounts = vi.fn(() =>
   Promise.resolve([
     {
@@ -83,7 +87,15 @@ vi.mock("@wraps/db", () => ({
     })),
     insert: vi.fn(() => ({
       values: vi.fn(() => ({
-        onConflictDoUpdate: mockDbInsertOnConflict,
+        // Supports updateActivationScore (awaited, no returning) AND
+        // claimFirstEmailTracked (.returning() decides who won the claim).
+        onConflictDoUpdate: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve(mockClaimResult())),
+          then: (
+            resolve: (value: unknown) => unknown,
+            reject?: (reason: unknown) => unknown
+          ) => mockDbInsertOnConflict().then(resolve, reject),
+        })),
       })),
     })),
     query: {
@@ -133,6 +145,7 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
   ne: vi.fn(),
+  isNull: vi.fn(),
 }));
 
 // Import AFTER mocks
@@ -251,6 +264,22 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     });
 
     expect(trackResolved).toBe(true);
+  });
+
+  it("trackFirstEmailSent does not emit once the org is already tracked", async () => {
+    // Regression: the activation_first_email_sent milestone must fire at most
+    // once per org. A lost claim means another path already tracked it.
+    mockClaimResult.mockReturnValueOnce([]);
+
+    await trackFirstEmailSent("user@example.com", "org-123", {
+      channel: "email",
+      source: "broadcast",
+    });
+
+    expect(mockTrack).not.toHaveBeenCalledWith(
+      "activation.first_email_sent",
+      expect.anything()
+    );
   });
 
   it("trackContactCreated should await emit() so the HTTP call completes", async () => {

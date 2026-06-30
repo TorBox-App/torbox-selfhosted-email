@@ -2,13 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type MockRow = Record<string, unknown>;
 
-const { mockCapture, mockGroupIdentify, mockPlatformPost, mockSelectResults } =
-  vi.hoisted(() => ({
-    mockCapture: vi.fn(),
-    mockGroupIdentify: vi.fn(),
-    mockPlatformPost: vi.fn(),
-    mockSelectResults: [] as MockRow[][],
-  }));
+const {
+  mockCapture,
+  mockGroupIdentify,
+  mockPlatformPost,
+  mockSelectResults,
+  mockInsertResults,
+} = vi.hoisted(() => ({
+  mockCapture: vi.fn(),
+  mockGroupIdentify: vi.fn(),
+  mockPlatformPost: vi.fn(),
+  mockSelectResults: [] as MockRow[][],
+  mockInsertResults: [] as MockRow[][],
+}));
 
 vi.mock("@wraps/db", () => ({
   db: {
@@ -27,6 +33,17 @@ vi.mock("@wraps/db", () => ({
             },
           };
         }),
+      })),
+    })),
+    // Atomic claim used by trackFirstEmailSent / trackFirstEmailDelivered.
+    // The returned array's length decides whether this caller won the claim.
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: vi.fn(() => ({
+          returning: vi.fn(() =>
+            Promise.resolve(mockInsertResults.shift() ?? [])
+          ),
+        })),
       })),
     })),
   },
@@ -73,17 +90,35 @@ vi.mock("../lib/logger", () => ({
   },
 }));
 
-const { trackFirstEmailDelivered, trackFirstResourceCreated } = await import(
-  "../lib/activation-tracking"
-);
+const {
+  trackFirstEmailSent,
+  trackFirstEmailDelivered,
+  trackFirstResourceCreated,
+} = await import("../lib/activation-tracking");
 
 function queueSelectResults(...results: MockRow[][]) {
   mockSelectResults.push(...results);
 }
 
+/**
+ * Queue the result of the first-email claim. The helper reads the flag first,
+ * then attempts the atomic upsert only when it's still null.
+ * - won: flag read returns null → upsert wins.
+ * - lost: flag read returns a timestamp → short-circuits before any upsert.
+ */
+function queueClaim(won: boolean) {
+  if (won) {
+    mockSelectResults.push([{ trackedAt: null }]);
+    mockInsertResults.push([{ organizationId: "claimed" }]);
+  } else {
+    mockSelectResults.push([{ trackedAt: new Date() }]);
+  }
+}
+
 describe("activation tracking", () => {
   beforeEach(() => {
     mockSelectResults.length = 0;
+    mockInsertResults.length = 0;
     mockCapture.mockReset();
     mockGroupIdentify.mockReset();
     mockPlatformPost.mockReset();
@@ -91,8 +126,60 @@ describe("activation tracking", () => {
     process.env.WRAPS_API_KEY = "wraps_test_key";
   });
 
-  it("tracks first SDK delivery when no platform sends exist", async () => {
-    queueSelectResults([{ activationScore: 0 }], [{ count: 0 }]);
+  it("fires first_email_sent exactly once when the claim is won", async () => {
+    queueClaim(true);
+
+    await trackFirstEmailSent(
+      "org-1",
+      { channel: "email", source: "workflow" },
+      "contact@example.com"
+    );
+
+    expect(mockCapture).toHaveBeenCalledWith({
+      distinctId: "org-1",
+      event: "activation_first_email_sent",
+      properties: {
+        organization_id: "org-1",
+        channel: "email",
+        source: "workflow",
+      },
+      groups: { organization: "org-1" },
+    });
+    expect(mockGroupIdentify).toHaveBeenCalledWith({
+      groupType: "organization",
+      groupKey: "org-1",
+      properties: { activation_first_email_sent: true },
+    });
+    expect(mockPlatformPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "activation.first_email_sent",
+        contactEmail: "contact@example.com",
+        properties: {
+          organization_id: "org-1",
+          channel: "email",
+          source: "workflow",
+        },
+      },
+    });
+  });
+
+  it("does not re-fire first_email_sent once the org is already tracked", async () => {
+    // Regression: the old count-window re-fired on every workflow run because
+    // workflow sends never land as status='sent'. The claim must lose here.
+    queueClaim(false);
+
+    await trackFirstEmailSent("org-1", {
+      channel: "email",
+      source: "workflow",
+    });
+
+    expect(mockCapture).not.toHaveBeenCalled();
+    expect(mockGroupIdentify).not.toHaveBeenCalled();
+    expect(mockPlatformPost).not.toHaveBeenCalled();
+  });
+
+  it("tracks first SDK delivery when the org has not been tracked yet", async () => {
+    queueClaim(true);
 
     await trackFirstEmailDelivered("org-sdk", "sdk");
 
@@ -116,8 +203,8 @@ describe("activation tracking", () => {
     });
   });
 
-  it("skips platform delivery tracking when sent records already exist", async () => {
-    queueSelectResults([{ activationScore: 0 }], [{ count: 4 }]);
+  it("skips delivery tracking when the org was already tracked", async () => {
+    queueClaim(false);
 
     await trackFirstEmailDelivered("org-platform", "platform");
 

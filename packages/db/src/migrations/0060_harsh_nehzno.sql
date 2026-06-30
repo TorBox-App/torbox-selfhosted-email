@@ -1,0 +1,1 @@
+ALTER TABLE "organization_extension" ADD COLUMN "activation_first_email_tracked_at" timestamp;
