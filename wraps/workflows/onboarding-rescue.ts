@@ -33,6 +33,20 @@ export default defineWorkflow({
       eventName: "onboarding.completed",
       timeout: { hours: 2 },
     }),
+
+    // ── Gate: invited members get the Member Onboarding flow instead ──
+    // accountType is set when they accept the invite, which always lands
+    // within this 2h window, so the property is reliably present here.
+    condition("check-invited", {
+      field: "contact.properties.accountType",
+      operator: "equals",
+      value: "invited",
+      branches: {
+        yes: [exit("invited-member", { markAs: "completed" })],
+        no: [],
+      },
+    }),
+
     condition("check-completed-1", {
       field: "contact.properties.onboardingPath",
       operator: "is_set",

@@ -11,6 +11,7 @@ import {
 } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { trackInvitationAccepted } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createActionLogger } from "@/lib/logger";
 
@@ -263,6 +264,18 @@ export async function acceptInvitation(
         error: "Organization not found",
       };
     }
+
+    // Emit the invitation.accepted platform event so the member onboarding
+    // workflow fires, and flag the contact as invited so the owner-centric
+    // onboarding flows skip them. Best-effort — never blocks the join.
+    const inviterUser = await db.query.user.findFirst({
+      where: eq(user.id, inv.inviterId),
+    });
+    await trackInvitationAccepted(session.user.email, inv.organizationId, {
+      organizationName: org.name,
+      inviterName: inviterUser?.name ?? "A teammate",
+      role: inv.role ?? "member",
+    });
 
     // Revalidate relevant paths
     revalidatePath(`/${org.slug}`);

@@ -18,6 +18,7 @@ vi.mock("@/lib/activation-tracking", () => ({
   trackBroadcastCreated: vi.fn(noop),
   trackApiKeyCreated: vi.fn(noop),
   trackTeammateInvited: vi.fn(noop),
+  trackInvitationAccepted: vi.fn(noop),
   trackOnboardingPathChosen: vi.fn(noop),
   computeActivationScore: vi.fn(() =>
     Promise.resolve({ score: 0, milestones: {} })
