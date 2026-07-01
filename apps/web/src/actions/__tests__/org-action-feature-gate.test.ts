@@ -7,15 +7,12 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  mockVerifyOrgAccess,
-  mockCheckPermission,
-  mockCheckFeatureAccess,
-} = vi.hoisted(() => ({
-  mockVerifyOrgAccess: vi.fn(),
-  mockCheckPermission: vi.fn(),
-  mockCheckFeatureAccess: vi.fn(),
-}));
+const { mockVerifyOrgAccess, mockCheckPermission, mockCheckFeatureAccess } =
+  vi.hoisted(() => ({
+    mockVerifyOrgAccess: vi.fn(),
+    mockCheckPermission: vi.fn(),
+    mockCheckFeatureAccess: vi.fn(),
+  }));
 
 vi.mock("@/actions/shared/verify-org-access", () => ({
   verifyOrgAccess: mockVerifyOrgAccess,
