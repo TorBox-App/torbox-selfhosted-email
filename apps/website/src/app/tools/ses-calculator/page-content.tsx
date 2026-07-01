@@ -428,7 +428,7 @@ function SESCalculatorInner() {
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       {/* Configuration Panel */}
       <Card>
         <CardHeader>
@@ -745,7 +745,7 @@ function SESCalculatorInner() {
                     }
                     value={numEventTypes.toString()}
                   >
-                    <SelectTrigger id="event-types">
+                    <SelectTrigger className="w-full" id="event-types">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
