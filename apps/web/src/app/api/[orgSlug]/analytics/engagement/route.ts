@@ -5,12 +5,10 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
 import {
-  aggregateByDate,
   gapFillDates,
   generateDateRange,
   validateTimezone,
 } from "@/lib/analytics-utils";
-import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -23,11 +21,6 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
-    const log = createRequestLogger({
-      path: "/api/[orgSlug]/analytics/engagement",
-      method: "GET",
-      orgSlug,
-    });
 
     const session = await auth.api.getSession({
       headers: await import("next/headers").then((mod) => mod.headers()),
@@ -55,8 +48,6 @@ export async function GET(request: Request, context: RouteContext) {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-    const period = days <= 7 ? 3600 : days <= 30 ? 3600 * 6 : 3600 * 24;
-
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, orgWithMembership.id),
     });
@@ -65,84 +56,26 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json([]);
     }
 
-    const metricsResults = await Promise.all(
-      accounts.map(async (account) => {
-        try {
-          return await getCloudWatchMetricsBatch({
-            awsAccountId: account.id,
-            metrics: [
-              SES_METRICS.SEND,
-              SES_METRICS.DELIVERY,
-              SES_METRICS.OPEN,
-              SES_METRICS.CLICK,
-            ],
-            period,
-            startTime,
-            endTime,
-          });
-        } catch (error) {
-          log.error(
-            { err: error, accountId: account.id },
-            "Failed to fetch engagement metrics for account"
-          );
-          return null;
-        }
-      })
+    // SES publishes no Open/Click metrics to CloudWatch without a CloudWatch
+    // event destination (Wraps deploys EventBridge only) — Postgres
+    // message_send is the only source of engagement data.
+    const pgData = await getEmailMetricsFromPostgres(
+      orgWithMembership.id,
+      startTime,
+      endTime,
+      timezone
     );
-
-    const keys = ["sent", "delivered", "opens", "clicks"] as const;
-    const dailyMap = new Map<string, Record<(typeof keys)[number], number>>();
-
-    for (const metrics of metricsResults) {
-      if (!metrics) {
-        continue;
-      }
-
-      const timestamps = metrics[SES_METRICS.SEND]?.[0]?.Timestamps || [];
-      const perAccount = aggregateByDate(
-        timestamps,
-        [
-          metrics[SES_METRICS.SEND]?.[0]?.Values || [],
-          metrics[SES_METRICS.DELIVERY]?.[0]?.Values || [],
-          metrics[SES_METRICS.OPEN]?.[0]?.Values || [],
-          metrics[SES_METRICS.CLICK]?.[0]?.Values || [],
-        ],
-        [...keys],
-        timezone
-      );
-
-      for (const [dateStr, values] of perAccount) {
-        const existing = dailyMap.get(dateStr) || {
-          sent: 0,
-          delivered: 0,
-          opens: 0,
-          clicks: 0,
-        };
-        dailyMap.set(dateStr, {
-          sent: existing.sent + values.sent,
-          delivered: existing.delivered + values.delivered,
-          opens: existing.opens + values.opens,
-          clicks: existing.clicks + values.clicks,
-        });
-      }
-    }
-
-    // Fallback to PostgreSQL message_send when CloudWatch returns no data
-    if (dailyMap.size === 0) {
-      const pgData = await getEmailMetricsFromPostgres(
-        orgWithMembership.id,
-        startTime,
-        endTime,
-        timezone
-      );
-      for (const [dateStr, m] of pgData) {
-        dailyMap.set(dateStr, {
-          sent: m.sent,
-          delivered: m.delivered,
-          opens: m.opens,
-          clicks: m.clicks,
-        });
-      }
+    const dailyMap = new Map<
+      string,
+      { sent: number; delivered: number; opens: number; clicks: number }
+    >();
+    for (const [dateStr, m] of pgData) {
+      dailyMap.set(dateStr, {
+        sent: m.sent,
+        delivered: m.delivered,
+        opens: m.opens,
+        clicks: m.clicks,
+      });
     }
 
     const dateRange = generateDateRange(startTime, endTime, timezone);

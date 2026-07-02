@@ -146,6 +146,7 @@ describe("Email Chart API", () => {
       bounceRate: null,
       complaintRate: null,
     });
+    mockGetEmailMetricsFromPostgres.mockResolvedValue(new Map());
   });
 
   it("returns correct deliveryRate in overview when rendering failures exist", async () => {
@@ -209,5 +210,62 @@ describe("Email Chart API", () => {
     expect(data.overview.bounceRate).not.toBeCloseTo(4.17, 1);
     // 0.0003 * 100 = 0.03%, rounded to 2 decimals
     expect(data.overview.complaintRate).toBeCloseTo(0.03, 2);
+  });
+
+  it("overlays opens/clicks from Postgres when CloudWatch has send data but no engagement metrics", async () => {
+    const testDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const testDay = testDate.toISOString().slice(0, 10);
+
+    const ts = [testDate];
+    mockGetCloudWatchMetricsBatch.mockResolvedValueOnce({
+      Send: [{ Timestamps: ts, Values: [100] }],
+      Delivery: [{ Timestamps: ts, Values: [90] }],
+      Bounce: [{ Timestamps: ts, Values: [0] }],
+      Complaint: [{ Timestamps: ts, Values: [0] }],
+      Open: [{ Timestamps: ts, Values: [0] }],
+      Click: [{ Timestamps: ts, Values: [0] }],
+      RenderingFailure: [{ Timestamps: ts, Values: [0] }],
+    });
+
+    mockGetEmailMetricsFromPostgres.mockResolvedValueOnce(
+      new Map([
+        [
+          testDay,
+          {
+            date: testDay,
+            sent: 100,
+            delivered: 90,
+            bounced: 0,
+            complaints: 0,
+            opens: 45,
+            clicks: 9,
+            renderingFailures: 0,
+          },
+        ],
+      ])
+    );
+
+    const { GET } = await import("../[orgSlug]/analytics/email-chart/route");
+    const request = new Request(
+      "http://localhost/api/test-org/analytics/email-chart?days=30&tz=UTC"
+    );
+    const context = { params: Promise.resolve({ orgSlug: "test-org" }) };
+
+    const response = await GET(request, context);
+    const data = await response.json();
+
+    const volumePoint = data.volume.find(
+      (v: { date: string }) => v.date === testDay
+    );
+    expect(volumePoint.opens).toBe(45);
+    expect(volumePoint.clicks).toBe(9);
+
+    const engagementPoint = data.engagement.find(
+      (v: { date: string }) => v.date === testDay
+    );
+    expect(engagementPoint.openRate).toBe(50);
+    expect(engagementPoint.clickRate).toBe(10);
+
+    expect(data.overview.totalSent).toBe(100);
   });
 });

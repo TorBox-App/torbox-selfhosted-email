@@ -150,14 +150,38 @@ function buildEmailChartData(orgId: string, days: number, timezone: string) {
         }
       }
 
-      // Fall back to PostgreSQL when CloudWatch has no data
+      const pgData = await getEmailMetricsFromPostgres(
+        orgId,
+        startTime,
+        endTime,
+        timezone
+      );
       if (dailyMap.size === 0) {
-        dailyMap = await getEmailMetricsFromPostgres(
-          orgId,
-          startTime,
-          endTime,
-          timezone
-        );
+        // CloudWatch returned nothing (no metrics yet, or all accounts errored)
+        dailyMap = pgData;
+      } else {
+        // CloudWatch Open/Click are always empty — no CloudWatch event destination
+        // is deployed — so engagement comes from Postgres message_send.
+        for (const [dateStr, m] of pgData) {
+          const existing = dailyMap.get(dateStr);
+          if (existing) {
+            existing.opens = m.opens;
+            existing.clicks = m.clicks;
+          } else {
+            // Day present in Postgres but absent from CloudWatch (period/timezone
+            // boundary) — CloudWatch contributed nothing for it, so use the full
+            // Postgres row rather than dropping the day.
+            dailyMap.set(dateStr, {
+              sent: m.sent,
+              delivered: m.delivered,
+              bounced: m.bounced,
+              complaints: m.complaints,
+              opens: m.opens,
+              clicks: m.clicks,
+              renderingFailures: m.renderingFailures,
+            });
+          }
+        }
       }
 
       let totalSent = 0;
