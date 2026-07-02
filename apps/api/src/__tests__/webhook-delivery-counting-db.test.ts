@@ -16,7 +16,7 @@
  * insert (`message_usage_monthly`) is allowed to run against the real DB.
  */
 
-import { db, eq, messageSend } from "@wraps/db";
+import { batchSend, db, eq, messageSend } from "@wraps/db";
 import { Elysia } from "elysia";
 import {
   afterAll,
@@ -158,6 +158,76 @@ describe("webhook delivery precedence (real DB)", () => {
     const row = await getStatus(messageId);
     expect(row.status).toBe("delivered");
     expect(row.deliveredAt).not.toBeNull();
+  });
+
+  it("heals a wrongly-'failed' row exactly once under duplicate delivery events", async () => {
+    // A row marked 'failed' by a bookkeeping error (send actually succeeded)
+    // must be flipped to delivered, its stale error cleared, and the batch
+    // failed counter decremented exactly once — even when EventBridge
+    // delivers the same event twice (at-least-once delivery).
+    const messageId = `${TEST_PREFIX}-mid-healed`;
+    const batchId = `${TEST_PREFIX}-batch-heal`;
+
+    await db.insert(batchSend).values({
+      id: batchId,
+      organizationId: fixture.ids.org,
+      awsAccountId: fixture.ids.awsAccount,
+      channel: "email",
+      status: "completed",
+      audienceType: "all",
+      totalRecipients: 1,
+      processedRecipients: 1,
+      sent: 0,
+      failed: 1,
+      delivered: 0,
+    } as typeof batchSend.$inferInsert);
+
+    await db.insert(messageSend).values(
+      messageSendRow(fixture.ids, {
+        id: `${TEST_PREFIX}-msg-healed`,
+        messageId,
+        status: "failed",
+        sourceType: "batch",
+        batchSendId: batchId,
+        error: 'Failed query: update "message_send" set ...',
+      })
+    );
+
+    const res1 = await postDelivery(
+      fixture.accountNumber,
+      messageId,
+      fixture.secret
+    );
+    expect(res1.status).toBe(200);
+    const res2 = await postDelivery(
+      fixture.accountNumber,
+      messageId,
+      fixture.secret
+    );
+    expect(res2.status).toBe(200);
+
+    const [row] = await db
+      .select({
+        status: messageSend.status,
+        error: messageSend.error,
+        deliveredAt: messageSend.deliveredAt,
+      })
+      .from(messageSend)
+      .where(eq(messageSend.messageId, messageId))
+      .limit(1);
+    expect(row.status).toBe("delivered");
+    expect(row.error).toBeNull();
+    expect(row.deliveredAt).not.toBeNull();
+
+    const [batch] = await db
+      .select({ failed: batchSend.failed })
+      .from(batchSend)
+      .where(eq(batchSend.id, batchId))
+      .limit(1);
+    // Decremented exactly once — the duplicate event must not decrement again.
+    expect(batch.failed).toBe(0);
+
+    await db.delete(batchSend).where(eq(batchSend.id, batchId));
   });
 
   it("rejects a wrong secret with 401 and does not change status", async () => {

@@ -10,7 +10,12 @@ import {
 } from "drizzle-orm";
 import { db } from "../index";
 import { awsAccount } from "../schema/app";
-import { batchSend, type Channel } from "../schema/batch";
+import {
+  batchSend,
+  type Channel,
+  MESSAGE_SEND_UNACCEPTED_STATUSES,
+  messageSend,
+} from "../schema/batch";
 import { contact, contactTopic } from "../schema/contacts";
 import { template } from "../schema/templates";
 import { buildConditionSQL } from "../segment-filter";
@@ -115,6 +120,46 @@ export async function findBroadcastWithMeta(
 export type BroadcastWithMeta = NonNullable<
   Awaited<ReturnType<typeof findBroadcastWithMeta>>
 >;
+
+export type BroadcastSendOutcomes = {
+  total: number;
+  accepted: number;
+  failed: number;
+};
+
+/**
+ * Derive send outcomes from message_send row statuses instead of the
+ * batch_send counters. The counters are monotonic increments written
+ * mid-send and never reconciled — a bookkeeping error can leave them
+ * permanently wrong, while row statuses self-heal as SES events arrive.
+ * `accepted` counts every status that means SES took the message
+ * ('failed' and the pre-send statuses are the only exclusions).
+ * `total` is 0 for broadcasts that predate per-message rows — callers
+ * should fall back to the counters in that case.
+ */
+export async function getBroadcastSendOutcomes(
+  batchId: string,
+  organizationId: string,
+  dbClient: DbClient = db
+): Promise<BroadcastSendOutcomes> {
+  const unaccepted = sql.raw(
+    MESSAGE_SEND_UNACCEPTED_STATUSES.map((s) => `'${s}'`).join(", ")
+  );
+  const [result] = await dbClient
+    .select({
+      total: sql<number>`count(*)::int`,
+      accepted: sql<number>`count(*) filter (where ${messageSend.status} not in (${unaccepted}))::int`,
+      failed: sql<number>`count(*) filter (where ${messageSend.status} = 'failed')::int`,
+    })
+    .from(messageSend)
+    .where(
+      and(
+        eq(messageSend.batchSendId, batchId),
+        eq(messageSend.organizationId, organizationId)
+      )
+    );
+  return result ?? { total: 0, accepted: 0, failed: 0 };
+}
 
 export async function listBroadcasts(
   organizationId: string,

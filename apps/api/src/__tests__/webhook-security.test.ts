@@ -41,7 +41,14 @@ vi.mock("@wraps/db", () => {
       })),
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn((...args: unknown[]) => mockUpdateSet(...args)),
+          // Thenable that also supports .returning() — processDelivery's
+          // atomic failed→delivered flip calls .where().returning(); []
+          // means "row was not 'failed'" → code proceeds to plain update.
+          where: vi.fn((...args: unknown[]) =>
+            Object.assign(Promise.resolve(mockUpdateSet(...args)), {
+              returning: vi.fn().mockResolvedValue([]),
+            })
+          ),
         })),
       })),
       insert: vi.fn(() => ({

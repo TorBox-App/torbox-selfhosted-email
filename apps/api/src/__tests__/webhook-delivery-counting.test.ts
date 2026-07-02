@@ -141,7 +141,13 @@ function mockInsertChain() {
 function mockUpdateChain() {
   mockDbUpdate.mockImplementation(() => ({
     set: () => ({
-      where: () => Promise.resolve({ rowCount: 1 }),
+      // Thenable that also supports .returning() — processDelivery's atomic
+      // failed→delivered flip calls .where().returning(); [] means "row was
+      // not 'failed'", so the code proceeds to the plain update.
+      where: () =>
+        Object.assign(Promise.resolve({ rowCount: 1 }), {
+          returning: () => Promise.resolve([]),
+        }),
     }),
   }));
 }
@@ -272,7 +278,10 @@ describe("webhook delivery counting", () => {
     // Make update (processDelivery) throw
     mockDbUpdate.mockImplementation(() => ({
       set: () => ({
-        where: () => Promise.reject(new Error("DB write failed")),
+        where: () => {
+          const rejected = Promise.reject(new Error("DB write failed"));
+          return Object.assign(rejected, { returning: () => rejected });
+        },
       }),
     }));
 
@@ -309,7 +318,10 @@ describe("webhook delivery counting", () => {
       set: (data: Record<string, unknown>) => {
         updateSpy(data);
         return {
-          where: () => Promise.resolve({ rowCount: 1 }),
+          where: () =>
+            Object.assign(Promise.resolve({ rowCount: 1 }), {
+              returning: () => Promise.resolve([]),
+            }),
         };
       },
     }));
@@ -334,7 +346,10 @@ describe("webhook delivery counting", () => {
     // Make update (processDelivery) throw
     mockDbUpdate.mockImplementation(() => ({
       set: () => ({
-        where: () => Promise.reject(new Error("DB write failed")),
+        where: () => {
+          const rejected = Promise.reject(new Error("DB write failed"));
+          return Object.assign(rejected, { returning: () => rejected });
+        },
       }),
     }));
 

@@ -16,6 +16,7 @@ import {
   findTemplateContent,
   findTemplateForValidation,
   findTemplateVariables,
+  getBroadcastSendOutcomes,
   getSampleBroadcastRecipients,
   getSampleRecipientsWithProperties,
   insertDraftBroadcast,
@@ -685,11 +686,19 @@ async function loadBatchWithMeta(
   batchId: string,
   organizationId: string
 ): Promise<GetBatchResult> {
-  const b = await findBroadcastWithMeta(batchId, organizationId);
+  // sent/failed come from message_send row statuses, not the batch counters:
+  // rows self-heal as SES events arrive, counters don't. Broadcasts that
+  // predate per-message rows (total === 0) fall back to the counters.
+  const [b, outcomes] = await Promise.all([
+    findBroadcastWithMeta(batchId, organizationId),
+    getBroadcastSendOutcomes(batchId, organizationId),
+  ]);
 
   if (!b) {
     return { success: false, error: "Batch send not found" };
   }
+
+  const hasPerMessageRows = outcomes.total > 0;
 
   return {
     success: true,
@@ -707,9 +716,9 @@ async function loadBatchWithMeta(
       templateName: b.emailTemplate?.name,
       totalRecipients: b.totalRecipients,
       processedRecipients: b.processedRecipients,
-      sent: b.sent,
+      sent: hasPerMessageRows ? outcomes.accepted : b.sent,
       delivered: b.delivered,
-      failed: b.failed,
+      failed: hasPerMessageRows ? outcomes.failed : b.failed,
       opened: b.opened,
       clicked: b.clicked,
       bounced: b.bounced,

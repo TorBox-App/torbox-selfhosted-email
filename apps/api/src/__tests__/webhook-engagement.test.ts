@@ -78,7 +78,14 @@ function selectChainUnlimited(rows: unknown[]) {
 function updateChain(result: unknown = undefined) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.set = vi.fn().mockReturnValue({
-    where: vi.fn().mockResolvedValue(result ?? { rowCount: 1 }),
+    // Thenable that also supports .returning() — processDelivery's atomic
+    // failed→delivered flip calls .where().returning(); [] means "row was
+    // not 'failed'", so the code proceeds to the plain update.
+    where: vi.fn().mockReturnValue(
+      Object.assign(Promise.resolve(result ?? { rowCount: 1 }), {
+        returning: vi.fn().mockResolvedValue([]),
+      })
+    ),
   });
   return chain;
 }

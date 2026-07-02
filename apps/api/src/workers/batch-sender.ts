@@ -12,6 +12,7 @@ import {
   GetAccountCommand,
   SESv2Client,
   SendBulkEmailCommand,
+  type SendBulkEmailCommandOutput,
 } from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
@@ -23,6 +24,7 @@ import {
   contactTopic,
   db,
   eq,
+  MESSAGE_SEND_UNACCEPTED_STATUSES,
   messageSend,
   organization,
   organizationExtension,
@@ -36,7 +38,7 @@ import {
   renderTemplateStrict,
 } from "@wraps/template-render";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
-import { and, exists, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
@@ -60,6 +62,112 @@ const CLAIM_STALE_MINUTES = 15;
 const SELF_RESCHEDULE_FLOOR_MS = 45_000;
 const SELF_RESCHEDULE_LOOP_GUARD = 2;
 const SELF_RESCHEDULE_DELAY_SECONDS = 10;
+
+// Post-send bookkeeping writes run AFTER SES has accepted a message, so a
+// transient DB error there must never surface as a send failure — it would
+// mark delivered mail 'failed' and expose it to re-claim (duplicate send).
+// Retry with backoff before giving up.
+const BOOKKEEPING_ATTEMPTS = 3;
+async function withBookkeepingRetries<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < BOOKKEEPING_ATTEMPTS; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < BOOKKEEPING_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// Both send paths record per-recipient outcomes through the two helpers below
+// so the paths can't drift apart — the 2026-07 incident happened because one
+// path wrapped its bookkeeping writes and the other didn't. Neither helper
+// ever throws.
+
+type BookkeepingCtx = { organizationId: string; batchId: string };
+
+// After SES accepts a message. On persistent write failure the row stays
+// claimed ('queued') without a messageId and becomes stale-reclaimable after
+// CLAIM_STALE_MINUTES — never misfiled as 'failed', which re-claim would
+// double-send. messageId rule: unique index on messageId; write null (not "")
+// so Postgres allows multiple NULL values without a uniqueness collision.
+async function recordAcceptedSend(
+  ctx: BookkeepingCtx,
+  recipient: { id: string; email: string | null },
+  values: { messageId: string | null; subject: string | null; sentAt: Date }
+): Promise<void> {
+  try {
+    await withBookkeepingRetries(() =>
+      db
+        .update(messageSend)
+        .set({
+          status: "sent",
+          messageId: values.messageId,
+          subject: values.subject,
+          sentAt: values.sentAt,
+        })
+        .where(
+          and(
+            eq(messageSend.organizationId, ctx.organizationId),
+            eq(messageSend.batchSendId, ctx.batchId),
+            eq(messageSend.contactId, recipient.id)
+          )
+        )
+    );
+  } catch (updateError) {
+    log.error(
+      "Post-send bookkeeping update failed after retries",
+      updateError,
+      {
+        email: recipient.email,
+        messageId: values.messageId,
+        batchId: ctx.batchId,
+        organizationId: ctx.organizationId,
+      }
+    );
+  }
+}
+
+// After SES rejects a recipient. Returns whether the failure was recorded —
+// callers count `failed` only for recorded rows. On persistent write failure
+// the row stays claimed; the stale re-claim path retries this genuinely-unsent
+// recipient later.
+async function recordSendFailure(
+  ctx: BookkeepingCtx,
+  recipient: { id: string; email: string | null },
+  error: string
+): Promise<boolean> {
+  try {
+    await withBookkeepingRetries(() =>
+      db
+        .update(messageSend)
+        .set({ status: "failed", error })
+        .where(
+          and(
+            eq(messageSend.organizationId, ctx.organizationId),
+            eq(messageSend.batchSendId, ctx.batchId),
+            eq(messageSend.contactId, recipient.id)
+          )
+        )
+    );
+    return true;
+  } catch (updateError) {
+    log.error(
+      "Failed to record send failure; row remains claimed",
+      updateError,
+      {
+        email: recipient.email,
+        batchId: ctx.batchId,
+        organizationId: ctx.organizationId,
+      }
+    );
+    return false;
+  }
+}
 
 export const handler: SQSHandler = async (
   event: SQSEvent,
@@ -339,7 +447,14 @@ async function processJob(
           eq(messageSend.batchSendId, batchId),
           inArray(messageSend.contactId, notClaimed),
           or(
-            eq(messageSend.status, "failed"),
+            // Only genuinely-unsent failures: a 'failed' row carrying a
+            // messageId was accepted by SES (e.g. a bookkeeping error was
+            // misfiled as a send failure) — re-claiming it would send a
+            // duplicate, and SES has no idempotency token to stop it.
+            and(
+              eq(messageSend.status, "failed"),
+              isNull(messageSend.messageId)
+            ),
             and(
               eq(messageSend.status, "queued"),
               sql`${messageSend.claimedAt} < now() - interval '${sql.raw(String(CLAIM_STALE_MINUTES))} minutes'`
@@ -551,8 +666,9 @@ async function processJob(
         }
       }
 
+      let result: SendBulkEmailCommandOutput;
       try {
-        const result = await sesClient.send(
+        result = await sesClient.send(
           new SendBulkEmailCommand({
             FromEmailAddress: fromDisplay,
             ReplyToAddresses: batch.replyTo ? [batch.replyTo] : undefined,
@@ -575,57 +691,11 @@ async function processJob(
             ],
           })
         );
-
-        // Update claimed rows with send results. Each row was claimed before the
-        // SES call — we UPDATE by (organizationId, batchSendId, contactId).
-        // messageId rule: unique index on messageId; write null (not "") so Postgres
-        // allows multiple NULL values without a uniqueness collision.
-        const sentAt = new Date();
-        await Promise.all(
-          recipientBatch.map(async (recipient, j) => {
-            const bulkResult = result.BulkEmailEntryResults?.[j];
-            if (bulkResult?.Status === "SUCCESS") {
-              await db
-                .update(messageSend)
-                .set({
-                  status: "sent",
-                  messageId: bulkResult.MessageId || null,
-                  subject: prepared[j].renderedSubject,
-                  sentAt,
-                })
-                .where(
-                  and(
-                    eq(messageSend.organizationId, organizationId),
-                    eq(messageSend.batchSendId, batchId),
-                    eq(messageSend.contactId, recipient.id)
-                  )
-                );
-              sent++;
-              sentContactIds.push(recipient.id);
-            } else {
-              log.error("Bulk send failed for recipient", bulkResult?.Error, {
-                email: recipient.email,
-                batchId,
-                organizationId,
-              });
-              await db
-                .update(messageSend)
-                .set({
-                  status: "failed",
-                  error: bulkResult?.Error ?? "Unknown error",
-                })
-                .where(
-                  and(
-                    eq(messageSend.organizationId, organizationId),
-                    eq(messageSend.batchSendId, batchId),
-                    eq(messageSend.contactId, recipient.id)
-                  )
-                );
-              failed++;
-            }
-          })
-        );
       } catch (error) {
+        // Only SES call errors reach this catch — the post-send bookkeeping
+        // moved below it, so a DB error can never be misread as a send
+        // failure. Every branch exits the iteration; rows in this sub-batch
+        // are all still 'queued' when the catch runs.
         // Check if this is a throttle error
         const isThrottle =
           error instanceof Error &&
@@ -698,14 +768,19 @@ async function processJob(
                   inArray(
                     messageSend.contactId,
                     recipientBatch.map((r) => r.id)
-                  )
+                  ),
+                  eq(messageSend.status, "queued")
                 )
               );
           }
           throw new Error(permError);
         }
 
-        // Non-throttle error: mark claimed recipients as failed
+        // Non-throttle error: SES rejected the chunk, so claimed recipients
+        // were never sent. The status='queued' guard restricts the sweep to
+        // rows this sub-batch actually owns in their pre-send state — it can
+        // never clobber a row already recorded 'sent'. Count failures from
+        // rows actually updated, not chunk size.
         log.error("Bulk send failed for chunk", error, {
           batchId,
           chunkOffset: i,
@@ -714,7 +789,7 @@ async function processJob(
         const errorMessage =
           error instanceof Error ? error.message : "Bulk send failed";
         if (recipientBatch.length > 0) {
-          await db
+          const marked = await db
             .update(messageSend)
             .set({ status: "failed", error: errorMessage })
             .where(
@@ -724,12 +799,50 @@ async function processJob(
                 inArray(
                   messageSend.contactId,
                   recipientBatch.map((r) => r.id)
-                )
+                ),
+                eq(messageSend.status, "queued")
               )
-            );
+            )
+            .returning({ contactId: messageSend.contactId });
+          failed += marked.length;
         }
-        failed += recipientBatch.length;
+        continue;
       }
+
+      // Record send results OUTSIDE the SES try/catch. SES has accepted every
+      // SUCCESS entry at this point: a transient DB error while recording that
+      // fact must not mark rows failed (re-claim would double-send them) and
+      // must not count toward the failed counter.
+      const ctx = { organizationId, batchId };
+      const sentAt = new Date();
+      await Promise.all(
+        recipientBatch.map(async (recipient, j) => {
+          const bulkResult = result.BulkEmailEntryResults?.[j];
+          if (bulkResult?.Status === "SUCCESS") {
+            await recordAcceptedSend(ctx, recipient, {
+              messageId: bulkResult.MessageId || null,
+              subject: prepared[j].renderedSubject,
+              sentAt,
+            });
+            sent++;
+            sentContactIds.push(recipient.id);
+          } else {
+            log.error("Bulk send failed for recipient", bulkResult?.Error, {
+              email: recipient.email,
+              batchId,
+              organizationId,
+            });
+            const recorded = await recordSendFailure(
+              ctx,
+              recipient,
+              bulkResult?.Error ?? "Unknown error"
+            );
+            if (recorded) {
+              failed++;
+            }
+          }
+        })
+      );
     }
   } else {
     // Fallback: individual sends for raw HTML (parallel with concurrency limit)
@@ -808,28 +921,20 @@ async function processJob(
       );
 
       // Update claimed rows with send results (raw-HTML individual-send path).
-      // messageId rule: use || null (not ?? "") — unique index prohibits duplicate
-      // non-NULL values; multiple NULLs are allowed.
+      // Bookkeeping errors are retried and never thrown: an unhandled DB error
+      // here would crash the invocation and SQS-redeliver the whole chunk
+      // against rows SES already accepted.
+      const ctx = { organizationId, batchId };
       const sentAt = new Date();
       await Promise.all(
         results.map(async (result, j) => {
           const recipient = recipientBatch[j];
           if (result.status === "fulfilled") {
-            await db
-              .update(messageSend)
-              .set({
-                status: "sent",
-                messageId: result.value.messageId || null,
-                subject: result.value.subject,
-                sentAt,
-              })
-              .where(
-                and(
-                  eq(messageSend.organizationId, organizationId),
-                  eq(messageSend.batchSendId, batchId),
-                  eq(messageSend.contactId, recipient.id)
-                )
-              );
+            await recordAcceptedSend(ctx, recipient, {
+              messageId: result.value.messageId || null,
+              subject: result.value.subject,
+              sentAt,
+            });
             sent++;
             sentContactIds.push(recipient.id);
           } else {
@@ -838,23 +943,16 @@ async function processJob(
               batchId,
               organizationId,
             });
-            await db
-              .update(messageSend)
-              .set({
-                status: "failed",
-                error:
-                  result.reason instanceof Error
-                    ? result.reason.message
-                    : "Send failed",
-              })
-              .where(
-                and(
-                  eq(messageSend.organizationId, organizationId),
-                  eq(messageSend.batchSendId, batchId),
-                  eq(messageSend.contactId, recipient.id)
-                )
-              );
-            failed++;
+            const recorded = await recordSendFailure(
+              ctx,
+              recipient,
+              result.reason instanceof Error
+                ? result.reason.message
+                : "Send failed"
+            );
+            if (recorded) {
+              failed++;
+            }
           }
         })
       );
@@ -909,10 +1007,20 @@ async function processJob(
       { delaySeconds: rateLimitDelay }
     );
   } else {
-    // Short chunk means we've reached the end — mark batch completed
+    // Short chunk means we've reached the end — mark batch completed and
+    // reconcile sent/failed from row statuses. The incremental counters can
+    // drift when a chunk hits partial failures; rows are the source of truth.
+    const unaccepted = sql.raw(
+      MESSAGE_SEND_UNACCEPTED_STATUSES.map((s) => `'${s}'`).join(", ")
+    );
     await db
       .update(batchSend)
-      .set({ status: "completed", completedAt: new Date() })
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        sent: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} not in (${unaccepted}))`,
+        failed: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} = 'failed')`,
+      })
       .where(eq(batchSend.id, batchId));
   }
 }

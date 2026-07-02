@@ -54,6 +54,17 @@ export const messageSendStatusEnum = pgEnum("message_send_status", [
   "opted_out", // SMS specific
 ]);
 
+// Statuses meaning SES has NOT accepted the message; every other status is a
+// post-acceptance refinement of 'sent'. Shared by the broadcast report
+// aggregation and the worker's completion-time counter reconciliation so the
+// two can never disagree when a new status is added.
+export const MESSAGE_SEND_UNACCEPTED_STATUSES = [
+  "pending",
+  "queued",
+  "failed",
+  "opted_out",
+] as const;
+
 /**
  * Message source type
  */

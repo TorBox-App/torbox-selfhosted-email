@@ -16,7 +16,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { trackFirstEmailDelivered } from "../lib/activation-tracking";
 import { log } from "../lib/logger";
@@ -475,14 +475,30 @@ async function processDelivery(
 
   const deliveredAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Update messageSend status
-  await db
+  // Common case first (single query on the hottest webhook path): the row is
+  // not 'failed'. When it IS 'failed', it was wrongly recorded (e.g. a
+  // bookkeeping error misfiled as a send failure) — heal it with an atomic
+  // status='failed' flip, so exactly one of N concurrent duplicate events
+  // wins and the counter decrement below can never double-apply.
+  const updated = await db
     .update(messageSend)
-    .set({
-      status: "delivered",
-      deliveredAt,
-    })
-    .where(eq(messageSend.id, message.id));
+    .set({ status: "delivered", deliveredAt })
+    .where(
+      and(eq(messageSend.id, message.id), ne(messageSend.status, "failed"))
+    )
+    .returning({ id: messageSend.id });
+
+  let wasWronglyFailed = false;
+  if (updated.length === 0) {
+    const healed = await db
+      .update(messageSend)
+      .set({ status: "delivered", deliveredAt, error: null })
+      .where(
+        and(eq(messageSend.id, message.id), eq(messageSend.status, "failed"))
+      )
+      .returning({ id: messageSend.id });
+    wasWronglyFailed = healed.length > 0;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {
@@ -490,11 +506,17 @@ async function processDelivery(
       .update(batchSend)
       .set({
         delivered: sql`${batchSend.delivered} + 1`,
+        ...(wasWronglyFailed
+          ? { failed: sql`greatest(${batchSend.failed} - 1, 0)` }
+          : {}),
       })
       .where(eq(batchSend.id, message.batchSendId));
   }
 
-  log.info("Webhook: message delivered", { messageId: message.id });
+  log.info("Webhook: message delivered", {
+    messageId: message.id,
+    healedFromFailed: wasWronglyFailed,
+  });
 }
 
 async function processOpen(
