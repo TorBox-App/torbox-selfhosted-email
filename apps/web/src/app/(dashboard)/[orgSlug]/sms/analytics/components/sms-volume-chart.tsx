@@ -27,6 +27,7 @@ import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { countYAxisProps } from "@/lib/chart-axis";
 import { useSMSVolumeData } from "../hooks/use-sms-analytics";
 
 const chartConfig = {
@@ -38,24 +39,6 @@ const chartConfig = {
     },
   },
 } satisfies ChartConfig;
-
-function createYAxisFormatter(data: { sent?: number }[]) {
-  const maxValue = Math.max(...data.map((d) => d.sent || 0));
-
-  if (maxValue >= 100_000) {
-    return (value: number) => `${Math.round(value / 1000)}k`;
-  }
-  if (maxValue >= 1000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 100) {
-    return (value: number) => `${Math.round(value / 100) * 100}`;
-  }
-  if (maxValue >= 10) {
-    return (value: number) => `${Math.round(value / 10) * 10}`;
-  }
-  return (value: number) => `${Math.round(value)}`;
-}
 
 export function SMSVolumeChart({ orgSlug }: { orgSlug: string }) {
   const isMobile = useIsMobile();
@@ -75,6 +58,7 @@ export function SMSVolumeChart({ orgSlug }: { orgSlug: string }) {
   } = useSMSVolumeData(orgSlug, days);
 
   const chartData = volumeData || [];
+  const maxValue = Math.max(...chartData.map((d) => d.sent || 0));
 
   return (
     <Card className="@container/card">
@@ -184,12 +168,7 @@ export function SMSVolumeChart({ orgSlug }: { orgSlug: string }) {
                 tickLine={false}
                 tickMargin={8}
               />
-              <YAxis
-                axisLine={false}
-                tickFormatter={createYAxisFormatter(chartData)}
-                tickLine={false}
-                tickMargin={8}
-              />
+              <YAxis {...countYAxisProps(maxValue)} />
               <ChartTooltip
                 content={
                   <ChartTooltipContent

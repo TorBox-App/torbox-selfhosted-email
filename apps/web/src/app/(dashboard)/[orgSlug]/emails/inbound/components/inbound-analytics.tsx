@@ -39,6 +39,7 @@ import { revalidateInboundEmails } from "@/actions/inbound";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { countYAxisProps } from "@/lib/chart-axis";
 import type { InboundEmailListItem } from "../types";
 
 const areaChartConfig = {
@@ -58,27 +59,6 @@ const pieColors = [
   "oklch(0.55 0.12 300)", // Purple
   "oklch(0.55 0.15 20)", // Red-orange
 ];
-
-function createYAxisFormatter(data: Array<{ count: number }>) {
-  const maxValue = Math.max(...data.map((d) => d.count || 0));
-
-  if (maxValue >= 100_000) {
-    return (value: number) => `${Math.round(value / 1000)}k`;
-  }
-  if (maxValue >= 10_000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 1000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 100) {
-    return (value: number) => `${Math.round(value / 100) * 100}`;
-  }
-  if (maxValue >= 10) {
-    return (value: number) => `${Math.round(value / 10) * 10}`;
-  }
-  return (value: number) => `${Math.round(value)}`;
-}
 
 // Format a Date as YYYY-MM-DD in local time (avoids UTC offset issues)
 function toLocalDateStr(date: Date): string {
@@ -312,10 +292,9 @@ export function InboundAnalytics({
                     tickMargin={8}
                   />
                   <YAxis
-                    axisLine={false}
-                    tickFormatter={createYAxisFormatter(analytics.dailyData)}
-                    tickLine={false}
-                    tickMargin={8}
+                    {...countYAxisProps(
+                      Math.max(...analytics.dailyData.map((d) => d.count || 0))
+                    )}
                     width={40}
                   />
                   <ChartTooltip

@@ -43,6 +43,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { countYAxisProps } from "@/lib/chart-axis";
 
 const areaChartConfig = {
   count: {
@@ -61,27 +62,6 @@ const pieColors = [
   "oklch(0.55 0.12 280)", // Purple
   "oklch(0.55 0.15 340)", // Pink
 ];
-
-function createYAxisFormatter(data: Array<{ count: number }>) {
-  const maxValue = Math.max(...data.map((d) => d.count || 0));
-
-  if (maxValue >= 100_000) {
-    return (value: number) => `${Math.round(value / 1000)}k`;
-  }
-  if (maxValue >= 10_000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 1000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 100) {
-    return (value: number) => `${Math.round(value / 100) * 100}`;
-  }
-  if (maxValue >= 10) {
-    return (value: number) => `${Math.round(value / 10) * 10}`;
-  }
-  return (value: number) => `${Math.round(value)}`;
-}
 
 type EventAnalyticsProps = {
   organizationId: string;
@@ -127,6 +107,7 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
   }
 
   const dailyData = analytics?.dailyEvents || [];
+  const maxDailyCount = Math.max(...dailyData.map((d) => d.count || 0));
   const topEventsData = analytics?.topEventNames || [];
 
   const pieChartConfig = React.useMemo(() => {
@@ -265,13 +246,7 @@ export function EventAnalytics({ organizationId }: EventAnalyticsProps) {
                       tickLine={false}
                       tickMargin={8}
                     />
-                    <YAxis
-                      axisLine={false}
-                      tickFormatter={createYAxisFormatter(dailyData)}
-                      tickLine={false}
-                      tickMargin={8}
-                      width={40}
-                    />
+                    <YAxis {...countYAxisProps(maxDailyCount)} width={40} />
                     <ChartTooltip
                       content={
                         <ChartTooltipContent

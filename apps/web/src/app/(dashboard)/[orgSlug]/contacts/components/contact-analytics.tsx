@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { countYAxisProps } from "@/lib/chart-axis";
 
 const chartConfig = {
   count: {
@@ -43,27 +44,6 @@ const chartConfig = {
     },
   },
 } satisfies ChartConfig;
-
-function createYAxisFormatter(data: Array<{ count: number }>) {
-  const maxValue = Math.max(...data.map((d) => d.count || 0));
-
-  if (maxValue >= 100_000) {
-    return (value: number) => `${Math.round(value / 1000)}k`;
-  }
-  if (maxValue >= 10_000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 1000) {
-    return (value: number) => `${(value / 1000).toFixed(1)}k`;
-  }
-  if (maxValue >= 100) {
-    return (value: number) => `${Math.round(value / 100) * 100}`;
-  }
-  if (maxValue >= 10) {
-    return (value: number) => `${Math.round(value / 10) * 10}`;
-  }
-  return (value: number) => `${Math.round(value)}`;
-}
 
 type ContactAnalyticsProps = {
   organizationId: string;
@@ -109,6 +89,7 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
   }
 
   const chartData = analytics?.dailyGrowth || [];
+  const maxValue = Math.max(...chartData.map((d) => d.count || 0));
 
   return (
     <Card className="@container/card">
@@ -229,12 +210,7 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
                       tickLine={false}
                       tickMargin={8}
                     />
-                    <YAxis
-                      axisLine={false}
-                      tickFormatter={createYAxisFormatter(chartData)}
-                      tickLine={false}
-                      tickMargin={8}
-                    />
+                    <YAxis {...countYAxisProps(maxValue)} />
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
