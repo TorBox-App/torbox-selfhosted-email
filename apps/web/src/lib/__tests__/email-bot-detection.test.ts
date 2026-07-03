@@ -47,8 +47,6 @@ describe("isBotOpen", () => {
       ["URLScanner/1.0", "scanner keyword"],
       ["link-prefetch/1.0", "prefetch keyword"],
       ["EmailPreview/1.0", "preview keyword"],
-      ["GoogleImageProxy/1.0", "Google image proxy"],
-      ["YahooMailProxy/1.0", "Yahoo mail proxy"],
       ["wget/1.21", "wget"],
       ["curl/7.88.0", "curl"],
       ["python-requests/2.28.0", "python-requests"],
@@ -83,6 +81,14 @@ describe("isBotOpen", () => {
         "Chrome on Android",
       ],
       ["Microsoft Outlook 16.0", "Microsoft Outlook desktop"],
+      [
+        "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
+        "Gmail image proxy (real Gmail open)",
+      ],
+      [
+        "YahooMailProxy; https://help.yahoo.com/kb/yahoo-mail-proxy-SLN28749.html",
+        "Yahoo mail proxy (real Yahoo open)",
+      ],
       [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
         "Edge on Windows",

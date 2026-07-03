@@ -17,9 +17,9 @@ export const BOT_UA_KEYWORDS = [
   "ironport",
   "cisco\\s+email",
   "forcepoint",
-  // Email image proxies
-  "GoogleImageProxy",
-  "YahooMailProxy",
+  // NOTE: Gmail (GoogleImageProxy) and Yahoo (YahooMailProxy) image proxies
+  // fetch at open time on behalf of real users — they are genuine opens and
+  // must NOT be listed here. Doing so drops ~60% of all real opens.
   // Generic bot patterns
   "bot",
   "crawler",
