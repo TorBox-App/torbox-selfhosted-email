@@ -25,7 +25,11 @@ export function HelpCard() {
             size="sm"
             variant="outline"
           >
-            <a href="/docs" rel="noopener noreferrer" target="_blank">
+            <a
+              href="https://wraps.dev/docs"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               <BookOpenIcon className="mr-2 h-4 w-4" />
               Documentation
             </a>

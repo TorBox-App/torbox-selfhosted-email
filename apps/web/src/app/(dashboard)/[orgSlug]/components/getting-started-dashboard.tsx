@@ -591,7 +591,11 @@ function SendFirstEmailGuide({ orgSlug }: { orgSlug: string }) {
           </Link>
         </Button>
         <Button asChild size="sm" variant="default">
-          <a href="/docs/quickstart" rel="noopener noreferrer" target="_blank">
+          <a
+            href="https://wraps.dev/docs/quickstart/email"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             View SDK Guide
           </a>
         </Button>
@@ -1315,7 +1319,7 @@ export function GettingStartedDashboard({
 
                 <Button asChild className="w-full" variant="outline">
                   <a
-                    href="/docs/quickstart"
+                    href="https://wraps.dev/docs/quickstart/email"
                     rel="noopener noreferrer"
                     target="_blank"
                   >

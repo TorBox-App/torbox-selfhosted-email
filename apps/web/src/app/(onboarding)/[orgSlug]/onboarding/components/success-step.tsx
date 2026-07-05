@@ -32,7 +32,7 @@ function NeedHelpBlock() {
         Check out our{" "}
         <a
           className="underline hover:text-foreground"
-          href="/docs"
+          href="https://wraps.dev/docs"
           rel="noopener"
           target="_blank"
         >
@@ -179,7 +179,7 @@ wraps platform connect`}</code>
           <div className="grid gap-4">
             <a
               className="flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
-              href="/docs/quickstart"
+              href="https://wraps.dev/docs/quickstart/email"
               onClick={() => handleNextStepClick("install_sdk")}
               rel="noopener noreferrer"
               target="_blank"
@@ -203,7 +203,7 @@ wraps platform connect`}</code>
 
             <a
               className="flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
-              href="/docs/domains"
+              href="https://wraps.dev/docs/guides/domain-verification"
               onClick={() => handleNextStepClick("verify_domain")}
               rel="noopener noreferrer"
               target="_blank"
