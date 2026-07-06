@@ -3,6 +3,7 @@ import { auth } from "@wraps/auth";
 import { NextResponse } from "next/server";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { isOwnedOrgLogo } from "./organization-logo-utils";
 
 export const runtime = "nodejs";
 
@@ -104,8 +105,12 @@ export async function POST(request: Request) {
       }
     );
 
-    // 6. Delete old logo if it exists and is from Vercel Blob
-    if (oldLogoUrl && isVercelBlobUrl(oldLogoUrl)) {
+    // 6. Delete old logo if it exists, is from Vercel Blob, and belongs to this org
+    if (
+      oldLogoUrl &&
+      isVercelBlobUrl(oldLogoUrl) &&
+      isOwnedOrgLogo(oldLogoUrl, orgWithMembership.id)
+    ) {
       try {
         await del(oldLogoUrl);
       } catch (error) {
@@ -183,11 +188,11 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // 4. Only delete if it's a Vercel Blob URL
-    if (!isVercelBlobUrl(url)) {
+    // 4. Only delete if it's a Vercel Blob URL owned by this organization
+    if (!(isVercelBlobUrl(url) && isOwnedOrgLogo(url, orgWithMembership.id))) {
       return NextResponse.json(
-        { error: "Can only delete Vercel Blob URLs" },
-        { status: 400 }
+        { error: "URL does not belong to this organization" },
+        { status: 403 }
       );
     }
 
