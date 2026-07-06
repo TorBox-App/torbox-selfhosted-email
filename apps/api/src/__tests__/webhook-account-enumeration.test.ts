@@ -17,12 +17,15 @@ vi.mock("@wraps/db", () => ({
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn((...args: unknown[]) => {
-          mockSelectWhere(...args);
-          return {
-            limit: vi.fn(() =>
-              Promise.resolve(mockSelectWhere.mock.results.at(-1)?.value ?? [])
-            ),
-          };
+          // .where() result is BOTH awaitable (the account lookup awaits it
+          // directly, no .limit()) and .limit()-capable (other lookups use
+          // .limit(1)).
+          const rows = Promise.resolve(mockSelectWhere(...args)).then(
+            (value) => value ?? []
+          );
+          return Object.assign(rows, {
+            limit: vi.fn(() => rows),
+          });
         }),
       })),
     })),

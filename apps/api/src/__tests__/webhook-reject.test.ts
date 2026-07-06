@@ -48,11 +48,14 @@ function createTestApp() {
 }
 
 function selectChain(rows: unknown[]) {
+  // .where() result is BOTH awaitable (the account lookup awaits it directly,
+  // no .limit()) and .limit()-capable (the messageSend lookup uses .limit(1)).
+  const whereResult = Object.assign(Promise.resolve(rows), {
+    limit: vi.fn().mockResolvedValue(rows),
+  });
   return {
     from: vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue(rows),
-      }),
+      where: vi.fn().mockReturnValue(whereResult),
     }),
   };
 }

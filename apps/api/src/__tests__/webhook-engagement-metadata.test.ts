@@ -90,19 +90,18 @@ function makeClickEvent(clickData: Record<string, unknown> = {}) {
 }
 
 function setupMocks(messageOverrides: Record<string, unknown> = {}) {
-  // Mock account lookup
+  // Mock account lookup — awaited at .where() directly (no .limit()); keep
+  // .limit available for compatibility with limited queries.
+  const accountRows = Promise.resolve([
+    {
+      id: "aws-acc-1",
+      webhookSecret: TEST_WEBHOOK_SECRET,
+      organizationId: "org-1",
+    },
+  ]);
   mockDbSelect.mockReturnValueOnce({
     from: () => ({
-      where: () => ({
-        limit: () =>
-          Promise.resolve([
-            {
-              id: "aws-acc-1",
-              webhookSecret: TEST_WEBHOOK_SECRET,
-              organizationId: "org-1",
-            },
-          ]),
-      }),
+      where: () => Object.assign(accountRows, { limit: () => accountRows }),
     }),
   });
 

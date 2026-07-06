@@ -52,18 +52,18 @@ function createApp() {
 }
 
 function mockAccountLookup() {
+  // The account lookup awaits .where() directly (no .limit()); keep .limit
+  // available for compatibility with limited queries.
+  const rows = Promise.resolve([
+    {
+      id: "aws-acc-sdk-1",
+      webhookSecret: WEBHOOK_SECRET,
+      organizationId: ORG_ID,
+    },
+  ]);
   mockDbSelect.mockReturnValueOnce({
     from: () => ({
-      where: () => ({
-        limit: () =>
-          Promise.resolve([
-            {
-              id: "aws-acc-sdk-1",
-              webhookSecret: WEBHOOK_SECRET,
-              organizationId: ORG_ID,
-            },
-          ]),
-      }),
+      where: () => Object.assign(rows, { limit: () => rows }),
     }),
   });
 }

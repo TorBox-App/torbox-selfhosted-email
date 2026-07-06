@@ -199,27 +199,35 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     const { awsAccountNumber } = params;
     const apiKey = headers["x-wraps-api-key"];
 
-    // 1. Lookup AWS account by AWS account number (e.g., "123456789012")
-    const [account] = await db
+    // 1. Lookup ALL AWS accounts registered under this AWS account number.
+    // account_id is NOT unique (two orgs may connect the same AWS account, and a
+    // malicious org can register a victim's account number), so we must resolve the
+    // correct row by matching the inbound secret rather than picking an arbitrary
+    // row. webhook_secret is 32 random bytes — collisions are impossible.
+    const candidates = await db
       .select({
         id: awsAccount.id,
         webhookSecret: awsAccount.webhookSecret,
         organizationId: awsAccount.organizationId,
       })
       .from(awsAccount)
-      .where(eq(awsAccount.accountId, awsAccountNumber))
-      .limit(1);
+      .where(eq(awsAccount.accountId, awsAccountNumber));
 
-    // 2. Validate API key (constant-time comparison to prevent timing attacks)
-    // Return uniform 401 for both missing account and invalid key to prevent account enumeration
-    const secret = account?.webhookSecret || "";
-    const secretBuffer = Buffer.from(secret);
     const keyBuffer = Buffer.from(apiKey || "");
-    if (
-      !account?.webhookSecret ||
-      secretBuffer.length !== keyBuffer.length ||
-      !timingSafeEqual(secretBuffer, keyBuffer)
-    ) {
+    const account = candidates.find((candidate) => {
+      if (!candidate.webhookSecret) {
+        return false;
+      }
+      const secretBuffer = Buffer.from(candidate.webhookSecret);
+      return (
+        secretBuffer.length === keyBuffer.length &&
+        timingSafeEqual(secretBuffer, keyBuffer)
+      );
+    });
+
+    // 2. Uniform 401 whether the account number is unknown or the key doesn't match
+    // any registered secret (prevents account enumeration).
+    if (!account) {
       log.warn("Webhook: authentication failed", { awsAccountNumber });
       set.status = 401;
       return { error: "Unauthorized" };
