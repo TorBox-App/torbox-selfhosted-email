@@ -90,7 +90,14 @@ function selectChainLimited(rows: unknown[]) {
 
 function insertChain() {
   const values = vi.fn().mockReturnValue({
-    onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+    // The messageSend insert now calls .onConflictDoNothing().returning(...)
+    // to tell whether THIS call created the row (see webhooks.ts). These
+    // tests exercise a fresh Delivery event for a brand-new messageId, so the
+    // insert must read as "row created" — a non-empty array — for billing to
+    // fire as expected. Mirrors webhook-delivery-counting.test.ts.
+    onConflictDoNothing: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+    }),
     onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
   });
   return { values };
