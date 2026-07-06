@@ -1,6 +1,7 @@
 import { auth } from "@wraps/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { validatePublicUrl } from "@/lib/ssrf-guard";
 
@@ -39,6 +40,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["write"]
+    );
+    if (denied) return denied;
 
     const { url } = await request.json();
 

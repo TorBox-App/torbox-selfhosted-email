@@ -14,6 +14,7 @@ import { renderTemplateStrict } from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -52,6 +53,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "broadcasts",
+      ["send"]
+    );
+    if (denied) return denied;
 
     // Parse request body
     const body = await request.json();

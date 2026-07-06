@@ -2,7 +2,12 @@ import { aiUsageMonthly, db } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentPeriodKey } from "@/lib/usage/ai-usage";
-import { testOrganization, testUser, testUserNoAccess } from "./setup";
+import {
+  testMemberOwner,
+  testOrganization,
+  testUser,
+  testUserNoAccess,
+} from "./setup";
 
 // Mock next/headers
 vi.mock("next/headers", () => ({
@@ -43,6 +48,7 @@ vi.mock("@/lib/organization", () => ({
         id: testOrganization.id,
         name: testOrganization.name,
         slug: testOrganization.slug,
+        userRole: testMemberOwner.role,
       };
     }
     return null;

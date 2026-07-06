@@ -4,6 +4,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { buildWorkflowSystemPrompt } from "@/lib/ai/(ee)/workflow-system-prompt";
 import { getAIModel } from "@/lib/ai/model";
 import { createRequestLogger } from "@/lib/logger";
@@ -39,6 +40,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "workflows",
+      ["write"]
+    );
+    if (denied) return denied;
 
     // Check AI usage limit before processing
     const usageCheck = await checkAiUsageLimit(orgWithMembership.id);

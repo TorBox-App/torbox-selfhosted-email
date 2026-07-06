@@ -72,6 +72,7 @@ vi.mock("@/lib/organization", () => ({
         id: testOrganization.id,
         name: testOrganization.name,
         slug: testOrganization.slug,
+        userRole: testMember.role,
       };
     }
     return null;

@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -56,6 +57,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["write"]
+    );
+    if (denied) return denied;
 
     // Verify template exists and is a code template
     const existing = await db.query.template.findFirst({

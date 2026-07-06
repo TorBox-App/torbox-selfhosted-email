@@ -4,6 +4,7 @@ import { organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { trackOnboardingCompleted } from "@/lib/activation-tracking";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -36,6 +37,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "orgSettings",
+      ["write"]
+    );
+    if (denied) return denied;
 
     // Parse optional body for onboarding path
     let onboardingPath: string | undefined;

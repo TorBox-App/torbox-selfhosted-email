@@ -7,6 +7,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { trackAwsConnected } from "@/lib/activation-tracking";
 import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger } from "@/lib/logger";
@@ -94,6 +95,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "awsAccounts",
+      ["read"]
+    );
+    if (denied) return denied;
 
     // Validate role ARN format and extract account ID
     const roleArnRegex = /^arn:aws:iam::(\d{12}):role\/(.+)$/;

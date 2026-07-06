@@ -3,6 +3,7 @@ import { db, reusableBlock } from "@wraps/db";
 import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -36,6 +37,13 @@ export async function POST(_request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["read"]
+    );
+    if (denied) return denied;
 
     // Increment usage count
     const [updated] = await db

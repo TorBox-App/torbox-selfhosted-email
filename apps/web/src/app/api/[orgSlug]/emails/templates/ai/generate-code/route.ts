@@ -15,6 +15,7 @@ import {
 import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { generateCodeBodySchema } from "@/lib/ai/generate-code-schema";
 import { fetchAndProcessImage } from "@/lib/ai/image-utils";
 import { getAIModel } from "@/lib/ai/model";
@@ -52,6 +53,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["write"]
+    );
+    if (denied) return denied;
 
     // Check AI usage limit before processing
     const usageCheck = await checkAiUsageLimit(orgWithMembership.id);

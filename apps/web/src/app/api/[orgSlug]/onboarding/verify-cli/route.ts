@@ -1,5 +1,6 @@
 import { auth } from "@wraps/auth";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -31,6 +32,13 @@ export async function POST(_request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "awsAccounts",
+      ["read"]
+    );
+    if (denied) return denied;
 
     // In a real implementation, we might check for a token or specific header
     // For now, we just return success to allow the UI to proceed if it were to call this

@@ -3,6 +3,7 @@ import { auditLog, brandKit, db } from "@wraps/db";
 import { desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { createRequestLogger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -79,6 +80,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["write"]
+    );
+    if (denied) return denied;
 
     const body = await request.json();
 

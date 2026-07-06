@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger } from "@/lib/logger";
@@ -131,6 +132,13 @@ export async function PUT(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["write"]
+    );
+    if (denied) return denied;
 
     const rawBody = await request.json();
     const parsed = updateTemplateSchema.safeParse(rawBody);
@@ -312,6 +320,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["delete"]
+    );
+    if (denied) return denied;
 
     // Fetch the template to check for SES template name
     const existingTemplate = await db.query.template.findFirst({

@@ -11,6 +11,7 @@ import { normalizePlainTextForSes } from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger } from "@/lib/logger";
@@ -46,6 +47,13 @@ export async function POST(_request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["publish"]
+    );
+    if (denied) return denied;
 
     // Fetch template
     const templateData = await db.query.template.findFirst({
@@ -231,6 +239,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "templates",
+      ["publish"]
+    );
+    if (denied) return denied;
 
     // Fetch template
     const templateData = await db.query.template.findFirst({

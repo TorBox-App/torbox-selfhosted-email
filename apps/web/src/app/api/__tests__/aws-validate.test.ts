@@ -1,7 +1,12 @@
 import { awsAccount, db } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { testOrganization, testUser, testUserNoAccess } from "./setup";
+import {
+  testMemberOwner,
+  testOrganization,
+  testUser,
+  testUserNoAccess,
+} from "./setup";
 
 // Mock next/headers
 vi.mock("next/headers", () => ({
@@ -57,6 +62,7 @@ vi.mock("@/lib/organization", () => ({
         id: testOrganization.id,
         name: testOrganization.name,
         slug: testOrganization.slug,
+        userRole: testMemberOwner.role,
       };
     }
     return null;

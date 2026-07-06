@@ -5,6 +5,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { requireRoutePermission } from "@/app/api/shared/route-permission";
 import {
   AssumeRoleError,
   type AssumeRoleErrorCode,
@@ -52,6 +53,13 @@ export async function POST(request: Request, context: RouteContext) {
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const denied = requireRoutePermission(
+      orgWithMembership.userRole,
+      "awsAccounts",
+      ["read"]
+    );
+    if (denied) return denied;
 
     // Parse request body
     const body = await request.json();
