@@ -5,7 +5,7 @@
  * to prevent stored XSS attacks against email recipients.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock jose for token verification
 vi.mock("jose", () => ({
@@ -139,5 +139,60 @@ describe("Unsubscribe XSS Prevention", () => {
       // The escaped form should be present
       expect(topicContent).toContain("&lt;script&gt;");
     }
+  });
+});
+
+describe("Unsubscribe XSS Prevention - contact email", () => {
+  const originalEmail = mockContact.email;
+
+  afterEach(() => {
+    mockContact.email = originalEmail;
+  });
+
+  it("escapes a script-laden email domain in the confirmation page", async () => {
+    mockContact.email = 'attacker@"><script>alert(1)</script>.example';
+
+    const { unsubscribeRoutes } = await import("../routes/unsubscribe");
+    const { Elysia } = await import("elysia");
+
+    const app = new Elysia().use(unsubscribeRoutes);
+
+    const response = await app.handle(
+      new Request("http://localhost/unsubscribe/valid-token", {
+        method: "GET",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // The raw script tag must NOT appear in the HTML
+    expect(html).not.toContain("<script>alert(1)</script>");
+
+    // The escaped version should appear instead
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+  });
+
+  it("renders a normal masked email unchanged (no double-escaping)", async () => {
+    mockContact.email = "john@example.com";
+
+    const { unsubscribeRoutes } = await import("../routes/unsubscribe");
+    const { Elysia } = await import("elysia");
+
+    const app = new Elysia().use(unsubscribeRoutes);
+
+    const response = await app.handle(
+      new Request("http://localhost/unsubscribe/valid-token", {
+        method: "GET",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // maskEmail("john@example.com") -> "j***n@example.com"; escapeHtml is a
+    // no-op on this string, so it must appear verbatim with no HTML-entity
+    // artifacts.
+    expect(html).toContain("j***n@example.com");
   });
 });

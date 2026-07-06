@@ -350,7 +350,7 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
   <div class="form">
     <h1>Unsubscribe</h1>
     <p>
-      You are about to unsubscribe <span class="email">${maskedEmail}</span>
+      You are about to unsubscribe <span class="email">${escapeHtml(maskedEmail)}</span>
       ${topicId ? ` from <span class="topic">${escapeHtml(topicName)}</span>` : " from all email communications"}.
     </p>
     <form method="POST" action="/unsubscribe/${token}">

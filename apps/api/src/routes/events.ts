@@ -232,6 +232,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
           t.String({
             description: "Contact email (alternative to contactId)",
             maxLength: 255,
+            format: "email",
           })
         ),
         contactName: t.Optional(
