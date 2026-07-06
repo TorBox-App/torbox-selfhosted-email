@@ -420,8 +420,8 @@ export const createContact = orgAction(
     // Revalidate
     revalidateContacts(ctx.access.orgSlug);
 
-    // Track activation event (fire-and-forget)
-    trackContactCreated(
+    // Track activation event
+    await trackContactCreated(
       ctx.access.userEmail,
       organizationId,
       {},

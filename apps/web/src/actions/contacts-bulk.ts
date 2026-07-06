@@ -131,9 +131,9 @@ export const bulkCreateContactsFromEmails = orgAction(
     // Revalidate
     revalidateContacts(ctx.access.orgSlug);
 
-    // Track activation event (fire-and-forget)
+    // Track activation event
     if (created > 0) {
-      trackContactsImported(ctx.access.userEmail, organizationId, {
+      await trackContactsImported(ctx.access.userEmail, organizationId, {
         count: created,
         firstContact: { email: toInsert[0]?.email },
       });
