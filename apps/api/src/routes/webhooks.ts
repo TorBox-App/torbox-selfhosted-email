@@ -503,21 +503,23 @@ async function processDelivery(
 
   const deliveredAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Common case first (single query on the hottest webhook path): the row is
-  // not 'failed' and not already 'delivered' (duplicate delivery events must
-  // not re-transition — that would double-count the batchSend counter below).
-  // When it IS 'failed', it was wrongly recorded (e.g. a bookkeeping error
-  // misfiled as a send failure) — heal it with an atomic status='failed'
-  // flip, so exactly one of N concurrent duplicate events wins and the
-  // counter decrement below can never double-apply.
+  // Common case first (single query on the hottest webhook path): the row
+  // transitions INTO 'delivered' only from a genuinely pre-delivery state.
+  // 'opened'/'clicked' imply delivery already happened (a late/duplicate
+  // Delivery must not regress the status or re-count), and
+  // 'bounced'/'complained'/'suppressed' are terminal-ish (a late Delivery
+  // must not overwrite them). When the row IS 'failed', it was wrongly
+  // recorded (e.g. a bookkeeping error misfiled as a send failure) — heal it
+  // with an atomic status='failed' flip below, so exactly one of N
+  // concurrent duplicate events wins and the counter decrement can never
+  // double-apply.
   const updated = await db
     .update(messageSend)
     .set({ status: "delivered", deliveredAt })
     .where(
       and(
         eq(messageSend.id, message.id),
-        ne(messageSend.status, "failed"),
-        ne(messageSend.status, "delivered")
+        inArray(messageSend.status, ["pending", "queued", "sent"])
       )
     )
     .returning({ id: messageSend.id });
