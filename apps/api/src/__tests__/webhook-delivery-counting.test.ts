@@ -129,11 +129,16 @@ function mockMessageSendLookup(found: boolean) {
   });
 }
 
-function mockInsertChain() {
+function mockInsertChain(insertedRows: unknown[] = [{ id: "sdk-msg-1" }]) {
   mockOnConflictDoUpdate.mockResolvedValue([{ messageCount: 1 }]);
   mockInsertValues.mockReturnValue({
     onConflictDoUpdate: mockOnConflictDoUpdate,
-    onConflictDoNothing: vi.fn().mockResolvedValue([]),
+    // The messageSend insert now calls .onConflictDoNothing().returning(...)
+    // so the transition guard can tell whether THIS call created the row —
+    // a duplicate SDK Delivery hits the conflict and returns [].
+    onConflictDoNothing: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue(insertedRows),
+    }),
   });
   mockDbInsert.mockReturnValue({ values: mockInsertValues });
 }
@@ -141,12 +146,12 @@ function mockInsertChain() {
 function mockUpdateChain() {
   mockDbUpdate.mockImplementation(() => ({
     set: () => ({
-      // Thenable that also supports .returning() — processDelivery's atomic
-      // failed→delivered flip calls .where().returning(); [] means "row was
-      // not 'failed'", so the code proceeds to the plain update.
+      // Thenable that also supports .returning() — processDelivery's primary
+      // update (WHERE status NOT IN (failed, delivered)) resolves a row here,
+      // simulating a genuine first-time delivery transition.
       where: () =>
         Object.assign(Promise.resolve({ rowCount: 1 }), {
-          returning: () => Promise.resolve([]),
+          returning: () => Promise.resolve([{ id: "msg-1" }]),
         }),
     }),
   }));

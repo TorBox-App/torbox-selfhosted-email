@@ -91,7 +91,11 @@ function mockMessageSendLookup(found: boolean) {
 }
 
 function mockInsertChain() {
-  mockOnConflictDoNothing.mockResolvedValue([]);
+  // .onConflictDoNothing() now chains .returning() so the SDK-path transition
+  // guard can tell whether this call created the row.
+  mockOnConflictDoNothing.mockReturnValue({
+    returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+  });
   // The same values() mock backs both the messageSend insert
   // (onConflictDoNothing) and the usage-tracking insert (onConflictDoUpdate)
   // that the Delivery path fires.

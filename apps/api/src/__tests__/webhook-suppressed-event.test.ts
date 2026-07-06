@@ -73,7 +73,14 @@ function selectChainNoLimit(rows: unknown[]) {
 function updateChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.set = vi.fn().mockReturnValue({
-    where: vi.fn().mockResolvedValue(undefined),
+    // Thenable that also supports .returning() — processSuppression's
+    // transition guard calls .where().returning(); a non-empty row simulates
+    // a genuine status transition (the default scenario these tests exercise).
+    where: vi.fn().mockReturnValue(
+      Object.assign(Promise.resolve(undefined), {
+        returning: vi.fn().mockResolvedValue([{ id: "msg-send-1" }]),
+      })
+    ),
   });
   return chain;
 }

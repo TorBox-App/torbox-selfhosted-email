@@ -108,7 +108,11 @@ function setupAccountOnly() {
   mockDbInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
-      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+      // .onConflictDoNothing() now chains .returning() so the SDK-path
+      // transition guard can tell whether this call created the row.
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+      }),
     }),
   });
 }
@@ -129,7 +133,11 @@ function setupWithMessage() {
   mockDbInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
-      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+      // .onConflictDoNothing() now chains .returning() so the SDK-path
+      // transition guard can tell whether this call created the row.
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+      }),
     }),
   });
 }
@@ -196,7 +204,9 @@ describe("Webhook: SDK delivery (message not found)", () => {
     mockDbInsert.mockReturnValue({
       values: vi.fn().mockReturnValue({
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
-        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        onConflictDoNothing: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+        }),
       }),
     });
   });
@@ -262,7 +272,9 @@ describe("Webhook: account found, message not found for non-Delivery events", ()
     // Lifecycle events (Bounce/Complaint) now materialize a minimal SDK log row.
     mockDbInsert.mockReturnValue({
       values: vi.fn().mockReturnValue({
-        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+        onConflictDoNothing: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: "sdk-msg-1" }]),
+        }),
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
       }),
     });

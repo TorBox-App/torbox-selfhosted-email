@@ -277,8 +277,9 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       // find it above and flow through normal status processing.
       const recipient = mail.destination?.[0];
       const lifecycle = sdkLogLifecycleFields(eventType, event.detail);
+      let insertedRow = false;
       if (recipient && lifecycle) {
-        await db
+        const inserted = await db
           .insert(messageSend)
           .values({
             organizationId: account.organizationId,
@@ -295,14 +296,23 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             sentAt: mail.timestamp ? new Date(mail.timestamp) : new Date(),
             ...lifecycle,
           })
-          .onConflictDoNothing();
+          .onConflictDoNothing()
+          .returning({ id: messageSend.id });
+        insertedRow = inserted.length > 0;
       }
-      // Count delivery and track activation in parallel.
+      // Count delivery and track activation in parallel. Billing must only
+      // fire when this call actually created the row — a duplicate SDK
+      // Delivery event hits onConflictDoNothing (0 rows), so it must not
+      // double-count messageUsageMonthly. trackFirstEmailDelivered is itself
+      // an idempotent per-org claim, so it can stay unconditional.
       if (eventType === "Delivery") {
-        for (const r of await Promise.allSettled([
-          incrementDeliveryCount(account.organizationId),
+        const sdkSideEffects: Promise<unknown>[] = [
           trackFirstEmailDelivered(account.organizationId, "sdk"),
-        ])) {
+        ];
+        if (insertedRow) {
+          sdkSideEffects.push(incrementDeliveryCount(account.organizationId));
+        }
+        for (const r of await Promise.allSettled(sdkSideEffects)) {
           if (r.status === "rejected") {
             log.error("Webhook: SDK delivery side effect failed", r.reason, {
               messageId,
@@ -317,14 +327,23 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     // 5. Process based on event type
     try {
       switch (eventType) {
-        case "Delivery":
+        case "Delivery": {
           // Critical: update message status (throws on failure → 500 → EventBridge retries)
-          await processDelivery(message, event.detail.delivery?.timestamp);
-          // Best-effort side effects — don't fail the webhook
-          for (const r of await Promise.allSettled([
-            incrementDeliveryCount(account.organizationId),
+          const didTransition = await processDelivery(
+            message,
+            event.detail.delivery?.timestamp
+          );
+          // Best-effort side effects — don't fail the webhook. Billing must
+          // only count a genuine transition (duplicate deliveries must not
+          // double-count messageUsageMonthly). trackFirstEmailDelivered is
+          // itself an idempotent per-org claim, so it can stay unconditional.
+          const sideEffects: Promise<unknown>[] = [
             trackFirstEmailDelivered(account.organizationId, "platform"),
-          ])) {
+          ];
+          if (didTransition) {
+            sideEffects.push(incrementDeliveryCount(account.organizationId));
+          }
+          for (const r of await Promise.allSettled(sideEffects)) {
             if (r.status === "rejected") {
               log.error("Webhook: delivery side effect failed", r.reason, {
                 messageId,
@@ -332,6 +351,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             }
           }
           break;
+        }
 
         case "Open":
           await processOpen(
@@ -470,7 +490,7 @@ type MessageRecord = {
 async function processDelivery(
   message: MessageRecord,
   timestamp?: string
-): Promise<void> {
+): Promise<boolean> {
   // Status precedence: bounced/complained cannot be overwritten by a delivery event
   // (e.g., delayed delivery notification arriving after a bounce)
   if (message.status === "bounced" || message.status === "complained") {
@@ -478,21 +498,27 @@ async function processDelivery(
       messageId: message.id,
       currentStatus: message.status,
     });
-    return;
+    return false;
   }
 
   const deliveredAt = timestamp ? new Date(timestamp) : new Date();
 
   // Common case first (single query on the hottest webhook path): the row is
-  // not 'failed'. When it IS 'failed', it was wrongly recorded (e.g. a
-  // bookkeeping error misfiled as a send failure) — heal it with an atomic
-  // status='failed' flip, so exactly one of N concurrent duplicate events
-  // wins and the counter decrement below can never double-apply.
+  // not 'failed' and not already 'delivered' (duplicate delivery events must
+  // not re-transition — that would double-count the batchSend counter below).
+  // When it IS 'failed', it was wrongly recorded (e.g. a bookkeeping error
+  // misfiled as a send failure) — heal it with an atomic status='failed'
+  // flip, so exactly one of N concurrent duplicate events wins and the
+  // counter decrement below can never double-apply.
   const updated = await db
     .update(messageSend)
     .set({ status: "delivered", deliveredAt })
     .where(
-      and(eq(messageSend.id, message.id), ne(messageSend.status, "failed"))
+      and(
+        eq(messageSend.id, message.id),
+        ne(messageSend.status, "failed"),
+        ne(messageSend.status, "delivered")
+      )
     )
     .returning({ id: messageSend.id });
 
@@ -506,6 +532,17 @@ async function processDelivery(
       )
       .returning({ id: messageSend.id });
     wasWronglyFailed = healed.length > 0;
+  }
+
+  // Only bump the counter when THIS call transitioned the row — otherwise a
+  // duplicate Delivery for an already-delivered row would double-count.
+  const didTransition = updated.length > 0 || wasWronglyFailed;
+
+  if (!didTransition) {
+    log.info("Webhook: duplicate delivery, skipping counter", {
+      messageId: message.id,
+    });
+    return false;
   }
 
   // Increment batchSend counter if applicable
@@ -525,6 +562,8 @@ async function processDelivery(
     messageId: message.id,
     healedFromFailed: wasWronglyFailed,
   });
+
+  return true;
 }
 
 async function processOpen(
@@ -686,8 +725,9 @@ async function processBounce(
 
   const bouncedAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Update messageSend status
-  await db
+  // Update messageSend status — guarded on a genuine transition (WHERE status
+  // <> 'bounced') so a duplicate Bounce event does not re-count.
+  const transitioned = await db
     .update(messageSend)
     .set({
       status: "bounced",
@@ -695,7 +735,17 @@ async function processBounce(
       bounceType: bounceType ?? null,
       bounceSubType: bounceSubType ?? null,
     })
-    .where(eq(messageSend.id, message.id));
+    .where(
+      and(eq(messageSend.id, message.id), ne(messageSend.status, "bounced"))
+    )
+    .returning({ id: messageSend.id });
+
+  if (transitioned.length === 0) {
+    log.info("Webhook: duplicate bounce, skipping counter", {
+      messageId: message.id,
+    });
+    return;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {
@@ -743,14 +793,25 @@ async function processComplaint(
 ): Promise<void> {
   const complainedAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Update messageSend status
-  await db
+  // Update messageSend status — guarded on a genuine transition (WHERE status
+  // <> 'complained') so a duplicate Complaint event does not re-count.
+  const transitioned = await db
     .update(messageSend)
     .set({
       status: "complained",
       complainedAt,
     })
-    .where(eq(messageSend.id, message.id));
+    .where(
+      and(eq(messageSend.id, message.id), ne(messageSend.status, "complained"))
+    )
+    .returning({ id: messageSend.id });
+
+  if (transitioned.length === 0) {
+    log.info("Webhook: duplicate complaint, skipping counter", {
+      messageId: message.id,
+    });
+    return;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {
@@ -833,14 +894,25 @@ async function processSuppression(
 ): Promise<void> {
   const suppressedAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Update messageSend status
-  await db
+  // Update messageSend status — guarded on a genuine transition (WHERE status
+  // <> 'suppressed') so a duplicate Suppressed event does not re-count.
+  const transitioned = await db
     .update(messageSend)
     .set({
       status: "suppressed",
       suppressedAt,
     })
-    .where(eq(messageSend.id, message.id));
+    .where(
+      and(eq(messageSend.id, message.id), ne(messageSend.status, "suppressed"))
+    )
+    .returning({ id: messageSend.id });
+
+  if (transitioned.length === 0) {
+    log.info("Webhook: duplicate suppression, skipping counter", {
+      messageId: message.id,
+    });
+    return;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {
