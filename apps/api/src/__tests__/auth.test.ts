@@ -170,6 +170,214 @@ const testSubscriptionOrg2 = {
   updatedAt: new Date(),
 };
 
+// --- Org 3: multi-subscription-row scenarios (stale canceled row alongside active) ---
+
+const testUser3 = {
+  id: `${TEST_PREFIX}-user-3`,
+  email: `${TEST_PREFIX}-3@example.com`,
+  name: "Auth Test User 3",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrg3 = {
+  id: `${TEST_PREFIX}-org-3`,
+  name: "Auth Test Org 3",
+  slug: `${TEST_PREFIX}-org-3`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const RAW_KEY_ORG3 = "wraps_live_authtest_org3_key";
+
+const testApiKeyOrg3 = {
+  id: `${TEST_PREFIX}-apikey-org3`,
+  organizationId: testOrg3.id,
+  name: "Test Key Org 3",
+  keyHash: hashKey(RAW_KEY_ORG3),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser3.id,
+  createdAt: new Date(),
+};
+
+const SESSION_TOKEN_ORG3 = `${TEST_PREFIX}-session-token-3`;
+
+const testSessionOrg3 = {
+  id: `${TEST_PREFIX}-session-3`,
+  token: SESSION_TOKEN_ORG3,
+  userId: testUser3.id,
+  activeOrganizationId: testOrg3.id,
+  expiresAt: new Date(Date.now() + 86_400_000),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ipAddress: null,
+  userAgent: null,
+};
+
+// Org 3 has TWO subscription rows: a stale canceled one and a live active one.
+// A canceled row must never shadow the active plan (the bug this test guards against).
+const testSubscriptionOrg3Canceled = {
+  id: `${TEST_PREFIX}-sub-3-canceled`,
+  plan: "scale",
+  referenceId: testOrg3.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "canceled",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const testSubscriptionOrg3Active = {
+  id: `${TEST_PREFIX}-sub-3-active`,
+  plan: "growth",
+  referenceId: testOrg3.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "active",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// --- Org 4: no subscription row at all (regression — must remain free/null) ---
+
+const testUser4 = {
+  id: `${TEST_PREFIX}-user-4`,
+  email: `${TEST_PREFIX}-4@example.com`,
+  name: "Auth Test User 4",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrg4 = {
+  id: `${TEST_PREFIX}-org-4`,
+  name: "Auth Test Org 4",
+  slug: `${TEST_PREFIX}-org-4`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const RAW_KEY_ORG4 = "wraps_live_authtest_org4_key";
+
+const testApiKeyOrg4 = {
+  id: `${TEST_PREFIX}-apikey-org4`,
+  organizationId: testOrg4.id,
+  name: "Test Key Org 4 (no subscription)",
+  keyHash: hashKey(RAW_KEY_ORG4),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser4.id,
+  createdAt: new Date(),
+};
+
+// --- Org 5: only a canceled subscription row (regression — must remain free/null) ---
+
+const testUser5 = {
+  id: `${TEST_PREFIX}-user-5`,
+  email: `${TEST_PREFIX}-5@example.com`,
+  name: "Auth Test User 5",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrg5 = {
+  id: `${TEST_PREFIX}-org-5`,
+  name: "Auth Test Org 5",
+  slug: `${TEST_PREFIX}-org-5`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const RAW_KEY_ORG5 = "wraps_live_authtest_org5_key";
+
+const testApiKeyOrg5 = {
+  id: `${TEST_PREFIX}-apikey-org5`,
+  organizationId: testOrg5.id,
+  name: "Test Key Org 5 (only canceled sub)",
+  keyHash: hashKey(RAW_KEY_ORG5),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser5.id,
+  createdAt: new Date(),
+};
+
+const testSubscriptionOrg5Canceled = {
+  id: `${TEST_PREFIX}-sub-5-canceled`,
+  plan: "starter",
+  referenceId: testOrg5.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "canceled",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// --- Org 6: only a trialing subscription row (regression — trialing counts) ---
+
+const testUser6 = {
+  id: `${TEST_PREFIX}-user-6`,
+  email: `${TEST_PREFIX}-6@example.com`,
+  name: "Auth Test User 6",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrg6 = {
+  id: `${TEST_PREFIX}-org-6`,
+  name: "Auth Test Org 6",
+  slug: `${TEST_PREFIX}-org-6`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const RAW_KEY_ORG6 = "wraps_live_authtest_org6_key";
+
+const testApiKeyOrg6 = {
+  id: `${TEST_PREFIX}-apikey-org6`,
+  organizationId: testOrg6.id,
+  name: "Test Key Org 6 (trialing)",
+  keyHash: hashKey(RAW_KEY_ORG6),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser6.id,
+  createdAt: new Date(),
+};
+
+const testSubscriptionOrg6Trialing = {
+  id: `${TEST_PREFIX}-sub-6-trialing`,
+  plan: "starter",
+  referenceId: testOrg6.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "trialing",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 // --- Test app using the real auth middleware ---
 
 function createTestApp() {
@@ -194,13 +402,13 @@ beforeAll(async () => {
   // Insert users
   await db
     .insert(user)
-    .values([testUser1, testUser2])
+    .values([testUser1, testUser2, testUser3, testUser4, testUser5, testUser6])
     .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
 
   // Insert orgs
   await db
     .insert(organization)
-    .values([testOrg1, testOrg2])
+    .values([testOrg1, testOrg2, testOrg3, testOrg4, testOrg5, testOrg6])
     .onConflictDoUpdate({
       target: organization.id,
       set: { name: testOrg1.name },
@@ -224,11 +432,25 @@ beforeAll(async () => {
         role: "owner",
         createdAt: new Date(),
       },
+      {
+        id: `${TEST_PREFIX}-member-3`,
+        organizationId: testOrg3.id,
+        userId: testUser3.id,
+        role: "owner",
+        createdAt: new Date(),
+      },
     ])
     .onConflictDoUpdate({ target: member.id, set: { role: "owner" } });
 
   // Insert subscriptions — upsert plan+status so stale rows from crashed runs don't persist wrong data
-  for (const sub of [testSubscriptionOrg1, testSubscriptionOrg2]) {
+  for (const sub of [
+    testSubscriptionOrg1,
+    testSubscriptionOrg2,
+    testSubscriptionOrg3Canceled,
+    testSubscriptionOrg3Active,
+    testSubscriptionOrg5Canceled,
+    testSubscriptionOrg6Trialing,
+  ]) {
     await db
       .insert(subscription)
       .values(sub)
@@ -241,7 +463,15 @@ beforeAll(async () => {
   // Insert API keys
   await db
     .insert(apiKey)
-    .values([testApiKeyOrg1, testApiKeyOrg2, testApiKeyExpired])
+    .values([
+      testApiKeyOrg1,
+      testApiKeyOrg2,
+      testApiKeyExpired,
+      testApiKeyOrg3,
+      testApiKeyOrg4,
+      testApiKeyOrg5,
+      testApiKeyOrg6,
+    ])
     .onConflictDoUpdate({
       target: apiKey.id,
       set: { createdAt: new Date() },
@@ -250,7 +480,7 @@ beforeAll(async () => {
   // Insert sessions
   await db
     .insert(session)
-    .values([testSessionOrg1, testSessionExpired])
+    .values([testSessionOrg1, testSessionExpired, testSessionOrg3])
     .onConflictDoUpdate({
       target: session.id,
       set: { updatedAt: new Date() },
@@ -258,9 +488,23 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.delete(session).where(eq(session.userId, testUser1.id));
-  const orgIds = [testOrg1.id, testOrg2.id];
-  const userIds = [testUser1.id, testUser2.id];
+  const userIds = [
+    testUser1.id,
+    testUser2.id,
+    testUser3.id,
+    testUser4.id,
+    testUser5.id,
+    testUser6.id,
+  ];
+  const orgIds = [
+    testOrg1.id,
+    testOrg2.id,
+    testOrg3.id,
+    testOrg4.id,
+    testOrg5.id,
+    testOrg6.id,
+  ];
+  await db.delete(session).where(inArray(session.userId, userIds));
   await db.delete(apiKey).where(inArray(apiKey.organizationId, orgIds));
   await db.delete(member).where(inArray(member.organizationId, orgIds));
   await db
@@ -543,6 +787,81 @@ describe("Authentication", () => {
       );
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe("Subscription Row Scoping", () => {
+    it("API key path: a stale canceled subscription row never shadows the active one", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG3}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      // Org 3 has both a "canceled" (scale) row and an "active" (growth) row.
+      // The join must be scoped to active/trialing so the canceled row can't be selected.
+      expect(body.planId).toBe("growth");
+      expect(body.planId).not.toBe("scale");
+    });
+
+    it("session path: a stale canceled subscription row never shadows the active one", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${SESSION_TOKEN_ORG3}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.organizationId).toBe(testOrg3.id);
+      expect(body.planId).toBe("growth");
+      expect(body.planId).not.toBe("scale");
+    });
+
+    it("no subscription row → planId is null (free tier, regression)", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG4}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.organizationId).toBe(testOrg4.id);
+      expect(body.planId).toBeNull();
+    });
+
+    it("only a canceled subscription row → planId is null (regression)", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG5}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.organizationId).toBe(testOrg5.id);
+      expect(body.planId).toBeNull();
+    });
+
+    it("only a trialing subscription row → planId is that plan (regression)", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG6}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.organizationId).toBe(testOrg6.id);
+      expect(body.planId).toBe(testSubscriptionOrg6Trialing.plan);
     });
   });
 

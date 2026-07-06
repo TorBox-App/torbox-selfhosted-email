@@ -8,7 +8,7 @@
 
 import { createHash } from "node:crypto";
 import { and, apiKey, db, eq, member, session, subscription } from "@wraps/db";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { validateLicenseKey } from "../(ee)/lib/license";
 import { log } from "../lib/logger";
@@ -89,7 +89,13 @@ async function validateApiKey(key: string): Promise<AuthContext | null> {
       subStatus: subscription.status,
     })
     .from(apiKey)
-    .leftJoin(subscription, eq(subscription.referenceId, apiKey.organizationId))
+    .leftJoin(
+      subscription,
+      and(
+        eq(subscription.referenceId, apiKey.organizationId),
+        inArray(subscription.status, ["active", "trialing"])
+      )
+    )
     .where(eq(apiKey.keyHash, keyHash))
     .limit(1);
 
@@ -147,9 +153,14 @@ async function validateSessionWithReason(
       )
       .leftJoin(
         subscription,
-        eq(
-          subscription.referenceId,
-          organizationId ? sql`${organizationId}` : session.activeOrganizationId
+        and(
+          eq(
+            subscription.referenceId,
+            organizationId
+              ? sql`${organizationId}`
+              : session.activeOrganizationId
+          ),
+          inArray(subscription.status, ["active", "trialing"])
         )
       )
       .where(eq(session.token, sessionToken))
