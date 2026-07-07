@@ -89,13 +89,19 @@ export const eventFeedStalenessCron = new sst.aws.CronV2("EventFeedStaleness", {
         })(),
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
-      // TODO(plan 113 STOP condition 3): no SES-capable credentials are
-      // wired here yet. getWrapsClient() falls back to the standard AWS
-      // credential chain (this function's own execution role), which has
-      // no SES send permissions — the owner-alert email will fail until
-      // this is wired up. Detection/flagging/the dashboard banner are
-      // unaffected. See the module comment above for context.
+      // wraps.dev is verified in the dogfood account's SES (010836206701),
+      // not this platform account — getWrapsClient() sees this env var and
+      // assumes the role from this function's execution role, the same
+      // sending identity the web app reaches via Vercel OIDC. The role's
+      // trust policy also trusts this platform account for sts:AssumeRole.
+      WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
     },
     nodejs: { install: ["pg"] },
+    permissions: [
+      {
+        actions: ["sts:AssumeRole"],
+        resources: ["arn:aws:iam::010836206701:role/wraps-email-role"],
+      },
+    ],
   },
 });

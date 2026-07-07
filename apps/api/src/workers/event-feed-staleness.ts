@@ -24,15 +24,12 @@
  *     failure doesn't suppress next hour's retry.
  *   - !stale && eventFeedStaleSince set -> clear both columns (recovered).
  *
- * NOTE: as of this writing, no platform Lambda (this cron included) has
- * SES-capable credentials wired for @wraps/email — getWrapsClient() only
- * resolves production credentials via Vercel OIDC (VERCEL === "1"), which
- * this Lambda never sets. Until infra/cron.ts wires SES-capable credentials
- * for this function, the owner email send below will fail in production
- * (falls through to the dev credential-chain branch with no caller
- * identity), and eventFeedAlertedAt will simply never get set — the sweep
- * degrades to detection + flag + dashboard banner only. See plan 113 STOP
- * condition 3.
+ * Email credentials: infra/cron.ts sets WRAPS_EMAIL_ROLE_ARN to the dogfood
+ * account's wraps-email-role (where wraps.dev is SES-verified) and grants
+ * this function sts:AssumeRole on it; getWrapsClient() assumes that role
+ * from the execution-role credentials. If the assume ever fails (e.g. trust
+ * policy drift), the send throws, eventFeedAlertedAt stays unset, and the
+ * sweep degrades to detection + flag + dashboard banner — retrying hourly.
  */
 
 import {
