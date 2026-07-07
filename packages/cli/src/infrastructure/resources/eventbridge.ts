@@ -8,6 +8,13 @@ export type EventBridgeConfig = {
   eventBusArn: pulumi.Output<string>;
   queueArn: pulumi.Output<string>;
   queueUrl: pulumi.Output<string>;
+  // Target dead-letter queue ARN. EventBridge retries a target 24h/185 times
+  // then drops the event; this ARN gives it somewhere to put the event
+  // instead of dropping it silently (see May-Jul 2026 incident).
+  dlqArn: pulumi.Output<string>;
+  // SNS topic ARN for the FailedInvocations alarm (from alerting resources).
+  // Alarm is still created without this — just without actions.
+  alertTopicArn?: pulumi.Input<string>;
   // Webhook configuration for Wraps platform
   webhook?: {
     awsAccountNumber: string; // The user's 12-digit AWS account ID
@@ -27,6 +34,9 @@ export type EventBridgeConfig = {
 export type EventBridgeResources = {
   rule: aws.cloudwatch.EventRule;
   target: aws.cloudwatch.EventTarget;
+  // Alarm on FailedInvocations for the rule (covers both a dead SQS target
+  // and a 4xx-ing webhook destination, since the metric is per-rule).
+  failedInvocationsAlarm: aws.cloudwatch.MetricAlarm;
   // API Destination resources (optional)
   webhookConnection?: aws.cloudwatch.EventConnection;
   webhookApiDestination?: aws.cloudwatch.EventApiDestination;
@@ -99,6 +109,7 @@ export async function createEventBridgeResources(
     rule: rule.name,
     eventBusName,
     arn: config.queueArn,
+    deadLetterConfig: { arn: config.dlqArn },
   });
 
   // Create API Destination for Wraps webhook (if configured)
@@ -183,6 +194,7 @@ export async function createEventBridgeResources(
       eventBusName,
       arn: webhookApiDestination.arn,
       roleArn: webhookRole.arn,
+      deadLetterConfig: { arn: config.dlqArn },
     });
   }
 
@@ -206,9 +218,41 @@ export async function createEventBridgeResources(
     userWebhookTarget = userWebhookResources.target;
   }
 
+  // Alarm on delivery failures for the rule's targets. FailedInvocations is
+  // per-rule, so this alarm covers both the SQS target and the webhook
+  // target (dead target or deauthorized destination). Created even without
+  // an alert topic so the failure state is still visible in the console and
+  // via `wraps email doctor`.
+  const alarmActions = config.alertTopicArn
+    ? [config.alertTopicArn]
+    : undefined;
+  const failedInvocationsAlarm = new aws.cloudwatch.MetricAlarm(
+    "wraps-email-events-delivery-failures",
+    {
+      name: "wraps-email-events-delivery-failures",
+      namespace: "AWS/Events",
+      metricName: "FailedInvocations",
+      dimensions: { RuleName: "wraps-email-events-to-sqs" },
+      statistic: "Sum",
+      period: 300,
+      evaluationPeriods: 3,
+      threshold: 1,
+      comparisonOperator: "GreaterThanOrEqualToThreshold",
+      treatMissingData: "notBreaching",
+      alarmDescription:
+        "SES event delivery from EventBridge is failing (dead target or deauthorized webhook). Event history is being lost — run `wraps email doctor`.",
+      ...(alarmActions ? { alarmActions, okActions: alarmActions } : {}),
+      tags: {
+        ManagedBy: "wraps-cli",
+        Service: "email",
+      },
+    }
+  );
+
   return {
     rule,
     target,
+    failedInvocationsAlarm,
     webhookConnection,
     webhookApiDestination,
     webhookTarget,

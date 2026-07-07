@@ -170,15 +170,32 @@ export async function deployEmailStack(
   // 6. SQS queues (if event tracking enabled)
   let sqsResources;
   if (emailConfig.eventTracking?.enabled) {
-    sqsResources = await createSQSResources({ region: config.region });
+    sqsResources = await createSQSResources({
+      region: config.region,
+      accountId,
+    });
   }
 
-  // 7. EventBridge rule to route SES events to SQS (if event tracking enabled)
+  // 7. Alerting resources (if enabled) — created before EventBridge so its
+  // SNS topic ARN can be wired into the FailedInvocations alarm below.
+  let alertingResources;
+  if (emailConfig.alerts?.enabled) {
+    alertingResources = await createAlertingResources({
+      alertConfig: emailConfig.alerts,
+      configSetName: sesResources?.configSet.configurationSetName,
+      dlqName: sqsResources ? "wraps-email-events-dlq" : undefined,
+      region: config.region,
+    });
+  }
+
+  // 8. EventBridge rule to route SES events to SQS (if event tracking enabled)
   if (emailConfig.eventTracking?.enabled && sesResources && sqsResources) {
     await createEventBridgeResources({
       eventBusArn: sesResources.eventBus.arn,
       queueArn: sqsResources.queue.arn,
       queueUrl: sqsResources.queue.url,
+      dlqArn: sqsResources.dlq.arn,
+      alertTopicArn: alertingResources?.topic.arn,
       // Include webhook config if provided (for Wraps platform integration)
       webhook: config.webhook,
       // Include user webhook config if provided
@@ -194,7 +211,7 @@ export async function deployEmailStack(
     });
   }
 
-  // 8. Lambda functions (if event tracking and DynamoDB enabled)
+  // 9. Lambda functions (if event tracking and DynamoDB enabled)
   let lambdaFunctions;
   if (
     emailConfig.eventTracking?.dynamoDBHistory &&
@@ -214,7 +231,7 @@ export async function deployEmailStack(
     });
   }
 
-  // 9. Mail Manager Archive (if email archiving enabled)
+  // 10. Mail Manager Archive (if email archiving enabled)
   let archiveResources;
   if (emailConfig.emailArchiving?.enabled && sesResources) {
     const { createMailManagerArchive } = await import(
@@ -228,22 +245,11 @@ export async function deployEmailStack(
     });
   }
 
-  // 10. SMTP credentials (if enabled)
+  // 11. SMTP credentials (if enabled)
   let smtpResources;
   if (emailConfig.smtpCredentials?.enabled && sesResources) {
     smtpResources = await createSMTPCredentials({
       configSetName: domainToConfigSetName(emailConfig.domain ?? ""),
-      region: config.region,
-    });
-  }
-
-  // 11. Alerting resources (if enabled)
-  let alertingResources;
-  if (emailConfig.alerts?.enabled) {
-    alertingResources = await createAlertingResources({
-      alertConfig: emailConfig.alerts,
-      configSetName: sesResources?.configSet.configurationSetName,
-      dlqName: sqsResources ? "wraps-email-events-dlq" : undefined,
       region: config.region,
     });
   }

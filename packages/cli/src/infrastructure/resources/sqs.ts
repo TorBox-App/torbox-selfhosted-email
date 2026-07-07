@@ -32,6 +32,7 @@ const SQS_TIMEOUTS = {
 
 export type SQSConfig = {
   region: string;
+  accountId: string;
 };
 
 export async function createSQSResources(
@@ -57,6 +58,38 @@ export async function createSQSResources(
   const dlq = new aws.sqs.Queue(dlqName, dlqConfig, {
     ...SQS_TIMEOUTS,
     ...(dlqUrl ? { import: dlqUrl } : {}),
+  });
+
+  // Allow EventBridge to deliver events here when a rule target fails
+  // (dead SQS target, deauthorized webhook, etc). This is a *target* DLQ —
+  // distinct from the redrivePolicy above, which only catches Lambda-consumer
+  // failures on the main queue. The EventBridge rule is created later, in
+  // eventbridge.ts, so we build its ARN from the well-known rule name instead
+  // of depending on the rule resource (which would create an SQS -> EventBridge
+  // -> SQS dependency cycle, since SQS resources are provisioned first).
+  const ruleArn = `arn:aws:events:${config.region}:${config.accountId}:rule/wraps-email-events-to-sqs`;
+  new aws.sqs.QueuePolicy("wraps-email-events-dlq-policy", {
+    queueUrl: dlq.url,
+    policy: dlq.arn.apply((dlqArn) =>
+      JSON.stringify({
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              Service: "events.amazonaws.com",
+            },
+            Action: "sqs:SendMessage",
+            Resource: dlqArn,
+            Condition: {
+              ArnEquals: {
+                "aws:SourceArn": ruleArn,
+              },
+            },
+          },
+        ],
+      })
+    ),
   });
 
   // Main queue for SES events
