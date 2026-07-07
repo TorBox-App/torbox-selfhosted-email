@@ -34,6 +34,11 @@ vi.mock("@wraps/db", async () => {
 
 const { webhooksRoutes } = await import("../routes/webhooks");
 const { Elysia } = await import("elysia");
+// Real drizzle table object — used to exclude the webhook route's
+// last_event_received_at liveness update from updateCalls, which every test
+// in this file indexes assuming it only contains messageSend/batchSend/contact
+// business updates.
+const { awsAccount } = await import("@wraps/db");
 
 const TEST_AWS_ACCOUNT_NUMBER = "123456789012";
 const TEST_WEBHOOK_SECRET = "test-secret-key";
@@ -83,11 +88,16 @@ function setupMocksForRace(
   // Track all update calls with their set data
   const updateCalls: { setData: Record<string, unknown>; rowCount: number }[] =
     [];
-  mockDbUpdate.mockImplementation(() => ({
+  mockDbUpdate.mockImplementation((table: unknown) => ({
     set: (data: Record<string, unknown>) => ({
       where: () => {
-        const call = { setData: data, rowCount: updateRowCount };
-        updateCalls.push(call);
+        // Skip the liveness-tracking update — covered separately in
+        // webhook-last-event-received.test.ts, not part of this file's
+        // contract (which asserts exact business-update counts).
+        if (table !== awsAccount) {
+          const call = { setData: data, rowCount: updateRowCount };
+          updateCalls.push(call);
+        }
         // Return result with rowCount to simulate affected rows
         return Promise.resolve({ rowCount: updateRowCount });
       },

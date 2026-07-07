@@ -208,7 +208,7 @@ describe("Webhook SES — missing mail field", () => {
     expect(body.reason).toContain("missing");
   });
 
-  it("does not attempt any DB updates when mail is missing", async () => {
+  it("attempts no message-lookup DB work when mail is missing, only the liveness update", async () => {
     mockAccountLookup();
 
     const app = createApp();
@@ -223,8 +223,10 @@ describe("Webhook SES — missing mail field", () => {
       })
     );
 
-    // Only one select call (account lookup), no message lookups or updates
+    // Only one select call (account lookup), no message lookups.
     expect(mockSelectWhere).toHaveBeenCalledTimes(1);
-    expect(mockUpdateSet).not.toHaveBeenCalled();
+    // The route still records feed liveness (last_event_received_at) even for
+    // events it otherwise ignores — an SDK-only sender still has a live feed.
+    expect(mockUpdateSet).toHaveBeenCalledTimes(1);
   });
 });

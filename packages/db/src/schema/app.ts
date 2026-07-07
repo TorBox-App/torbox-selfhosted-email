@@ -83,6 +83,11 @@ export const awsAccount = pgTable(
     isVerified: boolean("is_verified").default(false).notNull(),
     lastVerifiedAt: timestamp("last_verified_at"),
 
+    // Liveness of the SES event feed: bumped (throttled) by the SES webhook
+    // route every time an authenticated event arrives for this account.
+    // NULL = no event ever received. Used for staleness detection/alerting.
+    lastEventReceivedAt: timestamp("last_event_received_at"),
+
     // Quick product flags for navigation/menus
     emailEnabled: boolean("email_enabled").default(false).notNull(),
     smsEnabled: boolean("sms_enabled").default(false).notNull(),

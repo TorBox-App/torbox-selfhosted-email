@@ -1,0 +1,1 @@
+ALTER TABLE "aws_account" ADD COLUMN "last_event_received_at" timestamp;

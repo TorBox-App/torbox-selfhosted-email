@@ -206,15 +206,18 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
           emailEnabled: awsAccount.emailEnabled,
           smsEnabled: awsAccount.smsEnabled,
           lastVerifiedAt: awsAccount.lastVerifiedAt,
+          lastEventReceivedAt: awsAccount.lastEventReceivedAt,
+          webhookSecret: awsAccount.webhookSecret,
           createdAt: awsAccount.createdAt,
         })
         .from(awsAccount)
         .where(eq(awsAccount.organizationId, authContext.organizationId));
 
       return {
-        connections: connections.map((c) => ({
+        connections: connections.map(({ webhookSecret, ...c }) => ({
           ...c,
-          webhookConnected: true,
+          webhookConnected: webhookSecret !== null,
+          lastEventReceivedAt: c.lastEventReceivedAt?.toISOString() ?? null,
           lastVerifiedAt: c.lastVerifiedAt?.toISOString() ?? null,
           createdAt: c.createdAt.toISOString(),
         })),

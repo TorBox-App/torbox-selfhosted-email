@@ -183,8 +183,9 @@ describe("Webhook SES — cross-org message scoping", () => {
     const body = await response.json();
     expect(body.status).toBe("ignored");
 
-    // No DB update should have been attempted
-    expect(mockUpdateSet).not.toHaveBeenCalled();
+    // No messageSend/contact update should have been attempted — only the
+    // route's feed-liveness update (last_event_received_at) fires here.
+    expect(mockUpdateSet).toHaveBeenCalledTimes(1);
   });
 
   it("processes the event when messageSend belongs to the same org", async () => {

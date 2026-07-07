@@ -40,6 +40,11 @@ vi.mock("@wraps/db", async () => {
 
 const { webhooksRoutes } = await import("../routes/webhooks");
 const { Elysia } = await import("elysia");
+// Real drizzle table object — used to exclude the webhook route's
+// last_event_received_at liveness update from updateCalls, which every test
+// in this file indexes assuming it only contains messageSend/contact/batchSend
+// business updates.
+const { awsAccount } = await import("@wraps/db");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test helpers
@@ -167,10 +172,14 @@ describe("Webhook: Rendering Failure", () => {
       return selectChain([]);
     });
 
-    // Capture update calls
-    mockDbUpdate.mockImplementation(() => {
+    // Capture update calls (skip the liveness-tracking update — covered
+    // separately in webhook-last-event-received.test.ts, not part of this
+    // file's contract).
+    mockDbUpdate.mockImplementation((table: unknown) => {
       const chain = updateChain();
-      updateCalls.push(chain);
+      if (table !== awsAccount) {
+        updateCalls.push(chain);
+      }
       return chain;
     });
   });

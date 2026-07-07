@@ -16,7 +16,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { and, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { trackFirstEmailDelivered } from "../lib/activation-tracking";
 import { log } from "../lib/logger";
@@ -231,6 +231,27 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       log.warn("Webhook: authentication failed", { awsAccountNumber });
       set.status = 401;
       return { error: "Unauthorized" };
+    }
+
+    // Record feed liveness (throttled to ~1 write/min per account). Best-effort:
+    // a failure here must never fail event processing.
+    try {
+      await db
+        .update(awsAccount)
+        .set({ lastEventReceivedAt: new Date() })
+        .where(
+          and(
+            eq(awsAccount.id, account.id),
+            or(
+              isNull(awsAccount.lastEventReceivedAt),
+              lt(awsAccount.lastEventReceivedAt, new Date(Date.now() - 60_000))
+            )
+          )
+        );
+    } catch (error) {
+      log.error("Webhook: failed to record lastEventReceivedAt", error, {
+        awsAccountNumber,
+      });
     }
 
     // 3. Parse the EventBridge event

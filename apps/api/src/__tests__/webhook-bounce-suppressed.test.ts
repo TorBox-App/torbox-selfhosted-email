@@ -40,6 +40,11 @@ const { Elysia } = await import("elysia");
 const { enqueueWorkflowStep, deleteScheduledStep } = await import(
   "../services/workflow-queue"
 );
+// Real drizzle table object — used to exclude the webhook route's
+// last_event_received_at liveness update from updateCalls, which every test
+// in this file indexes assuming it only contains messageSend/contact/batchSend
+// business updates.
+const { awsAccount } = await import("@wraps/db");
 
 const TEST_AWS_ACCOUNT_NUMBER = "123456789012";
 const TEST_WEBHOOK_SECRET = "test-secret-key";
@@ -133,9 +138,13 @@ function setupMocks(opts: MockOpts = {}) {
   });
 
   const updateCalls: ReturnType<typeof updateChain>[] = [];
-  mockDbUpdate.mockImplementation(() => {
+  mockDbUpdate.mockImplementation((table: unknown) => {
     const chain = updateChain();
-    updateCalls.push(chain);
+    // Skip the liveness-tracking update — covered separately in
+    // webhook-last-event-received.test.ts, not part of this file's contract.
+    if (table !== awsAccount) {
+      updateCalls.push(chain);
+    }
     return chain;
   });
 

@@ -336,6 +336,34 @@ describe("GET /v1/connections — real DB", () => {
     expect(conn.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  it("exposes lastEventReceivedAt as null when no webhook event has arrived", async () => {
+    const app = createTestApp();
+    await postConnection(app);
+
+    const res = await getConnections(app);
+    const body = await res.json();
+
+    expect(body.connections).toHaveLength(1);
+    expect(body.connections[0].lastEventReceivedAt).toBeNull();
+  });
+
+  it("reports webhookConnected: false and hides webhookSecret after disconnect", async () => {
+    const app = createTestApp();
+    const postRes = await postConnection(app);
+    const { connectionId } = await postRes.json();
+
+    const delRes = await deleteConnection(app, connectionId);
+    expect(delRes.status).toBe(200);
+
+    const res = await getConnections(app);
+    const body = await res.json();
+
+    expect(body.connections).toHaveLength(1);
+    const conn = body.connections[0];
+    expect(conn.webhookConnected).toBe(false);
+    expect(conn.webhookSecret).toBeUndefined();
+  });
+
   it("is scoped to the authenticated org — other org sees empty list", async () => {
     const appA = createTestApp({ organizationId: testOrg.id });
     const appB = createTestApp({
