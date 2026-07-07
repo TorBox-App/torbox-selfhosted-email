@@ -187,7 +187,11 @@ describe("EventItem diagnostic panel", () => {
         color="text-yellow-500"
         event={{
           type: "deliverydelay",
-          timestamp: Date.now(),
+          // Fixed, non-today timestamp (unlike the other fixtures in this file)
+          // so the event header's rendered date can never land on the same
+          // calendar day as the "Expires" fixture below, regardless of when
+          // the suite runs.
+          timestamp: new Date("2026-03-15T14:30:00.000Z").getTime(),
           metadata: {
             delayType: "MailboxFull",
             expirationTime: "2026-07-08T00:00:00.000Z",
@@ -200,9 +204,16 @@ describe("EventItem diagnostic panel", () => {
     );
 
     expect(screen.getByText("Delivery delayed — mailbox full")).toBeTruthy();
+
+    // Scope the assertion to the "Expires" field's own <dd> instead of a
+    // broad getByText regex, so it can't match the unrelated event header
+    // timestamp (which is formatted similarly: "<Mon> <day>, <year>").
+    const expiresLabel = screen.getByText("Expires");
+    const expiresValue = expiresLabel.nextElementSibling;
     // The Expires field renders as a formatted local date, not the raw ISO string.
     // Midnight UTC on Jul 8 lands on Jul 7 or Jul 8 depending on the runner's zone.
-    expect(screen.getByText(/Jul [78], 2026/)).toBeTruthy();
+    expect(expiresValue?.textContent).toMatch(/Jul [78], 2026/);
+    expect(expiresValue?.textContent).not.toBe("2026-07-08T00:00:00.000Z");
     expect(screen.queryByText("2026-07-08T00:00:00.000Z")).toBeNull();
   });
 
