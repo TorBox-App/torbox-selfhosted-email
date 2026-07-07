@@ -88,6 +88,13 @@ export const awsAccount = pgTable(
     // NULL = no event ever received. Used for staleness detection/alerting.
     lastEventReceivedAt: timestamp("last_event_received_at"),
 
+    // Set by the event-feed-staleness cron when the feed is detected stale;
+    // cleared when events resume. Drives the dashboard warning banner.
+    eventFeedStaleSince: timestamp("event_feed_stale_since"),
+    // When the org owner was last emailed about this staleness episode.
+    // Cleared together with eventFeedStaleSince so a NEW episode re-alerts.
+    eventFeedAlertedAt: timestamp("event_feed_alerted_at"),
+
     // Quick product flags for navigation/menus
     emailEnabled: boolean("email_enabled").default(false).notNull(),
     smsEnabled: boolean("sms_enabled").default(false).notNull(),

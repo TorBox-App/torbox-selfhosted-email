@@ -6,6 +6,7 @@ import { getOrganizationBySlug } from "@/lib/organization";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { AccountDetails } from "./components/account-details";
 import { AccountFeatures } from "./components/account-features";
+import { EventFeedStaleBanner } from "./components/event-feed-stale-banner";
 import { WebhookConfiguration } from "./components/webhook-configuration";
 
 type AWSAccountPageProps = {
@@ -91,6 +92,9 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
         orgSlug={orgSlug}
         permissions={permissions}
       />
+
+      {/* Stale Event Feed Warning */}
+      <EventFeedStaleBanner account={account} />
 
       {/* Deployed Features */}
       <AccountFeatures account={account} organizationId={organization.id} />

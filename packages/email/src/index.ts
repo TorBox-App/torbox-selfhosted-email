@@ -1,4 +1,14 @@
 // Core email client
+
+// Event feed staleness alert
+export type {
+  EventFeedStaleContent,
+  SendEventFeedStaleEmailParams,
+} from "./emails/event-feed-stale";
+export {
+  buildEventFeedStaleEmail,
+  sendEventFeedStaleEmail,
+} from "./emails/event-feed-stale";
 export type { SendEmailParams } from "./lib/client";
 export { getWrapsClient, sendEmail } from "./lib/client";
 
