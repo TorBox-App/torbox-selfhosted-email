@@ -33,6 +33,60 @@ vi.mock("../../utils/shared/metadata.js", async () => {
 });
 vi.mock("../../utils/shared/prompts.js");
 vi.mock("../../infrastructure/email-stack.js");
+// Event-pipeline check clients (post-deploy warn-only check in upgrade.ts) —
+// mocked so the check resolves instantly instead of hitting real AWS.
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class {
+    send = vi.fn().mockResolvedValue({});
+  },
+  GetConfigurationSetEventDestinationsCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-eventbridge", () => ({
+  EventBridgeClient: class {
+    send = vi.fn().mockResolvedValue({});
+  },
+  DescribeRuleCommand: class {
+    constructor(public input: unknown) {}
+  },
+  ListTargetsByRuleCommand: class {
+    constructor(public input: unknown) {}
+  },
+  DescribeApiDestinationCommand: class {
+    constructor(public input: unknown) {}
+  },
+  DescribeConnectionCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-sqs", () => ({
+  SQSClient: class {
+    send = vi.fn().mockResolvedValue({});
+  },
+  GetQueueUrlCommand: class {
+    constructor(public input: unknown) {}
+  },
+  GetQueueAttributesCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-lambda", () => ({
+  LambdaClient: class {
+    send = vi.fn().mockResolvedValue({});
+  },
+  ListEventSourceMappingsCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-dynamodb", () => ({
+  DynamoDBClient: class {
+    send = vi.fn().mockResolvedValue({});
+  },
+  DescribeTableCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
 
 import * as prompts from "@clack/prompts";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";

@@ -15,6 +15,7 @@ import {
   getDNSCredentials,
 } from "../../utils/dns/credentials.js";
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
+import { checkEventPipeline } from "../../utils/email/event-pipeline-check.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
@@ -31,6 +32,7 @@ import {
   applyConfigUpdates,
   buildEmailStackConfig,
   generateWebhookSecret,
+  getAllTrackedDomains,
   loadConnectionMetadata,
   saveConnectionMetadata,
   updateEmailConfig,
@@ -2617,6 +2619,33 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   // Always persist metadata after all upgrade actions
   await saveConnectionMetadata(metadata);
+
+  // Post-deploy pipeline check (warn-only): verify SES events can actually
+  // reach the event log/dashboard after this deploy. Never fails the
+  // command — a checker crash or slow AWS call must not undo a successful
+  // upgrade.
+  try {
+    const domains = getAllTrackedDomains(metadata).map((d) => d.domain);
+    const pipelineChecks = await checkEventPipeline({
+      region: outputs.region ?? region,
+      domains,
+      expectPlatformWebhook: Boolean(metadata.services.email?.webhookSecret),
+    });
+    const issues = pipelineChecks.filter((check) => check.status !== "pass");
+    if (issues.length > 0 && !isJsonMode()) {
+      for (const issue of issues) {
+        clack.log.warn(
+          `Post-deploy pipeline check: ${issue.hop} — ${issue.details}`
+        );
+      }
+    }
+  } catch (error) {
+    if (!isJsonMode()) {
+      clack.log.warn(
+        `Post-deploy pipeline check failed to run: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
 
   if (isJsonMode()) {
     jsonSuccess("email.upgrade", {

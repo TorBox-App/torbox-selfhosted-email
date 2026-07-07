@@ -64,6 +64,7 @@
     "@aws-sdk/client-cloudfront": "catalog:",
     "@aws-sdk/client-cloudwatch": "catalog:",
     "@aws-sdk/client-dynamodb": "catalog:",
+    "@aws-sdk/client-eventbridge": "catalog:",
     "@aws-sdk/client-iam": "catalog:",
     "@aws-sdk/client-lambda": "catalog:",
     "@aws-sdk/client-mailmanager": "catalog:",

@@ -22,6 +22,10 @@ vi.mock("../../utils/shared/aws.js", () => ({
 vi.mock("../../utils/shared/metadata.js", () => ({
   loadConnectionMetadata: vi.fn().mockResolvedValue(null),
   findConnectionsWithService: vi.fn().mockResolvedValue([]),
+  getAllTrackedDomains: vi.fn((metadata) => {
+    const domain = metadata?.services?.email?.config?.domain;
+    return domain ? [{ domain, isPrimary: true, managed: true }] : [];
+  }),
 }));
 vi.mock("../../utils/shared/pulumi.js", () => ({
   ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
@@ -46,6 +50,10 @@ const mockLambdaSend = vi.fn().mockResolvedValue({});
 const mockIamSend = vi
   .fn()
   .mockResolvedValue({ PolicyNames: [], AttachedPolicies: [] });
+// Event-pipeline check clients (checkEventPipeline in event-pipeline-check.ts)
+const mockSesv2Send = vi.fn().mockResolvedValue({});
+const mockEventBridgeSend = vi.fn().mockResolvedValue({});
+const mockSqsSend = vi.fn().mockResolvedValue({});
 
 vi.mock("@aws-sdk/client-ses", () => ({
   SESClient: class {
@@ -70,12 +78,18 @@ vi.mock("@aws-sdk/client-dynamodb", () => ({
   DeleteTableCommand: class {
     constructor(public input: unknown) {}
   },
+  DescribeTableCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 vi.mock("@aws-sdk/client-lambda", () => ({
   LambdaClient: class {
     send = mockLambdaSend;
   },
   DeleteFunctionCommand: class {
+    constructor(public input: unknown) {}
+  },
+  ListEventSourceMappingsCommand: class {
     constructor(public input: unknown) {}
   },
 }));
@@ -99,9 +113,46 @@ vi.mock("@aws-sdk/client-iam", () => ({
     constructor(public input: unknown) {}
   },
 }));
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class {
+    send = mockSesv2Send;
+  },
+  GetConfigurationSetEventDestinationsCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-eventbridge", () => ({
+  EventBridgeClient: class {
+    send = mockEventBridgeSend;
+  },
+  DescribeRuleCommand: class {
+    constructor(public input: unknown) {}
+  },
+  ListTargetsByRuleCommand: class {
+    constructor(public input: unknown) {}
+  },
+  DescribeApiDestinationCommand: class {
+    constructor(public input: unknown) {}
+  },
+  DescribeConnectionCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+vi.mock("@aws-sdk/client-sqs", () => ({
+  SQSClient: class {
+    send = mockSqsSend;
+  },
+  GetQueueUrlCommand: class {
+    constructor(public input: unknown) {}
+  },
+  GetQueueAttributesCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
 
 import * as prompts from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import type { AWSResourceScan } from "../../utils/shared/scanner.js";
 import {
@@ -114,6 +165,8 @@ const mockFilterFn = filterWrapsResources as ReturnType<typeof vi.fn>;
 const mockFindConnections = findConnectionsWithService as ReturnType<
   typeof vi.fn
 >;
+const mockIsJsonMode = isJsonMode as ReturnType<typeof vi.fn>;
+const mockJsonSuccess = jsonSuccess as ReturnType<typeof vi.fn>;
 
 describe("emailDoctor", () => {
   let mockSpinner: {
@@ -148,6 +201,10 @@ describe("emailDoctor", () => {
     mockDynamoSend.mockResolvedValue({});
     mockLambdaSend.mockResolvedValue({});
     mockIamSend.mockResolvedValue({ PolicyNames: [], AttachedPolicies: [] });
+    mockSesv2Send.mockResolvedValue({});
+    mockEventBridgeSend.mockResolvedValue({});
+    mockSqsSend.mockResolvedValue({});
+    mockIsJsonMode.mockReturnValue(false);
 
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -394,6 +451,120 @@ describe("emailDoctor", () => {
     // Should warn the user about using destroy instead
     expect(vi.mocked(prompts.log.warn)).toHaveBeenCalledWith(
       expect.stringContaining("wraps email destroy")
+    );
+  });
+
+  it("should include Event Pipeline checks in text output when an email connection exists", async () => {
+    mockFindConnections.mockResolvedValueOnce([
+      {
+        accountId: "123456789012",
+        region: "us-east-1",
+        services: {
+          email: {
+            config: { domain: "example.com" },
+          },
+        },
+      },
+    ]);
+
+    const filteredScan: AWSResourceScan = {
+      identities: [],
+      configurationSets: [
+        { name: "wraps-email-example-com", eventDestinations: [] },
+      ],
+      snsTopics: [],
+      dynamoTables: [],
+      lambdaFunctions: [],
+      iamRoles: [],
+    };
+    mockScanFn.mockResolvedValue(filteredScan);
+    mockFilterFn.mockReturnValue(filteredScan);
+
+    // Healthy pipeline: config set has the eventbridge destination enabled,
+    // rule is enabled with a live SQS target, DLQ empty, mapping enabled,
+    // table active.
+    mockSesv2Send.mockResolvedValue({
+      EventDestinations: [{ Name: "wraps-email-eventbridge", Enabled: true }],
+    });
+    mockEventBridgeSend.mockImplementation(
+      (cmd: { constructor: { name: string } }) => {
+        switch (cmd.constructor.name) {
+          case "DescribeRuleCommand":
+            return Promise.resolve({ State: "ENABLED" });
+          case "ListTargetsByRuleCommand":
+            return Promise.resolve({
+              Targets: [
+                {
+                  Id: "sqs-target",
+                  Arn: "arn:aws:sqs:us-east-1:123456789012:wraps-email-events",
+                },
+              ],
+            });
+          default:
+            return Promise.resolve({});
+        }
+      }
+    );
+    mockSqsSend.mockResolvedValue({
+      QueueUrl:
+        "https://sqs.us-east-1.amazonaws.com/123456789012/wraps-email-events",
+      Attributes: { ApproximateNumberOfMessages: "0" },
+    });
+    mockLambdaSend.mockResolvedValue({
+      EventSourceMappings: [
+        {
+          EventSourceArn:
+            "arn:aws:sqs:us-east-1:123456789012:wraps-email-events",
+          State: "Enabled",
+        },
+      ],
+    });
+    mockDynamoSend.mockResolvedValue({ Table: { TableStatus: "ACTIVE" } });
+
+    const { emailDoctor } = await import("../email/doctor.js");
+    await emailDoctor({});
+
+    const allOutput = consoleLogSpy.mock.calls
+      .map((c) => c.join(" "))
+      .join("\n");
+    expect(allOutput).toContain("Event Pipeline");
+  });
+
+  it("should include Event Pipeline checks in JSON output when json mode is active", async () => {
+    mockIsJsonMode.mockReturnValue(true);
+    mockFindConnections.mockResolvedValueOnce([
+      {
+        accountId: "123456789012",
+        region: "us-east-1",
+        services: {
+          email: {
+            config: { domain: "example.com" },
+          },
+        },
+      },
+    ]);
+
+    const filteredScan: AWSResourceScan = {
+      identities: [],
+      configurationSets: [],
+      snsTopics: [],
+      dynamoTables: [],
+      lambdaFunctions: [],
+      iamRoles: [],
+    };
+    mockScanFn.mockResolvedValue(filteredScan);
+    mockFilterFn.mockReturnValue(filteredScan);
+
+    const { emailDoctor } = await import("../email/doctor.js");
+    await emailDoctor({});
+
+    expect(mockJsonSuccess).toHaveBeenCalledWith(
+      "email.doctor",
+      expect.objectContaining({
+        resources: expect.arrayContaining([
+          expect.objectContaining({ category: "Event Pipeline" }),
+        ]),
+      })
     );
   });
 });

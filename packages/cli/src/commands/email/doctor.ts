@@ -15,6 +15,10 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import {
+  checkEventPipeline,
+  type PipelineCheck,
+} from "../../utils/email/event-pipeline-check.js";
+import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
@@ -23,7 +27,10 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
-import { findConnectionsWithService } from "../../utils/shared/metadata.js";
+import {
+  findConnectionsWithService,
+  getAllTrackedDomains,
+} from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import {
   type AWSResourceScan,
@@ -43,6 +50,17 @@ type DoctorResult = {
   name: string;
   details?: string;
 };
+
+function pipelineChecksToDoctorResults(
+  pipelineChecks: PipelineCheck[]
+): DoctorResult[] {
+  return pipelineChecks.map((check) => ({
+    status: check.status,
+    category: "Event Pipeline",
+    name: check.hop,
+    details: check.details,
+  }));
+}
 
 function runResourceDiagnostics(
   wrapsResources: AWSResourceScan,
@@ -165,6 +183,13 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
   // 2. Get region — auto-detect from metadata when not explicitly provided
   let region = options.region || (await getAWSRegion());
 
+  // Fetched unconditionally: used both for region auto-detection below and
+  // to locate the connection for this region's event-pipeline health check.
+  const emailConnections = await findConnectionsWithService(
+    identity.accountId,
+    "email"
+  );
+
   if (
     !(
       options.region ||
@@ -172,11 +197,6 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const emailConnections = await findConnectionsWithService(
-      identity.accountId,
-      "email"
-    );
-
     if (emailConnections.length === 1) {
       region = emailConnections[0].region;
     } else if (emailConnections.length > 1 && !isJsonMode()) {
@@ -229,10 +249,32 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
     hasStack = false;
   }
 
+  // 5.5. If an email connection exists for this region, verify the SES ->
+  // EventBridge -> SQS -> Lambda -> DynamoDB pipeline can actually deliver
+  // events (see event-pipeline-check.ts for the hop-by-hop breakdown).
+  const emailConnection = emailConnections.find((c) => c.region === region);
+  let pipelineResults: DoctorResult[] = [];
+  if (emailConnection) {
+    const emailService = emailConnection.services.email;
+    const domains = emailService?.config
+      ? getAllTrackedDomains(emailConnection).map((d) => d.domain)
+      : [];
+    const expectPlatformWebhook = Boolean(emailService?.webhookSecret);
+
+    const pipelineChecks = await progress.execute(
+      "Checking event pipeline",
+      async () => checkEventPipeline({ region, domains, expectPlatformWebhook })
+    );
+    pipelineResults = pipelineChecksToDoctorResults(pipelineChecks);
+  }
+
   progress.stop();
 
   // 6. Run diagnostics
-  const results = runResourceDiagnostics(wrapsResources, hasStack);
+  const results = [
+    ...runResourceDiagnostics(wrapsResources, hasStack),
+    ...pipelineResults,
+  ];
 
   if (isJsonMode()) {
     jsonSuccess("email.doctor", {
@@ -250,7 +292,7 @@ export async function emailDoctor(options: EmailDoctorOptions): Promise<void> {
   }
 
   // 6. Display results
-  if (totalResources === 0) {
+  if (results.length === 0) {
     clack.log.info("No wraps-* resources found in this region.");
     clack.outro(pc.dim("Your AWS account is clean."));
   } else {
