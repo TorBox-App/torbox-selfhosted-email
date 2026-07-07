@@ -25,6 +25,7 @@ import {
   db,
   eq,
   MESSAGE_SEND_UNACCEPTED_STATUSES,
+  type MessageSendStatus,
   messageSend,
   organization,
   organizationExtension,
@@ -119,6 +120,32 @@ async function recordAcceptedSend(
         )
     );
   } catch (updateError) {
+    // 2026-07-02 incident: SES's Send event can reach POST /webhooks/ses/:acct
+    // before this write lands, so webhooks.ts's "message not found" branch
+    // materializes a minimal orphan row carrying values.messageId — and this
+    // UPDATE then collides on message_send_message_id_idx. The violation is
+    // deterministic, so withBookkeepingRetries above burns all
+    // BOOKKEEPING_ATTEMPTS retrying it before we get here (wasted work, but
+    // restructuring the shared retry wrapper to skip retries for this one
+    // error would also change recordSendFailure's retry semantics — left
+    // as-is; see plan 118).
+    if (values.messageId && isMessageIdUniqueViolation(updateError)) {
+      try {
+        await adoptOrphanRow(ctx, recipient, {
+          messageId: values.messageId,
+          subject: values.subject,
+          sentAt: values.sentAt,
+        });
+      } catch (adoptError) {
+        log.error("Orphan adoption failed; row remains claimed", adoptError, {
+          email: recipient.email,
+          messageId: values.messageId,
+          batchId: ctx.batchId,
+          organizationId: ctx.organizationId,
+        });
+      }
+      return;
+    }
     log.error(
       "Post-send bookkeeping update failed after retries",
       updateError,
@@ -130,6 +157,128 @@ async function recordAcceptedSend(
       }
     );
   }
+}
+
+// Walks err -> err.cause (node-postgres/drizzle nest the real pg error there)
+// looking for the specific unique-index violation this collision produces.
+// Matching the constraint name (not error class identity) because AWS/pg
+// error shapes are unreliable across drivers — see MEMORY.md "AWS SDK v3
+// Error Handling" for the same pattern applied to AWS errors.
+function isMessageIdUniqueViolation(err: unknown): boolean {
+  let current: unknown = err;
+  const seen = new Set<unknown>();
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current);
+    if (current.message.includes("message_send_message_id_idx")) {
+      return true;
+    }
+    current = (current as Error & { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+// Status precedence for deciding whether the orphan's current status should
+// win over the "sent" write this collision interrupted. Same spirit as the
+// webhook's own status-precedence checks (processDelivery et al.): later
+// lifecycle events always outrank "sent", and bounced/complained/suppressed
+// outrank delivered/opened/clicked too. Statuses not listed here (pending,
+// queued, failed, opted_out) can't legitimately appear on an SDK-materialized
+// orphan and are treated as no-more-advanced-than-sent.
+const ORPHAN_STATUS_RANK: Partial<Record<MessageSendStatus, number>> = {
+  sent: 0,
+  delivered: 1,
+  opened: 2,
+  clicked: 2,
+  bounced: 3,
+  complained: 3,
+  suppressed: 3,
+};
+
+// Adopts the webhook-materialized orphan row (see webhooks.ts's "message not
+// found" branch) onto the batch row that lost the messageId race. Runs as a
+// single transaction: the orphan is deleted before the batch row is updated
+// because both rows would otherwise momentarily share the same messageId,
+// which message_send_message_id_idx forbids.
+async function adoptOrphanRow(
+  ctx: BookkeepingCtx,
+  recipient: { id: string; email: string | null },
+  values: { messageId: string; subject: string | null; sentAt: Date }
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [orphan] = await tx
+      .select({
+        id: messageSend.id,
+        status: messageSend.status,
+        deliveredAt: messageSend.deliveredAt,
+        openedAt: messageSend.openedAt,
+        clickedAt: messageSend.clickedAt,
+        bouncedAt: messageSend.bouncedAt,
+        bounceType: messageSend.bounceType,
+        bounceSubType: messageSend.bounceSubType,
+        complainedAt: messageSend.complainedAt,
+        suppressedAt: messageSend.suppressedAt,
+      })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, ctx.organizationId),
+          eq(messageSend.messageId, values.messageId),
+          isNull(messageSend.batchSendId)
+        )
+      )
+      .for("update");
+
+    if (!orphan) {
+      // The colliding row isn't an adoptable orphan (e.g. it already belongs
+      // to a batch) — someone else's send genuinely holds this messageId.
+      // Leave the batch row 'queued'; the stale-reclaim path picks it up.
+      log.warn(
+        "Post-send bookkeeping: messageId collision but no adoptable orphan row found",
+        {
+          messageId: values.messageId,
+          batchId: ctx.batchId,
+          organizationId: ctx.organizationId,
+        }
+      );
+      return;
+    }
+
+    const orphanRank = ORPHAN_STATUS_RANK[orphan.status] ?? 0;
+    const orphanIsMoreAdvanced = orphanRank > (ORPHAN_STATUS_RANK.sent ?? 0);
+
+    await tx.delete(messageSend).where(eq(messageSend.id, orphan.id));
+
+    await tx
+      .update(messageSend)
+      .set({
+        status: orphanIsMoreAdvanced ? orphan.status : "sent",
+        messageId: values.messageId,
+        subject: values.subject,
+        sentAt: values.sentAt,
+        deliveredAt: orphan.deliveredAt ?? undefined,
+        openedAt: orphan.openedAt ?? undefined,
+        clickedAt: orphan.clickedAt ?? undefined,
+        bouncedAt: orphan.bouncedAt ?? undefined,
+        bounceType: orphan.bounceType ?? undefined,
+        bounceSubType: orphan.bounceSubType ?? undefined,
+        complainedAt: orphan.complainedAt ?? undefined,
+        suppressedAt: orphan.suppressedAt ?? undefined,
+      })
+      .where(
+        and(
+          eq(messageSend.organizationId, ctx.organizationId),
+          eq(messageSend.batchSendId, ctx.batchId),
+          eq(messageSend.contactId, recipient.id)
+        )
+      );
+
+    log.info("Adopted webhook orphan row", {
+      messageId: values.messageId,
+      batchId: ctx.batchId,
+      orphanId: orphan.id,
+      adoptedStatus: orphanIsMoreAdvanced ? orphan.status : "sent",
+    });
+  });
 }
 
 // After SES rejects a recipient. Returns whether the failure was recorded —
