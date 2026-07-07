@@ -8,7 +8,7 @@
  * clears the flags when events resume.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
@@ -136,6 +136,15 @@ function setupSelects(opts: {
 describe("event-feed-staleness worker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Pin the clock to the fixture anchor. The worker under test compares
+    // against `new Date()` at call time, so without this, fixtures anchored
+    // to NOW (e.g. "5 min ago" / "fresh") silently age past the 6h staleness
+    // threshold once the real wall clock drifts past NOW + 6h.
+    vi.useFakeTimers({ now: NOW });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("flags a connected account with recent sends and no events for >6h", async () => {
