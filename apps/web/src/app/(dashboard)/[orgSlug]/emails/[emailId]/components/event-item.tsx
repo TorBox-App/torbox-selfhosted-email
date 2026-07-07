@@ -15,6 +15,8 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { isBotOpen } from "@/lib/email-bot-detection";
+import { describeEventDiagnostics } from "@/lib/email-diagnostics";
+import { DiagnosticPanel } from "./diagnostic-panel";
 
 type EventItemProps = {
   event: {
@@ -83,6 +85,7 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
   const isAutomated =
     (event.type === "open" || event.type === "opened") &&
     isBotOpen(event.metadata?.userAgent as string | undefined | null);
+  const diagnostics = describeEventDiagnostics(event.type, event.metadata);
 
   return (
     <div>
@@ -146,6 +149,9 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
               )}
             </div>
           </div>
+
+          {/* Formatted diagnostics (always visible when available) */}
+          {diagnostics && <DiagnosticPanel diagnostics={diagnostics} />}
 
           {/* Expandable Metadata */}
           {hasMetadata && isExpanded && (
