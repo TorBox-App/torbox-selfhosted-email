@@ -157,6 +157,34 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
 
   // 4. Confirm destruction (skip if --force or --preview)
   if (!(options.force || options.preview)) {
+    const additionalDomainNames = (emailConfig?.additionalDomains ?? [])
+      .map((d) => d.domain)
+      .filter(Boolean);
+    const domainList = [domain, ...additionalDomainNames].filter(Boolean);
+
+    const summaryLines = [
+      domainList.length > 0
+        ? `Domain(s): ${domainList.join(", ")}`
+        : "Domain(s): none configured",
+      "SES configuration sets and event destinations for the above domain(s)",
+      "Event pipeline: wraps-email-events / wraps-email-events-dlq queues, wraps-email-event-processor Lambda, EventBridge rule wraps-email-events-to-sqs",
+      "",
+      pc.yellow(
+        "Event streaming stops: the Wraps dashboard email timeline and event history for THIS ENTIRE AWS ACCOUNT stop receiving events. Historical events in DynamoDB are destroyed with the table. This cannot be undone."
+      ),
+    ];
+
+    if (emailService?.webhookSecret) {
+      summaryLines.push(
+        "",
+        pc.yellow(
+          "This account is connected to the Wraps platform — the dashboard will stop receiving events for it."
+        )
+      );
+    }
+
+    clack.note(summaryLines.join("\n"), "What will be destroyed");
+
     const confirmed = await clack.confirm({
       message: pc.red(
         "Are you sure you want to destroy all email infrastructure?"
@@ -168,6 +196,22 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       clack.cancel("Destruction cancelled.");
       process.exit(0);
     }
+
+    // 4b. Typed confirmation gate for platform-connected accounts
+    if (emailService?.webhookSecret) {
+      const typed = await clack.text({
+        message: `Type the AWS account id (${identity.accountId}) to confirm destruction of a platform-connected account:`,
+      });
+
+      if (clack.isCancel(typed) || typed !== identity.accountId) {
+        clack.cancel("Destruction cancelled — account id did not match.");
+        process.exit(0);
+      }
+    }
+  } else if (options.force && emailService?.webhookSecret) {
+    clack.log.warn(
+      `--force skipped the typed account-id confirmation for platform-connected account ${identity.accountId}.`
+    );
   }
 
   // 5. Check for Route53 hosted zone and offer to clean up DNS

@@ -205,6 +205,125 @@ describe("email destroy command", () => {
     });
   });
 
+  describe("Blast-radius summary and typed confirmation", () => {
+    it("should print a summary note including the event queue names and consequence line", async () => {
+      await setupPulumiMock();
+      await emailDestroy({});
+
+      expect(prompts.note).toHaveBeenCalledWith(
+        expect.stringContaining("wraps-email-events"),
+        expect.any(String)
+      );
+      expect(prompts.note).toHaveBeenCalledWith(
+        expect.stringContaining("Event streaming stops"),
+        expect.any(String)
+      );
+    });
+
+    it("should not prompt for typed account id when account is not platform-connected", async () => {
+      await setupPulumiMock();
+      await emailDestroy({});
+
+      expect(prompts.text).not.toHaveBeenCalled();
+    });
+
+    it("should require typed account id when account is platform-connected, and cancel on mismatch", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            preset: "production",
+            config: {
+              domain: "example.com",
+              tracking: { enabled: true },
+            },
+            pulumiStackName: "wraps-email-123456789012-us-east-1",
+            deployedAt: new Date().toISOString(),
+            webhookSecret: "secret-key",
+          },
+        },
+      });
+      vi.mocked(prompts.text).mockResolvedValue("999999999999" as never);
+
+      await expect(emailDestroy({})).rejects.toThrow();
+
+      expect(prompts.text).toHaveBeenCalled();
+      const pulumi = await import("@pulumi/pulumi");
+      expect(
+        pulumi.automation.LocalWorkspace.selectStack
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should proceed when typed account id matches", async () => {
+      const mockStack = await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            preset: "production",
+            config: {
+              domain: "example.com",
+              tracking: { enabled: true },
+            },
+            pulumiStackName: "wraps-email-123456789012-us-east-1",
+            deployedAt: new Date().toISOString(),
+            webhookSecret: "secret-key",
+          },
+        },
+      });
+      vi.mocked(prompts.text).mockResolvedValue("123456789012" as never);
+
+      await emailDestroy({});
+
+      expect(prompts.text).toHaveBeenCalled();
+      expect(mockStack.destroy).toHaveBeenCalled();
+    });
+
+    it("should skip all prompts and print a warning when --force is used on a connected account", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            preset: "production",
+            config: {
+              domain: "example.com",
+              tracking: { enabled: true },
+            },
+            pulumiStackName: "wraps-email-123456789012-us-east-1",
+            deployedAt: new Date().toISOString(),
+            webhookSecret: "secret-key",
+          },
+        },
+      });
+
+      await emailDestroy({ force: true });
+
+      expect(prompts.confirm).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Are you sure you want to destroy"),
+        })
+      );
+      expect(prompts.text).not.toHaveBeenCalled();
+      expect(prompts.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("123456789012")
+      );
+    });
+  });
+
   describe("DNS Cleanup Tests", () => {
     it("should check for Route53 hosted zone when domain is configured", async () => {
       await setupPulumiMock();
