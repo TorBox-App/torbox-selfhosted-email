@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Plan 114: the SES EventBridge rule's targets need a target DLQ
  * (`deadLetterConfig`) so failed deliveries are retained instead of dropped,
  * and a FailedInvocations alarm so failures are loud. These tests pin both.
+ *
+ * Plan 117: the rule also gets a 30-day EventArchive so a broken pipeline
+ * (dead queue, deauthorized webhook) can be repaired and replayed instead of
+ * losing events. See the archive block in `createEventBridgeResources`.
  */
 
 type FakeOutput<T> = {
@@ -76,6 +80,7 @@ vi.mock("@pulumi/aws", () => {
       EventConnection: makeResourceClass("EventConnection"),
       EventApiDestination: makeResourceClass("EventApiDestination"),
       MetricAlarm: makeResourceClass("MetricAlarm"),
+      EventArchive: makeResourceClass("EventArchive"),
     },
     iam: {
       Role: makeResourceClass("Role"),
@@ -90,12 +95,11 @@ vi.mock("@pulumi/aws", () => {
 import { createEventBridgeResources } from "../eventbridge.js";
 
 const DLQ_ARN = "arn:aws:sqs:us-east-1:123456789012:wraps-email-events-dlq";
+const EVENT_BUS_ARN = "arn:aws:events:us-east-1:123456789012:event-bus/default";
 
 function baseConfig() {
   return {
-    eventBusArn: pulumiState.makeOutput(
-      "arn:aws:events:us-east-1:123456789012:event-bus/default"
-    ),
+    eventBusArn: pulumiState.makeOutput(EVENT_BUS_ARN),
     queueArn: pulumiState.makeOutput(
       "arn:aws:sqs:us-east-1:123456789012:wraps-email-events"
     ),
@@ -182,5 +186,32 @@ describe("EventBridge resources", () => {
     const rules = awsState.created.EventRule ?? [];
     expect(rules).toHaveLength(1);
     expect(rules[0]!.args.name).toBe("wraps-email-events-to-sqs");
+  });
+});
+
+describe("EventBridge replay archive", () => {
+  beforeEach(() => {
+    awsState.reset();
+  });
+
+  it("creates a 30-day replay archive scoped to aws.ses on the configured bus", async () => {
+    const resources = await createEventBridgeResources(baseConfig());
+
+    const archives = awsState.created.EventArchive ?? [];
+    expect(archives).toHaveLength(1);
+    const archive = archives[0]!;
+    expect(archive.args).toMatchObject({
+      name: "wraps-email-events-archive",
+      retentionDays: 30,
+    });
+    expect(JSON.parse(archive.args.eventPattern)).toEqual({
+      source: ["aws.ses"],
+    });
+    expect(pulumiState.unwrap(archive.args.eventSourceArn)).toBe(EVENT_BUS_ARN);
+
+    expect(resources.archive).toBeDefined();
+    expect(pulumiState.unwrap(resources.archive.name)).toBe(
+      "wraps-email-events-archive"
+    );
   });
 });

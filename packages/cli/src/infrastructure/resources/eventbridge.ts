@@ -37,6 +37,7 @@ export type EventBridgeResources = {
   // Alarm on FailedInvocations for the rule (covers both a dead SQS target
   // and a 4xx-ing webhook destination, since the metric is per-rule).
   failedInvocationsAlarm: aws.cloudwatch.MetricAlarm;
+  archive: aws.cloudwatch.EventArchive;
   // API Destination resources (optional)
   webhookConnection?: aws.cloudwatch.EventConnection;
   webhookApiDestination?: aws.cloudwatch.EventApiDestination;
@@ -111,6 +112,24 @@ export async function createEventBridgeResources(
     arn: config.queueArn,
     deadLetterConfig: { arn: config.dlqArn },
   });
+
+  // Replay safety net: 30 days of raw SES events. If the pipeline breaks
+  // (dead queue, deauthorized webhook), repair it and replay this archive:
+  //   aws events start-replay --replay-name wraps-recovery-<date> \
+  //     --event-source-arn <default bus arn> \
+  //     --event-start-time <outage start> --event-end-time <repair time> \
+  //     --destination '{"Arn":"<rule arn>"}'
+  const archive = new aws.cloudwatch.EventArchive(
+    "wraps-email-events-archive",
+    {
+      name: "wraps-email-events-archive",
+      eventSourceArn: config.eventBusArn,
+      description:
+        "Wraps: 30-day archive of SES events for outage replay (see wraps email doctor)",
+      retentionDays: 30,
+      eventPattern: JSON.stringify({ source: ["aws.ses"] }),
+    }
+  );
 
   // Create API Destination for Wraps webhook (if configured)
   let webhookConnection: aws.cloudwatch.EventConnection | undefined;
@@ -253,6 +272,7 @@ export async function createEventBridgeResources(
     rule,
     target,
     failedInvocationsAlarm,
+    archive,
     webhookConnection,
     webhookApiDestination,
     webhookTarget,
