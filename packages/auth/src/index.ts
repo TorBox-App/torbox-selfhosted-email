@@ -599,7 +599,6 @@ export const auth = betterAuth<BetterAuthOptions>({
   },
   plugins: [
     nextCookies(),
-    inbox(),
     haveIBeenPwned({
       customPasswordCompromisedMessage:
         "This password has been exposed in a data breach. Please choose a more secure password.",
@@ -616,6 +615,7 @@ export const auth = betterAuth<BetterAuthOptions>({
       issuer: "Wraps",
     }),
     organization({ ac, roles }),
+    inbox(),
     sso({
       domainVerification: { enabled: true },
       organizationProvisioning: { disabled: false, defaultRole: "member" },

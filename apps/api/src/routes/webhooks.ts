@@ -11,8 +11,11 @@ import {
   contact,
   db,
   eq,
+  hasRecentNotification,
   messageSend,
   messageUsageMonthly,
+  notifyOrg,
+  organization,
   workflow,
   workflowExecution,
 } from "@wraps/db";
@@ -435,6 +438,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
         case "Reject":
           await processReject(message, messageId, account.organizationId);
+          await notifySendFailures(account.organizationId, "reject");
           break;
 
         case "Rendering Failure":
@@ -443,6 +447,11 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             event.detail.failure?.errorMessage,
             event.detail.failure?.templateName,
             mail.tags
+          );
+          await notifySendFailures(
+            account.organizationId,
+            "rendering_failure",
+            event.detail.failure?.templateName
           );
           break;
 
@@ -868,6 +877,57 @@ async function processComplaint(
   }
 
   log.info("Webhook: message complained", { messageId: message.id });
+}
+
+/**
+ * Alert the org (once per 24h) that SES is refusing or failing to render
+ * their sends. Individual Reject / Rendering Failure events are stored per
+ * message; this is the "your sends are silently dying" wake-up call.
+ */
+async function notifySendFailures(
+  organizationId: string,
+  reason: "reject" | "rendering_failure",
+  detail?: string
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "ses.send_failures",
+      since,
+    });
+    if (already) {
+      return;
+    }
+
+    const [org] = await db
+      .select({ slug: organization.slug })
+      .from(organization)
+      .where(eq(organization.id, organizationId))
+      .limit(1);
+    if (!org?.slug) {
+      return;
+    }
+
+    const reasonText =
+      reason === "reject"
+        ? "SES rejected a message before attempting delivery (bad content or account-level reputation)."
+        : `SES failed to render a template${detail ? `: ${detail}` : "."}`;
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin"],
+      type: "ses.send_failures",
+      title: "Email sends are failing",
+      body: `${reasonText} Affected messages are marked failed — check your recent sends.`,
+      href: `/${org.slug}/emails`,
+      data: { reason },
+    });
+  } catch (error) {
+    log.error("Webhook: failed to write send-failure notification", error, {
+      organizationId,
+    });
+  }
 }
 
 async function processReject(

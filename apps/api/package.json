@@ -20,6 +20,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "catalog:",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/client-pinpoint-sms-voice-v2": "catalog:",
     "@aws-sdk/client-scheduler": "catalog:",

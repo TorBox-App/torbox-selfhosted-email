@@ -24,9 +24,11 @@ import {
   contactTopic,
   db,
   eq,
+  hasRecentNotification,
   MESSAGE_SEND_UNACCEPTED_STATUSES,
   type MessageSendStatus,
   messageSend,
+  notifyOrg,
   organization,
   organizationExtension,
   segment,
@@ -337,6 +339,104 @@ export const handler: SQSHandler = async (
   }
 };
 
+/**
+ * Write a broadcast-finished inbox notification, once per batch. Failed
+ * counts exclude bookkeeping-write artifacts (message_send.error beginning
+ * "Failed query") — those rows were accepted by SES, the DB write failed.
+ */
+async function notifyBroadcastFinished(
+  batchId: string,
+  organizationId: string
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.finished",
+      since,
+      dataEquals: { key: "batchId", value: batchId },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[batch], [org]] = await Promise.all([
+      db
+        .select({
+          name: batchSend.name,
+          subject: batchSend.subject,
+          status: batchSend.status,
+          sent: batchSend.sent,
+          totalRecipients: batchSend.totalRecipients,
+          errorMessage: batchSend.errorMessage,
+        })
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, batchId),
+            eq(batchSend.organizationId, organizationId)
+          )
+        )
+        .limit(1),
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
+    if (!(batch && org?.slug)) {
+      return;
+    }
+
+    const [failedRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.batchSendId, batchId),
+          eq(messageSend.organizationId, organizationId),
+          eq(messageSend.status, "failed"),
+          sql`(${messageSend.error} IS NULL OR ${messageSend.error} NOT LIKE 'Failed query%')`
+        )
+      );
+    const realFailed = failedRow?.count ?? 0;
+    const label = batch.name || batch.subject || "Broadcast";
+
+    let title: string;
+    let body: string | undefined;
+    if (batch.status === "failed") {
+      title = `Broadcast "${label}" failed`;
+      body = batch.errorMessage ?? undefined;
+    } else if (realFailed > 0) {
+      title = `Broadcast "${label}" finished with ${realFailed} failed sends`;
+      body = `${batch.sent} of ${batch.totalRecipients} recipients received the email. ${realFailed} sends failed.`;
+    } else {
+      title = `Broadcast "${label}" sent`;
+      body = `Delivered to SES for ${batch.sent} of ${batch.totalRecipients} recipients.`;
+    }
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.finished",
+      title,
+      body,
+      href: `/${org.slug}/emails/broadcasts/${batchId}`,
+      data: {
+        batchId,
+        status: batch.status,
+        sent: batch.sent,
+        failed: realFailed,
+      },
+    });
+  } catch (error) {
+    log.error("Failed to write broadcast-finished notification", error, {
+      batchId,
+      organizationId,
+    });
+  }
+}
+
 async function processJob(
   job: BatchJob,
   context: Context,
@@ -385,6 +485,7 @@ async function processJob(
         errorDetails: { channel },
       })
       .where(eq(batchSend.id, batchId));
+    await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
 
@@ -429,6 +530,7 @@ async function processJob(
       .update(batchSend)
       .set({ status: "completed", completedAt: new Date() })
       .where(eq(batchSend.id, batchId));
+    await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
 
@@ -455,6 +557,7 @@ async function processJob(
       .update(batchSend)
       .set({ status: "completed", completedAt: new Date() })
       .where(eq(batchSend.id, batchId));
+    await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
 
@@ -683,6 +786,7 @@ async function processJob(
         failed: sql`${batchSend.failed} + ${emailContacts.length}`,
       })
       .where(eq(batchSend.id, batchId));
+    await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
 
@@ -1171,6 +1275,7 @@ async function processJob(
         failed: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} = 'failed')`,
       })
       .where(eq(batchSend.id, batchId));
+    await notifyBroadcastFinished(batchId, organizationId);
   }
 }
 

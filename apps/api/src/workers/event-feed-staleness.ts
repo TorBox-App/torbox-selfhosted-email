@@ -37,6 +37,7 @@ import {
   db,
   member,
   messageSend,
+  notifyOrg,
   organization,
   user,
 } from "@wraps/db";
@@ -153,6 +154,24 @@ async function alertOwner(account: {
       awsAccountId: account.id,
       staleSince: account.eventFeedStaleSince,
     });
+
+    try {
+      await notifyOrg({
+        organizationId: account.organizationId,
+        roles: ["owner", "admin"],
+        type: "events.feed_stale",
+        title: `Event feed stale for ${account.name}`,
+        body: `No SES events have arrived from AWS account ${account.accountId} (${account.region}) since ${account.eventFeedStaleSince.toISOString()} while mail is still being sent. Delivery, bounce, and complaint tracking are blind until this is fixed.`,
+        href: `/${orgSlug}/settings/aws-accounts/${account.id}`,
+        data: { awsAccountId: account.id, region: account.region },
+      });
+    } catch (notifyError) {
+      log.error(
+        "[event-feed-staleness] Failed to write inbox notification",
+        notifyError,
+        { accountId: account.id, organizationId: account.organizationId }
+      );
+    }
 
     // Set the timestamp only after a successful send.
     await markAlerted(account.id, now);

@@ -6,6 +6,7 @@ import {
   db,
   invitation,
   member,
+  notifyUser,
   organization,
   user,
 } from "@wraps/db";
@@ -276,6 +277,28 @@ export async function acceptInvitation(
       inviterName: inviterUser?.name ?? "A teammate",
       role: inv.role ?? "member",
     });
+
+    if (inviterUser) {
+      try {
+        await notifyUser({
+          userId: inviterUser.id,
+          organizationId: inv.organizationId,
+          type: "member.invite_accepted",
+          title: `${session.user.name || session.user.email} joined ${org.name}`,
+          body: `They accepted your invitation and joined as ${inv.role ?? "member"}.`,
+          href: `/${org.slug}/settings/members`,
+          data: { invitationId, memberUserId: session.user.id },
+        });
+      } catch (notifyError) {
+        const log = createActionLogger("acceptInvitation", {
+          organizationId: inv.organizationId,
+        });
+        log.error(
+          { err: notifyError },
+          "Failed to write invite-accepted notification"
+        );
+      }
+    }
 
     // Revalidate relevant paths
     revalidatePath(`/${org.slug}`);

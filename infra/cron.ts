@@ -20,13 +20,16 @@
  * - Flags connected AWS accounts whose SES event feed has gone silent
  *   while sends are still happening, and emails the org owner once per
  *   episode. See apps/api/src/workers/event-feed-staleness.ts.
- * - NOTE: this function does NOT (yet) have SES-capable credentials wired
- *   for @wraps/email — no platform Lambda does today (plan 113 STOP
- *   condition 3). Detection/flagging/the dashboard banner work regardless;
- *   the owner email send will fail until this function is granted
- *   SES-capable credentials (mirroring how apps/web resolves them via
- *   Vercel OIDC + WRAPS_EMAIL_ROLE_ARN — see packages/email/src/lib/client.ts).
- *   Do not invent that IAM wiring here without a real precedent to follow.
+ * - SES-capable credentials for @wraps/email are wired via
+ *   WRAPS_EMAIL_ROLE_ARN + sts:AssumeRole on the dogfood email role
+ *   (see the function definition below).
+ *
+ * AccountHealth:
+ * - Runs hourly at :45 in production
+ * - Assumes each connected account's customer role and checks SES account
+ *   health: sending paused/enforcement, reputation thresholds, daily quota,
+ *   sandbox->production transitions. Writes inbox notifications (deduped
+ *   per account per day). See apps/api/src/workers/account-health.ts.
  */
 
 import { axiomToken } from "./secrets";
@@ -101,6 +104,34 @@ export const eventFeedStalenessCron = new sst.aws.CronV2("EventFeedStaleness", {
       {
         actions: ["sts:AssumeRole"],
         resources: ["arn:aws:iam::010836206701:role/wraps-email-role"],
+      },
+    ],
+  },
+});
+
+export const accountHealthCron = new sst.aws.CronV2("AccountHealth", {
+  schedule: "cron(45 * * * ? *)",
+  enabled: $app.stage === "production",
+  job: {
+    handler: "apps/api/src/workers/account-health.handler",
+    runtime: "nodejs24.x",
+    timeout: "10 minutes",
+    memory: "256 MB",
+    environment: {
+      DATABASE_URL:
+        process.env.DATABASE_URL ||
+        (() => {
+          throw new Error("DATABASE_URL is required");
+        })(),
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
+    },
+    nodejs: { install: ["pg"] },
+    permissions: [
+      // Assume cross-account customer roles to read SES account health
+      {
+        actions: ["sts:AssumeRole"],
+        resources: ["arn:aws:iam::*:role/wraps-*"],
       },
     ],
   },

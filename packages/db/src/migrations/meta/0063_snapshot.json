@@ -1,5 +1,5 @@
 {
-  "id": "de2206df-7d4b-44ab-bda8-d8a22cb1f6ba",
+  "id": "66e91747-e664-4858-a520-700017303793",
   "prevId": "bbecd984-c6f7-4d50-959f-cfd52c4fd6e3",
   "version": "7",
   "dialect": "postgresql",
@@ -1269,12 +1269,28 @@
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
-        "notification_user_created_idx": {
-          "name": "notification_user_created_idx",
+        "notification_org_idx": {
+          "name": "notification_org_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "notification_user_read_idx": {
+          "name": "notification_user_read_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -1283,7 +1299,7 @@
               "nulls": "last"
             },
             {
-              "expression": "created_at",
+              "expression": "read",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1302,6 +1318,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "notification_organization_id_organization_id_fk": {
+          "name": "notification_organization_id_organization_id_fk",
+          "tableFrom": "notification",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
           ],
           "columnsTo": [
             "id"

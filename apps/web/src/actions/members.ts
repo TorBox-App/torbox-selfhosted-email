@@ -1,6 +1,13 @@
 "use server";
 
-import { awsAccount, contact, db, messageSend, template } from "@wraps/db";
+import {
+  awsAccount,
+  contact,
+  db,
+  messageSend,
+  notifyUser,
+  template,
+} from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, count, eq } from "drizzle-orm";
@@ -210,6 +217,24 @@ export const updateMemberRole = orgAction(
         metadata: { oldRole: targetMember.role, newRole },
       })
     );
+
+    try {
+      await notifyUser({
+        userId: targetMember.userId,
+        organizationId,
+        type: "member.role_changed",
+        title: `Your role is now ${newRole}`,
+        body: `An administrator changed your role from ${targetMember.role} to ${newRole}.`,
+        href: `/${ctx.access.orgSlug}/settings/members`,
+        data: { oldRole: targetMember.role, newRole },
+      });
+    } catch (notifyError) {
+      const log = createActionLogger("updateMemberRole", { organizationId });
+      log.error(
+        { err: notifyError },
+        "Failed to write role-changed notification"
+      );
+    }
 
     revalidatePath(`/${ctx.access.orgSlug}/settings/members`);
 

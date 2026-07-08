@@ -17,11 +17,11 @@ export const authClient = createAuthClient({
     (typeof window !== "undefined" ? window.location.origin : "/"),
   plugins: [
     deviceAuthorizationClient(),
-    inboxClient(),
     lastLoginMethodClient(),
     passkeyClient(),
     twoFactorClient(),
     organizationClient(),
+    inboxClient(),
     stripeClient({
       subscription: true,
     }),

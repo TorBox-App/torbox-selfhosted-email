@@ -1,6 +1,13 @@
 "use server";
 
-import { auditLog, contact, contactTopic, db, topic } from "@wraps/db";
+import {
+  auditLog,
+  contact,
+  contactTopic,
+  db,
+  notifyUser,
+  topic,
+} from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { trackContactsImported } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
@@ -395,6 +402,27 @@ export async function importContacts(
         count: created,
         firstContact: data.contacts[0],
       });
+    }
+
+    try {
+      await notifyUser({
+        userId: access.userId,
+        organizationId,
+        type: "contact.imported",
+        title: `Contact import finished: ${created} created, ${updated} updated`,
+        body:
+          skipped > 0 || errors.length > 0
+            ? `${skipped} skipped, ${errors.length} rows had errors.`
+            : undefined,
+        href: `/${orgSlug}/contacts`,
+        data: { created, updated, skipped, errorCount: errors.length },
+      });
+    } catch (notifyError) {
+      const log = createActionLogger("importContacts", { orgSlug });
+      log.error(
+        { err: notifyError },
+        "Failed to write contact-import notification"
+      );
     }
 
     return { success: true, created, updated, skipped, errors };

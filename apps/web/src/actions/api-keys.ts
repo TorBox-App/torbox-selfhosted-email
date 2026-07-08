@@ -11,6 +11,7 @@ import {
   findApiKeyForOrg,
   insertApiKey,
   listApiKeysForOrg,
+  notifyOrg,
   touchApiKeyLastUsed,
   updateApiKeyForOrg,
 } from "@wraps/db";
@@ -230,6 +231,25 @@ export async function createApiKey(
     // Track activation event
     await trackApiKeyCreated(session.user.email, organizationId);
 
+    try {
+      await notifyOrg({
+        organizationId,
+        roles: ["owner", "admin"],
+        excludeUserIds: [session.user.id],
+        type: "api_key.created",
+        title: `API key "${options.name.trim()}" created`,
+        body: `${session.user.name || session.user.email} created a new ${keyType} API key (${displayPrefix}…).`,
+        href: `/${membership.organization.slug}/settings/api-keys`,
+        data: { apiKeyId: newKey.id, prefix: displayPrefix },
+      });
+    } catch (notifyError) {
+      const log = createActionLogger("createApiKey", { organizationId });
+      log.error(
+        { err: notifyError },
+        "Failed to write api-key-created notification"
+      );
+    }
+
     return {
       success: true,
       apiKey: {
@@ -414,6 +434,25 @@ export async function deleteApiKey(
 
     // Revalidate settings page
     revalidatePath(`/${membership.organization.slug}/settings`, "page");
+
+    try {
+      await notifyOrg({
+        organizationId,
+        roles: ["owner", "admin"],
+        excludeUserIds: [session.user.id],
+        type: "api_key.revoked",
+        title: `API key "${existingKey.name}" revoked`,
+        body: `${session.user.name || session.user.email} revoked this API key. Requests using it will now fail.`,
+        href: `/${membership.organization.slug}/settings/api-keys`,
+        data: { apiKeyId },
+      });
+    } catch (notifyError) {
+      const log = createActionLogger("deleteApiKey", { organizationId });
+      log.error(
+        { err: notifyError },
+        "Failed to write api-key-revoked notification"
+      );
+    }
 
     return { success: true };
   } catch (error) {

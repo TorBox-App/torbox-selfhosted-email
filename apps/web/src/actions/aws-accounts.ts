@@ -20,7 +20,7 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
-import { auditLog, awsAccount, db } from "@wraps/db";
+import { auditLog, awsAccount, db, notifyOrg } from "@wraps/db";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -839,6 +839,41 @@ export async function scanAWSAccountFeatures(
         await trackDomainVerified(session.user.email, organizationId, {
           domain: domain.identity,
         });
+        try {
+          await notifyOrg({
+            organizationId,
+            type: "domain.verified",
+            title: `${domain.identity} is verified`,
+            body: `DKIM verification completed for ${domain.identity}. You can now send email from this domain.`,
+            href: `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`,
+            data: { domain: domain.identity, awsAccountId },
+          });
+        } catch (notifyError) {
+          log.error(
+            { err: notifyError, domain: domain.identity },
+            "Failed to write domain-verified notification"
+          );
+        }
+      }
+    }
+
+    // 17b. Notify when SES production access is granted (sandbox -> production)
+    const wasSandbox = account.features?.email?.sandbox === true;
+    if (wasSandbox && !sesSandbox) {
+      try {
+        await notifyOrg({
+          organizationId,
+          type: "ses.production_access",
+          title: "SES production access granted",
+          body: `AWS account ${account.accountId} (${account.region}) is out of the SES sandbox. You can now send email to any recipient.`,
+          href: `/${membership.organization.slug}/emails`,
+          data: { awsAccountId, region: account.region },
+        });
+      } catch (notifyError) {
+        log.error(
+          { err: notifyError },
+          "Failed to write production-access notification"
+        );
       }
     }
 

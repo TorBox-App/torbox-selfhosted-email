@@ -125,6 +125,7 @@ export function SiteHeader() {
             <InboxButton
               client={authClient}
               onNavigate={(href) => router.push(href)}
+              organizationId={activeOrganization?.id}
             />
           </div>
         </div>
