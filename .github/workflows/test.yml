@@ -78,6 +78,9 @@ jobs:
           pnpm --filter @wraps/db build
           pnpm --filter "@wraps.dev/email-check" build
 
+      - name: Typecheck API
+        run: pnpm turbo run typecheck --filter=@wraps/api
+
       - name: Run API tests
         run: pnpm --filter @wraps/api test
         env:
