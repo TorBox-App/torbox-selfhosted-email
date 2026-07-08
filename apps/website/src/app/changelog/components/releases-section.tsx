@@ -49,6 +49,30 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "Platform v0.19.0",
+    date: "July 2026",
+    icon: Inbox,
+    iconColor:
+      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    title: "In-App Notifications",
+    items: [
+      "Notification bell in the dashboard — account health, billing, team, and send events surface where you already work",
+      "Hourly SES health checks: sending pauses, bounce/complaint rates entering the AWS review range, and daily quota above 80% all raise an alert",
+      "Milestone notifications for domain verification, SES production access, broadcast completion (with real failure counts), and contact imports",
+      "Security notifications: new-device sign-ins, invite acceptances, role changes, and API key creation or revocation",
+      "Payment failures notify org owners and admins in-app, alongside the existing email",
+      <>
+        Alerts for SES <Code>Reject</Code> and <Code>Rendering Failure</Code>{" "}
+        events — sends that previously died silently now ring the bell, deduped
+        to once per day
+      </>,
+      <>
+        Built on <Code>better-inbox</Code>, an open-source better-auth plugin —
+        notifications are rows in the database, not a third-party service
+      </>,
+    ],
+  },
+  {
     version: "Workflow Engine v2",
     date: "June 2026",
     icon: ShieldCheck,
