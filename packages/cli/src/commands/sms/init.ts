@@ -200,7 +200,17 @@ export async function init(options: SMSInitOptions): Promise<void> {
 
   const progress = new DeploymentProgress();
 
-  // 1. Check Pulumi CLI is installed
+  // 1. Validate AWS credentials first — missing credentials is the most
+  // common getting-started failure, so surface it before the Pulumi install
+  // check (which can auto-download Pulumi and take ~30s)
+  const identity = await progress.execute(
+    "Validating AWS credentials",
+    async () => validateAWSCredentials()
+  );
+
+  progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
+
+  // 2. Check Pulumi CLI is installed
   const wasAutoInstalled = await progress.execute(
     "Checking Pulumi CLI installation",
     async () => await ensurePulumiInstalled()
@@ -209,14 +219,6 @@ export async function init(options: SMSInitOptions): Promise<void> {
   if (wasAutoInstalled) {
     progress.info("Pulumi CLI was automatically installed");
   }
-
-  // 2. Validate AWS credentials
-  const identity = await progress.execute(
-    "Validating AWS credentials",
-    async () => validateAWSCredentials()
-  );
-
-  progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
 
   // 3. Get configuration (from options or prompts)
   const provider: Provider = options.provider || (await promptProvider());

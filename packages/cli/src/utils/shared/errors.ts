@@ -632,6 +632,11 @@ function pulumiErrorToWrapsError(
   }
 }
 
+// Shared by the credential-not-found errors. Deliberately neutral: list every
+// way credentials can be provided without prescribing one.
+const CREDENTIAL_OPTIONS =
+  "Wraps couldn't find working AWS credentials. Any of these work:\n\nAWS SSO:\n  aws configure sso\n  aws sso login\n\nIAM access keys:\n  aws configure\n\nEnvironment variables:\n  export AWS_ACCESS_KEY_ID=<your-key>\n  export AWS_SECRET_ACCESS_KEY=<your-secret>\n\nExisting profile:\n  export AWS_PROFILE=<profile-name>";
+
 /**
  * Common error factory functions
  */
@@ -640,7 +645,7 @@ export const errors = {
     new WrapsError(
       "AWS credentials not found",
       "NO_AWS_CREDENTIALS",
-      "Run: aws configure\nOr set AWS_PROFILE environment variable",
+      CREDENTIAL_OPTIONS,
       "https://wraps.dev/docs/guides/aws-setup"
     ),
 
@@ -798,7 +803,7 @@ export const errors = {
     new WrapsError(
       "AWS credentials file not found",
       "CREDENTIALS_FILE_MISSING",
-      "Configure AWS credentials:\n  aws configure\n\nOr set environment variables:\n  export AWS_ACCESS_KEY_ID=<your-key>\n  export AWS_SECRET_ACCESS_KEY=<your-secret>",
+      CREDENTIAL_OPTIONS,
       "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 

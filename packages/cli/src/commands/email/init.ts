@@ -84,17 +84,9 @@ export async function init(options: InitOptions): Promise<void> {
 
   const progress = new DeploymentProgress();
 
-  // 1. Check Pulumi CLI is installed (auto-install if missing)
-  const wasAutoInstalled = await progress.execute(
-    "Checking Pulumi CLI installation",
-    async () => await ensurePulumiInstalled()
-  );
-
-  if (wasAutoInstalled) {
-    progress.info("Pulumi CLI was automatically installed");
-  }
-
-  // 2. Validate AWS credentials
+  // 1. Validate AWS credentials first — missing credentials is the most
+  // common getting-started failure, so surface it before the Pulumi install
+  // check (which can auto-download Pulumi and take ~30s)
   const credentialResult = await progress.execute(
     "Validating AWS credentials",
     async () => validateAWSCredentialsWithDetails()
@@ -113,6 +105,16 @@ export async function init(options: InitOptions): Promise<void> {
     progress.info(
       `Using credentials from: ${pc.dim(credentialResult.credentialSource)}`
     );
+  }
+
+  // 2. Check Pulumi CLI is installed (auto-install if missing)
+  const wasAutoInstalled = await progress.execute(
+    "Checking Pulumi CLI installation",
+    async () => await ensurePulumiInstalled()
+  );
+
+  if (wasAutoInstalled) {
+    progress.info("Pulumi CLI was automatically installed");
   }
 
   // 3. Get configuration (from options or prompts)

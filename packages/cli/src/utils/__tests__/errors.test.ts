@@ -359,7 +359,13 @@ describe("error factory functions", () => {
       expect(error).toBeInstanceOf(WrapsError);
       expect(error.message).toBe("AWS credentials not found");
       expect(error.code).toBe("NO_AWS_CREDENTIALS");
+      expect(error.suggestion).toContain("aws configure sso");
       expect(error.suggestion).toContain("aws configure");
+      expect(error.suggestion).toContain("AWS_ACCESS_KEY_ID");
+      expect(error.suggestion).toContain("AWS_SECRET_ACCESS_KEY");
+      expect(error.suggestion).toContain("AWS_PROFILE");
+      // Neutral tone: list options without prescribing one
+      expect(error.suggestion).not.toContain("recommended");
       expect(error.docsUrl).toBe("https://wraps.dev/docs/guides/aws-setup");
     });
   });
@@ -575,7 +581,10 @@ describe("error factory functions", () => {
       expect(error).toBeInstanceOf(WrapsError);
       expect(error.message).toContain("credentials file not found");
       expect(error.code).toBe("CREDENTIALS_FILE_MISSING");
+      expect(error.suggestion).toContain("aws configure sso");
       expect(error.suggestion).toContain("aws configure");
+      expect(error.suggestion).toContain("AWS_PROFILE");
+      expect(error.suggestion).not.toContain("recommended");
     });
   });
 
