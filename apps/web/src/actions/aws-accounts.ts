@@ -707,6 +707,7 @@ export async function scanAWSAccountFeatures(
     const identities: Array<{
       identity: string;
       type: "DOMAIN" | "EMAIL_ADDRESS";
+      configSetName?: string;
     }> = [];
 
     try {
@@ -737,6 +738,9 @@ export async function scanAWSAccountFeatures(
             identities.push({
               identity: identity.IdentityName!,
               type: identity.IdentityType as "DOMAIN" | "EMAIL_ADDRESS",
+              // Store the identity's config set so sends can resolve it by
+              // lookup — a name SES just confirmed exists, never derived.
+              configSetName: details.ConfigurationSetName,
             });
           }
         } catch {

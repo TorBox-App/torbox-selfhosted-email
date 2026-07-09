@@ -1615,8 +1615,14 @@ describe("scanAWSAccountFeatures — config set detection", () => {
     if (result.success) {
       // No canonical config set was discovered...
       expect(result.features.email?.configSetName).toBeUndefined();
-      // ...but a verified Wraps identity was found.
+      // ...but a verified Wraps identity was found, carrying the SES-confirmed
+      // config set the send path resolves by lookup (never derives).
       expect(result.features.email?.identities).toHaveLength(1);
+      expect(result.features.email?.identities?.[0]).toMatchObject({
+        identity: "verified.com",
+        type: "DOMAIN",
+        configSetName: "wraps-email-verified-com",
+      });
     }
 
     const row = await db.query.awsAccount.findFirst({

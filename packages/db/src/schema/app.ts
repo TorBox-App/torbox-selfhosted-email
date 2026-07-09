@@ -115,6 +115,10 @@ export const awsAccount = pgTable(
         identities?: Array<{
           identity: string;
           type: "DOMAIN" | "EMAIL_ADDRESS";
+          // The SES configuration set attached to this identity, if any. Used
+          // to resolve the per-domain set at send time without deriving a name
+          // that may not exist. Absent on rows scanned before this field.
+          configSetName?: string;
         }>;
       };
       sms?: {

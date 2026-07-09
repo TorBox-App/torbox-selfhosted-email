@@ -35,7 +35,7 @@ import {
   template,
 } from "@wraps/db";
 import { toSesVariableName, transformVariablesForSes } from "@wraps/email";
-import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
+import { resolveConfigurationSetName, sendEmail } from "@wraps/email-send";
 import {
   extractCanonicalVars,
   renderTemplateStrict,
@@ -564,7 +564,8 @@ async function processJob(
   // Get customer AWS credentials
   const credentials = await getCredentials(awsAccountId, organizationId);
 
-  // Resolve the correct SES config set for this account (may be per-domain)
+  // Load account email features; the SES config set is resolved later, once
+  // the sender domain is known (config sets are per-domain).
   const [accountRow] = await db
     .select({ features: awsAccount.features })
     .from(awsAccount)
@@ -575,8 +576,6 @@ async function processJob(
       )
     )
     .limit(1);
-  const configSetName =
-    accountRow?.features?.email?.configSetName ?? WRAPS_CONFIGURATION_SET_NAME;
 
   // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({
@@ -791,6 +790,15 @@ async function processJob(
   }
 
   const fromDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+
+  // Resolve the SES config set from the actual sender domain (config sets are
+  // per-domain). Looks up a set discovery confirmed exists; never derives a
+  // name that could hard-fail delivery.
+  const configSetName = resolveConfigurationSetName({
+    fromDomain: fromAddress.split("@").at(-1),
+    storedConfigSetName: accountRow?.features?.email?.configSetName,
+    identities: accountRow?.features?.email?.identities,
+  });
 
   // For topic-audienced batches, scope the one-click unsubscribe to that topic
   // so recipients are only removed from that list — not all org topics.
@@ -1157,6 +1165,7 @@ async function processJob(
             html,
             text: htmlToPlainText(html),
             replyTo: batch.replyTo ?? undefined,
+            configurationSetName: configSetName,
             marketing:
               isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined,
             tags: [

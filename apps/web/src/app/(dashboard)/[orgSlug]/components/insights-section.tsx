@@ -246,12 +246,22 @@ export function InsightsSection({
   const { data: emailVolume } = useVolumeData(orgSlug, days * 2);
   const { data: smsVolume } = useSMSVolumeData(orgSlug, days * 2);
 
+  // Surface a channel's insights when it's flagged enabled OR has real send
+  // data. The stored enabled flag can lag actual usage, and a real bounce or
+  // volume-drop alert must never be hidden behind a stale flag.
+  const hasEmailData =
+    (emailAnalytics?.totalSent ?? 0) > 0 ||
+    (emailVolume?.some((d) => d.sent > 0) ?? false);
+  const hasSMSData = smsVolume?.some((d) => d.sent > 0) ?? false;
+  const showEmail = isEmailEnabled || hasEmailData;
+  const showSMS = isSMSEnabled || hasSMSData;
+
   const insights: Insight[] = [];
 
   // --- Anomaly delta callouts ---
   const anomalies = detectVolumeAnomalies(
-    isEmailEnabled ? emailVolume : undefined,
-    isSMSEnabled ? smsVolume : undefined
+    showEmail ? emailVolume : undefined,
+    showSMS ? smsVolume : undefined
   );
 
   for (const anomaly of anomalies) {
@@ -344,7 +354,7 @@ export function InsightsSection({
   }
 
   // High bounce rate (static threshold, distinct from anomaly)
-  if (isEmailEnabled && emailAnalytics && emailAnalytics.bounceRate > 2) {
+  if (showEmail && emailAnalytics && emailAnalytics.bounceRate > 2) {
     // Skip if we already flagged this as an anomaly
     const hasAnomalyForBounce = anomalies.some(
       (a) => a.metric === "Email bounce rate" && a.severity
@@ -374,7 +384,7 @@ export function InsightsSection({
   }
 
   // High complaint rate
-  if (isEmailEnabled && emailAnalytics && emailAnalytics.complaintRate > 0.1) {
+  if (showEmail && emailAnalytics && emailAnalytics.complaintRate > 0.1) {
     const severity =
       emailAnalytics.complaintRate > 0.3 ? "critical" : "warning";
     insights.push({

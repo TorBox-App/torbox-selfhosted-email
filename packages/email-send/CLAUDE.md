@@ -8,9 +8,11 @@ Canonical SESv2 send pipeline for Wraps. One place for `List-Unsubscribe` header
 
 `sendEmail()` is the single send entry point. If you build a new send path (drip, transactional, etc.) and bypass this package, recipients will have inconsistent headers, missing tracking tags, or a wrong configuration set. The invariant: `apps/api` + `apps/web` both depend on this package — keep it that way.
 
-### 2. The Configuration Set Is Hard-Coded by Design
+### 2. The Configuration Set Is Resolved Per-Domain, Never Derived
 
-`WRAPS_CONFIGURATION_SET_NAME = "wraps-email-tracking"` is the SES configuration set that drives open/click/bounce/complaint events → CloudWatch + EventBridge. Do not allow callers to override it except via `configurationSetName` on the input when there is an explicit operational reason. Omitting the set causes silent tracking loss.
+`WRAPS_CONFIGURATION_SET_NAME = "wraps-email-tracking"` is the legacy global SES configuration set that drives open/click/bounce/complaint events → CloudWatch + EventBridge. Configuration sets are **per-domain** now (`wraps-email-<domain>`), so send paths resolve the set from the sender domain with `resolveConfigurationSetName()`.
+
+**Only ever use a config-set name discovery confirmed exists.** A send that references a missing set hard-fails at the SES request level (failing an entire broadcast chunk), so `resolveConfigurationSetName()` never *derives* `wraps-email-<domain>` from a domain — it looks up the set SES returned for that identity during the scan (`features.email.identities[].configSetName`), then falls back to the stored canonical, then the legacy global set. It never omits the set: omitting silently disables tracking and makes engagement-gated workflows take the "not engaged" branch. `sendEmail`'s `configurationSetName` still defaults to `WRAPS_CONFIGURATION_SET_NAME` when the caller passes nothing (test sends rely on this).
 
 ### 3. Missing MessageId Is a Hard Error
 

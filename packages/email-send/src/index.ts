@@ -1,4 +1,9 @@
 export {
+  type ConfigSetIdentity,
+  type ResolveConfigSetInput,
+  resolveConfigurationSetName,
+} from "./config-set";
+export {
   type EmailTag,
   type SendEmailInput,
   type SendEmailOutput,

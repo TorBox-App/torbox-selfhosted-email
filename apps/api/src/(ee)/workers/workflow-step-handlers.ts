@@ -37,7 +37,7 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
-import { sendEmail, WRAPS_CONFIGURATION_SET_NAME } from "@wraps/email-send";
+import { resolveConfigurationSetName, sendEmail } from "@wraps/email-send";
 import {
   extractCanonicalVars,
   normalizePlainTextForSes,
@@ -184,9 +184,7 @@ export async function handleSendEmail(
   if (!account) {
     throw new Error(`AWS account ${wf.awsAccountId} not found`);
   }
-
-  const configSetName =
-    account.features?.email?.configSetName ?? WRAPS_CONFIGURATION_SET_NAME;
+  // The SES config set is resolved after the sender is known (per-domain).
 
   // Get template (scoped by org for defense-in-depth)
   const [tmpl] = await db
@@ -335,6 +333,14 @@ export async function handleSendEmail(
   }
   const fromDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
   const replyTo = config.replyTo || wf.defaultReplyTo;
+
+  // Resolve the SES config set from the actual sender domain (per-domain).
+  // Looks up a set discovery confirmed exists; never derives a missing name.
+  const configSetName = resolveConfigurationSetName({
+    fromDomain: fromAddress.split("@").at(-1),
+    storedConfigSetName: account.features?.email?.configSetName,
+    identities: account.features?.email?.identities,
+  });
 
   // Build headers for marketing emails
   const headers: Array<{ Name: string; Value: string }> = [];

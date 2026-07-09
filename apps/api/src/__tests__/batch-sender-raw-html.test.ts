@@ -24,9 +24,11 @@ import { makeMockContext } from "./__helpers__/lambda-context";
 
 const mockSendEmail = vi.fn();
 
-vi.mock("@wraps/email-send", () => ({
+// Mock only sendEmail; keep the real (pure) resolveConfigurationSetName so the
+// config-set wiring is exercised for real.
+vi.mock("@wraps/email-send", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@wraps/email-send")>()),
   sendEmail: mockSendEmail,
-  WRAPS_CONFIGURATION_SET_NAME: "wraps-email-tracking",
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

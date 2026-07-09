@@ -85,7 +85,6 @@ export function HealthStatus({
 }) {
   const productsStatus = useProductsStore((s) => s.status);
   const isEmailEnabled = productsStatus?.emailEnabled ?? false;
-  const isSMSEnabled = productsStatus?.smsEnabled ?? false;
 
   const { data: emailData } = useAnalyticsOverview(orgSlug, days);
   const { data: smsData } = useSMSAnalyticsOverview(orgSlug, days);
@@ -94,8 +93,9 @@ export function HealthStatus({
 
   const channels: ChannelHealth[] = [];
 
-  // Email channel
-  if (isEmailEnabled && emailData) {
+  // Email channel — show real health whenever there are sends, even if the
+  // stored emailEnabled flag is stale/false (it can lag actual usage).
+  if (emailData && (isEmailEnabled || emailData.totalSent > 0)) {
     let level: HealthLevel = "healthy";
     const issues: string[] = [];
 
@@ -136,8 +136,8 @@ export function HealthStatus({
     });
   }
 
-  // SMS channel
-  if (isSMSEnabled && smsData && smsData.totalSent > 0) {
+  // SMS channel — real send volume is the source of truth, not the flag.
+  if (smsData && smsData.totalSent > 0) {
     let level: HealthLevel = "healthy";
     const issues: string[] = [];
 

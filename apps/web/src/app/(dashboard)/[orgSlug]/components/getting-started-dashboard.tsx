@@ -362,8 +362,10 @@ function ScanFeaturesAction({
 
   const displayFeatures = scanResult?.features || features;
   const emailFeatures = displayFeatures?.email;
-  const hasConfigSet = !!emailFeatures?.configSetName;
   const identityCount = emailFeatures?.identities?.length || 0;
+  // Config sets are per-domain now, so a null canonical configSetName doesn't
+  // mean tracking is missing — verified identities each carry their own set.
+  const hasConfigSet = !!emailFeatures?.configSetName || identityCount > 0;
 
   return (
     <div className="space-y-4">
@@ -393,9 +395,11 @@ function ScanFeaturesAction({
           <FeatureStatusRow
             enabled={hasConfigSet}
             label={
-              hasConfigSet
-                ? `Configuration set (${emailFeatures?.configSetName})`
-                : "Configuration set not found"
+              emailFeatures?.configSetName
+                ? `Configuration set (${emailFeatures.configSetName})`
+                : identityCount > 0
+                  ? "Configuration set (per-domain)"
+                  : "Configuration set not found"
             }
           />
           <FeatureStatusRow
