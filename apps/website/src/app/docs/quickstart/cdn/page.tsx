@@ -53,7 +53,11 @@ export default function CdnQuickstartPage() {
       <article aria-hidden="true" className="sr-only">
         <h2>CDN Quickstart</h2>
         <p>Deploy a CDN for your email assets with Wraps.</p>
-        <h2>Prerequisites</h2>
+        <h2>Before You Start: AWS Credentials Required</h2>
+        <p>
+          Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables,
+          run aws configure, or use aws sso login before running any command.
+        </p>
         <h2>Step 1: Deploy CDN</h2>
         <h2>Step 2: Configure Assets</h2>
         <h2>Step 3: Use in Templates</h2>

@@ -104,33 +104,19 @@ export default function PlatformQuickstartPageContent() {
         </p>
       </div>
 
-      {/* Outcome Preview */}
-      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Target className="h-4 w-4 text-primary" />
-          <p className="font-medium text-sm">What you'll build</p>
-        </div>
-        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
-          <li>
-            A type-safe Platform SDK client connected to your organization
-          </li>
-          <li>Contact management with create and list operations</li>
-          <li>Batch email sending to segments of contacts</li>
-        </ul>
-        <p className="text-muted-foreground text-xs">Time: ~3 minutes</p>
-      </div>
-
-      {/* Prerequisites */}
-      <Card className="mb-8">
+      {/* Prerequisites — must come before any code */}
+      <Card className="mb-8 border-primary/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-primary" />
-            Prerequisites
+            Before You Start: Wraps API Key Required
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Before you begin, make sure you have:
+            Every request below authenticates with a Wraps API key — no AWS
+            credentials needed for this quickstart. Before writing any code,
+            make sure you have:
           </p>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>Node.js 20 or later installed</li>
@@ -146,10 +132,32 @@ export default function PlatformQuickstartPageContent() {
               </a>
               )
             </li>
-            <li>An API key from your organization settings</li>
+            <li>
+              An API key from your organization settings, exported as{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                WRAPS_API_KEY
+              </code>{" "}
+              in your environment — Step 1 walks you through creating one
+            </li>
           </ul>
         </CardContent>
       </Card>
+
+      {/* Outcome Preview */}
+      <div className="mb-8 rounded-lg border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="font-medium text-sm">What you'll build</p>
+        </div>
+        <ul className="mb-3 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+          <li>
+            A type-safe Platform SDK client connected to your organization
+          </li>
+          <li>Contact management with create and list operations</li>
+          <li>Batch email sending to segments of contacts</li>
+        </ul>
+        <p className="text-muted-foreground text-xs">Time: ~3 minutes</p>
+      </div>
 
       {/* Step 1: Get API Key */}
       <section className="mb-12">

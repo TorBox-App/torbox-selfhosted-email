@@ -53,7 +53,11 @@ export default function SmsQuickstartPage() {
       <article aria-hidden="true" className="sr-only">
         <h2>SMS Quickstart</h2>
         <p>Send SMS messages through AWS with the Wraps SMS SDK.</p>
-        <h2>Prerequisites</h2>
+        <h2>Before You Start: AWS Credentials Required</h2>
+        <p>
+          Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables,
+          run aws configure, or use aws sso login before running any command.
+        </p>
         <h2>Step 1: Deploy Infrastructure</h2>
         <h2>Step 2: Install SDK</h2>
         <h2>Step 3: Send Your First SMS</h2>

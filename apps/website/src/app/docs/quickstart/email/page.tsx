@@ -56,7 +56,11 @@ export default function EmailQuickstartPage() {
       <article aria-hidden="true" className="sr-only">
         <h2>Email Quickstart</h2>
         <p>Send your first email with Wraps in under 2 minutes.</p>
-        <h2>Prerequisites</h2>
+        <h2>Before You Start: AWS Credentials Required</h2>
+        <p>
+          Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables,
+          run aws configure, or use aws sso login before running any command.
+        </p>
         <h2>Step 1: Deploy Infrastructure</h2>
         <h2>Step 2: Install SDK</h2>
         <h2>Step 3: Send Your First Email</h2>

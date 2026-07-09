@@ -61,6 +61,11 @@ const navItems: NavSection[] = [
         href: "/docs/quickstart",
         icon: Rocket,
       },
+      {
+        title: "Docs for LLMs",
+        href: "/llms-full.txt",
+        icon: Bot,
+      },
     ],
   },
   {
@@ -354,18 +359,11 @@ function NavItemComponent({
     isActive || isChildActive || item.defaultExpanded === true
   );
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (hasChildren) {
-      e.preventDefault();
-      setIsExpanded(!isExpanded);
-    }
-  };
-
   return (
     <div>
-      <a
+      <div
         className={cn(
-          "group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          "group flex items-center rounded-md text-sm transition-colors",
           isActive
             ? "bg-primary/10 font-medium text-primary"
             : isChildActive
@@ -373,23 +371,35 @@ function NavItemComponent({
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           item.disabled && "pointer-events-none opacity-50"
         )}
-        href={item.disabled ? undefined : item.href}
-        onClick={hasChildren ? handleClick : undefined}
       >
-        {Icon && <Icon className="h-4 w-4 shrink-0" />}
-        <span className="flex-1">{item.title}</span>
+        <a
+          className="flex flex-1 items-center gap-2 px-2 py-1.5"
+          href={item.disabled ? undefined : item.href}
+          onClick={hasChildren ? () => setIsExpanded(true) : undefined}
+        >
+          {Icon && <Icon className="h-4 w-4 shrink-0" />}
+          <span className="flex-1">{item.title}</span>
+          {item.disabled && (
+            <span className="text-muted-foreground text-xs">(Soon)</span>
+          )}
+        </a>
         {hasChildren && (
-          <ChevronRight
-            className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-              isExpanded && "rotate-90"
-            )}
-          />
+          <button
+            aria-expanded={isExpanded}
+            aria-label={`Toggle ${item.title} section`}
+            className="rounded-md p-1.5 hover:bg-muted"
+            onClick={() => setIsExpanded(!isExpanded)}
+            type="button"
+          >
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                isExpanded && "rotate-90"
+              )}
+            />
+          </button>
         )}
-        {item.disabled && (
-          <span className="text-muted-foreground text-xs">(Soon)</span>
-        )}
-      </a>
+      </div>
 
       {/* Children */}
       {hasChildren && isExpanded && (
