@@ -806,8 +806,11 @@ export async function scanAWSAccountFeatures(
     };
 
     // 16. Update database with discovered features
-    // Email is enabled if we found a config set
-    const emailEnabled = !!configSetName;
+    // Email is enabled if the account has verified sending identities wired to
+    // a Wraps config set. Config sets are per-domain now, so the single
+    // canonical `configSetName` can be absent even when email sends fine —
+    // don't gate email on it alone.
+    const emailEnabled = identities.length > 0 || !!configSetName;
 
     await db
       .update(awsAccount)

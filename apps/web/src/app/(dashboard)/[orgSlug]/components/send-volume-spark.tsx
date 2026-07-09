@@ -57,12 +57,20 @@ export function SendVolumeSpark({
     days
   );
 
-  const isLoading =
-    (isEmailEnabled && emailLoading) || (isSMSEnabled && smsLoading);
+  // Show a channel when it's flagged enabled OR when it has real send data.
+  // The enabled flag is derived from infra discovery (e.g. a detected SES
+  // config set) and can be false for accounts that still send, so gating on
+  // the flag alone hides a channel that has actual volume.
+  const hasEmailData = emailVolume?.some((d) => d.sent > 0) ?? false;
+  const hasSMSData = smsVolume?.some((d) => d.sent > 0) ?? false;
+  const showEmail = isEmailEnabled || hasEmailData;
+  const showSMS = isSMSEnabled || hasSMSData;
+
+  const isLoading = emailLoading || smsLoading;
 
   const chartData = mergeVolumeData(
-    isEmailEnabled ? emailVolume : undefined,
-    isSMSEnabled ? smsVolume : undefined
+    showEmail ? emailVolume : undefined,
+    showSMS ? smsVolume : undefined
   );
 
   const emailTotal = chartData.reduce((sum, d) => sum + d.email, 0);
@@ -76,7 +84,7 @@ export function SendVolumeSpark({
   const trend =
     prevTotal > 0 ? Math.round(((currTotal - prevTotal) / prevTotal) * 100) : 0;
 
-  const showBothChannels = isEmailEnabled && isSMSEnabled;
+  const showBothChannels = showEmail && showSMS;
 
   return (
     <Card>
@@ -84,7 +92,7 @@ export function SendVolumeSpark({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Send Volume</CardTitle>
           <div className="flex items-center gap-3">
-            {isEmailEnabled && (
+            {showEmail && (
               <Link
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 href={`/${orgSlug}/emails/analytics`}
@@ -93,7 +101,7 @@ export function SendVolumeSpark({
                 <ArrowRightIcon className="h-3 w-3" />
               </Link>
             )}
-            {isSMSEnabled && (
+            {showSMS && (
               <Link
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 href={`/${orgSlug}/sms/analytics`}
@@ -201,7 +209,7 @@ export function SendVolumeSpark({
                   />
                 }
               />
-              {isEmailEnabled && (
+              {showEmail && (
                 <Area
                   dataKey="email"
                   fill="url(#emailFill)"
@@ -211,7 +219,7 @@ export function SendVolumeSpark({
                   type="monotone"
                 />
               )}
-              {isSMSEnabled && (
+              {showSMS && (
                 <Area
                   dataKey="sms"
                   fill="url(#smsFill)"

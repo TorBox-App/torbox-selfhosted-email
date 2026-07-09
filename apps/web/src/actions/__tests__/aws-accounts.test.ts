@@ -1559,4 +1559,69 @@ describe("scanAWSAccountFeatures — config set detection", () => {
     });
     expect(row?.emailEnabled).toBe(false);
   });
+
+  it("sets emailEnabled=true from verified identities even when the config set list is unavailable", async () => {
+    const accessDenied = Object.assign(new Error("AccessDeniedException"), {
+      name: "AccessDeniedException",
+    });
+
+    mockSend.mockImplementation(
+      (command: { _type: string; EmailIdentity?: string }) => {
+        // Config-set discovery is denied — canonical configSetName stays undefined
+        if (
+          command._type === "ListConfigurationSetsCommand" ||
+          command._type === "GetConfigurationSetCommand" ||
+          command._type === "GetConfigurationSetEventDestinationsCommand"
+        ) {
+          return Promise.reject(accessDenied);
+        }
+        if (command._type === "ListEmailIdentitiesCommand") {
+          return Promise.resolve({
+            EmailIdentities: [
+              {
+                IdentityName: "verified.com",
+                IdentityType: "DOMAIN",
+                SendingEnabled: true,
+              },
+            ],
+          });
+        }
+        if (command._type === "GetEmailIdentityCommand") {
+          return Promise.resolve({
+            IdentityType: "DOMAIN",
+            VerifiedForSendingStatus: true,
+            ConfigurationSetName: "wraps-email-verified-com",
+          });
+        }
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.resolve({ ProductionAccessEnabled: true });
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+
+    const result = await scanAWSAccountFeatures(
+      scanTestAccount.id,
+      testOrganization.id
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // No canonical config set was discovered...
+      expect(result.features.email?.configSetName).toBeUndefined();
+      // ...but a verified Wraps identity was found.
+      expect(result.features.email?.identities).toHaveLength(1);
+    }
+
+    const row = await db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.id, scanTestAccount.id),
+    });
+    expect(row?.emailEnabled).toBe(true);
+  });
 });
