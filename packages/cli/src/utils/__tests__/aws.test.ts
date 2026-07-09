@@ -6,7 +6,7 @@ import {
 import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { mockClient } from "aws-sdk-client-mock";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkRegion,
   getAWSRegion,
@@ -15,6 +15,7 @@ import {
   listSESDomains,
   validateAWSCredentials,
 } from "../shared/aws.js";
+import { detectAWSState } from "../shared/aws-detection.js";
 import { WrapsError } from "../shared/errors.js";
 
 // Mock aws-detection to prevent real filesystem reads (SSO cache, AWS config)
@@ -81,6 +82,88 @@ describe("validateAWSCredentials", () => {
     stsMock.on(GetCallerIdentityCommand).rejects(new Error("Network error"));
 
     await expect(validateAWSCredentials()).rejects.toThrow(WrapsError);
+  });
+});
+
+describe("validateAWSCredentials SSO pre-checks vs env credentials", () => {
+  const ORIGINAL_ENV = {
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  };
+
+  const expiredSSOState = {
+    cliInstalled: true,
+    cliVersion: "2.15.0",
+    credentialsConfigured: false,
+    credentialSource: null,
+    profileName: null,
+    accountId: null,
+    detectedProvider: null,
+    region: "us-east-1",
+    sso: {
+      configured: true,
+      profiles: [],
+      sessions: [],
+      tokenStatus: { valid: false, expired: true, minutesRemaining: null },
+      activeProfile: { name: "work" },
+    },
+  };
+
+  beforeEach(() => {
+    stsMock.reset();
+    delete process.env.AWS_ACCESS_KEY_ID;
+    delete process.env.AWS_SECRET_ACCESS_KEY;
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  });
+
+  it("reports the env credentials' actual failure, not SSO expiry, when env credentials are set", async () => {
+    // Static env credentials outrank SSO in the SDK chain. A machine with an
+    // expired SSO session must not mask an invalid-access-key failure.
+    process.env.AWS_ACCESS_KEY_ID = "AKIABOGUS";
+    process.env.AWS_SECRET_ACCESS_KEY = "bogussecret";
+    // biome-ignore lint/suspicious/noExplicitAny: partial AWSSetupState is sufficient for this path
+    vi.mocked(detectAWSState).mockResolvedValueOnce(expiredSSOState as any);
+    const invalidKey = new Error("The security token is invalid");
+    invalidKey.name = "InvalidClientTokenId";
+    stsMock.on(GetCallerIdentityCommand).rejects(invalidKey);
+
+    await expect(validateAWSCredentials()).rejects.toMatchObject({
+      code: "ACCESS_KEY_INVALID",
+    });
+  });
+
+  it("proceeds to STS when env credentials are set even if SSO is expired", async () => {
+    process.env.AWS_ACCESS_KEY_ID = "AKIAVALID";
+    process.env.AWS_SECRET_ACCESS_KEY = "validsecret";
+    // biome-ignore lint/suspicious/noExplicitAny: partial AWSSetupState is sufficient for this path
+    vi.mocked(detectAWSState).mockResolvedValueOnce(expiredSSOState as any);
+    stsMock.on(GetCallerIdentityCommand).resolves({
+      Account: "123456789012",
+      UserId: "AIDAI123456789",
+      Arn: "arn:aws:iam::123456789012:user/test",
+    });
+
+    const result = await validateAWSCredentials();
+
+    expect(result.accountId).toBe("123456789012");
+  });
+
+  it("still reports SSO expiry when no env credentials are set", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: partial AWSSetupState is sufficient for this path
+    vi.mocked(detectAWSState).mockResolvedValueOnce(expiredSSOState as any);
+
+    await expect(validateAWSCredentials()).rejects.toMatchObject({
+      code: "SSO_SESSION_EXPIRED",
+    });
   });
 });
 

@@ -55,32 +55,42 @@ export async function validateAWSCredentialsWithDetails(): Promise<CredentialVal
   const state = await detectAWSState();
   const warnings: string[] = [];
 
-  // Check if SSO is configured but token is expired
-  if (state.sso.configured && state.sso.tokenStatus?.expired) {
-    const profile = state.sso.activeProfile?.name;
-    throw errors.ssoSessionExpired(profile);
-  }
+  // Static env credentials outrank SSO and profiles in the SDK credential
+  // chain. When they are set, SSO/profile state is irrelevant to what STS
+  // will actually use — pre-checking it misattributes failures (e.g. bad
+  // access keys reported as "SSO session expired").
+  const hasStaticEnvCredentials = Boolean(
+    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  );
 
-  // Check if SSO token is about to expire (within 15 minutes)
-  if (
-    state.sso.configured &&
-    state.sso.tokenStatus?.valid &&
-    state.sso.tokenStatus.minutesRemaining !== null &&
-    state.sso.tokenStatus.minutesRemaining < 15
-  ) {
-    const minutes = state.sso.tokenStatus.minutesRemaining;
-    const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name);
-    warnings.push(
-      `SSO session expires in ${minutes} minute${minutes !== 1 ? "s" : ""}. Run "${loginCmd}" to refresh.`
-    );
-  }
+  if (!hasStaticEnvCredentials) {
+    // Check if SSO is configured but token is expired
+    if (state.sso.configured && state.sso.tokenStatus?.expired) {
+      const profile = state.sso.activeProfile?.name;
+      throw errors.ssoSessionExpired(profile);
+    }
 
-  // Check if specified profile exists
-  const currentProfile = getCurrentProfile();
-  if (currentProfile && currentProfile !== "default") {
-    const availableProfiles = getConfiguredProfiles();
-    if (!availableProfiles.includes(currentProfile)) {
-      throw errors.profileNotFound(currentProfile, availableProfiles);
+    // Check if SSO token is about to expire (within 15 minutes)
+    if (
+      state.sso.configured &&
+      state.sso.tokenStatus?.valid &&
+      state.sso.tokenStatus.minutesRemaining !== null &&
+      state.sso.tokenStatus.minutesRemaining < 15
+    ) {
+      const minutes = state.sso.tokenStatus.minutesRemaining;
+      const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name);
+      warnings.push(
+        `SSO session expires in ${minutes} minute${minutes !== 1 ? "s" : ""}. Run "${loginCmd}" to refresh.`
+      );
+    }
+
+    // Check if specified profile exists
+    const currentProfile = getCurrentProfile();
+    if (currentProfile && currentProfile !== "default") {
+      const availableProfiles = getConfiguredProfiles();
+      if (!availableProfiles.includes(currentProfile)) {
+        throw errors.profileNotFound(currentProfile, availableProfiles);
+      }
     }
   }
 
