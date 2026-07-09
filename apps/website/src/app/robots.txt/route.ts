@@ -4,6 +4,9 @@ export function GET() {
   const content = `# Wraps - Email Infrastructure for Developers
 # https://wraps.dev
 
+# AI agents: complete docs in one file at https://wraps.dev/llms-full.txt
+# Agent-oriented index at https://wraps.dev/llms.txt
+
 # Content Signals (https://contentsignals.org/)
 Content-Signal: ai-train=no, search=yes, ai-input=yes
 

@@ -341,7 +341,10 @@ function showHelp() {
   );
   console.log(`  ${pc.dim("-v, --version")}    Show version number\n`);
   console.log(
-    `Run ${pc.cyan("wraps <service> <command> --help")} for more information.\n`
+    `Run ${pc.cyan("wraps <service> <command> --help")} for more information.`
+  );
+  console.log(
+    `AI agents: complete docs at ${pc.cyan("https://wraps.dev/llms-full.txt")}\n`
   );
 }
 

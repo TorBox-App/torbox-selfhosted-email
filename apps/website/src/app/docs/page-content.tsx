@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Blocks,
   Book,
+  Bot,
   Box,
   Code,
   Layers,
@@ -165,6 +166,30 @@ export default function DocsPageContent() {
             <Button asChild size="lg" variant="outline">
               <Link href="/docs/quickstart/email">Email in 2 minutes</Link>
             </Button>
+          </div>
+
+          <div className="mt-6 flex items-start gap-3 rounded-lg border bg-muted/40 p-4">
+            <Bot className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p className="text-muted-foreground text-sm">
+              <span className="font-medium text-foreground">
+                Using an AI assistant?
+              </span>{" "}
+              Point it at{" "}
+              <a
+                className="font-medium text-primary underline underline-offset-4"
+                href="/llms-full.txt"
+              >
+                llms-full.txt
+              </a>{" "}
+              — the complete docs in one file — or{" "}
+              <a
+                className="font-medium text-primary underline underline-offset-4"
+                href="/llms.txt"
+              >
+                llms.txt
+              </a>{" "}
+              for the agent-oriented index.
+            </p>
           </div>
         </section>
 

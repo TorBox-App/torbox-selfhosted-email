@@ -55,6 +55,14 @@ const { messageId } = await email.send({
 console.log('Sent:', messageId);
 ```
 
+## For AI Agents
+
+Using Claude Code, Cursor, or another AI assistant? Point it at:
+
+- **[wraps.dev/llms-full.txt](https://wraps.dev/llms-full.txt)** — the complete Wraps documentation in one file (quickstarts, SDK reference, CLI reference, guides)
+- **[wraps.dev/llms.txt](https://wraps.dev/llms.txt)** — agent-oriented index: when to use Wraps, quick command reference, links to everything
+- **Claude Code skills** — installable from [wraps.dev/.well-known/skills/](https://wraps.dev/.well-known/skills/)
+
 ## Why Wraps?
 
 - **You own it** — Infrastructure deploys to your AWS account. Data never leaves your cloud. If we disappeared tomorrow, your email keeps working.
@@ -91,6 +99,7 @@ All resources are namespaced with `wraps-email-*` and tagged `ManagedBy: wraps-c
 | SDK Reference | [wraps.dev/docs/sdk-reference](https://wraps.dev/docs/sdk-reference) |
 | Guides | [wraps.dev/docs/guides](https://wraps.dev/docs/guides) |
 | Infrastructure | [wraps.dev/docs/infrastructure](https://wraps.dev/docs/infrastructure) |
+| Complete docs for LLMs | [wraps.dev/llms-full.txt](https://wraps.dev/llms-full.txt) |
 
 ## Community
 

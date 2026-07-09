@@ -99,6 +99,18 @@ export default function RootLayout({
     >
       <head>
         <script suppressHydrationWarning>{themeScript}</script>
+        <link
+          href="/llms.txt"
+          rel="alternate"
+          title="Wraps docs index for LLMs"
+          type="text/plain"
+        />
+        <link
+          href="/llms-full.txt"
+          rel="alternate"
+          title="Complete Wraps docs for LLMs"
+          type="text/plain"
+        />
         <JsonLd data={organizationSchema} />
       </head>
       <body className={inter.className}>

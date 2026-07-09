@@ -20,6 +20,9 @@ export async function support(): Promise<void> {
     `  ${pc.bold("GitHub:")}  ${pc.cyan("https://github.com/wraps-dev/wraps/issues")}`
   );
   console.log(`  ${pc.bold("Docs:")}    ${pc.cyan("https://wraps.dev/docs")}`);
+  console.log(
+    `  ${pc.bold("AI docs:")} ${pc.cyan("https://wraps.dev/llms-full.txt")} ${pc.dim("(complete docs, one file)")}`
+  );
   console.log();
   console.log(pc.dim("  Response time: Usually within 24 hours"));
   console.log();
