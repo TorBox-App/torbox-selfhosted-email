@@ -127,6 +127,13 @@ const configVars = [
     defaultValue: "—",
     description: "Default from address for send_email",
   },
+  {
+    name: "WRAPS_CONFIGURATION_SET",
+    required: "No",
+    defaultValue: "—",
+    description:
+      "SES configuration set applied to sends (enables open/click tracking)",
+  },
 ];
 
 const guardrailVars = [
@@ -221,7 +228,7 @@ export default function McpReferencePageContent() {
             <li>
               A Wraps email stack deployed (
               <code className="rounded bg-muted px-1.5 py-0.5">
-                wraps email deploy
+                wraps email init
               </code>
               )
             </li>

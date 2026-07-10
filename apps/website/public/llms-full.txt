@@ -845,7 +845,7 @@ Detailed comparisons:
 
 MCP server for Wraps email infrastructure. Gives AI agents access to your AWS SES sending history, delivery events, domain status, and suppression list — and, optionally, the ability to send email. Runs locally via stdio; AWS credentials never leave the machine.
 
-Prerequisites: a deployed Wraps email stack (`wraps email deploy`) and AWS credentials in the environment (same profile the CLI uses).
+Prerequisites: a deployed Wraps email stack (`wraps email init`) and AWS credentials in the environment (same profile the CLI uses).
 
 ### Tools
 

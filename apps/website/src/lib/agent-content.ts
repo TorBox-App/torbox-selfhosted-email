@@ -241,7 +241,7 @@ MCP server for Wraps email infrastructure. Gives AI agents access to your AWS SE
 
 ## Prerequisites
 
-- Wraps email stack deployed (\`wraps email deploy\`)
+- Wraps email stack deployed (\`wraps email init\`)
 - AWS credentials configured in your environment (same profile used for the Wraps CLI)
 
 ## Tools
@@ -298,6 +298,7 @@ GUI clients don't inherit your shell, so pass region and profile explicitly. Cla
 | \`WRAPS_ACCOUNT_ID\` | No | auto-detected via STS | Your AWS account ID (skips the STS call if set) |
 | \`WRAPS_WRITE_ENABLED\` | No | \`false\` | Set to \`true\` to enable \`send_email\` |
 | \`WRAPS_FROM_EMAIL\` | No | — | Default \`from\` address for \`send_email\` |
+| \`WRAPS_CONFIGURATION_SET\` | No | — | SES configuration set applied to sends (enables open/click tracking) |
 
 ## Write Mode
 
