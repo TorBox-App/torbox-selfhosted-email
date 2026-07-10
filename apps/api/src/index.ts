@@ -15,6 +15,8 @@ import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
 import { getAuthOptional } from "./middleware/auth";
+import { agentsRoutes } from "./routes/agents";
+import { agentsWebhookRoutes } from "./routes/agents-webhook";
 import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
@@ -248,7 +250,9 @@ export const app = new Elysia()
   .use(templatesSyncRoutes)
   .use(workflowsSyncRoutes)
   .use(toolsRoutes)
-  .use(workflowScheduleRoutes);
+  .use(workflowScheduleRoutes)
+  .use(agentsRoutes)
+  .use(agentsWebhookRoutes);
 
 // Export type for Eden Treaty client
 export type App = typeof app;

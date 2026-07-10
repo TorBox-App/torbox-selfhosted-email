@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "agent_unique_org_email_idx" ON "agent" USING btree ("organization_id","email_address");--> statement-breakpoint
+CREATE INDEX "agent_approval_queue_agent_idx" ON "agent_approval_queue" USING btree ("agent_id");

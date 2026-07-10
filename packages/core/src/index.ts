@@ -10,6 +10,24 @@
  * @packageDocumentation
  */
 
+// Agent enforcer contract (Lambda ↔ API ↔ MCP)
+export {
+  type AgentConfigItem,
+  type AgentEmailPayload,
+  type AgentPolicy,
+  configItemKey,
+  dayCounterKey,
+  type EnforcerAction,
+  type EnforcerRequest,
+  type EnforcerResponse,
+  type EnforcerStatus,
+  hourCounterKey,
+  type ItemKey,
+  isoDateWindow,
+  isoHourWindow,
+  type OutcomeRecord,
+  outcomeItemKey,
+} from "./agent-enforcer-contract.js";
 // Constants
 export {
   ALL_EVENT_TYPES,

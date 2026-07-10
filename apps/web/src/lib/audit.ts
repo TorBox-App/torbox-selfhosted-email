@@ -73,7 +73,13 @@ export type AuditLogAction =
   | "block.updated"
   | "block.deleted"
   | "template.duplicated"
-  | "template.version_created";
+  | "template.version_created"
+  | "agent.created"
+  | "agent.killed"
+  | "agent.send_pending"
+  | "agent.send_approved"
+  | "agent.send_rejected"
+  | "agent.send_blocked";
 
 export async function getAuditContext(): Promise<{
   ipAddress: string | null;

@@ -4,6 +4,7 @@
   "plugins": [
     "./baseline/no-redirect-in-try-catch.grit",
     "./baseline/no-region-default.grit",
+    "./baseline/no-plaintext-lambda-secret.grit",
     "./baseline/org-scoped-update.grit",
     "./baseline/org-scoped-delete.grit",
     "./baseline/org-scoped-select.grit"

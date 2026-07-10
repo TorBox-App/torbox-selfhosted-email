@@ -155,6 +155,19 @@ export type WrapsEmailConfig = {
     webhookSecret?: string; // generated API key for webhook auth
   };
 
+  // Agent mailboxes: per-agent scoped send credentials behind an enforcer Lambda
+  agents?: {
+    enabled: boolean;
+    webhookSecret?: string; // shared secret for the enforcer→API webhook
+    agents: Array<{
+      id: string; // Neon agent UUID — pins the per-agent enforcer alias qualifier
+      name: string;
+      emailAddress: string;
+      domain: string;
+      aliasArn?: string; // qualified enforcer alias ARN (set after deploy)
+    }>;
+  };
+
   // Inbound receiving domains (multi-domain support)
   inboundDomains?: InboundDomain[];
 
@@ -293,6 +306,17 @@ export type EmailStackOutputs = {
   // User webhook outputs
   userWebhookUrl?: string;
   userWebhookSecret?: string;
+  // Agent enforcement outputs
+  agentEnforcerArn?: string;
+  agentPolicyTableName?: string;
+  agentCredentials?: Record<
+    string,
+    { accessKeyId: string; secretAccessKey: string; userArn: string }
+  >;
+  // Per-agent qualified enforcer alias ARNs (keyed by agent name). The agent's
+  // credential can only invoke its own alias, so this is what the MCP client
+  // uses as WRAPS_AGENT_ENFORCER_ARN.
+  agentAliasArns?: Record<string, string>;
 };
 
 /**
@@ -523,6 +547,36 @@ export type EmailInboundRemoveOptions = {
  */
 export type EmailInboundTestOptions = {
   region?: string;
+  json?: boolean;
+};
+
+/**
+ * Command options for email agent create
+ */
+export type EmailAgentCreateOptions = {
+  region?: string;
+  name?: string;
+  domain?: string;
+  token?: string;
+  yes?: boolean;
+  json?: boolean;
+};
+
+/**
+ * Command options for email agent list
+ */
+export type EmailAgentListOptions = {
+  token?: string;
+  json?: boolean;
+};
+
+/**
+ * Command options for email agent kill
+ */
+export type EmailAgentKillOptions = {
+  name?: string; // agent name or id
+  token?: string;
+  yes?: boolean;
   json?: boolean;
 };
 

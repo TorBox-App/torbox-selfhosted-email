@@ -74,6 +74,9 @@ async function main() {
   // Build inbound email processor
   await buildLambda("inbound-processor");
 
+  // Build agent enforcer
+  await buildLambda("agent-enforcer");
+
   console.log("\nAll Lambda functions built successfully!");
 }
 

@@ -18,6 +18,7 @@ import { cdnStatus } from "./commands/cdn/status.js";
 import { cdnSync } from "./commands/cdn/sync.js";
 import { cdnUpgrade } from "./commands/cdn/upgrade.js";
 import { cdnVerify } from "./commands/cdn/verify.js";
+import { agentCreate, agentKill, agentList } from "./commands/email/agent.js";
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
 import { connect } from "./commands/email/connect.js";
@@ -204,6 +205,14 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("email inbound destroy")} Remove inbound email infrastructure\n`
+  );
+  console.log("Agent Commands:");
+  console.log(
+    `  ${pc.cyan("email agent create")}   Create a leashed agent mailbox`
+  );
+  console.log(`  ${pc.cyan("email agent list")}     List agents`);
+  console.log(
+    `  ${pc.cyan("email agent kill")}     Kill an agent (revoke sending)\n`
   );
   console.log("Template Commands:");
   console.log(
@@ -758,6 +767,52 @@ async function run() {
               );
               throw new Error(
                 `Unknown inbound command: ${inboundSubCommand || "(none)"}`
+              );
+          }
+          break;
+        }
+
+        case "agent": {
+          // Handle agent subcommands (wraps email agent <create|list|kill>)
+          const agentSubCommand = sub[2];
+
+          switch (agentSubCommand) {
+            case "create":
+              await agentCreate({
+                region: flags.region,
+                name: sub[3] || flags.name,
+                domain: flags.domain,
+                token: flags.token,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
+            case "list":
+              await agentList({
+                token: flags.token,
+                json: flags.json,
+              });
+              break;
+
+            case "kill":
+              await agentKill({
+                name: sub[3] || flags.name,
+                token: flags.token,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
+            default:
+              clack.log.error(
+                `Unknown agent command: ${agentSubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("create")}, ${pc.cyan("list")}, ${pc.cyan("kill")}\n`
+              );
+              throw new Error(
+                `Unknown agent command: ${agentSubCommand || "(none)"}`
               );
           }
           break;
@@ -1649,7 +1704,9 @@ async function run() {
       duration_ms: duration,
     });
 
-    handleCLIError(error);
+    // Pass the command name so agent commands (e.g. "email:agent") opt into the
+    // agent-enforcement error mappings; other commands stay on generic AWS errors.
+    handleCLIError(error, commandName);
   } finally {
     // Ensure telemetry events are sent before exit
     await telemetry.shutdown();

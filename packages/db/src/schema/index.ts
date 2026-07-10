@@ -1,4 +1,5 @@
 // Re-export all schema tables
+export * from "./agents";
 export * from "./app";
 export * from "./auth";
 export * from "./batch";

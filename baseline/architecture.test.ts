@@ -1115,6 +1115,9 @@ describe("cli router forwards region to all AWS commands", () => {
       "verifyDomain",
       "getDkim",
       "removeDomain",
+      // Email agents — list/kill use Wraps API, not direct AWS (create deploys and forwards region)
+      "agentList",
+      "agentKill",
       // Templates / workflows — API-backed or local scaffold
       "templatesInit",
       "templatesPush",

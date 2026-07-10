@@ -55,6 +55,7 @@ async function main() {
   copyLambda("event-processor");
   copyLambda("sms-event-processor");
   copyLambda("inbound-processor");
+  copyLambda("agent-enforcer");
 
   console.log("\n✓ Lambda setup complete");
 }

@@ -27,7 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "clean": "rm -rf dist lambda/event-processor/index.mjs lambda/event-processor/.bundled lambda/sms-event-processor/index.mjs lambda/sms-event-processor/.bundled lambda/inbound-processor/index.mjs lambda/inbound-processor/.bundled"
+    "clean": "rm -rf dist lambda/event-processor/index.mjs lambda/event-processor/.bundled lambda/sms-event-processor/index.mjs lambda/sms-event-processor/.bundled lambda/inbound-processor/index.mjs lambda/inbound-processor/.bundled lambda/agent-enforcer/index.js lambda/agent-enforcer/.bundled"
   },
   "keywords": [
     "wraps",
@@ -52,6 +52,7 @@
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/client-eventbridge": "catalog:",
     "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/client-sesv2": "catalog:",
     "@aws-sdk/client-ssm": "catalog:",
     "@aws-sdk/lib-dynamodb": "catalog:",
     "@smithy/node-http-handler": "^4.8.2",

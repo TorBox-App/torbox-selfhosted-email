@@ -502,6 +502,14 @@ export function applyConfigUpdates(
         ...result.inbound,
         ...(value as NonNullable<WrapsEmailConfig["inbound"]>),
       } as NonNullable<WrapsEmailConfig["inbound"]>;
+    } else if (key === "agents" && typeof value === "object") {
+      // Deep merge agents — preserves the generated webhookSecret when a later
+      // update (e.g. adding a second agent) carries the agents array but omits
+      // the secret it created on the first agent.
+      result.agents = {
+        ...result.agents,
+        ...(value as NonNullable<WrapsEmailConfig["agents"]>),
+      } as NonNullable<WrapsEmailConfig["agents"]>;
     } else if (key === "alerts" && typeof value === "object") {
       // Deep merge alerts (has nested thresholds)
       const alertUpdate = value as NonNullable<WrapsEmailConfig["alerts"]>;

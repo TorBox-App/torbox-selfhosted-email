@@ -1057,6 +1057,95 @@ describe("applyConfigUpdates", () => {
     });
   });
 
+  describe("agent mailboxes config", () => {
+    it("should deep-merge agents config, preserving webhookSecret when adding an agent", () => {
+      const existingConfig = {
+        domain: "example.com",
+        sendingEnabled: true,
+        agents: {
+          enabled: true,
+          webhookSecret: "secret-abc",
+          agents: [
+            {
+              name: "sdr",
+              emailAddress: "sdr@example.com",
+              domain: "example.com",
+            },
+          ],
+        },
+      };
+
+      // Adding a second agent: the update carries the full agents array but
+      // omits webhookSecret (generated only on first agent). Deep merge must
+      // preserve the existing secret rather than clobber it to undefined.
+      const result = applyConfigUpdates(existingConfig, {
+        agents: {
+          enabled: true,
+          agents: [
+            {
+              name: "sdr",
+              emailAddress: "sdr@example.com",
+              domain: "example.com",
+            },
+            {
+              name: "support",
+              emailAddress: "support@example.com",
+              domain: "example.com",
+            },
+          ],
+        },
+      });
+
+      expect(result.agents?.webhookSecret).toBe("secret-abc");
+      expect(result.agents?.enabled).toBe(true);
+      expect(result.agents?.agents).toHaveLength(2);
+      expect(result.agents?.agents[1].name).toBe("support");
+    });
+
+    it("should round-trip agents config through save AND load", async () => {
+      vi.clearAllMocks();
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(writeFile).mockResolvedValue(undefined);
+
+      const emailConfig = {
+        domain: "example.com",
+        sendingEnabled: true,
+        agents: {
+          enabled: true,
+          webhookSecret: "roundtrip-secret",
+          agents: [
+            {
+              id: "agent-uuid-1",
+              name: "sdr",
+              emailAddress: "sdr@example.com",
+              domain: "example.com",
+              aliasArn:
+                "arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-agent-uuid-1",
+            },
+          ],
+        },
+      };
+      const metadata = createConnectionMetadata(
+        "123456789012",
+        "us-east-1",
+        "aws",
+        emailConfig
+      );
+
+      await saveConnectionMetadata(metadata);
+
+      // Feed exactly what was written back through the load path so the test
+      // exercises loadConnectionMetadata (not just save/serialize) — a load-side
+      // migration that dropped the agents key would fail here.
+      const savedContent = vi.mocked(writeFile).mock.calls[0][1] as string;
+      vi.mocked(readFile).mockResolvedValue(savedContent);
+
+      const loaded = await loadConnectionMetadata("123456789012", "us-east-1");
+
+      expect(loaded?.services.email?.config.agents).toEqual(emailConfig.agents);
+    });
+  });
+
   describe("handling undefined values", () => {
     it("should skip undefined values in updates", () => {
       const existingConfig = {

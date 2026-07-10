@@ -1,6 +1,7 @@
 import * as clack from "@clack/prompts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  awsErrorToWrapsError,
   errors,
   handleCLIError,
   isAWSError,
@@ -1054,5 +1055,59 @@ describe("sanitizeErrorMessage", () => {
     const message = sanitizeErrorMessage(new Error("Error message"));
 
     expect(message).toBe("Error message");
+  });
+});
+
+describe("awsErrorToWrapsError — ResourceNotFoundException discrimination (COR-13)", () => {
+  it("maps DynamoDB's data-plane RNFE to the policy-table error", () => {
+    // DynamoDB GetItem/UpdateItem RNFE message carries no table/dynamodb token.
+    const ddbError = Object.assign(new Error("Requested resource not found"), {
+      name: "ResourceNotFoundException",
+    });
+
+    const result = awsErrorToWrapsError(
+      "ResourceNotFoundException",
+      "syncAgentPolicy",
+      ddbError,
+      true
+    );
+
+    expect(result.code).toBe("DYNAMODB_TABLE_NOT_FOUND");
+  });
+
+  it("does NOT map a bare RNFE to the policy-table error outside agent context", () => {
+    // A ResourceNotFoundException from a non-agent command must fall through to
+    // the generic AWS error, not tell the user to "run wraps email agent create".
+    const ddbError = Object.assign(new Error("Requested resource not found"), {
+      name: "ResourceNotFoundException",
+    });
+
+    const result = awsErrorToWrapsError(
+      "ResourceNotFoundException",
+      "getItem",
+      ddbError
+    );
+
+    expect(result.code).not.toBe("DYNAMODB_TABLE_NOT_FOUND");
+    expect(result.code).toBe("AWS_ResourceNotFoundException");
+    expect(result.suggestion ?? "").not.toMatch(/wraps email agent create/i);
+  });
+
+  it("maps Lambda's RNFE to the enforcer-Lambda error", () => {
+    const lambdaError = Object.assign(
+      new Error(
+        "Function not found: arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer"
+      ),
+      { name: "ResourceNotFoundException" }
+    );
+
+    const result = awsErrorToWrapsError(
+      "ResourceNotFoundException",
+      "invokeEnforcer",
+      lambdaError,
+      true
+    );
+
+    expect(result.code).toBe("LAMBDA_FUNCTION_NOT_FOUND");
   });
 });

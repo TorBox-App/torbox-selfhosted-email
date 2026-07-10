@@ -354,6 +354,10 @@ export function extractPulumiErrorSummary(pulumiOutput: string): string {
  */
 export function handleCLIError(error: unknown, command?: string): never {
   const cmdContext = command || "unknown";
+  // Agent commands (e.g. "email:agent") opt into the agent-enforcement
+  // resource-not-found mappings; every other command falls back to the generic
+  // AWS error so it isn't told to "run wraps email agent create".
+  const isAgentContext = cmdContext.includes("agent");
 
   // In JSON mode, convert any error to a JSON envelope and exit
   if (isJsonMode()) {
@@ -373,7 +377,12 @@ export function handleCLIError(error: unknown, command?: string): never {
       code = `AWS_${parsed.code}`;
       trackError(code, cmdContext, { action: parsed.action });
       // Map to user-friendly WrapsError for message/suggestion
-      const wrapsErr = awsErrorToWrapsError(parsed.code, parsed.action, error);
+      const wrapsErr = awsErrorToWrapsError(
+        parsed.code,
+        parsed.action,
+        error,
+        isAgentContext
+      );
       message = wrapsErr.message;
       suggestion = wrapsErr.suggestion;
       docsUrl = wrapsErr.docsUrl;
@@ -441,7 +450,12 @@ export function handleCLIError(error: unknown, command?: string): never {
     const { code, action } = parseAWSError(error);
     trackError(`AWS_${code}`, cmdContext, { action });
 
-    const wrapsError = awsErrorToWrapsError(code, action, error);
+    const wrapsError = awsErrorToWrapsError(
+      code,
+      action,
+      error,
+      isAgentContext
+    );
 
     clack.log.error(wrapsError.message);
     if (wrapsError.suggestion) {
@@ -522,8 +536,48 @@ export function handleCLIError(error: unknown, command?: string): never {
 export function awsErrorToWrapsError(
   code: string,
   action?: string,
-  originalError?: unknown
+  originalError?: unknown,
+  isAgentContext = false
 ): WrapsError {
+  // AWS SDK v3 sometimes returns name:"Error" with the real error code only in
+  // the message (e.g. IAM GetRole throws name:"Error", message:"NoSuchEntity…").
+  // Check BOTH the exception name (from `code`) and the raw message before the
+  // name-based switch, so these don't fall through to the generic default and
+  // get mislabeled. Agent create touches IAM (console-role invoke attach),
+  // Lambda (enforcer), and DynamoDB (policy table).
+  const originalName = originalError instanceof Error ? originalError.name : "";
+  const originalMessage =
+    originalError instanceof Error ? originalError.message : "";
+  const mentions = (needle: string): boolean =>
+    code === needle ||
+    originalName === needle ||
+    originalMessage.includes(needle);
+
+  // These agent-enforcement not-found mappings (console-access IAM entity,
+  // enforcer Lambda, policy table) only make sense for agent commands. Gating on
+  // isAgentContext keeps a bare NoSuchEntity/ResourceNotFoundException from an
+  // unrelated command from being mislabeled with "run wraps email agent create"
+  // guidance — those fall through to the generic default (awsUnknownError).
+  if (
+    isAgentContext &&
+    (mentions("NoSuchEntity") || mentions("NoSuchEntityException"))
+  ) {
+    return errors.iamEntityNotFound();
+  }
+  // Both Lambda and DynamoDB throw ResourceNotFoundException. Discriminate on
+  // the Lambda signal, which is reliable: Lambda's message is
+  // "Function not found: <arn>" (and the ARN contains ":function:"). DynamoDB's
+  // data-plane message is just "Requested resource not found" — it carries no
+  // "table"/"dynamodb" token, so the old free-text match mislabeled a missing
+  // policy table as a missing enforcer Lambda. Default to the policy table
+  // (COR-13).
+  if (isAgentContext && mentions("ResourceNotFoundException")) {
+    if (/function not found|:function:/i.test(originalMessage)) {
+      return errors.lambdaFunctionNotFound();
+    }
+    return errors.dynamoTableNotFound();
+  }
+
   switch (code) {
     // Credential / token errors — these mean the request never reached the API
     case "ExpiredTokenException":
@@ -905,6 +959,33 @@ export const errors = {
       `AWS API error: ${code}${action ? ` (${action})` : ""}${detail ? ` — ${detail}` : ""}`,
       `AWS_${code}`,
       `This is an AWS API error, not a credentials problem. Look up "${code}" in the AWS documentation for the failing service.\n\nIf you believe this is a Wraps bug, report it at:\n  https://github.com/wraps-team/wraps/issues`,
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+    ),
+
+  // Agent enforcement resource-not-found errors. These surface when the
+  // console-access role, enforcer Lambda, or policy table is missing — usually
+  // because platform connect or the agent deploy hasn't run yet.
+  iamEntityNotFound: () =>
+    new WrapsError(
+      "IAM entity not found",
+      "IAM_ENTITY_NOT_FOUND",
+      "The expected IAM role or user does not exist. This usually means platform connect hasn't run for this account.\n\nConnect first:\n  wraps platform connect",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  lambdaFunctionNotFound: () =>
+    new WrapsError(
+      "Agent enforcer Lambda not found",
+      "LAMBDA_FUNCTION_NOT_FOUND",
+      "The agent enforcer function (wraps-agent-enforcer) does not exist in this region.\n\nDeploy it by creating an agent:\n  wraps email agent create",
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+    ),
+
+  dynamoTableNotFound: () =>
+    new WrapsError(
+      "Agent policy table not found",
+      "DYNAMODB_TABLE_NOT_FOUND",
+      "The agent policy table (wraps-email-agent-policy) does not exist in this region.\n\nDeploy it by creating an agent:\n  wraps email agent create",
       "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 

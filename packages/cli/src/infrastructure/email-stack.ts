@@ -372,6 +372,83 @@ export async function deployEmailStack(
     };
   }
 
+  // 13. Agent enforcement resources (if enabled)
+  let agentEnforcerArnOut: import("@pulumi/pulumi").Output<string> | undefined;
+  let agentPolicyTableNameOut:
+    | import("@pulumi/pulumi").Output<string>
+    | undefined;
+  let agentCredentials:
+    | Record<
+        string,
+        { accessKeyId: string; secretAccessKey: string; userArn: string }
+      >
+    | undefined;
+  let agentAliasArns: Record<string, string> | undefined;
+
+  if (emailConfig.agents?.enabled) {
+    const { getApiBaseUrl } = await import("../utils/shared/config.js");
+
+    // Policy/counter/outcome table
+    const { createAgentPolicyTable } = await import(
+      "./resources/dynamodb-agent-policy.js"
+    );
+    const policyTable = await createAgentPolicyTable({
+      region: config.region,
+    });
+
+    // Enforcer Lambda (the leash: only thing agent creds can invoke)
+    const { deployAgentEnforcerLambda } = await import(
+      "./resources/lambda-agent-enforcer.js"
+    );
+    const enforcer = await deployAgentEnforcerLambda({
+      region: config.region,
+      accountId,
+      policyTableName: policyTable.name,
+      policyTableArn: policyTable.arn,
+      configSet: domainToConfigSetName(emailConfig.domain ?? ""),
+      wrapsApiUrl: getApiBaseUrl(),
+      webhookSecret: emailConfig.agents.webhookSecret ?? "",
+    });
+
+    // Grant the platform-connect role invoke on the enforcer (skips with a
+    // warning when the role is absent — never fails the stack).
+    const { createAgentUser, attachConsoleRoleInvoke } = await import(
+      "./resources/iam-agent-user.js"
+    );
+    await attachConsoleRoleInvoke({
+      enforcerArn: enforcer.lambdaFunction.arn,
+    });
+
+    // Per-agent alias + scoped IAM users + access keys. Each agent gets its own
+    // `agent-<agentId>` alias on the shared enforcer; the credential is pinned
+    // to that alias so the enforcer can derive the caller identity from the
+    // invoked qualifier (SEC-2). The console role keeps invoke on the
+    // unqualified function for the execute path (attachConsoleRoleInvoke above).
+    agentCredentials = {};
+    agentAliasArns = {};
+    for (const agent of emailConfig.agents.agents) {
+      const alias = new aws.lambda.Alias(`wraps-agent-alias-${agent.name}`, {
+        name: `agent-${agent.id}`,
+        functionName: enforcer.lambdaFunction.name,
+        functionVersion: "$LATEST",
+      });
+
+      const userRes = await createAgentUser({
+        name: agent.name,
+        enforcerArn: alias.arn,
+      });
+      agentCredentials[agent.name] = {
+        accessKeyId: userRes.accessKey.id as unknown as string,
+        secretAccessKey: userRes.accessKey.secret as unknown as string,
+        userArn: userRes.iamUser.arn as unknown as string,
+      };
+      agentAliasArns[agent.name] = alias.arn as unknown as string;
+    }
+
+    agentEnforcerArnOut = enforcer.lambdaFunction.arn;
+    agentPolicyTableNameOut = policyTable.name;
+  }
+
   // Return outputs
   return {
     roleArn: role.arn as any as string,
@@ -442,5 +519,12 @@ export async function deployEmailStack(
           )
         ) as Record<string, { parameterArn: string; parameterName: string }>)
       : undefined,
+    // Agent enforcement outputs
+    agentEnforcerArn: agentEnforcerArnOut as unknown as string | undefined,
+    agentPolicyTableName: agentPolicyTableNameOut as unknown as
+      | string
+      | undefined,
+    agentCredentials,
+    agentAliasArns,
   };
 }
