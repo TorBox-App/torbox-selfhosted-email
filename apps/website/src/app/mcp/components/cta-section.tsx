@@ -5,13 +5,13 @@ import { ArrowRight, Bot } from "lucide-react";
 import Link from "next/link";
 import { trackEvent } from "@/utils/analytics";
 
-export function AgentsCtaSection() {
+export function McpCtaSection() {
   return (
     <section className="py-20">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <p className="mb-6 font-medium text-2xl tracking-tight sm:text-3xl">
-          Your agent. Your AWS.{" "}
-          <span className="text-muted-foreground">One command.</span>
+          Your SES. Your credentials.{" "}
+          <span className="text-muted-foreground">One config block.</span>
         </p>
 
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
@@ -21,30 +21,22 @@ export function AgentsCtaSection() {
             size="lg"
           >
             <Link
-              href="/docs/quickstart/email/agents"
+              href="/docs/mcp-reference"
               onClick={() =>
                 trackEvent("cta_click", {
-                  location: "agents_cta",
-                  cta_text: "Read the agent quickstart",
+                  location: "mcp_cta",
+                  cta_text: "Read the MCP reference",
                 })
               }
             >
-              Read the agent quickstart
+              Read the MCP reference
               <ArrowRight className="ml-2 size-4" />
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link
-              href="/mcp"
-              onClick={() =>
-                trackEvent("cta_click", {
-                  location: "agents_cta",
-                  cta_text: "Meet the MCP server",
-                })
-              }
-            >
+            <Link href="/agents">
               <Bot className="size-4" />
-              Meet the MCP server
+              Wraps for agents
             </Link>
           </Button>
         </div>

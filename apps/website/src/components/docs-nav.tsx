@@ -116,6 +116,11 @@ const navItems: NavSection[] = [
         icon: Mail,
       },
       {
+        title: "MCP Server",
+        href: "/docs/mcp-reference",
+        icon: Bot,
+      },
+      {
         title: "CLI Commands",
         href: "/docs/cli-reference/email",
         icon: Terminal,

@@ -841,6 +841,80 @@ Detailed comparisons:
 - Customer.io vs Wraps: https://wraps.dev/compare/customer-io-vs-wraps
 - Klaviyo vs Wraps: https://wraps.dev/compare/klaviyo-vs-wraps
 
+## MCP Server (@wraps.dev/mcp)
+
+MCP server for Wraps email infrastructure. Gives AI agents access to your AWS SES sending history, delivery events, domain status, and suppression list — and, optionally, the ability to send email. Runs locally via stdio; AWS credentials never leave the machine.
+
+Prerequisites: a deployed Wraps email stack (`wraps email deploy`) and AWS credentials in the environment (same profile the CLI uses).
+
+### Tools
+
+| Tool | Description | Write? |
+|------|-------------|--------|
+| `send_email` | Send a transactional email via your SES account | Yes — requires `WRAPS_WRITE_ENABLED=true` |
+| `list_recent_sends` | List recent sends from your email history | No |
+| `get_email_event_log` | Full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
+| `verify_domain_status` | Verification and DKIM status of a sending domain | No |
+| `list_suppressions` | Addresses on the SES suppression list, filterable by BOUNCE or COMPLAINT | No |
+| `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
+
+### Setup
+
+Claude Code (`.mcp.json` in project root — inherits shell AWS environment):
+
+```json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}
+```
+
+Claude Desktop / Cursor / Windsurf (GUI clients need explicit env):
+
+```json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"],
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "your-aws-profile"
+      }
+    }
+  }
+}
+```
+
+### Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AWS_REGION` | Yes | — | AWS region where the Wraps stack is deployed |
+| `WRAPS_HISTORY_TABLE_NAME` | No | `wraps-email-history` | DynamoDB table for email history |
+| `WRAPS_ACCOUNT_ID` | No | auto-detected via STS | AWS account ID (skips the STS call if set) |
+| `WRAPS_WRITE_ENABLED` | No | `false` | Set to `true` to enable `send_email` |
+| `WRAPS_FROM_EMAIL` | No | — | Default `from` address for `send_email` |
+
+### Send guardrails (write mode)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WRAPS_ALLOWED_RECIPIENTS` | — (no restriction) | Comma-separated exact addresses the agent may send to |
+| `WRAPS_ALLOWED_RECIPIENT_DOMAINS` | — (no restriction) | Comma-separated domains; exact match only, list subdomains explicitly |
+| `WRAPS_MAX_RECIPIENTS` | `50` | Maximum recipients per `send_email` call |
+| `WRAPS_ALLOW_FROM_OVERRIDE` | `false` | Allow a `from` differing from `WRAPS_FROM_EMAIL` |
+
+Warning: `WRAPS_WRITE_ENABLED=true` with no allowlist gives the agent unrestricted send capability to any address the SES account can reach.
+
+Enforced mode: agents provisioned via `wraps email agent create` get a credential that can only invoke an enforcer Lambda in your account (never SES directly). Kill-switch, allowlist, and hourly/daily caps are decided server-side; `send_email` returns `sent`, `pending_approval` (poll `check_send_status`), or `blocked`. Activated by setting `WRAPS_AGENT_ID` and `WRAPS_AGENT_ENFORCER_ARN`.
+
+Full reference: https://wraps.dev/docs/mcp-reference
+
 ## Agent Skills
 
 Wraps publishes Claude Code skills for AI agents at `https://wraps.dev/.well-known/skills/`:
@@ -873,6 +947,8 @@ Install in Claude Code: `claude install-skill https://wraps.dev/.well-known/skil
 - Express Guide: https://wraps.dev/docs/quickstart/email/express
 - Remix Guide: https://wraps.dev/docs/quickstart/email/remix
 - Email SDK Reference: https://wraps.dev/docs/sdk-reference
+- MCP Server Reference: https://wraps.dev/docs/mcp-reference
+- MCP Server (product page): https://wraps.dev/mcp
 - SMS SDK Reference: https://wraps.dev/docs/sms-sdk-reference
 - Platform SDK Reference: https://wraps.dev/docs/client-sdk-reference
 - CLI Reference: https://wraps.dev/docs/cli-reference
@@ -912,6 +988,7 @@ Install in Claude Code: `claude install-skill https://wraps.dev/.well-known/skil
 - npm (sms): https://npmjs.com/package/@wraps.dev/sms
 - npm (client): https://npmjs.com/package/@wraps.dev/client
 - npm (cli): https://npmjs.com/package/@wraps.dev/cli
+- npm (mcp): https://npmjs.com/package/@wraps.dev/mcp
 - Skills: https://wraps.dev/.well-known/skills/
 
 ## Contact

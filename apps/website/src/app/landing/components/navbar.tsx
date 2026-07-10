@@ -70,6 +70,11 @@ const productItems = [
     description: "Email infrastructure your agent owns",
   },
   {
+    name: "MCP Server",
+    href: "/mcp",
+    description: "Your email infra as MCP tools, guarded sending",
+  },
+  {
     name: "Platform",
     href: "/platform",
     description: "Wraps Platform for templates & broadcasts",

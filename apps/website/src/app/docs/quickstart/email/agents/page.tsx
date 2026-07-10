@@ -65,6 +65,7 @@ export default function AgentEmailQuickstartPage() {
         <h2>Step 2: Install the SDK</h2>
         <h2>Step 3: Write the agent tool</h2>
         <h2>Step 4: Give your AI editor Wraps docs</h2>
+        <h2>Step 5: Give your agent live access with the Wraps MCP server</h2>
       </article>
       <AgentEmailQuickstartPageContent />
     </>

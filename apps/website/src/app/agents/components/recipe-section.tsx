@@ -45,8 +45,10 @@ export function AgentsRecipeSection() {
             Agents already work with Wraps today.
           </h2>
           <p className="text-lg text-muted-foreground">
-            Two pieces, both shipped: the SDK your agent calls at runtime, and
-            an MCP config that keeps your AI editor writing correct Wraps code.
+            Three pieces, all shipped: the SDK your agent calls at runtime, an
+            MCP config that keeps your AI editor writing correct Wraps code, and
+            a Wraps MCP server that gives your agent live access to your email
+            infrastructure.
           </p>
         </div>
 
@@ -164,16 +166,21 @@ export function AgentsRecipeSection() {
             <Bot className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
             <div>
               <p className="font-medium">
-                A dedicated Wraps MCP server is coming.
+                3. Give your agent live access with the Wraps MCP server.
               </p>
               <p className="mt-1 text-muted-foreground text-sm">
-                For now, Context7 gives your agent the docs. Follow the build on{" "}
-                <a
-                  className="underline underline-offset-4 hover:text-foreground"
-                  href="https://github.com/wraps-team/wraps"
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                  npx -y @wraps.dev/mcp
+                </code>{" "}
+                exposes your send history, delivery events, domain status, and
+                suppression list as MCP tools — plus guarded sending, off by
+                default. Your credentials never leave your machine.{" "}
+                <Link
+                  className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
+                  href="/mcp"
                 >
-                  GitHub
-                </a>
+                  Meet the MCP server
+                </Link>
                 .
               </p>
             </div>

@@ -54,10 +54,16 @@ describe("Chunk 2 — /agents marketing page", () => {
     expect(source).not.toMatch(/cold outreach from/i);
   });
 
-  it("recipe-section references the shipped @wraps.dev/email SDK and does not reference unshipped packages", () => {
+  it("recipe-section references the shipped @wraps.dev/email SDK and the shipped @wraps.dev/mcp server", () => {
     const source = read("src/app/agents/components/recipe-section.tsx");
     expect(source).toContain("@wraps.dev/email");
-    expect(source).not.toContain("@wraps.dev/mcp");
+    expect(source).toContain("@wraps.dev/mcp");
+    expect(source).not.toMatch(/coming/i);
+  });
+
+  it("recipe-section links to the /mcp product page", () => {
+    const source = read("src/app/agents/components/recipe-section.tsx");
+    expect(source).toContain('href="/mcp"');
   });
 
   it("/agents OG image asset exists at public/agents-og.webp", () => {
@@ -83,6 +89,71 @@ describe("Chunk 4 — llms.txt", () => {
     expect(contents).toContain("/docs/quickstart/email/agents");
     expect(contents).toContain("/docs/guides/context7");
     expect(contents).toContain("/agents");
+  });
+
+  it("documents the Wraps MCP server for AI crawlers", () => {
+    const contents = read("public/llms.txt");
+    expect(contents).toContain("@wraps.dev/mcp");
+    expect(contents).toContain("https://wraps.dev/docs/mcp-reference");
+    expect(contents).toContain("https://wraps.dev/mcp");
+  });
+
+  it("llms-full.txt carries the full MCP server reference (tools + guardrails)", () => {
+    const contents = read("public/llms-full.txt");
+    expect(contents).toContain("@wraps.dev/mcp");
+    expect(contents).toContain("WRAPS_WRITE_ENABLED");
+    expect(contents).toContain("list_recent_sends");
+    expect(contents).toContain("get_email_event_log");
+  });
+});
+
+describe("MCP surfaces — /mcp page and docs reference", () => {
+  it("/mcp page exports metadata with the /mcp canonical URL and an MCP-facing title", async () => {
+    const mod = await import("@/app/mcp/page");
+    expect(mod.metadata).toBeDefined();
+    expect(String(mod.metadata.title).toLowerCase()).toContain("mcp");
+    expect(mod.metadata.alternates?.canonical).toBe("https://wraps.dev/mcp");
+    expect(typeof mod.default).toBe("function");
+  });
+
+  it("/docs/mcp-reference page exports metadata with the correct canonical URL", async () => {
+    const mod = await import("@/app/docs/mcp-reference/page");
+    expect(mod.metadata).toBeDefined();
+    expect(mod.metadata.alternates?.canonical).toBe(
+      "https://wraps.dev/docs/mcp-reference"
+    );
+    expect(typeof mod.default).toBe("function");
+  });
+
+  it("docs sidebar links to the MCP reference", () => {
+    const source = read("src/components/docs-nav.tsx");
+    expect(source).toContain('"/docs/mcp-reference"');
+  });
+
+  it("agent quickstart wires the Wraps MCP server, not just Context7", () => {
+    const source = read(
+      "src/app/docs/quickstart/email/agents/page-content.tsx"
+    );
+    expect(source).toContain("@wraps.dev/mcp");
+    expect(source).toContain('href="/docs/mcp-reference"');
+  });
+
+  it("agent-content.ts serves markdown for the MCP reference path", () => {
+    const source = read("src/lib/agent-content.ts");
+    expect(source).toContain('"/docs/mcp-reference"');
+    expect(source).toContain("WRAPS_WRITE_ENABLED");
+  });
+
+  it("landing navbar Products mega-menu includes an MCP Server entry linking to /mcp", () => {
+    const source = read("src/app/landing/components/navbar.tsx");
+    expect(source).toMatch(
+      /name:\s*"MCP Server",\s*href:\s*"\/mcp",\s*description:/
+    );
+  });
+
+  it("agents CTA section links to the /mcp product page", () => {
+    const source = read("src/app/agents/components/cta-section.tsx");
+    expect(source).toContain('href="/mcp"');
   });
 });
 

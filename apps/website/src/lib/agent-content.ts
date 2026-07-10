@@ -137,6 +137,7 @@ Wire Wraps into your agent's tool calls. The infrastructure lives in your AWS ac
 - AWS SES deployed to your account (DKIM, SPF, DMARC included)
 - A typed send-email tool your agent framework can register as-is
 - Wraps docs in your AI editor's context via Context7 MCP
+- Live access to your email infrastructure via the Wraps MCP server
 
 Time: ~5 minutes
 
@@ -210,10 +211,122 @@ Add Context7 to your MCP config so Claude Code, Cursor, Windsurf, or any MCP-com
 
 Full setup at [Context7 Guide](https://wraps.dev/docs/guides/context7).
 
+## Step 5: Give Your Agent Live Access with the Wraps MCP Server
+
+Context7 gives your editor the docs; \`@wraps.dev/mcp\` gives your agent the infrastructure itself. It exposes your send history, delivery events, domain status, and suppression list as MCP tools — plus guarded sending, disabled by default:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}
+\`\`\`
+
+Tools, configuration, and write-mode guardrails: [MCP Server Reference](https://wraps.dev/docs/mcp-reference).
+
 ## Next Steps
 
+- [MCP Server Reference](https://wraps.dev/docs/mcp-reference) — give your agent live access to your email infrastructure
 - [Email SDK Reference](https://wraps.dev/docs/sdk-reference) — every method and response shape
 - [CLI Reference](https://wraps.dev/docs/cli-reference/email) — manage infrastructure
+`,
+
+  "/docs/mcp-reference": `# MCP Server Reference (@wraps.dev/mcp)
+
+MCP server for Wraps email infrastructure. Gives AI agents access to your AWS SES sending history, delivery events, domain status, and suppression list — and, optionally, the ability to send email. Runs locally via stdio; your AWS credentials never leave your machine.
+
+## Prerequisites
+
+- Wraps email stack deployed (\`wraps email deploy\`)
+- AWS credentials configured in your environment (same profile used for the Wraps CLI)
+
+## Tools
+
+| Tool | Description | Write? |
+|------|-------------|--------|
+| \`send_email\` | Send a transactional email via your SES account | Yes — requires \`WRAPS_WRITE_ENABLED=true\` |
+| \`list_recent_sends\` | List recent sends from your email history | No |
+| \`get_email_event_log\` | Full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
+| \`verify_domain_status\` | Verification and DKIM status of a sending domain | No |
+| \`list_suppressions\` | Addresses on your SES suppression list, filterable by BOUNCE or COMPLAINT | No |
+| \`check_send_status\` | Poll the outcome of a \`pending_approval\` send by \`approvalId\` (enforced mode only) | No |
+
+## Setup: Claude Code
+
+Add to \`.mcp.json\` in your project root. Claude Code inherits your shell's AWS environment — no extra env config needed.
+
+\`\`\`json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}
+\`\`\`
+
+## Setup: Claude Desktop / Cursor / Windsurf
+
+GUI clients don't inherit your shell, so pass region and profile explicitly. Claude Desktop config lives at \`~/Library/Application Support/Claude/claude_desktop_config.json\`; Cursor uses \`.cursor/mcp.json\`.
+
+\`\`\`json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"],
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "your-aws-profile"
+      }
+    }
+  }
+}
+\`\`\`
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| \`AWS_REGION\` | Yes | — | AWS region where your Wraps stack is deployed |
+| \`WRAPS_HISTORY_TABLE_NAME\` | No | \`wraps-email-history\` | DynamoDB table name for email history |
+| \`WRAPS_ACCOUNT_ID\` | No | auto-detected via STS | Your AWS account ID (skips the STS call if set) |
+| \`WRAPS_WRITE_ENABLED\` | No | \`false\` | Set to \`true\` to enable \`send_email\` |
+| \`WRAPS_FROM_EMAIL\` | No | — | Default \`from\` address for \`send_email\` |
+
+## Write Mode
+
+\`send_email\` is disabled by default. Set \`WRAPS_WRITE_ENABLED=true\` to enable it. The \`from\` address must belong to a domain verified in your SES account.
+
+Warning: write mode with no allowlist gives the agent unrestricted send capability to any address your SES account can reach. Set the guardrails below.
+
+## Send Guardrails
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| \`WRAPS_ALLOWED_RECIPIENTS\` | — (no restriction) | Comma-separated exact addresses the agent may send to |
+| \`WRAPS_ALLOWED_RECIPIENT_DOMAINS\` | — (no restriction) | Comma-separated domains; exact match only (subdomains must be listed explicitly) |
+| \`WRAPS_MAX_RECIPIENTS\` | \`50\` | Maximum recipients per \`send_email\` call |
+| \`WRAPS_ALLOW_FROM_OVERRIDE\` | \`false\` | Allow the agent to supply a \`from\` differing from \`WRAPS_FROM_EMAIL\` |
+
+A recipient is allowed if it matches either the address list or the domain list.
+
+## Enforced Mode
+
+For agents provisioned via \`wraps email agent create\`, the agent's AWS credential can only invoke an enforcer Lambda in your account — never SES directly. Kill-switch, recipient allowlist, and hourly/daily caps are decided by that Lambda; local guardrails don't apply. Activated by setting both \`WRAPS_AGENT_ID\` and \`WRAPS_AGENT_ENFORCER_ARN\`.
+
+\`send_email\` returns a structured disposition for policy outcomes: \`sent\` (with messageId), \`pending_approval\` (poll \`check_send_status\` with the returned approvalId), or \`blocked\` (with a reason). Enforced mode accepts one recipient per send.
+
+## Resources
+
+- npm: https://www.npmjs.com/package/@wraps.dev/mcp
+- GitHub: https://github.com/wraps-team/wraps-js/tree/main/packages/mcp
+- Agent quickstart: https://wraps.dev/docs/quickstart/email/agents
 `,
 
   "/docs/quickstart/email/nextjs": `# Send Email from Next.js

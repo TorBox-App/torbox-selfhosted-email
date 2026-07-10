@@ -64,6 +64,28 @@ await email.send({
 });
 ```
 
+## MCP Server (for AI Agents)
+
+Wraps ships an MCP server, `@wraps.dev/mcp`, that exposes a deployed email
+stack as tools: `list_recent_sends`, `get_email_event_log`,
+`verify_domain_status`, `list_suppressions`, and `send_email` (disabled by
+default; guarded by allowlists and caps when enabled). It runs locally over
+stdio and resolves AWS credentials from the environment — no API key.
+
+```json
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}
+```
+
+Full reference: https://wraps.dev/docs/mcp-reference — product page:
+https://wraps.dev/mcp
+
 ## Docs
 
 - [Quickstart: Email](https://wraps.dev/docs/quickstart/email): Deploy email in 30 seconds
@@ -75,6 +97,7 @@ await email.send({
 - [Remix Guide](https://wraps.dev/docs/quickstart/email/remix): Send email from Remix
 - [Inbound Email](https://wraps.dev/docs/quickstart/email/inbound): Receive and process inbound email
 - [Agent Email Quickstart](https://wraps.dev/docs/quickstart/email/agents): Wire Wraps into agent tool calls; SES lives in your AWS, not ours
+- [MCP Server Reference](https://wraps.dev/docs/mcp-reference): @wraps.dev/mcp — query send history, delivery events, domain status, and suppressions from any MCP client; guarded sending
 - [Email SDK Reference](https://wraps.dev/docs/sdk-reference): @wraps.dev/email API
 - [SMS SDK Reference](https://wraps.dev/docs/sms-sdk-reference): @wraps.dev/sms API
 - [Platform SDK Reference](https://wraps.dev/docs/client-sdk-reference): @wraps.dev/client API
@@ -135,6 +158,7 @@ await email.send({
 - [SMS](https://wraps.dev/sms): SMS product overview
 - [Inbound Email](https://wraps.dev/inbound): Inbound email receiving
 - [Agents](https://wraps.dev/agents): Email infrastructure your agent owns
+- [MCP Server](https://wraps.dev/mcp): MCP server for AWS SES email — read tools plus guarded sending
 - [Why Wraps](https://wraps.dev/why-wraps): Value proposition and differentiators
 
 ## Compare
@@ -159,6 +183,7 @@ await email.send({
 - [npm @wraps.dev/sms](https://npmjs.com/package/@wraps.dev/sms): SMS SDK
 - [npm @wraps.dev/client](https://npmjs.com/package/@wraps.dev/client): Platform SDK
 - [npm @wraps.dev/cli](https://npmjs.com/package/@wraps.dev/cli): CLI package
+- [npm @wraps.dev/mcp](https://npmjs.com/package/@wraps.dev/mcp): MCP server for AI agents
 
 ## Agent Skills
 

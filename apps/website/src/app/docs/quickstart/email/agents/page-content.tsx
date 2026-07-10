@@ -72,6 +72,15 @@ const context7McpConfig = `{
   }
 }`;
 
+const wrapsMcpConfig = `{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}`;
+
 export default function AgentEmailQuickstartPageContent() {
   return (
     <DocsLayout>
@@ -99,6 +108,9 @@ export default function AgentEmailQuickstartPageContent() {
             A typed send-email tool your agent framework can register as-is
           </li>
           <li>Wraps docs in your AI editor's context via Context7 MCP</li>
+          <li>
+            Live access to your email infrastructure via the Wraps MCP server
+          </li>
         </ul>
         <p className="text-muted-foreground text-xs">Time: ~5 minutes</p>
       </div>
@@ -322,6 +334,68 @@ export default function AgentEmailQuickstartPageContent() {
             href="/docs/guides/context7"
           >
             in the Context7 guide
+          </Link>
+          .
+        </p>
+      </section>
+
+      {/* Step 5 */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            5
+          </div>
+          Give your agent live access with the Wraps MCP server
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Context7 gives your editor the docs;{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">@wraps.dev/mcp</code>{" "}
+          gives your agent the infrastructure itself. It exposes your send
+          history, delivery events, domain status, and suppression list as MCP
+          tools — plus guarded sending, disabled by default.
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "json",
+              filename: ".mcp.json",
+              code: wrapsMcpConfig,
+            },
+          ]}
+          defaultValue="json"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <p className="text-muted-foreground text-sm">
+          Tools, configuration, and write-mode guardrails are covered{" "}
+          <Link
+            className="text-primary underline underline-offset-4"
+            href="/docs/mcp-reference"
+          >
+            in the MCP reference
           </Link>
           .
         </p>

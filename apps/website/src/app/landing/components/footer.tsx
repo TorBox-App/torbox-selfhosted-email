@@ -12,6 +12,8 @@ const footerLinks = {
   product: [
     { name: "CLI & SDK", href: "/cli" },
     { name: "Inbound Email", href: "/inbound" },
+    { name: "Agents", href: "/agents" },
+    { name: "MCP Server", href: "/mcp" },
     { name: "Platform", href: "/platform" },
     { name: "Pricing", href: "/#pricing" },
   ],
@@ -20,6 +22,7 @@ const footerLinks = {
     { name: "Quickstart", href: "/docs/quickstart" },
     { name: "CLI Reference", href: "/docs/cli-reference" },
     { name: "SDK Reference", href: "/docs/sdk-reference" },
+    { name: "MCP Reference", href: "/docs/mcp-reference" },
     { name: "CDK Reference", href: "/docs/cdk-reference" },
     { name: "Pulumi Reference", href: "/docs/pulumi-reference" },
     { name: "llms.txt", href: "/llms.txt" },
