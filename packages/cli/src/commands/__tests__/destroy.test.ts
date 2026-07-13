@@ -29,14 +29,20 @@ vi.mock("../../utils/shared/pulumi.js", async () => {
 });
 vi.mock("../../utils/route53.js");
 vi.mock("@aws-sdk/client-sesv2");
+vi.mock("../../utils/shared/agent-api.js");
 
 import * as prompts from "@clack/prompts";
 import * as route53 from "../../utils/route53.js";
+import * as agentApi from "../../utils/shared/agent-api.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
 import * as metadata from "../../utils/shared/metadata.js";
 // Import after mocks
-import { emailDestroy } from "../email/destroy.js";
+import {
+  buildAgentDestroySummaryLines,
+  emailDestroy,
+  selectAgentsToDestroy,
+} from "../email/destroy.js";
 import { destroy } from "../shared/destroy.js";
 
 describe("email destroy command", () => {
@@ -105,7 +111,54 @@ describe("email destroy command", () => {
     // Mock Route53 utilities
     vi.mocked(route53.findHostedZone).mockResolvedValue(null);
     vi.mocked(route53.deleteDNSRecords).mockResolvedValue(undefined);
+
+    // Default: no reachable Wraps Platform (agent kill step is best-effort).
+    vi.mocked(agentApi.createAgentApiClient).mockResolvedValue({
+      ok: false,
+      reason: "not-authenticated",
+    });
   });
+
+  // Metadata carrying two enabled agents in the email stack.
+  function metadataWithAgents(webhookSecret?: string) {
+    return {
+      version: "1.0.0" as const,
+      accountId: "123456789012",
+      region: "us-east-1",
+      provider: "vercel" as const,
+      timestamp: new Date().toISOString(),
+      services: {
+        email: {
+          preset: "production",
+          config: {
+            domain: "example.com",
+            tracking: { enabled: true },
+            agents: {
+              enabled: true,
+              webhookSecret: "enforcer-secret",
+              agents: [
+                {
+                  id: "agent-1",
+                  name: "sdr",
+                  emailAddress: "sdr@example.com",
+                  domain: "example.com",
+                },
+                {
+                  id: "agent-2",
+                  name: "support",
+                  emailAddress: "support@example.com",
+                  domain: "example.com",
+                },
+              ],
+            },
+          },
+          pulumiStackName: "wraps-email-123456789012-us-east-1",
+          deployedAt: new Date().toISOString(),
+          ...(webhookSecret ? { webhookSecret } : {}),
+        },
+      },
+    };
+  }
 
   // Helper function to setup Pulumi mocking
   async function setupPulumiMock(shouldThrowOnSelect = false) {
@@ -510,6 +563,131 @@ describe("email destroy command", () => {
     });
   });
 
+  describe("Agent mailbox cleanup", () => {
+    describe("selectAgentsToDestroy", () => {
+      it("returns empty when agents are absent or disabled", () => {
+        expect(selectAgentsToDestroy(undefined)).toEqual([]);
+        expect(selectAgentsToDestroy({} as never)).toEqual([]);
+        expect(
+          selectAgentsToDestroy({
+            agents: { enabled: false, agents: [] },
+          } as never)
+        ).toEqual([]);
+      });
+
+      it("projects id/name/emailAddress for enabled agents", () => {
+        const agents = selectAgentsToDestroy(
+          metadataWithAgents().services.email.config as never
+        );
+        expect(agents).toEqual([
+          { id: "agent-1", name: "sdr", emailAddress: "sdr@example.com" },
+          {
+            id: "agent-2",
+            name: "support",
+            emailAddress: "support@example.com",
+          },
+        ]);
+      });
+    });
+
+    describe("buildAgentDestroySummaryLines", () => {
+      it("returns no lines when there are no agents", () => {
+        expect(buildAgentDestroySummaryLines([])).toEqual([]);
+      });
+
+      it("names the agents and states the credential/enforcer/approval impact", () => {
+        const lines = buildAgentDestroySummaryLines([
+          { id: "a1", name: "sdr", emailAddress: "sdr@example.com" },
+          { id: "a2", name: "support", emailAddress: "support@example.com" },
+        ]).join("\n");
+        expect(lines).toContain("Agent mailboxes (2)");
+        expect(lines).toContain("sdr@example.com");
+        expect(lines).toContain("support@example.com");
+        expect(lines).toContain("wraps-agent-enforcer");
+        expect(lines).toContain("wraps-email-agent-policy");
+        expect(lines).toContain("pending approvals");
+      });
+    });
+
+    it("includes agents in the confirm summary note", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        metadataWithAgents() as never
+      );
+
+      await emailDestroy({});
+
+      expect(prompts.note).toHaveBeenCalledWith(
+        expect.stringContaining("sdr@example.com"),
+        "What will be destroyed"
+      );
+      expect(prompts.note).toHaveBeenCalledWith(
+        expect.stringContaining("wraps-agent-enforcer"),
+        "What will be destroyed"
+      );
+    });
+
+    it("kills each agent in Neon after the stack destroy succeeds", async () => {
+      const mockStack = await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        metadataWithAgents() as never
+      );
+      const post = vi.fn().mockResolvedValue({ ok: true } as Response);
+      vi.mocked(agentApi.createAgentApiClient).mockResolvedValue({
+        ok: true,
+        get: vi.fn(),
+        post,
+      });
+
+      await emailDestroy({ force: true });
+
+      expect(mockStack.destroy).toHaveBeenCalled();
+      expect(post).toHaveBeenCalledWith("/v1/agents/agent-1/kill");
+      expect(post).toHaveBeenCalledWith("/v1/agents/agent-2/kill");
+      expect(prompts.log.info).toHaveBeenCalledWith(
+        expect.stringContaining("2/2 agent(s) as killed")
+      );
+    });
+
+    it("warns (never throws) when the Platform is unreachable for agent kill", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        metadataWithAgents() as never
+      );
+      vi.mocked(agentApi.createAgentApiClient).mockResolvedValue({
+        ok: false,
+        reason: "not-authenticated",
+      });
+
+      await emailDestroy({ force: true });
+
+      expect(prompts.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("still show as active in the dashboard")
+      );
+    });
+
+    it("never fails the destroy when the kill call throws", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        metadataWithAgents() as never
+      );
+      const post = vi.fn().mockRejectedValue(new Error("network down"));
+      vi.mocked(agentApi.createAgentApiClient).mockResolvedValue({
+        ok: true,
+        get: vi.fn(),
+        post,
+      });
+
+      await emailDestroy({ force: true });
+
+      // Metadata still cleaned up — the swallowed kill error did not abort.
+      expect(metadata.deleteConnectionMetadata).toHaveBeenCalledWith(
+        "123456789012",
+        "us-east-1"
+      );
+    });
+  });
+
   describe("JSON output", () => {
     let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
@@ -550,6 +728,29 @@ describe("email destroy command", () => {
       await expect(emailDestroy({ json: true })).rejects.toThrow(
         "--force flag is required in JSON mode"
       );
+    });
+
+    it("should mirror agent info in the JSON envelope", async () => {
+      const mockStack = await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        metadataWithAgents() as never
+      );
+      await emailDestroy({ force: true, json: true });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          return JSON.parse(call[0]).command === "email.destroy";
+        } catch {
+          return false;
+        }
+      });
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.data.agents).toEqual([
+        { id: "agent-1", name: "sdr", emailAddress: "sdr@example.com" },
+        { id: "agent-2", name: "support", emailAddress: "support@example.com" },
+      ]);
+      // mockStack destroyed so this exercises the success path.
+      expect(mockStack.destroy).toHaveBeenCalled();
     });
   });
 });

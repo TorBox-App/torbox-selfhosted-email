@@ -214,6 +214,96 @@ describe("POST /v1/agents/webhook", () => {
     expect(orgBRows).toHaveLength(0);
   });
 
+  it("event:blocked → no queue row, returns {approvalId:null}, notifies the org", async () => {
+    const res = await app().handle(
+      new Request("http://localhost/v1/agents/webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Wraps-Agent-Key": SECRET_A,
+        },
+        body: JSON.stringify({
+          agentId,
+          event: "blocked",
+          payload,
+          reason: "kill switch is on",
+        }),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.approvalId).toBeNull();
+
+    // Blocked sends are a pure stop — nothing is queued for approval.
+    const rows = await db
+      .select()
+      .from(agentApprovalQueue)
+      .where(inArray(agentApprovalQueue.organizationId, [ORG_A, ORG_B]));
+    expect(rows).toHaveLength(0);
+
+    // But the operator still gets an audit-trail notification.
+    const notes = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.organizationId, ORG_A));
+    expect(notes.some((n) => n.type === "agent.send_blocked")).toBe(true);
+    // Never the pending type for a blocked send.
+    expect(notes.some((n) => n.type === "agent.send_pending")).toBe(false);
+  });
+
+  it("valid key + unknown agentId → 404, writes nothing", async () => {
+    const res = await app().handle(
+      new Request("http://localhost/v1/agents/webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Wraps-Agent-Key": SECRET_A,
+        },
+        body: JSON.stringify({
+          agentId: crypto.randomUUID(),
+          event: "pending_approval",
+          payload,
+          reason: "x",
+        }),
+      })
+    );
+
+    expect(res.status).toBe(404);
+    const rows = await db
+      .select()
+      .from(agentApprovalQueue)
+      .where(inArray(agentApprovalQueue.organizationId, [ORG_A, ORG_B]));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("valid key for the WRONG org's account → 404 (agent not in matched org)", async () => {
+    // SECRET_B matches ORG_B, but the agent belongs to ORG_A. The org is
+    // resolved from the matched account, so ORG_A's agent is invisible → 404.
+    const res = await app().handle(
+      new Request("http://localhost/v1/agents/webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Wraps-Agent-Key": SECRET_B,
+        },
+        body: JSON.stringify({
+          agentId,
+          event: "pending_approval",
+          payload,
+          reason: "cross-org attempt",
+        }),
+      })
+    );
+
+    expect(res.status).toBe(404);
+    const rows = await db
+      .select()
+      .from(agentApprovalQueue)
+      .where(inArray(agentApprovalQueue.organizationId, [ORG_A, ORG_B]));
+    expect(rows).toHaveLength(0);
+  });
+
   it("invalid key → 401 and writes nothing", async () => {
     const res = await app().handle(
       new Request("http://localhost/v1/agents/webhook", {

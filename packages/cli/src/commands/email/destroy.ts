@@ -2,8 +2,10 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
+import type { WrapsEmailConfig } from "../../types/email.js";
 import type { DestroyOptions } from "../../types/index.js";
 import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
+import { createAgentApiClient } from "../../utils/shared/agent-api.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -59,6 +61,52 @@ async function getEmailIdentityInfo(
     }
     throw error;
   }
+}
+
+export type DestroyAgentEntry = {
+  id: string;
+  name: string;
+  emailAddress: string;
+};
+
+/**
+ * Pick the agents that live in the email stack being torn down. Their scoped
+ * credentials, the enforcer Lambda, and the policy table all live in this same
+ * stack, so a destroy revokes them — the returned list drives both the consent
+ * summary and the best-effort Neon status sync.
+ */
+export function selectAgentsToDestroy(
+  emailConfig: WrapsEmailConfig | undefined
+): DestroyAgentEntry[] {
+  const agentsConfig = emailConfig?.agents;
+  if (!agentsConfig?.enabled) {
+    return [];
+  }
+  return (agentsConfig.agents ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    emailAddress: a.emailAddress,
+  }));
+}
+
+/**
+ * Build the "What will be destroyed" lines that spell out the agent blast
+ * radius. Empty when the stack has no enabled agents.
+ */
+export function buildAgentDestroySummaryLines(
+  agents: DestroyAgentEntry[]
+): string[] {
+  if (agents.length === 0) {
+    return [];
+  }
+  const addresses = agents.map((a) => a.emailAddress).join(", ");
+  return [
+    "",
+    `Agent mailboxes (${agents.length}): ${addresses}`,
+    pc.yellow(
+      "Agent scoped credentials are revoked (IAM users wraps-agent-* deleted), the wraps-agent-enforcer Lambda and wraps-email-agent-policy table are destroyed, and any pending approvals become undeliverable."
+    ),
+  ];
 }
 
 /**
@@ -154,6 +202,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   const emailConfig = emailService?.config;
   const domain = emailConfig?.domain;
   const storedStackName = emailService?.pulumiStackName;
+  const agentsToDestroy = selectAgentsToDestroy(emailConfig);
 
   // 4. Confirm destruction (skip if --force or --preview)
   if (!(options.force || options.preview)) {
@@ -173,6 +222,8 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         "Event streaming stops: the Wraps dashboard email timeline and event history for THIS ENTIRE AWS ACCOUNT stop receiving events. Historical events in DynamoDB are destroyed with the table. This cannot be undone."
       ),
     ];
+
+    summaryLines.push(...buildAgentDestroySummaryLines(agentsToDestroy));
 
     if (emailService?.webhookSecret) {
       summaryLines.push(
@@ -301,6 +352,15 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
             `DNS records in Route53 for ${pc.cyan(domain)} will also be deleted`
           );
         }
+      }
+
+      // Show agent blast radius so the operator sees leashed credentials go too.
+      const agentSummaryLines = buildAgentDestroySummaryLines(agentsToDestroy);
+      if (agentSummaryLines.length > 0) {
+        clack.note(
+          agentSummaryLines.filter(Boolean).join("\n"),
+          "Agent mailboxes"
+        );
       }
 
       clack.outro(
@@ -457,6 +517,40 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
     // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
   } catch {}
 
+  // 9c. Best-effort: mark this stack's agents KILLED in Neon so the dashboard
+  // doesn't keep showing live agents pointing at destroyed infra. The enforcer's
+  // DynamoDB sync-back is expected to fail (the policy table is gone) — we only
+  // care about the durable Neon status, so `syncStatus` is ignored here. Runs
+  // AFTER the stack destroy so API availability can never block the teardown,
+  // and is fully swallowed so it can never fail the destroy.
+  if (agentsToDestroy.length > 0) {
+    try {
+      const agentApi = await createAgentApiClient();
+      if (agentApi.ok) {
+        let killed = 0;
+        for (const agent of agentsToDestroy) {
+          try {
+            const resp = await agentApi.post(`/v1/agents/${agent.id}/kill`);
+            if (resp.ok) {
+              killed++;
+            }
+            // baseline:allow-next-line no-swallowed-errors — best-effort cleanup
+          } catch {}
+        }
+        if (!isJsonMode()) {
+          clack.log.info(
+            `Marked ${killed}/${agentsToDestroy.length} agent(s) as killed in the Wraps dashboard.`
+          );
+        }
+      } else if (!isJsonMode()) {
+        clack.log.warn(
+          "Could not reach the Wraps Platform to update agent status — your agents will still show as active in the dashboard. Kill them there: wraps email agent kill (or the dashboard)."
+        );
+      }
+      // baseline:allow-next-line no-swallowed-errors — never fail destroy on cleanup
+    } catch {}
+  }
+
   // 9b. Delete connection metadata (even on partial failure, so user isn't stuck)
   await deleteConnectionMetadata(identity.accountId, region);
 
@@ -469,6 +563,11 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       region,
       dns_cleaned: shouldCleanDNS,
       partial_failure: destroyFailed,
+      agents: agentsToDestroy.map((a) => ({
+        id: a.id,
+        name: a.name,
+        emailAddress: a.emailAddress,
+      })),
     });
     trackServiceRemoved("email", {
       reason: "user_initiated",
