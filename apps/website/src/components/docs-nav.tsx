@@ -111,9 +111,14 @@ const navItems: NavSection[] = [
         ],
       },
       {
-        title: "SDK Reference",
+        title: "TypeScript SDK",
         href: "/docs/sdk-reference",
         icon: Mail,
+      },
+      {
+        title: "Python SDK",
+        href: "/docs/python-sdk-reference",
+        icon: FileCode2,
       },
       {
         title: "MCP Server",

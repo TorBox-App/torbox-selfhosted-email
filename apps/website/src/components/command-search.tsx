@@ -240,11 +240,18 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
       icon: Workflow,
     },
     {
-      title: "Email SDK Reference",
+      title: "TypeScript Email SDK",
       description: "send, batch, templates, and tracking APIs",
       url: "/docs/sdk-reference",
       group: "Email",
       icon: Mail,
+    },
+    {
+      title: "Python Email SDK",
+      description: "send, attachments, templates, and suppression from Python",
+      url: "/docs/python-sdk-reference",
+      group: "Email",
+      icon: FileCode2,
     },
     {
       title: "Email CLI Commands",
