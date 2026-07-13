@@ -265,7 +265,7 @@ export const COMPETITORS: Competitor[] = [
     name: "PostHog",
     freeMessages: "10K",
     entryPrice: "Usage-based",
-    overageRate: "~$5/1K",
+    overageRate: "$3/1K (email)",
     infrastructure: "PostHog",
   },
   {

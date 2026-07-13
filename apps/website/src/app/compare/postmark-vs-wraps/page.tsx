@@ -122,27 +122,27 @@ const pricingRows = [
   },
   {
     volume: "100K/mo",
-    postmark: "$100-$134",
-    postmarkDetail: "Pro tier, volume-dependent",
+    postmark: "$126-$134",
+    postmarkDetail: "Pro/Platform + overage",
     wraps: "$89",
     wrapsDetail: "$79 Growth + $10 SES",
-    savings: "11-33%",
+    savings: "29-34%",
   },
   {
     volume: "500K/mo",
-    postmark: "$320-$400",
-    postmarkDetail: "Pro tier, volume-dependent",
+    postmark: "$606-$654",
+    postmarkDetail: "Pro/Platform + overage",
     wraps: "$249",
     wrapsDetail: "$199 Scale + $50 SES",
-    savings: "22-38%",
+    savings: "59-62%",
   },
   {
     volume: "1M/mo",
-    postmark: "~$700",
-    postmarkDetail: "Pro @ 1.5M volume tier",
+    postmark: "~$1,200-$1,300",
+    postmarkDetail: "Pro/Platform + overage (custom deals at 1.5M+)",
     wraps: "$299",
     wrapsDetail: "$199 Scale + $100 SES",
-    savings: "57%",
+    savings: "75%+",
   },
 ];
 
@@ -536,9 +536,11 @@ export default function PostmarkVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
-              Postmark charges $1.20&ndash;$1.80 per 1,000 emails depending on
-              plan and volume. AWS SES charges $0.10 per 1,000. Here&apos;s what
-              that means at real send volumes.
+              Postmark&apos;s 2026 plans (Basic $15, Pro $16.50, Platform $18)
+              all include just 10K emails &mdash; everything above that is
+              overage at $1.20&ndash;$1.80 per 1,000 emails depending on plan.
+              AWS SES charges $0.10 per 1,000. Here&apos;s what that means at
+              real send volumes.
             </p>
 
             <Card className="overflow-hidden py-0">
@@ -548,7 +550,7 @@ export default function PostmarkVsWrapsPage() {
                     <tr className="border-b bg-muted/50">
                       <th className="p-4 text-left font-medium">Volume</th>
                       <th className="p-4 text-left font-medium">
-                        Postmark (Pro)
+                        Postmark (Pro/Platform)
                       </th>
                       <th className="p-4 text-left font-medium text-primary">
                         Wraps + SES
@@ -583,9 +585,10 @@ export default function PostmarkVsWrapsPage() {
             </Card>
 
             <p className="mt-4 text-muted-foreground text-sm">
-              Postmark pricing uses their Pro tier (most popular). Wraps pricing
-              includes the platform fee plus AWS SES at $0.10/1K emails. You pay
-              AWS directly &mdash; Wraps never touches your email spend.{" "}
+              Postmark pricing shows their Pro and Platform plans, computed from
+              published base + overage rates. Wraps pricing includes the
+              platform fee plus AWS SES at $0.10/1K emails. You pay AWS directly
+              &mdash; Wraps never touches your email spend.{" "}
               <a
                 className="text-primary underline"
                 href="/tools/ses-calculator"

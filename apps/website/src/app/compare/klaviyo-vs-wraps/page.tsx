@@ -89,7 +89,7 @@ const tldrComparison = [
   },
   {
     dimension: "Contact cost",
-    klaviyo: "$0.006-$0.014 per profile/month",
+    klaviyo: "$0.014-$0.030 per profile/month",
     wraps: "$0 (unlimited on all tiers)",
   },
   {

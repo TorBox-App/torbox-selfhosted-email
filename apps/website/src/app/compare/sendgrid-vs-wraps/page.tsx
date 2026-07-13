@@ -86,7 +86,7 @@ const tldrComparison = [
   },
   {
     dimension: "Pricing (500K emails/mo)",
-    sendgrid: "~$449/mo",
+    sendgrid: "~$499/mo",
     wraps: "$199 + $50 AWS = $249/mo",
   },
   {
@@ -140,12 +140,12 @@ const pricingComparison = [
   {
     volume: "500K/mo",
     sendgridTier: "Pro 700K",
-    sendgridCost: "~$449/mo",
+    sendgridCost: "~$499/mo",
     wrapsTier: "Scale",
     wrapsPlatform: "$199",
     wrapsAws: "$50.00",
     wrapsTotal: "$249.00/mo",
-    savings: "44%",
+    savings: "50%",
   },
 ];
 
@@ -255,7 +255,7 @@ const featureComparison = [
       },
       {
         name: "Unlimited contacts",
-        sendgrid: "$10/10K contacts/mo extra",
+        sendgrid: "Separate Marketing Campaigns plan ($25-60/mo for 10K)",
         wraps: "All tiers",
       },
       {
@@ -635,9 +635,9 @@ export default function SendGridVsWrapsPage() {
                 <CardContent>
                   <h3 className="mb-1 font-medium text-sm">Hidden cost #2</h3>
                   <p className="text-muted-foreground text-sm">
-                    Contact storage costs $10 per 10,000 contacts/month on
-                    Marketing Campaigns plans. Wraps includes unlimited contacts
-                    on all tiers.
+                    Marketing Campaigns is priced by contacts: 10K contacts runs
+                    $25/mo (Basic) or $60/mo (Advanced), on top of your Email
+                    API plan. Wraps includes unlimited contacts on all tiers.
                   </p>
                 </CardContent>
               </Card>

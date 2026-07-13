@@ -57,7 +57,7 @@ const comparisons = [
     href: "/compare/resend-vs-wraps",
     tagline: "Same DX, different economics",
     description:
-      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (3 days vs unlimited), overage pricing ($0.90/1K vs $0.10/1K), and what happens when you cancel.",
+      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (30 days vs unlimited), overage pricing ($0.90/1K vs $0.10/1K), and what happens when you cancel.",
   },
   {
     competitor: "Amazon SES",
@@ -78,7 +78,7 @@ const comparisons = [
     href: "/compare/customer-io-vs-wraps",
     tagline: "Unlimited contacts, no surprise bills",
     description:
-      "Customer.io charges per contact — $100/mo at 5K profiles, $1,000/mo at 75K. Wraps charges a flat platform fee with unlimited contacts. Compare the full cost at every volume.",
+      "Customer.io charges per contact — $100/mo at 5K profiles, ~$1,000/mo at 100K. Wraps charges a flat platform fee with unlimited contacts. Compare the full cost at every volume.",
   },
   {
     competitor: "Postmark",

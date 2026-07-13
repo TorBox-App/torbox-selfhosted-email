@@ -71,12 +71,12 @@ const tldrComparison = [
   },
   {
     dimension: "Sending cost",
-    resend: "$0.40-0.90/1K emails",
+    resend: "$0.35-0.90/1K emails",
     wraps: "$0.10/1K (AWS SES direct)",
   },
   {
     dimension: "Data retention",
-    resend: "1-7 days (plan-dependent)",
+    resend: "30 days (non-Enterprise)",
     wraps: "You decide (your DynamoDB)",
   },
   {
@@ -119,8 +119,8 @@ const pricingComparison = [
   },
   {
     volume: "100K/mo",
-    resendTier: "Scale",
-    resendCost: "$90",
+    resendTier: "Pro 100K / Scale",
+    resendCost: "$35-90",
     wrapsTier: "Growth",
     wrapsPlatform: "$79",
     awsSes: "$10",
@@ -129,13 +129,13 @@ const pricingComparison = [
   },
   {
     volume: "500K/mo",
-    resendTier: "Scale + overage",
-    resendCost: "$450",
+    resendTier: "Scale 500K tier",
+    resendCost: "$350",
     wrapsTier: "Scale",
     wrapsPlatform: "$199",
     awsSes: "$50",
     wrapsTotal: "$249",
-    savings: "45%",
+    savings: "29%",
   },
 ];
 
@@ -160,7 +160,7 @@ const featureComparison = [
       { name: "Delivery events", resend: true, wraps: true },
       {
         name: "Data retention",
-        resend: "1-7 days",
+        resend: "30 days (non-Enterprise)",
         wraps: "You decide (your DynamoDB)",
       },
       {
@@ -614,13 +614,16 @@ export default function ResendVsWrapsPage() {
                 (1M events). All tiers include unlimited contacts.
               </p>
               <p>
-                Resend gotchas: Pro plan hard caps at 250K emails (5x quota).
-                Scale plan hard caps at 500K. CC/BCC count as separate emails.
-                Marketing contacts billed separately ($40/mo for 5K contacts).
+                Resend gotchas: exceeding your tier auto-bills overage at
+                $0.65-0.90/1K. Getting Scale features at 100K costs $90/mo (the
+                $35 Pro tier skips SSO and caps domains at 10). CC/BCC count as
+                separate emails. Marketing contacts billed separately ($40/mo
+                for 5K contacts).
               </p>
               <p>
-                At 50K/mo, pricing is comparable -- but Wraps includes 30-day
-                data history vs Resend&apos;s 3-day retention on Pro.
+                At 50K/mo, pricing is comparable -- but with Wraps the events
+                live in your own DynamoDB with retention you control, vs
+                Resend&apos;s 30-day cap.
               </p>
             </div>
           </section>

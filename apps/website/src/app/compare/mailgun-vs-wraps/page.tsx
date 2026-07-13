@@ -70,7 +70,7 @@ const tldrComparison = [
   },
   {
     dimension: "Sending cost",
-    mailgun: "$0.80/1K (Flex PAYG) or $35/mo for 50K",
+    mailgun: "$15/mo (10K) to $90/mo (100K), overage $1.10-1.80/1K",
     wraps: "$0.10/1K (AWS SES direct)",
   },
   {
@@ -98,13 +98,13 @@ const tldrComparison = [
 const pricingComparison = [
   {
     volume: "10K/mo",
-    mailgunTier: "Flex (PAYG)",
-    mailgunCost: "~$6",
+    mailgunTier: "Basic",
+    mailgunCost: "$15",
     wrapsTier: "Free",
     wrapsPlatform: "$0",
     awsSes: "$1",
     wrapsTotal: "$1",
-    savings: "83%",
+    savings: "93%",
   },
   {
     volume: "50K/mo",
@@ -118,8 +118,8 @@ const pricingComparison = [
   },
   {
     volume: "100K/mo",
-    mailgunTier: "Foundation + overage",
-    mailgunCost: "$85",
+    mailgunTier: "Foundation 100K / Scale",
+    mailgunCost: "$75-90",
     wrapsTier: "Growth",
     wrapsPlatform: "$79",
     awsSes: "$10",
@@ -128,13 +128,13 @@ const pricingComparison = [
   },
   {
     volume: "500K/mo",
-    mailgunTier: "Scale + overage",
-    mailgunCost: "$490",
+    mailgunTier: "Scale 500K",
+    mailgunCost: "$400",
     wrapsTier: "Scale",
     wrapsPlatform: "$199",
     awsSes: "$50",
     wrapsTotal: "$249",
-    savings: "49%",
+    savings: "38%",
   },
 ];
 
@@ -185,7 +185,7 @@ const featureComparison = [
       { name: "DKIM/SPF/DMARC", mailgun: true, wraps: true },
       {
         name: "Dedicated IPs",
-        mailgun: "Foundation+ ($35/mo+)",
+        mailgun: "Included from $75/mo plans; extras $59/IP/mo",
         wraps: "Request via AWS",
       },
       {
@@ -545,10 +545,11 @@ export default function MailgunVsWrapsPage() {
               Pricing at real volumes
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Mailgun&apos;s Flex plan charges $0.80/1K after 100 emails/day
-              (~3K/mo). Foundation is $35/mo for 50K emails then $1/1K overage.
-              Wraps charges a platform fee separately -- you pay AWS directly at
-              $0.10/1K emails.
+              Mailgun retired its Flex pay-as-you-go plan in December 2025 (new
+              signups get a 100-emails/day free plan, hard capped). Paid plans
+              start at $15/mo for 10K emails; Foundation is $35/mo for 50K then
+              $1.30/1K overage. Wraps charges a platform fee separately -- you
+              pay AWS directly at $0.10/1K emails.
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
@@ -598,9 +599,11 @@ export default function MailgunVsWrapsPage() {
                 (1M events). All tiers include unlimited contacts.
               </p>
               <p>
-                Mailgun gotchas: Flex PAYG at $0.80/1K is 8x AWS SES pricing.
-                Dedicated IPs require Foundation or higher. HIPAA BAA only
-                available on Enterprise (custom pricing).
+                Mailgun gotchas: legacy Flex users saw their rate double to
+                $2/1K in December 2025 -- 20x AWS SES pricing. Overage runs
+                $1.10-1.80/1K depending on plan. Dedicated IPs are included only
+                from the $75/mo Foundation 100K plan up; extras cost $59/IP/mo.
+                HIPAA BAA only available on Enterprise (custom pricing).
               </p>
               <p>
                 At 100K/mo, pricing is comparable -- but Wraps includes
