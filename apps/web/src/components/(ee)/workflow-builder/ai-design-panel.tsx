@@ -26,6 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AssistantConversation } from "@/components/ui/assistant-conversation";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/ui/markdown";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { extractWorkflowFromMessage } from "@/lib/ai/(ee)/workflow-parser";
@@ -355,9 +356,11 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
         isLoading={isLoading}
         loadingLabel="Generating your workflow..."
         messages={messages}
-        renderAssistantText={(text) =>
-          text.replace(/```json[\s\S]*?```/g, "[Workflow generated]")
-        }
+        renderAssistantText={(text) => (
+          <Markdown>
+            {text.replace(/```json[\s\S]*?```/g, "[Workflow generated]")}
+          </Markdown>
+        )}
       />
 
       {/* Pending Workflow Actions */}

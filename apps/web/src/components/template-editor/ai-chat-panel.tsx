@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AssistantConversation } from "@/components/ui/assistant-conversation";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/ui/markdown";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
@@ -540,7 +541,7 @@ function AssistantMessage({ content }: { content: string }) {
   const parts = content.split(/(```json[\s\S]*?```)/g);
 
   return (
-    <div className="space-y-2 whitespace-pre-wrap">
+    <div className="space-y-2">
       {parts.map((part, index) => {
         if (part.startsWith("```json")) {
           // Show a collapsed indicator for JSON blocks
@@ -555,7 +556,9 @@ function AssistantMessage({ content }: { content: string }) {
         }
         const trimmed = part.trim();
         return trimmed ? (
-          <span key={`${index}-${trimmed.slice(0, 20)}`}>{trimmed}</span>
+          <Markdown key={`${index}-${trimmed.slice(0, 20)}`}>
+            {trimmed}
+          </Markdown>
         ) : null;
       })}
     </div>
