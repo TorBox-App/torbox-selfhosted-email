@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import { Avatar, AvatarFallback } from "@wraps/ui/components/ui/avatar";
-import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { DefaultChatTransport } from "ai";
 import {
@@ -23,9 +22,24 @@ import {
   Wand2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from "@/components/ui/message";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller";
 import {
   Reasoning,
   ReasoningContent,
@@ -124,7 +138,6 @@ export function AIChatPanel({
   );
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 44,
     maxHeight: 360,
@@ -235,18 +248,6 @@ export function AIChatPanel({
     }
   }, [messages, isLoading, setLastGeneratedContent]);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  }, []);
-
   const handleApplyContent = useCallback(() => {
     if (!(editor && pendingContent)) {
       return;
@@ -294,6 +295,16 @@ export function AIChatPanel({
       .map((part) => part.text)
       .join("");
 
+  // A part is still streaming if it's the last part of the last message
+  // and generation is in progress
+  const isPartStreaming = (
+    message: (typeof messages)[number],
+    partIndex: number
+  ) =>
+    isLoading &&
+    partIndex === message.parts.length - 1 &&
+    message.id === messages.at(-1)?.id;
+
   return (
     <div
       className={cn(
@@ -334,200 +345,194 @@ export function AIChatPanel({
       )}
 
       {/* Messages */}
-      <ScrollArea className="min-h-0 flex-1" ref={scrollAreaRef}>
-        <div className="p-3">
-          {/* Show limit reached state when no messages remaining */}
-          {aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
-                <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h4 className="mb-1 font-medium text-sm">
-                Monthly Limit Reached
-              </h4>
-              <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
-                You've used all {aiUsage.limit} AI messages this month. Upgrade
-                your plan for more AI assistance.
-              </p>
-              <Button asChild className="h-8 text-xs" size="sm">
-                <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
-              </Button>
-              <p className="mt-3 text-muted-foreground text-xs">
-                Resets on the 1st of next month.
-              </p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="space-y-3">
-              {/* Compact welcome - hidden on very small screens when as side panel */}
-              <div className="py-4 text-center">
-                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <Wand2 className="h-5 w-5 text-primary" />
-                </div>
-                <h4 className="mb-1 font-medium text-sm">AI Assistant</h4>
-                <p className="text-muted-foreground text-xs">
-                  Describe your email to generate it
-                </p>
-              </div>
-
-              {/* Quick prompts as compact chips */}
-              <div className="space-y-2">
-                <p className="px-1 font-medium text-muted-foreground text-xs">
-                  Quick prompts
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_PROMPTS.map((qp) => (
-                    <Button
-                      className="h-7 px-2.5 text-xs"
-                      key={qp.label}
-                      onClick={() => handleSendMessage(qp.prompt)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      {qp.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Favorite prompts */}
-              {favorites.length > 0 && (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1 px-1 font-medium text-muted-foreground text-xs">
-                    <Heart className="h-3 w-3" />
-                    Your favorites
+      <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
+        <MessageScroller className="min-h-0 flex-1">
+          <MessageScrollerViewport>
+            <MessageScrollerContent className="p-3">
+              {/* Show limit reached state when no messages remaining */}
+              {aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
+                    <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <h4 className="mb-1 font-medium text-sm">
+                    Monthly Limit Reached
+                  </h4>
+                  <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
+                    You've used all {aiUsage.limit} AI messages this month.
+                    Upgrade your plan for more AI assistance.
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {favorites.map((fav) => (
-                      <div className="group relative" key={fav.id}>
+                  <Button asChild className="h-8 text-xs" size="sm">
+                    <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
+                  </Button>
+                  <p className="mt-3 text-muted-foreground text-xs">
+                    Resets on the 1st of next month.
+                  </p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="space-y-3">
+                  {/* Compact welcome - hidden on very small screens when as side panel */}
+                  <div className="py-4 text-center">
+                    <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <Wand2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <h4 className="mb-1 font-medium text-sm">AI Assistant</h4>
+                    <p className="text-muted-foreground text-xs">
+                      Describe your email to generate it
+                    </p>
+                  </div>
+
+                  {/* Quick prompts as compact chips */}
+                  <div className="space-y-2">
+                    <p className="px-1 font-medium text-muted-foreground text-xs">
+                      Quick prompts
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUICK_PROMPTS.map((qp) => (
                         <Button
-                          className="h-7 pr-6 text-xs"
-                          onClick={() => handleSendMessage(fav.prompt)}
+                          className="h-7 px-2.5 text-xs"
+                          key={qp.label}
+                          onClick={() => handleSendMessage(qp.prompt)}
                           size="sm"
-                          variant="secondary"
+                          variant="outline"
                         >
-                          {fav.label}
+                          {qp.label}
                         </Button>
-                        <button
-                          aria-label="Remove from favorites"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFavorite(fav.id);
-                          }}
-                          type="button"
-                        >
-                          <X className="h-3 w-3 text-muted-foreground" />
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  className={cn(
-                    "flex gap-2",
-                    message.role === "user" && "flex-row-reverse"
-                  )}
-                  key={message.id}
-                >
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback
-                      className={cn(
-                        "text-xs",
-                        message.role === "assistant"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      )}
-                    >
-                      {message.role === "assistant" ? (
-                        <Bot className="h-3 w-3" />
-                      ) : (
-                        <User className="h-3 w-3" />
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
-                    className={cn(
-                      "min-w-0 flex-1",
-                      message.role === "user" && "text-right"
-                    )}
-                  >
-                    {message.role === "assistant" ? (
-                      <div className="space-y-2">
-                        {message.parts.map((part, partIndex) => {
-                          const isLastPart =
-                            partIndex === message.parts.length - 1;
-                          const isLastMessage =
-                            message.id === messages.at(-1)?.id;
-                          const isStreamingPart =
-                            isLoading && isLastPart && isLastMessage;
 
-                          if (part.type === "reasoning") {
-                            return (
-                              <Reasoning
-                                defaultOpen={isStreamingPart}
-                                isStreaming={isStreamingPart}
-                                key={`${message.id}-${partIndex}`}
-                              >
-                                <ReasoningTrigger />
-                                <ReasoningContent>{part.text}</ReasoningContent>
-                              </Reasoning>
-                            );
-                          }
-
-                          if (part.type === "text") {
-                            return (
-                              <div
-                                className="inline-block max-w-full rounded-lg bg-muted px-2.5 py-1.5 text-xs"
-                                key={`${message.id}-${partIndex}`}
-                              >
-                                <AssistantMessage content={part.text} />
-                              </div>
-                            );
-                          }
-
-                          return null;
-                        })}
-                      </div>
-                    ) : (
-                      <div className="inline-block max-w-full rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground text-xs">
-                        {getMessageText(message)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && messages.at(-1)?.role === "user" && (
-                <div className="flex gap-2">
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <Bot className="h-3 w-3" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col gap-1">
-                    <div className="inline-block rounded-lg bg-muted px-2.5 py-1.5">
-                      {/* Animated typing dots */}
-                      <div className="flex items-center gap-1">
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:0ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
+                  {/* Favorite prompts */}
+                  {favorites.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="flex items-center gap-1 px-1 font-medium text-muted-foreground text-xs">
+                        <Heart className="h-3 w-3" />
+                        Your favorites
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {favorites.map((fav) => (
+                          <div className="group relative" key={fav.id}>
+                            <Button
+                              className="h-7 pr-6 text-xs"
+                              onClick={() => handleSendMessage(fav.prompt)}
+                              size="sm"
+                              variant="secondary"
+                            >
+                              {fav.label}
+                            </Button>
+                            <button
+                              aria-label="Remove from favorites"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFavorite(fav.id);
+                              }}
+                              type="button"
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <span className="text-muted-foreground text-xs">
-                      Generating your email...
-                    </span>
-                  </div>
+                  )}
                 </div>
+              ) : (
+                <>
+                  {messages.map((message) => (
+                    <MessageScrollerItem
+                      key={message.id}
+                      messageId={message.id}
+                      scrollAnchor={message.role === "user"}
+                    >
+                      <Message
+                        align={message.role === "user" ? "end" : "start"}
+                      >
+                        <MessageAvatar>
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback
+                              className={cn(
+                                "text-xs",
+                                message.role === "assistant"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              )}
+                            >
+                              {message.role === "assistant" ? (
+                                <Bot className="h-3 w-3" />
+                              ) : (
+                                <User className="h-3 w-3" />
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                        </MessageAvatar>
+                        <MessageContent>
+                          {message.role === "assistant" ? (
+                            message.parts.map((part, partIndex) => {
+                              if (part.type === "reasoning") {
+                                return (
+                                  <Reasoning
+                                    defaultOpen={isPartStreaming(
+                                      message,
+                                      partIndex
+                                    )}
+                                    isStreaming={isPartStreaming(
+                                      message,
+                                      partIndex
+                                    )}
+                                    key={`${message.id}-${partIndex}`}
+                                  >
+                                    <ReasoningTrigger />
+                                    <ReasoningContent>
+                                      {part.text}
+                                    </ReasoningContent>
+                                  </Reasoning>
+                                );
+                              }
+
+                              if (part.type === "text") {
+                                return (
+                                  <Bubble
+                                    align="start"
+                                    key={`${message.id}-${partIndex}`}
+                                    variant="muted"
+                                  >
+                                    <BubbleContent>
+                                      <AssistantMessage content={part.text} />
+                                    </BubbleContent>
+                                  </Bubble>
+                                );
+                              }
+
+                              return null;
+                            })
+                          ) : (
+                            <Bubble align="end" variant="default">
+                              <BubbleContent>
+                                {getMessageText(message)}
+                              </BubbleContent>
+                            </Bubble>
+                          )}
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>
+                  ))}
+
+                  {isLoading && messages.at(-1)?.role === "user" && (
+                    <Marker role="status">
+                      <MarkerIcon>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      </MarkerIcon>
+                      <MarkerContent>Generating your email...</MarkerContent>
+                    </Marker>
+                  )}
+                </>
               )}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <MessageScrollerButton />
+        </MessageScroller>
+      </MessageScrollerProvider>
 
       {/* Error Display */}
       {error && (

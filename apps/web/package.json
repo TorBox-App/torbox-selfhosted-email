@@ -71,6 +71,7 @@
     "@react-email/components": "catalog:",
     "@react-email/render": "catalog:",
     "@sentry/nextjs": "10.47.0",
+    "@shadcn/react": "0.2.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/pacer": "0.16.4",
     "@tanstack/react-form": "^1.33.0",
