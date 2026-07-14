@@ -6,7 +6,7 @@ import { trackEvent } from "@/utils/analytics";
 
 export function CTAButtons() {
   return (
-    <div className="flex flex-col justify-center gap-4 sm:flex-row">
+    <div className="flex flex-col gap-4 sm:flex-row sm:justify-start">
       <Button
         asChild
         className="cursor-pointer bg-orange-500 hover:bg-orange-600"

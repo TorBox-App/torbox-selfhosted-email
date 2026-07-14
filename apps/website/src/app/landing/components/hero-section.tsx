@@ -1,101 +1,70 @@
-import { DotPattern } from "@wraps/ui/components/dot-pattern";
-import { Github } from "lucide-react";
-import Image from "next/image";
 import { HeroAnimatedCTA } from "./hero-cta";
 import { HeroTerminal } from "./hero-terminal";
+import { SectionKicker } from "./section-kicker";
+
+const proofStats: { n: string; k: string }[] = [
+  { n: "~38s", k: "median first deploy" },
+  { n: "$0.10", k: "per 1k emails, at AWS cost" },
+  { n: "0", k: "credentials we store" },
+];
 
 // Static content - server rendered, visible immediately
 export function HeroSection() {
   return (
-    <section className="relative pt-20 pb-16 md:pt-24 lg:pt-32">
+    <section className="relative border-border border-b pt-20 pb-16 md:pt-24 lg:pt-28">
       {/* Background Pattern — extends past section to blend into principles */}
-      <div className="absolute inset-0 -bottom-80">
+      {/*<div className="absolute inset-0 -bottom-80">
         <DotPattern
           className="opacity-100 dark:opacity-65"
           fadeStyle="ellipse"
           size="md"
         />
-      </div>
+      </div>*/}
 
-      {/* Noise grain texture — extends to match */}
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -bottom-80 h-[calc(100%+20rem)] w-full opacity-[0.06]"
-      >
-        <filter id="hero-noise">
-          <feTurbulence
-            baseFrequency="0.65"
-            numOctaves="3"
-            stitchTiles="stitch"
-            type="fractalNoise"
-          />
-        </filter>
-        <rect filter="url(#hero-noise)" height="100%" width="100%" />
-      </svg>
-
-      <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
+      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
           {/* Left column — copy */}
-          <div className="flex flex-col items-start lg:flex-1">
-            {/* Badge */}
-            <div className="mb-6">
-              <a
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-orange-500 transition-colors hover:border-orange-500/50"
-                href="https://github.com/wraps-team/wraps"
-              >
-                <Github className="size-4" />
-                <span>Open Source</span>
-                <span className="text-muted-foreground">·</span>
-                <span>AGPLv3 Licensed</span>
-              </a>
-            </div>
+          <div className="flex flex-col items-start">
+            <SectionKicker>Open-source email infrastructure</SectionKicker>
 
-            {/* Main Headline */}
-            <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] font-heading md:text-[42px] md:leading-[48px] lg:text-[52px] lg:leading-[60px]">
-              The email platform that sends through{" "}
-              <a
-                className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60 transition-colors"
-                href="/docs/quickstart/email"
-              >
-                your AWS.
-              </a>
+            <h1 className="max-w-[15ch] text-left font-heading font-semibold text-[40px] text-foreground leading-[1.04] tracking-[-0.03em] md:text-[52px] lg:text-[62px]">
+              Email infrastructure, deployed to your own AWS.
             </h1>
 
-            {/* Subheadline */}
-            <p className="mt-4 max-w-[520px] text-left text-[16px] leading-[24px] text-foreground/70 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
-              One command deploys SES, event tracking, and analytics to your AWS
-              account. Ship transactional email from your app — or your agent —
-              at{" "}
+            <p className="mt-5 max-w-[46ch] text-left text-[17px] text-muted-foreground leading-[1.55] md:text-[19px]">
+              Wraps provisions SES, DynamoDB, and Lambda into your AWS account
+              with one command. Send from your app or your agent, and pay AWS
+              directly at{" "}
               <strong className="text-foreground/90">
-                $0.10 per 1,000 emails.
+                $0.10 per 1,000 emails
               </strong>
+              .
             </p>
 
-            {/* Founder credibility */}
-            <div className="mt-4 flex items-center gap-2.5">
-              <Image
-                alt="Jarod, founder of Wraps"
-                className="shrink-0 rounded-full"
-                height={36}
-                src="/team/jarod-medium-smile.webp"
-                width={36}
-              />
-              <a
-                className="text-left text-[15px] leading-[22px] text-foreground/50 underline underline-offset-2 hover:text-foreground md:text-[16px]"
-                href="https://x.com/stewartjarod"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Built by an ex-SendGrid engineer
-              </a>
+            <div className="mt-8 mb-10">
+              <HeroAnimatedCTA />
             </div>
 
-            {/* CTA - client component for tracking */}
-            <HeroAnimatedCTA />
+            {/* Proof stats */}
+            <dl className="flex flex-wrap border-border border-t">
+              {proofStats.map((stat, i) => (
+                <div
+                  className={`py-4 pr-6 ${i < proofStats.length - 1 ? "mr-6 border-border border-r" : ""}`}
+                  key={stat.k}
+                >
+                  <dt className="font-mono font-semibold text-[20px] text-foreground tracking-[-0.01em]">
+                    {stat.n}
+                  </dt>
+                  <dd className="mt-0.5 text-[12.5px] text-muted-foreground">
+                    {stat.k}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           {/* Right column — terminal */}
-          <div className="hidden lg:block lg:flex-1">
+          <div className="w-full lg:justify-self-end">
             <HeroTerminal />
           </div>
         </div>

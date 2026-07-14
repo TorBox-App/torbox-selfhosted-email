@@ -1,9 +1,8 @@
-import { Bot, Cloud, GitPullRequest, ShieldCheck, Users } from "lucide-react";
+import { Bot, Cloud, Code2, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
-import { FadeIn } from "./animations";
 
 type Principle = {
-  icon: typeof GitPullRequest;
+  icon: typeof Cloud;
   title: string;
   description: string;
   href?: string;
@@ -11,137 +10,83 @@ type Principle = {
 
 const principles: Principle[] = [
   {
-    icon: GitPullRequest,
-    title: "Code You Can Review",
+    icon: Code2,
+    title: "Code you can review",
     description:
-      "Templates and workflows live in your repo. Review in PRs. Roll back bad deploys. No more 'don't edit while I'm editing.'",
+      "Templates and workflows live in your repo. Roll back a bad send in a pull request.",
   },
   {
     icon: ShieldCheck,
-    title: "Type-Safe Everything",
+    title: "Type-safe end to end",
     description:
-      "TypeScript SDK. Typed template variables. Typed workflow definitions. Catch errors before they reach an inbox.",
+      "Typed SDK, typed templates, typed workflows. Errors surface at build, not in inboxes.",
   },
   {
     icon: Users,
-    title: "No More Tickets",
+    title: "No more email tickets",
     description:
-      "Engineers own the code. Marketers own the content. Both deploy through the same pipeline. Nobody waits on a Jira ticket to change a button color.",
+      "Engineers own the code, marketers own the content, both ship through one pipeline.",
   },
   {
     icon: Cloud,
-    title: "Sends Through Your AWS",
+    title: "Runs in your account",
     description:
-      "Your SES. Your DynamoDB. Your domain reputation. Pay AWS directly. Leave anytime, keep everything.",
+      "Your SES, your DynamoDB, your domain reputation. The bill comes from AWS, not us.",
   },
   {
     icon: Bot,
     title: "Built for Agents Too",
     href: "/agents",
     description:
-      "Agents write TypeScript. They open PRs. They iterate in seconds. Wraps workflows are TypeScript files; templates are React components — your agent can ship what your team ships.",
+      "Agents write TypeScript and open PRs. Your agent ships what your team ships.",
   },
 ];
 
-function DotGrid({
-  position,
-  fadeDirection,
-}: {
-  position: string;
-  fadeDirection: "to-bottom-left" | "to-top-right";
-}) {
-  const rows = 8;
-  const cols = 12;
-
-  return (
-    <div className={`absolute ${position}`}>
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-      >
-        {Array.from({ length: rows * cols }).map((_, i) => {
-          const row = Math.floor(i / cols);
-          const col = i % cols;
-
-          // Calculate opacity based on distance from corner
-          let distance: number;
-          if (fadeDirection === "to-bottom-left") {
-            // Top-right corner: fade as we go down-left
-            distance = (row + (cols - 1 - col)) / (rows + cols - 2);
-          } else {
-            // Bottom-left corner: fade as we go up-right
-            distance = (rows - 1 - row + col) / (rows + cols - 2);
-          }
-
-          const opacity = Math.max(0, 1 - distance * 1.2);
-
-          if (opacity <= 0.05) {
-            return <div className="size-1" key={i} />;
-          }
-
-          return (
-            <div
-              className="size-1 rounded-full bg-orange-500 dark:bg-orange-400"
-              key={i}
-              style={{ opacity: opacity * 0.5 }}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export function PrinciplesSection() {
   return (
-    <section className="relative overflow-hidden pt-6 pb-16 sm:pt-8 sm:pb-20">
-      {/* Bottom-left Dot Grid */}
-      <DotGrid fadeDirection="to-top-right" position="-bottom-4 -left-4" />
+    <section className="border-border border-b py-20 md:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <h2 className="sr-only">Why teams run email on Wraps</h2>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
+          {principles.map((principle) => {
+            const Icon = principle.icon;
+            const body = (
+              <>
+                <Icon
+                  aria-hidden="true"
+                  className="mb-4 size-5 text-foreground"
+                />
+                <h3 className="mb-2 font-semibold text-[15px] text-foreground">
+                  {principle.title}
+                </h3>
+                <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+                  {principle.description}
+                </p>
+              </>
+            );
 
-      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        {/* Principles Grid */}
-        <FadeIn>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-            {principles.map((principle) => {
-              const Icon = principle.icon;
-              const body = (
-                <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
-                  {/* Large background icon */}
-                  <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
-                    <Icon className="size-24 text-orange-500" />
-                  </div>
-
-                  {/* Small accent icon */}
-                  <div className="absolute left-4 top-4">
-                    <Icon className="size-5 text-orange-500" />
-                  </div>
-
-                  <h3 className="relative mb-1 font-semibold text-sm text-foreground/70">
-                    {principle.title}
-                  </h3>
-                  <p className="relative text-foreground/70 text-xs leading-relaxed">
-                    {principle.description}
-                  </p>
-                </div>
-              );
-
+            if (principle.href) {
               return (
-                <div key={principle.title}>
-                  {principle.href ? (
-                    <Link
-                      className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
-                      href={principle.href}
-                    >
-                      {body}
-                    </Link>
-                  ) : (
-                    body
-                  )}
-                </div>
+                <Link
+                  className="block border-foreground border-t pt-5 transition-colors hover:border-orange-500"
+                  href={principle.href}
+                  key={principle.title}
+                >
+                  {body}
+                </Link>
               );
-            })}
-          </div>
-        </FadeIn>
+            }
+
+            return (
+              <div
+                className="border-foreground border-t pt-5"
+                key={principle.title}
+              >
+                {body}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

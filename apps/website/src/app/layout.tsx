@@ -5,6 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { JsonLd } from "@/components/json-ld";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeShortcut } from "@/components/theme-shortcut";
 import { WebMCP } from "@/components/webmcp";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { InViewProvider } from "@/hooks/use-shared-in-view";
@@ -116,6 +117,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <NuqsAdapter>
           <ThemeProvider defaultTheme="system" storageKey="wraps-ui-theme">
+            <ThemeShortcut />
             <AnalyticsProvider>
               <InViewProvider>
                 <SidebarConfigProvider>{children}</SidebarConfigProvider>

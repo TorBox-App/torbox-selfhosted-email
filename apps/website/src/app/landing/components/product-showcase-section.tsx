@@ -1,116 +1,114 @@
-"use client";
+import { SectionKicker } from "./section-kicker";
 
-import { FadeIn, StaggerContainer, StaggerItem } from "./animations";
-
-type VideoCardProps = {
+type Tile = {
+  index: string;
   title: string;
-  description: string;
+  meta?: string;
   video: string;
-  className?: string;
+  span: "wide" | "tall" | "sm";
+  videoClassName?: string;
 };
 
-function VideoCard({ title, description, video, className }: VideoCardProps) {
-  return (
-    <StaggerItem
-      className={`group overflow-hidden rounded-xl border border-border/50 bg-card ${className ?? ""}`}
-    >
-      <div className="overflow-hidden bg-background">
-        <video
-          autoPlay
-          className="w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
-          loop
-          muted
-          playsInline
-          preload="none"
-          src={video}
-        >
-          <track kind="descriptions" label={title} />
-        </video>
-      </div>
-      <div className="border-t border-border/50 px-4 py-3">
-        <h3 className="font-semibold text-sm text-foreground">{title}</h3>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </div>
-    </StaggerItem>
-  );
-}
+const tiles: Tile[] = [
+  {
+    index: "01",
+    title: "One-command deploy",
+    meta: "SES, DynamoDB, Lambda in 38s",
+    video: "/landing/DeployFlow.mp4",
+    span: "wide",
+    videoClassName: "scale-[1.5]",
+  },
+  {
+    index: "02",
+    title: "Broadcasts",
+    meta: "compose once, send to thousands",
+    video: "/landing/BroadcastSend.mp4",
+    span: "wide",
+  },
+  {
+    index: "03",
+    title: "Audience segments",
+    video: "/landing/ContactSegment.mp4",
+    span: "tall",
+  },
+  {
+    index: "04",
+    title: "Templates as code",
+    video: "/landing/TemplateEdit.mp4",
+    span: "sm",
+  },
+  {
+    index: "05",
+    title: "Workflows",
+    video: "/landing/WorkflowConnect.mp4",
+    span: "sm",
+  },
+  {
+    index: "06",
+    title: "Live analytics",
+    video: "/landing/MetricsCountUp.mp4",
+    span: "sm",
+  },
+  {
+    index: "07",
+    title: "Every send, tracked",
+    video: "/landing/StatusBadgeFlow.mp4",
+    span: "sm",
+  },
+];
+
+const spanClass: Record<Tile["span"], string> = {
+  wide: "md:col-span-3 md:row-span-2",
+  tall: "md:col-span-2 md:row-span-2",
+  sm: "md:col-span-2",
+};
 
 export function ProductShowcaseSection() {
   return (
-    <section className="py-16 md:py-24" id="features">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <FadeIn className="text-center">
-          <h2 className="font-bold text-3xl tracking-tight font-heading md:text-4xl text-balance">
-            Everything you need to send.{" "}
-            <span className="text-muted-foreground">
-              Nothing you don&apos;t.
-            </span>
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Templates, workflows, analytics, and event tracking — all running on
-            your AWS, all visible in one dashboard.
-          </p>
-        </FadeIn>
+    <section className="border-border border-b py-20 md:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <SectionKicker>Product tour</SectionKicker>
+        <h2 className="mb-8 max-w-[24ch] font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+          Everything that happens after you hit send.
+        </h2>
 
-        <div className="mt-12 flex flex-col gap-3">
-          {/* Row 1: AI Templates + AI Workflows — the two hero features */}
-          <StaggerContainer
-            className="grid gap-3 md:grid-cols-2"
-            staggerDelay={0.08}
-          >
-            <VideoCard
-              description="Describe your email, AI generates React Email code. Live preview as you iterate."
-              title="AI Template Editor"
-              video="/landing/TemplateEdit.mp4"
-            />
-            <VideoCard
-              description="Describe your automation, AI builds it. Drag to refine."
-              title="AI Workflow Builder"
-              video="/landing/WorkflowConnect.mp4"
-            />
-          </StaggerContainer>
-
-          {/* Row 2: Broadcasts (wide) + Event Timeline */}
-          <StaggerContainer
-            className="grid gap-3 md:grid-cols-3"
-            staggerDelay={0.08}
-          >
-            <VideoCard
-              className="md:col-span-2"
-              description="Send to thousands, Sankey chart fills in — delivered, opened, clicked."
-              title="Broadcasts & Delivery Funnel"
-              video="/landing/BroadcastSend.mp4"
-            />
-            <VideoCard
-              description="Full email lifecycle with timestamps and metadata."
-              title="Event Timeline"
-              video="/landing/EventTimeline.mp4"
-            />
-          </StaggerContainer>
-
-          {/* Row 3: Three equal — Logs + Segments + Metrics */}
-          <StaggerContainer
-            className="grid gap-3 md:grid-cols-3"
-            staggerDelay={0.08}
-          >
-            <VideoCard
-              description="Status, recipient, subject — searchable and filterable."
-              title="Live Email Logs"
-              video="/landing/StatusBadgeFlow.mp4"
-            />
-            <VideoCard
-              description="Filter audiences, watch matching contacts narrow."
-              title="Contact Segments"
-              video="/landing/ContactSegment.mp4"
-            />
-            <VideoCard
-              description="Open rate, click rate, bounces — from your SES events."
-              title="Delivery Metrics"
-              video="/landing/MetricsCountUp.mp4"
-            />
-          </StaggerContainer>
+        <div className="grid grid-cols-2 gap-3.5 md:auto-rows-[196px] md:grid-cols-6">
+          {tiles.map((tile) => (
+            <div
+              className={`col-span-2 flex min-h-[220px] flex-col overflow-hidden rounded-lg border border-border bg-zinc-950 md:min-h-0 ${spanClass[tile.span]}`}
+              key={tile.index}
+            >
+              <div className="relative min-h-0 flex-1 overflow-hidden">
+                <video
+                  autoPlay
+                  className={`size-full object-cover ${tile.videoClassName ?? ""}`}
+                  loop
+                  muted
+                  playsInline
+                  poster={tile.video
+                    .replace("/landing/", "/landing/posters/")
+                    .replace(".mp4", ".jpg")}
+                  preload="metadata"
+                  src={tile.video}
+                >
+                  <track kind="descriptions" label={tile.title} />
+                </video>
+              </div>
+              <div className="flex items-baseline gap-2 border-white/10 border-t bg-zinc-950 px-3.5 py-2.5">
+                <span className="font-mono text-[11px] text-orange-500">
+                  {tile.index}
+                </span>
+                <span className="font-medium text-[13px] text-white">
+                  {tile.title}
+                  {tile.meta ? (
+                    <small className="ml-1.5 font-normal text-[11px] text-zinc-400">
+                      {tile.meta}
+                    </small>
+                  ) : null}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

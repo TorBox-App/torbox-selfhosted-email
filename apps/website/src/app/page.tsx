@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
+import { CodeSampleSection } from "./landing/components/code-sample-section";
+import { CompareSection } from "./landing/components/compare-section";
 import { CTASection } from "./landing/components/cta-section";
-import { DualPathTabbedSection } from "./landing/components/dual-path-tabbed-section";
 import { FaqSection } from "./landing/components/faq-section";
+import { FeatureBlockSection } from "./landing/components/feature-block-section";
 import { LandingFooter } from "./landing/components/footer";
 import { HeroSection } from "./landing/components/hero-section";
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
-
 import { ProductShowcaseSection } from "./landing/components/product-showcase-section";
 
 export const metadata: Metadata = {
@@ -93,16 +94,11 @@ export default function LandingPage() {
         <main>
           <HeroSection />
           <PrinciplesSection />
-
+          <FeatureBlockSection />
+          <CodeSampleSection />
+          <CompareSection />
           <ProductShowcaseSection />
-          {/*<InfrastructureSection />*/}
-
-          {/*<CliTabbedSection />*/}
-          <DualPathTabbedSection />
-
           <PricingSection />
-
-          {/*<WhyWrapsSection />*/}
           <FaqSection />
           <CTASection />
         </main>

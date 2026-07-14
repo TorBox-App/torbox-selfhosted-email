@@ -61,7 +61,7 @@ const footerLinks = {
 
 export function LandingFooter() {
   return (
-    <footer className="relative overflow-hidden border-t bg-background">
+    <footer className="dark relative overflow-hidden border-border border-t bg-background text-foreground">
       <WrapsMotifLayers
         className="pointer-events-none absolute bottom-4 right-4 h-[280px] w-[310px] md:h-[340px] md:w-[375px]"
         strokeColor="#ff6600"
@@ -117,7 +117,9 @@ export function LandingFooter() {
 
           {/* Links Columns */}
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-semibold">Product</h4>
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+              Product
+            </h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
@@ -133,7 +135,9 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-semibold">Developers</h4>
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+              Developers
+            </h4>
             <ul className="space-y-3">
               {footerLinks.developers.map((link) => (
                 <li key={link.name}>
@@ -149,7 +153,9 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-semibold">Company</h4>
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+              Company
+            </h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
@@ -165,7 +171,9 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-semibold">Resources</h4>
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+              Resources
+            </h4>
             <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
@@ -183,7 +191,9 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-semibold">Legal</h4>
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+              Legal
+            </h4>
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
