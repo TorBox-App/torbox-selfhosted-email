@@ -3,19 +3,16 @@
 import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Avatar, AvatarFallback } from "@wraps/ui/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@wraps/ui/components/ui/dropdown-menu";
-import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import {
   AlertTriangle,
-  Bot,
   Check,
   Heart,
   Loader2,
@@ -25,18 +22,13 @@ import {
   Send,
   Sparkles,
   Square,
-  User,
   Wand2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AssistantConversation } from "@/components/ui/assistant-conversation";
 import { Button } from "@/components/ui/button";
-import {
-  Reasoning,
-  ReasoningContent,
-  ReasoningTrigger,
-} from "@/components/ui/reasoning";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
@@ -141,7 +133,6 @@ export function CodeTemplateAIPanel({
   const lastAppliedSourceRef = useRef<string | null>(currentSource);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 44,
     maxHeight: 360,
@@ -350,18 +341,6 @@ export function CodeTemplateAIPanel({
     }
   }, [messages, isLoading, autoFixAttempted, onApply]);
 
-  // Auto-scroll to bottom when messages change or while streaming
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  }, []);
-
   // Apply: compile first, then call onApply. On failure, ask AI to fix (once).
   const handleApply = useCallback(async () => {
     if (!pendingSource) {
@@ -425,14 +404,6 @@ export function CodeTemplateAIPanel({
     e.preventDefault();
     handleSendMessage(input);
   };
-
-  const getMessageText = (message: (typeof messages)[number]) =>
-    message.parts
-      .filter(
-        (part): part is { type: "text"; text: string } => part.type === "text"
-      )
-      .map((part) => part.text)
-      .join("");
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -521,9 +492,10 @@ export function CodeTemplateAIPanel({
       )}
 
       {/* Messages */}
-      <ScrollArea className="min-h-0 flex-1" ref={scrollAreaRef}>
-        <div className="p-3">
-          {aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
+      <AssistantConversation
+        className="min-h-0 flex-1"
+        emptyState={
+          aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
                 <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -539,7 +511,7 @@ export function CodeTemplateAIPanel({
                 <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
             </div>
-          ) : messages.length === 0 ? (
+          ) : (
             <div className="space-y-3">
               <div className="py-4 text-center">
                 <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -604,112 +576,15 @@ export function CodeTemplateAIPanel({
                 </div>
               )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  className={cn(
-                    "flex gap-2",
-                    message.role === "user" && "flex-row-reverse"
-                  )}
-                  key={message.id}
-                >
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback
-                      className={cn(
-                        "text-xs",
-                        message.role === "assistant"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      )}
-                    >
-                      {message.role === "assistant" ? (
-                        <Bot className="h-3 w-3" />
-                      ) : (
-                        <User className="h-3 w-3" />
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
-                    className={cn(
-                      "min-w-0 flex-1",
-                      message.role === "user" && "text-right"
-                    )}
-                  >
-                    {message.role === "assistant" ? (
-                      <div className="space-y-2">
-                        {message.parts.map((part, partIndex) => {
-                          const isLastPart =
-                            partIndex === message.parts.length - 1;
-                          const isLastMessage =
-                            message.id === messages.at(-1)?.id;
-                          const isStreamingPart =
-                            isLoading && isLastPart && isLastMessage;
-
-                          if (part.type === "reasoning") {
-                            return (
-                              <Reasoning
-                                defaultOpen={isStreamingPart}
-                                isStreaming={isStreamingPart}
-                                key={`${message.id}-${partIndex}`}
-                              >
-                                <ReasoningTrigger />
-                                <ReasoningContent>{part.text}</ReasoningContent>
-                              </Reasoning>
-                            );
-                          }
-
-                          if (part.type === "text") {
-                            return (
-                              <div
-                                className="inline-block max-w-full rounded-lg bg-muted px-2.5 py-1.5 text-xs"
-                                key={`${message.id}-${partIndex}`}
-                              >
-                                <AssistantCodeMessage
-                                  content={part.text}
-                                  isStreaming={isStreamingPart}
-                                />
-                              </div>
-                            );
-                          }
-
-                          return null;
-                        })}
-                      </div>
-                    ) : (
-                      <div className="inline-block max-w-full rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground text-xs">
-                        {getMessageText(message)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && messages.at(-1)?.role === "user" && (
-                <div className="flex gap-2">
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <Bot className="h-3 w-3" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col gap-1">
-                    <div className="inline-block rounded-lg bg-muted px-2.5 py-1.5">
-                      <div className="flex items-center gap-1">
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:0ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
-                      </div>
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      Generating your email code...
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+          )
+        }
+        isLoading={isLoading}
+        loadingLabel="Generating your email code..."
+        messages={messages}
+        renderAssistantText={(text, isStreaming) => (
+          <AssistantCodeMessage content={text} isStreaming={isStreaming} />
+        )}
+      />
 
       {/* Error */}
       {error && (

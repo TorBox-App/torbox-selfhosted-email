@@ -4,8 +4,6 @@ import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
-import { Avatar, AvatarFallback } from "@wraps/ui/components/ui/avatar";
-import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import { Textarea } from "@wraps/ui/components/ui/textarea";
 import {
   Tooltip,
@@ -15,30 +13,22 @@ import {
 import { DefaultChatTransport } from "ai";
 import {
   AlertTriangle,
-  Bot,
   Check,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   Send,
   Sparkles,
   Square,
-  User,
   Wand2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AssistantConversation } from "@/components/ui/assistant-conversation";
 import { Button } from "@/components/ui/button";
-import {
-  Reasoning,
-  ReasoningContent,
-  ReasoningTrigger,
-} from "@/components/ui/reasoning";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { extractWorkflowFromMessage } from "@/lib/ai/(ee)/workflow-parser";
-import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "./use-workflow-store";
 
 type ExistingWorkflow = {
@@ -91,7 +81,6 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const [pendingWorkflow, setPendingWorkflow] =
     useState<PendingWorkflow | null>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 44,
     maxHeight: 200,
@@ -215,18 +204,6 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
     setPendingWorkflow(null);
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  }, []);
-
   const handleSendMessage = useCallback(
     (text: string) => {
       if (!text.trim() || isLoading) {
@@ -250,15 +227,6 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
     e.preventDefault();
     handleSendMessage(input);
   };
-
-  // Helper to get text content from a message
-  const getMessageText = (message: (typeof messages)[number]) =>
-    message.parts
-      .filter(
-        (part): part is { type: "text"; text: string } => part.type === "text"
-      )
-      .map((part) => part.text)
-      .join("");
 
   // Collapsed state - just show a toggle button
   if (isCollapsed) {
@@ -331,10 +299,10 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
       )}
 
       {/* Messages */}
-      <ScrollArea className="min-h-0 flex-1" ref={scrollAreaRef}>
-        <div className="p-3">
-          {/* Limit reached state */}
-          {aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
+      <AssistantConversation
+        className="min-h-0 flex-1"
+        emptyState={
+          aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
                 <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -349,7 +317,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                 <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
             </div>
-          ) : messages.length === 0 ? (
+          ) : (
             <div className="space-y-3">
               {/* Welcome */}
               <div className="py-4 text-center">
@@ -382,80 +350,15 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  className={cn(
-                    "flex gap-2",
-                    message.role === "user" && "flex-row-reverse"
-                  )}
-                  key={message.id}
-                >
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback
-                      className={cn(
-                        "text-xs",
-                        message.role === "assistant"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted"
-                      )}
-                    >
-                      {message.role === "assistant" ? (
-                        <Bot className="h-3.5 w-3.5" />
-                      ) : (
-                        <User className="h-3.5 w-3.5" />
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
-                    className={cn(
-                      "min-w-0 flex-1 rounded-lg px-3 py-2 text-sm",
-                      message.role === "assistant"
-                        ? "bg-muted/50"
-                        : "bg-primary text-primary-foreground"
-                    )}
-                  >
-                    {/* Check for reasoning parts */}
-                    {message.parts.some((p) => p.type === "reasoning") && (
-                      <Reasoning className="mb-2">
-                        <ReasoningTrigger />
-                        <ReasoningContent>
-                          {message.parts
-                            .filter((p) => p.type === "reasoning")
-                            .map(
-                              (p) =>
-                                (p as { type: "reasoning"; text: string }).text
-                            )
-                            .join("")}
-                        </ReasoningContent>
-                      </Reasoning>
-                    )}
-                    <div className="whitespace-pre-wrap break-words">
-                      {getMessageText(message).replace(
-                        /```json[\s\S]*?```/g,
-                        "[Workflow generated]"
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex gap-2">
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      <Bot className="h-3.5 w-3.5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="rounded-lg bg-muted/50 px-3 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+          )
+        }
+        isLoading={isLoading}
+        loadingLabel="Generating your workflow..."
+        messages={messages}
+        renderAssistantText={(text) =>
+          text.replace(/```json[\s\S]*?```/g, "[Workflow generated]")
+        }
+      />
 
       {/* Pending Workflow Actions */}
       {pendingWorkflow && !isLoading && (
