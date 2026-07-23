@@ -237,3 +237,65 @@ jobs:
 
       - name: Run linter
         run: pnpm check:errors
+
+  # Clean-clone smoke test for the self-hosted deploy path. A CI runner IS a
+  # fresh customer clone — this job proves the path a fork customer follows
+  # actually works without any maintainer-machine state (stale gitignored
+  # dist/, hoisted binaries, lockfile drift). No AWS credentials needed: every
+  # step stops before touching AWS. See project_selfhost_fresh_clone_fixes —
+  # six shipped bugs were only visible from a clean clone.
+  selfhost-smoke:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies (frozen, as CI deploys do)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lockfile is stable on a plain install (as the docs instruct)
+        run: |
+          pnpm install
+          git diff --exit-code pnpm-lock.yaml || {
+            echo "::error::A plain 'pnpm install' rewrote pnpm-lock.yaml — a workspace package is referenced by the lockfile but not shipped in git (gitignored dir matched by a workspace glob?). Customers following the docs get a permanently dirty tree."
+            exit 1
+          }
+
+      - name: Build workspace packages (what selfhost:deploy/upgrade run first)
+        run: pnpm selfhost:build-deps
+
+      - name: Dist artifacts the SST bundle imports exist
+        run: |
+          for f in packages/db/dist/index.js packages/core/dist/index.js packages/email-check/dist/index.js; do
+            [ -f "$f" ] || { echo "::error::$f missing after selfhost:build-deps — the SST esbuild bundle will fail with 'Could not resolve' on customer machines"; exit 1; }
+          done
+
+      - name: SST config builds from zero (sst install)
+        working-directory: infra
+        run: ../node_modules/.bin/sst install --config selfhost.sst.config.ts --stage production --print-logs
+
+      - name: Upgrade script boots and fails with its own guard (not a crash)
+        run: |
+          set +e
+          output=$(pnpm exec tsx scripts/selfhost/upgrade.ts 2>&1)
+          status=$?
+          set -e
+          echo "$output"
+          if [ $status -eq 0 ]; then
+            echo "::error::upgrade.ts exited 0 with no .env.selfhost — the guard is broken"
+            exit 1
+          fi
+          echo "$output" | grep -q ".env.selfhost not found" || {
+            echo "::error::upgrade.ts failed with something other than its .env.selfhost guard — likely a broken import (missing root dep or dist artifact)"
+            exit 1
+          }
