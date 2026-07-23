@@ -1,6 +1,9 @@
 packages:
   - apps/*
   - packages/*
+  # local-only scratch package (gitignored) — including it bakes its deps into
+  # the committed lockfile, which fresh clones then rewrite on first install
+  - "!packages/video"
   - wraps
 
 # better-inbox is our own package (github.com/better-inbox/better-inbox)
