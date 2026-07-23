@@ -222,7 +222,7 @@ export default function SelfHostedPageContent() {
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
-                <span>Node.js 20+ and pnpm 10+ installed locally</span>
+                <span>Node.js 22+ and pnpm 10+ installed locally</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 shrink-0 text-green-500" />
