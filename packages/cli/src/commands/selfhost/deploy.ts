@@ -16,6 +16,7 @@ import {
   buildNeonProjectName,
   provisionNeonProject,
 } from "../../utils/selfhost/neon.js";
+import { detectSelfhostVariant } from "../../utils/selfhost/variant.js";
 import { validateAWSCredentialsWithDetails } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
 import {
@@ -109,17 +110,47 @@ export async function selfhostDeploy(
     region
   );
   if (existingMetadata?.services?.selfhost) {
+    const existing = existingMetadata.services.selfhost;
     clack.log.warn(
       `Self-hosted deployment already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
+    clack.log.info(`API URL: ${pc.cyan(existing.apiUrl)}`);
+    clack.log.info(`Deployed: ${existing.deployedAt}`);
     clack.log.info(
-      `API URL: ${pc.cyan(existingMetadata.services.selfhost.apiUrl)}`
+      existing.variant === "sst"
+        ? `This is a full-platform (SST) deployment. To update: run ${pc.cyan("pnpm selfhost:upgrade")} from your fork.`
+        : `To update: run ${pc.cyan("wraps selfhost upgrade")}`
     );
-    clack.log.info(
-      `Deployed: ${existingMetadata.services.selfhost.deployedAt}`
-    );
-    clack.log.info(`To update: run ${pc.cyan("wraps selfhost upgrade")}`);
     process.exit(0);
+  }
+
+  // 4b. No local metadata — probe AWS for a deployment made elsewhere (another
+  // machine, CI). Both selfhost variants create the account-global IAM role
+  // wraps-selfhost-scheduler-role, so deploying over the other variant fails
+  // partway through with EntityAlreadyExists. Fail fast instead.
+  const deployedVariant = await progress.execute(
+    "Checking for existing selfhost deployments",
+    async () => detectSelfhostVariant(region)
+  );
+  if (deployedVariant === "sst") {
+    progress.stop();
+    clack.log.error(
+      "A full-platform (SST) selfhost deployment already exists in this AWS account."
+    );
+    clack.log.info(
+      `The two selfhost variants share IAM resources and cannot coexist.\nTo update it: run ${pc.cyan("pnpm selfhost:upgrade")} from your fork.\nTo replace it with the API-only control plane: run ${pc.cyan("pnpm selfhost:destroy")} from your fork first.`
+    );
+    process.exit(1);
+  }
+  if (deployedVariant === "pulumi") {
+    progress.stop();
+    clack.log.error(
+      "An API-only selfhost control plane already exists in this AWS account, but no local metadata was found."
+    );
+    clack.log.info(
+      `It was deployed from another machine. Run ${pc.cyan("wraps selfhost upgrade")} there, or remove the existing stack before redeploying from this one.`
+    );
+    process.exit(1);
   }
 
   // 5. Resolve database connection — either a user-supplied URL or a new Neon project
@@ -306,6 +337,7 @@ export async function selfhostDeploy(
     pulumiStackName: stackName,
     config: selfhostConfig,
     apiUrl: priorApiUrl, // Refreshed from Pulumi outputs after deploy succeeds
+    variant: "pulumi",
   };
   savedMetadata.timestamp = deployedAt;
   await saveConnectionMetadata(savedMetadata); // baseline:allow-early-save — Neon orphan prevention

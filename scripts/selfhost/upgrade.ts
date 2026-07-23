@@ -116,6 +116,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     };
     metadata.services.selfhost = {
       deployedAt: now,
+      variant: "sst",
       apiUrl: env.WRAPS_API_URL ?? "",
       webUrl: env.NEXT_PUBLIC_APP_URL ?? "",
       config: {
@@ -228,6 +229,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     apiUrl,
     webUrl,
     deployedAt: now,
+    variant: "sst",
   };
   metadata.timestamp = now;
   await saveConnectionMetadata(metadata);

@@ -83,6 +83,10 @@ export type ConnectionMetadata = {
       config: SelfhostConfig;
       apiUrl: string;
       webUrl?: string;
+      // Which implementation deployed this: "pulumi" = `wraps selfhost deploy`
+      // (API-only), "sst" = `pnpm selfhost:deploy` from a fork (full platform).
+      // Absent on pre-2026-07 metadata — infer via detectSelfhostVariant.
+      variant?: "sst" | "pulumi";
     };
   };
 };

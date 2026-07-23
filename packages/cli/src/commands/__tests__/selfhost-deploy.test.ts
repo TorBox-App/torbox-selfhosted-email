@@ -45,12 +45,16 @@ vi.mock("../../utils/selfhost/neon.js", async () => {
   const actual = await vi.importActual("../../utils/selfhost/neon.js");
   return { ...actual, provisionNeonProject: vi.fn() };
 });
+vi.mock("../../utils/selfhost/variant.js", () => ({
+  detectSelfhostVariant: vi.fn(),
+}));
 vi.mock("../../telemetry/events.js");
 
 import * as prompts from "@clack/prompts";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import * as neon from "../../utils/selfhost/neon.js";
+import * as variantModule from "../../utils/selfhost/variant.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
 import * as metadata from "../../utils/shared/metadata.js";
@@ -133,6 +137,7 @@ describe("selfhostDeploy", () => {
 
     vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(null);
     vi.mocked(metadata.saveConnectionMetadata).mockResolvedValue(undefined);
+    vi.mocked(variantModule.detectSelfhostVariant).mockResolvedValue(null);
 
     vi.mocked(neon.provisionNeonProject).mockResolvedValue({
       id: "neon-project-id-123",
@@ -237,6 +242,75 @@ describe("selfhostDeploy", () => {
       ).rejects.toThrow();
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("cross-variant deploy guards", () => {
+    it("stamps variant 'pulumi' on saved metadata", async () => {
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      expect(metadata.saveConnectionMetadata).toHaveBeenCalledWith(
+        expect.objectContaining({
+          services: expect.objectContaining({
+            selfhost: expect.objectContaining({ variant: "pulumi" }),
+          }),
+        })
+      );
+    });
+
+    it("refuses to deploy when an SST selfhost deployment exists in the account", async () => {
+      vi.mocked(variantModule.detectSelfhostVariant).mockResolvedValue("sst");
+
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("process.exit called");
+      });
+
+      await expect(
+        selfhostDeploy({
+          region: "us-east-1",
+          databaseUrl:
+            "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+          licenseKey: "v1.scale.2027-01-01.abc123",
+          appUrl: "https://app.torbox.app",
+          yes: true,
+        })
+      ).rejects.toThrow("process.exit called");
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(neon.provisionNeonProject).not.toHaveBeenCalled();
+      expect(metadata.saveConnectionMetadata).not.toHaveBeenCalled();
+      exitSpy.mockRestore();
+    });
+
+    it("refuses to deploy over a pulumi deployment made from another machine", async () => {
+      vi.mocked(variantModule.detectSelfhostVariant).mockResolvedValue(
+        "pulumi"
+      );
+
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("process.exit called");
+      });
+
+      await expect(
+        selfhostDeploy({
+          region: "us-east-1",
+          databaseUrl:
+            "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+          licenseKey: "v1.scale.2027-01-01.abc123",
+          appUrl: "https://app.torbox.app",
+          yes: true,
+        })
+      ).rejects.toThrow("process.exit called");
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(metadata.saveConnectionMetadata).not.toHaveBeenCalled();
+      exitSpy.mockRestore();
     });
   });
 
