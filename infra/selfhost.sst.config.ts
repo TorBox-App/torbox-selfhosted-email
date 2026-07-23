@@ -1,6 +1,4 @@
-/// <reference path="../.sst/platform/config.d.ts" />
-import * as aws from "@pulumi/aws";
-import * as sst from "./.sst/platform/src/components/index.js";
+/// <reference path="./.sst/platform/config.d.ts" />
 
 /**
  * SST v3 (Ion) Configuration for Wraps Self-Hosted Deployment
@@ -13,7 +11,12 @@ import * as sst from "./.sst/platform/src/components/index.js";
  * - Next.js web app via sst.aws.Nextjs (OpenNext)
  *
  * Reads config from .env.selfhost in repo root.
- * Run via: sst deploy --config infra/selfhost.sst.config.ts
+ * Run via: pnpm selfhost:deploy — sst runs with cwd=infra/, which both the
+ * .env.selfhost lookup below and the .sst/platform reference above depend on.
+ *
+ * Do not import `sst` or `aws` here. SST injects them as globals when it builds
+ * this config; importing them from .sst/platform deadlocks `sst install`, which
+ * must build the config before it can create that directory.
  */
 
 export default $config({
