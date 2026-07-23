@@ -249,7 +249,11 @@ describe("scripts/selfhost/upgrade", () => {
 
   it("updates .env.selfhost when --web-domain is passed", async () => {
     const { upgrade } = await import("../upgrade.js");
-    await upgrade({ region: "us-east-1", yes: true, webDomain: "mail.acme.com" });
+    await upgrade({
+      region: "us-east-1",
+      yes: true,
+      webDomain: "mail.acme.com",
+    });
 
     expect(files.env).toMatch(/SELFHOST_WEB_DOMAIN=mail\.acme\.com/);
   });
