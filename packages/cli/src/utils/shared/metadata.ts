@@ -38,6 +38,7 @@ export type ServiceConfig<TConfig, TPreset> = {
   deployedAt: string;
   // Webhook configuration for Wraps platform integration
   webhookSecret?: string; // API key for webhook authentication (uses metadata.accountId as AWS account number)
+  webhookUrl?: string; // Custom webhook target (selfhost reroute) — defaults to the Wraps platform when absent
   // SMTP credentials metadata (actual credentials shown once, only ARN stored)
   smtpCredentials?: SMTPCredentialsMetadata;
   // DNS provider used for automatic DNS record management
@@ -803,10 +804,13 @@ export function buildEmailStackConfig(
     // Explicit override (including deliberate removal via undefined)
     webhook = overrides.webhook;
   } else if (emailService?.webhookSecret) {
-    // Default: reconstruct from metadata
+    // Default: reconstruct from metadata. webhookUrl must survive here — a
+    // selfhost reroute that gets dropped silently points the customer's SES
+    // events back at the Wraps platform on the next redeploy.
     webhook = {
       awsAccountNumber: metadata.accountId,
       webhookSecret: emailService.webhookSecret,
+      ...(emailService.webhookUrl && { webhookUrl: emailService.webhookUrl }),
     };
   }
 

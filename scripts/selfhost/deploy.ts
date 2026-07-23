@@ -1,11 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { access, chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
-import {
-  ListConfigurationSetsCommand,
-  SESv2Client,
-} from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import mri from "mri";
@@ -21,48 +16,12 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../packages/cli/src/utils/shared/metadata.js";
+import {
+  appendMissingEnvVars,
+  buildDeployedEnvVars,
+  detectEmailStack,
+} from "./env.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
-
-async function detectEmailStack(region: string): Promise<{
-  roleArn: string | null;
-  configSetName: string | null;
-}> {
-  try {
-    const iam = new IAMClient({ region });
-    const ses = new SESv2Client({ region });
-    const [roleResult, setsResult] = await Promise.allSettled([
-      iam.send(new GetRoleCommand({ RoleName: "wraps-email-role" })),
-      ses.send(new ListConfigurationSetsCommand({})),
-    ]);
-    const roleArn =
-      roleResult.status === "fulfilled"
-        ? (roleResult.value.Role?.Arn ?? null)
-        : null;
-    const sets =
-      setsResult.status === "fulfilled"
-        ? (setsResult.value.ConfigurationSets ?? []).filter((n) =>
-            n.startsWith("wraps-email-")
-          )
-        : [];
-    const configSetName =
-      sets.find((n) => n !== "wraps-email-tracking") ?? sets[0] ?? null;
-    return { roleArn, configSetName };
-  } catch {
-    return { roleArn: null, configSetName: null };
-  }
-}
-
-function parseEnvFile(content: string): Record<string, string> {
-  return Object.fromEntries(
-    content
-      .split("\n")
-      .filter((l) => l.includes("=") && !l.startsWith("#"))
-      .map((l) => {
-        const idx = l.indexOf("=");
-        return [l.slice(0, idx), l.slice(idx + 1)];
-      })
-  );
-}
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
@@ -76,6 +35,7 @@ export type DeployOptions = {
   webDomain?: string;
   aiGatewayApiKey?: string;
   yes?: boolean;
+  rerouteEvents?: boolean;
 };
 
 export async function deploy(options: DeployOptions = {}): Promise<void> {
@@ -116,14 +76,20 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     if (clack.isCancel(licenseKey)) process.exit(0);
   }
 
-  const betterAuthSecret = randomBytes(32).toString("hex");
-  const unsubscribeSecret = randomBytes(32).toString("hex");
+  // Honor operator-provided secrets (CI runs on ephemeral machines — generated
+  // secrets would be lost with the runner, invalidating every issued token on
+  // the next deploy). Generate only when absent.
+  const betterAuthSecret =
+    process.env.BETTER_AUTH_SECRET || randomBytes(32).toString("hex");
+  const unsubscribeSecret =
+    process.env.UNSUBSCRIBE_SECRET || randomBytes(32).toString("hex");
 
   const envLines = [
     `DATABASE_URL=${databaseUrl}`,
     `LICENSE_KEY=${licenseKey}`,
     `BETTER_AUTH_SECRET=${betterAuthSecret}`,
     `UNSUBSCRIBE_SECRET=${unsubscribeSecret}`,
+    `SELFHOST_AWS_REGION=${region}`,
   ];
   if (options.webDomain)
     envLines.push(`SELFHOST_WEB_DOMAIN=${options.webDomain}`);
@@ -134,11 +100,13 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   await chmod(ENV_PATH, 0o600);
   clack.log.info("Wrote .env.selfhost");
 
+  const sstEnv = { SELFHOST_AWS_REGION: region };
+
   clack.log.step("Installing SST providers...");
   await runSubprocess(
     "sst",
     ["install", "--config", SST_CONFIG],
-    undefined,
+    sstEnv,
     SST_DIR
   );
 
@@ -146,7 +114,7 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   await runSubprocess(
     "sst",
     ["deploy", "--config", SST_CONFIG, "--stage", "production"],
-    undefined,
+    sstEnv,
     SST_DIR
   );
 
@@ -163,27 +131,31 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
 
   const emailStack = await detectEmailStack(region);
 
-  const currentEnv = await readFile(ENV_PATH, "utf-8");
-  const envAppend = [
-    `NEXT_PUBLIC_APP_URL=${webUrl}`,
-    `WRAPS_API_URL=${apiUrl}`,
-    `BETTER_AUTH_URL=${webUrl}`,
-    ...(emailStack.roleArn
-      ? [`WRAPS_EMAIL_ROLE_ARN=${emailStack.roleArn}`]
-      : []),
-    ...(emailStack.configSetName
-      ? [`AUTH_EMAIL_CONFIGURATION_SET=${emailStack.configSetName}`]
-      : []),
-    ...(emailStack.configSetName && options.webDomain
-      ? [`AUTH_EMAIL_FROM=noreply@${options.webDomain}`]
-      : []),
-  ];
-  await writeFile(
+  const appended = await appendMissingEnvVars(
     ENV_PATH,
-    `${currentEnv.trimEnd()}\n${envAppend.join("\n")}\n`,
-    "utf-8"
+    buildDeployedEnvVars({
+      apiUrl,
+      webUrl,
+      webDomain: options.webDomain,
+      emailStack,
+    })
   );
-  await chmod(ENV_PATH, 0o600);
+
+  // The first deploy could not know its own URLs, so the web app was built
+  // with empty NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL — which app code silently
+  // falls back past, into wraps.dev and localhost links. Deploy again so the
+  // URLs written above are actually baked into the build.
+  if (appended.length > 0) {
+    clack.log.step(
+      "Redeploying with app URLs baked in (second pass, faster than the first)..."
+    );
+    await runSubprocess(
+      "sst",
+      ["deploy", "--config", SST_CONFIG, "--stage", "production"],
+      sstEnv,
+      SST_DIR
+    );
+  }
 
   const now = new Date().toISOString();
   const metadata = (await loadConnectionMetadata(
@@ -197,20 +169,23 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     timestamp: now,
     services: {},
   };
+  // Always write current config — a redeploy rotates secrets, and stale
+  // metadata would make `wraps selfhost env` emit secrets that don't match
+  // what's deployed.
   metadata.services.selfhost = {
-    ...(metadata.services.selfhost ?? {
-      config: {
-        databaseUrl: databaseUrl!,
-        licenseKey: licenseKey!,
-        appUrl: webUrl,
-        unsubscribeSecret,
-        betterAuthSecret,
-        ...(options.webDomain && { webDomain: options.webDomain }),
-        ...(options.aiGatewayApiKey && {
-          aiGatewayApiKey: options.aiGatewayApiKey,
-        }),
-      },
-    }),
+    ...metadata.services.selfhost,
+    config: {
+      ...metadata.services.selfhost?.config,
+      databaseUrl: databaseUrl!,
+      licenseKey: licenseKey!,
+      appUrl: webUrl,
+      unsubscribeSecret,
+      betterAuthSecret,
+      ...(options.webDomain && { webDomain: options.webDomain }),
+      ...(options.aiGatewayApiKey && {
+        aiGatewayApiKey: options.aiGatewayApiKey,
+      }),
+    },
     apiUrl,
     webUrl,
     deployedAt: now,
@@ -219,20 +194,25 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   await saveConnectionMetadata(metadata);
 
   if (metadata.services.email?.webhookSecret) {
-    const rerouteConfirmed = options.yes
-      ? true
-      : await clack.confirm({
-          message: `Reroute SES email events to your selfhost API (${pc.cyan(apiUrl)}) instead of the Wraps platform?`,
-          initialValue: false,
-        });
+    // --yes means "accept defaults", and the interactive default is NO —
+    // rerouting live SES events must be an explicit choice (--reroute-events).
+    const rerouteConfirmed =
+      options.rerouteEvents ??
+      (options.yes
+        ? false
+        : await clack.confirm({
+            message: `Reroute SES email events to your selfhost API (${pc.cyan(apiUrl)}) instead of the Wraps platform?`,
+            initialValue: false,
+          }));
 
     if (!clack.isCancel(rerouteConfirmed) && rerouteConfirmed) {
       clack.log.step("Rerouting email events to selfhost API...");
+      const webhookUrl = `${apiUrl}/v1/ses-events`;
       const stackConfig = buildEmailStackConfig(metadata, region, {
         webhook: {
           awsAccountNumber: identity.accountId,
           webhookSecret: metadata.services.email.webhookSecret,
-          webhookUrl: `${apiUrl}/v1/ses-events`,
+          webhookUrl,
         },
       });
 
@@ -264,6 +244,13 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
       await stack.setConfig("aws:region", { value: region });
       await stack.refresh({ onOutput: () => {} });
       await stack.up({ onOutput: () => {} });
+
+      // Persist the reroute target — without this, the next email stack
+      // redeploy rebuilds the webhook with the default (Wraps platform) URL
+      // and silently points the customer's events back at us.
+      metadata.services.email.webhookUrl = webhookUrl;
+      metadata.timestamp = new Date().toISOString();
+      await saveConnectionMetadata(metadata);
       clack.log.success("Email events rerouted to self-hosted API");
     }
   }
@@ -282,13 +269,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "web-domain",
       "ai-gateway-api-key",
     ],
-    boolean: ["yes"],
+    boolean: ["yes", "reroute-events"],
     alias: {
       y: "yes",
       "database-url": "databaseUrl",
       "license-key": "licenseKey",
       "web-domain": "webDomain",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "reroute-events": "rerouteEvents",
     },
   });
   deploy({
@@ -298,6 +286,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     webDomain: flags["web-domain"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
     yes: flags.yes,
+    rerouteEvents: flags["reroute-events"],
   }).catch((err) => {
     clack.log.error(err instanceof Error ? err.message : String(err));
     process.exit(1);

@@ -51,7 +51,7 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
       "Self-hosted deployment is incomplete — API URL is not available yet."
     );
     console.log(
-      `\nThe deployment may have failed partway through. Re-run ${pc.cyan("wraps selfhost deploy")} to complete it.\n`
+      `\nThe deployment may have failed partway through. Run ${pc.cyan("pnpm selfhost:upgrade")} from your fork (SST deployments) or re-run ${pc.cyan("wraps selfhost deploy")} (API-only deployments) to complete it.\n`
     );
     process.exit(1);
     return;

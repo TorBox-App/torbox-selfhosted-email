@@ -44,10 +44,11 @@ jobs:
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       # Upgrades run on a fresh runner with no .env.selfhost on disk.
-      # SST reads config from .env.selfhost (infra/selfhost.sst.config.ts line 35),
+      # SST reads config from .env.selfhost (infra/selfhost.sst.config.ts),
       # so we reconstruct it from repository secrets before deploying.
-      # After your first local deploy, copy BETTER_AUTH_SECRET and UNSUBSCRIBE_SECRET
-      # from .env.selfhost into your repository secrets.
+      # BETTER_AUTH_SECRET / UNSUBSCRIBE_SECRET are the same repository secrets
+      # required by the first-time deploy (generate with 'openssl rand -hex 32');
+      # if you first deployed locally, copy them from .env.selfhost instead.
       - name: Reconstruct .env.selfhost (upgrade)
         if: inputs.action == 'upgrade'
         env:
@@ -55,6 +56,7 @@ jobs:
           WRAPS_LICENSE_KEY: ${{ secrets.WRAPS_LICENSE_KEY }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           SELFHOST_WEB_DOMAIN: ${{ vars.SELFHOST_WEB_DOMAIN }}
           NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
           WRAPS_EMAIL_ROLE_ARN: ${{ secrets.WRAPS_EMAIL_ROLE_ARN }}
@@ -78,6 +80,7 @@ jobs:
             echo "LICENSE_KEY=${WRAPS_LICENSE_KEY}"
             echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}"
             echo "UNSUBSCRIBE_SECRET=${UNSUBSCRIBE_SECRET}"
+            echo "SELFHOST_AWS_REGION=${AWS_REGION}"
             [ -n "${SELFHOST_WEB_DOMAIN}" ] && echo "SELFHOST_WEB_DOMAIN=${SELFHOST_WEB_DOMAIN}"
             [ -n "${NEXT_PUBLIC_APP_URL}" ] && echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}"
             [ -n "${WRAPS_EMAIL_ROLE_ARN}" ] && echo "WRAPS_EMAIL_ROLE_ARN=${WRAPS_EMAIL_ROLE_ARN}"
@@ -86,12 +89,32 @@ jobs:
             [ -n "${AI_GATEWAY_API_KEY}" ] && echo "AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}"
           } > .env.selfhost
 
+      # First-time deploys MUST receive the auth secrets from repository
+      # secrets. This runner is ephemeral — secrets generated here would die
+      # with it, and regenerating UNSUBSCRIBE_SECRET on the next deploy
+      # invalidates every unsubscribe token ever issued.
+      - name: Validate secrets (deploy)
+        if: inputs.action == 'deploy'
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
+        run: |
+          missing=()
+          [ -z "${BETTER_AUTH_SECRET}" ] && missing+=("BETTER_AUTH_SECRET")
+          [ -z "${UNSUBSCRIBE_SECRET}" ] && missing+=("UNSUBSCRIBE_SECRET")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}. Generate each with 'openssl rand -hex 32' and add them under Settings → Secrets before deploying."
+            exit 1
+          fi
+
       - name: First-time deploy
         if: inputs.action == 'deploy'
         run: pnpm selfhost:deploy --yes
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           WRAPS_LICENSE_KEY: ${{ secrets.WRAPS_LICENSE_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Upgrade existing instance

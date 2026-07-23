@@ -27,7 +27,11 @@ export default $config({
       home: "aws",
       providers: {
         aws: {
-          region: "us-east-1",
+          // Set by the selfhost deploy/upgrade scripts (persisted in
+          // .env.selfhost). app() runs before run()'s dotenv load, so this
+          // must arrive via the subprocess environment, not the env file.
+          region: (process.env.SELFHOST_AWS_REGION ||
+            "us-east-1") as aws.Region,
         },
       },
     };
@@ -250,6 +254,9 @@ export default $config({
         WRAPS_API_URL: api.url,
         NEXT_PUBLIC_API_URL: api.url,
         NEXT_PUBLIC_APP_URL:
+          process.env.NEXT_PUBLIC_APP_URL ||
+          (webDomain ? `https://${webDomain}` : ""),
+        CORS_ORIGIN:
           process.env.NEXT_PUBLIC_APP_URL ||
           (webDomain ? `https://${webDomain}` : ""),
         AWS_BACKEND_ACCOUNT_ID: aws.getCallerIdentityOutput({}).accountId,

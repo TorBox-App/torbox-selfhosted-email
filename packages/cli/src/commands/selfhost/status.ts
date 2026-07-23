@@ -22,17 +22,29 @@ function displaySelfhostStatus(options: {
 }) {
   const lines: string[] = [];
 
-  lines.push(pc.bold(pc.green("Self-Hosted Control Plane Active")));
+  const incomplete = !(options.apiUrl && options.appUrl);
+  lines.push(
+    incomplete
+      ? pc.bold(pc.yellow("Self-Hosted Control Plane Incomplete"))
+      : pc.bold(pc.green("Self-Hosted Control Plane Active"))
+  );
+  if (incomplete) {
+    lines.push(
+      pc.yellow(
+        `A previous deploy did not finish. Run ${pc.cyan("pnpm selfhost:upgrade")} from your fork to complete it.`
+      )
+    );
+  }
   lines.push("");
 
   lines.push(pc.bold("API"));
-  lines.push(`  URL: ${pc.cyan(options.apiUrl)}`);
+  lines.push(`  URL: ${pc.cyan(options.apiUrl || "(not deployed)")}`);
   lines.push(`  Region: ${pc.cyan(options.region)}`);
   lines.push(`  Deployed: ${pc.dim(options.deployedAt)}`);
   lines.push("");
 
   lines.push(pc.bold("Configuration"));
-  lines.push(`  App URL: ${pc.cyan(options.appUrl)}`);
+  lines.push(`  App URL: ${pc.cyan(options.appUrl || "(not deployed)")}`);
   lines.push(`  License Key: ${pc.dim(`${options.licenseKeyPrefix}...`)}`);
   if (options.neonProjectId) {
     lines.push(`  Neon Project: ${pc.dim(options.neonProjectId)}`);
@@ -75,7 +87,7 @@ export async function selfhostStatus(
     progress.stop();
     clack.log.error("No self-hosted deployment found");
     console.log(
-      `\nRun ${pc.cyan("wraps selfhost deploy")} to deploy the self-hosted control plane.\n`
+      `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to deploy the full platform (API + dashboard),\nor ${pc.cyan("wraps selfhost deploy")} for the API-only control plane.\n`
     );
     process.exit(1);
   }

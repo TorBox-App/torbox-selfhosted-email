@@ -8,19 +8,14 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../packages/cli/src/utils/shared/metadata.js";
+import {
+  appendMissingEnvVars,
+  buildDeployedEnvVars,
+  detectEmailStack,
+  parseEnvFile,
+  upsertEnvVars,
+} from "./env.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
-
-function parseEnvFile(content: string): Record<string, string> {
-  return Object.fromEntries(
-    content
-      .split("\n")
-      .filter((l) => l.includes("=") && !l.startsWith("#"))
-      .map((l) => {
-        const idx = l.indexOf("=");
-        return [l.slice(0, idx), l.slice(idx + 1)];
-      })
-  );
-}
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
@@ -29,8 +24,41 @@ const OUTPUTS_PATH = join(REPO_ROOT, "infra", ".sst", "outputs.json");
 
 export type UpgradeOptions = {
   region?: string;
+  webDomain?: string;
+  aiGatewayApiKey?: string;
   yes?: boolean;
 };
+
+async function readOutputs(): Promise<{ apiUrl: string; webUrl: string }> {
+  try {
+    const outputs = JSON.parse(await readFile(OUTPUTS_PATH, "utf-8"));
+    return {
+      apiUrl: outputs.SelfhostApi?.url ?? outputs.apiUrl ?? "",
+      webUrl: outputs.SelfhostWeb?.url ?? outputs.webUrl ?? "",
+    };
+  } catch {
+    return { apiUrl: "", webUrl: "" };
+  }
+}
+
+/**
+ * Append any deploy-output env vars missing from .env.selfhost (recovery from
+ * a partial first deploy). Returns the appended keys.
+ */
+async function backfillEnvVars(
+  region: string,
+  webDomain: string | undefined
+): Promise<string[]> {
+  const { apiUrl, webUrl } = await readOutputs();
+  if (!apiUrl) {
+    return [];
+  }
+  const emailStack = await detectEmailStack(region);
+  return await appendMissingEnvVars(
+    ENV_PATH,
+    buildDeployedEnvVars({ apiUrl, webUrl, webDomain, emailStack })
+  );
+}
 
 export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   clack.intro(pc.bold("Wraps Self-Hosted Upgrade"));
@@ -44,18 +72,33 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     process.exit(1);
   }
 
+  // Docs promise these flags for adding a domain / AI key after first deploy
+  if (options.webDomain || options.aiGatewayApiKey) {
+    await upsertEnvVars(ENV_PATH, {
+      SELFHOST_WEB_DOMAIN: options.webDomain,
+      AI_GATEWAY_API_KEY: options.aiGatewayApiKey,
+    });
+    clack.log.info("Updated .env.selfhost with provided options");
+  }
+
   const identity = await validateAWSCredentials();
+  let env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
+  // The SST config deploys to SELFHOST_AWS_REGION — falling back to the
+  // ambient AWS_REGION here could silently target a different region than the
+  // existing stack, so the env file wins over everything but the explicit flag.
   const region =
     options.region ||
+    env.SELFHOST_AWS_REGION ||
     process.env.AWS_REGION ||
     process.env.AWS_DEFAULT_REGION ||
     "us-east-1";
+  await appendMissingEnvVars(ENV_PATH, { SELFHOST_AWS_REGION: region });
+  const webDomain = options.webDomain || env.SELFHOST_WEB_DOMAIN;
 
   let metadata = await loadConnectionMetadata(identity.accountId, region);
 
   if (!metadata?.services?.selfhost) {
     // Partial deploy recovery — env file exists but metadata was never saved
-    const env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
     if (!env.DATABASE_URL) {
       clack.log.error("No self-hosted deployment found in metadata.");
       clack.log.info(`Run ${pc.cyan("pnpm selfhost:deploy")} first.`);
@@ -96,17 +139,49 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     }
   }
 
+  const sstEnv = { SELFHOST_AWS_REGION: region };
+
+  // If a prior deploy already emitted URLs but never wrote them to
+  // .env.selfhost (partial first deploy), backfill now so this deploy bakes
+  // them in — otherwise the web app builds with empty NEXT_PUBLIC_APP_URL and
+  // falls back to wraps.dev / localhost links.
+  if (!env.NEXT_PUBLIC_APP_URL) {
+    const backfilled = await backfillEnvVars(region, webDomain);
+    if (backfilled.length > 0) {
+      clack.log.info(
+        `Recovered missing env vars from a previous deploy: ${backfilled.join(", ")}`
+      );
+    }
+  }
+
   clack.log.step("Deploying updated infrastructure...");
   await runSubprocess(
     "sst",
     ["deploy", "--config", SST_CONFIG, "--stage", "production"],
-    undefined,
+    sstEnv,
     SST_DIR
   );
 
+  // First-ever successful deploy through the recovery path: the URLs only
+  // exist now, so bake them in with a second pass.
+  env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
+  if (!env.NEXT_PUBLIC_APP_URL) {
+    const backfilled = await backfillEnvVars(region, webDomain);
+    if (backfilled.length > 0) {
+      clack.log.step(
+        "Redeploying with app URLs baked in (second pass, faster than the first)..."
+      );
+      await runSubprocess(
+        "sst",
+        ["deploy", "--config", SST_CONFIG, "--stage", "production"],
+        sstEnv,
+        SST_DIR
+      );
+    }
+  }
+
   const databaseUrl =
-    metadata.services.selfhost?.config?.databaseUrl ||
-    parseEnvFile(await readFile(ENV_PATH, "utf-8")).DATABASE_URL;
+    metadata.services.selfhost?.config?.databaseUrl || env.DATABASE_URL;
 
   if (databaseUrl) {
     clack.log.step("Running database migrations...");
@@ -134,9 +209,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     );
   }
 
-  const outputs = JSON.parse(await readFile(OUTPUTS_PATH, "utf-8"));
-  const apiUrl: string = outputs.SelfhostApi?.url ?? outputs.apiUrl ?? "";
-  const webUrl: string = outputs.SelfhostWeb?.url ?? outputs.webUrl ?? "";
+  const { apiUrl, webUrl } = await readOutputs();
 
   if (!apiUrl) {
     clack.log.error(
@@ -147,7 +220,11 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
   const now = new Date().toISOString();
   metadata.services.selfhost = {
-    ...metadata.services.selfhost,
+    ...metadata.services.selfhost!,
+    config: {
+      ...metadata.services.selfhost!.config,
+      appUrl: webUrl,
+    },
     apiUrl,
     webUrl,
     deployedAt: now,
@@ -162,11 +239,20 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const flags = mri(process.argv.slice(2), {
-    string: ["region"],
+    string: ["region", "web-domain", "ai-gateway-api-key"],
     boolean: ["yes"],
-    alias: { y: "yes" },
+    alias: {
+      y: "yes",
+      "web-domain": "webDomain",
+      "ai-gateway-api-key": "aiGatewayApiKey",
+    },
   });
-  upgrade({ region: flags.region, yes: flags.yes }).catch((err) => {
+  upgrade({
+    region: flags.region,
+    webDomain: flags["web-domain"],
+    aiGatewayApiKey: flags["ai-gateway-api-key"],
+    yes: flags.yes,
+  }).catch((err) => {
     clack.log.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   });
