@@ -119,7 +119,7 @@ async function runFullSetup(): Promise<boolean> {
   console.log(`  ${pc.cyan("https://aws.amazon.com/free")}`);
   console.log();
   console.log(
-    pc.dim("  The AWS Free Tier includes 3,000 SES emails/month for 12 months")
+    pc.dim("  New AWS accounts get $200 in Free Tier credits (6 months)")
   );
   console.log();
 

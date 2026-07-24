@@ -568,7 +568,8 @@ export function OrganizationSettingsBilling({
             ~$2-5/month for DynamoDB, Lambda, EventBridge
           </p>
           <p className="text-xs">
-            Free tier: First 3,000 emails/month are free for new AWS accounts
+            New AWS accounts get $200 in AWS Free Tier credits, valid for 6
+            months.
           </p>
         </CardContent>
       </Card>

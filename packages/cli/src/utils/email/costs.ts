@@ -55,9 +55,9 @@ const AWS_PRICING = {
  * Note: Some limits are permanently free, others only for first 12 months
  */
 const FREE_TIER = {
-  // SES: 3,000 emails/month for first 12 months (new AWS accounts only)
-  // After 12 months or for existing accounts: NO free tier
-  SES_EMAILS: 0, // Conservative: assume no free tier (most users are past 12 months)
+  // SES: no free sending tier (the 3,000/mo-for-12-months offer was retired
+  // 2026-07-21; new accounts get generic $200 AWS credits instead)
+  SES_EMAILS: 0,
 
   // Lambda: Permanently free tier
   LAMBDA_REQUESTS: 1_000_000, // 1M requests per month (always free)

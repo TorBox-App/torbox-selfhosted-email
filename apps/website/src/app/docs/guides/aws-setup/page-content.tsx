@@ -246,8 +246,8 @@ export default function AWSSetupPageContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              Your billing account with Amazon. Free tier includes 3,000
-              emails/month for 12 months.
+              Your billing account with Amazon. New accounts get $200 in AWS
+              Free Tier credits, valid for 6 months.
             </CardContent>
           </Card>
           <Card>

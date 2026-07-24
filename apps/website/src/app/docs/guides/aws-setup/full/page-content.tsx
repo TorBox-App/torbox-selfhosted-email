@@ -118,8 +118,9 @@ export default function FullGuidePageContent() {
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">AWS Free Tier</p>
           <p className="mt-1 text-muted-foreground text-sm">
-            New AWS accounts get 3,000 outbound SES emails per month free for 12
-            months.
+            New AWS accounts get $200 in AWS Free Tier credits, valid for 6
+            months and usable across AWS services. There is no longer an
+            SES-specific free sending allowance.
           </p>
         </div>
       </section>
