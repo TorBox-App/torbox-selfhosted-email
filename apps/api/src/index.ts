@@ -12,6 +12,7 @@ import { Elysia } from "elysia";
 import { workflowScheduleRoutes } from "./(ee)/routes/workflow-schedules";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
 import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
+import { type ApiErrorSinks, handleApiError } from "./lib/error-handler";
 import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
 import { getAuthOptional } from "./middleware/auth";
@@ -121,6 +122,21 @@ const openApiDocumentation = {
  * browsers, and cookie auth on this API would require an allowlist instead.
  */
 
+/**
+ * Incident sinks for the error handler. Sentry and PostHog always fire
+ * together, so they are one dependency from the handler's point of view.
+ */
+const apiErrorSinks: ApiErrorSinks = {
+  log,
+  captureException: (error, context) => {
+    Sentry.captureException(error, { extra: { ...context } });
+    getPostHogClient().captureException(error, "api-error", {
+      url: context.url,
+      method: context.method,
+    });
+  },
+};
+
 export const app = new Elysia()
   .derive(({ request }) => ({
     startTime: performance.now(),
@@ -149,77 +165,19 @@ export const app = new Elysia()
       authMethod: auth.apiKeyId ? "api_key" : "session",
     });
   })
-  .onError(({ error, request, code, set, requestId, ...ctx }) => {
-    const auth = getAuthOptional(ctx);
-    const url = new URL(request.url);
-    const status =
-      code === "NOT_FOUND"
-        ? 404
-        : code === "VALIDATION"
-          ? 400
-          : ((set.status as number) ?? 500);
-
-    log.error(
-      "api.error",
-      error instanceof Error ? error : new Error(String(error)),
+  .onError(({ error, request, code, set, requestId, ...ctx }) =>
+    handleApiError(
       {
-        requestId,
-        method: request.method,
-        path: url.pathname,
-        status,
+        error,
+        request,
         code,
-        organizationId: auth?.organizationId,
-        apiKeyId: auth?.apiKeyId,
-        userId: auth?.userId,
-        authMethod: auth?.apiKeyId ? "api_key" : auth ? "session" : undefined,
-      }
-    );
-
-    // Only report unexpected errors to Sentry/PostHog (skip 404s and validation errors)
-    if (code !== "NOT_FOUND" && code !== "VALIDATION") {
-      Sentry.captureException(
-        error instanceof Error ? error : new Error(String(error)),
-        {
-          extra: {
-            requestId,
-            url: request.url,
-            method: request.method,
-            path: url.pathname,
-            status,
-            organizationId: auth?.organizationId,
-          },
-        }
-      );
-
-      const posthog = getPostHogClient();
-      posthog.captureException(
-        error instanceof Error ? error : new Error(String(error)),
-        "api-error",
-        {
-          url: request.url,
-          method: request.method,
-        }
-      );
-    }
-    if (code === "NOT_FOUND") {
-      return { error: "Not found" };
-    }
-
-    if (code === "VALIDATION") {
-      const message = error instanceof Error ? error.message : String(error);
-      log.warn("Validation failed", { details: message });
-      return { error: "Validation failed" };
-    }
-
-    // 4xx errors from routes are already sanitized — pass through
-    if (status >= 400 && status < 500) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { error: message };
-    }
-
-    // 5xx: never leak internal details
-    return { error: "Internal server error" };
-  })
+        setStatus: set.status,
+        requestId,
+        auth: getAuthOptional(ctx) ?? null,
+      },
+      apiErrorSinks
+    )
+  )
   .use(
     cors({
       origin: true,
