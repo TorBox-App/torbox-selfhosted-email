@@ -19,7 +19,7 @@ import { REPO_ROOT, runSubprocess } from "./subprocess.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
-const SST_CONFIG = "selfhost.sst.config.ts";
+const SST_CONFIG = "selfhost.config.ts";
 const OUTPUTS_PATH = join(REPO_ROOT, "infra", ".sst", "outputs.json");
 
 export type UpgradeOptions = {
@@ -214,7 +214,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
   if (!apiUrl) {
     clack.log.error(
-      "SST deploy did not emit an API URL. Check the selfhost.sst.config.ts outputs."
+      "SST deploy did not emit an API URL. Check the selfhost.config.ts outputs."
     );
     process.exit(1);
   }

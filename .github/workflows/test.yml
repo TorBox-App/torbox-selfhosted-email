@@ -280,9 +280,20 @@ jobs:
             [ -f "$f" ] || { echo "::error::$f missing after selfhost:build-deps — the SST esbuild bundle will fail with 'Could not resolve' on customer machines"; exit 1; }
           done
 
+      # SST's bundler injects the aws/sst globals into every source file
+      # EXCEPT paths containing ".sst" (its platform dir check is a naive
+      # substring match). A config named e.g. selfhost.sst.config.ts silently
+      # gets no globals and dies at deploy with "aws is not defined".
+      - name: SST config filename must not contain ".sst"
+        run: |
+          if ls infra/*.ts | grep -q "\.sst"; then
+            echo "::error::An infra config filename contains '.sst' — SST's InjectGlobals plugin skips such paths, so aws/sst globals will be undefined at deploy time"
+            exit 1
+          fi
+
       - name: SST config builds from zero (sst install)
         working-directory: infra
-        run: ../node_modules/.bin/sst install --config selfhost.sst.config.ts --stage production --print-logs
+        run: ../node_modules/.bin/sst install --config selfhost.config.ts --stage production --print-logs
 
       - name: Upgrade script boots and fails with its own guard (not a crash)
         run: |

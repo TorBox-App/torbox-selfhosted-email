@@ -12,7 +12,7 @@ import { REPO_ROOT, runSubprocess } from "./subprocess.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
-const SST_CONFIG = "selfhost.sst.config.ts";
+const SST_CONFIG = "selfhost.config.ts";
 
 export type DestroyOptions = {
   region?: string;

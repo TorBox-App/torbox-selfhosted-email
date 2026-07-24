@@ -44,7 +44,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       # Upgrades run on a fresh runner with no .env.selfhost on disk.
-      # SST reads config from .env.selfhost (infra/selfhost.sst.config.ts),
+      # SST reads config from .env.selfhost (infra/selfhost.config.ts),
       # so we reconstruct it from repository secrets before deploying.
       # BETTER_AUTH_SECRET / UNSUBSCRIBE_SECRET are the same repository secrets
       # required by the first-time deploy (generate with 'openssl rand -hex 32');

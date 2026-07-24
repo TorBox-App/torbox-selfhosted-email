@@ -14,9 +14,18 @@
  * Run via: pnpm selfhost:deploy — sst runs with cwd=infra/, which both the
  * .env.selfhost lookup below and the .sst/platform reference above depend on.
  *
- * Do not import `sst` or `aws` here. SST injects them as globals when it builds
- * this config; importing them from .sst/platform deadlocks `sst install`, which
- * must build the config before it can create that directory.
+ * Two SST sharp edges, both learned the hard way:
+ *
+ * 1. This file's path must NOT contain the substring ".sst". SST's bundler
+ *    injects the `aws`/`sst` import shim into every source file EXCEPT paths
+ *    containing ".sst" (meant to exclude its platform directory) — a name
+ *    like "selfhost.sst.config.ts" matches that check, gets no shim, and
+ *    every `aws.*` reference throws "ReferenceError: aws is not defined" at
+ *    deploy. The selfhost-smoke CI job guards this.
+ *
+ * 2. Do not import `sst` or `aws` here. The injected shim provides them;
+ *    importing them from .sst/platform deadlocks `sst install`, which must
+ *    build the config before that directory exists.
  */
 
 export default $config({

@@ -534,7 +534,7 @@ pnpm install`,
             <code className="rounded bg-muted px-1.5 py-0.5">region</code> field
             in{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
-              infra/selfhost.sst.config.ts
+              infra/selfhost.config.ts
             </code>{" "}
             before deploying.
           </p>
@@ -1139,7 +1139,7 @@ pnpm install`,
                     <td className="py-2">
                       AWS region for deployments (note: must also match{" "}
                       <code className="rounded bg-muted px-1.5 py-0.5">
-                        infra/selfhost.sst.config.ts
+                        infra/selfhost.config.ts
                       </code>
                       )
                     </td>
