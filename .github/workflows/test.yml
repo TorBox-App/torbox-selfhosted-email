@@ -295,6 +295,16 @@ jobs:
         working-directory: infra
         run: ../node_modules/.bin/sst install --config selfhost.config.ts --stage production --print-logs
 
+      # Full run() evaluation — the phase sst install never reaches (it only
+      # evaluates app()). Real config + real SST platform components + real
+      # @pulumi/aws; only the Pulumi engine is mocked (pulumi's official
+      # setMocks API). The negative control proves the harness can still
+      # detect the missing-globals failure, so it can't rot into always-pass.
+      - name: SST config run() evaluates (mock engine)
+        run: |
+          node scripts/selfhost/eval-config.mjs
+          node scripts/selfhost/eval-config.mjs negative
+
       - name: Upgrade script boots and fails with its own guard (not a crash)
         run: |
           set +e
