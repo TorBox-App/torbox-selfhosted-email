@@ -6,10 +6,17 @@ vi.mock("node:fs", () => ({
 }));
 
 const mockPoolEnd = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+// Capture the constructor argument: discarding it meant no test could see the
+// connection string, so reverting normalizeDatabaseUrl at the call site left
+// this suite green while PlanetScale customers got ENOENT back.
+const mockPoolCtor = vi.hoisted(() => vi.fn());
 
 vi.mock("pg", () => ({
   Pool: class {
     end = mockPoolEnd;
+    constructor(config: unknown) {
+      mockPoolCtor(config);
+    }
   },
 }));
 
@@ -210,6 +217,82 @@ describe("selfhostDeploy", () => {
         vi.mocked(drizzle).mock.results[0]?.value,
         { migrationsFolder: expect.stringContaining("selfhost-migrations") }
       );
+    });
+
+    it("strips sslrootcert=system before connecting — pg reads it as a filename", async () => {
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl:
+          "postgresql://u:pw@xyz.horizon.psdb.cloud:5432/db?sslmode=verify-full&sslrootcert=system",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      const { connectionString } = mockPoolCtor.mock.calls[0]?.[0] as {
+        connectionString: string;
+      };
+      expect(connectionString).not.toContain("sslrootcert");
+      expect(connectionString).toContain("sslmode=verify-full");
+    });
+
+    it("keeps TLS verification when sslrootcert was the only TLS parameter", async () => {
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://u:pw@custom-host:5432/mydb?sslrootcert=system",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      const { connectionString } = mockPoolCtor.mock.calls[0]?.[0] as {
+        connectionString: string;
+      };
+      expect(connectionString).toContain("sslmode=verify-full");
+    });
+
+    it("rejects a MySQL URL before running the deploy", async () => {
+      await expect(
+        selfhostDeploy({
+          region: "us-east-1",
+          databaseUrl: "mysql://u:pw@custom-host:3306/mydb",
+          licenseKey: "v1.scale.2027-01-01.abc123",
+          appUrl: "https://app.torbox.app",
+          yes: true,
+        })
+      ).rejects.toThrow(/requires PostgreSQL/);
+
+      expect(mockPoolCtor).not.toHaveBeenCalled();
+    });
+
+    it("reports the pg cause AND its fix behind a failed migration", async () => {
+      const pgError = Object.assign(
+        new Error('permission denied for database "wraps"'),
+        { code: "42501" }
+      );
+      const drizzleError = new Error(
+        'Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle"\nparams: '
+      );
+      drizzleError.cause = pgError;
+      vi.mocked(migrate).mockRejectedValueOnce(drizzleError);
+
+      const failure = await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      }).catch((error: Error) => error);
+
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as Error).message).toContain(
+        "permission denied for database"
+      );
+      expect((failure as Error).message).toContain("42501");
+      // The CLI used to print the cause without the fix — the hint table lived
+      // only in the repo scripts, so `wraps selfhost deploy` left the operator
+      // to work out the missing privilege themselves.
+      expect((failure as Error).message).toContain("GRANT CREATE ON DATABASE");
     });
 
     it("closes the pg.Pool connection after migration completes", async () => {

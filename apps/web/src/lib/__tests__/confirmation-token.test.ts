@@ -126,16 +126,21 @@ describe("Confirmation Token", () => {
       expect(url).toMatch(/^https:\/\/test\.wraps\.dev\/confirm\/.+$/);
     });
 
-    it("should use default URL when env not set", async () => {
+    it("should refuse to build a link when no app URL is configured", async () => {
+      // Previously this fell back to app.wraps.dev, which sent a self-hosted
+      // deployment's recipients to the Wraps platform, where their token is
+      // meaningless. Failing loudly is the lesser harm.
+      //
+      // Pin all three variables the resolver reads. Stubbing only the first
+      // relies on the other two being absent from .env.test — an ambient
+      // precondition that a future BETTER_AUTH_URL entry would silently break.
       vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+      vi.stubEnv("BETTER_AUTH_URL", undefined);
+      vi.stubEnv("APP_BASE_URL", undefined);
 
-      const url = await generateConfirmationUrl(
-        "contact-123",
-        "org-456",
-        "topic-789"
-      );
-
-      expect(url).toMatch(/^https:\/\/app\.wraps\.dev\/confirm\/.+$/);
+      await expect(
+        generateConfirmationUrl("contact-123", "org-456", "topic-789")
+      ).rejects.toThrow(/NEXT_PUBLIC_APP_URL/);
     });
 
     it("should generate URL with verifiable token", async () => {

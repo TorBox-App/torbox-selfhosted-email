@@ -91,6 +91,24 @@ vi.mock("../../../packages/cli/src/utils/shared/metadata.js", async () => {
   };
 });
 
+// ── pg / drizzle mocks ────────────────────────────────────────────────────────
+const mockMigrate = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockPoolEnd = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock("pg", () => ({
+  Pool: class MockPool {
+    end = mockPoolEnd;
+  },
+}));
+
+vi.mock("drizzle-orm/node-postgres", () => ({
+  drizzle: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock("drizzle-orm/node-postgres/migrator", () => ({
+  migrate: mockMigrate,
+}));
+
 // ── pulumi mock ───────────────────────────────────────────────────────────────
 const mockStackUp = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 const mockStackRefresh = vi.hoisted(() => vi.fn().mockResolvedValue({}));
@@ -117,6 +135,13 @@ vi.mock("@pulumi/pulumi", () => ({
 vi.mock("../../../packages/cli/src/utils/shared/fs.js", () => ({
   ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
   getPulumiWorkDir: vi.fn().mockReturnValue("/mock/.wraps/pulumi"),
+}));
+
+const mockEnsurePulumiInstalled = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(false)
+);
+vi.mock("../../../packages/cli/src/utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: mockEnsurePulumiInstalled,
 }));
 
 vi.mock("../../../packages/cli/src/infrastructure/email-stack.js", () => ({
@@ -158,6 +183,8 @@ describe("scripts/selfhost/deploy", () => {
     mockConfirm.mockResolvedValue(false);
     mockText.mockResolvedValue("");
     mockDetectVariant.mockResolvedValue(null);
+    mockMigrate.mockResolvedValue(undefined);
+    mockEnsurePulumiInstalled.mockResolvedValue(false);
 
     vi.mocked(metadataModule.loadConnectionMetadata).mockResolvedValue(null);
     vi.mocked(metadataModule.saveConnectionMetadata).mockResolvedValue(
@@ -326,6 +353,141 @@ describe("scripts/selfhost/deploy", () => {
     expect(
       pulumi.automation.LocalWorkspace.createOrSelectStack
     ).toHaveBeenCalled();
+  });
+
+  it("runs database migrations so signup works on a fresh deploy", async () => {
+    const { deploy } = await import("../deploy.js");
+    await deploy({
+      databaseUrl: "postgres://user:pass@host/db",
+      licenseKey: "wraps_lic_test",
+      region: "us-east-1",
+    });
+
+    expect(mockMigrate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        migrationsFolder: expect.stringContaining("migrations"),
+      })
+    );
+  });
+
+  it("surfaces the underlying pg cause when migrations fail, not just the SQL", async () => {
+    const pgError = Object.assign(
+      new Error('permission denied for database "wraps"'),
+      { code: "42501" }
+    );
+    const drizzleError = new Error(
+      'Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle"\nparams: '
+    );
+    drizzleError.cause = pgError;
+    mockMigrate.mockRejectedValue(drizzleError);
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+
+    const { deploy } = await import("../deploy.js");
+    await expect(
+      deploy({
+        databaseUrl: "postgres://user:pass@host/db",
+        licenseKey: "wraps_lic_test",
+        region: "us-east-1",
+      })
+    ).rejects.toThrow("process.exit called");
+
+    const reported = mockLog.error.mock.calls.flat().join("\n");
+    expect(reported).toContain("permission denied for database");
+    expect(reported).toContain("42501");
+    expect(reported).toContain("GRANT CREATE ON DATABASE");
+    exitSpy.mockRestore();
+  });
+
+  it("still reports the deployed URLs when migrations fail", async () => {
+    mockMigrate.mockRejectedValue(new Error("ECONNREFUSED 10.0.0.1:5432"));
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+
+    const { deploy } = await import("../deploy.js");
+    await expect(
+      deploy({
+        databaseUrl: "postgres://user:pass@host/db",
+        licenseKey: "wraps_lic_test",
+        region: "us-east-1",
+      })
+    ).rejects.toThrow("process.exit called");
+
+    const info = mockLog.info.mock.calls.flat().join("\n");
+    expect(info).toContain("https://api.selfhost.example.com");
+    expect(info).toContain("https://web.selfhost.example.com");
+    exitSpy.mockRestore();
+  });
+
+  it("installs the Pulumi CLI before rerouting — SST never puts it on PATH", async () => {
+    vi.mocked(metadataModule.loadConnectionMetadata).mockResolvedValue({
+      ...BASE_METADATA,
+      services: {
+        email: {
+          deployedAt: "2026-05-01T00:00:00.000Z",
+          config: { domain: "example.com" } as never,
+          webhookSecret: "existing-secret",
+        },
+      },
+    } as never);
+    mockConfirm.mockResolvedValue(true);
+
+    const { deploy } = await import("../deploy.js");
+    await deploy({
+      databaseUrl: "postgres://user:pass@host/db",
+      licenseKey: "wraps_lic_test",
+      region: "us-east-1",
+    });
+
+    expect(mockEnsurePulumiInstalled).toHaveBeenCalled();
+    expect(mockEnsurePulumiInstalled.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(pulumi.automation.LocalWorkspace.createOrSelectStack).mock
+        .invocationCallOrder[0]
+    );
+  });
+
+  it("keeps a completed deploy usable when the email reroute fails", async () => {
+    vi.mocked(metadataModule.loadConnectionMetadata).mockResolvedValue({
+      ...BASE_METADATA,
+      services: {
+        email: {
+          deployedAt: "2026-05-01T00:00:00.000Z",
+          config: { domain: "example.com" } as never,
+          webhookSecret: "existing-secret",
+        },
+      },
+    } as never);
+    mockConfirm.mockResolvedValue(true);
+    mockEnsurePulumiInstalled.mockRejectedValue(
+      new Error("Command failed with ENOENT: pulumi version")
+    );
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+
+    const { deploy } = await import("../deploy.js");
+    await expect(
+      deploy({
+        databaseUrl: "postgres://user:pass@host/db",
+        licenseKey: "wraps_lic_test",
+        region: "us-east-1",
+      })
+    ).rejects.toThrow("process.exit called");
+
+    // Migrations still ran and the URLs still printed — only the reroute failed.
+    expect(mockMigrate).toHaveBeenCalled();
+    const info = mockLog.info.mock.calls.flat().join("\n");
+    expect(info).toContain("https://api.selfhost.example.com");
+    const reported = mockLog.error.mock.calls.flat().join("\n");
+    expect(reported).toMatch(/reroute/i);
+    expect(reported).toContain("selfhost:upgrade --reroute-events");
+    exitSpy.mockRestore();
   });
 
   it("skips email reroute prompt when no email service in metadata", async () => {

@@ -783,6 +783,19 @@ export async function findConnectionsWithService(
 }
 
 /**
+ * `webhookUrl` is a BASE url — every consumer (eventbridge.ts, pulumi events,
+ * cdk email) appends `/webhooks/ses/{account}` itself. An earlier selfhost
+ * reroute persisted a full path (`.../v1/ses-events`), which made those
+ * consumers build `.../v1/ses-events/webhooks/ses/{account}` — a route that
+ * exists nowhere, so EventBridge POSTed into a 404 and every event was dropped.
+ * Heal the stored value on read so affected deployments recover on their next
+ * redeploy instead of needing a metadata migration.
+ */
+function normalizeWebhookBaseUrl(webhookUrl: string): string {
+  return webhookUrl.replace(/\/v1\/ses-events\/?$/, "").replace(/\/+$/, "");
+}
+
+/**
  * Build a complete EmailStackConfig from metadata.
  *
  * All commands that redeploy existing infrastructure MUST use this helper
@@ -814,7 +827,9 @@ export function buildEmailStackConfig(
     webhook = {
       awsAccountNumber: metadata.accountId,
       webhookSecret: emailService.webhookSecret,
-      ...(emailService.webhookUrl && { webhookUrl: emailService.webhookUrl }),
+      ...(emailService.webhookUrl && {
+        webhookUrl: normalizeWebhookBaseUrl(emailService.webhookUrl),
+      }),
     };
   }
 

@@ -4,6 +4,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+// The canonical normalizer, shared with the app runtime and the selfhost
+// scripts. A local copy drifted from it once; the subpath keeps @wraps/db's
+// schema and repository layer out of the CLI bundle.
+import {
+  assertPostgresUrl,
+  describeMigrationFailure,
+  normalizeDatabaseUrl,
+} from "@wraps/db/connection-url";
 import pc from "picocolors";
 import { deploySelfhostStack } from "../../infrastructure/selfhost-stack.js";
 import { trackError } from "../../telemetry/events.js";
@@ -301,6 +309,11 @@ export async function selfhostDeploy(
   }
   const databaseUrl = resolvedDatabaseUrl;
 
+  // Reject a URL we can never connect with now, not after the Pulumi deploy —
+  // a MySQL URL or a libpq keyword/value DSN otherwise surfaced minutes later
+  // as an opaque pg error.
+  assertPostgresUrl(databaseUrl);
+
   // Save critical state immediately after database resolution, before Pulumi.
   // If Pulumi fails partway through, re-running deploy will find this record
   // and avoid creating a second orphaned Neon project.
@@ -343,15 +356,28 @@ export async function selfhostDeploy(
   await saveConnectionMetadata(savedMetadata); // baseline:allow-early-save — Neon orphan prevention
 
   // 12. Run database migrations using bundled SQL files + pg driver
+  const { url: migrationUrl, notes: connectionNotes } =
+    normalizeDatabaseUrl(databaseUrl);
+  for (const note of connectionNotes) {
+    // Never rewrite TLS settings silently — the operator has to be able to see
+    // that we changed how their connection is secured. Printed before the
+    // spinner starts so it does not fight for the same line.
+    progress.info(note);
+  }
+
   await progress.execute("Running database migrations", async () => {
     const { Pool } = await import("pg");
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
 
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({ connectionString: migrationUrl });
     const db = drizzle(pool);
     try {
       await migrate(db, { migrationsFolder: bundledMigrationsDir });
+    } catch (error) {
+      // Drizzle's message is only the SQL it attempted; the reason (rejected
+      // credentials, missing CREATE, TLS, unreachable host) is on `cause`.
+      throw new Error(describeMigrationFailure(error));
     } finally {
       await pool.end();
     }

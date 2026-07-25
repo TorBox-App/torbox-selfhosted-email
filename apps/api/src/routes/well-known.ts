@@ -1,17 +1,24 @@
 import { Elysia, t } from "elysia";
+import { resolveApiUrl, resolveAppUrl } from "../lib/urls";
 
+// A self-hosted deployment must advertise its own endpoints — the CLI reads
+// this document to start the device flow, and the platform's URLs would send
+// the customer's users to a server that has never heard of them.
 export const wellKnownRoutes = new Elysia({ prefix: "/.well-known" }).get(
   "/oauth-authorization-server",
-  () => ({
-    issuer: "https://api.wraps.dev",
-    device_authorization_endpoint: "https://app.wraps.dev/api/auth/device/code",
-    token_endpoint: "https://app.wraps.dev/api/auth/device/token",
-    grant_types_supported: [
-      "urn:ietf:params:oauth:grant-type:device_code",
-    ] as string[],
-    token_endpoint_auth_methods_supported: ["none"] as string[],
-    service_documentation: "https://wraps.dev/docs",
-  }),
+  () => {
+    const appUrl = resolveAppUrl();
+    return {
+      issuer: resolveApiUrl(),
+      device_authorization_endpoint: `${appUrl}/api/auth/device/code`,
+      token_endpoint: `${appUrl}/api/auth/device/token`,
+      grant_types_supported: [
+        "urn:ietf:params:oauth:grant-type:device_code",
+      ] as string[],
+      token_endpoint_auth_methods_supported: ["none"] as string[],
+      service_documentation: "https://wraps.dev/docs",
+    };
+  },
   {
     response: t.Object({
       issuer: t.String(),

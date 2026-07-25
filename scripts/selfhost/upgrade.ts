@@ -16,6 +16,9 @@ import {
   parseEnvFile,
   upsertEnvVars,
 } from "./env.js";
+import { describeError } from "./errors.js";
+import { migrateWithProgress } from "./migrate.js";
+import { rerouteEmailEvents, sesEventsWebhookUrl } from "./reroute.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
@@ -28,6 +31,7 @@ export type UpgradeOptions = {
   webDomain?: string;
   aiGatewayApiKey?: string;
   yes?: boolean;
+  rerouteEvents?: boolean;
 };
 
 async function readOutputs(): Promise<{ apiUrl: string; webUrl: string }> {
@@ -40,6 +44,29 @@ async function readOutputs(): Promise<{ apiUrl: string; webUrl: string }> {
   } catch {
     return { apiUrl: "", webUrl: "" };
   }
+}
+
+/**
+ * Vars the deploy bakes into the web build AND the API reads at runtime.
+ *
+ * The backfill used to be gated on NEXT_PUBLIC_APP_URL alone, which left
+ * WRAPS_API_URL and BETTER_AUTH_URL unwritten whenever an operator supplied the
+ * app URL themselves — exactly what the CI workflow does when it reconstructs
+ * .env.selfhost from repository secrets. An empty WRAPS_API_URL then makes the
+ * API advertise the Wraps platform to the customer's own users: `.well-known`
+ * returns `issuer: https://api.wraps.dev`, and POST /v1/connections hands back
+ * a platform webhook endpoint.
+ */
+const DEPLOYED_ENV_KEYS = [
+  "NEXT_PUBLIC_APP_URL",
+  "WRAPS_API_URL",
+  "BETTER_AUTH_URL",
+] as const;
+
+function needsDeployedEnvVars(
+  env: Record<string, string | undefined>
+): boolean {
+  return DEPLOYED_ENV_KEYS.some((key) => !env[key]);
 }
 
 /**
@@ -185,7 +212,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   // .env.selfhost (partial first deploy), backfill now so this deploy bakes
   // them in — otherwise the web app builds with empty NEXT_PUBLIC_APP_URL and
   // falls back to wraps.dev / localhost links.
-  if (!env.NEXT_PUBLIC_APP_URL) {
+  if (needsDeployedEnvVars(env)) {
     const backfilled = await backfillEnvVars(region, webDomain);
     if (backfilled.length > 0) {
       clack.log.info(
@@ -205,7 +232,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   // First-ever successful deploy through the recovery path: the URLs only
   // exist now, so bake them in with a second pass.
   env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
-  if (!env.NEXT_PUBLIC_APP_URL) {
+  if (needsDeployedEnvVars(env)) {
     const backfilled = await backfillEnvVars(region, webDomain);
     if (backfilled.length > 0) {
       clack.log.step(
@@ -223,31 +250,7 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   const databaseUrl =
     metadata.services.selfhost?.config?.databaseUrl || env.DATABASE_URL;
 
-  if (databaseUrl) {
-    clack.log.step("Running database migrations...");
-    const { Pool } = await import("pg");
-    const { drizzle } = await import("drizzle-orm/node-postgres");
-    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-    const migrationsFolder = join(
-      REPO_ROOT,
-      "packages",
-      "db",
-      "src",
-      "migrations"
-    );
-    const pool = new Pool({ connectionString: databaseUrl });
-    const db = drizzle(pool);
-    try {
-      await migrate(db, { migrationsFolder });
-    } finally {
-      await pool.end();
-    }
-    clack.log.success("Database migrations applied.");
-  } else {
-    clack.log.warn(
-      "DATABASE_URL not found in metadata or .env.selfhost — skipping database migrations."
-    );
-  }
+  await migrateWithProgress(databaseUrl);
 
   const { apiUrl, webUrl } = await readOutputs();
 
@@ -273,19 +276,47 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   metadata.timestamp = now;
   await saveConnectionMetadata(metadata);
 
-  clack.outro(pc.green("Upgrade complete!"));
+  // Runs after the upgrade's own bookkeeping is persisted: rerouting touches a
+  // separate Pulumi stack and must not be able to discard a successful upgrade.
+  let rerouteFailure: string | undefined;
+  if (options.rerouteEvents) {
+    try {
+      clack.log.step("Rerouting email events to selfhost API...");
+      await rerouteEmailEvents({
+        metadata,
+        accountId: identity.accountId,
+        region,
+        apiUrl,
+      });
+      clack.log.success(
+        `Email events rerouted to ${pc.cyan(sesEventsWebhookUrl(apiUrl))}`
+      );
+    } catch (error) {
+      rerouteFailure = `Could not reroute email events: ${describeError(error)}\nThe upgrade itself succeeded — SES events just still go to the Wraps platform rather than ${pc.cyan(sesEventsWebhookUrl(apiUrl))}.`;
+    }
+  }
+
   clack.log.info(`API: ${pc.cyan(apiUrl)}`);
   clack.log.info(`Web: ${pc.cyan(webUrl)}`);
+
+  if (rerouteFailure) {
+    clack.log.error(rerouteFailure);
+    clack.outro(pc.yellow("Upgrade complete, but the event reroute failed."));
+    process.exit(1);
+  }
+
+  clack.outro(pc.green("Upgrade complete!"));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const flags = mri(process.argv.slice(2), {
     string: ["region", "web-domain", "ai-gateway-api-key"],
-    boolean: ["yes"],
+    boolean: ["yes", "reroute-events"],
     alias: {
       y: "yes",
       "web-domain": "webDomain",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "reroute-events": "rerouteEvents",
     },
   });
   upgrade({
@@ -293,8 +324,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     webDomain: flags["web-domain"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
     yes: flags.yes,
+    rerouteEvents: flags["reroute-events"],
   }).catch((err) => {
-    clack.log.error(err instanceof Error ? err.message : String(err));
+    clack.log.error(describeError(err));
     process.exit(1);
   });
 }

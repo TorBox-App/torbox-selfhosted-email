@@ -1,0 +1,253 @@
+/**
+ * DATABASE_URL handling shared by the app runtime and the self-hosted
+ * migration scripts.
+ *
+ * Managed Postgres providers document libpq connection strings, but we connect
+ * with node-postgres, which implements a subset of libpq's parameters. Where
+ * the two disagree the failure is opaque — so normalize here, once, instead of
+ * letting each caller rediscover it.
+ */
+
+const POSTGRES_SCHEMES = ["postgres:", "postgresql:"];
+
+/**
+ * libpq resolves `sslrootcert=system` (and its `os` alias) to the platform
+ * trust store. node-postgres has no such concept: pg-connection-string passes
+ * the value straight to `fs.readFileSync`, so the connection dies with
+ * `ENOENT: no such file or directory, open 'system'` before any SQL runs.
+ *
+ * Dropping the parameter alone is NOT safe. pg-connection-string only creates
+ * an `ssl` object when one of sslcert/sslkey/sslrootcert/sslmode is present, so
+ * a URL whose only TLS parameter was `sslrootcert` drops to a CLEARTEXT
+ * connection once it is removed. And under `uselibpqcompat=true`, `require`
+ * verifies only while a CA is configured — remove the CA and it becomes
+ * `rejectUnauthorized: false`. Both cases turn a fail-closed ENOENT into a
+ * silently weakened session carrying the password, so the strip must re-pin the
+ * mode. See `pinVerification` below.
+ */
+const TRUST_STORE_SENTINELS = new Set(["system", "os"]);
+
+/**
+ * sslmode values that deliberately opt out of verification. An ABSENT sslmode
+ * is not opting out — it just inherits pg's default, which is no TLS at all.
+ */
+const TLS_OPT_OUT = new Set(["disable", "no-verify"]);
+
+/**
+ * Guarantee the URL still verifies after the CA reference is removed.
+ * `verify-full` is the one mode that verifies under both pg-connection-string's
+ * current mode aliasing and real libpq semantics, so pin it unless the operator
+ * explicitly opted out. Returns a note when this actually changed something.
+ */
+function pinVerification(parsed: URL): string | undefined {
+  // pg-connection-string assigns every query param in iteration order
+  // (`config[key] = value`), so on a duplicated key the LAST value wins. Read
+  // the same one pg will — reading the first let `?sslmode=no-verify&
+  // sslmode=require&uselibpqcompat=true` take the opt-out branch here while pg
+  // resolved `require` and connected unverified.
+  const modes = parsed.searchParams.getAll("sslmode");
+  const effective = modes.at(-1)?.toLowerCase();
+  const hadCompat = parsed.searchParams.has("uselibpqcompat");
+
+  // `set` collapses duplicates to a single entry, so both branches below leave
+  // exactly one sslmode and no compat flag for pg to reinterpret.
+  if (effective && TLS_OPT_OUT.has(effective)) {
+    parsed.searchParams.set("sslmode", effective);
+    parsed.searchParams.delete("uselibpqcompat");
+    return;
+  }
+
+  const alreadyVerifying =
+    modes.length === 1 && effective === "verify-full" && !hadCompat;
+  parsed.searchParams.set("sslmode", "verify-full");
+  parsed.searchParams.delete("uselibpqcompat");
+
+  return alreadyVerifying
+    ? undefined
+    : "Pinned sslmode=verify-full — without the CA reference the original mode would have connected unverified (or in cleartext).";
+}
+
+export type NormalizedDatabaseUrl = {
+  url: string;
+  /** Human-readable description of each adjustment made, for logging. */
+  notes: string[];
+};
+
+export function normalizeDatabaseUrl(raw: string): NormalizedDatabaseUrl {
+  const url = raw.trim();
+  const notes: string[] = [];
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    // Not a URI (libpq keyword/value form, or malformed) — leave it alone and
+    // let assertPostgresUrl or pg produce the error.
+    return { url, notes };
+  }
+
+  // Match the key the way pg sees it: decoded and case-insensitively. A raw
+  // substring test missed `?%73slrootcert=` and `?SSLROOTCERT=`.
+  const certKey = [...parsed.searchParams.keys()].find(
+    (key) => key.toLowerCase() === "sslrootcert"
+  );
+  const sslRootCert = certKey ? parsed.searchParams.get(certKey) : undefined;
+  if (!(sslRootCert && TRUST_STORE_SENTINELS.has(sslRootCert.toLowerCase()))) {
+    // Nothing to strip — hand back the caller's string byte-for-byte rather
+    // than a re-serialized equivalent.
+    return { url, notes };
+  }
+
+  parsed.searchParams.delete(certKey as string);
+  notes.push(
+    `Dropped sslrootcert=${sslRootCert} — node-postgres would read it as a filename. TLS stays on and the certificate is verified against Node's bundled CA set (set NODE_EXTRA_CA_CERTS for a private CA).`
+  );
+  const pinNote = pinVerification(parsed);
+  if (pinNote) {
+    notes.push(pinNote);
+  }
+  return { url: parsed.toString(), notes };
+}
+
+/**
+ * Flatten an error's `cause` chain into one line.
+ *
+ * The libraries in the selfhost path bury the actionable reason: Drizzle
+ * reports only the SQL it tried to run ("Failed query: CREATE SCHEMA ...")
+ * and hangs the real pg error off `cause`. Printing `err.message` alone left
+ * operators staring at a statement with no reason it failed.
+ */
+export function describeMigrationError(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current);
+    const code = (current as { code?: string }).code;
+    // DrizzleQueryError's message embeds the whole query plus a `params:` line
+    // — keep the statement, drop the rest. Every other message stays intact.
+    const message = current.message.startsWith("Failed query:")
+      ? current.message.split("\n")[0]
+      : current.message;
+    const described = code ? `${message} (${code})` : message;
+    if (!parts.includes(described)) {
+      parts.push(described);
+    }
+    current = current.cause;
+  }
+
+  return parts.length > 0 ? parts.join(" — ") : String(error);
+}
+
+/**
+ * Postgres/network failures operators can act on, mapped to the fix. Matched
+ * against the flattened cause chain, since the pg error code and text are only
+ * reachable through Drizzle's `cause`.
+ */
+const HINTS: Array<{ match: RegExp; hint: string }> = [
+  // Filesystem errors first: an unreadable cert file reports "permission
+  // denied, open '/path'", which would otherwise collect the GRANT hint below.
+  {
+    match: /\b(ENOENT|EACCES)\b/,
+    // Node reads its own bundled CA set, NOT the OS trust store, so "just drop
+    // the parameter" is wrong advice for a privately-signed cert.
+    hint: "A file named in DATABASE_URL (usually sslrootcert) is missing or unreadable. Point it at a readable CA file, or set NODE_EXTRA_CA_CERTS if the certificate chains to a private CA.",
+  },
+  {
+    match: /password authentication failed|28P01|28000/i,
+    hint: "The credentials in DATABASE_URL were rejected. Check the user and password.",
+  },
+  {
+    // Only the schema-creation case earns the GRANT CREATE advice. A 42501 on a
+    // later ALTER is a different missing privilege, and this hint would send the
+    // operator after the wrong one.
+    match:
+      /CREATE SCHEMA|permission denied for database|must be owner of database/i,
+    hint: "The database user cannot create schemas. Grant it CREATE on the database (GRANT CREATE ON DATABASE <db> TO <user>), or use an owner role.",
+  },
+  {
+    match: /permission denied|42501/i,
+    hint: "The database user lacks a privilege this migration needs. The failing statement above names the object — grant on that, or run migrations as the database owner.",
+  },
+  {
+    match: /database .* does not exist|3D000/i,
+    hint: "The database named in DATABASE_URL does not exist. Create it first.",
+  },
+  {
+    match: /no pg_hba\.conf entry|SSL|self[- ]signed|certificate/i,
+    // verify-full, not require: pg-connection-string currently aliases require
+    // to verify-full but warns it will adopt libpq's weaker semantics (encrypt,
+    // do not verify) in its next major.
+    hint: "TLS negotiation failed. Most managed Postgres requires ?sslmode=verify-full on DATABASE_URL.",
+  },
+  {
+    match: /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i,
+    hint: "Could not reach the database host. Check the host and port, and that this machine is allowed through the firewall or IP allowlist.",
+  },
+];
+
+/** The fix for a failure description, when we have one to offer. */
+export function migrationHint(description: string): string | undefined {
+  return HINTS.find(({ match }) => match.test(description))?.hint;
+}
+
+/**
+ * One operator-facing line for a failed migration: the buried pg cause, plus
+ * the fix when we recognize it.
+ */
+export function describeMigrationFailure(error: unknown): string {
+  const description = describeMigrationError(error);
+  const hint = migrationHint(description);
+  return hint
+    ? `Database migrations failed: ${description}\n${hint}`
+    : `Database migrations failed: ${description}`;
+}
+
+/**
+ * Fail fast on a connection string we can never connect with. Used by the
+ * self-hosted deploy/upgrade path, where an operator is watching and a wrong
+ * DATABASE_URL otherwise surfaces ten minutes later as unexplained SQL errors.
+ */
+export function assertPostgresUrl(raw: string): void {
+  const url = raw.trim();
+  if (!url) {
+    throw new Error("DATABASE_URL is empty.");
+  }
+
+  if (!url.includes("://")) {
+    // PlanetScale, RDS and others document a libpq keyword/value DSN
+    // ("host=... port=... sslmode=require"). node-postgres only parses URIs.
+    if (/(^|\s)(host|dbname|user)=/.test(url)) {
+      throw new Error(
+        "DATABASE_URL is a libpq keyword/value connection string, which node-postgres cannot parse. Use the URI form instead: postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=verify-full"
+      );
+    }
+    throw new Error(
+      "DATABASE_URL is not a connection URI. Expected postgresql://USER:PASSWORD@HOST:5432/DATABASE"
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(
+      "DATABASE_URL could not be parsed as a URI. If the password contains @ / : or ?, percent-encode it."
+    );
+  }
+
+  if (POSTGRES_SCHEMES.includes(parsed.protocol)) {
+    return;
+  }
+
+  if (parsed.protocol === "mysql:" || parsed.protocol === "mysql2:") {
+    throw new Error(
+      `DATABASE_URL points at MySQL (${parsed.protocol}//). Wraps requires PostgreSQL — its schema uses Postgres types, enums and partial indexes that have no MySQL equivalent.`
+    );
+  }
+
+  throw new Error(
+    `DATABASE_URL has an unsupported scheme (${parsed.protocol}//). Wraps requires PostgreSQL: postgresql://USER:PASSWORD@HOST:5432/DATABASE`
+  );
+}

@@ -3,10 +3,11 @@ import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
+import { normalizeDatabaseUrl } from "./connection-url";
 import * as schema from "./schema";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "",
+  connectionString: normalizeDatabaseUrl(process.env.DATABASE_URL || "").url,
   // Lambda freeze/thaw leaves sockets the Neon pooler has already closed;
   // recycle aggressively so we rarely pick up a dead connection.
   idleTimeoutMillis: 30_000,
@@ -27,6 +28,7 @@ export type DbOrTx =
 
 // Re-export commonly used drizzle-orm operators
 export { and, desc, eq, or, sql as sqlExpr } from "drizzle-orm";
+export { assertPostgresUrl, normalizeDatabaseUrl } from "./connection-url";
 
 /**
  * Escape ILIKE special characters to prevent wildcard injection.

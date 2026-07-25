@@ -9,6 +9,7 @@ export {
   buildEventFeedStaleEmail,
   sendEventFeedStaleEmail,
 } from "./emails/event-feed-stale";
+export { resolveAppUrl } from "./lib/app-url";
 export type { SendEmailParams } from "./lib/client";
 export { getWrapsClient, sendEmail } from "./lib/client";
 

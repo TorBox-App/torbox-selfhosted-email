@@ -2,26 +2,23 @@ import { randomBytes } from "node:crypto";
 import { access, chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
-import * as pulumi from "@pulumi/pulumi";
 import mri from "mri";
 import pc from "picocolors";
-import { deployEmailStack } from "../../packages/cli/src/infrastructure/email-stack.js";
 import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
 import {
-  ensurePulumiWorkDir,
-  getPulumiWorkDir,
-} from "../../packages/cli/src/utils/shared/fs.js";
-import {
-  buildEmailStackConfig,
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../packages/cli/src/utils/shared/metadata.js";
+import { assertPostgresUrl } from "../../packages/db/src/connection-url.js";
 import {
   appendMissingEnvVars,
   buildDeployedEnvVars,
   detectEmailStack,
 } from "./env.js";
+import { describeError } from "./errors.js";
+import { migrateWithProgress } from "./migrate.js";
+import { rerouteEmailEvents, sesEventsWebhookUrl } from "./reroute.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
@@ -101,6 +98,15 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     if (clack.isCancel(licenseKey)) process.exit(0);
   }
 
+  // Check the connection string before the 10-minute SST deploy, not after —
+  // and before .env.selfhost is written, since its existence blocks a retry.
+  try {
+    assertPostgresUrl(databaseUrl);
+  } catch (error) {
+    clack.log.error(describeError(error));
+    process.exit(1);
+  }
+
   // Honor operator-provided secrets (CI runs on ephemeral machines — generated
   // secrets would be lost with the runner, invalidating every issued token on
   // the next deploy). Generate only when absent.
@@ -150,6 +156,17 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   if (!apiUrl) {
     clack.log.error(
       "SST deploy did not emit an API URL. Check the selfhost.config.ts outputs."
+    );
+    process.exit(1);
+  }
+
+  // An empty webUrl is silently corrosive: appendMissingEnvVars skips falsy
+  // values, so NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL never reach .env.selfhost,
+  // the second pass still runs (WRAPS_API_URL alone was appended) and reports
+  // success, and the deployed API is left permanently unable to build a link.
+  if (!webUrl) {
+    clack.log.error(
+      "SST deploy did not emit a web URL. Check the selfhost.config.ts outputs."
     );
     process.exit(1);
   }
@@ -219,6 +236,22 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   metadata.timestamp = now;
   await saveConnectionMetadata(metadata);
 
+  // Post-deploy steps run against live infrastructure and can fail on their
+  // own (unreachable database, missing Pulumi CLI). Collect their failures
+  // instead of throwing: the stack is already up, and the operator needs the
+  // URLs and the remediation more than they need a stack trace.
+  const failures: string[] = [];
+
+  // better-auth signup writes to tables that only exist after this runs — a
+  // deploy that skips migrations looks completely broken at the first signup.
+  try {
+    await migrateWithProgress(databaseUrl);
+  } catch (error) {
+    failures.push(
+      `${describeError(error)}\nRe-run ${pc.cyan("pnpm selfhost:upgrade")} once the database is reachable — until migrations apply, signup and login will fail.`
+    );
+  }
+
   if (metadata.services.email?.webhookSecret) {
     // --yes means "accept defaults", and the interactive default is NO —
     // rerouting live SES events must be an explicit choice (--reroute-events).
@@ -232,58 +265,37 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
           }));
 
     if (!clack.isCancel(rerouteConfirmed) && rerouteConfirmed) {
-      clack.log.step("Rerouting email events to selfhost API...");
-      const webhookUrl = `${apiUrl}/v1/ses-events`;
-      const stackConfig = buildEmailStackConfig(metadata, region, {
-        webhook: {
-          awsAccountNumber: identity.accountId,
-          webhookSecret: metadata.services.email.webhookSecret,
-          webhookUrl,
-        },
-      });
-
-      await ensurePulumiWorkDir({ accountId: identity.accountId, region });
-      const emailStackName =
-        metadata.services.email?.pulumiStackName ||
-        `wraps-${identity.accountId}-${region}`;
-
-      const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
-        {
-          stackName: emailStackName,
-          projectName: "wraps-email",
-          program: async () => {
-            const result = await deployEmailStack(stackConfig);
-            return {
-              roleArn: result.roleArn,
-              configSetName: result.configSetName,
-              tableName: result.tableName,
-              region: result.region,
-            };
-          },
-        },
-        {
-          workDir: getPulumiWorkDir(),
-          envVars: { PULUMI_CONFIG_PASSPHRASE: "", AWS_REGION: region },
-          secretsProvider: "passphrase",
-        }
-      );
-      await stack.setConfig("aws:region", { value: region });
-      await stack.refresh({ onOutput: () => {} });
-      await stack.up({ onOutput: () => {} });
-
-      // Persist the reroute target — without this, the next email stack
-      // redeploy rebuilds the webhook with the default (Wraps platform) URL
-      // and silently points the customer's events back at us.
-      metadata.services.email.webhookUrl = webhookUrl;
-      metadata.timestamp = new Date().toISOString();
-      await saveConnectionMetadata(metadata);
-      clack.log.success("Email events rerouted to self-hosted API");
+      try {
+        clack.log.step("Rerouting email events to selfhost API...");
+        await rerouteEmailEvents({
+          metadata,
+          accountId: identity.accountId,
+          region,
+          apiUrl,
+        });
+        clack.log.success("Email events rerouted to self-hosted API");
+      } catch (error) {
+        failures.push(
+          `Could not reroute email events: ${describeError(error)}\nThe control plane itself deployed fine — SES events just still go to the Wraps platform rather than ${pc.cyan(sesEventsWebhookUrl(apiUrl))}. Retry with ${pc.cyan("pnpm selfhost:upgrade --reroute-events")}.`
+        );
+      }
     }
   }
 
-  clack.outro(pc.green("Self-hosted deployment complete!"));
   clack.log.info(`API: ${pc.cyan(apiUrl)}`);
   clack.log.info(`Web: ${pc.cyan(webUrl)}`);
+
+  if (failures.length > 0) {
+    for (const failure of failures) {
+      clack.log.error(failure);
+    }
+    clack.outro(
+      pc.yellow("Infrastructure deployed, but post-deploy steps failed.")
+    );
+    process.exit(1);
+  }
+
+  clack.outro(pc.green("Self-hosted deployment complete!"));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -314,7 +326,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     yes: flags.yes,
     rerouteEvents: flags["reroute-events"],
   }).catch((err) => {
-    clack.log.error(err instanceof Error ? err.message : String(err));
+    clack.log.error(describeError(err));
     process.exit(1);
   });
 }

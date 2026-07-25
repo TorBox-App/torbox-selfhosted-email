@@ -10,6 +10,7 @@ import {
 } from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
+import { resolveAppUrl } from "@wraps/email/lib/app-url";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
@@ -337,6 +338,23 @@ export const inviteMember = orgAction(
       };
     }
 
+    // Resolve the link target before writing anything: resolveAppUrl throws on
+    // a misconfigured deployment, and failing after the insert would leave a
+    // pending invitation whose email never went out.
+    let appUrl: string;
+    try {
+      appUrl = resolveAppUrl();
+    } catch (error) {
+      // Letting this reach orgAction's catch flattens it to "Failed to send
+      // invitation" — but the message names the environment variable a
+      // self-hosted operator has to set, which is the whole point of throwing.
+      ctx.log.error({ err: error }, "Dashboard URL is not configured");
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to invite user",
+      };
+    }
+
     // Create the invitation + audit log atomically
     const newInvitation = await ctx.audited(
       async (tx) => {
@@ -371,7 +389,6 @@ export const inviteMember = orgAction(
     }
 
     // Gather workspace context for the enriched invite email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
       const [templateResult, contactResult, sentResult, accounts] =
         await Promise.all([

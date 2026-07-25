@@ -1,3 +1,4 @@
+import { resolveAppUrl } from "../lib/app-url";
 import { getWrapsClient } from "../lib/client";
 
 export type EventFeedStaleContent = {
@@ -29,7 +30,7 @@ export function buildEventFeedStaleEmail({
   awsAccountId,
   staleSince,
 }: EventFeedStaleContent): { subject: string; html: string; text: string } {
-  const settingsUrl = `https://app.wraps.dev/${orgSlug}/settings/aws-accounts/${awsAccountId}`;
+  const settingsUrl = `${resolveAppUrl()}/${orgSlug}/settings/aws-accounts/${awsAccountId}`;
   const since = formatTimestamp(staleSince);
 
   const subject = `SES event feed stalled for ${accountName} (${awsAccountNumber})`;

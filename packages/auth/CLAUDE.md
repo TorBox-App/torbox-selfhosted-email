@@ -97,8 +97,10 @@ function getPostHogHost(): string {
 ### Key Exports
 ```typescript
 import { auth, subscriptionPlans, stripeClient } from "@wraps/auth";
-import { createWrapsAuthClient } from "@wraps/auth/client";
 ```
+
+This package is server-only — it has no client entrypoint. Client components use
+the better-auth React client in `apps/web/src/lib/auth-client.ts`.
 
 ## Subscription Plans
 
@@ -164,8 +166,8 @@ import { auth } from "@wraps/auth";
 const session = await auth.api.getSession({ headers: await headers() });
 ```
 
-**apps/web** (client components):
+**apps/web** (client components) — do NOT import `@wraps/auth` here, it is
+server-only. Use the shared better-auth React client:
 ```typescript
-import { createWrapsAuthClient } from "@wraps/auth/client";
-const authClient = createWrapsAuthClient();
+import { authClient } from "@/lib/auth-client";
 ```

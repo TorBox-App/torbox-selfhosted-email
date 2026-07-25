@@ -3,6 +3,7 @@ import { organization } from "@wraps/db/schema/auth";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -62,6 +63,32 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockSignInSSO.mockResolvedValue({ url: OKTA_AUTH_URL, redirect: true });
 });
+
+afterEach(() => {
+  // The redirect allowlist is derived from the environment, so every case that
+  // stubs it must not leak into the next one.
+  vi.unstubAllEnvs();
+});
+
+/**
+ * Drive the route the way an IdP does. `requestHost` matters: the allowlist
+ * falls back to the request's own host when nothing is configured.
+ */
+async function initiate(params: {
+  requestHost?: string;
+  targetLinkUri?: string;
+}): Promise<Response> {
+  const { GET } = await import("../sso/initiate/route");
+  const search = new URLSearchParams({ iss: TEST_ISSUER });
+  if (params.targetLinkUri) {
+    search.set("target_link_uri", params.targetLinkUri);
+  }
+  return await GET(
+    new Request(
+      `${params.requestHost ?? "http://localhost"}/api/sso/initiate?${search}`
+    )
+  );
+}
 
 describe("GET /api/sso/initiate", () => {
   it("redirects to Okta auth URL for a valid registered and verified issuer", async () => {
@@ -132,18 +159,165 @@ describe("GET /api/sso/initiate", () => {
     }
   });
 
-  it("uses target_link_uri as callbackURL when it is on app.wraps.dev", async () => {
-    const { GET } = await import("../sso/initiate/route");
+  it("uses target_link_uri as callbackURL when it is on the deployment's own host", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.wraps.dev");
 
     const target = "https://app.wraps.dev/torbox/templates";
-    const req = new Request(
-      `http://localhost/api/sso/initiate?iss=${encodeURIComponent(TEST_ISSUER)}&target_link_uri=${encodeURIComponent(target)}`
+    const response = await initiate({
+      requestHost: "https://app.wraps.dev",
+      targetLinkUri: target,
+    });
+
+    expect(response.headers.get("location")).toBe(OKTA_AUTH_URL);
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: target }),
+      })
     );
-    const response = await GET(req);
+  });
+
+  // The whole point of deriving the allowlist: a self-hosted deployment's SSO
+  // settings page tells the customer to paste its OWN callback into their IdP,
+  // and a hardcoded app.wraps.dev rejected it and silently dropped them on "/".
+  it("accepts a self-hosted deployment's own host", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://wraps.torbox.app");
+
+    const target = "https://wraps.torbox.app/torbox/templates";
+    await initiate({
+      requestHost: "https://wraps.torbox.app",
+      targetLinkUri: target,
+    });
 
     expect(mockSignInSSO).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({ callbackURL: target }),
+      })
+    );
+  });
+
+  it("rejects the Wraps platform's host on a self-hosted deployment", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://wraps.torbox.app");
+
+    await initiate({
+      requestHost: "https://wraps.torbox.app",
+      targetLinkUri: "https://app.wraps.dev/torbox/templates",
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: "/" }),
+      })
+    );
+  });
+
+  it("falls back to BETTER_AUTH_URL, the only URL the selfhost web app always sets", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("BETTER_AUTH_URL", "https://wraps.torbox.app");
+
+    const target = "https://wraps.torbox.app/torbox/templates";
+    await initiate({
+      requestHost: "https://wraps.torbox.app",
+      targetLinkUri: target,
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: target }),
+      })
+    );
+  });
+
+  it("does not let the request's host widen a configured allowlist", async () => {
+    // Reflecting the incoming host would turn this into an open redirect on any
+    // proxy that forwards an attacker-supplied X-Forwarded-Host.
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://wraps.torbox.app");
+    vi.stubEnv("BETTER_AUTH_URL", "");
+
+    await initiate({
+      requestHost: "https://evil.com",
+      targetLinkUri: "https://evil.com/steal-tokens",
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: "/" }),
+      })
+    );
+  });
+
+  it("accepts its own host when nothing is configured yet", async () => {
+    // First selfhost deploy pass: SST injects "" because the URLs do not exist
+    // until the stack is up.
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("BETTER_AUTH_URL", "");
+
+    const target = "https://d111.cloudfront.net/torbox/templates";
+    await initiate({
+      requestHost: "https://d111.cloudfront.net",
+      targetLinkUri: target,
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: target }),
+      })
+    );
+  });
+
+  it("stops reflecting the request's host in production", async () => {
+    // The unconfigured fallback above is a development convenience. Left open in
+    // production it is an open redirect on any proxy that forwards an
+    // attacker-supplied X-Forwarded-Host — Next builds req.url from that header,
+    // so the reflected host would allowlist itself.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("BETTER_AUTH_URL", "");
+
+    await initiate({
+      requestHost: "https://evil.com",
+      targetLinkUri: "https://evil.com/steal-tokens",
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: "/" }),
+      })
+    );
+  });
+
+  it("still honors a configured host in production", async () => {
+    // Closing the fallback must not close the normal path: this is the case
+    // every real deployment hits.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://wraps.torbox.app");
+
+    const target = "https://wraps.torbox.app/torbox/templates";
+    await initiate({
+      requestHost: "https://wraps.torbox.app",
+      targetLinkUri: target,
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: target }),
+      })
+    );
+  });
+
+  it("stops accepting localhost in production", async () => {
+    // An IdP redirect to a local listener is a session hand-off to whatever is
+    // running on the victim's machine.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.wraps.dev");
+
+    await initiate({
+      requestHost: "https://app.wraps.dev",
+      targetLinkUri: "http://localhost:6666/steal-tokens",
+    });
+
+    expect(mockSignInSSO).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ callbackURL: "/" }),
       })
     );
   });

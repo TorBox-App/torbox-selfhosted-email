@@ -6,8 +6,20 @@
  * event feed goes silent while sends are still happening.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildEventFeedStaleEmail } from "./event-feed-stale";
+
+// The builder resolves the dashboard URL from the environment rather than
+// hardcoding the Wraps platform, so a self-hosted deployment links to itself.
+const APP_URL = "https://dash.selfhosted.example";
+
+beforeAll(() => {
+  vi.stubEnv("NEXT_PUBLIC_APP_URL", APP_URL);
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 const BASE_PARAMS = {
   accountName: "Production",
@@ -38,11 +50,17 @@ describe("buildEventFeedStaleEmail", () => {
 
   it("links to the account settings page scoped by orgSlug and awsAccountId", () => {
     const { html, text } = buildEventFeedStaleEmail(BASE_PARAMS);
-    const expectedUrl =
-      "https://app.wraps.dev/acme/settings/aws-accounts/aws-account-1";
+    const expectedUrl = `${APP_URL}/acme/settings/aws-accounts/aws-account-1`;
 
     expect(html).toContain(expectedUrl);
     expect(text).toContain(expectedUrl);
+  });
+
+  it("never points a self-hosted deployment at the Wraps platform", () => {
+    const { html, text } = buildEventFeedStaleEmail(BASE_PARAMS);
+
+    expect(html).not.toContain("app.wraps.dev");
+    expect(text).not.toContain("app.wraps.dev");
   });
 
   it("mentions the wraps email doctor remediation command", () => {

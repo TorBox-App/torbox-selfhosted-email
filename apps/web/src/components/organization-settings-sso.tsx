@@ -43,6 +43,19 @@ type Props = {
   initialVerificationExpiresAt: string | null;
 };
 
+// Self-hosted deployments must show their own URLs here — these strings are
+// what the customer pastes into their IdP, so the platform's host would point
+// their SSO callbacks at a server that cannot complete them.
+//
+// Strip a trailing slash for the same reason: NEXT_PUBLIC_APP_URL is pasted into
+// .env.selfhost, and `${APP_URL}/api/auth/...` would then register
+// `//api/auth/sso/callback/domain` in the IdP — a path better-auth does not
+// serve, so SSO and SCIM both fail on a deployment that looks configured.
+const APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev"
+).replace(/\/+$/, "");
+const APP_HOST = APP_URL.replace(/^https?:\/\//, "");
+
 export function OrganizationSettingsSso({
   organization,
   userRole,
@@ -69,7 +82,7 @@ export function OrganizationSettingsSso({
     string | null
   >(initialVerificationExpiresAt);
 
-  const scimBaseUrl = "https://app.wraps.dev/api/auth/scim/v2";
+  const scimBaseUrl = `${APP_URL}/api/auth/scim/v2`;
 
   function handleCopy(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -209,7 +222,7 @@ export function OrganizationSettingsSso({
   }
 
   const redirectUri = domain
-    ? `https://app.wraps.dev/api/auth/sso/callback/${domain}`
+    ? `${APP_URL}/api/auth/sso/callback/${domain}`
     : null;
 
   const dnsTxtHostname = existingProvider
@@ -264,7 +277,7 @@ export function OrganizationSettingsSso({
                   <p className="font-medium">How your team signs in</p>
                   <ol className="space-y-1 text-muted-foreground list-decimal list-inside">
                     <li>
-                      Go to <strong>app.wraps.dev</strong>
+                      Go to <strong>{APP_HOST}</strong>
                     </li>
                     <li>
                       Enter their <strong>@{existingProvider.domain}</strong>{" "}
@@ -559,7 +572,7 @@ export function OrganizationSettingsSso({
                     className={`flex-1 break-all ${domain ? "" : "text-muted-foreground"}`}
                   >
                     {redirectUri ??
-                      "https://app.wraps.dev/api/auth/sso/callback/your-domain.com"}
+                      `${APP_URL}/api/auth/sso/callback/your-domain.com`}
                   </span>
                   {redirectUri && (
                     <Button

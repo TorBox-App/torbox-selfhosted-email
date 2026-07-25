@@ -15,7 +15,7 @@ trap 'rm -rf "$LOGDIR"' EXIT
 export TURBO_UI=stream
 
 typeset -a STEPS CMDS
-STEPS=(lint migrations typecheck baseline build test)
+STEPS=(lint migrations typecheck baseline build test scripts)
 CMDS=(
   "pnpm check:errors"
   "pnpm --filter @wraps/db exec drizzle-kit check"
@@ -23,6 +23,10 @@ CMDS=(
   "pnpm test:baseline"
   "pnpm build"
   "pnpm test"
+  # scripts/ is outside the pnpm workspace, so `pnpm test` (turbo) never sees
+  # it. Without this step the selfhost deploy/upgrade/migrate tests run in no
+  # gate at all.
+  "pnpm test:scripts"
 )
 
 typeset -a RESULTS

@@ -262,7 +262,31 @@ export default function SelfHostedPageContent() {
                   >
                     Railway
                   </a>
-                  , or self-hosted Postgres all work
+                  ,{" "}
+                  <a
+                    className="text-primary underline underline-offset-2"
+                    href="https://planetscale.com/docs/postgres"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    PlanetScale for Postgres
+                  </a>
+                  , or self-hosted Postgres all work. The connection URI must be
+                  the{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    postgresql://
+                  </code>{" "}
+                  form, and the role must be able to create schemas — migrations
+                  create a{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    drizzle
+                  </code>{" "}
+                  schema to track their own state, so a least-privilege
+                  application role usually needs{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                    GRANT CREATE ON DATABASE
+                  </code>{" "}
+                  first
                 </span>
               </li>
               <li className="flex items-center gap-3">
@@ -437,22 +461,23 @@ pnpm install`,
               .env.selfhost
             </code>
           </li>
+          <li>
+            Apply all pending Drizzle migrations against your database — signup
+            and login need these tables
+          </li>
         </ol>
         <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
           <p className="font-medium text-sm">
-            Run migrations after initial deploy
+            If migrations fail, the infrastructure is still deployed
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
-            <code className="rounded bg-muted px-1.5 py-0.5">
-              selfhost:deploy
-            </code>{" "}
-            provisions infrastructure but does not run database migrations.
-            After your first deploy, run{" "}
+            The deploy prints your API and app URLs, then reports what failed
+            and why (rejected credentials, missing CREATE privilege, TLS,
+            unreachable host). Fix the database and run{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               pnpm selfhost:upgrade
             </code>{" "}
-            to apply all pending Drizzle migrations against your database.
-            Upgrades always run migrations automatically.
+            to retry — until migrations apply, creating an account will fail.
           </p>
         </div>
         <p className="mb-4 text-muted-foreground">
@@ -526,6 +551,22 @@ pnpm install`,
             URL — a custom domain can be configured any time by re-running with{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">--web-domain</code>
             .
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            If you already deployed Wraps email infrastructure to this account,{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              --reroute-events
+            </code>{" "}
+            points its SES event webhook at your self-hosted API instead of the
+            Wraps platform. It works on both{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              selfhost:deploy
+            </code>{" "}
+            and{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              selfhost:upgrade
+            </code>
+            , so a failed reroute can be retried without redeploying.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             The SST stack always deploys to{" "}

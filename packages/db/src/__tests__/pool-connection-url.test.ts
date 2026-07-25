@@ -1,0 +1,76 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * The production runtime pool. `connection-url.test.ts` covers the normalizer as
+ * a pure function; this asserts that `index.ts` actually feeds its output to
+ * `pg.Pool`. Without it, dropping `.url` from the call site reintroduces
+ * `ENOENT open 'system'` on every self-hosted Lambda cold start and no test
+ * fails.
+ *
+ * vitest.config.ts dotenv-loads apps/web/.env.local, so DATABASE_URL is stubbed
+ * explicitly in each case rather than inherited.
+ */
+const mockPoolCtor = vi.hoisted(() => vi.fn());
+
+vi.mock("pg", () => ({
+  Pool: class {
+    on = vi.fn();
+    constructor(config: unknown) {
+      mockPoolCtor(config);
+    }
+  },
+}));
+
+async function connectionStringForDatabaseUrl(
+  databaseUrl: string
+): Promise<string> {
+  vi.stubEnv("DATABASE_URL", databaseUrl);
+  vi.resetModules();
+  await import("../index");
+
+  expect(mockPoolCtor).toHaveBeenCalled();
+  const config = mockPoolCtor.mock.calls[0]?.[0] as {
+    connectionString: string;
+  };
+  return config.connectionString;
+}
+
+beforeEach(() => {
+  mockPoolCtor.mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("runtime pool connection string", () => {
+  it("strips sslrootcert=system, which pg would read as a filename", async () => {
+    const connectionString = await connectionStringForDatabaseUrl(
+      "postgresql://u:pw@xyz.horizon.psdb.cloud:5432/db?sslmode=verify-full&sslrootcert=system"
+    );
+
+    expect(connectionString).not.toContain("sslrootcert");
+    expect(connectionString).toContain("sslmode=verify-full");
+  });
+
+  it("keeps TLS verification when sslrootcert was the only TLS parameter", async () => {
+    const connectionString = await connectionStringForDatabaseUrl(
+      "postgres://u:pw@h/db?sslrootcert=system"
+    );
+
+    expect(connectionString).not.toContain("sslrootcert");
+    expect(connectionString).toContain("sslmode=verify-full");
+  });
+
+  it("passes an ordinary Neon URL through untouched", async () => {
+    const neon =
+      "postgresql://u:pw@ep-x.us-east-1.aws.neon.tech/neondb?sslmode=require";
+
+    expect(await connectionStringForDatabaseUrl(neon)).toBe(neon);
+  });
+
+  it("tolerates an unset DATABASE_URL without throwing at import time", async () => {
+    // A throw here would crash every Lambda on cold start.
+    expect(await connectionStringForDatabaseUrl("")).toBe("");
+  });
+});

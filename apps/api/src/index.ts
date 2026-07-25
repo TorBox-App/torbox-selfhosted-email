@@ -15,6 +15,7 @@ import { workflowsSyncRoutes } from "./(ee)/routes/workflows-sync";
 import { type ApiErrorSinks, handleApiError } from "./lib/error-handler";
 import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
+import { resolveApiUrl } from "./lib/urls";
 import { getAuthOptional } from "./middleware/auth";
 import { agentsRoutes } from "./routes/agents";
 import { agentsWebhookRoutes } from "./routes/agents-webhook";
@@ -56,7 +57,11 @@ const openApiDocumentation = {
   },
   servers: [
     {
-      url: "https://api.wraps.dev",
+      // A self-hosted deployment must advertise its OWN server here. Hardcoded,
+      // this sent every client generated from this spec — and every "try it"
+      // request from the swagger UI, carrying the customer's self-hosted API
+      // key — to the Wraps platform.
+      url: resolveApiUrl(),
       description: "Production API",
     },
   ],

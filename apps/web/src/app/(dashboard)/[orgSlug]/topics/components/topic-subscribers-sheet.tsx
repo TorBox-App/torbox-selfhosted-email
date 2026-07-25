@@ -220,6 +220,11 @@ export function TopicSubscribersSheet({
   );
 }
 
+// Snippets are copy-pasted and run, so they must target this deployment.
+// Module scope: build-time inlined, so it is a constant and stays out of
+// the useMemo dependency list.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.wraps.dev";
+
 function QuickStartSnippets({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
 
@@ -228,7 +233,11 @@ function QuickStartSnippets({ slug }: { slug: string }) {
       typescript: {
         "@wraps.dev/client": `import { createPlatformClient } from "@wraps.dev/client";
 
-const client = createPlatformClient({ apiKey: "wraps_..." });
+// baseUrl defaults to https://api.wraps.dev — pin it to this deployment
+const client = createPlatformClient({
+  apiKey: "wraps_...",
+  baseUrl: "${API_URL}",
+});
 
 // Subscribe a contact to this topic
 await client.POST("/v1/contacts/", {
@@ -239,7 +248,7 @@ await client.POST("/v1/contacts/", {
 });`,
       },
       curl: {
-        cURL: `curl -X POST https://api.wraps.dev/v1/contacts/ \\
+        cURL: `curl -X POST ${API_URL}/v1/contacts/ \\
   -H "Authorization: Bearer wraps_..." \\
   -H "Content-Type: application/json" \\
   -d '{"email":"user@example.com","topicSlugs":["${slug}"]}'`,

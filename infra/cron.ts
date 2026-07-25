@@ -92,6 +92,11 @@ export const eventFeedStalenessCron = new sst.aws.CronV2("EventFeedStaleness", {
         })(),
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
+      // The alert email links to the account's settings page, and resolveAppUrl
+      // throws rather than defaulting to app.wraps.dev. Without this the send
+      // fails, markAlerted never runs, and the alert retries hourly forever.
+      NEXT_PUBLIC_APP_URL:
+        process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
       // wraps.dev is verified in the dogfood account's SES (010836206701),
       // not this platform account — getWrapsClient() sees this env var and
       // assumes the role from this function's execution role, the same

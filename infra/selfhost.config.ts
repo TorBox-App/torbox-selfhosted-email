@@ -48,7 +48,16 @@ export default $config({
   async run() {
     const { config } = await import("dotenv");
     const { resolve } = await import("node:path");
-    config({ path: resolve(process.cwd(), "..", ".env.selfhost") });
+    // override: the customer's .env.selfhost is the authority for THEIR stack.
+    // Without it, a maintainer who also works on the platform and has
+    // NEXT_PUBLIC_APP_URL / DATABASE_URL exported in their shell silently bakes
+    // wraps.dev values into the customer's deployment — these vars became
+    // load-bearing for the API's email links and .well-known issuer. The repo
+    // has precedent for exactly this (WRAPS_LICENSE_KEY poisoning test runs).
+    config({
+      path: resolve(process.cwd(), "..", ".env.selfhost"),
+      override: true,
+    });
 
     const webDomain = process.env.SELFHOST_WEB_DOMAIN;
 
@@ -198,6 +207,18 @@ export default $config({
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
         UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET ?? "",
         LICENSE_KEY: process.env.LICENSE_KEY ?? "",
+        // The API builds links into emails and advertises OAuth endpoints, so
+        // it needs the deployment's own URLs. It cannot read `api.url`/`web.url`
+        // (both are being defined here), so it reads what the first deploy pass
+        // backfilled into .env.selfhost — the same source the web app uses.
+        NEXT_PUBLIC_APP_URL:
+          process.env.NEXT_PUBLIC_APP_URL ||
+          (webDomain ? `https://${webDomain}` : ""),
+        BETTER_AUTH_URL:
+          process.env.BETTER_AUTH_URL ||
+          process.env.NEXT_PUBLIC_APP_URL ||
+          (webDomain ? `https://${webDomain}` : ""),
+        WRAPS_API_URL: process.env.WRAPS_API_URL ?? "",
         BATCH_QUEUE_URL: batchQueue.url,
         BATCH_QUEUE_ARN: batchQueue.arn,
         WORKFLOW_QUEUE_URL: workflowQueue.url,

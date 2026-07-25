@@ -188,6 +188,31 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
+  # scripts/ sits outside the pnpm workspace, so turbo's `pnpm test` never
+  # reaches it. Without this job the selfhost deploy/upgrade/migrate/reroute
+  # tests protect nothing in CI.
+  test-scripts:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run selfhost script tests
+        run: pnpm test:scripts
+
   baseline:
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
@@ -207,6 +232,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # baseline/architecture.test.ts is not part of any workspace package, so
+      # no other job runs it. The scan below is the other half of
+      # `pnpm test:baseline`, run separately here so it can be changed-only.
+      - name: Run architecture tests
+        run: pnpm test:architecture
 
       - name: Run baseline (changed files only)
         if: github.event_name == 'pull_request'

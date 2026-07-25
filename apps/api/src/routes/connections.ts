@@ -13,6 +13,7 @@ import { and, awsAccount, db, eq, sqlExpr } from "@wraps/db";
 import { count } from "drizzle-orm";
 import { t } from "elysia";
 import { log } from "../lib/logger";
+import { resolveApiUrl } from "../lib/urls";
 import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 
 // Plan limits for AWS accounts (matches apps/web/src/lib/plans.ts)
@@ -143,7 +144,8 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
           externalId,
           roleArn,
           webhookSecret,
-          webhookEndpoint: `https://api.wraps.dev/webhooks/ses/${body.accountId}`,
+          // Customers paste this into AWS, so it must name their own API.
+          webhookEndpoint: `${resolveApiUrl()}/webhooks/ses/${body.accountId}`,
         };
       });
 

@@ -59,6 +59,12 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           SELFHOST_WEB_DOMAIN: ${{ vars.SELFHOST_WEB_DOMAIN }}
           NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+          # Optional. The API advertises these as its own (.well-known issuer,
+          # SES webhook endpoint), so the upgrade backfills them from the deploy
+          # outputs when absent — at the cost of a second SST pass every run.
+          # Set them (copy from .env.selfhost after a deploy) to skip that pass.
+          WRAPS_API_URL: ${{ vars.WRAPS_API_URL }}
+          BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           WRAPS_EMAIL_ROLE_ARN: ${{ secrets.WRAPS_EMAIL_ROLE_ARN }}
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           AUTH_EMAIL_CONFIGURATION_SET: ${{ secrets.AUTH_EMAIL_CONFIGURATION_SET }}
@@ -83,6 +89,8 @@ jobs:
             echo "SELFHOST_AWS_REGION=${AWS_REGION}"
             [ -n "${SELFHOST_WEB_DOMAIN}" ] && echo "SELFHOST_WEB_DOMAIN=${SELFHOST_WEB_DOMAIN}"
             [ -n "${NEXT_PUBLIC_APP_URL}" ] && echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}"
+            [ -n "${WRAPS_API_URL}" ] && echo "WRAPS_API_URL=${WRAPS_API_URL}"
+            [ -n "${BETTER_AUTH_URL}" ] && echo "BETTER_AUTH_URL=${BETTER_AUTH_URL}"
             [ -n "${WRAPS_EMAIL_ROLE_ARN}" ] && echo "WRAPS_EMAIL_ROLE_ARN=${WRAPS_EMAIL_ROLE_ARN}"
             [ -n "${AUTH_EMAIL_FROM}" ] && echo "AUTH_EMAIL_FROM=${AUTH_EMAIL_FROM}"
             [ -n "${AUTH_EMAIL_CONFIGURATION_SET}" ] && echo "AUTH_EMAIL_CONFIGURATION_SET=${AUTH_EMAIL_CONFIGURATION_SET}"

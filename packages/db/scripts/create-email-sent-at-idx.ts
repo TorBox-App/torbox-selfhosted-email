@@ -19,6 +19,7 @@
 
 import { Pool } from "@neondatabase/serverless";
 import dotenv from "dotenv";
+import { normalizeDatabaseUrl } from "../src/connection-url";
 
 dotenv.config({ path: "../../apps/web/.env.local" });
 dotenv.config({ path: "../../.env" });
@@ -32,8 +33,13 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
+// The Neon driver bundles pg-connection-string, which readFileSync()s
+// sslrootcert — a provider URL carrying `sslrootcert=system` dies with ENOENT
+// before any SQL runs.
+const CONNECTION_STRING = normalizeDatabaseUrl(DATABASE_URL).url;
+
 async function run() {
-  const pool = new Pool({ connectionString: DATABASE_URL });
+  const pool = new Pool({ connectionString: CONNECTION_STRING });
 
   try {
     console.log(

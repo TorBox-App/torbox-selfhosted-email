@@ -135,6 +135,19 @@ vi.mock("drizzle-orm/node-postgres/migrator", () => ({
   migrate: mockMigrate,
 }));
 
+// ── email reroute mock ────────────────────────────────────────────────────────
+const mockRerouteEmailEvents = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined)
+);
+// Mock only the Pulumi-driving function. sesEventsWebhookUrl stays real — the
+// hand-written stub here reimplemented the `/v1/ses-events` bug, so the suite
+// stayed green against the very shape it was supposed to catch.
+vi.mock("../reroute.js", async () => {
+  const actual =
+    await vi.importActual<typeof import("../reroute.js")>("../reroute.js");
+  return { ...actual, rerouteEmailEvents: mockRerouteEmailEvents };
+});
+
 // ── metadata mock ─────────────────────────────────────────────────────────────
 vi.mock("../../../packages/cli/src/utils/shared/metadata.js", async () => {
   const actual = await vi.importActual(
@@ -184,6 +197,7 @@ describe("scripts/selfhost/upgrade", () => {
     mockMigrate.mockResolvedValue(undefined);
     mockChmod.mockResolvedValue(undefined);
     mockDetectVariant.mockResolvedValue(null);
+    mockRerouteEmailEvents.mockResolvedValue(undefined);
     files.env = COMPLETE_ENV;
     files.outputs = OUTPUTS_JSON;
     wireFsMocks();
@@ -299,6 +313,50 @@ describe("scripts/selfhost/upgrade", () => {
     );
   });
 
+  it("backfills WRAPS_API_URL even when the operator supplied the app URL", async () => {
+    // The shape .github/workflows/selfhost-deploy.yml reconstructs from
+    // repository secrets: NEXT_PUBLIC_APP_URL comes from a repo variable, but
+    // WRAPS_API_URL and BETTER_AUTH_URL are not secrets the operator holds.
+    // Gating the backfill on NEXT_PUBLIC_APP_URL alone left WRAPS_API_URL empty
+    // on every CI upgrade, so the API advertised `issuer: api.wraps.dev` and
+    // handed customers a platform webhook endpoint.
+    files.env = [
+      "DATABASE_URL=postgres://user:pass@host/db",
+      "LICENSE_KEY=wraps_lic_test",
+      "BETTER_AUTH_SECRET=secret2",
+      "UNSUBSCRIBE_SECRET=secret1",
+      "SELFHOST_AWS_REGION=us-east-1",
+      "NEXT_PUBLIC_APP_URL=https://web.selfhost.example.com",
+    ].join("\n");
+    // A CI runner is a fresh clone: infra/.sst/outputs.json is gitignored, so
+    // the URLs only exist once this run's deploy has emitted them.
+    files.outputs = null;
+    mockRunSubprocess.mockImplementation(async (_cmd, args) => {
+      if ((args as string[]).includes("deploy")) {
+        files.outputs = OUTPUTS_JSON;
+      }
+    });
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(files.env).toMatch(
+      /WRAPS_API_URL=https:\/\/api\.selfhost\.example\.com/
+    );
+    expect(files.env).toMatch(
+      /BETTER_AUTH_URL=https:\/\/web\.selfhost\.example\.com/
+    );
+    // Written after the first deploy, so a second pass bakes them into the build.
+    expect(sstDeployCalls()).toHaveLength(2);
+  });
+
+  it("does not redeploy when every deploy-output var is already present", async () => {
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(sstDeployCalls()).toHaveLength(1);
+  });
+
   it("updates .env.selfhost when --web-domain is passed", async () => {
     const { upgrade } = await import("../upgrade.js");
     await upgrade({
@@ -318,6 +376,68 @@ describe("scripts/selfhost/upgrade", () => {
       expect.anything(),
       expect.objectContaining({
         migrationsFolder: expect.stringContaining("migrations"),
+      })
+    );
+  });
+
+  it("reports the pg cause behind a failed migration, not just the SQL", async () => {
+    const pgError = Object.assign(new Error("password authentication failed"), {
+      code: "28P01",
+    });
+    const drizzleError = new Error(
+      'Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle"\nparams: '
+    );
+    drizzleError.cause = pgError;
+    mockMigrate.mockRejectedValue(drizzleError);
+
+    const { upgrade } = await import("../upgrade.js");
+    await expect(upgrade({ region: "us-east-1", yes: true })).rejects.toThrow(
+      /password authentication failed/
+    );
+  });
+
+  it("does not reroute email events unless asked", async () => {
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(mockRerouteEmailEvents).not.toHaveBeenCalled();
+  });
+
+  it("keeps a successful upgrade when the reroute fails", async () => {
+    mockRerouteEmailEvents.mockRejectedValue(
+      new Error("Command failed with ENOENT: pulumi version")
+    );
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+
+    const { upgrade } = await import("../upgrade.js");
+    await expect(
+      upgrade({ region: "us-east-1", yes: true, rerouteEvents: true })
+    ).rejects.toThrow("process.exit called");
+
+    // The upgrade's own bookkeeping must survive a failed reroute.
+    expect(metadataModule.saveConnectionMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        services: expect.objectContaining({
+          selfhost: expect.objectContaining({
+            apiUrl: "https://api.selfhost.example.com",
+          }),
+        }),
+      })
+    );
+    exitSpy.mockRestore();
+  });
+
+  it("retries the email reroute with --reroute-events", async () => {
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true, rerouteEvents: true });
+
+    expect(mockRerouteEmailEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "123456789012",
+        region: "us-east-1",
+        apiUrl: "https://api.selfhost.example.com",
       })
     );
   });

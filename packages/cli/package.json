@@ -111,6 +111,7 @@
     "@vitest/coverage-v8": "catalog:",
     "@wraps.dev/email-check": "workspace:*",
     "@wraps/core": "workspace:*",
+    "@wraps/db": "workspace:*",
     "aws-sdk-client-mock": "4.1.0",
     "aws-sdk-client-mock-vitest": "7.0.1",
     "handlebars": "catalog:",

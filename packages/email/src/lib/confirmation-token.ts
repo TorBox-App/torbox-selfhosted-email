@@ -6,6 +6,7 @@
  */
 
 import * as jose from "jose";
+import { resolveAppUrl } from "./app-url";
 
 export type ConfirmationTokenPayload = {
   cid: string; // contact ID
@@ -111,6 +112,5 @@ export async function generateConfirmationUrl(
     topicId
   );
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
-  return `${baseUrl}/confirm/${token}`;
+  return `${resolveAppUrl()}/confirm/${token}`;
 }
