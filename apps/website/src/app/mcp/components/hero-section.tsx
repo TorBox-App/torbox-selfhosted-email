@@ -26,6 +26,11 @@ const tools = [
     write: false,
   },
   {
+    name: "estimate_cost",
+    description: "Real Wraps + AWS cost for a volume",
+    write: false,
+  },
+  {
     name: "send_email",
     description: "Send via your SES account, guarded",
     write: true,

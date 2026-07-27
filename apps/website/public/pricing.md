@@ -1,140 +1,140 @@
 # Wraps Pricing
 
-> Last updated: March 2026
+> Last updated: July 2026. Generated from source — the numbers here match the website exactly.
 
-Wraps is a CLI, SDK, and dashboard that deploys email, SMS, and CDN infrastructure to your AWS account. You pay Wraps for the platform. You pay AWS directly for sending — at their published rates.
+Wraps is a CLI, SDK, MCP server, and dashboard that deploys email (AWS SES), SMS (AWS End User Messaging), and CDN (S3 + CloudFront) infrastructure into **your** AWS account.
 
-## How it works
+You get two bills:
 
-Wraps charges a flat platform fee based on tracked events (sends, opens, clicks, deliveries, bounces). AWS sending costs are separate and go straight to your AWS bill at $0.10 per 1,000 emails.
+1. **Wraps** — a flat monthly platform fee based on tracked events. That is the table below.
+2. **AWS** — sending and infrastructure costs, billed directly to you by AWS at AWS rates. Wraps adds no markup and takes no cut.
 
-You own the infrastructure. No vendor lock-in. Leave anytime and keep everything.
+## Wraps plans
 
----
+| Plan | Monthly | Annual | Tracked events/mo | Overage (per 1,000 events) | AWS accounts | Support |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Free** | $0/mo | — | 5,000/mo | Upgrade required | 1 | Community |
+| **Starter** | $19/mo | $199/yr | 50,000/mo | Upgrade required | 1 | Email |
+| **Growth** | $79/mo | $799/yr | 250,000/mo | $0.50 | 3 | Priority (24hr) |
+| **Scale** | $199/mo | $1,999/yr | 1,000,000/mo | $0.15 | Unlimited | Priority + SLA |
 
-## Plans
+Wraps bills on **tracked events**, not emails sent. A tracked event is anything Wraps records or acts on: a send, delivery, open, click, bounce, complaint, or an event you emit yourself to trigger a workflow. Sending 100,000 emails with tracking disabled costs $0 in Wraps events.
 
-| | Free | Starter | Growth | Scale |
-|---|---|---|---|---|
-| **Price** | $0/mo | $19/mo | $79/mo | $199/mo |
-| **Annual** | — | $199/yr | $799/yr | $1,999/yr |
-| **Tracked events** | 5,000/mo | 50,000/mo | 250,000/mo | 1,000,000/mo |
-| **Overage** | Upgrade required | Upgrade required | $0.50/1K events | $0.15/1K events |
-| **Contacts** | Unlimited | Unlimited | Unlimited | Unlimited |
-| **Workflows** | 1 | Unlimited | Unlimited | Unlimited |
-| **AI generations** | 10/mo | 50/mo | 250/mo | 1,000/mo |
-| **AWS accounts** | 1 | 1 | 3 | Unlimited |
-| **Team members** | 1 | Unlimited | Unlimited | Unlimited |
-| **Support** | Community | Email | Priority (24hr) | Priority + SLA |
+The overage rate applies only to events beyond the included volume. Free and Starter have no overage rate — they stop at the included volume and require an upgrade. Annual billing is billed once per year and saves roughly two months.
 
-### Free
+## AWS SES pricing plans (paid to AWS, not to Wraps)
 
-Get started with no credit card.
+Sending costs go to AWS directly at AWS rates. Wraps adds no markup and never touches that bill. Since 2026-07-21 AWS offers four SES pricing modes, set **per account and per Region**:
 
-- Dashboard + AI template editor
-- 5K tracked events/mo
-- 1 workflow
-- Unlimited contacts
-- CLI + TypeScript SDK
-- 10 AI template generations/mo
+| SES plan | Monthly fee | Per 1,000 emails | Default for new accounts | What it adds |
+| --- | --- | --- | --- | --- |
+| **À la carte** | $0 | $0.10 | No | Pay-per-email with no subscription. The cheapest option for send-only workloads. |
+| **Essentials** | $0 | $0.16 | Yes | Bundles Virtual Deliverability Manager. AWS assigns this to every new account by default. |
+| **Pro** | $105/mo | $0.22 | No | Adds global inbox placement testing, one managed dedicated IP, and 2,500 email validations. |
+| **Enterprise** | $500/mo | $0.23 | No | Multi-Region, up to 1,000 tenants, 5 domains and 12 dedicated IPs. |
 
-### Starter — $19/mo
+Read this carefully if you are comparing providers: à la carte at $0.10/1,000 is still the cheapest way to send, but **AWS defaults every new account to Essentials at $0.16/1,000** (as well as any account with no sending activity since 2025-06-01). An account that was defaulted into Essentials can move back to à la carte with immediate effect; every other downgrade waits for the next billing cycle.
 
-For developers shipping their first integration.
+Wraps detects which plan each account and Region is on and tells you when you are paying the Essentials rate without using Essentials features. Pro only makes financial sense for send-only workloads above roughly 1–2M emails/month — below that the $105/mo fee plus the higher per-email rate costs more than à la carte.
 
-- 50K tracked events/mo
-- Unlimited workflows
-- React templates + AI editor
-- Topics, segments & broadcasts
-- Unlimited team members
-- Email support
+The SES-specific free tier (3,000 emails/month for 12 months) no longer exists for new accounts. New AWS accounts get a generic $200 AWS credit instead.
 
-### Growth — $79/mo
+## Worked examples (all-in monthly cost)
 
-For teams where developers and marketers ship together.
+Precomputed so you do not have to do the arithmetic. Assumes event tracking on, 8 event types per email, DynamoDB history with 90-day retention, no dedicated IP, monthly billing, and tracked events at half of email volume. The AWS column is what AWS bills you; the Wraps column is what Wraps bills you.
 
-- 250K tracked events/mo, then $0.50/1K
-- AI workflow generation
-- 3 AWS accounts
-- Priority support (24hr)
-- Everything in Starter
+| Volume | Tracked events | Wraps plan | Wraps cost | AWS (à la carte) | Total (à la carte) | Total (Essentials) | Effective per 1,000 emails |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10,000 emails | 5,000 | Free | $0 | $1.18 | **$1.18** | $1.78 | $0.12 |
+| 100,000 emails | 50,000 | Starter | $19.00 | $12.50 | **$31.50** | $37.50 | $0.32 |
+| 500,000 emails | 250,000 | Growth | $79.00 | $65.10 | **$144.10** | $174.10 | $0.29 |
+| 1,000,000 emails | 500,000 | Scale | $199.00 | $136.09 | **$335.09** | $395.09 | $0.34 |
 
-### Scale — $199/mo
+Change any assumption and the numbers move. Call the estimator below instead of interpolating between these rows.
 
-For high-volume teams with multiple AWS accounts.
+## Cost estimator API (for agents)
 
-- 1M tracked events/mo, then $0.15/1K
-- Behavioral segments
-- 1K AI generations/mo
-- Unlimited AWS accounts
-- Priority support + SLA
-- Everything in Growth
+Do not estimate Wraps + AWS costs by hand — the model has six interacting variables. Call this endpoint instead. It is public, unauthenticated, needs no account, and returns the same numbers the website calculator shows.
 
----
+```
+GET https://wraps.dev/api/pricing/estimate?emails=500000&events=250000&tier=growth&sesPlan=alacarte
+```
 
-## AWS costs (paid directly to AWS)
+Returns JSON by default. Send `Accept: text/markdown` for a rendered cost table. Every response includes a `shareUrl` pointing at the interactive calculator with the same inputs — hand that to a human rather than re-describing the breakdown.
 
-| Service | Rate |
-|---|---|
-| SES email sending | $0.10 per 1,000 emails |
-| SES dedicated IP | $24.95/mo per IP |
-| SMS sending | Varies by country |
-| S3 + CloudFront (CDN) | Standard AWS rates |
+| Parameter | Values | Meaning | Default |
+| --- | --- | --- | --- |
+| `emails` | integer | Emails sent per month | `25000` |
+| `events` | integer | Wraps tracked events per month | `5000` |
+| `tier` | free \| starter \| growth \| scale | Wraps plan | `free` |
+| `billing` | monthly \| annual | Wraps billing interval | `monthly` |
+| `sesPlan` | alacarte \| essentials \| pro \| enterprise | AWS SES pricing plan for the account and Region | `alacarte` |
+| `tracking` | boolean | Event tracking pipeline deployed | `true` |
+| `eventbridge` | boolean | EventBridge event bus enabled | `true` |
+| `dynamodb` | boolean | DynamoDB event history enabled | `true` |
+| `retention` | 7days \| 30days \| 90days \| 1year \| indefinite | Event history retention | `90days` |
+| `eventTypes` | integer | Event types recorded per email | `8` |
+| `dedicatedIp` | boolean | Dedicated sending IP | `false` |
+| `https` | boolean | HTTPS tracking domain (CloudFront) | `false` |
+| `waf` | boolean | WAF protection on the tracking domain | `false` |
 
-These costs appear on your AWS bill, not your Wraps bill. You get full AWS volume pricing and free tier benefits.
+The response contains a per-line AWS breakdown (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF), the Wraps platform and overage split, the combined total, and the effective cost per 1,000 emails.
 
----
+## Other AWS costs (paid to AWS)
+
+| Service | Rate | Notes |
+| --- | --- | --- |
+| Dedicated IP | $24.95/mo per IP | Included with SES Pro and Enterprise |
+| EventBridge | $1.00 per million events | Delivery, open, click, bounce, complaint routing |
+| Lambda | $0.20 per million requests | 1M requests + 400K GB-seconds free per month |
+| SQS | $0.50 per million requests | 1M requests free per month |
+| DynamoDB | $1.25 per million writes, $0.25/GB-month | 25 GB storage free per month |
+| WAF | $5.00/mo Web ACL + $1.00/mo per rule | Optional, for HTTPS tracking domains |
+| SMS | Varies by destination country | AWS End User Messaging rates |
+| S3 + CloudFront (CDN) | Standard AWS rates | Storage and egress |
+
+These appear on your AWS bill, not your Wraps bill. You keep AWS volume discounts and any remaining free-tier allowances. US East (N. Virginia) rates; other Regions vary.
 
 ## Feature comparison
 
 | Feature | Free | Starter | Growth | Scale |
-|---|---|---|---|---|
-| Dashboard + AI editor | Yes | Yes | Yes | Yes |
-| CLI + TypeScript SDK | Yes | Yes | Yes | Yes |
+| --- | --- | --- | --- | --- |
+| Tracked events/month | 5K | 50K | 250K | 1M |
+| Overage rate | Upgrade | Upgrade | $0.50/1K | $0.15/1K |
+| Contacts | Unlimited | Unlimited | Unlimited | Unlimited |
+| Workflows | 1 | Unlimited | Unlimited | Unlimited |
+| AI generations | 10/mo | 50/mo | 250/mo | 1,000/mo |
+| AWS accounts | 1 | 1 | 3 | Unlimited |
+| Team members | 1 | Unlimited | Unlimited | Unlimited |
 | Batch sending | — | Yes | Yes | Yes |
 | Topics & preferences | — | Yes | Yes | Yes |
 | Segments & targeting | — | Yes | Yes | Yes |
 | Campaigns | — | Yes | Yes | Yes |
 | Cross-channel cascades | — | Yes | Yes | Yes |
 | Event tracking | — | Yes | Yes | Yes |
-| AI workflow generation | — | — | Yes | Yes |
 | Behavioral segments | — | — | — | Yes |
+| SSO + SCIM | — | — | — | Yes |
+| Support | Community | Email | Priority (24hr) | Priority + SLA |
 
----
+Every plan includes: the CLI, the TypeScript SDKs (`@wraps.dev/email`, `@wraps.dev/sms`, `@wraps.dev/client`), the MCP server (`@wraps.dev/mcp`), React Email templates, the dashboard, DKIM/SPF/DMARC setup, bounce and complaint handling, suppression lists, webhooks, and infrastructure deployed into your own AWS account under `wraps-*` namespaced resources.
 
-## Annual billing
+## What you own
 
-Save ~16% with annual billing (roughly 2 months free).
+The infrastructure is deployed into your AWS account with Pulumi and namespaced `wraps-email-*`, `wraps-sms-*`, `wraps-cdn-*`. Nothing pre-existing is modified. Your sending identities, event history, and suppression lists live in your account. If you stop paying Wraps, the infrastructure keeps sending — you lose the dashboard, workflows, and platform tooling, not your ability to send email. `wraps email destroy` removes exactly what was deployed.
 
-| Plan | Monthly | Annual | Monthly equiv. |
-|---|---|---|---|
-| Starter | $19/mo | $199/yr | ~$17/mo |
-| Growth | $79/mo | $799/yr | ~$67/mo |
-| Scale | $199/mo | $1,999/yr | ~$167/mo |
-
----
+Wraps is open source (AGPL-3.0). Self-hosting the control plane is available on Enterprise.
 
 ## Enterprise
 
-Custom limits, on-prem deployment, dedicated support. [Contact us](https://wraps.dev/contact).
-
----
-
-## Founding Member Program
-
-First 50 customers get:
-
-- Direct Slack access to the founder
-- Input on roadmap priorities
-- Your logo on our website
-- Locked-in pricing for life
-
----
+Custom event limits, self-hosted control plane, SSO/SCIM, dedicated support, and SLAs. Contact https://wraps.dev/contact.
 
 ## Links
 
 - Sign up: https://app.wraps.dev
-- Docs: https://wraps.dev/docs
+- Docs for agents: https://wraps.dev/llms.txt (index) and https://wraps.dev/llms-full.txt (everything)
+- Cost estimator: https://wraps.dev/api/pricing/estimate
+- Interactive calculator: https://wraps.dev/tools/ses-calculator
 - CLI: `npx @wraps.dev/cli`
 - Email SDK: `npm install @wraps.dev/email`
 - SMS SDK: `npm install @wraps.dev/sms`
+- MCP server: `npx @wraps.dev/mcp`

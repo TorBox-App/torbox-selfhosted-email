@@ -86,6 +86,29 @@ stdio and resolves AWS credentials from the environment — no API key.
 Full reference: https://wraps.dev/docs/mcp-reference — product page:
 https://wraps.dev/mcp
 
+## Pricing and Cost (for AI Agents)
+
+- [pricing.md](https://wraps.dev/pricing.md): Complete pricing in markdown — Wraps
+  plans and tracked-event overage rates, the four AWS SES pricing plans, worked
+  all-in cost examples at 10K/100K/500K/1M emails, and the feature comparison.
+- [Cost estimator API](https://wraps.dev/api/pricing/estimate): Public,
+  unauthenticated JSON endpoint. Do not compute Wraps + AWS costs by hand — call
+  this instead.
+
+```
+GET https://wraps.dev/api/pricing/estimate?emails=500000&events=250000&tier=growth&sesPlan=alacarte
+```
+
+Returns the Wraps platform/overage split, an itemized AWS breakdown (SES,
+EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF), the combined total, the
+effective cost per 1,000 emails, and a `shareUrl` to the interactive calculator.
+Send `Accept: text/markdown` for a rendered table instead of JSON.
+
+Important: AWS defaults every new SES account to the Essentials plan at
+$0.16 per 1,000 emails. À la carte is $0.10 per 1,000 and is still available —
+an account defaulted into Essentials can move back with immediate effect. SES
+plans are set per account and per Region. Pass `sesPlan` to model either.
+
 ## Docs
 
 - [Quickstart: Email](https://wraps.dev/docs/quickstart/email): Deploy email in 30 seconds

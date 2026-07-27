@@ -50,90 +50,17 @@ import {
   PRICING_TIERS,
   TIER_LIMITS,
 } from "@/config/pricing";
+import type { RetentionPeriod } from "@/lib/ses-cost";
+import {
+  AWS_FREE_TIER,
+  AWS_INFRA_PRICING,
+  calculateStorageGrowth,
+  estimateCost,
+  RETENTION_PERIODS,
+  SES_PLAN_IDS,
+  SES_PLANS,
+} from "@/lib/ses-cost";
 import { cn } from "@/lib/utils";
-
-/**
- * AWS pricing constants (as of 2026)
- * All costs in USD (US East N. Virginia region)
- */
-const AWS_PRICING = {
-  SES_PER_EMAIL: 0.0001, // $0.10 per 1,000 emails
-  DYNAMODB_WRITE_PER_MILLION: 1.25,
-  DYNAMODB_STORAGE_PER_GB: 0.25,
-  LAMBDA_REQUESTS_PER_MILLION: 0.2,
-  LAMBDA_COMPUTE_PER_GB_SECOND: 0.000_016_666_7,
-  SQS_REQUESTS_PER_MILLION: 0.5,
-  EVENTBRIDGE_EVENTS_PER_MILLION: 1.0,
-  DEDICATED_IP_PER_MONTH: 24.95,
-  // WAF pricing (for HTTPS tracking CDN protection)
-  WAF_WEB_ACL_PER_MONTH: 5.0, // $5.00 per Web ACL per month
-  WAF_RULE_PER_MONTH: 1.0, // $1.00 per rule per month
-  WAF_REQUESTS_PER_MILLION: 0.6, // $0.60 per million requests
-} as const;
-
-const FREE_TIER = {
-  LAMBDA_REQUESTS: 1_000_000,
-  LAMBDA_COMPUTE_GB_SECONDS: 400_000,
-  DYNAMODB_STORAGE_GB: 25,
-  SQS_REQUESTS: 1_000_000,
-} as const;
-
-type RetentionPeriod = "7days" | "30days" | "90days" | "1year" | "indefinite";
-
-/**
- * Estimate steady-state storage size in GB
- * This represents storage AFTER the retention period fills up
- */
-function estimateStorageSize(
-  emailsPerMonth: number,
-  retention: RetentionPeriod,
-  numEventTypes = 8
-): number {
-  const avgRecordSizeKB = 2;
-  const retentionMonths = {
-    "7days": 0.25,
-    "30days": 1,
-    "90days": 3,
-    "1year": 12,
-    indefinite: 24,
-  }[retention];
-
-  const totalKB =
-    emailsPerMonth * numEventTypes * retentionMonths * avgRecordSizeKB;
-  return totalKB / 1024 / 1024; // Convert to GB
-}
-
-/**
- * Calculate storage growth over time (for visualization)
- */
-function calculateStorageGrowth(
-  emailsPerMonth: number,
-  retention: RetentionPeriod,
-  numEventTypes = 8
-): Array<{ month: number; storageGB: number }> {
-  const avgRecordSizeKB = 2;
-  const retentionMonths = {
-    "7days": 0.25,
-    "30days": 1,
-    "90days": 3,
-    "1year": 12,
-    indefinite: 24,
-  }[retention];
-
-  const monthlyDataKB = emailsPerMonth * numEventTypes * avgRecordSizeKB;
-  const maxMonths = Math.ceil(retentionMonths) + 1;
-
-  return Array.from({ length: maxMonths }, (_, i) => {
-    const month = i + 1;
-    // Storage grows linearly until it reaches retention limit
-    const accumulatedMonths = Math.min(month, retentionMonths);
-    const storageKB = monthlyDataKB * accumulatedMonths;
-    return {
-      month,
-      storageGB: storageKB / 1024 / 1024,
-    };
-  });
-}
 
 const TIER_IDS = ["free", "starter", "growth", "scale"] as const;
 const BILLING_INTERVALS = ["monthly", "annual"] as const;
@@ -160,14 +87,6 @@ const VOLUME_PRESETS = [
   },
 ];
 
-const RETENTION_PERIODS = [
-  "7days",
-  "30days",
-  "90days",
-  "1year",
-  "indefinite",
-] as const;
-
 /** Returns a human-friendly step size based on the current value. */
 function getStepSize(value: number): number {
   if (value < 1000) {
@@ -190,6 +109,7 @@ const calculatorParsers = {
   events: parseAsInteger.withDefault(5000),
   tier: parseAsStringLiteral(TIER_IDS).withDefault("free"),
   billing: parseAsStringLiteral(BILLING_INTERVALS).withDefault("monthly"),
+  sesPlan: parseAsStringLiteral(SES_PLAN_IDS).withDefault("alacarte"),
   tracking: parseAsBoolean.withDefault(true),
   eventbridge: parseAsBoolean.withDefault(true),
   dynamodb: parseAsBoolean.withDefault(true),
@@ -219,6 +139,7 @@ function SESCalculatorInner() {
   const customDomain = state.customDomain;
   const httpsTracking = state.https;
   const wafEnabled = state.waf;
+  const sesPlan = state.sesPlan;
 
   const activePreset = VOLUME_PRESETS.find(
     (p) =>
@@ -227,183 +148,30 @@ function SESCalculatorInner() {
       p.tier === selectedTier
   );
 
-  // Calculate Wraps platform costs (based on events, not emails)
-  const calculateWrapsCosts = () => {
-    const tier = PRICING_TIERS.find((t) => t.id === selectedTier);
-    const limits = TIER_LIMITS[selectedTier];
-    const overage = OVERAGE_RATES[selectedTier];
+  // All cost math lives in @/lib/ses-cost so the calculator, the
+  // /api/pricing/estimate endpoint, and pricing.md can never disagree.
+  const estimate = estimateCost({
+    emailsPerMonth,
+    eventsPerMonth,
+    tier: selectedTier,
+    billing: billingInterval,
+    sesPlan,
+    eventTracking: eventTrackingEnabled,
+    eventBridge: eventBridgeEnabled,
+    dynamodb: dynamoDBEnabled,
+    retention,
+    eventTypes: numEventTypes,
+    dedicatedIp,
+    httpsTracking,
+    waf: wafEnabled,
+  });
 
-    if (!tier) {
-      return {
-        platformCost: 0,
-        overageCost: 0,
-        totalWrapsCost: 0,
-        annualSavings: 0,
-      };
-    }
-
-    const platformCost = getDisplayPrice(tier, billingInterval);
-    const annualSavings =
-      billingInterval === "annual" && tier.annualPrice
-        ? tier.price * 12 - tier.annualPrice
-        : 0;
-    const includedEvents =
-      typeof limits.messages === "number"
-        ? limits.messages
-        : Number.POSITIVE_INFINITY;
-    const overageEvents = Math.max(0, eventsPerMonth - includedEvents);
-    const overageCost =
-      overage.perThousand > 0
-        ? (overageEvents / 1000) * overage.perThousand
-        : 0;
-
-    return {
-      platformCost,
-      overageCost,
-      totalWrapsCost: platformCost + overageCost,
-      annualSavings,
-      includedEvents,
-      overageEvents,
-      requiresUpgrade: overageEvents > 0 && overage.perThousand === 0,
-    };
+  const wrapsCosts = {
+    ...estimate.wraps,
+    totalWrapsCost: estimate.wraps.total,
   };
-
-  const wrapsCosts = calculateWrapsCosts();
-
-  // Calculate costs
-  const calculateCosts = () => {
-    let total = 0;
-    const breakdown: Array<{ name: string; cost: number; details?: string }> =
-      [];
-
-    // SES email sending cost
-    const sesEmailCost = emailsPerMonth * AWS_PRICING.SES_PER_EMAIL;
-    total += sesEmailCost;
-    breakdown.push({
-      name: "SES Email Sending",
-      cost: sesEmailCost,
-      details: `${emailsPerMonth.toLocaleString()} emails × $${AWS_PRICING.SES_PER_EMAIL.toFixed(4)}`,
-    });
-
-    if (eventTrackingEnabled) {
-      const totalEvents = emailsPerMonth * numEventTypes;
-
-      // EventBridge
-      if (eventBridgeEnabled) {
-        const eventCost =
-          (totalEvents / 1_000_000) *
-          AWS_PRICING.EVENTBRIDGE_EVENTS_PER_MILLION;
-        total += eventCost;
-        breakdown.push({
-          name: "EventBridge Events",
-          cost: eventCost,
-          details: `${totalEvents.toLocaleString()} events × $${(AWS_PRICING.EVENTBRIDGE_EVENTS_PER_MILLION / 1_000_000).toFixed(6)}`,
-        });
-      }
-
-      // SQS
-      const sqsRequests = totalEvents * 3;
-      const sqsCost =
-        (Math.max(0, sqsRequests - FREE_TIER.SQS_REQUESTS) / 1_000_000) *
-        AWS_PRICING.SQS_REQUESTS_PER_MILLION;
-      total += sqsCost;
-      breakdown.push({
-        name: "SQS Queue",
-        cost: sqsCost,
-        details:
-          sqsCost === 0
-            ? "Within free tier (1M requests/month)"
-            : `${sqsRequests.toLocaleString()} requests (after 1M free tier)`,
-      });
-
-      // Lambda
-      const lambdaInvocations = totalEvents;
-      const lambdaRequestCost =
-        (Math.max(0, lambdaInvocations - FREE_TIER.LAMBDA_REQUESTS) /
-          1_000_000) *
-        AWS_PRICING.LAMBDA_REQUESTS_PER_MILLION;
-
-      const memoryGB = 0.5;
-      const avgDurationSeconds = 0.1;
-      const computeGBSeconds =
-        lambdaInvocations * memoryGB * avgDurationSeconds;
-      const lambdaComputeCost =
-        Math.max(0, computeGBSeconds - FREE_TIER.LAMBDA_COMPUTE_GB_SECONDS) *
-        AWS_PRICING.LAMBDA_COMPUTE_PER_GB_SECOND;
-
-      const lambdaTotalCost = lambdaRequestCost + lambdaComputeCost;
-      total += lambdaTotalCost;
-      breakdown.push({
-        name: "Lambda Processing",
-        cost: lambdaTotalCost,
-        details:
-          lambdaTotalCost === 0
-            ? "Within free tier (1M requests + 400K GB-seconds/month)"
-            : `${lambdaInvocations.toLocaleString()} invocations (512MB, 100ms avg)`,
-      });
-
-      // DynamoDB
-      if (dynamoDBEnabled) {
-        const writeCost =
-          (totalEvents / 1_000_000) * AWS_PRICING.DYNAMODB_WRITE_PER_MILLION;
-
-        const storageGB = estimateStorageSize(
-          emailsPerMonth,
-          retention,
-          numEventTypes
-        );
-        const storageCost =
-          Math.max(0, storageGB - FREE_TIER.DYNAMODB_STORAGE_GB) *
-          AWS_PRICING.DYNAMODB_STORAGE_PER_GB;
-
-        const dynamoTotalCost = writeCost + storageCost;
-        total += dynamoTotalCost;
-        breakdown.push({
-          name: "DynamoDB Storage",
-          cost: dynamoTotalCost,
-          details: `${storageGB.toFixed(3)} GB at steady-state (${retention}), ${totalEvents.toLocaleString()} writes/month`,
-        });
-      }
-    }
-
-    // Dedicated IP
-    if (dedicatedIp) {
-      total += AWS_PRICING.DEDICATED_IP_PER_MONTH;
-      breakdown.push({
-        name: "Dedicated IP",
-        cost: AWS_PRICING.DEDICATED_IP_PER_MONTH,
-        details: "Recommended for 100k+ emails/day",
-      });
-    }
-
-    // Custom tracking domain (no additional cost - DNS managed where user manages DNS)
-    if (customDomain) {
-      // No cost to add
-    }
-
-    // WAF protection for HTTPS tracking CDN
-    if (httpsTracking && wafEnabled) {
-      // Estimate ~2 requests per email (open tracking pixel + click tracking)
-      const estimatedWafRequests = emailsPerMonth * 2;
-      const wafCost =
-        AWS_PRICING.WAF_WEB_ACL_PER_MONTH +
-        AWS_PRICING.WAF_RULE_PER_MONTH +
-        (estimatedWafRequests / 1_000_000) *
-          AWS_PRICING.WAF_REQUESTS_PER_MILLION;
-      total += wafCost;
-      breakdown.push({
-        name: "WAF Rate Limiting",
-        cost: wafCost,
-        details: `$${AWS_PRICING.WAF_WEB_ACL_PER_MONTH}/mo Web ACL + $${AWS_PRICING.WAF_RULE_PER_MONTH}/mo rule + requests`,
-      });
-    }
-
-    return { total, breakdown };
-  };
-
-  const { total, breakdown } = calculateCosts();
-  const _perThousandEmails =
-    emailsPerMonth > 0 ? (total / emailsPerMonth) * 1000 : 0;
+  const breakdown = estimate.aws.lines;
+  const total = breakdown.reduce((sum, line) => sum + line.cost, 0);
 
   // Calculate storage growth for display
   const storageGrowth = dynamoDBEnabled
@@ -656,6 +424,40 @@ function SESCalculatorInner() {
             </div>
             <p className="text-muted-foreground text-sm">
               Emails sent via AWS SES
+            </p>
+          </div>
+
+          {/* SES pricing plan (per AWS account, per Region) */}
+          <div className="space-y-2">
+            <Label htmlFor="ses-plan">AWS SES Pricing Plan</Label>
+            <Select
+              onValueChange={(v) =>
+                setState({ sesPlan: v as (typeof SES_PLAN_IDS)[number] })
+              }
+              value={sesPlan}
+            >
+              <SelectTrigger id="ses-plan">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SES_PLAN_IDS.map((id) => {
+                  const plan = SES_PLANS[id];
+                  return (
+                    <SelectItem key={id} value={id}>
+                      {plan.name} —{" "}
+                      {plan.monthlyFee > 0 ? `$${plan.monthlyFee}/mo + ` : ""}$
+                      {plan.perThousandEmails.toFixed(2)}/1K
+                      {plan.defaultForNewAccounts ? " (AWS default)" : ""}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-sm">
+              {SES_PLANS[sesPlan].summary}{" "}
+              {sesPlan === "essentials"
+                ? "AWS puts every new account on this plan — moving back to à la carte takes effect immediately."
+                : "Set per AWS account, per Region."}
             </p>
           </div>
 
@@ -1044,8 +846,8 @@ function SESCalculatorInner() {
                   const storageCost =
                     Math.max(
                       0,
-                      point.storageGB - FREE_TIER.DYNAMODB_STORAGE_GB
-                    ) * AWS_PRICING.DYNAMODB_STORAGE_PER_GB;
+                      point.storageGB - AWS_FREE_TIER.DYNAMODB_STORAGE_GB
+                    ) * AWS_INFRA_PRICING.DYNAMODB_STORAGE_PER_GB;
 
                   return (
                     <div

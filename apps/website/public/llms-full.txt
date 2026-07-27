@@ -88,7 +88,8 @@ Visual dashboard with progressive feature unlocks:
 
 - **Your AWS Account**: Infrastructure deploys to your account, not ours
 - **No Vendor Lock-in**: Your infrastructure keeps working if you stop paying
-- **AWS Prices**: Pay AWS directly ($0.10/1K emails, ~$0.008/SMS segment), no markup
+- **AWS Prices**: Pay AWS directly, no markup ($0.10/1K emails on SES a la carte, $0.16/1K on the
+  Essentials plan AWS defaults new accounts to; ~$0.008/SMS segment). See https://wraps.dev/pricing.md
 - **Under 2 Minutes**: `npx @wraps.dev/cli email init` and done
 - **Unlimited Contacts**: Gate on events (what costs money), not vanity metrics
 - **Zero Credentials Stored**: OIDC authentication, no AWS secrets
@@ -856,6 +857,7 @@ Prerequisites: a deployed Wraps email stack (`wraps email init`) and AWS credent
 | `get_email_event_log` | Full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
 | `verify_domain_status` | Verification and DKIM status of a sending domain | No |
 | `list_suppressions` | Addresses on the SES suppression list, filterable by BOUNCE or COMPLAINT | No |
+| `estimate_cost` | Monthly Wraps + AWS cost for a send volume, including the account's SES pricing plan. Needs no AWS credentials | No |
 | `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
 
 ### Setup

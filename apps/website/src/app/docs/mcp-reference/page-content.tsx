@@ -83,6 +83,12 @@ const tools = [
       "Addresses on your SES suppression list, filterable by BOUNCE or COMPLAINT",
   },
   {
+    name: "estimate_cost",
+    write: false,
+    description:
+      "Monthly Wraps + AWS cost for a send volume, including which SES pricing plan the account is on — needs no AWS credentials",
+  },
+  {
     name: "send_email",
     write: true,
     description:

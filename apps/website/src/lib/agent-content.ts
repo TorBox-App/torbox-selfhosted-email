@@ -1,4 +1,14 @@
+import { renderPricingMarkdown } from "./pricing-markdown";
+
+/** Generated from config/pricing.ts + lib/ses-cost.ts — mirrors public/pricing.md */
+const PRICING_MARKDOWN = renderPricingMarkdown();
+
 export const AGENT_CONTENT: Record<string, string> = {
+  // Pricing is the single most-requested page for agents; serve it on both the
+  // page path (via Accept: text/markdown) and the literal .md path.
+  "/pricing": PRICING_MARKDOWN,
+  "/pricing.md": PRICING_MARKDOWN,
+  "/tools/ses-calculator": PRICING_MARKDOWN,
   "/": `# Wraps
 
 > Deploy email, SMS, and CDN infrastructure to your AWS account with one command.
@@ -31,7 +41,7 @@ await wraps.send({
 
 ## Pricing
 
-Wraps charges for the platform. You pay AWS directly for sending at $0.10/1,000 emails.
+Wraps charges for the platform. You pay AWS directly for sending — $0.10/1,000 emails on SES à la carte, $0.16/1,000 on the Essentials plan AWS assigns to new accounts by default. Full pricing, SES plan detail, and a cost estimator API: https://wraps.dev/pricing.md
 
 | Plan | Price | Tracked Events/mo | AWS Accounts |
 |------|-------|-------------------|--------------|
@@ -253,6 +263,7 @@ MCP server for Wraps email infrastructure. Gives AI agents access to your AWS SE
 | \`get_email_event_log\` | Full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
 | \`verify_domain_status\` | Verification and DKIM status of a sending domain | No |
 | \`list_suppressions\` | Addresses on your SES suppression list, filterable by BOUNCE or COMPLAINT | No |
+| \`estimate_cost\` | Monthly Wraps + AWS cost for a send volume, including the account's SES pricing plan. Needs no AWS credentials | No |
 | \`check_send_status\` | Poll the outcome of a \`pending_approval\` send by \`approvalId\` (enforced mode only) | No |
 
 ## Setup: Claude Code

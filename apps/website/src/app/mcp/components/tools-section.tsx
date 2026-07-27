@@ -31,6 +31,13 @@ const tools = [
     prompt: "“Who complained in the last import?”",
   },
   {
+    name: "estimate_cost",
+    write: false,
+    description:
+      "What a given send volume actually costs on Wraps + AWS, itemized — including whether the account is on the SES rate it should be.",
+    prompt: "“What would 500K emails a month cost us?”",
+  },
+  {
     name: "send_email",
     write: true,
     description:

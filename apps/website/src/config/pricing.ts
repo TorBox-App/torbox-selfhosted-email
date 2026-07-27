@@ -59,6 +59,9 @@ export type Competitor = {
 // PRICING CONSTANTS
 // =============================================================================
 
+/** Bump when any number in this file changes — surfaced in generated pricing.md */
+export const PRICING_LAST_UPDATED = "July 2026";
+
 export const ANNUAL_DISCOUNT = 0.16; // 16% off (save ~2 months)
 
 export const AWS_PRICING = {
