@@ -7,12 +7,14 @@ import {
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { user } from "@wraps/db/schema/auth";
+import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   type ChangePasswordInput,
   changePasswordFormOpts,
   changePasswordSchema,
+  joinFullName,
   type SecuritySettingsInput,
   securitySettingsFormOpts,
   securitySettingsSchema,
@@ -66,10 +68,10 @@ export async function updateAccountAction(
     // Validate form data
     const validatedData = await serverValidateAccount(formData);
 
+    const headers = await import("next/headers").then((mod) => mod.headers());
+
     // Get current user session
-    const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
-    });
+    const session = await auth.api.getSession({ headers });
 
     if (!session?.user) {
       return {
@@ -78,35 +80,35 @@ export async function updateAccountAction(
       };
     }
 
-    // Check if email is being changed and if it's already in use
-    if (validatedData.email !== session.user.email) {
-      const existingUser = await db.query.user.findFirst({
-        where: (users, { eq: eqOp }) => eqOp(users.email, validatedData.email),
-      });
-
-      if (existingUser) {
-        return {
-          success: false,
-          error: "This email address is already in use",
-        };
-      }
+    // Update the name through better-auth rather than writing to the user table
+    // directly: it refreshes the cached session cookie (5min TTL, see
+    // packages/auth session.cookieCache) so the change is visible immediately,
+    // and it maintains updatedAt.
+    const name = joinFullName(validatedData.firstName, validatedData.lastName);
+    if (name !== session.user.name) {
+      await auth.api.updateUser({ body: { name }, headers });
     }
 
-    // Update user in database
-    await db
-      .update(user)
-      .set({
-        name: `${validatedData.firstName} ${validatedData.lastName}`,
-        email: validatedData.email,
-      })
-      .where(eq(user.id, session.user.id));
+    // Email changes go through better-auth's verification flow — a direct DB
+    // write would move the address without proving the user owns it and would
+    // leave emailVerified stale.
+    const newEmail = validatedData.email.toLowerCase();
+    const emailChanged = newEmail !== session.user.email.toLowerCase();
+    if (emailChanged) {
+      await auth.api.changeEmail({
+        body: { newEmail, callbackURL: "/settings/account" },
+        headers,
+      });
+    }
 
     // Revalidate paths
     revalidatePath("/settings/account");
 
     return {
       success: true,
-      message: "Account updated successfully",
+      message: emailChanged
+        ? `Profile updated. Check ${newEmail} for a link to confirm your new email address.`
+        : "Account updated successfully",
     };
   } catch (error) {
     // If it's a ServerValidateError, re-throw it
@@ -115,6 +117,17 @@ export async function updateAccountAction(
     }
 
     const log = createActionLogger("updateAccountAction", {});
+
+    // better-auth rejections carry a client-safe message (e.g. "Email is the
+    // same") — surface it instead of a generic failure.
+    if (error instanceof APIError) {
+      log.warn({ err: error }, "Account update rejected by better-auth");
+      return {
+        success: false,
+        error: error.body?.message ?? "Could not update your account.",
+      };
+    }
+
     log.error({ err: error }, "Failed to update account");
     return {
       success: false,

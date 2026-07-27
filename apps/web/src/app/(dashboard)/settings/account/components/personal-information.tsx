@@ -10,17 +10,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@wraps/ui/components/ui/card";
-import { useActionState, useEffect } from "react";
+import { useActionState, useCallback, useEffect, useRef } from "react";
 import { z } from "zod";
 import { updateAccountAction } from "@/actions/account";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { updateAccountFormOpts } from "@/lib/forms/update-account";
+import {
+  splitFullName,
+  updateAccountFormOpts,
+} from "@/lib/forms/update-account";
 
 export function PersonalInformation() {
-  const { data: session } = authClient.useSession();
+  const { data: session, refetch } = authClient.useSession();
 
   // Account update form
   const [accountState, accountAction, isAccountPending] = useActionState<
@@ -45,18 +48,27 @@ export function PersonalInformation() {
     ),
   });
 
-  // Set default values from session
-  useEffect(() => {
-    if (session?.user) {
-      const [firstName = "", lastName = ""] = (session.user.name || "").split(
-        " ",
-        2
-      );
-      accountForm.setFieldValue("firstName", firstName);
-      accountForm.setFieldValue("lastName", lastName);
-      accountForm.setFieldValue("email", session.user.email || "");
+  const seedFromSession = useCallback(() => {
+    if (!session?.user) {
+      return;
     }
-  }, [session, accountForm.setFieldValue, accountForm]);
+    const { firstName, lastName } = splitFullName(session.user.name || "");
+    accountForm.setFieldValue("firstName", firstName);
+    accountForm.setFieldValue("lastName", lastName);
+    accountForm.setFieldValue("email", session.user.email || "");
+  }, [session, accountForm]);
+
+  // Seed the inputs from the session once per user. Re-seeding on every session
+  // change would wipe out whatever the user is typing whenever useSession
+  // refetches (window focus, etc.).
+  const seededUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session?.user || seededUserIdRef.current === session.user.id) {
+      return;
+    }
+    seededUserIdRef.current = session.user.id;
+    seedFromSession();
+  }, [session, seedFromSession]);
 
   const accountFormErrors = useStore(
     accountForm.store,
@@ -68,6 +80,18 @@ export function PersonalInformation() {
     typeof accountState === "object" &&
     "success" in accountState &&
     accountState.success === true;
+
+  // The server action refreshes the session cookie; pull the new values into
+  // the client store and re-seed so the form shows what was actually saved.
+  const refetchedForStateRef = useRef<unknown>(null);
+  useEffect(() => {
+    if (!isAccountSuccess || refetchedForStateRef.current === accountState) {
+      return;
+    }
+    refetchedForStateRef.current = accountState;
+    seededUserIdRef.current = null;
+    refetch();
+  }, [isAccountSuccess, accountState, refetch]);
 
   return (
     <form
@@ -155,13 +179,9 @@ export function PersonalInformation() {
               }}
             </accountForm.Field>
 
-            <accountForm.Field
-              name="lastName"
-              validators={{
-                onChange: ({ value }) =>
-                  value.length < 1 ? "Last name is required" : undefined,
-              }}
-            >
+            {/* No required validator: accounts signed up with a single-word
+                name have no last name and must still be able to save. */}
+            <accountForm.Field name="lastName">
               {(field) => {
                 const isInvalid =
                   field.state.meta.isTouched && !field.state.meta.isValid;
@@ -247,7 +267,10 @@ export function PersonalInformation() {
             </Button>
             <Button
               className="cursor-pointer"
-              onClick={() => accountForm.reset()}
+              onClick={() => {
+                accountForm.reset();
+                seedFromSession();
+              }}
               type="button"
               variant="outline"
             >

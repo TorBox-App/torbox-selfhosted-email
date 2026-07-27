@@ -3,10 +3,41 @@ import { z } from "zod";
 
 // Schema for updating account information
 export const updateAccountSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+  firstName: z.string().trim().min(1, "First name is required"),
+  // Optional: accounts created with a single-word name have no last name, and
+  // requiring one here would lock them out of saving anything at all.
+  lastName: z.string().trim(),
+  email: z.string().trim().email("Invalid email address"),
 });
+
+/**
+ * Split a stored `name` into first/last on the FIRST space only.
+ *
+ * `String.split(" ", 2)` drops everything after the second token, so
+ * "Mary Jane Watson" round-tripped through the form as "Mary Jane" — saving
+ * the page without editing anything destroyed part of the name.
+ */
+export function splitFullName(name: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const normalized = name.trim().replace(/\s+/g, " ");
+  const boundary = normalized.indexOf(" ");
+
+  if (boundary === -1) {
+    return { firstName: normalized, lastName: "" };
+  }
+
+  return {
+    firstName: normalized.slice(0, boundary),
+    lastName: normalized.slice(boundary + 1),
+  };
+}
+
+/** Inverse of `splitFullName` — safe when either half is empty. */
+export function joinFullName(firstName: string, lastName: string): string {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
 
 export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
 

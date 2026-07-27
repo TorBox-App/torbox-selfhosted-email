@@ -510,6 +510,9 @@ export const auth = betterAuth<BetterAuthOptions>({
     schema: { ...schema, ...ssoSchema, ...scimSchema },
   }),
   user: {
+    changeEmail: {
+      enabled: true,
+    },
     deleteUser: {
       enabled: true,
       afterDelete: async (user) => {
