@@ -32,6 +32,14 @@
  * sweep degrades to detection + flag + dashboard banner — retrying hourly.
  */
 
+// Initialize Sentry before all other imports
+import "../lib/sentry";
+
+import {
+  captureException,
+  captureMessage,
+  wrapHandler,
+} from "@sentry/aws-serverless";
 import {
   awsAccount,
   db,
@@ -133,6 +141,21 @@ async function alertOwner(account: {
     ]);
 
     if (!(ownerEmail && orgSlug)) {
+      // Returns without setting eventFeedAlertedAt, so this repeats hourly
+      // and never self-resolves. Report it rather than only logging.
+      captureMessage(
+        "[event-feed-staleness] Missing owner email or org slug, skipping alert",
+        {
+          level: "warning",
+          tags: { worker: "event-feed-staleness", stage: "resolve-owner" },
+          extra: {
+            accountId: account.id,
+            organizationId: account.organizationId,
+            hasOwnerEmail: !!ownerEmail,
+            hasOrgSlug: !!orgSlug,
+          },
+        }
+      );
       log.warn(
         "[event-feed-staleness] Missing owner email or org slug, skipping alert",
         {
@@ -166,6 +189,13 @@ async function alertOwner(account: {
         data: { awsAccountId: account.id, region: account.region },
       });
     } catch (notifyError) {
+      captureException(notifyError, {
+        tags: { worker: "event-feed-staleness", stage: "notify-inbox" },
+        extra: {
+          accountId: account.id,
+          organizationId: account.organizationId,
+        },
+      });
       log.error(
         "[event-feed-staleness] Failed to write inbox notification",
         notifyError,
@@ -182,7 +212,17 @@ async function alertOwner(account: {
     });
   } catch (error) {
     // One org's email failure must not abort the sweep. eventFeedAlertedAt
-    // stays unset so the next hourly run retries the send.
+    // stays unset so the next hourly run retries the send. That retry is
+    // silent by design, so report it — a permanently failing alert is
+    // otherwise indistinguishable from a working one.
+    captureException(error, {
+      tags: { worker: "event-feed-staleness", stage: "alert-owner" },
+      extra: {
+        accountId: account.id,
+        organizationId: account.organizationId,
+        staleSince: account.eventFeedStaleSince.toISOString(),
+      },
+    });
     log.error("[event-feed-staleness] Failed to alert org owner", error, {
       accountId: account.id,
       organizationId: account.organizationId,
@@ -190,7 +230,7 @@ async function alertOwner(account: {
   }
 }
 
-export const handler: Handler = async () => {
+export const handler: Handler = wrapHandler(async () => {
   log.info("[event-feed-staleness] Starting sweep");
 
   const now = new Date();
@@ -273,4 +313,4 @@ export const handler: Handler = async () => {
     recoveredCount,
   });
   await flushLogger();
-};
+});

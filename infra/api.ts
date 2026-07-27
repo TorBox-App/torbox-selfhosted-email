@@ -72,8 +72,10 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     WORKFLOW_QUEUE_ARN: workflowQueue.arn,
     // Confirmation email tokens (double opt-in)
     UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+    // `||` not `??`: CI passes an unset secret through as an empty string,
+    // which `??` would forward verbatim and resolveAppUrl rejects as unset.
     NEXT_PUBLIC_APP_URL:
-      process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
+      process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev",
     // Anthropic API key for AI workflow generation
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
     SENTRY_DSN: sentryDsn.value,
