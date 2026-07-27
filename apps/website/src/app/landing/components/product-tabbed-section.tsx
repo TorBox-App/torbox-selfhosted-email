@@ -15,7 +15,7 @@ export function ProductTabbedSection() {
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Build workflows that trigger on user behavior. Send broadcasts to
             segments. Design templates with AI. All while sending through your
-            AWS at $0.10/1K
+            AWS at $0.10/1K (à la carte) or $0.16/1K on AWS&apos;s default plan
           </p>
         </div>
 

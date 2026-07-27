@@ -52,7 +52,7 @@ const secondaryFeatures = [
     icon: Cloud,
     title: "AWS Pricing, No Markup",
     description:
-      "Pay AWS directly at $0.10 per 1,000 emails. Scale affordably without worrying about tier limits or surprise bills.",
+      "Pay AWS directly at $0.10 per 1,000 emails (à la carte) — or $0.16 on AWS's new default Essentials plan. Scale affordably without worrying about tier limits or surprise bills.",
   },
   {
     icon: Shield,

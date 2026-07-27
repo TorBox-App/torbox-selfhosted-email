@@ -587,8 +587,9 @@ export default function AmazonSesVsWrapsPage() {
             <p className="mb-6 text-muted-foreground">
               SES is cheap. Production SES infrastructure is not. The per-email
               cost is identical whether you use raw SES or Wraps — because Wraps
-              deploys SES to your account at $0.10 per 1,000 emails. The
-              question is whether you pay with{" "}
+              deploys SES to your account at $0.10 per 1,000 emails on à la
+              carte (AWS defaults new accounts to $0.16). The question is
+              whether you pay with{" "}
               <strong className="text-foreground">engineering time</strong>{" "}
               (DIY) or a{" "}
               <strong className="text-foreground">platform fee</strong> (Wraps).
@@ -653,7 +654,8 @@ export default function AmazonSesVsWrapsPage() {
                 <strong className="text-foreground">Wraps tiers</strong>: Free
                 (5K tracked events/mo), Starter $19/mo (50K events), Growth
                 $79/mo (250K events), Scale $199/mo (1M events). SES charges are
-                billed by AWS directly at $0.10/1K emails.{" "}
+                billed by AWS directly at $0.10/1K emails à la carte (AWS
+                defaults new accounts to $0.16/1K).{" "}
                 <a className="text-primary underline" href="/platform#pricing">
                   See what each tier includes
                 </a>

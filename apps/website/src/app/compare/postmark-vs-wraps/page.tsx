@@ -79,7 +79,7 @@ const tldrRows = [
   {
     dimension: "Pricing model",
     postmark: "$1.20-$1.80 per 1K emails",
-    wraps: "$0.10 per 1K (AWS SES) + platform fee",
+    wraps: "$0.10 per 1K à la carte (AWS SES) + platform fee",
   },
   {
     dimension: "Contact management",
@@ -539,8 +539,9 @@ export default function PostmarkVsWrapsPage() {
               Postmark&apos;s 2026 plans (Basic $15, Pro $16.50, Platform $18)
               all include just 10K emails &mdash; everything above that is
               overage at $1.20&ndash;$1.80 per 1,000 emails depending on plan.
-              AWS SES charges $0.10 per 1,000. Here&apos;s what that means at
-              real send volumes.
+              AWS SES charges $0.10 per 1,000 à la carte (AWS defaults new
+              accounts to $0.16). Here&apos;s what that means at real send
+              volumes.
             </p>
 
             <Card className="overflow-hidden py-0">
@@ -587,8 +588,9 @@ export default function PostmarkVsWrapsPage() {
             <p className="mt-4 text-muted-foreground text-sm">
               Postmark pricing shows their Pro and Platform plans, computed from
               published base + overage rates. Wraps pricing includes the
-              platform fee plus AWS SES at $0.10/1K emails. You pay AWS directly
-              &mdash; Wraps never touches your email spend.{" "}
+              platform fee plus AWS SES at $0.10/1K emails on à la carte (AWS
+              defaults new accounts to $0.16). You pay AWS directly &mdash;
+              Wraps never touches your email spend.{" "}
               <a
                 className="text-primary underline"
                 href="/tools/ses-calculator"
@@ -705,7 +707,7 @@ export default function PostmarkVsWrapsPage() {
                   {[
                     "You want to own your email infrastructure in your AWS account, not rent it from a vendor",
                     "You need a full communication platform: automations, broadcasts, segments, and contact management alongside transactional sends",
-                    "You're cost-sensitive at scale \u2014 AWS SES pricing ($0.10/1K) is 12-18x cheaper than Postmark's per-email rate",
+                    "You're cost-sensitive at scale \u2014 AWS SES pricing ($0.10/1K \u00e0 la carte) is 12-18x cheaper than Postmark's per-email rate",
                     "You control your own data retention (your DynamoDB, your rules) -- no paid add-ons to keep your event history",
                     "You want SMS alongside email via AWS End User Messaging, from the same platform",
                     "You care about vendor lock-in: cancel Wraps and your SES infrastructure keeps running with no DNS changes or IP warmup required",

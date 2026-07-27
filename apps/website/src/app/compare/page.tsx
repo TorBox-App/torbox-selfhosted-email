@@ -57,7 +57,7 @@ const comparisons = [
     href: "/compare/resend-vs-wraps",
     tagline: "Same DX, different economics",
     description:
-      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (30 days vs unlimited), overage pricing ($0.90/1K vs $0.10/1K), and what happens when you cancel.",
+      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (30 days vs unlimited), overage pricing ($0.90/1K vs $0.10/1K à la carte), and what happens when you cancel.",
   },
   {
     competitor: "Amazon SES",
@@ -187,8 +187,9 @@ export default function ComparePage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    $0.10 per 1,000 emails. No per-contact fees, no overage
-                    surcharges, no surprises.
+                    $0.10 per 1,000 emails à la carte (AWS defaults new accounts
+                    to $0.16 — Wraps tells you which plan applies). No
+                    per-contact fees, no overage surcharges.
                   </p>
                 </CardContent>
               </Card>

@@ -45,7 +45,7 @@ const costComparison = [
     saas: "$0-30",
     wrapsPlatform: "Free",
     trackedEvents: "5K/mo",
-    awsCost: "~$0.10",
+    awsCost: "~$0.10 (à la carte)",
   },
   {
     volume: "10K/mo",
@@ -168,7 +168,8 @@ export default function WhyWrapsPage() {
               Email SaaS examples: Mailchimp, Resend, SendGrid, Postmark,
               Customer.io. Wraps Platform is a flat fee for tooling (dashboard,
               workflows, templates, analytics) — not based on email volume. You
-              pay AWS directly for sending at $0.10/1K emails.{" "}
+              pay AWS directly for sending at $0.10/1K emails on à la carte (AWS
+              defaults new accounts to $0.16/1K).{" "}
               <a className="text-primary underline" href="/platform#pricing">
                 See what each tier includes
               </a>

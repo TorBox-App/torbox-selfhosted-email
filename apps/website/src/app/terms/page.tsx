@@ -139,7 +139,10 @@ export default function TermsOfService() {
           </p>
 
           <ul>
-            <li>AWS SES sending fees (~$0.10 per 1,000 emails)</li>
+            <li>
+              AWS SES sending fees (~$0.10 per 1,000 emails à la carte, or
+              ~$0.16 per 1,000 on AWS&apos;s default Essentials plan)
+            </li>
             <li>DynamoDB storage and read/write costs</li>
             <li>Lambda function execution costs</li>
             <li>EventBridge event processing costs</li>

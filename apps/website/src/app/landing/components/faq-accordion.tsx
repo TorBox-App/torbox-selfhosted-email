@@ -51,17 +51,18 @@ const faqItems: FaqItem[] = [
     value: "item-2",
     question: "What are the costs for running Wraps?",
     answer:
-      "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
+      "With Wraps, you pay AWS directly with no markup: à la carte SES is $0.10 per 1,000 emails, though AWS now defaults new accounts to Essentials at $0.16 (Wraps tells you which plan you're on). For example, 50,000 emails/month costs ~$5-8 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
     richAnswer: (
       <>
-        With Wraps, you pay AWS directly at{" "}
+        With Wraps, you pay AWS directly with no markup:{" "}
         <a className={faqLink} href="/tools/ses-calculator">
-          $0.10 per 1,000 emails
-        </a>{" "}
-        with no markup. For example, 50,000 emails/month costs ~$5 to AWS.
-        There&rsquo;s a free tier with 5,000 tracked events/month included. Paid
-        plans start at $19/month. The infrastructure is yours forever&mdash;no
-        vendor lock-in, no surprise bills.
+          à la carte SES is $0.10 per 1,000 emails
+        </a>
+        , though AWS now defaults new accounts to Essentials at $0.16 (Wraps
+        tells you which plan you&rsquo;re on). For example, 50,000 emails/month
+        costs ~$5-8 to AWS. There&rsquo;s a free tier with 5,000 tracked
+        events/month included. Paid plans start at $19/month. The infrastructure
+        is yours forever&mdash;no vendor lock-in, no surprise bills.
       </>
     ),
   },

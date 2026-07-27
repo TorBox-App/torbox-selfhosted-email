@@ -603,7 +603,8 @@ export default function KlaviyoVsWrapsPage() {
             <p className="mb-4 text-muted-foreground text-sm">
               Klaviyo prices by <strong>active profiles</strong> (contacts you
               store, whether you email them or not). Wraps charges a flat
-              platform fee + AWS SES at $0.10/1,000 emails. Wraps has{" "}
+              platform fee + AWS SES at $0.10/1,000 emails on à la carte (AWS
+              defaults new accounts to $0.16/1,000). Wraps has{" "}
               <strong>unlimited contacts</strong> on all tiers.
             </p>
             <Card className="overflow-hidden py-0">
@@ -648,8 +649,9 @@ export default function KlaviyoVsWrapsPage() {
             </Card>
             <div className="mt-4 space-y-2 text-muted-foreground text-sm">
               <p>
-                Wraps total = platform fee + AWS SES ($0.10/1K emails), paid
-                directly to AWS.{" "}
+                Wraps total = platform fee + AWS SES ($0.10/1K emails à la
+                carte, or $0.16/1K on AWS&apos;s default plan), paid directly to
+                AWS.{" "}
                 <a
                   className="text-primary underline"
                   href="/tools/ses-calculator"

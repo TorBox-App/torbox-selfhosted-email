@@ -198,8 +198,9 @@ export function DashboardPricingSection() {
 
         {/* Footer note */}
         <p className="mt-6 text-center text-muted-foreground text-sm">
-          AWS costs billed separately by AWS (~$0.10 per 1,000 emails). Free
-          tier available with 5,000 tracked events/month.
+          AWS costs billed separately by AWS (~$0.10 per 1,000 emails à la
+          carte, or ~$0.16 on AWS&apos;s new default Essentials plan). Free tier
+          available with 5,000 tracked events/month.
         </p>
       </div>
     </section>

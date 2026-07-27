@@ -36,7 +36,7 @@ const faqSchema = {
       name: "What are the costs for running Wraps?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month.",
+        text: "With Wraps, you pay AWS directly with no markup: à la carte SES is $0.10 per 1,000 emails, though AWS now defaults new accounts to the Essentials plan at $0.16 (Wraps tells you which plan you're on and how to move back). For example, 50,000 emails/month costs ~$5-8 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month.",
       },
     },
     {

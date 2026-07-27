@@ -570,8 +570,9 @@ export default function SendGridVsWrapsPage() {
             <p className="mb-6 text-muted-foreground">
               Wraps charges a flat platform fee for tooling (dashboard,
               analytics, templates). You pay AWS directly for sending at
-              $0.10/1,000 emails. SendGrid charges per plan tier with separate
-              billing for marketing and transactional email.
+              $0.10/1,000 emails on à la carte (AWS defaults new accounts to
+              $0.16/1,000). SendGrid charges per plan tier with separate billing
+              for marketing and transactional email.
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
@@ -663,8 +664,9 @@ export default function SendGridVsWrapsPage() {
               >
                 sendgrid.com/pricing
               </a>
-              . Wraps AWS cost = $0.10 per 1,000 emails via SES. All prices as
-              of March 2026.{" "}
+              . Wraps AWS cost = $0.10 per 1,000 emails via SES à la carte (AWS
+              defaults new accounts to $0.16/1,000). All prices as of March
+              2026.{" "}
               <a
                 className="text-primary underline"
                 href="/tools/ses-calculator"

@@ -113,8 +113,10 @@ export function PricingSection() {
           <p className="mb-4 text-muted-foreground text-sm">
             You pay AWS directly for sending at{" "}
             <strong className="text-foreground">$0.10 per 1,000 emails</strong>{" "}
-            plus infrastructure (~$2-5/mo). The infrastructure lives in your
-            account, so you can leave anytime and keep everything.
+            on à la carte — AWS now defaults new accounts to $0.16, and Wraps
+            tells you which plan applies — plus infrastructure (~$2-5/mo). The
+            infrastructure lives in your account, so you can leave anytime and
+            keep everything.
           </p>
           <Button asChild className="cursor-pointer" variant="outline">
             <Link href="/tools/ses-calculator">Calculate Your Costs</Link>

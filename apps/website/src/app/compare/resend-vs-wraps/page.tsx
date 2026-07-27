@@ -72,7 +72,7 @@ const tldrComparison = [
   {
     dimension: "Sending cost",
     resend: "$0.35-0.90/1K emails",
-    wraps: "$0.10/1K (AWS SES direct)",
+    wraps: "$0.10/1K à la carte (AWS SES direct)",
   },
   {
     dimension: "Data retention",
@@ -564,7 +564,8 @@ export default function ResendVsWrapsPage() {
             <p className="mb-6 text-muted-foreground">
               Resend bundles sending cost into their platform fee with $0.90/1K
               overage. Wraps charges a platform fee separately -- you pay AWS
-              directly at $0.10/1K emails.
+              directly at $0.10/1K emails on à la carte (AWS defaults new
+              accounts to $0.16 — Wraps tells you which plan applies).
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">

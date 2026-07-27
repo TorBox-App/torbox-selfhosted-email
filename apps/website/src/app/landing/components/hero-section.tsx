@@ -4,7 +4,7 @@ import { SectionKicker } from "./section-kicker";
 
 const proofStats: { n: string; k: string }[] = [
   { n: "~38s", k: "median first deploy" },
-  { n: "$0.10", k: "per 1k emails, at AWS cost" },
+  { n: "$0.10", k: "per 1k emails on à la carte, at AWS cost" },
   { n: "0", k: "credentials we store" },
 ];
 
@@ -37,8 +37,9 @@ export function HeroSection() {
               directly at{" "}
               <strong className="text-foreground/90">
                 $0.10 per 1,000 emails
-              </strong>
-              .
+              </strong>{" "}
+              on à la carte — AWS defaults new accounts to $0.16, and Wraps
+              tells you which plan applies.
             </p>
 
             <div className="mt-8 mb-10">

@@ -4,7 +4,7 @@ import { StaggerContainer, StaggerItem } from "./animations";
 const proofPoints = [
   {
     icon: DollarSign,
-    text: "Pay AWS directly. $0.10 per 1,000 emails.",
+    text: "Pay AWS directly. $0.10 per 1,000 emails à la carte ($0.16 on AWS's new default plan).",
   },
   {
     icon: Users,

@@ -79,7 +79,7 @@ const tldrRows = [
   {
     dimension: "Starting price",
     customerio: "$100/mo for 5,000 profiles",
-    wraps: "Free (5K events/mo) + AWS SES at $0.10/1K",
+    wraps: "Free (5K events/mo) + AWS SES at $0.10/1K à la carte",
   },
   {
     dimension: "Infrastructure",
@@ -616,7 +616,8 @@ export default function CustomerIoVsWrapsPage() {
             <p className="mt-4 text-muted-foreground text-sm">
               Wraps pricing: Free (5K events/mo), $19/mo (50K events), $79/mo
               (250K events), $199/mo (1M events). AWS SES costs $0.10 per 1,000
-              emails, paid directly to AWS.{" "}
+              emails on à la carte (AWS defaults new accounts to $0.16), paid
+              directly to AWS.{" "}
               <a
                 className="text-primary underline"
                 href="/tools/ses-calculator"

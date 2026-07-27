@@ -71,7 +71,7 @@ const tldrComparison = [
   {
     dimension: "Sending cost",
     mailgun: "$15/mo (10K) to $90/mo (100K), overage $1.10-1.80/1K",
-    wraps: "$0.10/1K (AWS SES direct)",
+    wraps: "$0.10/1K à la carte (AWS SES direct)",
   },
   {
     dimension: "Data retention",
@@ -549,7 +549,8 @@ export default function MailgunVsWrapsPage() {
               signups get a 100-emails/day free plan, hard capped). Paid plans
               start at $15/mo for 10K emails; Foundation is $35/mo for 50K then
               $1.30/1K overage. Wraps charges a platform fee separately -- you
-              pay AWS directly at $0.10/1K emails.
+              pay AWS directly at $0.10/1K emails on à la carte (AWS defaults
+              new accounts to $0.16/1K).
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">

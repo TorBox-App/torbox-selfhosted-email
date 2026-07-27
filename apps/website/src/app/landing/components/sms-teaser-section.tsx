@@ -9,7 +9,7 @@ const services = [
     name: "Email",
     tagline: "Transactional & Marketing",
     aws: "AWS SES",
-    price: "$0.10 / 1k emails",
+    price: "$0.10 / 1k emails (à la carte)",
     features: ["Open & click tracking", "Bounce handling", "DKIM signing"],
     status: "available",
     href: "/docs/quickstart/email",
