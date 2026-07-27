@@ -463,6 +463,13 @@
       "when": 1783698829218,
       "tag": "0065_public_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1785179900561,
+      "tag": "0066_odd_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
