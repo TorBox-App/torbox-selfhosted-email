@@ -91,7 +91,8 @@ export default async function HomePage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-sm">
-                  Pay AWS directly at $0.10 per 1,000 emails. Transparent and
+                  Pay AWS directly at $0.10 per 1,000 emails on à la carte, or
+                  $0.16 on AWS&apos;s default Essentials plan. Transparent and
                   cost-effective.
                 </p>
               </CardContent>

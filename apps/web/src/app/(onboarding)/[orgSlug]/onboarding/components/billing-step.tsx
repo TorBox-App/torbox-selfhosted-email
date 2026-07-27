@@ -218,9 +218,10 @@ export function BillingStep({
             <h3 className="font-semibold text-sm">AWS costs are separate</h3>
           </div>
           <p className="text-muted-foreground text-sm">
-            Your subscription covers the Wraps dashboard. You'll pay AWS
-            directly for email sending ($0.10 per 1,000 emails) and
-            infrastructure (~$2-5/mo for most apps).
+            Your subscription covers the Wraps dashboard. You&apos;ll pay AWS
+            directly for email sending ($0.10 per 1,000 emails on à la carte, or
+            $0.16 on AWS&apos;s default Essentials plan) and infrastructure
+            (~$2-5/mo for most apps).
           </p>
         </div>
       </CardContent>

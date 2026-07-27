@@ -126,7 +126,8 @@ export function DeployStep({ onNext, onBack, onSkip }: DeployStepProps) {
           <h3 className="font-semibold text-sm">Estimated monthly costs</h3>
           <div className="space-y-1 text-muted-foreground text-sm">
             <p>
-              <strong>Emails:</strong> $0.10 per 1,000 emails (AWS SES)
+              <strong>Emails:</strong> $0.10 per 1,000 emails à la carte, or
+              $0.16 on AWS&apos;s default Essentials plan (AWS SES)
             </p>
             <p>
               <strong>Infrastructure:</strong> ~$2-5/mo for most apps

@@ -561,7 +561,8 @@ export function OrganizationSettingsBilling({
         <CardContent className="space-y-2 text-muted-foreground text-sm">
           <p>
             <strong className="text-foreground">Email Sending:</strong> $0.10
-            per 1,000 emails (paid directly to AWS)
+            per 1,000 emails à la carte, or $0.16 on AWS&apos;s default
+            Essentials plan (paid directly to AWS)
           </p>
           <p>
             <strong className="text-foreground">Infrastructure:</strong>{" "}

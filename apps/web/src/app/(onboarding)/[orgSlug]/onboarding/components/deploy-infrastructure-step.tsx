@@ -152,10 +152,10 @@ function estimateMonthlyCost(config: InfrastructureConfig): string {
   }
 
   if (cost === 0) {
-    return "From $0.10/1000 emails";
+    return "From $0.10/1000 emails (à la carte)";
   }
 
-  return `~$${cost.toFixed(0)}-${(cost * 3).toFixed(0)}/mo + $0.10/1000 emails`;
+  return `~$${cost.toFixed(0)}-${(cost * 3).toFixed(0)}/mo + $0.10/1000 emails (à la carte)`;
 }
 
 export function DeployInfrastructureStep({

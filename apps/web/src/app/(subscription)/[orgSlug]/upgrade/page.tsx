@@ -205,8 +205,9 @@ export default function UpgradePage() {
               <div>
                 <p className="font-medium text-sm">AWS costs are separate</p>
                 <p className="text-muted-foreground text-sm">
-                  You pay AWS directly for email sending ($0.10 per 1,000
-                  emails) and infrastructure (~$2-5/mo for most apps).
+                  You pay AWS directly for email sending ($0.10 per 1,000 emails
+                  on à la carte, or $0.16 on AWS&apos;s default Essentials plan)
+                  and infrastructure (~$2-5/mo for most apps).
                 </p>
               </div>
             </div>

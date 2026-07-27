@@ -7,7 +7,8 @@
  * PLATFORM FEE PHILOSOPHY:
  * Wraps is a platform fee for email infrastructure you own.
  * - You deploy to YOUR AWS account
- * - You pay AWS directly ($0.10/1K emails)
+ * - You pay AWS directly ($0.10/1K emails à la carte, or $0.16/1K on AWS's
+ *   default Essentials plan)
  * - We provide the tools: dashboard, workflows, AI, analytics
  *
  * What we charge for (Platform value):
