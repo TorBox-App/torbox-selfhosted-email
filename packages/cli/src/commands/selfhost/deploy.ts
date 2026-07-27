@@ -20,6 +20,7 @@ import type {
   SelfhostDeployOptions,
   SelfhostStackOutputs,
 } from "../../types/index.js";
+import { normalizeApiUrl } from "../../utils/selfhost/api-url.js";
 import {
   buildNeonProjectName,
   provisionNeonProject,
@@ -488,7 +489,14 @@ export async function selfhostDeploy(
 
         const pulumiOutputs = upResult.outputs;
         return {
-          apiUrl: pulumiOutputs.apiUrl?.value as string,
+          // Normalize at the source. The Pulumi output is the raw Lambda
+          // Function URL, which always ends in "/" — and this value is
+          // persisted to metadata, echoed as the WRAPS_API_URL the operator
+          // must set, and returned as JSON. Leaving it unnormalized made
+          // `selfhost deploy` and `selfhost status` disagree on the same URL
+          // (status normalizes via reconcileSelfhostApiUrl), and handed out a
+          // WRAPS_API_URL whose appended paths double the slash.
+          apiUrl: normalizeApiUrl(pulumiOutputs.apiUrl?.value as string),
           lambdaArn: pulumiOutputs.lambdaArn?.value as string,
           lambdaRoleArn: pulumiOutputs.lambdaRoleArn?.value as string,
           rateLimitTableName: pulumiOutputs.rateLimitTableName?.value as string,

@@ -68,9 +68,16 @@ import * as metadata from "../../utils/shared/metadata.js";
 import * as pulumiUtils from "../../utils/shared/pulumi.js";
 import { selfhostDeploy } from "../selfhost/deploy.js";
 
+// A real Lambda Function URL ALWAYS ends in "/" — GetFunctionUrlConfig and the
+// Pulumi output both return it that way. The previous mock dropped the slash,
+// so this suite could not see that deploy persisted an unnormalized URL while
+// `selfhost status` normalized it; only a live deployment test caught it.
+const RAW_LAMBDA_FUNCTION_URL = "https://abc123.lambda-url.us-east-1.on.aws/";
+const NORMALIZED_API_URL = "https://abc123.lambda-url.us-east-1.on.aws";
+
 const MOCK_PULUMI_OUTPUTS = {
   outputs: {
-    apiUrl: { value: "https://abc123.lambda-url.us-east-1.on.aws" },
+    apiUrl: { value: RAW_LAMBDA_FUNCTION_URL },
     lambdaArn: {
       value:
         "arn:aws:lambda:us-east-1:123456789012:function:wraps-selfhost-api",
@@ -293,6 +300,30 @@ describe("selfhostDeploy", () => {
       // only in the repo scripts, so `wraps selfhost deploy` left the operator
       // to work out the missing privilege themselves.
       expect((failure as Error).message).toContain("GRANT CREATE ON DATABASE");
+    });
+
+    it("persists the API URL without the Lambda Function URL's trailing slash", async () => {
+      // deploy and status must agree: status normalizes via
+      // reconcileSelfhostApiUrl, so an unnormalized value here made the two
+      // commands report different URLs for the same deployment. It is also the
+      // WRAPS_API_URL the operator is told to set, and the API appends paths to
+      // it (`${WRAPS_API_URL}/webhooks/ses/{account}`) — a trailing slash there
+      // yields a double slash, which Elysia does not route.
+      await selfhostDeploy({
+        region: "us-east-1",
+        databaseUrl: "postgres://custom-user:custom-pass@custom-host:5432/mydb",
+        licenseKey: "v1.scale.2027-01-01.abc123",
+        appUrl: "https://app.torbox.app",
+        yes: true,
+      });
+
+      const saved = vi
+        .mocked(metadata.saveConnectionMetadata)
+        .mock.calls.at(-1)?.[0] as unknown as {
+        services: { selfhost?: { apiUrl?: string } };
+      };
+      expect(saved.services.selfhost?.apiUrl).toBe(NORMALIZED_API_URL);
+      expect(saved.services.selfhost?.apiUrl).not.toMatch(/\/$/);
     });
 
     it("closes the pg.Pool connection after migration completes", async () => {

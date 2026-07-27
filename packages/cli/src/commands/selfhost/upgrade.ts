@@ -10,6 +10,7 @@ import type {
   SelfhostStackOutputs,
   SelfhostUpgradeOptions,
 } from "../../types/index.js";
+import { normalizeApiUrl } from "../../utils/selfhost/api-url.js";
 import { validateAWSCredentialsWithDetails } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
 import {
@@ -222,7 +223,11 @@ export async function selfhostUpgrade(
 
         const pulumiOutputs = upResult.outputs;
         return {
-          apiUrl: pulumiOutputs.apiUrl?.value as string,
+          // Normalized for the same reason as in deploy.ts: the raw Lambda
+          // Function URL ends in "/", and this value is persisted to metadata
+          // and reported to the operator. An unnormalized upgrade would also
+          // silently rewrite the apiUrl a normalized deploy had stored.
+          apiUrl: normalizeApiUrl(pulumiOutputs.apiUrl?.value as string),
           lambdaArn: pulumiOutputs.lambdaArn?.value as string,
           lambdaRoleArn: pulumiOutputs.lambdaRoleArn?.value as string,
           rateLimitTableName: pulumiOutputs.rateLimitTableName?.value as string,

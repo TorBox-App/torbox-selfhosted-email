@@ -443,11 +443,16 @@ LAMBDA_OUT=$(aws lambda get-function \
 if echo "$LAMBDA_OUT" | jq -e '.Configuration.FunctionName' &>/dev/null; then
   pass "Lambda wraps-selfhost-api exists"
 
+  # Kept as an independent expectation rather than read from the stack source —
+  # a test that mirrors the code it verifies passes for any value, including a
+  # wrong one. Bump this deliberately alongside the runtime: it last drifted
+  # when d51df983 moved the stack to Node.js 24 and this assertion stayed on 22.
+  EXPECTED_LAMBDA_RUNTIME="nodejs24.x"
   LAMBDA_RUNTIME=$(echo "$LAMBDA_OUT" | jq -r '.Configuration.Runtime // ""')
-  if [[ "$LAMBDA_RUNTIME" == "nodejs22.x" ]]; then
-    pass "Lambda runtime: nodejs22.x"
+  if [[ "$LAMBDA_RUNTIME" == "$EXPECTED_LAMBDA_RUNTIME" ]]; then
+    pass "Lambda runtime: $LAMBDA_RUNTIME"
   else
-    fail "Lambda runtime: expected nodejs22.x, got $LAMBDA_RUNTIME"
+    fail "Lambda runtime: expected $EXPECTED_LAMBDA_RUNTIME, got $LAMBDA_RUNTIME (see packages/cli/src/infrastructure/selfhost-stack.ts)"
   fi
 
   LAMBDA_HANDLER=$(echo "$LAMBDA_OUT" | jq -r '.Configuration.Handler // ""')
@@ -464,11 +469,15 @@ if echo "$LAMBDA_OUT" | jq -e '.Configuration.FunctionName' &>/dev/null; then
     fail "Lambda memory: expected 512, got $LAMBDA_MEM"
   fi
 
+  # 300s, raised in 576e31ac for batch processing. It must also stay >= the
+  # batch/workflow queue visibility timeout (also 300s) or SQS refuses the event
+  # source mapping — so this is a floor, not just a preference.
+  EXPECTED_LAMBDA_TIMEOUT="300"
   LAMBDA_TIMEOUT=$(echo "$LAMBDA_OUT" | jq -r '.Configuration.Timeout // 0')
-  if [[ "$LAMBDA_TIMEOUT" == "30" ]]; then
-    pass "Lambda timeout: 30s"
+  if [[ "$LAMBDA_TIMEOUT" == "$EXPECTED_LAMBDA_TIMEOUT" ]]; then
+    pass "Lambda timeout: ${LAMBDA_TIMEOUT}s"
   else
-    fail "Lambda timeout: expected 30, got $LAMBDA_TIMEOUT"
+    fail "Lambda timeout: expected $EXPECTED_LAMBDA_TIMEOUT, got $LAMBDA_TIMEOUT (see packages/cli/src/infrastructure/selfhost-stack.ts)"
   fi
 
   LAMBDA_ENV=$(echo "$LAMBDA_OUT" | jq -r '.Configuration.Environment.Variables // {}')
@@ -599,13 +608,22 @@ summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
 printf "\n${YELLOW}Phase 4: API health check${NC}\n"
 reset_counters
 
-section "Phase 4: GET ${API_URL}health"
+section "Phase 4: GET ${API_URL}/health"
 
 # Use -s (silent) without -f so curl doesn't exit non-zero on 4xx/5xx —
 # we just want to know if the Lambda Function URL is reachable at all.
+#
+# `|| true`: -f only covers HTTP status. curl still exits non-zero on transport
+# failures (6 = DNS, 28 = timeout), and under `set -e` that killed the script
+# before the "000" fallback below could run — losing the readable diagnosis.
+#
+# The path is joined with an explicit "/": API_URL is a normalized base with no
+# trailing slash (normalizeApiUrl in the CLI strips the one Lambda Function URLs
+# carry). Concatenating bare produced ".on.awshealth" once the CLI started
+# normalizing what `selfhost deploy` reports.
 HEALTH_STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
   --max-time 15 \
-  "${API_URL}health" 2>/dev/null)
+  "${API_URL}/health" 2>/dev/null || true)
 [[ -z "$HEALTH_STATUS" ]] && HEALTH_STATUS="000"
 
 if [[ "$HEALTH_STATUS" =~ ^[1-9][0-9][0-9]$ ]]; then
