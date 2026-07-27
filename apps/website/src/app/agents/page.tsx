@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/json-ld";
 import { AgentsPromptSection } from "./components/agent-prompt-section";
 import { AgentsCtaSection } from "./components/cta-section";
 import { AgentsHeroSection } from "./components/hero-section";
+import { AgentsLeashSection } from "./components/leash-section";
 import { AgentsRecipeSection } from "./components/recipe-section";
 import { AgentsTrustSection } from "./components/trust-section";
 import { AgentsWhyOwnSection } from "./components/why-own-section";
@@ -21,7 +22,7 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Email infrastructure your agent owns. Deploy AWS SES to your account, send transactional email from your agent's code, wire Wraps docs via MCP. No stored credentials, no vendor lock-in.",
+    "Agent mailboxes: give every AI agent its own email address, with send caps, a recipient allowlist, an approval queue, and a kill switch enforced in your own AWS account. No stored credentials, no vendor lock-in.",
   url: "https://wraps.dev/agents",
   author: {
     "@type": "Organization",
@@ -33,27 +34,29 @@ const softwareSchema = {
 };
 
 export const metadata: Metadata = {
-  title: "Email infrastructure your agent owns | Wraps",
+  // The root layout applies a "%s | Wraps" template — do not repeat the suffix.
+  title: "Give your agent an email address, with a leash",
   description:
-    "Give your agent a sender. Deploy AWS SES to your account in one command. Your domain, your reputation, your infra — the agent just sends.",
+    "An agent with a raw API key can email anyone, at any volume. A Wraps agent gets its own address, send caps, an allowlist, an approval queue, and a kill switch, enforced in your AWS account.",
   openGraph: {
-    title: "Email infrastructure your agent owns | Wraps",
+    title: "Give your agent an email address. Keep the leash.",
     description:
-      "Give your agent a sender. Deploy AWS SES to your account in one command. Your domain, your reputation, your infra — the agent just sends.",
+      "An agent with a raw API key can email anyone, at any volume. A Wraps agent gets its own address, send caps, an allowlist, an approval queue, and a kill switch, enforced in your AWS account.",
     images: [
       {
-        url: "/agents-og.webp",
+        url: "/agents-og.png",
         width: 1200,
         height: 630,
-        alt: "Wraps for Agents — email infrastructure your agent owns",
+        type: "image/png",
+        alt: "Wraps agent mailboxes — an email address for your agent, with a leash",
       },
     ],
   },
   twitter: {
-    title: "Email infrastructure your agent owns | Wraps",
+    title: "Give your agent an email address. Keep the leash.",
     description:
-      "Give your agent a sender. Deploy AWS SES to your account in one command. Your domain, your reputation, your infra — the agent just sends.",
-    images: ["/agents-og.webp"],
+      "An agent with a raw API key can email anyone, at any volume. A Wraps agent gets its own address, send caps, an allowlist, an approval queue, and a kill switch, enforced in your AWS account.",
+    images: ["/agents-og.png"],
   },
   alternates: {
     canonical: "https://wraps.dev/agents",
@@ -68,6 +71,7 @@ export default function AgentsPage() {
         <LandingNavbar />
         <main>
           <AgentsHeroSection />
+          <AgentsLeashSection />
           <AgentsPromptSection />
           <AgentsWhyOwnSection />
           <AgentsRecipeSection />

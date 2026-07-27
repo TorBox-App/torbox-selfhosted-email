@@ -116,7 +116,8 @@ export function AgentsTrustSection() {
             Where Wraps fits in the agent-email landscape.
           </h3>
           <p className="mt-1 text-muted-foreground">
-            The differentiator isn't volume or features. It's ownership.
+            The differentiator isn't volume or features. It's that you own both
+            the rails and the leash.
           </p>
         </div>
 

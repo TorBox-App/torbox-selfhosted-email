@@ -20,11 +20,12 @@ export function AgentsHeroSection() {
             </div>
 
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-              Email infrastructure{" "}
-              <span className="text-orange-500">your agent owns.</span>
+              Give your agent an email address.{" "}
+              <span className="text-orange-500">Keep the leash.</span>
             </h1>
 
-            {/* Mono anchor: the tool signature IS the marketing */}
+            {/* Mono anchor: the return type IS the marketing. Every send has
+                three possible endings, and one of them is "a human decides". */}
             <pre className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/60 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground/90">
               <span className="text-muted-foreground">tool</span>{" "}
               <span className="text-orange-500">wraps.send</span>
@@ -34,12 +35,26 @@ export function AgentsHeroSection() {
               {"\n  "}subject:{" "}
               <span className="text-foreground/60">string</span>,{"\n  "}html:{" "}
               <span className="text-foreground/60">string</span>,{"\n"}
-              {"): { messageId: string }"}
+              {"): { status: "}
+              <span className="text-emerald-700 dark:text-emerald-400">
+                {'"sent"'}
+              </span>
+              {" | "}
+              <span className="text-amber-700 dark:text-amber-400">
+                {'"pending_approval"'}
+              </span>
+              {" | "}
+              <span className="text-red-700 dark:text-red-400">
+                {'"blocked"'}
+              </span>
+              {" }"}
             </pre>
 
             <p className="mb-6 max-w-md text-muted-foreground">
-              One tool. One AWS account — yours. The agent calls it; the
-              reputation, logs, and bill live where they should.
+              An agent with a raw API key can email anyone, at any volume. A
+              Wraps agent gets its own address, a cap, an allowlist, and a kill
+              switch, enforced in your AWS account before SES ever sees the
+              send.
             </p>
 
             <HeroAnimatedCTA />

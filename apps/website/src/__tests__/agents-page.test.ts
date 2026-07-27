@@ -33,12 +33,14 @@ describe("Chunk 2 — /agents marketing page", () => {
     expect(mod.metadata.alternates?.canonical).toBe("https://wraps.dev/agents");
   });
 
-  it("page metadata.openGraph.images[0] points to /agents-og.webp at 1200×630", async () => {
+  // PNG, not WebP: LinkedIn and some scrapers handle WebP OG images
+  // unreliably, and the saving here is ~37KB on an asset budgeted for ~1MB.
+  it("page metadata.openGraph.images[0] points to /agents-og.png at 1200×630", async () => {
     const mod = await import("@/app/agents/page");
     const images = mod.metadata.openGraph?.images;
     const first = Array.isArray(images) ? images[0] : images;
     expect(first).toBeTruthy();
-    expect((first as { url?: string }).url).toBe("/agents-og.webp");
+    expect((first as { url?: string }).url).toBe("/agents-og.png");
     expect((first as { width?: number }).width).toBe(1200);
     expect((first as { height?: number }).height).toBe(630);
   });
@@ -67,8 +69,8 @@ describe("Chunk 2 — /agents marketing page", () => {
     expect(source).toContain('href="/mcp"');
   });
 
-  it("/agents OG image asset exists at public/agents-og.webp", () => {
-    const assetPath = resolve(webRoot, "public/agents-og.webp");
+  it("/agents OG image asset exists at public/agents-og.png", () => {
+    const assetPath = resolve(webRoot, "public/agents-og.png");
     expect(existsSync(assetPath)).toBe(true);
   });
 });
