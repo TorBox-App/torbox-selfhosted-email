@@ -1,7 +1,10 @@
+import { PinpointSMSVoiceV2Client } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import { passkey } from "@better-auth/passkey";
 import { scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
+import * as Sentry from "@sentry/nextjs";
+import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { auditLog, db, eq, member } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import * as scimSchema from "@wraps/db/schema/scim-provider";
@@ -279,10 +282,40 @@ async function trackUserSignup(
 }
 
 /**
- * Send login alert SMS when a new device or IP is detected.
- * Non-blocking - failures are logged but don't affect auth flow.
+ * Build the Pinpoint client for login alerts.
+ *
+ * On Vercel we must construct this ourselves. `@wraps.dev/sms` bundles a CJS
+ * copy of `@vercel/oidc` into its ESM output, so its own OIDC branch throws
+ * `Dynamic require of "path" is not supported` and reports it as a missing
+ * dependency. Passing a pre-built `client` bypasses that branch entirely.
+ * Same pattern as `packages/email/src/lib/client.ts`.
  */
-async function sendLoginAlertSms(
+function createLoginAlertSmsClient(): PinpointSMSVoiceV2Client | undefined {
+  // WRAPS_SMS_ROLE_ARN is a dedicated SMS role in the dogfood account, mirroring
+  // WRAPS_EMAIL_ROLE_ARN. It is not provisioned yet; until it is, this falls back
+  // to AWS_ROLE_ARN (the platform hop role), which only grants sts:AssumeRole and
+  // will fail with AccessDenied. That failure is now reported to Sentry rather
+  // than being masked by the SDK's bundling error.
+  const roleArn = process.env.WRAPS_SMS_ROLE_ARN ?? process.env.AWS_ROLE_ARN;
+
+  if (!(process.env.VERCEL && roleArn)) {
+    return;
+  }
+
+  return new PinpointSMSVoiceV2Client({
+    region: process.env.AWS_REGION ?? "us-east-1",
+    credentials: awsCredentialsProvider({
+      roleArn,
+      roleSessionName: "wraps-sms-session",
+    }),
+  });
+}
+
+/**
+ * Send login alert SMS when a new device or IP is detected.
+ * Failures are logged and reported but don't affect auth flow.
+ */
+export async function sendLoginAlertSms(
   phoneNumber: string,
   details: { ipAddress?: string; userAgent?: string }
 ) {
@@ -292,11 +325,16 @@ async function sendLoginAlertSms(
 
     const message = `[Wraps.dev] New login detected from ${deviceInfo}${details.ipAddress ? ` (IP: ${details.ipAddress})` : ""}. If this wasn't you, secure your account immediately.`;
 
-    const sms = new WrapsSMS();
+    const client = createLoginAlertSmsClient();
+    const sms = new WrapsSMS(client ? { client } : {});
     await sms.send({
       to: phoneNumber,
       message,
       messageType: "TRANSACTIONAL",
+      // AWS End User Messaging requires an origination identity (phone number,
+      // pool, or sender ID). None is provisioned for Wraps' own account yet, so
+      // this is undefined today and AWS rejects the send.
+      from: process.env.WRAPS_SMS_ORIGINATION_IDENTITY,
     });
 
     console.info(
@@ -307,6 +345,9 @@ async function sendLoginAlertSms(
     );
   } catch (error) {
     console.error("Failed to send login alert SMS:", error);
+    Sentry.captureException(error, {
+      tags: { feature: "login-alert-sms" },
+    });
   }
 }
 
@@ -784,8 +825,10 @@ export const auth = betterAuth<BetterAuthOptions>({
 
                 // SMS only when a phone number is on file
                 if (user.phoneNumber) {
-                  // Fire and forget - don't block auth flow
-                  sendLoginAlertSms(user.phoneNumber, {
+                  // Awaited: on Vercel the function can freeze once the
+                  // response is sent, cutting off an unawaited send.
+                  // sendLoginAlertSms never throws, so auth is unaffected.
+                  await sendLoginAlertSms(user.phoneNumber, {
                     ipAddress: session.ipAddress ?? undefined,
                     userAgent: session.userAgent ?? undefined,
                   });
