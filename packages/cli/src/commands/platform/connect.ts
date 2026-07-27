@@ -411,14 +411,18 @@ const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
 async function updatePlatformRole(
   metadata: ConnectionMetadata,
   progress: DeploymentProgress,
-  externalId?: string
+  externalId: string | undefined,
+  selfhosted: boolean
 ): Promise<void> {
   const roleName = "wraps-console-access-role";
   const iam = new IAMClient({ region: "us-east-1" });
 
   // Self-hosted customers run the dashboard in their own AWS account, so the
-  // trust policy must trust their account rather than the Wraps platform account.
-  const trustedAccountId = metadata.services?.selfhost
+  // trust policy must trust their account rather than the Wraps platform
+  // account. This is keyed off the explicit `--selfhosted` flag: keying it off
+  // the presence of selfhost metadata made an ordinary SaaS connect from a
+  // machine that had deployed selfhost silently revoke platform access.
+  const trustedAccountId = selfhosted
     ? metadata.accountId
     : WRAPS_PLATFORM_ACCOUNT_ID;
 
@@ -838,7 +842,12 @@ async function authenticatedConnect(
 
     // 7. Update IAM role with server-provided externalId
     try {
-      await updatePlatformRole(metadata, progress, result.externalId);
+      await updatePlatformRole(
+        metadata,
+        progress,
+        result.externalId,
+        selfhosted
+      );
     } catch (error) {
       const errName =
         error && typeof error === "object" && "name" in error
@@ -931,6 +940,11 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
 
   // Unauthenticated fallback — manual copy/paste flow
   const startTime = Date.now();
+  // Always false here: options.selfhosted routes to authenticatedConnect and
+  // returns above, so this branch never runs for a self-hosted connect. Kept
+  // as an explicit flag read (matching authenticatedConnect) rather than
+  // reading self-hosted state off metadata, per the trust-principal fix below.
+  const selfhosted = Boolean(options.selfhosted);
 
   intro(pc.bold("Connect to Wraps Platform"));
 
@@ -1178,7 +1192,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     // 8. Update platform access role
     const roleName = "wraps-console-access-role";
     const iam = new IAMClient({ region: "us-east-1" });
-    const trustedAccountId = metadata.services?.selfhost
+    const trustedAccountId = selfhosted
       ? metadata.accountId
       : WRAPS_PLATFORM_ACCOUNT_ID;
 
@@ -1212,7 +1226,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
         );
         // For self-hosted deployments, also correct the trust policy to use
         // the customer's own account rather than the Wraps platform account.
-        if (metadata.services?.selfhost) {
+        if (selfhosted) {
           const trustPolicy = {
             Version: "2012-10-17",
             Statement: [
@@ -1233,7 +1247,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
       });
 
       progress.succeed("Platform access role updated");
-    } else if (metadata.services?.selfhost) {
+    } else if (selfhosted) {
       // Self-hosted deployments have no SaaS dashboard to complete role creation,
       // so create the role directly here.
       const trustPolicy = {

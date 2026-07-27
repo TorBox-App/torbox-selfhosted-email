@@ -159,8 +159,8 @@ describe("platform connect - selfhost trust policy", () => {
     iamMock.on(UpdateAssumeRolePolicyCommand).resolves({});
   });
 
-  it("uses the customer account as trusted principal when selfhost metadata is present", async () => {
-    await connect({ yes: true });
+  it("uses the customer account as trusted principal when --selfhosted is passed", async () => {
+    await connect({ yes: true, selfhosted: true });
 
     const createCalls = iamMock.commandCalls(CreateRoleCommand);
     expect(createCalls).toHaveLength(1);
@@ -169,6 +169,22 @@ describe("platform connect - selfhost trust policy", () => {
     );
     expect(trustPolicy.Statement[0].Principal.AWS).toBe(
       "arn:aws:iam::123456789012:root"
+    );
+  });
+
+  it("keeps the Wraps platform principal for a SaaS connect from a machine with selfhost metadata", async () => {
+    // Regression: the principal used to be chosen from metadata presence, so a
+    // plain SaaS connect on a self-hoster's machine silently revoked
+    // app.wraps.dev's AssumeRole access.
+    await connect({ yes: true });
+
+    const createCalls = iamMock.commandCalls(CreateRoleCommand);
+    expect(createCalls).toHaveLength(1);
+    const trustPolicy = JSON.parse(
+      createCalls[0].args[0].input.AssumeRolePolicyDocument!
+    );
+    expect(trustPolicy.Statement[0].Principal.AWS).toBe(
+      "arn:aws:iam::905130073023:root"
     );
   });
 
@@ -315,13 +331,13 @@ describe("platform connect - selfhost trust policy", () => {
     exitSpy.mockRestore();
   });
 
-  it("uses customer account when updating trust policy on an existing role with selfhost metadata", async () => {
+  it("uses customer account when updating trust policy on an existing role with --selfhosted", async () => {
     // Role exists → UpdateAssumeRolePolicy path
     iamMock.on(GetRoleCommand).resolves({
       Role: { RoleName: "wraps-console-access-role" } as any,
     });
 
-    await connect({ yes: true });
+    await connect({ yes: true, selfhosted: true });
 
     const updateCalls = iamMock.commandCalls(UpdateAssumeRolePolicyCommand);
     expect(updateCalls).toHaveLength(1);
