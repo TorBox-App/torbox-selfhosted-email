@@ -436,3 +436,59 @@ export function recommendTier(eventsPerMonth: number): TierId {
   });
   return fit ?? "scale";
 }
+
+export type SesPlanRecommendation = {
+  cheapest: SesPlanId;
+  cheapestMonthlyCost: number;
+  selectedMonthlyCost: number;
+  monthlySavings: number;
+  annualSavings: number;
+};
+
+/** SES-only monthly cost (base fee + sending + dedicated IP if not bundled). */
+function sesPlanMonthlyCost(
+  planId: SesPlanId,
+  emailsPerMonth: number,
+  dedicatedIp: boolean
+): number {
+  const plan = SES_PLANS[planId];
+  const sendingCost = emailsPerMonth * (plan.perThousandEmails / 1000);
+  const ipCost =
+    dedicatedIp && !plan.includesDedicatedIp
+      ? AWS_INFRA_PRICING.DEDICATED_IP_PER_MONTH
+      : 0;
+  return roundCents(plan.monthlyFee + sendingCost + ipCost);
+}
+
+/**
+ * Cheapest SES pricing plan for a given volume, priced on the SES portion
+ * only (base fee, sending, dedicated IP) — deliberately excludes the event
+ * pipeline, which costs the same regardless of SES plan.
+ */
+export function recommendSesPlan(
+  emailsPerMonth: number,
+  selected: SesPlanId,
+  dedicatedIp = false
+): SesPlanRecommendation {
+  const costs = SES_PLAN_IDS.map((id) => ({
+    id,
+    cost: sesPlanMonthlyCost(id, emailsPerMonth, dedicatedIp),
+  }));
+  const cheapest = costs.reduce((min, candidate) =>
+    candidate.cost < min.cost ? candidate : min
+  );
+  const selectedMonthlyCost = sesPlanMonthlyCost(
+    selected,
+    emailsPerMonth,
+    dedicatedIp
+  );
+  const monthlySavings = roundCents(selectedMonthlyCost - cheapest.cost);
+
+  return {
+    cheapest: cheapest.id,
+    cheapestMonthlyCost: cheapest.cost,
+    selectedMonthlyCost,
+    monthlySavings,
+    annualSavings: roundCents(monthlySavings * 12),
+  };
+}

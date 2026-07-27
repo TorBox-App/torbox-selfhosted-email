@@ -57,6 +57,7 @@ import {
   calculateStorageGrowth,
   estimateCost,
   RETENTION_PERIODS,
+  recommendSesPlan,
   SES_PLAN_IDS,
   SES_PLANS,
 } from "@/lib/ses-cost";
@@ -165,6 +166,12 @@ function SESCalculatorInner() {
     httpsTracking,
     waf: wafEnabled,
   });
+
+  const planRecommendation = recommendSesPlan(
+    emailsPerMonth,
+    sesPlan,
+    dedicatedIp
+  );
 
   const wrapsCosts = {
     ...estimate.wraps,
@@ -459,6 +466,26 @@ function SESCalculatorInner() {
                 ? "AWS puts every new account on this plan — moving back to à la carte takes effect immediately."
                 : "Set per AWS account, per Region."}
             </p>
+            {planRecommendation.monthlySavings > 0 && (
+              <div className="rounded-lg border border-primary/50 bg-primary/10 p-4">
+                <p className="font-semibold text-primary">
+                  Switch to {SES_PLANS[planRecommendation.cheapest].name} and
+                  save {formatCost(planRecommendation.monthlySavings)}/mo (
+                  {formatCost(planRecommendation.annualSavings)}/yr)
+                </p>
+                <p className="mt-1 text-muted-foreground text-sm">
+                  SES pricing plans are set per AWS account, per Region — moving
+                  back to à la carte takes effect immediately.{" "}
+                  <Link
+                    className="underline underline-offset-2 hover:text-foreground"
+                    href="/docs/cli-reference/email"
+                  >
+                    See how
+                  </Link>
+                  .
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Email Event Tracking (SES events, not Wraps custom events) */}

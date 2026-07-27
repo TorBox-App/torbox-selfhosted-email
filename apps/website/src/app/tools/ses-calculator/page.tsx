@@ -18,16 +18,16 @@ import SESCalculatorPageContent from "./page-content";
 export const metadata: Metadata = {
   title: "AWS SES Cost Calculator",
   description:
-    "Calculate your true AWS SES email costs including infrastructure (Lambda, DynamoDB, SQS, EventBridge). The only SES pricing calculator that shows full production costs, not just the $0.10/1K sending fee.",
+    "Calculate your true AWS SES email costs including infrastructure (Lambda, DynamoDB, SQS, EventBridge). The only SES pricing calculator that shows full production costs, not just the $0.10/1K à la carte sending fee — or the $0.16/1K AWS defaults new accounts to.",
   openGraph: {
     title: "AWS SES Cost Calculator | Wraps",
     description:
-      "Calculate your true AWS SES costs including infrastructure. See full production email costs beyond the $0.10/1K headline price.",
+      "Calculate your true AWS SES costs including infrastructure. See full production email costs beyond the $0.10/1K à la carte headline — AWS now defaults new accounts to $0.16/1K instead.",
   },
   twitter: {
     title: "AWS SES Cost Calculator | Wraps",
     description:
-      "Calculate your true AWS SES costs including infrastructure. See full production email costs beyond the $0.10/1K headline price.",
+      "Calculate your true AWS SES costs including infrastructure. See full production email costs beyond the $0.10/1K à la carte headline — AWS now defaults new accounts to $0.16/1K instead.",
   },
   alternates: {
     canonical: "https://wraps.dev/tools/ses-calculator",
@@ -72,7 +72,7 @@ const faqSchema = {
       name: "How much does AWS SES cost per email?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "AWS SES costs $0.10 per 1,000 emails ($0.0001 per email) for sending. However, a production email setup also requires infrastructure for event processing and storage — EventBridge, SQS, Lambda, and DynamoDB — which typically adds $1-5/month depending on volume.",
+        text: "AWS SES costs $0.10 per 1,000 emails ($0.0001 per email) at the à la carte rate. AWS defaults every new account to the Essentials plan instead, at $0.16 per 1,000 emails — moving back to à la carte takes effect immediately. However, a production email setup also requires infrastructure for event processing and storage — EventBridge, SQS, Lambda, and DynamoDB — which typically adds $1-5/month depending on volume.",
       },
     },
     {
@@ -80,7 +80,7 @@ const faqSchema = {
       name: "What is the total cost of running AWS SES in production?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "For a typical startup sending 50,000 emails/month with event tracking and 90-day history retention, expect roughly $5-10/month total including SES sending fees and supporting infrastructure. Most AWS services include generous free tiers that cover low-volume usage.",
+        text: "For a typical startup sending 50,000 emails/month with event tracking and 90-day history retention on the à la carte SES rate, expect roughly $5-10/month total including SES sending fees and supporting infrastructure — a few dollars more if the account defaults to AWS's pricier Essentials plan. Most AWS services include generous free tiers that cover low-volume infrastructure usage, though SES sending itself has no free tier.",
       },
     },
     {
@@ -88,7 +88,7 @@ const faqSchema = {
       name: "Does AWS SES have a free tier?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "SES itself charges $0.10 per 1,000 emails with no permanent free sending tier. However, the supporting infrastructure benefits from AWS free tiers: 1 million Lambda requests/month, 1 million SQS requests/month, and 25 GB of DynamoDB storage.",
+        text: "SES itself has no permanent free sending tier — the à la carte rate is $0.10 per 1,000 emails, though AWS defaults new accounts to the Essentials plan at $0.16 per 1,000 instead. The SES-specific free tier (3,000 emails/month for 12 months) no longer exists for new accounts. New AWS accounts get a generic $200 AWS credit instead. However, the supporting infrastructure benefits from AWS free tiers: 1 million Lambda requests/month, 1 million SQS requests/month, and 25 GB of DynamoDB storage.",
       },
     },
     {
@@ -96,7 +96,7 @@ const faqSchema = {
       name: "How much does a dedicated IP cost in AWS SES?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "A dedicated IP address in AWS SES costs $24.95 per month. Dedicated IPs are recommended for senders with consistent volume over 100,000 emails per day, as they give you full control over your sending IP reputation.",
+        text: "A dedicated IP address in AWS SES costs $24.95 per month on the à la carte or Essentials plans. Dedicated IPs are recommended for senders with consistent volume over 100,000 emails per day, as they give you full control over your sending IP reputation. The Pro and Enterprise SES plans include one managed dedicated IP at no extra charge.",
       },
     },
     {
@@ -104,7 +104,7 @@ const faqSchema = {
       name: "Is AWS SES cheaper than SendGrid, Resend, or Postmark?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "AWS SES is significantly cheaper at scale. SES costs $0.10 per 1,000 emails with no monthly minimum. By comparison, SendGrid starts at $19.95/month for 50K emails and Resend starts at $20/month. The trade-off is SES requires infrastructure setup, which tools like Wraps automate with a single command.",
+        text: "AWS SES is significantly cheaper at scale. SES costs $0.10 per 1,000 emails at the à la carte rate (AWS defaults new accounts to the pricier Essentials plan at $0.16 per 1,000 instead) with no monthly minimum. By comparison, SendGrid starts at $19.95/month for 50K emails and Resend starts at $20/month. The trade-off is SES requires infrastructure setup, which tools like Wraps automate with a single command.",
       },
     },
   ],
@@ -130,10 +130,11 @@ export default function SESCalculatorPage() {
                 AWS SES Cost Calculator
               </h1>
               <p className="mx-auto max-w-2xl text-pretty text-lg text-muted-foreground">
-                Calculate your true AWS SES costs — not just the $0.10/1K
-                sending fee, but the full production infrastructure:
-                EventBridge, Lambda, SQS, and DynamoDB. The only SES calculator
-                that shows what you&apos;ll actually pay.
+                Calculate your true AWS SES costs — not just the $0.10/1K à la
+                carte sending fee (AWS now defaults new accounts to $0.16/1K
+                instead), but the full production infrastructure: EventBridge,
+                Lambda, SQS, and DynamoDB. The only SES calculator that shows
+                what you&apos;ll actually pay.
               </p>
             </div>
 
@@ -186,9 +187,10 @@ export default function SESCalculatorPage() {
                   Understanding AWS SES Pricing
                 </h2>
                 <p className="mx-auto max-w-2xl text-muted-foreground">
-                  SES advertises $0.10 per 1,000 emails, but production email
-                  infrastructure costs more. Here&apos;s what most calculators
-                  miss.
+                  SES advertises $0.10 per 1,000 emails at the à la carte rate,
+                  but AWS defaults new accounts to the pricier Essentials plan
+                  ($0.16/1,000) instead — and production email infrastructure
+                  costs more on top. Here&apos;s what most calculators miss.
                 </p>
               </div>
 
@@ -196,14 +198,17 @@ export default function SESCalculatorPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      The $0.10/1K Headline
+                      Four Rates, Not One
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
-                      AWS SES charges $0.10 per 1,000 outbound emails. This is
-                      the base sending cost and what most people quote. But
-                      sending emails is only part of a production setup.
+                      AWS SES has four pricing plans: à la carte ($0.10/1,000),
+                      Essentials ($0.16/1,000), Pro ($105/mo + $0.22/1,000), and
+                      Enterprise ($500/mo + $0.23/1,000). AWS defaults every new
+                      account to Essentials — use the calculator above to
+                      compare all four and see what switching to à la carte
+                      would save.
                     </p>
                   </CardContent>
                 </Card>
@@ -249,8 +254,9 @@ export default function SESCalculatorPage() {
                     <p>
                       AWS free tiers cover most low-volume infrastructure: 1M
                       Lambda requests, 1M SQS requests, and 25GB DynamoDB
-                      storage per month. Small senders often pay only the SES
-                      fee.
+                      storage per month. SES sending itself has no free tier, so
+                      small senders often pay only the à la carte (or
+                      Essentials) sending fee.
                     </p>
                   </CardContent>
                 </Card>
@@ -308,8 +314,11 @@ export default function SESCalculatorPage() {
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
                       AWS SES costs $0.10 per 1,000 emails ($0.0001 per email)
-                      for sending. However, a production email setup also
-                      requires infrastructure for event processing and storage —
+                      at the à la carte rate. AWS defaults every new account to
+                      the Essentials plan instead, at $0.16 per 1,000 emails —
+                      moving back to à la carte takes effect immediately.
+                      However, a production email setup also requires
+                      infrastructure for event processing and storage —
                       EventBridge, SQS, Lambda, and DynamoDB — which typically
                       adds $1-5/month depending on volume.
                     </p>
@@ -325,10 +334,13 @@ export default function SESCalculatorPage() {
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
                       For a typical startup sending 50,000 emails/month with
-                      event tracking and 90-day history retention, expect
-                      roughly $5-10/month total including SES sending fees and
-                      supporting infrastructure. Most AWS services include
-                      generous free tiers that cover low-volume usage.
+                      event tracking and 90-day history retention on the à la
+                      carte SES rate, expect roughly $5-10/month total including
+                      SES sending fees and supporting infrastructure — a few
+                      dollars more if the account defaults to AWS&apos;s pricier
+                      Essentials plan. Most AWS services include generous free
+                      tiers that cover low-volume infrastructure usage, though
+                      SES sending itself has no free tier.
                     </p>
                   </CardContent>
                 </Card>
@@ -341,11 +353,15 @@ export default function SESCalculatorPage() {
                   </CardHeader>
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
-                      SES itself charges $0.10 per 1,000 emails with no
-                      permanent free sending tier. However, the supporting
-                      infrastructure benefits from AWS free tiers: 1 million
-                      Lambda requests/month, 1 million SQS requests/month, and
-                      25 GB of DynamoDB storage.
+                      SES itself has no permanent free sending tier — the à la
+                      carte rate is $0.10 per 1,000 emails, though AWS defaults
+                      new accounts to the Essentials plan at $0.16 per 1,000
+                      instead. The SES-specific free tier (3,000 emails/month
+                      for 12 months) no longer exists for new accounts. New AWS
+                      accounts get a generic $200 AWS credit instead. However,
+                      the supporting infrastructure benefits from AWS free
+                      tiers: 1 million Lambda requests/month, 1 million SQS
+                      requests/month, and 25 GB of DynamoDB storage.
                     </p>
                   </CardContent>
                 </Card>
@@ -358,10 +374,12 @@ export default function SESCalculatorPage() {
                   </CardHeader>
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
-                      A dedicated IP address in AWS SES costs $24.95 per month.
-                      Dedicated IPs are recommended for senders with consistent
-                      volume over 100,000 emails per day, as they give you full
-                      control over your sending IP reputation.
+                      A dedicated IP address in AWS SES costs $24.95 per month
+                      on the à la carte or Essentials plans. Dedicated IPs are
+                      recommended for senders with consistent volume over
+                      100,000 emails per day, as they give you full control over
+                      your sending IP reputation. The Pro and Enterprise SES
+                      plans include one managed dedicated IP at no extra charge.
                     </p>
                   </CardContent>
                 </Card>
@@ -375,11 +393,13 @@ export default function SESCalculatorPage() {
                   <CardContent className="text-muted-foreground text-sm">
                     <p>
                       AWS SES is significantly cheaper at scale. SES costs $0.10
-                      per 1,000 emails with no monthly minimum. By comparison,
-                      SendGrid starts at $19.95/month for 50K emails and Resend
-                      starts at $20/month. The trade-off is SES requires
-                      infrastructure setup, which tools like Wraps automate with
-                      a single command.
+                      per 1,000 emails at the à la carte rate (AWS defaults new
+                      accounts to the pricier Essentials plan at $0.16 per 1,000
+                      instead) with no monthly minimum. By comparison, SendGrid
+                      starts at $19.95/month for 50K emails and Resend starts at
+                      $20/month. The trade-off is SES requires infrastructure
+                      setup, which tools like Wraps automate with a single
+                      command.
                     </p>
                   </CardContent>
                 </Card>
@@ -395,9 +415,9 @@ export default function SESCalculatorPage() {
                 <div>
                   <h3 className="mb-2 font-semibold">How We Calculate Costs</h3>
                   <p className="text-pretty text-muted-foreground">
-                    All costs are based on official AWS pricing as of January
-                    2026 for US East (N. Virginia) region. Costs include AWS
-                    free tier benefits where applicable. Storage costs shown
+                    All costs are based on official AWS pricing as of 2026-07-21
+                    for US East (N. Virginia) region. Costs include AWS free
+                    tier benefits where applicable. Storage costs shown
                     represent <strong>steady-state</strong> (after retention
                     period fills up) - initial months will be cheaper as storage
                     builds gradually. Your actual costs may vary based on region
@@ -407,7 +427,11 @@ export default function SESCalculatorPage() {
                 <div>
                   <h3 className="mb-2 font-semibold">What&apos;s Included</h3>
                   <ul className="list-inside list-disc space-y-1 text-muted-foreground">
-                    <li>SES email sending ($0.10 per 1,000 emails)</li>
+                    <li>
+                      SES email sending ($0.10 per 1,000 emails at the à la
+                      carte rate; AWS defaults new accounts to Essentials at
+                      $0.16 per 1,000 instead)
+                    </li>
                     <li>
                       Event processing (EventBridge, SQS, Lambda) if enabled
                     </li>
@@ -424,10 +448,11 @@ export default function SESCalculatorPage() {
                   <p className="text-pretty text-muted-foreground">
                     Wraps is a platform fee for email infrastructure you own.
                     You pay us for tooling (dashboard, workflows, AI, analytics)
-                    and AWS directly for sending ($0.10/1K emails). Free tier
-                    includes 5K tracked events/month. Paid plans unlock more
-                    volume, longer history retention, and features like topics,
-                    segments, and campaigns.
+                    and AWS directly for sending ($0.10/1K emails at the à la
+                    carte rate, or $0.16/1K if your account defaults to
+                    Essentials). Free tier includes 5K tracked events/month.
+                    Paid plans unlock more volume, longer history retention, and
+                    features like topics, segments, and campaigns.
                   </p>
                 </div>
                 <div>
