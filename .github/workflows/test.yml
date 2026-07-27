@@ -35,9 +35,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build dependencies
-        run: |
-          pnpm --dir packages/core build
-          pnpm --dir packages/email-check build
+        run: pnpm --filter "@wraps.dev/cli^..." build
 
       - name: Run type checking
         run: pnpm --dir packages/cli typecheck
@@ -74,9 +72,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build workspace deps
-        run: |
-          pnpm --filter @wraps/db build
-          pnpm --filter "@wraps.dev/email-check" build
+        run: pnpm --filter "@wraps/api^..." build
 
       - name: Typecheck API
         run: pnpm turbo run typecheck --filter=@wraps/api
