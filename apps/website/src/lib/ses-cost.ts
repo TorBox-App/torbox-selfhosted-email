@@ -87,6 +87,22 @@ export const SES_PLAN_IDS = [
 export const DEFAULT_SES_PLAN: SesPlanId = "alacarte";
 
 // =============================================================================
+// MARKETING COPY (derived from SES_PLANS — keep numbers in sync with the table above)
+// =============================================================================
+
+const ALACARTE_RATE = SES_PLANS.alacarte.perThousandEmails.toFixed(2);
+const ESSENTIALS_RATE = SES_PLANS.essentials.perThousandEmails.toFixed(2);
+
+export const SES_PRICING_COPY = {
+  /** For stat tiles and table cells — a number plus the qualifier, nothing more. */
+  rateStat: `$${ALACARTE_RATE}/1K on à la carte`,
+  /** One sentence. For body copy and card descriptions. */
+  rateShort: `AWS SES à la carte is $${ALACARTE_RATE} per 1,000 emails; AWS now defaults new accounts to Essentials at $${ESSENTIALS_RATE}.`,
+  /** Two sentences. For FAQ answers, JSON-LD, and onboarding. */
+  rateLong: `AWS SES à la carte is $${ALACARTE_RATE} per 1,000 emails. New AWS accounts are defaulted to the Essentials plan at $${ESSENTIALS_RATE} per 1,000 — Wraps detects which plan each account and Region is on and tells you how to move back.`,
+} as const;
+
+// =============================================================================
 // AWS UNIT PRICING (US East, N. Virginia)
 // =============================================================================
 

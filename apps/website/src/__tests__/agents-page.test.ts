@@ -11,6 +11,7 @@ describe("Chunk 1 — Homepage", () => {
     const source = read("src/app/landing/components/hero-section.tsx");
     expect(source).toContain("your agent");
     expect(source).toContain("$0.10 per 1,000 emails");
+    expect(source).toContain("$0.16");
     expect(source).toMatch(/your AWS\s+account/);
   });
 
