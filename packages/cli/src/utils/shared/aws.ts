@@ -4,8 +4,13 @@ import {
   ListIdentitiesCommand,
   SESClient,
 } from "@aws-sdk/client-ses";
-import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
+import {
+  GetAccountCommand,
+  PutAccountPricingAttributesCommand,
+  SESv2Client,
+} from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
+import { isSESPricingPlan, type SESPricingPlan } from "../email/ses-plans.js";
 import {
   type AWSSetupState,
   detectAWSState,
@@ -13,7 +18,7 @@ import {
   getCurrentProfile,
   getSSOLoginCommand,
 } from "./aws-detection.js";
-import { errors } from "./errors.js";
+import { errors, sanitizeErrorMessage, WrapsError } from "./errors.js";
 
 /**
  * AWS identity information
@@ -332,6 +337,10 @@ export type SESAccountStatus = {
     sentLast24Hours: number;
   };
   enforcementStatus?: string;
+  /** SES pricing plan currently in effect. `undefined` when SES didn't report a recognized value. */
+  currentPlan?: SESPricingPlan;
+  /** Pending pricing plan that takes effect next billing cycle, if any. */
+  nextPlan?: SESPricingPlan;
 };
 
 /**
@@ -345,6 +354,8 @@ export async function getSESAccountStatus(
 
   try {
     const response = await sesv2.send(new GetAccountCommand({}));
+    const currentPlanRaw = response.PricingAttributes?.CurrentPlan;
+    const nextPlanRaw = response.PricingAttributes?.NextPlan;
     return {
       isSandbox: !response.ProductionAccessEnabled,
       sendQuota: response.SendQuota
@@ -355,10 +366,86 @@ export async function getSESAccountStatus(
           }
         : undefined,
       enforcementStatus: response.EnforcementStatus,
+      // Narrow through isSESPricingPlan rather than casting — an unrecognized
+      // future plan value becomes `undefined` instead of a lying assertion.
+      currentPlan:
+        currentPlanRaw && isSESPricingPlan(currentPlanRaw)
+          ? currentPlanRaw
+          : undefined,
+      nextPlan:
+        nextPlanRaw && isSESPricingPlan(nextPlanRaw) ? nextPlanRaw : undefined,
     };
     // baseline:allow-next-line no-swallowed-errors — SES GetAccount may fail due to permissions or throttling, default to sandbox (safer: offers extra help)
   } catch {
     return { isSandbox: true, sandboxUncertain: true };
+  }
+}
+
+/**
+ * Set the SES pricing plan for this account, in this Region.
+ *
+ * Mutating — the caller (`wraps email plan --set`) is responsible for
+ * confirming with the user before invoking this. Unlike `getSESAccountStatus`,
+ * this must NEVER swallow errors: a silent failure here would let a customer
+ * believe their billing plan changed when it didn't.
+ */
+export async function setSESPricingPlan(
+  region: string,
+  plan: SESPricingPlan
+): Promise<void> {
+  const sesv2 = new SESv2Client({ region });
+
+  try {
+    await sesv2.send(new PutAccountPricingAttributesCommand({ Plan: plan }));
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    const name = error.name;
+    const message = error.message || "";
+    const mentions = (needle: string): boolean =>
+      name === needle || message.includes(needle);
+
+    // Request never reached the API, or was denied once it did.
+    if (
+      mentions("AccessDenied") ||
+      mentions("AccessDeniedException") ||
+      mentions("UnauthorizedAccess")
+    ) {
+      throw errors.iamPermissionDenied(
+        "ses:PutAccountPricingAttributes",
+        "SES account pricing settings",
+        "Ensure your IAM user/role has the ses:PutAccountPricingAttributes permission."
+      );
+    }
+
+    // Throttled — safe to retry.
+    if (
+      mentions("Throttling") ||
+      mentions("ThrottlingException") ||
+      mentions("TooManyRequestsException")
+    ) {
+      throw errors.awsThrottled("PutAccountPricingAttributes");
+    }
+
+    // Request reached SES but was rejected — e.g. a plan change already
+    // pending, or the plan is invalid for this account's current state.
+    if (
+      mentions("ConflictException") ||
+      mentions("BadRequestException") ||
+      mentions("ValidationException")
+    ) {
+      throw new WrapsError(
+        `SES rejected the pricing plan change: ${sanitizeErrorMessage(error)}`,
+        "SES_PRICING_PLAN_CHANGE_REJECTED",
+        "This can happen if a plan change is already pending, or the requested plan isn't valid for this account right now.\n\nCheck the current plan:\n  wraps email plan",
+        "https://docs.aws.amazon.com/ses/latest/dg/sending-email-pricing.html"
+      );
+    }
+
+    // Anything else — surface the real AWS error instead of swallowing it.
+    throw error;
   }
 }
 

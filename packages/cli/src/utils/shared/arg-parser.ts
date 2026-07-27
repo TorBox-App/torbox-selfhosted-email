@@ -81,6 +81,10 @@ export type CliFlags = {
   limit?: string;
   cursor?: string;
 
+  // Email plan
+  set?: string;
+  volume?: string;
+
   // License
   tier?: string;
   expires?: string;
@@ -143,6 +147,8 @@ const STRING_FLAGS = [
   "status",
   "limit",
   "cursor",
+  "set",
+  "volume",
 ] as const;
 
 /**

@@ -113,6 +113,24 @@ export type {
   WrapsSMSFeatureMetadata,
 } from "./sms.js";
 
+/**
+ * Command options for `wraps email plan` — detect and (with `--set`) change
+ * the account's SES pricing plan. Declared directly here rather than in
+ * `email.ts` since it has no other sibling exports to live alongside; shape
+ * follows `StatusOptions` above.
+ */
+export type EmailPlanOptions = {
+  account?: string;
+  region?: string;
+  /** Pricing plan value to switch to (validated against `SES_PRICING_PLANS`). */
+  set?: string;
+  /** Override the estimated monthly send volume used for cost comparison. */
+  volume?: string;
+  /** Skip the confirmation prompt when mutating with `--set`. */
+  yes?: boolean;
+  json?: boolean;
+};
+
 // Backwards compatibility aliases (deprecated, use specific types instead)
 // Import specific types for legacy aliases
 import type {

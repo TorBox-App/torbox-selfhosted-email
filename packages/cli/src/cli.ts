@@ -43,6 +43,7 @@ import {
 } from "./commands/email/inbound.js";
 import { init } from "./commands/email/init.js";
 import { emailLogsGet, emailLogsList } from "./commands/email/logs.js";
+import { emailPlan } from "./commands/email/plan.js";
 import {
   replyDecode,
   replyDestroy,
@@ -174,6 +175,9 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("email status")}         Show email infrastructure details`
+  );
+  console.log(
+    `  ${pc.cyan("email plan")}           Show SES pricing plan and cheaper options`
   );
   console.log(`  ${pc.cyan("email test")}           Send a test email`);
   console.log(`  ${pc.cyan("email verify")}         Verify domain DNS records`);
@@ -669,6 +673,17 @@ async function run() {
           await emailStatus({
             account: flags.account,
             region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "plan":
+          await emailPlan({
+            account: flags.account,
+            region: flags.region,
+            set: flags.set,
+            volume: flags.volume,
+            yes: flags.yes,
             json: flags.json,
           });
           break;
