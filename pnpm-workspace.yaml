@@ -42,7 +42,7 @@ catalog:
   '@vitest/coverage-v8': 4.1.9
   '@vitest/ui': 4.1.9
   better-auth: 1.6.23
-  better-inbox: 0.1.0
+  better-inbox: 0.1.2
   dotenv: ^17.4.2
   drizzle-orm: ^0.45.2
   handlebars: 4.7.9
