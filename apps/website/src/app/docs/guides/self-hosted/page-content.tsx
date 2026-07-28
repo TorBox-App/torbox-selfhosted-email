@@ -610,7 +610,14 @@ pnpm install`,
             Without it, a self-hosted stack reports errors nowhere — the
             dashboard&apos;s error page still shows an Error ID, but that ID
             only resolves in your own CloudWatch logs. Nothing is ever reported
-            to Wraps either way.
+            to Wraps either way. If you deploy or upgrade from GitHub Actions,
+            add the same DSN as a{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">SENTRY_DSN</code>{" "}
+            repository secret — the workflow rebuilds{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              .env.selfhost
+            </code>{" "}
+            from secrets on every run.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             <code className="rounded bg-muted px-1.5 py-0.5">
@@ -1291,7 +1298,7 @@ pnpm install`,
                       </code>
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b">
                     <td className="py-2 pr-4">
                       <code className="rounded bg-muted px-1.5 py-0.5">
                         AI_GATEWAY_API_KEY
@@ -1301,6 +1308,28 @@ pnpm install`,
                     <td className="py-2">
                       API key for the AI gateway — enables AI email template
                       generation
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        SENTRY_DSN
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      DSN for <em>your</em> Sentry project — turns on error
+                      reporting for the API, dashboard and browser. Set it here
+                      even if you passed{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        --sentry-dsn
+                      </code>{" "}
+                      locally: the upgrade rebuilds{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        .env.selfhost
+                      </code>{" "}
+                      from these secrets, so a DSN that is missing here is
+                      dropped on the next run
                     </td>
                   </tr>
                 </tbody>
@@ -1708,7 +1737,12 @@ pnpm install`,
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     --sentry-dsn
                   </code>{" "}
-                  on deploy or upgrade. Unset means errors are reported nowhere
+                  on deploy or upgrade, or set a{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    SENTRY_DSN
+                  </code>{" "}
+                  repository secret for the Actions workflow. Unset means errors
+                  are reported nowhere
                 </td>
               </tr>
               <tr>

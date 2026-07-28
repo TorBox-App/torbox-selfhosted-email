@@ -69,6 +69,11 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           AUTH_EMAIL_CONFIGURATION_SET: ${{ secrets.AUTH_EMAIL_CONFIGURATION_SET }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          # Optional. Your OWN Sentry project's DSN — this file is the only
+          # source infra/selfhost.config.ts reads it from, so leaving it out
+          # here turns error reporting OFF on the next upgrade even if a local
+          # deploy had configured it.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           # Validate required secrets are present
           missing=()
@@ -95,6 +100,11 @@ jobs:
             [ -n "${AUTH_EMAIL_FROM}" ] && echo "AUTH_EMAIL_FROM=${AUTH_EMAIL_FROM}"
             [ -n "${AUTH_EMAIL_CONFIGURATION_SET}" ] && echo "AUTH_EMAIL_CONFIGURATION_SET=${AUTH_EMAIL_CONFIGURATION_SET}"
             [ -n "${AI_GATEWAY_API_KEY}" ] && echo "AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}"
+            [ -n "${SENTRY_DSN}" ] && echo "SENTRY_DSN=${SENTRY_DSN}"
+            # A false `[ -n ... ]` above is the group's exit status, and the
+            # group is this step's last command — without this the step fails
+            # whenever the final optional secret is unset.
+            true
           } > .env.selfhost
 
       # First-time deploys MUST receive the auth secrets from repository
@@ -117,13 +127,23 @@ jobs:
 
       - name: First-time deploy
         if: inputs.action == 'deploy'
-        run: pnpm selfhost:deploy --yes
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           WRAPS_LICENSE_KEY: ${{ secrets.WRAPS_LICENSE_KEY }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        # The optional values go in as flags, not env vars: deploy.ts reads
+        # DATABASE_URL and WRAPS_LICENSE_KEY from the environment but
+        # deliberately ignores an ambient SENTRY_DSN / AI_GATEWAY_API_KEY, so
+        # nobody's shell can silently redirect a deployment's error stream.
+        run: |
+          args=(--yes)
+          [ -n "${AI_GATEWAY_API_KEY}" ] && args+=(--ai-gateway-api-key "${AI_GATEWAY_API_KEY}")
+          [ -n "${SENTRY_DSN}" ] && args+=(--sentry-dsn "${SENTRY_DSN}")
+          pnpm selfhost:deploy "${args[@]}"
 
       - name: Upgrade existing instance
         if: inputs.action == 'upgrade'
