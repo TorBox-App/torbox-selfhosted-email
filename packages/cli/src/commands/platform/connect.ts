@@ -348,7 +348,12 @@ async function deployEventBridge(
   region: string,
   identity: { accountId: string },
   webhookSecret: string,
-  progress: DeploymentProgress
+  progress: DeploymentProgress,
+  // Present ⇒ `webhookSecret` was issued by the customer's self-hosted control
+  // plane, so it configures the SECOND target. Passing no `webhook` key here is
+  // load-bearing: buildEmailStackConfig then reconstructs the platform webhook
+  // from metadata, which is what keeps app.wraps.dev receiving events.
+  selfhostTarget?: { url: string }
 ): Promise<void> {
   // Get Vercel config if needed
   if (metadata.provider === "vercel" && !metadata.vercel) {
@@ -356,9 +361,19 @@ async function deployEventBridge(
     metadata.vercel = await promptVercelConfig();
   }
 
-  const stackConfig = buildEmailStackConfig(metadata, region, {
-    webhook: { awsAccountNumber: metadata.accountId, webhookSecret },
-  });
+  const stackConfig = buildEmailStackConfig(
+    metadata,
+    region,
+    selfhostTarget
+      ? {
+          selfhostWebhook: {
+            awsAccountNumber: metadata.accountId,
+            webhookSecret,
+            webhookUrl: selfhostTarget.url,
+          },
+        }
+      : { webhook: { awsAccountNumber: metadata.accountId, webhookSecret } }
+  );
 
   await progress.execute("Configuring event streaming", async () => {
     await ensurePulumiWorkDir({ accountId: identity.accountId, region });
@@ -831,7 +846,32 @@ async function authenticatedConnect(
       connectionId: result.connectionId,
     };
     if (hasEmail) {
-      metadata.services.email!.webhookSecret = result.webhookSecret;
+      const emailService = metadata.services.email!;
+      if (selfhosted) {
+        // The self-hosted plane's secret is a SECOND target, not a replacement.
+        // Writing it to `webhookSecret` is what made SES events single-plane:
+        // whichever control plane connected last owned the customer's events.
+        if (emailService.webhookUrl) {
+          // `reroute.ts` is the only writer of `webhookUrl`, so its presence
+          // means this account went through `--reroute-events`. Leaving it in
+          // place would deliver every event twice once the second target is
+          // built. Migrate it: the new field supersedes it, and the fresh
+          // secret below is the one the plane actually has in its DB.
+          emailService.webhookUrl = undefined;
+          emailService.webhookSecret = undefined;
+          log.warn(
+            `Migrated this account off the legacy event reroute.\n` +
+              `  SES events now reach your self-hosted API via a dedicated target (${pc.cyan(apiBaseUrl)}).\n` +
+              `  The Wraps platform is NOT receiving events for this account — run ${pc.cyan("wraps platform connect")} (without ${pc.cyan("--selfhosted")}) if you also want app.wraps.dev connected.`
+          );
+        }
+        emailService.selfhostWebhook = {
+          url: apiBaseUrl,
+          secret: result.webhookSecret,
+        };
+      } else {
+        emailService.webhookSecret = result.webhookSecret;
+      }
     }
     await saveConnectionMetadata(metadata);
 
@@ -842,7 +882,8 @@ async function authenticatedConnect(
         region,
         identity,
         result.webhookSecret,
-        progress
+        progress,
+        selfhosted ? { url: apiBaseUrl } : undefined
       );
     }
 
