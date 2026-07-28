@@ -6,7 +6,9 @@ import type { EmailPlanOptions } from "../../types/index.js";
 import {
   formatUSD,
   isSESPricingPlan,
+  monthlyCostForPlan,
   planComparison,
+  SES_PLAN_RATES,
   SES_PRICING_PLANS,
   type SESPlanComparison,
   type SESPricingPlan,
@@ -33,7 +35,34 @@ import { isInteractive } from "../../utils/shared/prompts.js";
  */
 const REFERENCE_VOLUME_PER_MONTH = 50_000;
 
+/**
+ * Below this monthly USD delta between the current plan and the cheapest
+ * plan, the headline number is too small to make the rate gap legible on its
+ * own — a $0.00 vs $0.00 row reads as "nothing to fix" even though the RATE
+ * gap (e.g. Essentials' $0.16/1K vs à la carte's $0.10/1K) is real and will
+ * compound as volume grows. Below this threshold we add an explicit
+ * illustrative projection instead of letting silence imply parity.
+ */
+const NEGLIGIBLE_MONTHLY_DELTA_USD = 1;
+
 type VolumeSource = "override" | "measured" | "estimated";
+
+/**
+ * Illustration shown when the current plan isn't cheapest but the real
+ * monthly delta is too small to read as urgent. Every figure here is
+ * computed via `monthlyCostForPlan` at `REFERENCE_VOLUME_PER_MONTH` — never
+ * hardcoded — so it stays correct if AWS's rates change.
+ */
+type LowVolumeProjection = {
+  currentPlan: SESPricingPlan;
+  cheapestPlan: SESPricingPlan;
+  currentPer1K: number;
+  cheapestPer1K: number;
+  referenceEmailsPerMonth: number;
+  currentMonthlyCostAtReference: number;
+  cheapestMonthlyCostAtReference: number;
+  annualDeltaAtReference: number;
+};
 
 type RegionPlanReport = {
   region: string;
@@ -42,7 +71,66 @@ type RegionPlanReport = {
   emailsPerMonth: number;
   volumeSource: VolumeSource;
   comparison: SESPlanComparison;
+  lowVolumeProjection: LowVolumeProjection | null;
 };
+
+/** Round to whole cents so money comparisons/output don't trip on float noise. */
+function roundCents(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/**
+ * When the current plan isn't the cheapest but the real monthly delta at the
+ * account's actual volume is too small to read as urgent (e.g. a 30/mo
+ * sender losing sub-cent amounts to Essentials' markup), project the same
+ * rate gap at the illustrative reference volume so the customer can see
+ * where it's headed. Returns `null` when there's nothing to project: current
+ * plan unknown, already on the cheapest plan, or the delta is already large
+ * enough to speak for itself.
+ */
+function computeLowVolumeProjection(
+  currentPlan: SESPricingPlan | undefined,
+  comparison: SESPlanComparison
+): LowVolumeProjection | null {
+  if (!currentPlan || currentPlan === comparison.cheapestPlan) {
+    return null;
+  }
+
+  const currentRow = comparison.rows.find((r) => r.plan === currentPlan);
+  const cheapestRow = comparison.rows.find(
+    (r) => r.plan === comparison.cheapestPlan
+  );
+  const monthlyDelta = Math.abs(
+    (currentRow?.monthlyCost ?? 0) - (cheapestRow?.monthlyCost ?? 0)
+  );
+
+  if (monthlyDelta >= NEGLIGIBLE_MONTHLY_DELTA_USD) {
+    return null;
+  }
+
+  const cheapest = comparison.cheapestPlan;
+  const currentMonthlyCostAtReference = monthlyCostForPlan(
+    currentPlan,
+    REFERENCE_VOLUME_PER_MONTH
+  );
+  const cheapestMonthlyCostAtReference = monthlyCostForPlan(
+    cheapest,
+    REFERENCE_VOLUME_PER_MONTH
+  );
+
+  return {
+    currentPlan,
+    cheapestPlan: cheapest,
+    currentPer1K: SES_PLAN_RATES[currentPlan].tiers[0].per1K,
+    cheapestPer1K: SES_PLAN_RATES[cheapest].tiers[0].per1K,
+    referenceEmailsPerMonth: REFERENCE_VOLUME_PER_MONTH,
+    currentMonthlyCostAtReference,
+    cheapestMonthlyCostAtReference,
+    annualDeltaAtReference: roundCents(
+      (currentMonthlyCostAtReference - cheapestMonthlyCostAtReference) * 12
+    ),
+  };
+}
 
 /**
  * Resolve the monthly send volume to price plans against: `--volume`
@@ -84,13 +172,19 @@ async function buildRegionReport(
     status.sendQuota?.sentLast24Hours
   );
 
+  const comparison = planComparison(emailsPerMonth, status.currentPlan);
+
   return {
     region,
     currentPlan: status.currentPlan,
     nextPlan: status.nextPlan,
     emailsPerMonth,
     volumeSource: source,
-    comparison: planComparison(emailsPerMonth, status.currentPlan),
+    comparison,
+    lowVolumeProjection: computeLowVolumeProjection(
+      status.currentPlan,
+      comparison
+    ),
   };
 }
 
@@ -147,8 +241,19 @@ function printRegionReport(report: RegionPlanReport): void {
     const marker = row.isCheapest ? pc.green("cheapest") : "";
     const current = row.isCurrent ? pc.dim(" (current)") : "";
     const delta = formatDelta(row.deltaVsCurrent);
+    const rate = `(${formatUSD(SES_PLAN_RATES[row.plan].tiers[0].per1K)}/1K)`;
     console.log(
-      `  ${row.label.padEnd(12)} ${formatUSD(row.monthlyCost).padStart(12)}/mo${current} ${marker}${delta}`
+      `  ${row.label.padEnd(12)} ${formatUSD(row.monthlyCost).padStart(12)}/mo  ${rate.padEnd(12)}${current} ${marker}${delta}`
+    );
+  }
+
+  if (report.lowVolumeProjection) {
+    const p = report.lowVolumeProjection;
+    const currentLabel = SES_PLAN_RATES[p.currentPlan].label;
+    console.log(
+      `\n  ${pc.dim(
+        `At ${report.emailsPerMonth.toLocaleString("en-US")}/mo the difference is under a dollar — but ${currentLabel} costs ${formatUSD(p.currentPer1K)}/1K against ${formatUSD(p.cheapestPer1K)}/1K. At ${p.referenceEmailsPerMonth.toLocaleString("en-US")}/mo that is ${formatUSD(p.currentMonthlyCostAtReference)} vs ${formatUSD(p.cheapestMonthlyCostAtReference)} (~${formatUSD(p.annualDeltaAtReference)}/yr, illustrative).`
+      )}`
     );
   }
 
@@ -182,7 +287,11 @@ function regionReportToJson(report: RegionPlanReport) {
     volumeSource: report.volumeSource,
     recommendedPlan: report.comparison.cheapestPlan,
     annualSavings: report.comparison.annualSavings ?? null,
-    comparison: report.comparison.rows,
+    comparison: report.comparison.rows.map((row) => ({
+      ...row,
+      per1K: SES_PLAN_RATES[row.plan].tiers[0].per1K,
+    })),
+    lowVolumeProjection: report.lowVolumeProjection,
   };
 }
 

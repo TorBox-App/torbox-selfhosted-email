@@ -316,4 +316,102 @@ describe("email plan command", () => {
     );
     expect(essentialsRow.monthlyCost).toBeGreaterThan(0);
   });
+
+  it("near-zero-volume ESSENTIALS account gets a non-null low-volume projection with per1K rates and real projected figures", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: true,
+      PricingAttributes: { CurrentPlan: "ESSENTIALS" },
+      SendQuota: {
+        Max24HourSend: 50_000,
+        MaxSendRate: 14,
+        // 1/day -> 30/mo. The regression case: the monthly delta between
+        // Essentials and à la carte at this volume rounds to $0.00, so the
+        // pre-fix implementation's all-$0.00 table hid the 60% rate gap.
+        SentLast24Hours: 1,
+      },
+    });
+
+    setJsonMode(true);
+    await emailPlan({ json: true });
+
+    const envelope = readJsonEnvelope(consoleLogSpy);
+    const region = envelope.data.regions[0];
+    expect(region.currentPlan).toBe("ESSENTIALS");
+    expect(region.emailsPerMonth).toBe(30);
+
+    // per1K must be present on every comparison row, and must differ between
+    // NONE (à la carte, $0.10/1K) and ESSENTIALS ($0.16/1K) — the entire
+    // point of the fix is making this rate gap visible when the dollar
+    // amounts round to zero.
+    const noneRow = region.comparison.find(
+      (row: { plan: string }) => row.plan === "NONE"
+    );
+    const essentialsRow = region.comparison.find(
+      (row: { plan: string }) => row.plan === "ESSENTIALS"
+    );
+    expect(noneRow.per1K).toBe(0.1);
+    expect(essentialsRow.per1K).toBe(0.16);
+    expect(essentialsRow.per1K).not.toBe(noneRow.per1K);
+
+    // The low-volume projection must be present (this is the core
+    // regression assertion) and must carry real computed figures, not
+    // hardcoded placeholders.
+    expect(region.lowVolumeProjection).not.toBeNull();
+    const projection = region.lowVolumeProjection;
+    expect(projection.currentPlan).toBe("ESSENTIALS");
+    expect(projection.cheapestPlan).toBe("NONE");
+    expect(projection.currentPer1K).toBe(0.16);
+    expect(projection.cheapestPer1K).toBe(0.1);
+    expect(projection.referenceEmailsPerMonth).toBe(50_000);
+    // 50,000/mo at $0.16/1K = $8.00; at $0.10/1K = $5.00; annualized delta
+    // is (8 - 5) * 12 = $36.00. These are the real `monthlyCostForPlan`
+    // outputs, not hardcoded — asserting the exact figures pins that.
+    expect(projection.currentMonthlyCostAtReference).toBe(8);
+    expect(projection.cheapestMonthlyCostAtReference).toBe(5);
+    expect(projection.annualDeltaAtReference).toBe(36);
+  });
+
+  it("high-volume ESSENTIALS account with a large real delta gets no low-volume projection (the headline already speaks for itself)", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: true,
+      PricingAttributes: { CurrentPlan: "ESSENTIALS" },
+      SendQuota: {
+        Max24HourSend: 1_000_000,
+        MaxSendRate: 14,
+        // 20,000/day -> 600,000/mo. Essentials vs à la carte delta here is
+        // $36/mo, far above the negligible threshold.
+        SentLast24Hours: 20_000,
+      },
+    });
+
+    setJsonMode(true);
+    await emailPlan({ json: true });
+
+    const envelope = readJsonEnvelope(consoleLogSpy);
+    const region = envelope.data.regions[0];
+    expect(region.currentPlan).toBe("ESSENTIALS");
+    expect(region.emailsPerMonth).toBe(600_000);
+    expect(region.lowVolumeProjection).toBeNull();
+  });
+
+  it("account already on NONE (à la carte) at low volume gets no low-volume projection — nothing to recommend", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: true,
+      PricingAttributes: { CurrentPlan: "NONE" },
+      SendQuota: {
+        Max24HourSend: 50_000,
+        MaxSendRate: 14,
+        SentLast24Hours: 1,
+      },
+    });
+
+    setJsonMode(true);
+    await emailPlan({ json: true });
+
+    const envelope = readJsonEnvelope(consoleLogSpy);
+    const region = envelope.data.regions[0];
+    expect(region.currentPlan).toBe("NONE");
+    expect(region.recommendedPlan).toBe("NONE");
+    expect(region.lowVolumeProjection).toBeNull();
+  });
 });
