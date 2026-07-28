@@ -49,6 +49,51 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v2.29.0",
+    date: "July 2026",
+    icon: Terminal,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "Self-Hosted Control Plane Hardening",
+    items: [
+      <>
+        Deploy and upgrade now publish the SES templates the dashboard sends by
+        name, so signup verification, invitations and password reset work on a
+        fresh install instead of failing on a missing template
+      </>,
+      <>
+        <Code>wraps selfhost env</Code> emits <Code>AUTH_EMAIL_FROM</Code>,{" "}
+        <Code>AUTH_EMAIL_CONFIGURATION_SET</Code> and{" "}
+        <Code>WRAPS_EMAIL_ROLE_ARN</Code> — the API-only variant hosts its own
+        dashboard, and this is where it gets that configuration
+      </>,
+      <>
+        The auth sender address is derived from the verified SES identity rather
+        than the dashboard domain, which is only sendable when the two happen to
+        match
+      </>,
+      <>
+        A self-hosted deployment gets its own{" "}
+        <Code>wraps-selfhost-console-access-role</Code>, trusting your account
+        rather than Wraps
+      </>,
+      <>
+        <Code>wraps selfhost connect</Code> adds a dedicated SES event target
+        instead of repointing the platform&apos;s, so both control planes
+        receive events
+      </>,
+      <>
+        Self-hosters can route errors to their own Sentry DSN instead of
+        Wraps&apos;
+      </>,
+      <>
+        <Code>--selfhosted</Code> is replaced by the <Code>wraps selfhost</Code>{" "}
+        subcommand
+      </>,
+      "Fix: recover the API URL on SST deployments, whose resource names carry a generated suffix",
+    ],
+  },
+  {
     version: "CLI v2.28.0",
     date: "July 2026",
     icon: SlidersHorizontal,
