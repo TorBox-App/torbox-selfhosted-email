@@ -58,9 +58,15 @@ extract_json() {
   grep -oE '\{"success":.*' | tail -1
 }
 
+# A SKIP is not a failure. The trailing `[[ -n $2 ]] && printf` used to be the
+# last command, so a one-argument call returned 1 and `set -e` killed the run at
+# the first skipped phase — every assertion passing, no PASSED line, exit 1.
 notice() {
   printf "${YELLOW}  SKIP${NC} %s\n" "$1"
-  [[ -n "${2:-}" ]] && printf "       %s\n" "$2"
+  if [[ -n "${2:-}" ]]; then
+    printf "       %s\n" "$2"
+  fi
+  return 0
 }
 
 METADATA_FILE="${HOME}/.wraps/connections/${ACCOUNT_ID}-${REGION}.json"
@@ -250,7 +256,11 @@ else
 
   section "Phase 5: wraps selfhost update-role"
 
-  UPDATE_OUT=$(wraps selfhost update-role --region "$REGION" --json 2>/dev/null | extract_json) || true
+  # --force, not just --json: the confirm prompt is gated on --force alone
+  # (platform/update-role.ts:143), so in JSON mode it prompts, reads EOF from
+  # the pipe, and exits 0 having done nothing — a silent no-op the assertions
+  # below then report as a failed command.
+  UPDATE_OUT=$(wraps selfhost update-role --region "$REGION" --force --json 2>/dev/null | extract_json) || true
   if echo "$UPDATE_OUT" | jq -e '.success == true' &>/dev/null; then
     pass "selfhost update-role succeeded"
   else
@@ -269,7 +279,7 @@ else
   if [[ "$CONNECTED_PLATFORM" == "true" ]]; then
     section "Phase 5: wraps platform update-role (platform form)"
 
-    PLATFORM_UPDATE_OUT=$(wraps platform update-role --region "$REGION" --json 2>/dev/null | extract_json) || true
+    PLATFORM_UPDATE_OUT=$(wraps platform update-role --region "$REGION" --force --json 2>/dev/null | extract_json) || true
     if echo "$PLATFORM_UPDATE_OUT" | jq -e '.success == true' &>/dev/null; then
       pass "update-role (platform) succeeded"
     else

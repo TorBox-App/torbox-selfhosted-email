@@ -29,6 +29,54 @@ wraps() { node "${REPO_ROOT}/packages/cli/dist/cli.js" "$@"; }
 # Neon project ID extracted after deploy (used in cleanup)
 NEON_PROJECT_ID=""
 
+# ─── Preflight: what was already here ────────────────────────────────
+#
+# Both selfhost variants create the account-global IAM role
+# wraps-selfhost-scheduler-role and the wraps-selfhost-schedulers group. The
+# teardown below deletes those by name and has no way of its own to tell a
+# resource this run created from one that was already here. Snapshot them
+# first — destroy consults the snapshot and leaves anything older alone.
+
+SHARED_SCHEDULER_ROLE="wraps-selfhost-scheduler-role"
+SHARED_SCHEDULER_GROUP="wraps-selfhost-schedulers"
+
+PREEXISTING_SCHEDULER_ROLE=false
+PREEXISTING_SCHEDULER_GROUP=false
+if aws iam get-role --role-name "$SHARED_SCHEDULER_ROLE" &>/dev/null; then
+  PREEXISTING_SCHEDULER_ROLE=true
+fi
+if aws scheduler get-schedule-group --name "$SHARED_SCHEDULER_GROUP" \
+  --region "$REGION" &>/dev/null; then
+  PREEXISTING_SCHEDULER_GROUP=true
+fi
+
+# Set true immediately before `selfhost deploy` runs. Everything up to that
+# point creates nothing, so a failure there must not trigger a teardown: with a
+# deployment already present, `selfhost deploy` exits 0 with "already exists",
+# Phase 1 fails on the empty output, and the trap used to delete the shared
+# scheduler role out from under the plane that was already running.
+DEPLOY_ATTEMPTED=false
+
+# Refuse the run outright when a control plane is already here. A Pulumi stack
+# is not ours to redeploy; an SST one cannot coexist with the stack this
+# scenario deploys (packages/cli/src/utils/selfhost/variant.ts). This runs
+# before the EXIT trap is installed, so these exits destroy nothing.
+if aws lambda get-function --function-name wraps-selfhost-api \
+  --region "$REGION" &>/dev/null; then
+  printf "${RED}An API-only (Pulumi) selfhost control plane already exists in account %s.${NC}\n" "$ACCOUNT_ID"
+  printf "This scenario deploys and tears down its own — it will not touch an existing one.\n"
+  printf "Remove it with ${CYAN}wraps selfhost destroy --region %s${NC} first.\n" "$REGION"
+  exit 1
+fi
+if [[ "$PREEXISTING_SCHEDULER_ROLE" == "true" || "$PREEXISTING_SCHEDULER_GROUP" == "true" ]]; then
+  printf "${RED}A full-platform (SST) selfhost deployment already exists in account %s.${NC}\n" "$ACCOUNT_ID"
+  printf "The variants share %s and %s, so they cannot coexist.\n" \
+    "$SHARED_SCHEDULER_ROLE" "$SHARED_SCHEDULER_GROUP"
+  printf "Run ${CYAN}pnpm selfhost:destroy${NC} from the fork that deployed it, or point\n"
+  printf "AWS_PROFILE_CLI at an account with no control plane.\n"
+  exit 1
+fi
+
 # ─── Resource cleanup ────────────────────────────────────────────────
 
 destroy_selfhost_resources() {
@@ -74,20 +122,31 @@ destroy_selfhost_resources() {
     --table-name wraps-selfhost-rate-limit \
     --region "$REGION" &>/dev/null || true
 
-  # Delete EventBridge Scheduler group (must be empty — schedules within the group
-  # were created by the API at runtime, not by deploy, so this may fail if any remain)
-  aws scheduler delete-schedule-group \
-    --name wraps-selfhost-schedulers \
-    --region "$REGION" &>/dev/null || true
+  # The scheduler group and its role are shared with the SST variant — delete
+  # them only if this run created them.
+  #
+  # The group must be empty: schedules inside it are created by the API at
+  # runtime, not by deploy, so this fails if any remain.
+  local policy
+  if [[ "$PREEXISTING_SCHEDULER_GROUP" == "true" ]]; then
+    printf "${YELLOW}  Leaving %s alone — it predates this run${NC}\n" "$SHARED_SCHEDULER_GROUP"
+  else
+    aws scheduler delete-schedule-group \
+      --name "$SHARED_SCHEDULER_GROUP" \
+      --region "$REGION" &>/dev/null || true
+  fi
 
   # Delete Scheduler IAM role (inline policies must go first)
-  local policy
-  for policy in $(aws iam list-role-policies --role-name wraps-selfhost-scheduler-role \
-    --query 'PolicyNames' --output text 2>/dev/null || true); do
-    aws iam delete-role-policy --role-name wraps-selfhost-scheduler-role \
-      --policy-name "$policy" &>/dev/null || true
-  done
-  aws iam delete-role --role-name wraps-selfhost-scheduler-role &>/dev/null || true
+  if [[ "$PREEXISTING_SCHEDULER_ROLE" == "true" ]]; then
+    printf "${YELLOW}  Leaving %s alone — it predates this run${NC}\n" "$SHARED_SCHEDULER_ROLE"
+  else
+    for policy in $(aws iam list-role-policies --role-name "$SHARED_SCHEDULER_ROLE" \
+      --query 'PolicyNames' --output text 2>/dev/null || true); do
+      aws iam delete-role-policy --role-name "$SHARED_SCHEDULER_ROLE" \
+        --policy-name "$policy" &>/dev/null || true
+    done
+    aws iam delete-role --role-name "$SHARED_SCHEDULER_ROLE" &>/dev/null || true
+  fi
 
   # Delete Lambda IAM role (detach managed policy + delete inline policies)
   aws iam detach-role-policy \
@@ -143,6 +202,10 @@ destroy_selfhost_resources() {
 cleanup_on_exit() {
   local exit_code=$?
   if (( exit_code != 0 )); then
+    if [[ "$DEPLOY_ATTEMPTED" != "true" ]]; then
+      printf "\n${RED}Test failed (exit %d) before deploying — nothing to destroy${NC}\n" "$exit_code"
+      exit "$exit_code"
+    fi
     printf "\n${RED}Test failed (exit %d) — destroying resources to avoid orphans${NC}\n" "$exit_code"
     destroy_selfhost_resources
   fi
@@ -171,6 +234,10 @@ printf "${YELLOW}Phase 1: wraps selfhost deploy${NC}\n"
 
 DEPLOY_EXTRA_FLAGS=()
 [[ -n "$NEON_ORG_ID" ]] && DEPLOY_EXTRA_FLAGS+=(--neon-org-id "$NEON_ORG_ID")
+
+# Past this line a failure may have left half a stack behind, so the trap's
+# teardown becomes the right response.
+DEPLOY_ATTEMPTED=true
 
 DEPLOY_OUT=$(wraps selfhost deploy \
   --region "$REGION" \
