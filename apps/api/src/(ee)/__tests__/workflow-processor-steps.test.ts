@@ -823,6 +823,64 @@ describe("handleSendEmail", () => {
     expect(tmplContent.Headers).toBeUndefined();
   });
 
+  // The send step builds the recipient-facing unsubscribe and preference links
+  // itself. A self-hosted deployment's token means nothing to the Wraps
+  // platform, so a silent fallback mails contacts a dead link on another
+  // company's domain — failing the send is the lesser harm.
+  it("builds unsubscribe and preference links from the deployment's own URLs", async () => {
+    vi.stubEnv("API_BASE_URL", "https://api.customer.test");
+    vi.stubEnv("APP_BASE_URL", "https://mail.customer.test");
+    // APP_BASE_URL is what the worker Lambda actually receives; clear the
+    // higher-precedence vars so this asserts the variable the worker gets.
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("BETTER_AUTH_URL", "");
+    setupEmailTest();
+
+    await handler(makeSQSEvent(emailJob));
+
+    expect(sesSendCalls).toHaveLength(1);
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
+    const tmplContent = content.Template as Record<string, unknown>;
+    const templateData = JSON.parse(
+      tmplContent.TemplateData as string
+    ) as Record<string, unknown>;
+    expect(templateData.unsubscribeUrl).toBe(
+      "https://api.customer.test/unsubscribe/mock-token"
+    );
+    expect(templateData.preferencesUrl).toBe(
+      "https://mail.customer.test/preferences/mock-token"
+    );
+  });
+
+  it("never sends a wraps.dev link when the deployment's URLs are unset", async () => {
+    vi.stubEnv("API_BASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "");
+    vi.stubEnv("APP_BASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("BETTER_AUTH_URL", "");
+    setupEmailTest();
+
+    await handler(makeSQSEvent(emailJob));
+
+    expect(sesSendCalls).toHaveLength(0);
+    expect(JSON.stringify(sesSendCalls)).not.toContain("wraps.dev");
+
+    // Failed for the right reason — not merely failed.
+    const failedUpdate = mockDbUpdate.mock.results.find((r: any) => {
+      const setCalls = r.value?.set?.mock?.calls;
+      return setCalls?.some((c: unknown[]) => {
+        const arg = c[0] as Record<string, unknown>;
+        return (
+          arg?.status === "failed" &&
+          typeof arg?.error === "string" &&
+          (arg.error as string).includes("API_BASE_URL")
+        );
+      });
+    });
+    expect(failedUpdate).toBeDefined();
+  });
+
   it("records messageSend and updates contact metrics", async () => {
     setupEmailTest();
     await handler(makeSQSEvent(emailJob));
