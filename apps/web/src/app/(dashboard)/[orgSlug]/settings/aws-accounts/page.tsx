@@ -48,6 +48,7 @@ export default async function AwsAccountsPage({
       <OrganizationSettingsAwsAccounts
         organization={orgWithMembership}
         planId={planId}
+        selfHosted={isSelfHosted()}
         unlimited={isSelfHosted()}
         userRole={orgWithMembership.userRole}
       />

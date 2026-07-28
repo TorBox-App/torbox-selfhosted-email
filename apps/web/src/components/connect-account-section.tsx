@@ -4,10 +4,16 @@ import { ConnectAWSAccountForm } from "@/components/forms/connect-aws-account-fo
 
 type ConnectAccountSectionProps = {
   organizationId: string;
+  /**
+   * True on self-hosted deployments. Threaded from a server component calling
+   * `isSelfHosted()`; the license key must never reach the client bundle.
+   */
+  selfHosted: boolean;
 };
 
 export function ConnectAccountSection({
   organizationId,
+  selfHosted,
 }: ConnectAccountSectionProps) {
   return (
     <div className="px-4 lg:px-6" id="connect-account">
@@ -18,6 +24,7 @@ export function ConnectAccountSection({
           window.location.reload();
         }}
         organizationId={organizationId}
+        selfHosted={selfHosted}
       />
     </div>
   );

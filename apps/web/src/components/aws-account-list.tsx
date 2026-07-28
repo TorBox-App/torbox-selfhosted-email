@@ -3,7 +3,20 @@ import { Badge } from "@wraps/ui/components/ui/badge";
 import { Card, CardContent } from "@wraps/ui/components/ui/card";
 import type { InferSelectModel } from "drizzle-orm";
 import { ExternalLink } from "lucide-react";
+import { SelfhostConnectInstructions } from "@/components/selfhost-connect-instructions";
 import { Button } from "@/components/ui/button";
+
+/**
+ * Builds the CloudFormation quick-create link used to update an existing
+ * stack. Only called when `selfHosted` is false — the S3-hosted template
+ * creates a role trusting the Wraps platform account.
+ */
+function buildPlatformCloudFormationUrl(region: string, externalId: string) {
+  const templateUrl =
+    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
+
+  return `https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/create/review?templateURL=${encodeURIComponent(templateUrl)}&stackName=wraps-console-access&param_ExternalId=${externalId}`;
+}
 
 type AWSAccountListProps = {
   accounts: Array<
@@ -17,21 +30,27 @@ type AWSAccountListProps = {
   >;
   organizationId: string;
   orgSlug?: string;
+  /**
+   * True on self-hosted deployments. The CloudFormation stack link is not
+   * offered there — it would create a role trusting the Wraps platform account.
+   */
+  selfHosted: boolean;
 };
 
 export function AWSAccountList({
   accounts,
   organizationId,
   orgSlug,
+  selfHosted,
 }: AWSAccountListProps) {
   // Use slug-based URLs if orgSlug is provided, otherwise fall back to old format
   const baseUrl = orgSlug
     ? `/${orgSlug}/settings/aws-accounts`
     : `/dashboard/organizations/${organizationId}/settings/aws-accounts`;
 
-  // CloudFormation template URL for updating stacks
-  const templateUrl =
-    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
+  const canManageAny = accounts.some(
+    (account) => account.permissions.canManage
+  );
 
   return (
     <div className="space-y-4">
@@ -105,17 +124,22 @@ export function AWSAccountList({
                         Manage Permissions
                       </a>
                     </Button>
-                    <Button asChild size="sm" variant="ghost">
-                      <a
-                        href={`https://console.aws.amazon.com/cloudformation/home?region=${account.region}#/stacks/create/review?templateURL=${encodeURIComponent(templateUrl)}&stackName=wraps-console-access&param_ExternalId=${account.externalId}`}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                        title="Update CloudFormation stack with latest IAM permissions (will prompt to update existing stack)"
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Update IAM Role
-                      </a>
-                    </Button>
+                    {selfHosted ? null : (
+                      <Button asChild size="sm" variant="ghost">
+                        <a
+                          href={buildPlatformCloudFormationUrl(
+                            account.region,
+                            account.externalId
+                          )}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                          title="Update CloudFormation stack with latest IAM permissions (will prompt to update existing stack)"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Update IAM Role
+                        </a>
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -123,6 +147,8 @@ export function AWSAccountList({
           </CardContent>
         </Card>
       ))}
+
+      {selfHosted && canManageAny ? <SelfhostConnectInstructions /> : null}
     </div>
   );
 }

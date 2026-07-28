@@ -56,6 +56,11 @@ type OrganizationSettingsAwsAccountsProps = {
   planId?: PlanId | string;
   /** Self-hosted deployments are unlimited — no AWS account cap. */
   unlimited?: boolean;
+  /**
+   * True on self-hosted deployments. Threaded from a server component calling
+   * `isSelfHosted()`; the license key must never reach the client bundle.
+   */
+  selfHosted?: boolean;
 };
 
 export function OrganizationSettingsAwsAccounts({
@@ -63,6 +68,7 @@ export function OrganizationSettingsAwsAccounts({
   userRole,
   planId = "starter",
   unlimited = false,
+  selfHosted = false,
 }: OrganizationSettingsAwsAccountsProps) {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
@@ -162,6 +168,7 @@ export function OrganizationSettingsAwsAccounts({
           <ConnectAWSAccountForm
             onSuccess={handleConnectSuccess}
             organizationId={organization.id}
+            selfHosted={selfHosted}
           />
         </DialogContent>
       </Dialog>

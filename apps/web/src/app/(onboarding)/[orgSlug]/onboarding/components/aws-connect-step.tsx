@@ -17,14 +17,32 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 import { uuidv7 } from "uuidv7";
 import z from "zod";
+import { SelfhostConnectInstructions } from "@/components/selfhost-connect-instructions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+/**
+ * Builds the CloudFormation quick-create link for the hosted platform. Only
+ * called when `selfHosted` is false — the S3-hosted template creates a role
+ * trusting the Wraps platform account.
+ */
+function buildPlatformCloudFormationUrl(externalId: string) {
+  const cfTemplateUrl =
+    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
+
+  return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access&param_ExternalId=${encodeURIComponent(externalId)}`;
+}
 
 type AwsConnectStepProps = {
   onNext: () => void;
   onBack: () => void;
   onSkip: () => void;
   organizationId: string;
+  /**
+   * True on self-hosted deployments. Must be threaded down from a server
+   * component calling `isSelfHosted()` — the license key is server-only.
+   */
+  selfHosted: boolean;
 };
 
 export function AwsConnectStep({
@@ -32,6 +50,7 @@ export function AwsConnectStep({
   onBack,
   onSkip,
   organizationId,
+  selfHosted,
 }: AwsConnectStepProps) {
   const queryClient = useQueryClient();
 
@@ -39,9 +58,9 @@ export function AwsConnectStep({
   // Using UUIDv7 ensures uniqueness and time-ordering
   const externalId = useMemo(() => `wraps_${uuidv7()}`, []);
 
-  const cfTemplateUrl =
-    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
-  const awsConsoleUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access&param_ExternalId=${encodeURIComponent(externalId)}`;
+  const awsConsoleUrl = selfHosted
+    ? null
+    : buildPlatformCloudFormationUrl(externalId);
 
   // Track back button
   const handleBack = () => {
@@ -139,29 +158,42 @@ export function AwsConnectStep({
           <div>
             <CardTitle>Connect Your AWS Account</CardTitle>
             <CardDescription>
-              Deploy a CloudFormation stack to grant dashboard access
+              {awsConsoleUrl === null
+                ? "Run the Wraps CLI to grant dashboard access"
+                : "Deploy a CloudFormation stack to grant dashboard access"}
             </CardDescription>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Step 1: Deploy CloudFormation */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm">
-            1. Deploy the CloudFormation stack
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            This creates an IAM role in your AWS account that allows Wraps to
-            read email metrics and manage your SES configuration.
-          </p>
-          <Button asChild className="w-full" variant="outline">
-            <a href={awsConsoleUrl} rel="noopener noreferrer" target="_blank">
-              <ExternalLinkIcon className="mr-2 h-4 w-4" />
-              Deploy to AWS Console
-            </a>
-          </Button>
-        </div>
+        {/* Step 1: Create the IAM role */}
+        {awsConsoleUrl === null ? (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">1. Create the IAM role</h3>
+            <p className="text-muted-foreground text-sm">
+              This creates an IAM role in your AWS account that allows your
+              dashboard to read email metrics and manage your SES configuration.
+            </p>
+            <SelfhostConnectInstructions />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">
+              1. Deploy the CloudFormation stack
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              This creates an IAM role in your AWS account that allows Wraps to
+              read email metrics and manage your SES configuration.
+            </p>
+            <Button asChild className="w-full" variant="outline">
+              <a href={awsConsoleUrl} rel="noopener noreferrer" target="_blank">
+                <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                Deploy to AWS Console
+              </a>
+            </Button>
+          </div>
+        )}
 
         {/* Step 2: Copy Outputs */}
         <div className="space-y-3">

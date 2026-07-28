@@ -32,6 +32,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { uuidv7 } from "uuidv7";
 import { connectAWSAccountAction } from "@/actions/aws-accounts";
+import { SelfhostConnectInstructions } from "@/components/selfhost-connect-instructions";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -57,7 +58,27 @@ const AWS_REGIONS = [
 type ConnectAWSAccountFormProps = {
   organizationId: string;
   onSuccess?: () => void;
+  /**
+   * True on self-hosted deployments. Must come from a server component calling
+   * `isSelfHosted()` — the license key is server-only and must never reach the
+   * client bundle.
+   */
+  selfHosted: boolean;
 };
+
+/**
+ * Builds the CloudFormation quick-create link for the hosted platform. Only
+ * called when `selfHosted` is false: the S3-hosted template creates
+ * `wraps-console-access-role`, which trusts the Wraps platform account.
+ * CloudFormation quick-create links require an S3 template URL, so a
+ * self-hosted deployment cannot serve its own from this link.
+ */
+function buildPlatformCloudFormationUrl(externalId: string) {
+  const templateUrl =
+    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
+
+  return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?stackName=wraps-console-access&templateURL=${encodeURIComponent(templateUrl)}&param_ExternalId=${externalId}`;
+}
 
 // Submit button component that uses useFormStatus
 function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
@@ -78,6 +99,7 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
 export function ConnectAWSAccountForm({
   organizationId,
   onSuccess,
+  selfHosted,
 }: ConnectAWSAccountFormProps) {
   const [state, action] = useActionState(
     connectAWSAccountAction,
@@ -152,11 +174,11 @@ export function ConnectAWSAccountForm({
     }
   }
 
-  // Use S3-hosted CloudFormation template (CloudFormation requires S3 or approved HTTPS sources)
-  const templateUrl =
-    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
-
-  const cloudFormationUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?stackName=wraps-console-access&templateURL=${encodeURIComponent(templateUrl)}&param_ExternalId=${externalId}`;
+  // Only the hosted platform can use this link — the template it points at
+  // creates a role trusting the Wraps platform account.
+  const cloudFormationUrl = selfHosted
+    ? null
+    : buildPlatformCloudFormationUrl(externalId);
 
   // Show loading state while External ID is being loaded
   if (!(isClient && externalId)) {
@@ -182,52 +204,58 @@ export function ConnectAWSAccountForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field>
-            <FieldLabel>Your External ID</FieldLabel>
-            <InputGroup>
-              <InputGroupInput
-                className="font-mono"
-                readOnly
-                value={externalId}
-              />
-              <InputGroupAddon align="inline-end">
-                <Button
-                  aria-label="Copy External ID"
-                  onClick={() => {
-                    navigator.clipboard.writeText(externalId);
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Copy className="size-4" />
+          {cloudFormationUrl === null ? (
+            <SelfhostConnectInstructions />
+          ) : (
+            <>
+              <Field>
+                <FieldLabel>Your External ID</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    className="font-mono"
+                    readOnly
+                    value={externalId}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <Button
+                      aria-label="Copy External ID"
+                      onClick={() => {
+                        navigator.clipboard.writeText(externalId);
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>
+                  This ID is saved in your browser and will be used in
+                  CloudFormation. Don't worry if you refresh the page - it won't
+                  change.
+                </FieldDescription>
+              </Field>
+
+              <div className="space-y-2">
+                <Button asChild>
+                  <a
+                    href={cloudFormationUrl}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <ExternalLink className="size-4" />
+                    Deploy to AWS
+                  </a>
                 </Button>
-              </InputGroupAddon>
-            </InputGroup>
-            <FieldDescription>
-              This ID is saved in your browser and will be used in
-              CloudFormation. Don't worry if you refresh the page - it won't
-              change.
-            </FieldDescription>
-          </Field>
 
-          <div className="space-y-2">
-            <Button asChild>
-              <a
-                href={cloudFormationUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <ExternalLink className="size-4" />
-                Deploy to AWS
-              </a>
-            </Button>
-
-            <p className="text-muted-foreground text-sm">
-              This will open AWS CloudFormation in a new tab. Review the stack
-              and click "Create stack" to deploy the IAM role.
-            </p>
-          </div>
+                <p className="text-muted-foreground text-sm">
+                  This will open AWS CloudFormation in a new tab. Review the
+                  stack and click "Create stack" to deploy the IAM role.
+                </p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

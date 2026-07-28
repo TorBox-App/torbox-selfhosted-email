@@ -6,6 +6,7 @@ import { AWSAccountList } from "@/components/aws-account-list";
 import { ConnectAccountSection } from "@/components/connect-account-section";
 import { Button } from "@/components/ui/button";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { isSelfHosted } from "@/lib/plan-limits";
 
 type AWSAccountsPageProps = {
   params: Promise<{
@@ -138,13 +139,17 @@ export default async function AWSAccountsPage({
             accounts={accountsWithPermissions}
             organizationId={orgWithMembership.id}
             orgSlug={orgSlug}
+            selfHosted={isSelfHosted()}
           />
         )}
       </div>
 
       {/* Connect AWS Account Form */}
       {canManageAccounts && (
-        <ConnectAccountSection organizationId={orgWithMembership.id} />
+        <ConnectAccountSection
+          organizationId={orgWithMembership.id}
+          selfHosted={isSelfHosted()}
+        />
       )}
     </>
   );
