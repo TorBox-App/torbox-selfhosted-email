@@ -34,12 +34,17 @@ import {
   segment,
   template,
 } from "@wraps/db";
-import { toSesVariableName, transformVariablesForSes } from "@wraps/email";
+import {
+  resolveAppUrl,
+  toSesVariableName,
+  transformVariablesForSes,
+} from "@wraps/email";
 import { resolveConfigurationSetName, sendEmail } from "@wraps/email-send";
 import {
   extractCanonicalVars,
   renderTemplateStrict,
 } from "@wraps/template-render";
+import { resolveApiBaseUrl } from "@wraps/unsubscribe-token";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { and, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
@@ -642,8 +647,13 @@ async function processJob(
   let failed = 0;
   const sentContactIds: string[] = [];
 
-  const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
-  const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
+  // Both throw when the deployment has not configured its own URLs. That is the
+  // intended behavior for a recipient-facing link: a self-hosted customer's
+  // unsubscribe token is meaningless to the Wraps platform, so a silent
+  // fallback would mail their contacts a dead link on another company's domain.
+  // Do not wrap these in a try/catch that restores a default.
+  const apiBaseUrl = resolveApiBaseUrl();
+  const appBaseUrl = resolveAppUrl();
 
   // Filter email contacts
   let emailContacts = contacts.filter((c) => channel === "email" && c.email);

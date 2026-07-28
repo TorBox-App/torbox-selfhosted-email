@@ -249,6 +249,9 @@ vi.mock("./variable-mappings", () => ({
 
 // Must set before import — QUEUE_URL is captured at module load
 process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
+// Recipient-facing link bases have no platform fallback — the worker throws
+// unless the deployment configures its own URLs.
+process.env.API_BASE_URL = "https://api.test.local";
 
 const { handler } = await import("../workers/batch-sender");
 

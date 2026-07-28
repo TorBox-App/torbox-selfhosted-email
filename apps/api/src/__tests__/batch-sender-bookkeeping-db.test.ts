@@ -264,6 +264,9 @@ async function loadRows() {
 beforeAll(async () => {
   // Point the worker's module-scoped QUEUE_URL at a dummy before importing it.
   process.env.BATCH_QUEUE_URL = "https://sqs.test.local/queue";
+  // Recipient-facing link bases have no platform fallback — the worker throws
+  // unless the deployment configures its own URLs.
+  process.env.API_BASE_URL = "https://api.test.local";
 
   fixture = await seedBaseOrg(TEST_PREFIX);
   const orgId = fixture.ids.org;
