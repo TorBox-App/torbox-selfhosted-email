@@ -77,6 +77,7 @@ import { selfhostDestroy } from "./commands/selfhost/destroy.js";
 import { selfhostEnv } from "./commands/selfhost/env.js";
 import { selfhostLogin } from "./commands/selfhost/login.js";
 import { selfhostLogout } from "./commands/selfhost/logout.js";
+import { selfhostLogs } from "./commands/selfhost/logs.js";
 import { selfhostStatus } from "./commands/selfhost/status.js";
 import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
@@ -294,10 +295,19 @@ function showHelp() {
     `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details`
   );
   console.log(
+    `  ${pc.cyan("selfhost logs")}        Stream logs from your self-hosted API, dashboard, and workers`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost env")}         Print env vars for hosting the dashboard yourself`
+  );
+  console.log(
     `  ${pc.cyan("selfhost connect")}     Connect your AWS account to your self-hosted instance`
   );
   console.log(
-    `  ${pc.cyan("selfhost update-role")} Refresh your self-hosted console role's permissions\n`
+    `  ${pc.cyan("selfhost update-role")} Refresh your self-hosted console role's permissions`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost destroy")}     Tear down the self-hosted deployment\n`
   );
   console.log("Local Development:");
   console.log(
@@ -1227,6 +1237,22 @@ async function run() {
         case "env":
           await selfhostEnv({
             region: flags.region,
+            json: flags.json,
+          });
+          break;
+
+        case "logs":
+          await selfhostLogs({
+            region: flags.region,
+            follow: flags.follow,
+            errors: flags.errors,
+            source: flags.source,
+            since: flags.since,
+            filter: flags.filter,
+            interval: flags.interval,
+            live: flags.live,
+            platform: flags.platform,
+            verbose: flags.verbose,
             json: flags.json,
           });
           break;

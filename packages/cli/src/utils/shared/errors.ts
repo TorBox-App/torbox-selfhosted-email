@@ -1021,6 +1021,51 @@ export const errors = {
       "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
+  cloudWatchLogsPermissionDenied: (action: string) =>
+    new WrapsError(
+      "CloudWatch Logs permission denied",
+      "CLOUDWATCH_LOGS_PERMISSION_DENIED",
+      `Your IAM user/role is not allowed to call ${action}.\nRequired actions: logs:DescribeLogGroups, logs:FilterLogEvents, logs:StartLiveTail\n\nView required permissions:\n  wraps permissions --json`,
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  // Discovery scans for /aws/lambda/wraps-selfhost*, which both the Pulumi and
+  // SST variants create — no groups means no deployment in this region, not an
+  // unsupported variant.
+  noSelfhostLogGroups: (region: string) =>
+    new WrapsError(
+      `No self-hosted log groups found in ${region}`,
+      "SELFHOST_NO_LOG_GROUPS",
+      "Nothing matching /aws/lambda/wraps-selfhost* exists in this region. The deployment may live in another region, or may not have run yet.\n\nCheck the deployment:\n  wraps selfhost status\n\nOr target a different region:\n  wraps selfhost logs --region <region>",
+      "https://wraps.dev/docs/self-hosting"
+    ),
+
+  invalidLogSource: (value: string) =>
+    new WrapsError(
+      `Unknown --source value: ${value}`,
+      "INVALID_LOG_SOURCE",
+      "Valid sources are: api, web, workers, other, all.\n\nExample:\n  wraps selfhost logs --source api",
+      "https://wraps.dev/docs/self-hosting"
+    ),
+
+  // The Pulumi variant deploys the API Lambda only, so `--source web` is a
+  // legitimate request with no matching groups rather than a typo.
+  noLogGroupsForSource: (source: string, available: string) =>
+    new WrapsError(
+      `No ${source} log groups in this deployment`,
+      "SELFHOST_NO_LOG_GROUPS_FOR_SOURCE",
+      `This deployment has: ${available}.\n\nThe API-only control plane (wraps selfhost deploy) has no dashboard or worker Lambdas — those ship with the full SST platform.\n\nDrop the filter to see everything:\n  wraps selfhost logs`,
+      "https://wraps.dev/docs/self-hosting"
+    ),
+
+  invalidLogWindow: (value: string) =>
+    new WrapsError(
+      `Invalid --since value: ${value}`,
+      "INVALID_LOG_WINDOW",
+      "Use a positive number followed by s, m, h, or d.\n\nExamples:\n  wraps selfhost logs --since 30m\n  wraps selfhost logs --since 6h\n  wraps selfhost logs --since 2d",
+      "https://wraps.dev/docs/self-hosting"
+    ),
+
   route53PermissionDenied: () =>
     new WrapsError(
       "Route53 permission denied",

@@ -96,6 +96,15 @@ export type CliFlags = {
   licenseKey?: string;
   appUrl?: string;
 
+  // Self-hosted logs
+  follow?: boolean;
+  errors?: boolean;
+  live?: boolean;
+  platform?: boolean;
+  since?: string;
+  filter?: string;
+  source?: string;
+
   // Help / version (informational; cli.ts short-circuits before parsing)
   help?: boolean;
   version?: boolean;
@@ -149,6 +158,9 @@ const STRING_FLAGS = [
   "cursor",
   "set",
   "volume",
+  "since",
+  "filter",
+  "source",
 ] as const;
 
 /**
@@ -186,6 +198,10 @@ const BOOLEAN_FLAGS = [
   "vdm-inbox",
   "help",
   "version",
+  "follow",
+  "errors",
+  "live",
+  "platform",
 ] as const;
 
 /**

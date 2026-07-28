@@ -73,6 +73,7 @@ export type {
   SelfhostDeployOptions,
   SelfhostDestroyOptions,
   SelfhostEnvOptions,
+  SelfhostLogsOptions,
   SelfhostStackConfig,
   SelfhostStackOutputs,
   SelfhostStatusOptions,

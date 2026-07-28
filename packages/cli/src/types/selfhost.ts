@@ -27,6 +27,29 @@ export type SelfhostEnvOptions = {
   json?: boolean;
 };
 
+export type SelfhostLogsOptions = {
+  region?: string;
+  /** Keep streaming instead of printing one window and exiting. */
+  follow?: boolean;
+  /** Show only genuine error lines (server pre-filter + structured refine). */
+  errors?: boolean;
+  /** Restrict to one component: api, web, workers, other. Defaults to all. */
+  source?: string;
+  /** Lookback window, e.g. `30m`, `6h`, `2d`. Defaults to `1h`. */
+  since?: string;
+  /** Raw CloudWatch Logs filter pattern; takes precedence over --errors. */
+  filter?: string;
+  /** Poll interval in seconds while following. Defaults to 3. */
+  interval?: string;
+  /** Use CloudWatch Live Tail (billed per minute) instead of polling. */
+  live?: boolean;
+  /** Include Lambda START/END/REPORT lines, hidden by default. */
+  platform?: boolean;
+  /** Print the full raw log line rather than the structured message body. */
+  verbose?: boolean;
+  json?: boolean;
+};
+
 export type SelfhostConfig = {
   neonProjectId?: string;
   databaseUrl: string;
