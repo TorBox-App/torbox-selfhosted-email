@@ -5,6 +5,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["web.wraps.localhost", "*.wraps.localhost"],
 
+  // Required for PostHog error tracking to symbolicate stack traces
+  productionBrowserSourceMaps: true,
+
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
   },
@@ -60,8 +63,12 @@ const nextConfig: NextConfig = {
 
 // PostHog source map upload configuration
 // Requires POSTHOG_PERSONAL_API_KEY and POSTHOG_ENV_ID env vars
+// Restricted to CI so local builds don't upload sourcemaps (and their
+// symbol sets) on every run
 const hasPostHogCredentials =
-  process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_ENV_ID;
+  process.env.POSTHOG_PERSONAL_API_KEY &&
+  process.env.POSTHOG_ENV_ID &&
+  Boolean(process.env.CI || process.env.VERCEL);
 
 const postHogWrapped = hasPostHogCredentials
   ? withPostHogConfig(nextConfig, {

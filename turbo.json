@@ -16,7 +16,12 @@
     "AWS_REGION",
     "WRAPS_EMAIL_ROLE_ARN",
     "EMAIL_FROM",
-    "BLOB_READ_WRITE_TOKEN"
+    "BLOB_READ_WRITE_TOKEN",
+    "POSTHOG_PERSONAL_API_KEY",
+    "POSTHOG_ENV_ID",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT"
   ],
   "cacheMaxSize": "10GB",
   "cacheMaxAge": "7d",
@@ -39,7 +44,12 @@
         "AWS_REGION",
         "WRAPS_EMAIL_ROLE_ARN",
         "EMAIL_FROM",
-        "BLOB_READ_WRITE_TOKEN"
+        "BLOB_READ_WRITE_TOKEN",
+        "POSTHOG_PERSONAL_API_KEY",
+        "POSTHOG_ENV_ID",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT"
       ]
     },
     "dev": {
