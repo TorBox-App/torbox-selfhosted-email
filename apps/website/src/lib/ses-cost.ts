@@ -23,16 +23,59 @@ import {
 
 export type SesPlanId = "alacarte" | "essentials" | "pro" | "enterprise";
 
+const TIER_1_LIMIT = 10_000_000;
+const TIER_2_LIMIT = 100_000_000;
+
+/** One marginal volume band. `upTo` is the cumulative monthly ceiling. */
+export type SesPlanTier = {
+  upTo: number;
+  perThousandEmails: number;
+};
+
 export type SesPlan = {
   id: SesPlanId;
   name: string;
   monthlyFee: number;
+  /**
+   * Headline rate, shown in copy and plan tables. Always equal to the first
+   * tier's rate — `sesSendingCost` is what prices real volume.
+   */
   perThousandEmails: number;
+  /**
+   * Marginal volume bands, cheapest-plan math included. An account sending 20M
+   * on Essentials pays $0.16/1K on the first 10M and $0.14/1K on the next 10M,
+   * for $3,000 — applying the headline rate to the whole volume would overstate
+   * it as $3,200.
+   */
+  tiers: SesPlanTier[];
   /** True for the plan AWS assigns to accounts that never opt in. */
   defaultForNewAccounts: boolean;
   summary: string;
   includesDedicatedIp: boolean;
 };
+
+/**
+ * Monthly sending cost for `emailsPerMonth`, walking the plan's marginal tiers.
+ * Excludes the plan's base fee.
+ */
+export function sesSendingCost(plan: SesPlan, emailsPerMonth: number): number {
+  let remaining = Math.max(0, emailsPerMonth);
+  let previousLimit = 0;
+  let cost = 0;
+
+  for (const tier of plan.tiers) {
+    if (remaining <= 0) {
+      break;
+    }
+    const capacity = tier.upTo - previousLimit;
+    const inThisTier = Math.min(remaining, capacity);
+    cost += (inThisTier / 1000) * tier.perThousandEmails;
+    remaining -= inThisTier;
+    previousLimit = tier.upTo;
+  }
+
+  return cost;
+}
 
 export const SES_PLANS: Record<SesPlanId, SesPlan> = {
   alacarte: {
@@ -40,6 +83,7 @@ export const SES_PLANS: Record<SesPlanId, SesPlan> = {
     name: "À la carte",
     monthlyFee: 0,
     perThousandEmails: 0.1,
+    tiers: [{ upTo: Number.POSITIVE_INFINITY, perThousandEmails: 0.1 }],
     defaultForNewAccounts: false,
     summary:
       "Pay-per-email with no subscription. The cheapest option for send-only workloads.",
@@ -50,6 +94,11 @@ export const SES_PLANS: Record<SesPlanId, SesPlan> = {
     name: "Essentials",
     monthlyFee: 0,
     perThousandEmails: 0.16,
+    tiers: [
+      { upTo: TIER_1_LIMIT, perThousandEmails: 0.16 },
+      { upTo: TIER_2_LIMIT, perThousandEmails: 0.14 },
+      { upTo: Number.POSITIVE_INFINITY, perThousandEmails: 0.11 },
+    ],
     defaultForNewAccounts: true,
     summary:
       "Bundles Virtual Deliverability Manager. AWS assigns this to every new account by default.",
@@ -60,6 +109,11 @@ export const SES_PLANS: Record<SesPlanId, SesPlan> = {
     name: "Pro",
     monthlyFee: 105,
     perThousandEmails: 0.22,
+    tiers: [
+      { upTo: TIER_1_LIMIT, perThousandEmails: 0.22 },
+      { upTo: TIER_2_LIMIT, perThousandEmails: 0.17 },
+      { upTo: Number.POSITIVE_INFINITY, perThousandEmails: 0.12 },
+    ],
     defaultForNewAccounts: false,
     summary:
       "Adds global inbox placement testing, one managed dedicated IP, and 2,500 email validations.",
@@ -70,6 +124,11 @@ export const SES_PLANS: Record<SesPlanId, SesPlan> = {
     name: "Enterprise",
     monthlyFee: 500,
     perThousandEmails: 0.23,
+    tiers: [
+      { upTo: TIER_1_LIMIT, perThousandEmails: 0.23 },
+      { upTo: TIER_2_LIMIT, perThousandEmails: 0.18 },
+      { upTo: Number.POSITIVE_INFINITY, perThousandEmails: 0.13 },
+    ],
     defaultForNewAccounts: false,
     summary:
       "Multi-Region, up to 1,000 tenants, 5 domains and 12 dedicated IPs.",
@@ -306,11 +365,13 @@ function sesLines(input: CostInput, plan: SesPlan): CostLine[] {
     });
   }
 
-  const perEmail = plan.perThousandEmails / 1000;
+  const tiered = input.emailsPerMonth > TIER_1_LIMIT && plan.tiers.length > 1;
   lines.push({
     name: "SES email sending",
-    cost: input.emailsPerMonth * perEmail,
-    details: `${input.emailsPerMonth.toLocaleString()} emails × $${plan.perThousandEmails.toFixed(2)}/1,000 (${plan.name})`,
+    cost: sesSendingCost(plan, input.emailsPerMonth),
+    details: tiered
+      ? `${input.emailsPerMonth.toLocaleString()} emails on ${plan.name}, priced across AWS's marginal volume tiers (from $${plan.perThousandEmails.toFixed(2)}/1,000)`
+      : `${input.emailsPerMonth.toLocaleString()} emails × $${plan.perThousandEmails.toFixed(2)}/1,000 (${plan.name})`,
   });
 
   return lines;
@@ -468,7 +529,7 @@ function sesPlanMonthlyCost(
   dedicatedIp: boolean
 ): number {
   const plan = SES_PLANS[planId];
-  const sendingCost = emailsPerMonth * (plan.perThousandEmails / 1000);
+  const sendingCost = sesSendingCost(plan, emailsPerMonth);
   const ipCost =
     dedicatedIp && !plan.includesDedicatedIp
       ? AWS_INFRA_PRICING.DEDICATED_IP_PER_MONTH

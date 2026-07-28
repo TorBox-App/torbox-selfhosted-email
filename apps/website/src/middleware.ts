@@ -15,8 +15,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match all pages; exclude static assets, API routes, and Next.js internals
+  // Match all pages; exclude static assets, API routes, and Next.js internals.
+  // `.well-known` and `.txt` are excluded because agents — the clients most
+  // likely to send `Accept: text/markdown` — are exactly who reads the
+  // discovery documents served there, and rewriting those to markdown returned
+  // llms.txt instead of the OAuth metadata, api-catalog, or robots.txt.
   matcher: [
-    "/((?!_next|api|ingest|.*\\.(?:js|css|png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2|ttf|mp4|pdf|zip)).*)",
+    "/((?!_next|api|ingest|\\.well-known|.*\\.(?:txt|js|css|png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2|ttf|mp4|pdf|zip)).*)",
   ],
 };
