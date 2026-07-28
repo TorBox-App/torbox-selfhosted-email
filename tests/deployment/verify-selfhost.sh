@@ -175,7 +175,7 @@ verify_selfhost_console_role() {
       done
     else
       fail "Self-hosted console role has no wraps-console-access-policy inline policy" \
-        "run 'wraps platform update-role --selfhosted' to repair it"
+        "run 'wraps selfhost update-role' to repair it"
     fi
   else
     fail "IAM role $SELFHOST_CONSOLE_ROLE not found" \
@@ -303,8 +303,8 @@ verify_selfhost_metadata() {
   fi
 
   # `apiUrl` is persisted empty before the stack runs, so an interrupted deploy
-  # leaves the service present but unusable. It is also what `platform connect
-  # --selfhosted` POSTs the control-plane API key to, so a stale value is not a
+  # leaves the service present but unusable. It is also what `wraps selfhost
+  # connect` POSTs the control-plane API key to, so a stale value is not a
   # cosmetic problem.
   local api_url
   api_url=$(echo "$metadata" | jq -r '.services.selfhost.apiUrl // ""')
@@ -331,7 +331,7 @@ verify_selfhost_metadata() {
     fi
   else
     fail "selfhostPlatform.externalId is unset" \
-      "run 'wraps selfhost connect' — without it 'wraps platform update-role --selfhosted' cannot repair the trust policy"
+      "run 'wraps selfhost connect' — without it 'wraps selfhost update-role' cannot repair the trust policy"
   fi
 
   if [[ -n "$platform_external_id" ]]; then
@@ -368,7 +368,7 @@ verify_selfhost_metadata() {
   # The legacy `--reroute-events` path wrote the self-hosted URL into the
   # PRIMARY webhook fields, which are now reserved for the platform. Leaving it
   # in place builds two targets pointed at the same self-hosted API and
-  # delivers every event twice; `platform connect --selfhosted` migrates it.
+  # delivers every event twice; `wraps selfhost connect` migrates it.
   local legacy_webhook_url
   legacy_webhook_url=$(echo "$metadata" | jq -r '.services.email.webhookUrl // ""')
   if [[ -z "$legacy_webhook_url" ]]; then

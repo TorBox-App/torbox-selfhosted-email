@@ -97,7 +97,7 @@ fi
 #
 # The CLI finds an SST deployment by scanning ListFunctions for the app prefix
 # plus the SelfhostApi logical name — a Pulumi-only lookup silently no-opped
-# here, leaving `platform connect --selfhosted` unable to find the plane it was
+# here, leaving `wraps selfhost connect` unable to find the plane it was
 # supposed to register with. These two commands are the observable surface of
 # that recovery.
 
@@ -232,11 +232,12 @@ fi
 
 # ─── Phase 5: update-role, both directions ───────────────────────────
 #
-# `wraps platform update-role` writes a trust policy. Which role it writes, and
-# which principal it names, is keyed off --selfhosted — and the regression it
-# guards is not that the flag is broken, but that running EITHER form silently
-# rewrote the OTHER plane's role. Both forms run here, and both roles are
-# re-verified after each.
+# `update-role` writes a trust policy. Which role it writes, and which principal
+# it names, is keyed off the invoked subcommand — `wraps selfhost update-role`
+# for the self-hosted plane, `wraps platform update-role` for the SaaS one. The
+# regression this guards is not that one form is broken, but that running EITHER
+# silently rewrote the OTHER plane's role. Both forms run here, and both roles
+# are re-verified after each.
 
 printf "\n${YELLOW}Phase 5: platform update-role (mutating)${NC}\n"
 
@@ -247,20 +248,20 @@ elif [[ "$CONNECTED_SELFHOST" != "true" ]]; then
 else
   reset_counters
 
-  section "Phase 5: wraps platform update-role --selfhosted"
+  section "Phase 5: wraps selfhost update-role"
 
-  UPDATE_OUT=$(wraps platform update-role --selfhosted --region "$REGION" --json 2>/dev/null | extract_json) || true
+  UPDATE_OUT=$(wraps selfhost update-role --region "$REGION" --json 2>/dev/null | extract_json) || true
   if echo "$UPDATE_OUT" | jq -e '.success == true' &>/dev/null; then
-    pass "update-role --selfhosted succeeded"
+    pass "selfhost update-role succeeded"
   else
-    fail "update-role --selfhosted failed" "$UPDATE_OUT"
+    fail "selfhost update-role failed" "$UPDATE_OUT"
   fi
 
   if echo "$UPDATE_OUT" | jq -e '.data.roleName == "wraps-selfhost-console-access-role"' &>/dev/null; then
-    pass "update-role --selfhosted targeted wraps-selfhost-console-access-role"
+    pass "selfhost update-role targeted wraps-selfhost-console-access-role"
   else
-    fail "update-role --selfhosted reported role $(echo "$UPDATE_OUT" | jq -r '.data.roleName // "MISSING"')" \
-      "without the flag reaching the arg parser it silently updates the platform role instead"
+    fail "selfhost update-role reported role $(echo "$UPDATE_OUT" | jq -r '.data.roleName // "MISSING"')" \
+      "self-hosted intent travels with the subcommand — a router that does not pass selfhosted:true silently updates the platform role instead"
   fi
 
   verify_selfhost_console_role "$ACCOUNT_ID"

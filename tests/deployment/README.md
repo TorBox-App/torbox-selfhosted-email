@@ -64,10 +64,10 @@ untouched — that domain drives throwaway SES deploys into the CLI test account
 | Phase | What it proves | Mutates |
 |---|---|---|
 | 1. Deployed SST resources | The license reaches the API as `WRAPS_LICENSE_KEY` (not the bare `LICENSE_KEY` the API never reads), the dashboard Lambda is licensed too, the API/dashboard/workers all point at this deployment's own URLs, the console role name is the self-hosted one, Sentry is the self-hoster's | no |
-| 2. CLI resolution | `selfhost status` and `selfhost env` find an **SST** deployment — the Pulumi-only lookup silently no-opped here, leaving `platform connect --selfhosted` unable to find the plane | no |
+| 2. CLI resolution | `selfhost status` and `selfhost env` find an **SST** deployment — the Pulumi-only lookup silently no-opped here, leaving `selfhost connect` unable to find the plane | no |
 | 3. Console roles + identity | Both console roles exist with the right principals, neither connect flow overwrote the other's trust policy, the enforcer invoke grant reached the self-hosted role, and the two control-plane identities are distinct | no |
 | 4. SES event delivery | Both planes' targets coexist on one rule; with `WRAPS_SELFHOST_LIVE_SEND=1`, one real send proves events are actually accepted | one send |
-| 5. `platform update-role` | Both forms of the command write the role they claim and leave the other plane's role alone | IAM trust policies |
+| 5. `update-role`, both forms | Both forms of the command write the role they claim and leave the other plane's role alone | IAM trust policies |
 
 Phases 3–5 need `wraps selfhost connect` to have run against the account. On a
 freshly deployed plane it has not, which is a legitimate state — those phases
