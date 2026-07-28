@@ -226,6 +226,13 @@ export default $config({
         RATE_LIMIT_TABLE_NAME: rateLimitTable.name,
         SCHEDULER_ROLE_ARN: schedulerRole.arn,
         SCHEDULER_GROUP_NAME: schedulerGroup.name,
+        // Self-hosted assumes its OWN console role; sharing the platform's
+        // would mean overwriting its single-principal trust policy.
+        // Literal, not an import: infra/ has no node_modules, so importing
+        // @wraps/core here breaks the SST esbuild bundle at deploy time.
+        // Pinned to SELFHOST_CONSOLE_ACCESS_ROLE_NAME by
+        // scripts/selfhost/__tests__/selfhost-config-role-name.test.ts
+        WRAPS_CONSOLE_ROLE_NAME: "wraps-selfhost-console-access-role",
         ...(process.env.AI_GATEWAY_API_KEY && {
           AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
         }),

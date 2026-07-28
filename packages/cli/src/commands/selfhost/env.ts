@@ -134,9 +134,12 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   console.log(`#      "Statement": [{`);
   console.log(`#        "Effect": "Allow",`);
   console.log(`#        "Action": "sts:AssumeRole",`);
+  console.log(`#        "Resource": [`);
   console.log(
-    `#        "Resource": "arn:aws:iam::*:role/wraps-console-access-role"`
+    `#          "arn:aws:iam::*:role/wraps-selfhost-console-access-role",`
   );
+  console.log(`#          "arn:aws:iam::*:role/wraps-console-access-role"`);
+  console.log("#        ]");
   console.log("#      }]");
   console.log("#    }");
   console.log("#");

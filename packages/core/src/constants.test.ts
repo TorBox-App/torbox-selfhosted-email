@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_EVENT_TYPES,
+  CONSOLE_ACCESS_ROLE_NAME,
   DEFAULT_CONFIG_SET_NAME,
   DEFAULT_EVENT_TYPES,
   DEFAULT_HISTORY_RETENTION,
@@ -9,6 +10,7 @@ import {
   DEFAULT_TAGS,
   EXTERNAL_ID_PREFIX,
   RESOURCE_PREFIX,
+  SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
   VERCEL_OIDC_THUMBPRINT,
   VERCEL_OIDC_URL,
 } from "./constants.js";
@@ -105,5 +107,23 @@ describe("DEFAULT_TAGS", () => {
 describe("EXTERNAL_ID_PREFIX", () => {
   it("is exactly wraps_ — changing this breaks customer IAM trust policies", () => {
     expect(EXTERNAL_ID_PREFIX).toBe("wraps_");
+  });
+});
+
+describe("console access role names", () => {
+  it("platform and self-hosted role names are not equal", () => {
+    expect(CONSOLE_ACCESS_ROLE_NAME).not.toBe(
+      SELFHOST_CONSOLE_ACCESS_ROLE_NAME
+    );
+  });
+
+  it("self-hosted role name starts with wraps-selfhost-", () => {
+    expect(
+      SELFHOST_CONSOLE_ACCESS_ROLE_NAME.startsWith("wraps-selfhost-")
+    ).toBe(true);
+  });
+
+  it("is exactly wraps-console-access-role — changing this orphans every existing platform customer's deployed role", () => {
+    expect(CONSOLE_ACCESS_ROLE_NAME).toBe("wraps-console-access-role");
   });
 });

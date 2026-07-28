@@ -18,6 +18,10 @@ import {
 } from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro, select } from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+import {
+  CONSOLE_ACCESS_ROLE_NAME,
+  SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
+} from "@wraps/core";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
@@ -414,7 +418,9 @@ async function updatePlatformRole(
   externalId: string | undefined,
   selfhosted: boolean
 ): Promise<void> {
-  const roleName = "wraps-console-access-role";
+  const roleName = selfhosted
+    ? SELFHOST_CONSOLE_ACCESS_ROLE_NAME
+    : CONSOLE_ACCESS_ROLE_NAME;
   const iam = new IAMClient({ region: "us-east-1" });
 
   // Self-hosted customers run the dashboard in their own AWS account, so the
@@ -1185,7 +1191,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     }
 
     // 8. Update platform access role
-    const roleName = "wraps-console-access-role";
+    const roleName = CONSOLE_ACCESS_ROLE_NAME;
     const iam = new IAMClient({ region: "us-east-1" });
 
     let roleExists = false;

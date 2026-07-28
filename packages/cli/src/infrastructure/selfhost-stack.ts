@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { SELFHOST_CONSOLE_ACCESS_ROLE_NAME } from "@wraps/core";
 import type {
   SelfhostStackConfig,
   SelfhostStackOutputs,
@@ -201,6 +202,9 @@ export async function deploySelfhostStack(
         WORKFLOW_QUEUE_ARN: workflowQueue.arn,
         SCHEDULER_ROLE_ARN: schedulerRole.arn,
         SCHEDULER_GROUP_NAME: schedulerGroup.name,
+        // Self-hosted assumes its OWN console role; sharing the platform's
+        // would mean overwriting its single-principal trust policy.
+        WRAPS_CONSOLE_ROLE_NAME: SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
       },
     },
     tags: { ManagedBy: "wraps-cli", Service: "selfhost" },

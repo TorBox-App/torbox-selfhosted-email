@@ -9,6 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { CONSOLE_ACCESS_ROLE_NAME } from "@wraps/core";
 import { and, awsAccount, db, eq, sqlExpr } from "@wraps/db";
 import { count } from "drizzle-orm";
 import { t } from "elysia";
@@ -82,7 +83,12 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
         // Generate secrets
         const webhookSecret = randomBytes(32).toString("hex");
         const externalId = existing?.externalId || generateExternalId();
-        const roleArn = `arn:aws:iam::${body.accountId}:role/wraps-console-access-role`;
+        // Self-hosted deployments assume their own role so they never contend
+        // with the platform over a single trust policy. SST injects "" for
+        // unset variables, so `||` (not `??`) is required here.
+        const consoleRoleName =
+          process.env.WRAPS_CONSOLE_ROLE_NAME || CONSOLE_ACCESS_ROLE_NAME;
+        const roleArn = `arn:aws:iam::${body.accountId}:role/${consoleRoleName}`;
 
         // Cast features to a known shape for property access
         const features = body.features as Record<string, unknown> | undefined;

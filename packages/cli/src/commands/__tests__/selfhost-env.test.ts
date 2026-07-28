@@ -142,18 +142,27 @@ describe("selfhostEnv", () => {
   });
 
   describe("OIDC instructions", () => {
-    it("outputs wildcard resource ARN for sts:AssumeRole, not selfhost account", async () => {
+    it("outputs wildcard resource ARNs for both console roles, not selfhost account", async () => {
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
       await selfhostEnv({ region: "us-east-1" });
 
       const output = consoleSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      // Both the self-hosted role and the platform role must be listed — an
+      // already-migrated install needs the new name, and an install mid-migration
+      // still has the old ARN stored in its DB.
       expect(output).toContain(
-        `"Resource": "arn:aws:iam::*:role/wraps-console-access-role"`
+        `"arn:aws:iam::*:role/wraps-selfhost-console-access-role"`
       );
-      // Must NOT scope the resource to the selfhost account — customers live in other accounts
+      expect(output).toContain(
+        `"arn:aws:iam::*:role/wraps-console-access-role"`
+      );
+      // Must NOT scope either resource to the selfhost account — customers live in other accounts
       expect(output).not.toContain(
-        `"Resource": "arn:aws:iam::115690362111:role/wraps-console-access-role"`
+        `"arn:aws:iam::115690362111:role/wraps-console-access-role"`
+      );
+      expect(output).not.toContain(
+        `"arn:aws:iam::115690362111:role/wraps-selfhost-console-access-role"`
       );
     });
 

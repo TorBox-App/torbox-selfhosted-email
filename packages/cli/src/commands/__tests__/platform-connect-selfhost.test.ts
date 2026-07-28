@@ -172,6 +172,28 @@ describe("platform connect - selfhost trust policy", () => {
     );
   });
 
+  it("creates the self-hosted role name when --selfhosted is passed", async () => {
+    await connect({ yes: true, selfhosted: true });
+
+    const createCalls = iamMock.commandCalls(CreateRoleCommand);
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0].args[0].input.RoleName).toBe(
+      "wraps-selfhost-console-access-role"
+    );
+  });
+
+  it("creates the platform role name for a SaaS connect from a machine with selfhost metadata", async () => {
+    // Companion to the trust-policy regression above: a stray SaaS connect must
+    // touch neither the principal nor the name of the self-hosted role.
+    await connect({ yes: true });
+
+    const createCalls = iamMock.commandCalls(CreateRoleCommand);
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0].args[0].input.RoleName).toBe(
+      "wraps-console-access-role"
+    );
+  });
+
   it("keeps the Wraps platform principal for a SaaS connect from a machine with selfhost metadata", async () => {
     // Regression: the principal used to be chosen from metadata presence, so a
     // plain SaaS connect on a self-hoster's machine silently revoked

@@ -79,3 +79,22 @@ export const DEFAULT_TAGS = {
  * NEVER change this — existing customer roles depend on it for sts:AssumeRole.
  */
 export const EXTERNAL_ID_PREFIX = "wraps_";
+
+/**
+ * IAM role the Wraps platform assumes in a customer's AWS account for console
+ * access (CloudWatch metrics, SES data). Trusts the Wraps platform account.
+ * NEVER change this — every existing platform customer's deployed role uses it.
+ */
+export const CONSOLE_ACCESS_ROLE_NAME = "wraps-console-access-role";
+
+/**
+ * IAM role a SELF-HOSTED control plane assumes in the same account. Deliberately
+ * distinct from CONSOLE_ACCESS_ROLE_NAME: an IAM trust policy names one
+ * principal, so sharing one role forces the platform and a self-hosted install
+ * to overwrite each other's trust policy and break the loser's dashboard.
+ *
+ * Both the API (which stores the role ARN) and the CLI (which creates the role)
+ * must agree on this string — hence a shared constant rather than two literals.
+ */
+export const SELFHOST_CONSOLE_ACCESS_ROLE_NAME =
+  "wraps-selfhost-console-access-role";
