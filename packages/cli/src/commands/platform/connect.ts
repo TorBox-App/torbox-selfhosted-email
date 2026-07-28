@@ -860,7 +860,7 @@ async function authenticatedConnect(
           emailService.webhookUrl = undefined;
           emailService.webhookSecret = undefined;
           log.warn(
-            `Migrated this account off the legacy event reroute.\n` +
+            "Migrated this account off the legacy event reroute.\n" +
               `  SES events now reach your self-hosted API via a dedicated target (${pc.cyan(apiBaseUrl)}).\n` +
               `  The Wraps platform is NOT receiving events for this account — run ${pc.cyan("wraps platform connect")} (without ${pc.cyan("--selfhosted")}) if you also want app.wraps.dev connected.`
           );

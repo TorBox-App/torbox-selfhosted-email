@@ -33,6 +33,7 @@ vi.mock("../../infrastructure/email-stack.js");
 vi.mock("../../telemetry/events.js");
 
 import * as prompts from "@clack/prompts";
+import * as pulumi from "@pulumi/pulumi";
 import * as aws from "../../utils/shared/aws.js";
 import * as config from "../../utils/shared/config.js";
 import * as fsUtils from "../../utils/shared/fs.js";
@@ -77,6 +78,27 @@ const NON_SELFHOST_SMS_METADATA = {
   timestamp: "2026-05-26T00:00:00.000Z",
   services: {
     sms: { config: { sendingEnabled: true }, preset: "production" },
+  },
+};
+
+// Self-hosted + email: the fixture that exercises deployEventBridge's Pulumi
+// path. `webhookSecret: "platform-secret-abc"` stands in for an existing
+// app.wraps.dev connection so tests can assert it survives a selfhost
+// connect (and vice versa).
+const SELFHOST_EMAIL_METADATA = {
+  ...SELFHOST_SMS_METADATA,
+  services: {
+    ...SELFHOST_SMS_METADATA.services,
+    email: {
+      preset: "production" as const,
+      config: {
+        tracking: { enabled: true, opens: true, clicks: true },
+        sendingEnabled: true,
+        eventTracking: { enabled: true, eventBridge: true },
+      },
+      deployedAt: "2026-05-26T00:00:00.000Z",
+      webhookSecret: "platform-secret-abc",
+    },
   },
 };
 
@@ -369,5 +391,134 @@ describe("platform connect - selfhost trust policy", () => {
     expect(trustPolicy.Statement[0].Principal.AWS).toBe(
       "arn:aws:iam::123456789012:root"
     );
+  });
+
+  describe("selfhost webhook target", () => {
+    // Set by the mocked buildEmailStackConfig on every deployEventBridge call —
+    // this is what proves whether the platform/selfhost webhook keys were
+    // passed as explicit overrides or left for metadata reconstruction.
+    let capturedOverrides: any;
+
+    beforeEach(() => {
+      capturedOverrides = undefined;
+
+      // Every fixture in the outer describe is SMS-only specifically to skip
+      // this Pulumi path, so each case here must re-supply an email + selfhost
+      // fixture and clone it — authenticatedConnect mutates the loaded object
+      // directly (webhookUrl/webhookSecret/selfhostWebhook), and a
+      // module-level fixture handed out by reference would leak mutations
+      // across tests.
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        structuredClone(SELFHOST_EMAIL_METADATA) as any
+      );
+
+      vi.mocked(metadata.buildEmailStackConfig).mockImplementation(
+        (_meta, _region, overrides) => {
+          capturedOverrides = overrides;
+          return {} as any;
+        }
+      );
+
+      const mockStack = {
+        setConfig: vi.fn().mockResolvedValue(undefined),
+        refresh: vi.fn().mockResolvedValue(undefined),
+        exportStack: vi
+          .fn()
+          .mockResolvedValue({ deployment: { resources: [] } }),
+        up: vi.fn().mockResolvedValue({}),
+      } as any;
+      vi.mocked(
+        pulumi.automation.LocalWorkspace.createOrSelectStack
+      ).mockResolvedValue(mockStack);
+    });
+
+    it("writes the self-hosted secret to selfhostWebhook instead of clobbering the platform's", async () => {
+      await connect({ yes: true, selfhosted: true });
+
+      const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      expect(saved.services.email.selfhostWebhook).toEqual({
+        url: "https://abc123.lambda-url.us-east-1.on.aws",
+        secret: "webhook-secret-789",
+      });
+    });
+
+    it("preserves the platform webhook and passes no webhook override key (coexistence regression)", async () => {
+      await connect({ yes: true, selfhosted: true });
+
+      const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      expect(saved.services.email.webhookSecret).toBe("platform-secret-abc");
+      expect("webhook" in capturedOverrides).toBe(false);
+      expect(capturedOverrides.selfhostWebhook.webhookUrl).toBe(
+        "https://abc123.lambda-url.us-east-1.on.aws"
+      );
+    });
+
+    it("keeps a plain SaaS connect writing webhookSecret exactly as before", async () => {
+      await connect({ yes: true });
+
+      const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      expect(saved.services.email.webhookSecret).toBe("webhook-secret-789");
+      expect(saved.services.email.selfhostWebhook).toBeUndefined();
+      expect(capturedOverrides.webhook).toBeTruthy();
+    });
+
+    it("migrates a legacy reroute onto selfhostWebhook instead of duplicating it", async () => {
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        structuredClone({
+          ...SELFHOST_EMAIL_METADATA,
+          services: {
+            ...SELFHOST_EMAIL_METADATA.services,
+            email: {
+              ...SELFHOST_EMAIL_METADATA.services.email,
+              webhookUrl: "https://abc123.lambda-url.us-east-1.on.aws",
+              webhookSecret: "old-rerouted-secret",
+            },
+          },
+        }) as any
+      );
+
+      await connect({ yes: true, selfhosted: true });
+
+      const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      expect(saved.services.email.webhookUrl).toBeUndefined();
+      expect(saved.services.email.webhookSecret).toBeUndefined();
+      expect(saved.services.email.selfhostWebhook.secret).toBe(
+        "webhook-secret-789"
+      );
+      expect(prompts.log.warn).toHaveBeenCalled();
+    });
+
+    it("preserves an existing self-hosted target through a later SaaS connect", async () => {
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        structuredClone({
+          ...SELFHOST_EMAIL_METADATA,
+          services: {
+            ...SELFHOST_EMAIL_METADATA.services,
+            email: {
+              ...SELFHOST_EMAIL_METADATA.services.email,
+              webhookSecret: "platform-secret-abc",
+              selfhostWebhook: {
+                url: "https://abc123.lambda-url.us-east-1.on.aws",
+                secret: "sh-secret-old",
+              },
+            },
+          },
+        }) as any
+      );
+
+      await connect({ yes: true });
+
+      const saved = vi.mocked(metadata.saveConnectionMetadata).mock
+        .calls[0][0] as any;
+      expect(saved.services.email.selfhostWebhook).toEqual({
+        url: "https://abc123.lambda-url.us-east-1.on.aws",
+        secret: "sh-secret-old",
+      });
+      expect("selfhostWebhook" in capturedOverrides).toBe(false);
+    });
   });
 });
