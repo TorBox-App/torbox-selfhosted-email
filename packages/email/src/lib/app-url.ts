@@ -5,14 +5,17 @@
  * platform config set NEXT_PUBLIC_APP_URL, the self-hosted config additionally
  * sets BETTER_AUTH_URL on the web app and APP_BASE_URL on the queue workers.
  *
- * Every recipient-facing caller is routed through here. Three non-recipient
+ * Every recipient-facing caller is routed through here. Two non-recipient
  * callers still read NEXT_PUBLIC_APP_URL directly, each deliberately:
  * stripe-webhooks.ts builds a billing link on a path self-host never reaches
  * (no Stripe); organization-settings-sso.tsx's constant is inlined at build
  * time, so it needs the build environment to be right rather than a runtime
- * resolver; event-limit.ts's upgrade URL becomes unreachable on a licensed
- * self-host once the license-key work lands, at which point delete it rather
- * than resolve it.
+ * resolver.
+ *
+ * apps/api/src/middleware/event-limit.ts is a third case and does NOT read the
+ * env var — it hardcodes an app.wraps.dev upgrade link. A licensed self-host
+ * cannot reach that page, so the fix is to drop the field on a licensed
+ * deployment rather than resolve it here.
  *
  * Not to be confused with the resolveAppUrl in apps/api/src/lib/urls.ts, which
  * DOES fall back to the platform on purpose — it advertises service-discovery
