@@ -32,6 +32,7 @@ export type DeployOptions = {
   region?: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  sentryDsn?: string;
   yes?: boolean;
   rerouteEvents?: boolean;
 };
@@ -126,6 +127,10 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     envLines.push(`SELFHOST_WEB_DOMAIN=${options.webDomain}`);
   if (options.aiGatewayApiKey)
     envLines.push(`AI_GATEWAY_API_KEY=${options.aiGatewayApiKey}`);
+  // Flag only, never `process.env.SENTRY_DSN` — inheriting an ambient DSN from
+  // the operator's shell would point a customer's error stream at whoever ran
+  // the deploy. Opting in has to be explicit.
+  if (options.sentryDsn) envLines.push(`SENTRY_DSN=${options.sentryDsn}`);
 
   await writeFile(ENV_PATH, `${envLines.join("\n")}\n`, "utf-8");
   await chmod(ENV_PATH, 0o600);
@@ -227,6 +232,7 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
       ...(options.aiGatewayApiKey && {
         aiGatewayApiKey: options.aiGatewayApiKey,
       }),
+      ...(options.sentryDsn && { sentryDsn: options.sentryDsn }),
     },
     apiUrl,
     webUrl,
@@ -306,6 +312,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "region",
       "web-domain",
       "ai-gateway-api-key",
+      "sentry-dsn",
     ],
     boolean: ["yes", "reroute-events"],
     alias: {
@@ -314,6 +321,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "license-key": "licenseKey",
       "web-domain": "webDomain",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "sentry-dsn": "sentryDsn",
       "reroute-events": "rerouteEvents",
     },
   });
@@ -323,6 +331,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     region: flags.region,
     webDomain: flags["web-domain"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
+    sentryDsn: flags["sentry-dsn"],
     yes: flags.yes,
     rerouteEvents: flags["reroute-events"],
   }).catch((err) => {

@@ -553,6 +553,15 @@ pnpm install`,
             .
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
+            Pass{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">--sentry-dsn</code>{" "}
+            to send this deployment&apos;s errors to your own Sentry project.
+            Without it, a self-hosted stack reports errors nowhere — the
+            dashboard&apos;s error page still shows an Error ID, but that ID
+            only resolves in your own CloudWatch logs. Nothing is ever reported
+            to Wraps either way.
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
             If you already deployed Wraps email infrastructure to this account,{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               --reroute-events
@@ -1508,6 +1517,27 @@ pnpm install`,
                     AI_GATEWAY_API_KEY
                   </code>{" "}
                   for direct Anthropic access without a gateway
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    SENTRY_DSN
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  DSN for <em>your</em> Sentry project — turns on error
+                  reporting for both the API Lambda and the dashboard (the
+                  browser copy,{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    NEXT_PUBLIC_SENTRY_DSN
+                  </code>
+                  , is derived from it at build time). Pass via{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    --sentry-dsn
+                  </code>{" "}
+                  on deploy or upgrade. Unset means errors are reported nowhere
                 </td>
               </tr>
               <tr>

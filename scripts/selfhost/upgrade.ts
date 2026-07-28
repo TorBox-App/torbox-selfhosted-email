@@ -30,6 +30,7 @@ export type UpgradeOptions = {
   region?: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  sentryDsn?: string;
   yes?: boolean;
   rerouteEvents?: boolean;
 };
@@ -100,11 +101,13 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  // Docs promise these flags for adding a domain / AI key after first deploy
-  if (options.webDomain || options.aiGatewayApiKey) {
+  // Docs promise these flags for adding a domain / AI key / Sentry DSN after
+  // the first deploy. upsert, not append: rotating a DSN has to replace it.
+  if (options.webDomain || options.aiGatewayApiKey || options.sentryDsn) {
     await upsertEnvVars(ENV_PATH, {
       SELFHOST_WEB_DOMAIN: options.webDomain,
       AI_GATEWAY_API_KEY: options.aiGatewayApiKey,
+      SENTRY_DSN: options.sentryDsn,
     });
     clack.log.info("Updated .env.selfhost with provided options");
   }
@@ -310,12 +313,13 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const flags = mri(process.argv.slice(2), {
-    string: ["region", "web-domain", "ai-gateway-api-key"],
+    string: ["region", "web-domain", "ai-gateway-api-key", "sentry-dsn"],
     boolean: ["yes", "reroute-events"],
     alias: {
       y: "yes",
       "web-domain": "webDomain",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "sentry-dsn": "sentryDsn",
       "reroute-events": "rerouteEvents",
     },
   });
@@ -323,6 +327,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     region: flags.region,
     webDomain: flags["web-domain"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
+    sentryDsn: flags["sentry-dsn"],
     yes: flags.yes,
     rerouteEvents: flags["reroute-events"],
   }).catch((err) => {

@@ -368,6 +368,24 @@ describe("scripts/selfhost/upgrade", () => {
     expect(files.env).toMatch(/SELFHOST_WEB_DOMAIN=mail\.acme\.com/);
   });
 
+  it("replaces an existing SENTRY_DSN when --sentry-dsn is passed", async () => {
+    files.env = `${files.env}\nSENTRY_DSN=https://old@o1.ingest.sentry.io/1\n`;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({
+      region: "us-east-1",
+      yes: true,
+      sentryDsn: "https://new@o2.ingest.sentry.io/2",
+    });
+
+    // upsert, not append — a rotated DSN must not leave the old line behind for
+    // parseEnvFile to pick up first.
+    expect(files.env).toMatch(
+      /SENTRY_DSN=https:\/\/new@o2\.ingest\.sentry\.io\/2/
+    );
+    expect(files.env).not.toContain("https://old@o1.ingest.sentry.io/1");
+  });
+
   it("runs database migrations after deploy", async () => {
     const { upgrade } = await import("../upgrade.js");
     await upgrade({ region: "us-east-1", yes: true });

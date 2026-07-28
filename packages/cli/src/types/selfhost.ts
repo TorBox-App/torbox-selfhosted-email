@@ -36,6 +36,7 @@ export type SelfhostConfig = {
   betterAuthSecret: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  sentryDsn?: string;
 };
 
 export type SelfhostDestroyOptions = {

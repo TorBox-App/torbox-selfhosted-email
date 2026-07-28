@@ -233,6 +233,53 @@ describe("scripts/selfhost/deploy", () => {
     );
   });
 
+  it("writes SENTRY_DSN to .env.selfhost and metadata when the flag is passed", async () => {
+    const { deploy } = await import("../deploy.js");
+    await deploy({
+      databaseUrl: "postgres://user:pass@host/db",
+      licenseKey: "wraps_lic_test",
+      region: "us-east-1",
+      sentryDsn: "https://abc123@o1.ingest.sentry.io/42",
+    });
+
+    const [, content] =
+      mockWriteFile.mock.calls.find(([path]) =>
+        String(path).includes(".env.selfhost")
+      ) ?? [];
+    expect(String(content)).toMatch(
+      /SENTRY_DSN=https:\/\/abc123@o1\.ingest\.sentry\.io\/42/
+    );
+
+    // Persisted too, so `selfhost:upgrade` and the env dump keep reporting on.
+    const saved = vi.mocked(metadataModule.saveConnectionMetadata).mock
+      .calls[0][0];
+    expect(saved.services.selfhost?.config.sentryDsn).toBe(
+      "https://abc123@o1.ingest.sentry.io/42"
+    );
+  });
+
+  it("omits SENTRY_DSN entirely when no DSN is provided", async () => {
+    // Opt-in only: without a DSN the deployed SDK no-ops, and nothing is
+    // reported anywhere — least of all to Wraps.
+    process.env.SENTRY_DSN = "https://wraps-own-dsn@o0.ingest.sentry.io/1";
+    try {
+      const { deploy } = await import("../deploy.js");
+      await deploy({
+        databaseUrl: "postgres://user:pass@host/db",
+        licenseKey: "wraps_lic_test",
+        region: "us-east-1",
+      });
+
+      const [, content] =
+        mockWriteFile.mock.calls.find(([path]) =>
+          String(path).includes(".env.selfhost")
+        ) ?? [];
+      expect(String(content)).not.toContain("SENTRY_DSN");
+    } finally {
+      delete process.env.SENTRY_DSN;
+    }
+  });
+
   it("runs sst install then sst deploy, with .env.selfhost written before install", async () => {
     const { deploy } = await import("../deploy.js");
     await deploy({

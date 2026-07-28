@@ -54,12 +54,22 @@ export default $config({
     // wraps.dev values into the customer's deployment — these vars became
     // load-bearing for the API's email links and .well-known issuer. The repo
     // has precedent for exactly this (WRAPS_LICENSE_KEY poisoning test runs).
-    config({
+    const envFile = config({
       path: resolve(process.cwd(), "..", ".env.selfhost"),
       override: true,
     });
 
     const webDomain = process.env.SELFHOST_WEB_DOMAIN;
+
+    // Optional: point this deployment's error reporting at the operator's OWN
+    // Sentry project. Unset means the SDK initializes without a DSN and no-ops,
+    // which is the status quo — a self-hosted stack reports errors nowhere.
+    //
+    // Read from the env FILE, not process.env: `override: true` only overrides
+    // keys the file actually contains, so a maintainer who runs a customer
+    // deploy from this repo with Wraps' own SENTRY_DSN exported would otherwise
+    // bake it in and silently stream that customer's errors to us.
+    const sentryDsn = envFile.parsed?.SENTRY_DSN;
 
     // EventBridge Scheduler resources (must come before queues to avoid circular deps)
     const schedulerGroup = new aws.scheduler.ScheduleGroup(
@@ -239,6 +249,7 @@ export default $config({
         ...(process.env.ANTHROPIC_API_KEY && {
           ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
         }),
+        ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
       },
       link: [rateLimitTable, batchQueue, workflowQueue],
       nodejs: {
@@ -302,6 +313,14 @@ export default $config({
         }),
         ...(process.env.AI_MODEL && {
           AI_MODEL: process.env.AI_MODEL,
+        }),
+        // Two vars, one input: the server SDK reads SENTRY_DSN, the browser SDK
+        // reads the NEXT_PUBLIC_ copy that Next inlines at build time. A DSN is
+        // write-only and ships in the client bundle by design, so mirroring it
+        // leaks nothing.
+        ...(sentryDsn && {
+          SENTRY_DSN: sentryDsn,
+          NEXT_PUBLIC_SENTRY_DSN: sentryDsn,
         }),
       },
       permissions: [
