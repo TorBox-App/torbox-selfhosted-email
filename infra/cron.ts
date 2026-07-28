@@ -109,7 +109,9 @@ export const eventFeedStalenessCron = new sst.aws.CronV2("EventFeedStaleness", {
       // trust policy also trusts this platform account for sts:AssumeRole.
       WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
     },
-    nodejs: { install: ["pg"] },
+    // @sentry/profiling-node ships native .node binaries that esbuild cannot
+    // bundle; installing it keeps it external, the same as the API handler.
+    nodejs: { install: ["pg", "@sentry/profiling-node"] },
     permissions: [
       {
         actions: ["sts:AssumeRole"],
