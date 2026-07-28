@@ -33,6 +33,7 @@ import {
 } from "@wraps/db";
 import {
   generateSESTemplateName,
+  resolveAppUrl,
   toSesVariableName,
   transformVariablesForSes,
   upsertSESTemplate,
@@ -42,6 +43,7 @@ import {
   extractCanonicalVars,
   normalizePlainTextForSes,
 } from "@wraps/template-render";
+import { resolveApiBaseUrl } from "@wraps/unsubscribe-token";
 import { and, sql } from "drizzle-orm";
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { awsDefaults } from "../../lib/aws-defaults";
@@ -283,8 +285,13 @@ export async function handleSendEmail(
   // {{unsubscribeUrl}} in their footer. List-Unsubscribe headers are still
   // marketing-only (see below).
   const isMarketing = tmpl.emailType === "marketing";
-  const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
-  const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
+  // Both throw when the deployment has not configured its own URLs. That is the
+  // intended behavior for a recipient-facing link: a self-hosted customer's
+  // unsubscribe token is meaningless to the Wraps platform, so a silent
+  // fallback would mail their contacts a dead link on another company's domain.
+  // Do not wrap these in a try/catch that restores a default.
+  const apiBaseUrl = resolveApiBaseUrl();
+  const appBaseUrl = resolveAppUrl();
 
   const unsubscribeToken = await generateUnsubscribeToken(
     contactRecord.id,

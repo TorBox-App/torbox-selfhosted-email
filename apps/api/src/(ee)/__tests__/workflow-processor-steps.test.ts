@@ -7,7 +7,7 @@
  * subscribe_topic, unsubscribe_topic.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   makeContact,
@@ -93,6 +93,9 @@ vi.mock("@wraps/email", async () => {
     await vi.importActual<typeof import("@wraps/email")>("@wraps/email");
   return {
     generateSESTemplateName: vi.fn().mockReturnValue("ses-tmpl-name"),
+    // Real resolveAppUrl: it deliberately throws rather than defaulting to the
+    // Wraps platform, and a stub returning a URL would hide that.
+    resolveAppUrl: actual.resolveAppUrl,
     transformVariablesForSes: vi.fn(actual.transformVariablesForSes),
     toSesVariableName: vi.fn(actual.toSesVariableName),
     upsertSESTemplate: vi.fn(),
@@ -169,6 +172,10 @@ vi.mock("node:dns/promises", () => ({
 }));
 
 vi.stubGlobal("fetch", mockFetch);
+
+// Recipient-facing link bases have no platform fallback — the send step throws
+// unless the deployment configures its own URLs.
+process.env.API_BASE_URL = "https://api.test.local";
 
 const {
   handler,
@@ -288,6 +295,12 @@ beforeEach(() => {
       insert: mockDbInsert,
     })
   );
+});
+
+// Tests below stub link-base env vars; restore them so sibling files in the
+// same vitest process are not poisoned.
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -780,6 +793,8 @@ describe("handleSendEmail", () => {
   });
 
   it("no unsubscribe headers for transactional", async () => {
+    vi.stubEnv("API_BASE_URL", "https://api.customer.test");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://mail.customer.test");
     setupEmailTest({
       template: {
         id: "tmpl-1",
@@ -797,11 +812,13 @@ describe("handleSendEmail", () => {
     const templateData = JSON.parse(
       tmplContent.TemplateData as string
     ) as Record<string, unknown>;
+    // The deployment's own URLs, never the Wraps platform's: a self-hosted
+    // customer's token is meaningless to app.wraps.dev / api.wraps.dev.
     expect(templateData.unsubscribeUrl).toBe(
-      "https://api.wraps.dev/unsubscribe/mock-token"
+      "https://api.customer.test/unsubscribe/mock-token"
     );
     expect(templateData.preferencesUrl).toBe(
-      "https://app.wraps.dev/preferences/mock-token"
+      "https://mail.customer.test/preferences/mock-token"
     );
     expect(tmplContent.Headers).toBeUndefined();
   });
