@@ -1747,3 +1747,296 @@ verify_teardown() {
     pass "MailManager archive wraps-email-archive removed"
   fi
 }
+
+# ─── Dual-Plane Coexistence Verification ─────────────────────────────
+
+# Record a failed assertion, then swallow the status.
+#
+# `fail` ends in a `[[ -n "${2:-}" ]] && printf` short-circuit, so it returns 1
+# whenever it is called without a detail string — and `aws_check` echoes
+# nothing when the AWS call fails, so the detail is empty exactly when a
+# resource is missing. Under this file's `set -euo pipefail` that aborts the
+# entire run at the FIRST failed assertion instead of reporting the rest.
+# Every failure below goes through this wrapper so a run against a missing or
+# half-built deployment reports all of its findings.
+_coexistence_fail() {
+  fail "$@" || true
+}
+
+# Count rule targets whose ARN contains a substring. Echoes the count.
+_coexistence_target_count() {
+  local targets_json="$1"
+  local needle="$2"
+  echo "$targets_json" \
+    | jq --arg n "$needle" '[.Targets[]? | select(.Arn | contains($n))] | length' \
+      2>/dev/null || echo 0
+}
+
+# Verify that SES events reach BOTH the Wraps platform and a self-hosted
+# control plane from the same EventBridge rule (plans 134-138).
+#
+# The unit tests for this behaviour all mock buildEmailStackConfig, so the
+# thing that is actually load-bearing — what Pulumi built in the customer's
+# AWS account — is only checked here. Requires a live deployment; it asserts
+# end state and never mutates anything.
+#
+# Args:
+#   $1 region       — AWS region
+#   $2 account_id   — 12-digit AWS account ID (for the webhook path assertion)
+#   $3 selfhost_url — BASE url of the self-hosted API, no trailing slash
+verify_coexistence() {
+  local region="${1:-us-east-1}"
+  local account_id="${2:?account_id is required}"
+  local selfhost_url="${3:?selfhost_url is required}"
+
+  # Resource names below are spelled out literally, never derived — the harness
+  # asserts what the infrastructure code hardcodes. Sources: eventbridge.ts
+  # (rule :83, platform connection :163, platform destination :179) and
+  # eventbridge-selfhost-webhook.ts (connection :51, destination :67, role :78).
+  local expected_endpoint="${selfhost_url}/webhooks/ses/${account_id}"
+
+  section "Coexistence: Rule targets"
+
+  local rule_output
+  if rule_output=$(aws_check events describe-rule \
+    --name "wraps-email-events-to-sqs" \
+    --region "$region"); then
+    pass "EventBridge rule wraps-email-events-to-sqs exists"
+
+    local rule_state
+    rule_state=$(echo "$rule_output" | jq -r '.State // "DISABLED"')
+    if [[ "$rule_state" == "ENABLED" ]]; then
+      pass "EventBridge rule is ENABLED"
+    else
+      _coexistence_fail "EventBridge rule state: expected ENABLED, got $rule_state"
+    fi
+  else
+    _coexistence_fail "EventBridge rule wraps-email-events-to-sqs not found" "$rule_output"
+  fi
+
+  # Fall back to an empty target list so every assertion below still reports a
+  # fail rather than aborting the whole run under `set -e`.
+  local targets_output
+  if ! targets_output=$(aws_check events list-targets-by-rule \
+    --rule "wraps-email-events-to-sqs" \
+    --region "$region"); then
+    _coexistence_fail "Could not list targets for wraps-email-events-to-sqs" "$targets_output"
+    targets_output='{"Targets":[]}'
+  fi
+
+  local target_count
+  target_count=$(echo "$targets_output" | jq '.Targets | length' 2>/dev/null || echo 0)
+
+  # Deliberately exact, not >= 3. EventBridge allows 5 targets per rule (hard
+  # AWS quota, not adjustable), so an exact count turns "we quietly added a
+  # fifth target" into a failing test instead of a LimitExceeded on a
+  # customer's next deploy.
+  if (( target_count == 4 )); then
+    pass "EventBridge rule has exactly 4 targets (SQS + platform + user + selfhost)"
+  elif (( target_count >= 5 )); then
+    _coexistence_fail "EventBridge rule has $target_count targets, expected exactly 4" \
+      "at the AWS hard quota of 5 targets per rule — the next target will be rejected"
+  else
+    _coexistence_fail "EventBridge rule has $target_count target(s), expected exactly 4" \
+      "expected SQS + platform webhook + user webhook + selfhost webhook"
+  fi
+
+  local sqs_target_count
+  sqs_target_count=$(_coexistence_target_count "$targets_output" "sqs")
+  if (( sqs_target_count == 1 )); then
+    pass "Exactly one SQS target (the events pipeline)"
+  else
+    _coexistence_fail "Expected exactly 1 SQS target, found $sqs_target_count"
+  fi
+
+  # THE coexistence regression assertion. If the platform target is missing,
+  # a self-hosted connect deleted app.wraps.dev's event delivery.
+  local platform_target_count
+  platform_target_count=$(_coexistence_target_count "$targets_output" "wraps-webhook-destination")
+  if (( platform_target_count == 1 )); then
+    pass "Exactly one platform target (wraps-webhook-destination) — app.wraps.dev still receives events"
+  else
+    _coexistence_fail "Expected exactly 1 wraps-webhook-destination target, found $platform_target_count" \
+      "the self-hosted target must be an ADDITION; losing this one means app.wraps.dev stopped receiving SES events"
+  fi
+
+  local selfhost_target_count
+  selfhost_target_count=$(_coexistence_target_count "$targets_output" "wraps-selfhost-webhook-destination")
+  if (( selfhost_target_count == 1 )); then
+    pass "Exactly one self-hosted target (wraps-selfhost-webhook-destination)"
+  else
+    _coexistence_fail "Expected exactly 1 wraps-selfhost-webhook-destination target, found $selfhost_target_count"
+  fi
+
+  section "Coexistence: Self-hosted API destination"
+
+  local dest_output
+  if dest_output=$(aws_check events describe-api-destination \
+    --name "wraps-selfhost-webhook-destination" \
+    --region "$region"); then
+    pass "API destination wraps-selfhost-webhook-destination exists"
+
+    # Whole-string compare: a substring check would pass for a truncated or
+    # doubled path.
+    local endpoint
+    endpoint=$(echo "$dest_output" | jq -r '.InvocationEndpoint // ""')
+    if [[ "$endpoint" == "$expected_endpoint" ]]; then
+      pass "Self-hosted invocation endpoint: $endpoint"
+    else
+      _coexistence_fail "Self-hosted invocation endpoint mismatch" \
+        "expected $expected_endpoint, got ${endpoint:-<empty>}"
+    fi
+
+    local rate_limit
+    rate_limit=$(echo "$dest_output" | jq -r '.InvocationRateLimitPerSecond // 0')
+    if [[ "$rate_limit" == "300" ]]; then
+      pass "Self-hosted API destination rate limit: 300/s"
+    else
+      _coexistence_fail "Self-hosted API destination rate limit: expected 300, got $rate_limit"
+    fi
+
+    # Connection ARN shape: arn:aws:events:<region>:<acct>:connection/<name>/<uuid>
+    local conn_arn conn_name
+    conn_arn=$(echo "$dest_output" | jq -r '.ConnectionArn // ""')
+    conn_name="${${conn_arn%/*}##*/}"
+    if [[ "$conn_name" == "wraps-selfhost-webhook-connection" ]]; then
+      pass "Self-hosted API destination uses connection wraps-selfhost-webhook-connection"
+    else
+      _coexistence_fail "Self-hosted API destination connection: expected wraps-selfhost-webhook-connection, got ${conn_name:-<empty>}" \
+        "ConnectionArn was ${conn_arn:-<empty>}"
+    fi
+  else
+    _coexistence_fail "API destination wraps-selfhost-webhook-destination not found" "$dest_output"
+  fi
+
+  local conn_output
+  if conn_output=$(aws_check events describe-connection \
+    --name "wraps-selfhost-webhook-connection" \
+    --region "$region"); then
+    pass "EventBridge connection wraps-selfhost-webhook-connection exists"
+
+    local auth_type
+    auth_type=$(echo "$conn_output" | jq -r '.AuthorizationType // "NONE"')
+    if [[ "$auth_type" == "API_KEY" ]]; then
+      pass "Self-hosted connection auth type: API_KEY"
+    else
+      _coexistence_fail "Self-hosted connection auth type: expected API_KEY, got $auth_type"
+    fi
+
+    # Header NAME only. verify.sh output is routinely pasted into issues, so
+    # never read or print anything else out of AuthParameters — a swap to
+    # X-Wraps-Signature would 401 every event, which is what this catches.
+    local api_key_name
+    api_key_name=$(echo "$conn_output" \
+      | jq -r '.AuthParameters.ApiKeyAuthParameters.ApiKeyName // ""')
+    if [[ "$api_key_name" == "X-Wraps-Api-Key" ]]; then
+      pass "Self-hosted connection auth header: X-Wraps-Api-Key"
+    else
+      _coexistence_fail "Self-hosted connection auth header: expected X-Wraps-Api-Key, got ${api_key_name:-<empty>}"
+    fi
+  else
+    _coexistence_fail "EventBridge connection wraps-selfhost-webhook-connection not found" "$conn_output"
+  fi
+
+  section "Coexistence: Self-hosted target config"
+
+  local selfhost_target
+  selfhost_target=$(echo "$targets_output" \
+    | jq --arg n "wraps-selfhost-webhook-destination" \
+      'first(.Targets[]? | select(.Arn | contains($n))) // {}' 2>/dev/null || echo '{}')
+
+  if [[ -n "$selfhost_target" && "$selfhost_target" != "{}" ]]; then
+    local dlq_arn
+    dlq_arn=$(echo "$selfhost_target" | jq -r '.DeadLetterConfig.Arn // ""')
+    if [[ -n "$dlq_arn" ]]; then
+      pass "Self-hosted target has a DLQ: ${dlq_arn##*:}"
+    else
+      _coexistence_fail "Self-hosted target has no DeadLetterConfig.Arn" \
+        "undeliverable events would be dropped silently"
+    fi
+
+    # The self-hosted control plane runs the same apps/api code as the
+    # platform and expects the raw SES envelope.
+    if echo "$selfhost_target" | jq -e '.InputTransformer' &>/dev/null; then
+      _coexistence_fail "Self-hosted target has an InputTransformer" \
+        "the self-hosted control plane expects the raw SES event envelope"
+    else
+      pass "Self-hosted target has no InputTransformer (raw SES envelope)"
+    fi
+  else
+    _coexistence_fail "No rule target found for wraps-selfhost-webhook-destination"
+  fi
+
+  local role_output
+  if role_output=$(aws_check iam get-role --role-name "wraps-selfhost-webhook-role"); then
+    pass "IAM role wraps-selfhost-webhook-role exists"
+
+    if echo "$role_output" \
+      | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Principal.Service | tostring | contains("events.amazonaws.com"))' \
+        &>/dev/null; then
+      pass "Self-hosted webhook role trusts events.amazonaws.com"
+    else
+      _coexistence_fail "Self-hosted webhook role missing events.amazonaws.com trust"
+    fi
+
+    local policy_names
+    if policy_names=$(aws_check iam list-role-policies --role-name "wraps-selfhost-webhook-role"); then
+      local found_invoke="false"
+      local policy_name policy_doc
+      for policy_name in $(echo "$policy_names" | jq -r '.PolicyNames[]?'); do
+        policy_doc=$(aws_check iam get-role-policy \
+          --role-name "wraps-selfhost-webhook-role" \
+          --policy-name "$policy_name") || continue
+        if echo "$policy_doc" \
+          | jq -e '.PolicyDocument.Statement[] | select(.Action | tostring | contains("events:InvokeApiDestination"))' \
+            &>/dev/null; then
+          found_invoke="true"
+          break
+        fi
+      done
+      if [[ "$found_invoke" == "true" ]]; then
+        pass "Self-hosted webhook role grants events:InvokeApiDestination"
+      else
+        _coexistence_fail "Self-hosted webhook role has no inline policy granting events:InvokeApiDestination"
+      fi
+    else
+      _coexistence_fail "Could not list inline policies for wraps-selfhost-webhook-role" "$policy_names"
+    fi
+  else
+    _coexistence_fail "IAM role wraps-selfhost-webhook-role not found" "$role_output"
+  fi
+
+  section "Coexistence: Legacy reroute is gone"
+
+  # Resolve every API-destination target's invocation endpoint and count how
+  # many POST to the self-hosted control plane. Two means the legacy
+  # `--reroute-events` primary is still wired up alongside the new selfhost
+  # target, so every SES event is delivered twice. Target ARN shape:
+  # arn:aws:events:<region>:<acct>:api-destination/<name>/<uuid>
+  local -a dest_names
+  dest_names=($(echo "$targets_output" \
+    | jq -r '.Targets[]?.Arn | select(contains(":api-destination/")) | split("/")[1]' \
+      2>/dev/null || true))
+
+  local -i selfhost_endpoint_hits=0
+  local dest_name dest_endpoint
+  for dest_name in "${dest_names[@]}"; do
+    dest_endpoint=$(aws events describe-api-destination \
+      --name "$dest_name" \
+      --region "$region" \
+      --query 'InvocationEndpoint' --output text 2>/dev/null) || dest_endpoint=""
+    if [[ "$dest_endpoint" == "$expected_endpoint" ]]; then
+      selfhost_endpoint_hits+=1
+    fi
+  done
+
+  if (( selfhost_endpoint_hits == 1 )); then
+    pass "Exactly one target POSTs to the self-hosted control plane"
+  elif (( selfhost_endpoint_hits == 0 )); then
+    _coexistence_fail "No target POSTs to the self-hosted control plane" \
+      "expected exactly one target at $expected_endpoint"
+  else
+    _coexistence_fail "$selfhost_endpoint_hits targets POST to $expected_endpoint" \
+      "the legacy --reroute-events target is still wired alongside wraps-selfhost-webhook-destination — every SES event is delivered twice"
+  fi
+}
