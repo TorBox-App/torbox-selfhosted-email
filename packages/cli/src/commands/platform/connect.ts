@@ -940,11 +940,6 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
 
   // Unauthenticated fallback — manual copy/paste flow
   const startTime = Date.now();
-  // Always false here: options.selfhosted routes to authenticatedConnect and
-  // returns above, so this branch never runs for a self-hosted connect. Kept
-  // as an explicit flag read (matching authenticatedConnect) rather than
-  // reading self-hosted state off metadata, per the trust-principal fix below.
-  const selfhosted = Boolean(options.selfhosted);
 
   intro(pc.bold("Connect to Wraps Platform"));
 
@@ -1192,9 +1187,6 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     // 8. Update platform access role
     const roleName = "wraps-console-access-role";
     const iam = new IAMClient({ region: "us-east-1" });
-    const trustedAccountId = selfhosted
-      ? metadata.accountId
-      : WRAPS_PLATFORM_ACCOUNT_ID;
 
     let roleExists = false;
     try {
@@ -1224,59 +1216,9 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
             PolicyDocument: JSON.stringify(consolePolicy, null, 2),
           })
         );
-        // For self-hosted deployments, also correct the trust policy to use
-        // the customer's own account rather than the Wraps platform account.
-        if (selfhosted) {
-          const trustPolicy = {
-            Version: "2012-10-17",
-            Statement: [
-              {
-                Effect: "Allow",
-                Principal: { AWS: `arn:aws:iam::${trustedAccountId}:root` },
-                Action: "sts:AssumeRole",
-              },
-            ],
-          };
-          await iam.send(
-            new UpdateAssumeRolePolicyCommand({
-              RoleName: roleName,
-              PolicyDocument: JSON.stringify(trustPolicy),
-            })
-          );
-        }
       });
 
       progress.succeed("Platform access role updated");
-    } else if (selfhosted) {
-      // Self-hosted deployments have no SaaS dashboard to complete role creation,
-      // so create the role directly here.
-      const trustPolicy = {
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Effect: "Allow",
-            Principal: { AWS: `arn:aws:iam::${trustedAccountId}:root` },
-            Action: "sts:AssumeRole",
-          },
-        ],
-      };
-      await progress.execute("Creating platform access role", async () => {
-        await iam.send(
-          new CreateRoleCommand({
-            RoleName: roleName,
-            AssumeRolePolicyDocument: JSON.stringify(trustPolicy),
-            Description: "Wraps Platform console access role",
-          })
-        );
-        await iam.send(
-          new PutRolePolicyCommand({
-            RoleName: roleName,
-            PolicyName: "wraps-console-access-policy",
-            PolicyDocument: JSON.stringify(consolePolicy, null, 2),
-          })
-        );
-      });
-      progress.succeed("Platform access role created");
     } else {
       progress.info(
         `IAM role ${pc.cyan(roleName)} will be created when you add your AWS account in the dashboard`
