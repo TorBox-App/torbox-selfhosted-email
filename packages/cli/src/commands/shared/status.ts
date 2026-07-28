@@ -3,6 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { StatusOptions } from "../../types/index.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -140,7 +141,12 @@ export async function status(options: StatusOptions): Promise<void> {
     console.log(`  ${pc.dim("Deploy SMS:")} ${pc.cyan("wraps sms init")}`);
   }
 
-  console.log(`\n${pc.bold("Dashboard:")} ${pc.blue("https://app.wraps.dev")}`);
+  // Not hardcoded: a self-hosted account's dashboard is its own deployment,
+  // and sending that customer to app.wraps.dev points them at a dashboard
+  // holding none of their sends. The email commands were fixed for this; this
+  // one was missed.
+  const dashboardUrl = await resolveDashboardUrl(identity.accountId, region);
+  console.log(`\n${pc.bold("Dashboard:")} ${pc.blue(dashboardUrl)}`);
   console.log(`${pc.bold("Docs:")} ${pc.blue("https://wraps.dev/docs")}\n`);
 
   // 6. Track status command
