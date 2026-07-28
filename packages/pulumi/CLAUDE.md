@@ -146,7 +146,7 @@ serialization.
 - **ACM certs for CloudFront must be us-east-1** — handled transparently with a separate provider
 - **SES uses mixed API versions** — `sesv2` for config set, `ses` (v1) for domain identity + DKIM
 - **Lambda code path** — looks for `.bundled` marker in `dist/lambda/event-processor/`; throws if not found (run `build:lambda` first)
-- **Mail Manager** — placeholder only; AWS Pulumi provider lacks support, CLI uses SDK directly
+- **Mail Manager** — implemented as a dynamic provider (`src/resources/mail-manager.ts`); `@pulumi/aws` has no Mail Manager resources (upstream Terraform issue open since 2024-08), so the provider wraps the `@aws-sdk/client-mailmanager` calls directly. `delete()` is deliberately non-destructive — the native Cloud Control resource in `@pulumi/aws-native` marks an archive `PENDING_DELETION` for permanent deletion in 30 days, which violates the non-destructive principle.
 - **DNS providers** — Cloudflare uses native Pulumi provider, Vercel uses `@pulumi/command` with curl
 
 ## Commands
