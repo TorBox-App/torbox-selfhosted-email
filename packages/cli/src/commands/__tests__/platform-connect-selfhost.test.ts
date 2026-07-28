@@ -521,4 +521,109 @@ describe("platform connect - selfhost trust policy", () => {
       expect("selfhostWebhook" in capturedOverrides).toBe(false);
     });
   });
+
+  describe("control-plane identity", () => {
+    // The externalId issued by whichever plane you connect to is the
+    // sts:ExternalId condition on THAT plane's console access role. Both planes
+    // used to write `metadata.platform`, so the last connect silently broke the
+    // other plane's AssumeRole. These cases pin the two-slot split.
+    //
+    // SMS-only fixtures on purpose: no email means deployEventBridge's Pulumi
+    // path is skipped, isolating the metadata assertion.
+    //
+    // Cloning alone is not enough here. authenticatedConnect assigns onto the
+    // object loadConnectionMetadata returns, and the cases in the enclosing
+    // describe hand out the module-level SELFHOST_SMS_METADATA by reference —
+    // so it already carries identity slots written by those earlier connects,
+    // and a clone would inherit them. Start every case from an explicitly
+    // empty identity state instead of inheriting whichever slot ran last.
+    const cleanFixture = () => {
+      const base = structuredClone(SELFHOST_SMS_METADATA) as any;
+      base.platform = undefined;
+      base.selfhostPlatform = undefined;
+      return base;
+    };
+
+    beforeEach(() => {
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue(
+        cleanFixture()
+      );
+    });
+
+    // saveConnectionMetadata is called twice with the SAME object reference, so
+    // calls[0][0] reads final state once connect() has resolved.
+    const savedMetadata = () =>
+      vi.mocked(metadata.saveConnectionMetadata).mock.calls[0][0] as any;
+
+    it("writes the self-hosted identity to its own slot, not the platform's", async () => {
+      await connect({ yes: true, selfhosted: true });
+
+      const saved = savedMetadata();
+      expect(saved.selfhostPlatform).toEqual({
+        externalId: "ext-xyz-456",
+        connectionId: "conn-abc-123",
+      });
+      expect(saved.platform).toBeUndefined();
+    });
+
+    it("preserves an existing Wraps platform identity through a selfhost connect", async () => {
+      // The core regression: a --selfhosted connect used to overwrite the
+      // platform's externalId, so `wraps platform update-role` would then write
+      // the self-hosted external ID into the platform's trust policy.
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        ...cleanFixture(),
+        platform: {
+          externalId: "plat-ext-1",
+          connectionId: "plat-conn-1",
+        },
+      });
+
+      await connect({ yes: true, selfhosted: true });
+
+      const saved = savedMetadata();
+      expect(saved.platform).toEqual({
+        externalId: "plat-ext-1",
+        connectionId: "plat-conn-1",
+      });
+      expect(saved.selfhostPlatform).toEqual({
+        externalId: "ext-xyz-456",
+        connectionId: "conn-abc-123",
+      });
+    });
+
+    it("keeps a plain SaaS connect writing the platform slot exactly as before", async () => {
+      await connect({ yes: true });
+
+      const saved = savedMetadata();
+      expect(saved.platform).toEqual({
+        externalId: "ext-xyz-456",
+        connectionId: "conn-abc-123",
+      });
+      expect(saved.selfhostPlatform).toBeUndefined();
+    });
+
+    it("preserves an existing self-hosted identity through a later SaaS connect", async () => {
+      // Mirror of the regression above: a routine SaaS reconnect must not
+      // delete the self-hosted plane's externalId.
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        ...cleanFixture(),
+        selfhostPlatform: {
+          externalId: "sh-ext-1",
+          connectionId: "sh-conn-1",
+        },
+      });
+
+      await connect({ yes: true });
+
+      const saved = savedMetadata();
+      expect(saved.selfhostPlatform).toEqual({
+        externalId: "sh-ext-1",
+        connectionId: "sh-conn-1",
+      });
+      expect(saved.platform).toEqual({
+        externalId: "ext-xyz-456",
+        connectionId: "conn-abc-123",
+      });
+    });
+  });
 });

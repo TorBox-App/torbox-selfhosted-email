@@ -86,8 +86,25 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   const externalId = metadata.platform?.externalId;
 
+  // A self-hosted-only account has `selfhostPlatform` but no `platform`. This
+  // command manages the PLATFORM role (wraps-console-access-role, trusting the
+  // Wraps account), so an absent `platform` identity is the accurate answer —
+  // but say so plainly instead of implying they never connected at all.
+  // Updating the self-hosted role is plan 145's job.
+  const selfhostOnly = !metadata.platform && !!metadata.selfhostPlatform;
+
   if (!(roleExists || externalId)) {
     progress.stop();
+    if (selfhostOnly) {
+      log.warn(
+        "No Wraps platform connection found for this account — only a self-hosted one."
+      );
+      console.log(
+        `\nThis command updates ${pc.cyan("wraps-console-access-role")}, which the Wraps platform assumes.` +
+          `\nYour self-hosted control plane uses ${pc.cyan("wraps-selfhost-console-access-role")}; re-run ${pc.cyan("wraps selfhost connect")} to refresh it.\n`
+      );
+      process.exit(0);
+    }
     log.warn(`IAM role ${pc.cyan(roleName)} does not exist`);
     console.log(
       "\nThis role is created when you connect AWS accounts through the Wraps Platform."

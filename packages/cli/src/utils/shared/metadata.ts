@@ -80,6 +80,17 @@ export type ConnectionMetadata = {
     connectionId?: string;
   };
 
+  // Identity issued by a self-hosted control plane's `wraps selfhost connect`.
+  // A SECOND slot, not a replacement for `platform` above: the
+  // two planes issue different externalIds, and `externalId` is the
+  // sts:ExternalId condition on each plane's console access role. Writing both
+  // to one field meant whichever plane connected last silently broke the
+  // other's AssumeRole. Mirrors `services.email.selfhostWebhook`.
+  selfhostPlatform?: {
+    externalId?: string;
+    connectionId?: string;
+  };
+
   // Service-specific configurations
   services: {
     email?: ServiceConfig<WrapsEmailConfig, EmailConfigPreset>;

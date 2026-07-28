@@ -1811,3 +1811,47 @@ describe("buildEmailStackConfig", () => {
     );
   });
 });
+
+describe("control-plane identity persistence", () => {
+  it("should round-trip both platform and selfhostPlatform through save AND load", async () => {
+    // Each plane's externalId is the sts:ExternalId condition on its own
+    // console access role, so a field that is written but not persisted is
+    // silently destroyed by the next command that saves metadata.
+    vi.clearAllMocks();
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(writeFile).mockResolvedValue(undefined);
+
+    const metadata = createConnectionMetadata(
+      "123456789012",
+      "us-east-1",
+      "aws",
+      getPreset("starter")!
+    );
+    metadata.platform = {
+      externalId: "plat-ext-1",
+      connectionId: "plat-conn-1",
+    };
+    metadata.selfhostPlatform = {
+      externalId: "sh-ext-1",
+      connectionId: "sh-conn-1",
+    };
+
+    await saveConnectionMetadata(metadata);
+
+    // Feed exactly what was written back through the load path so a load-side
+    // migration that dropped either identity would fail here.
+    const savedContent = vi.mocked(writeFile).mock.calls[0][1] as string;
+    vi.mocked(readFile).mockResolvedValue(savedContent);
+
+    const loaded = await loadConnectionMetadata("123456789012", "us-east-1");
+
+    expect(loaded?.platform).toEqual({
+      externalId: "plat-ext-1",
+      connectionId: "plat-conn-1",
+    });
+    expect(loaded?.selfhostPlatform).toEqual({
+      externalId: "sh-ext-1",
+      connectionId: "sh-conn-1",
+    });
+  });
+});

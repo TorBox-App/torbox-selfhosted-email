@@ -840,11 +840,22 @@ async function authenticatedConnect(
 
     progress.succeed("Connection registered");
 
-    // 5. Save platform data immediately (so externalId survives if later steps fail)
-    metadata.platform = {
-      externalId: result.externalId,
-      connectionId: result.connectionId,
-    };
+    // 5. Save the issuing plane's identity immediately (so externalId survives
+    // if later steps fail). Self-hosted writes its OWN slot — the two planes
+    // issue different externalIds, and each is the sts:ExternalId condition on
+    // that plane's console access role. Writing both here meant whichever
+    // plane connected last silently broke the other's AssumeRole.
+    if (selfhosted) {
+      metadata.selfhostPlatform = {
+        externalId: result.externalId,
+        connectionId: result.connectionId,
+      };
+    } else {
+      metadata.platform = {
+        externalId: result.externalId,
+        connectionId: result.connectionId,
+      };
+    }
     if (hasEmail) {
       const emailService = metadata.services.email!;
       if (selfhosted) {
