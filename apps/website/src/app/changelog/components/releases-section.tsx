@@ -49,6 +49,30 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v2.29.1",
+    date: "July 2026",
+    icon: Wrench,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "Self-Hosted URL Fixes",
+    items: [
+      <>
+        Fix: <Code>wraps selfhost deploy</Code> no longer defaults the app URL
+        to the Wraps dashboard. Accepting that default deployed a control plane
+        that believed our dashboard was its own, and that URL builds every
+        unsubscribe, preference and verification link the deployment emails to
+        its recipients
+      </>,
+      <>
+        Fix: <Code>wraps email init</Code>, <Code>connect</Code>,{" "}
+        <Code>config</Code>, <Code>upgrade</Code> and <Code>status</Code> now
+        report your own dashboard on a self-hosted install instead of always
+        printing the Wraps one
+      </>,
+      "Fix: the support address shown by the CLI and its telemetry footer pointed at a domain we do not own",
+    ],
+  },
+  {
     version: "CLI v2.29.0",
     date: "July 2026",
     icon: Terminal,
