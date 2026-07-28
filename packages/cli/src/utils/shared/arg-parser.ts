@@ -90,6 +90,7 @@ export type CliFlags = {
   expires?: string;
 
   // Self-hosted
+  selfhosted?: boolean;
   databaseUrl?: string;
   neonApiKey?: string;
   neonOrgId?: string;
@@ -184,6 +185,7 @@ const BOOLEAN_FLAGS = [
   "sending-enabled",
   "vdm-engagement",
   "vdm-inbox",
+  "selfhosted",
   "help",
   "version",
 ] as const;

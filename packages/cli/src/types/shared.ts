@@ -92,6 +92,7 @@ export type UpdateRoleOptions = {
   region?: string;
   force?: boolean; // Skip confirmation prompt
   json?: boolean;
+  selfhosted?: boolean; // Target the self-hosted console role instead of the platform's
 };
 
 /**

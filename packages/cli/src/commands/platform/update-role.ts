@@ -5,6 +5,10 @@ import {
   UpdateAssumeRolePolicyCommand,
 } from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro } from "@clack/prompts";
+import {
+  CONSOLE_ACCESS_ROLE_NAME,
+  SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
+} from "@wraps/core";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { UpdateRoleOptions } from "../../types/index.js";
@@ -65,9 +69,23 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     process.exit(1);
   }
 
-  // 4. Check if wraps-console-access-role exists
-  const roleName = "wraps-console-access-role";
+  // 4. Check whether the target console role exists. Which role — and which
+  // account it must trust — is keyed off the explicit --selfhosted flag, NEVER
+  // off the presence of selfhost metadata: a machine that has run
+  // `wraps selfhost deploy` would otherwise have every ordinary update-role
+  // silently rewrite the platform role to trust the wrong account (plan 134).
+  const selfhosted = options.selfhosted === true;
+  const roleName = selfhosted
+    ? SELFHOST_CONSOLE_ACCESS_ROLE_NAME
+    : CONSOLE_ACCESS_ROLE_NAME;
   const iam = new IAMClient({ region: "us-east-1" }); // IAM is global
+
+  // Self-hosted customers run the dashboard in their OWN AWS account, so the
+  // role must trust that account rather than the Wraps platform account.
+  const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
+  const trustedAccountId = selfhosted
+    ? metadata.accountId
+    : WRAPS_PLATFORM_ACCOUNT_ID;
 
   let roleExists = false;
   try {
@@ -84,34 +102,31 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     }
   }
 
-  const externalId = metadata.platform?.externalId;
-
-  // A self-hosted-only account has `selfhostPlatform` but no `platform`. This
-  // command manages the PLATFORM role (wraps-console-access-role, trusting the
-  // Wraps account), so an absent `platform` identity is the accurate answer —
-  // but say so plainly instead of implying they never connected at all.
-  // Updating the self-hosted role is plan 145's job.
-  const selfhostOnly = !metadata.platform && !!metadata.selfhostPlatform;
+  // Each control plane issues its own externalId — it is the sts:ExternalId
+  // condition on that plane's role. Reading the wrong one writes a trust policy
+  // the dashboard cannot satisfy.
+  const externalId = selfhosted
+    ? metadata.selfhostPlatform?.externalId
+    : metadata.platform?.externalId;
 
   if (!(roleExists || externalId)) {
     progress.stop();
-    if (selfhostOnly) {
-      log.warn(
-        "No Wraps platform connection found for this account — only a self-hosted one."
+    log.warn(`IAM role ${pc.cyan(roleName)} does not exist`);
+    if (selfhosted) {
+      console.log(
+        "\nThis role is created when your self-hosted control plane connects this AWS account."
       );
       console.log(
-        `\nThis command updates ${pc.cyan("wraps-console-access-role")}, which the Wraps platform assumes.` +
-          `\nYour self-hosted control plane uses ${pc.cyan("wraps-selfhost-console-access-role")}; re-run ${pc.cyan("wraps selfhost connect")} to refresh it.\n`
+        `Run ${pc.cyan("wraps selfhost connect")} to create the role automatically.\n`
       );
-      process.exit(0);
+    } else {
+      console.log(
+        "\nThis role is created when you connect AWS accounts through the Wraps Platform."
+      );
+      console.log(
+        `Run ${pc.cyan("wraps platform connect")} while logged in to create the role automatically.\n`
+      );
     }
-    log.warn(`IAM role ${pc.cyan(roleName)} does not exist`);
-    console.log(
-      "\nThis role is created when you connect AWS accounts through the Wraps Platform."
-    );
-    console.log(
-      `Run ${pc.cyan("wraps platform connect")} while logged in to create the role automatically.\n`
-    );
     process.exit(0);
   }
 
@@ -162,8 +177,6 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   // 7. Create or update role
   if (!roleExists && externalId) {
-    const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
-
     await progress.execute("Creating IAM role", async () => {
       const trustPolicy = {
         Version: "2012-10-17",
@@ -171,7 +184,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
           {
             Effect: "Allow",
             Principal: {
-              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+              AWS: `arn:aws:iam::${trustedAccountId}:root`,
             },
             Action: "sts:AssumeRole",
             Condition: {
@@ -220,14 +233,13 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     });
 
     if (externalId) {
-      const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
       const trustPolicy = {
         Version: "2012-10-17",
         Statement: [
           {
             Effect: "Allow",
             Principal: {
-              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+              AWS: `arn:aws:iam::${trustedAccountId}:root`,
             },
             Action: "sts:AssumeRole",
             Condition: {

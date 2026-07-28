@@ -1499,6 +1499,7 @@ async function run() {
             region: flags.region,
             force: flags.force,
             json: flags.json,
+            selfhosted: flags.selfhosted,
           });
           break;
 
