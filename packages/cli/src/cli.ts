@@ -294,7 +294,10 @@ function showHelp() {
     `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details`
   );
   console.log(
-    `  ${pc.cyan("selfhost connect")}     Connect your AWS account to your self-hosted instance\n`
+    `  ${pc.cyan("selfhost connect")}     Connect your AWS account to your self-hosted instance`
+  );
+  console.log(
+    `  ${pc.cyan("selfhost update-role")} Refresh your self-hosted console role's permissions\n`
   );
   console.log("Local Development:");
   console.log(
@@ -1260,6 +1263,15 @@ async function run() {
           });
           break;
 
+        case "update-role":
+          await updateRole({
+            region: flags.region,
+            force: flags.force,
+            json: flags.json,
+            selfhosted: true,
+          });
+          break;
+
         default:
           clack.log.error(`Unknown selfhost command: ${subCommand}`);
           console.log(
@@ -1499,7 +1511,6 @@ async function run() {
             region: flags.region,
             force: flags.force,
             json: flags.json,
-            selfhosted: flags.selfhosted,
           });
           break;
 

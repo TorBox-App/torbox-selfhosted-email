@@ -223,6 +223,26 @@ describe("parseCliArgs", () => {
       expect(flags.neonApiKey).toBe("neon_abc123");
       expect(flags.databaseUrl).toBeUndefined();
     });
+
+    // Plan 151: `--selfhosted` was never released and is gone. Self-hosted
+    // intent is carried by the invoked subcommand (`wraps selfhost <command>`),
+    // which hardcodes it at the router — never by a flag on `platform`.
+    it("does not recognize --selfhosted as a boolean flag", () => {
+      const { flags } = parseCliArgs(
+        argv("platform", "update-role", "--selfhosted")
+      );
+      // Must be undefined, not false: `false` would mean it is still declared
+      // in BOOLEAN_FLAGS and merely unset. Cast because `selfhosted` is
+      // deliberately absent from CliFlags.
+      expect((flags as Record<string, unknown>).selfhosted).toBeUndefined();
+    });
+
+    it("still parses real self-host deploy flags after the removal", () => {
+      const { flags } = parseCliArgs(
+        argv("selfhost", "deploy", "--database-url", "postgres://x")
+      );
+      expect(flags.databaseUrl).toBe("postgres://x");
+    });
   });
 
   describe("complex real-world scenarios", () => {

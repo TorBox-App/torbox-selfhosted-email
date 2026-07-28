@@ -70,8 +70,9 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   }
 
   // 4. Check whether the target console role exists. Which role — and which
-  // account it must trust — is keyed off the explicit --selfhosted flag, NEVER
-  // off the presence of selfhost metadata: a machine that has run
+  // account it must trust — is keyed off the invoked subcommand
+  // (`wraps selfhost update-role` hardcodes it), NEVER off the presence of
+  // selfhost metadata: a machine that has run
   // `wraps selfhost deploy` would otherwise have every ordinary update-role
   // silently rewrite the platform role to trust the wrong account (plan 134).
   const selfhosted = options.selfhosted === true;

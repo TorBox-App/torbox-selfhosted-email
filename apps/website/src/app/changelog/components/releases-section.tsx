@@ -76,7 +76,7 @@ const releases: Release[] = [
         <Code>--volume</Code> models the comparison against a volume you supply;{" "}
         <Code>--json</Code> for scripting
       </>,
-      "Fix: wraps platform connect chose the console role's trust principal from whether self-hosted metadata existed on the local machine rather than from --selfhosted. A normal connect run on a machine that had ever run wraps selfhost deploy would silently point the trust policy at the customer's own AWS account and break dashboard access with no error",
+      "Fix: wraps platform connect chose the console role's trust principal from whether self-hosted metadata existed on the local machine rather than from the invoked subcommand. A normal connect run on a machine that had ever run wraps selfhost deploy would silently point the trust policy at the customer's own AWS account and break dashboard access with no error",
       <>
         Fix: <Code>selfhost deploy</Code> and <Code>upgrade</Code> now store the
         API URL normalized, matching <Code>selfhost status</Code>. The raw

@@ -440,9 +440,10 @@ async function updatePlatformRole(
 
   // Self-hosted customers run the dashboard in their own AWS account, so the
   // trust policy must trust their account rather than the Wraps platform
-  // account. This is keyed off the explicit `--selfhosted` flag: keying it off
-  // the presence of selfhost metadata made an ordinary SaaS connect from a
-  // machine that had deployed selfhost silently revoke platform access.
+  // account. This is keyed off the invoked subcommand (`wraps selfhost connect`
+  // hardcodes it), NEVER off the presence of selfhost metadata: keying it off
+  // metadata made an ordinary SaaS connect from a machine that had deployed
+  // selfhost silently revoke platform access.
   const trustedAccountId = selfhosted
     ? metadata.accountId
     : WRAPS_PLATFORM_ACCOUNT_ID;
@@ -873,7 +874,7 @@ async function authenticatedConnect(
           log.warn(
             "Migrated this account off the legacy event reroute.\n" +
               `  SES events now reach your self-hosted API via a dedicated target (${pc.cyan(apiBaseUrl)}).\n` +
-              `  The Wraps platform is NOT receiving events for this account — run ${pc.cyan("wraps platform connect")} (without ${pc.cyan("--selfhosted")}) if you also want app.wraps.dev connected.`
+              `  The Wraps platform is NOT receiving events for this account — run ${pc.cyan("wraps platform connect")} if you also want app.wraps.dev connected.`
           );
         }
         emailService.selfhostWebhook = {
