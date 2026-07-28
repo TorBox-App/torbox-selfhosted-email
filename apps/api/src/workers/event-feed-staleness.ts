@@ -11,10 +11,16 @@
  *
  * Detection (per connected account):
  *   1. Candidate: webhookSecret IS NOT NULL (account claims to be connected).
- *   2. hasRecentSends: a message_send row with sentAt in the last 24h.
- *   3. feedStale: lastEventReceivedAt IS NULL, or older than 6h.
- *      (An idle org with no recent sends is never flagged — silence is
- *      expected when nothing is being sent.)
+ *   2. feedStale: a send in the last 24h is newer than lastEventReceivedAt and
+ *      older than the grace period — i.e. a send that should already have been
+ *      acknowledged hasn't been. Measuring events against the send cursor
+ *      rather than against a fixed age is what keeps a healthy-but-infrequent
+ *      sender out of the alert: an account that sends twice a day and gets a
+ *      delivery event for each one is never stale, however long the gaps are.
+ *      SES emits SEND to the configuration set (see the CLI's ses.ts
+ *      matchingEventTypes), so a working feed acknowledges every send within
+ *      seconds and the grace period is generous. An idle org is never flagged
+ *      — with no sends to acknowledge, silence proves nothing.
  *
  * Transitions:
  *   - stale && eventFeedStaleSince IS NULL -> set eventFeedStaleSince = now.
@@ -22,7 +28,10 @@
  *     alerted -> email the org owner, then set eventFeedAlertedAt. The
  *     timestamp is only set after a successful send so one org's email
  *     failure doesn't suppress next hour's retry.
- *   - !stale && eventFeedStaleSince set -> clear both columns (recovered).
+ *   - !stale && an event has arrived since the flag was raised -> clear both
+ *     columns (recovered). Recovery demands positive evidence that the feed
+ *     came back: an account that merely stopped sending also stops looking
+ *     stale, and clearing on that would silently resolve a still-broken feed.
  *
  * Email credentials: infra/cron.ts sets WRAPS_EMAIL_ROLE_ARN to the dogfood
  * account's wraps-email-role (where wraps.dev is SES-verified) and grants
@@ -51,11 +60,11 @@ import {
 } from "@wraps/db";
 import { sendEventFeedStaleEmail } from "@wraps/email";
 import type { Handler } from "aws-lambda";
-import { and, eq, gt, isNotNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, lt } from "drizzle-orm";
 import { flushLogger, log } from "../lib/logger";
 
 const RECENT_SEND_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
-const STALE_EVENT_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6h
+const EVENT_GRACE_MS = 15 * 60 * 1000; // 15m
 const ALERT_DEBOUNCE_MS = 60 * 60 * 1000; // 1h
 
 /** Look up the org owner's email. Returns null if not found. */
@@ -73,12 +82,40 @@ async function getOrgOwnerEmail(
   return row?.email ?? null;
 }
 
-async function hasRecentSends(
+/**
+ * True when a send that should already have been acknowledged hasn't been:
+ * newer than the last event we received, older than the grace period, and
+ * inside the lookback window. This is the staleness signal — an account whose
+ * every send has a matching event is healthy no matter how long it sits idle
+ * between sends.
+ *
+ * Scoped to channel="email" because lastEventReceivedAt is only ever bumped by
+ * the SES webhook — SMS delivery runs through End User Messaging and never
+ * touches the cursor, so judging an SMS send against it would report a feed
+ * that was never supposed to acknowledge it. The channel predicate also lets
+ * message_send_org_channel_sent_at_idx serve this query on all three columns
+ * instead of walking the org's whole index range.
+ */
+async function hasUnacknowledgedSend(
   organizationId: string,
   awsAccountId: string,
+  lastEventReceivedAt: Date | null,
   now: Date
 ): Promise<boolean> {
-  const cutoff = new Date(now.getTime() - RECENT_SEND_WINDOW_MS);
+  const windowStart = new Date(now.getTime() - RECENT_SEND_WINDOW_MS);
+  const graceCutoff = new Date(now.getTime() - EVENT_GRACE_MS);
+  // Sends before the last event are already accounted for; sends before the
+  // window opened are too old to judge the feed by.
+  const after =
+    lastEventReceivedAt && lastEventReceivedAt > windowStart
+      ? lastEventReceivedAt
+      : windowStart;
+
+  if (after >= graceCutoff) {
+    // An event arrived within the grace period — nothing can qualify.
+    return false;
+  }
+
   const [row] = await db
     .select({ id: messageSend.id })
     .from(messageSend)
@@ -86,7 +123,9 @@ async function hasRecentSends(
       and(
         eq(messageSend.organizationId, organizationId),
         eq(messageSend.awsAccountId, awsAccountId),
-        gt(messageSend.sentAt, cutoff)
+        eq(messageSend.channel, "email"),
+        gt(messageSend.sentAt, after),
+        lt(messageSend.sentAt, graceCutoff)
       )
     )
     .limit(1);
@@ -234,7 +273,6 @@ export const handler: Handler = wrapHandler(async () => {
   log.info("[event-feed-staleness] Starting sweep");
 
   const now = new Date();
-  const staleEventCutoff = new Date(now.getTime() - STALE_EVENT_THRESHOLD_MS);
   const debounceCutoff = new Date(now.getTime() - ALERT_DEBOUNCE_MS);
 
   const connectedAccounts = await db
@@ -256,22 +294,12 @@ export const handler: Handler = wrapHandler(async () => {
   let recoveredCount = 0;
 
   for (const account of connectedAccounts) {
-    const recentSends = await hasRecentSends(
+    const feedStale = await hasUnacknowledgedSend(
       account.organizationId,
       account.id,
+      account.lastEventReceivedAt,
       now
     );
-
-    if (!recentSends) {
-      // Idle org — no recent sends means silence is expected, not broken.
-      // If a prior episode was flagged (e.g. sends just stopped), leave it;
-      // recovery is only declared when events resume, not when sends stop.
-      continue;
-    }
-
-    const feedStale =
-      account.lastEventReceivedAt === null ||
-      account.lastEventReceivedAt < staleEventCutoff;
 
     if (feedStale) {
       if (account.eventFeedStaleSince === null) {
@@ -296,7 +324,14 @@ export const handler: Handler = wrapHandler(async () => {
         });
         alertedCount++;
       }
-    } else if (account.eventFeedStaleSince !== null) {
+    } else if (
+      account.eventFeedStaleSince !== null &&
+      account.lastEventReceivedAt !== null &&
+      account.lastEventReceivedAt > account.eventFeedStaleSince
+    ) {
+      // An event landed after the flag was raised — the feed is genuinely
+      // back. Without this check an account that simply stopped sending
+      // would also stop looking stale and clear its own alert.
       await clearStaleFlags(account.id);
       recoveredCount++;
       log.info("[event-feed-staleness] Event feed recovered", {

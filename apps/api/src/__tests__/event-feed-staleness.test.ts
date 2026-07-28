@@ -2,10 +2,10 @@
  * Event Feed Staleness Worker Tests
  *
  * Covers the detection + flag lifecycle + alert-once semantics described in
- * plan 113: an account's SES event feed is "stale" when it's connected,
- * still sending mail, but no event has arrived in >6h. The worker flags it,
- * debounces one cycle, alerts the org owner exactly once per episode, and
- * clears the flags when events resume.
+ * plan 113: an account's SES event feed is "stale" when it's connected and a
+ * send that should already have been acknowledged has no event behind it. The
+ * worker flags it, debounces one cycle, alerts the org owner exactly once per
+ * episode, and clears the flags when events demonstrably resume.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +41,7 @@ const { awsAccount, member, messageSend, organization } = await import(
 const { handler } = await import("../workers/event-feed-staleness");
 
 const NOW = new Date("2026-07-07T12:00:00.000Z");
+const TWENTY_HOURS_AGO = new Date(NOW.getTime() - 20 * 60 * 60 * 1000);
 const SEVEN_HOURS_AGO = new Date(NOW.getTime() - 7 * 60 * 60 * 1000);
 const TWO_HOURS_AGO = new Date(NOW.getTime() - 2 * 60 * 60 * 1000);
 const THIRTY_MIN_AGO = new Date(NOW.getTime() - 30 * 60 * 1000);
@@ -51,7 +52,7 @@ const BASE_ACCOUNT = {
   name: "Production",
   accountId: "123456789012",
   region: "us-east-1",
-  lastEventReceivedAt: SEVEN_HOURS_AGO,
+  lastEventReceivedAt: SEVEN_HOURS_AGO as Date | null,
   eventFeedStaleSince: null as Date | null,
   eventFeedAlertedAt: null as Date | null,
 };
@@ -107,16 +108,24 @@ function setupUpdateCapture(): UpdateCall[] {
   return calls;
 }
 
-/** Configure db.select to answer per-table with the given fixture rows. */
+/**
+ * Configure db.select to answer per-table with the given fixture rows.
+ *
+ * `unacknowledgedSend` is the messageSend probe: rows come back when the
+ * account has a send that is newer than lastEventReceivedAt and older than
+ * the grace period. Empty covers both "idle, nothing sent" and "sent, but
+ * every send already has its event" — from the worker's side those are the
+ * same answer, and neither is stale.
+ */
 function setupSelects(opts: {
   connectedAccounts: (typeof BASE_ACCOUNT)[];
-  recentSends?: boolean;
+  unacknowledgedSend?: boolean;
   ownerEmail?: string | null;
   orgSlug?: string | null;
 }) {
   const resultsByTable = new Map<unknown, unknown[]>([
     [awsAccount, opts.connectedAccounts],
-    [messageSend, opts.recentSends === false ? [] : [{ id: "send-1" }]],
+    [messageSend, opts.unacknowledgedSend === false ? [] : [{ id: "send-1" }]],
     // getOrgOwnerEmail selects .from(member).innerJoin(user, ...) — the
     // dispatch key is the `.from()` table, i.e. `member`, not `user`.
     [
@@ -138,8 +147,8 @@ describe("event-feed-staleness worker", () => {
     vi.clearAllMocks();
     // Pin the clock to the fixture anchor. The worker under test compares
     // against `new Date()` at call time, so without this, fixtures anchored
-    // to NOW (e.g. "5 min ago" / "fresh") silently age past the 6h staleness
-    // threshold once the real wall clock drifts past NOW + 6h.
+    // to NOW (e.g. "5 min ago" / "fresh") silently age past the grace period
+    // once the real wall clock drifts.
     vi.useFakeTimers({ now: NOW });
   });
 
@@ -147,10 +156,10 @@ describe("event-feed-staleness worker", () => {
     vi.useRealTimers();
   });
 
-  it("flags a connected account with recent sends and no events for >6h", async () => {
+  it("flags a connected account holding a send no event ever acknowledged", async () => {
     setupSelects({
       connectedAccounts: [{ ...BASE_ACCOUNT }],
-      recentSends: true,
+      unacknowledgedSend: true,
     });
     const updateCalls = setupUpdateCapture();
 
@@ -173,7 +182,7 @@ describe("event-feed-staleness worker", () => {
           eventFeedAlertedAt: null,
         },
       ],
-      recentSends: true,
+      unacknowledgedSend: true,
       ownerEmail: OWNER_ROW.email,
       orgSlug: ORG_ROW.slug,
     });
@@ -214,7 +223,7 @@ describe("event-feed-staleness worker", () => {
           eventFeedAlertedAt: THIRTY_MIN_AGO,
         },
       ],
-      recentSends: true,
+      unacknowledgedSend: true,
       ownerEmail: OWNER_ROW.email,
       orgSlug: ORG_ROW.slug,
     });
@@ -236,7 +245,9 @@ describe("event-feed-staleness worker", () => {
           eventFeedAlertedAt: THIRTY_MIN_AGO,
         },
       ],
-      recentSends: true,
+      // Left true deliberately: an event inside the grace period short-circuits
+      // the probe, so even a waiting send can't hold the account stale.
+      unacknowledgedSend: true,
     });
     const updateCalls = setupUpdateCapture();
 
@@ -254,7 +265,7 @@ describe("event-feed-staleness worker", () => {
   it("never flags an account with no recent sends (idle org, not a broken feed)", async () => {
     setupSelects({
       connectedAccounts: [{ ...BASE_ACCOUNT }],
-      recentSends: false,
+      unacknowledgedSend: false,
     });
     const updateCalls = setupUpdateCapture();
 
@@ -262,6 +273,68 @@ describe("event-feed-staleness worker", () => {
 
     expect(updateCalls).toHaveLength(0);
     expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("never flags an infrequent sender whose every send was acknowledged", async () => {
+    // Regression: the detector used to pair "sent in the last 24h" with "no
+    // event in the last 6h", so an account sending one healthy batch a day
+    // satisfied both and got alerted while nothing was wrong. Here the last
+    // event is 20h old but sits after the last send — no send is waiting on
+    // an event, so the probe finds nothing and the feed is not stale.
+    setupSelects({
+      connectedAccounts: [
+        { ...BASE_ACCOUNT, lastEventReceivedAt: TWENTY_HOURS_AGO },
+      ],
+      unacknowledgedSend: false,
+    });
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(0);
+    expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("keeps the flag when a stale account stops sending without events resuming", async () => {
+    // Sends drying up makes the staleness probe go quiet too. Clearing on
+    // that alone would resolve the alert for a feed that never came back, so
+    // recovery requires an event newer than the flag itself.
+    setupSelects({
+      connectedAccounts: [
+        {
+          ...BASE_ACCOUNT,
+          lastEventReceivedAt: SEVEN_HOURS_AGO, // predates the flag
+          eventFeedStaleSince: TWO_HOURS_AGO,
+          eventFeedAlertedAt: THIRTY_MIN_AGO,
+        },
+      ],
+      unacknowledgedSend: false,
+    });
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(0);
+    expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not clear the flag for an account that never received any event", async () => {
+    setupSelects({
+      connectedAccounts: [
+        {
+          ...BASE_ACCOUNT,
+          lastEventReceivedAt: null,
+          eventFeedStaleSince: TWO_HOURS_AGO,
+          eventFeedAlertedAt: THIRTY_MIN_AGO,
+        },
+      ],
+      unacknowledgedSend: false,
+    });
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(0);
   });
 
   it("continues the sweep when one org's email send throws, and does not set eventFeedAlertedAt for it", async () => {
@@ -284,7 +357,7 @@ describe("event-feed-staleness worker", () => {
 
     setupSelects({
       connectedAccounts: [throwingAccount, nextAccount],
-      recentSends: true,
+      unacknowledgedSend: true,
       ownerEmail: OWNER_ROW.email,
       orgSlug: ORG_ROW.slug,
     });
