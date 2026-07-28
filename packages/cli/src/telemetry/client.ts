@@ -324,7 +324,7 @@ export class TelemetryClient {
     console.log("📊 Wraps Platform — analytics, templates, automations");
     console.log(`   From $10/mo → ${pc.cyan("https://wraps.dev/platform")}`);
     console.log();
-    console.log(`💬 ${pc.cyan("hey@wraps.sh")}`);
+    console.log(`💬 ${pc.cyan("hey@wraps.dev")}`);
     console.log(pc.dim("─────────────────────────────────────"));
 
     return true;

@@ -323,7 +323,7 @@ export default function TelemetryPageContent() {
             hear from you.
           </p>
           <Button asChild>
-            <a href="mailto:hey@wraps.sh">
+            <a href="mailto:hey@wraps.dev">
               Contact Us
               <ArrowRight className="ml-2 h-4 w-4" />
             </a>

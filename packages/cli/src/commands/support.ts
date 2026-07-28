@@ -15,7 +15,7 @@ export async function support(): Promise<void> {
   clack.intro(pc.bold("Get Help with Wraps"));
 
   console.log();
-  console.log(`  ${pc.bold("Email:")}   ${pc.cyan("hey@wraps.sh")}`);
+  console.log(`  ${pc.bold("Email:")}   ${pc.cyan("hey@wraps.dev")}`);
   console.log(
     `  ${pc.bold("GitHub:")}  ${pc.cyan("https://github.com/wraps-dev/wraps/issues")}`
   );
