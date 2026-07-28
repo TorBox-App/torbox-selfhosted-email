@@ -251,6 +251,15 @@ export type EmailStackConfig = {
     webhookSecret: string; // API key for webhook authentication
     webhookUrl?: string; // Override webhook URL (defaults to api.wraps.dev)
   };
+  // Second webhook target for a self-hosted control plane running in the same
+  // AWS account. Delivered in addition to `webhook`, not instead of it.
+  // `webhookUrl` is required here — unlike the platform webhook there is no
+  // sensible default endpoint to fall back to.
+  selfhostWebhook?: {
+    awsAccountNumber: string; // The user's 12-digit AWS account ID
+    webhookSecret: string; // API key issued by the self-hosted control plane
+    webhookUrl: string; // BASE url of the self-hosted API
+  };
   // Skip Pulumi import flags when resources already exist in Pulumi state.
   // Prevents import collisions when redeploying an existing stack (e.g., platform connect after email init).
   skipResourceImports?: boolean;

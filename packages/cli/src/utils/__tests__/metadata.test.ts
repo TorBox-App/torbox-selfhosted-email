@@ -1733,4 +1733,81 @@ describe("buildEmailStackConfig", () => {
 
     expect(result.region).toBe("eu-west-1");
   });
+
+  it("preserves selfhostWebhook across a rebuild so a redeploy cannot destroy the self-hosted target", () => {
+    const selfhostMetadata = {
+      ...baseMetadata,
+      services: {
+        email: {
+          ...baseMetadata.services.email,
+          selfhostWebhook: {
+            url: "https://abc.lambda-url.us-east-1.on.aws",
+            secret: "sh-secret",
+          },
+        },
+      },
+    };
+
+    const result = buildEmailStackConfig(selfhostMetadata, "us-east-1");
+
+    expect(result.selfhostWebhook).toEqual({
+      awsAccountNumber: "123456789012",
+      webhookSecret: "sh-secret",
+      webhookUrl: "https://abc.lambda-url.us-east-1.on.aws",
+    });
+  });
+
+  it("should omit selfhostWebhook when absent from metadata", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1");
+
+    expect(result.selfhostWebhook).toBeUndefined();
+  });
+
+  it("keeps webhook and selfhostWebhook independent when both are present", () => {
+    const bothMetadata = {
+      ...baseMetadata,
+      services: {
+        email: {
+          ...baseMetadata.services.email,
+          selfhostWebhook: {
+            url: "https://abc.lambda-url.us-east-1.on.aws",
+            secret: "sh-secret",
+          },
+        },
+      },
+    };
+
+    const result = buildEmailStackConfig(bothMetadata, "us-east-1");
+
+    expect(result.webhook).toEqual({
+      awsAccountNumber: "123456789012",
+      webhookSecret: "abc123webhooksecret",
+    });
+    expect(result.selfhostWebhook).toEqual({
+      awsAccountNumber: "123456789012",
+      webhookSecret: "sh-secret",
+      webhookUrl: "https://abc.lambda-url.us-east-1.on.aws",
+    });
+  });
+
+  it("normalizes a stored selfhostWebhook url that still has the legacy path suffix", () => {
+    const selfhostMetadata = {
+      ...baseMetadata,
+      services: {
+        email: {
+          ...baseMetadata.services.email,
+          selfhostWebhook: {
+            url: "https://abc.lambda-url.us-east-1.on.aws/v1/ses-events/",
+            secret: "sh-secret",
+          },
+        },
+      },
+    };
+
+    const result = buildEmailStackConfig(selfhostMetadata, "us-east-1");
+
+    expect(result.selfhostWebhook?.webhookUrl).toBe(
+      "https://abc.lambda-url.us-east-1.on.aws"
+    );
+  });
 });

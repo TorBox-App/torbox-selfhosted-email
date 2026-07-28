@@ -39,6 +39,14 @@ export type ServiceConfig<TConfig, TPreset> = {
   // Webhook configuration for Wraps platform integration
   webhookSecret?: string; // API key for webhook authentication (uses metadata.accountId as AWS account number)
   webhookUrl?: string; // Custom webhook target (selfhost reroute) — defaults to the Wraps platform when absent
+  // Additional self-hosted control-plane webhook target, delivered ALONGSIDE
+  // the platform webhook above rather than replacing it. Present only when the
+  // customer runs a self-hosted control plane in the same AWS account; each
+  // control plane issues its own secret, so this cannot reuse `webhookSecret`.
+  selfhostWebhook?: {
+    url: string; // BASE url of the self-hosted API (no path suffix)
+    secret: string; // API key issued by the self-hosted control plane
+  };
   // SMTP credentials metadata (actual credentials shown once, only ARN stored)
   smtpCredentials?: SMTPCredentialsMetadata;
   // DNS provider used for automatic DNS record management
@@ -812,6 +820,7 @@ export function buildEmailStackConfig(
   overrides?: {
     emailConfig?: WrapsEmailConfig;
     webhook?: EmailStackConfig["webhook"] | undefined;
+    selfhostWebhook?: EmailStackConfig["selfhostWebhook"] | undefined;
   }
 ): EmailStackConfig {
   const emailService = metadata.services.email;
@@ -833,6 +842,22 @@ export function buildEmailStackConfig(
     };
   }
 
+  let selfhostWebhook: EmailStackConfig["selfhostWebhook"] | undefined;
+
+  if (overrides && "selfhostWebhook" in overrides) {
+    // Explicit override (including deliberate removal via undefined)
+    selfhostWebhook = overrides.selfhostWebhook;
+  } else if (emailService?.selfhostWebhook) {
+    // Default: reconstruct from metadata. Same hazard as `webhook` above —
+    // dropping this on a redeploy silently deletes the self-hosted control
+    // plane's EventBridge target, and events stop reaching it with no error.
+    selfhostWebhook = {
+      awsAccountNumber: metadata.accountId,
+      webhookSecret: emailService.selfhostWebhook.secret,
+      webhookUrl: normalizeWebhookBaseUrl(emailService.selfhostWebhook.url),
+    };
+  }
+
   const emailConfig = overrides?.emailConfig ?? emailService?.config;
   if (!emailConfig) {
     throw new Error("Email service config not found in metadata");
@@ -844,6 +869,7 @@ export function buildEmailStackConfig(
     vercel: metadata.vercel,
     emailConfig,
     webhook,
+    selfhostWebhook,
   };
 }
 
