@@ -49,6 +49,43 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v2.28.0",
+    date: "July 2026",
+    icon: SlidersHorizontal,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "SES Pricing Plan Detection",
+    items: [
+      <>
+        <Code>wraps email plan</Code> — reports the SES pricing plan for every
+        tracked Region, the cheaper alternative if there is one, and the annual
+        savings against your real send volume
+      </>,
+      "AWS added pricing plans to SES on 2026-07-21 and defaults new accounts to Essentials at $0.16/1K instead of a la carte at $0.10/1K. The plan is set per account, per Region, and no line item on your bill names the difference",
+      <>
+        Read-only by default. <Code>--set</Code> switches plans and always
+        requires a confirmation naming the Region and account, or{" "}
+        <Code>--yes</Code> — and never guesses a Region for a multi-Region
+        account
+      </>,
+      <>
+        Every comparison row carries a per-1K rate, so the gap between plans
+        stays legible even when your monthly cost rounds to $0.00
+      </>,
+      <>
+        <Code>--volume</Code> models the comparison against a volume you supply;{" "}
+        <Code>--json</Code> for scripting
+      </>,
+      "Fix: wraps platform connect chose the console role's trust principal from whether self-hosted metadata existed on the local machine rather than from --selfhosted. A normal connect run on a machine that had ever run wraps selfhost deploy would silently point the trust policy at the customer's own AWS account and break dashboard access with no error",
+      <>
+        Fix: <Code>selfhost deploy</Code> and <Code>upgrade</Code> now store the
+        API URL normalized, matching <Code>selfhost status</Code>. The raw
+        Lambda Function URL's trailing slash produced a double slash in webhook
+        paths that the API would not route
+      </>,
+    ],
+  },
+  {
     version: "Platform v0.19.0",
     date: "July 2026",
     icon: Inbox,
