@@ -1,19 +1,12 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@wraps/ui/components/ui/card";
 import {
   ArrowRight,
+  Bot,
   Building2,
-  Calendar,
-  Clock,
   Code2,
   Database,
+  DollarSign,
   FileCheck,
+  FileText,
   Inbox,
   KeyRound,
   Mail,
@@ -21,11 +14,12 @@ import {
   Send,
   Server,
   Shield,
-  User,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 type BlogPost = {
   slug: string;
@@ -41,6 +35,64 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "ses-pricing-plans-2026",
+    title: "AWS SES Pricing Plans: What Actually Changed",
+    description:
+      "AWS added three subscription plans to SES and now starts every new account and Region on Essentials at $0.16 per 1,000 on the first 10M each month. À la carte is still $0.10, untiered — here's how to tell which one you're on and how to move back.",
+    category: "Research",
+    date: "July 2026",
+    readTime: "12 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <DollarSign className="h-6 w-6" />,
+  },
+  {
+    slug: "python-email-sdk",
+    title: "A Python Email SDK for Your Own SES",
+    description:
+      "wraps-email 0.1.0 is on PyPI. It signs SigV4 straight against SES in your AWS account — no Wraps API key, no Wraps server in the request path.",
+    category: "Product",
+    date: "July 2026",
+    readTime: "9 min read",
+    author: "Wraps Team",
+    icon: <Code2 className="h-6 w-6" />,
+  },
+  {
+    slug: "agent-mailboxes",
+    title: "Agent Mailboxes: A Leash the Agent Can't Reach",
+    description:
+      "An email identity for an AI agent, constrained by a Lambda in your own AWS account. Kill switch, sender pin, allowlist, and caps decided where the agent's credential can't reach them.",
+    category: "Product",
+    date: "July 2026",
+    readTime: "14 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <Bot className="h-6 w-6" />,
+  },
+  {
+    slug: "dmarcbis-what-changes",
+    title: "DMARC Is Finally an Actual Standard: What RFC 9989 Changes",
+    description:
+      "RFC 9989 made DMARC Standards Track in May 2026, obsoleting RFC 7489 and RFC 9091. The Public Suffix List is replaced by a DNS tree walk, pct= is removed, np= and t= are in.",
+    category: "Security",
+    date: "July 2026",
+    readTime: "13 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <Shield className="h-6 w-6" />,
+  },
+  {
+    slug: "agent-readable-docs",
+    title: "Making Our Docs Agent-Readable",
+    description:
+      "Per-page markdown over content negotiation, well-known discovery documents, an in-browser tool surface, and AI crawl signals. What we shipped, what it does not do, and which of it is actually a standard.",
+    category: "Engineering",
+    date: "May 2026",
+    readTime: "11 min read",
+    author: "Wraps Team",
+    icon: <FileText className="h-6 w-6" />,
+  },
   {
     slug: "scale-plan-enterprise-features",
     title: "SSO, Behavioral Segments, and What's Next: Inside the Scale Plan",
@@ -116,7 +168,6 @@ const posts: BlogPost[] = [
     date: "April 2026",
     readTime: "6 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <KeyRound className="h-6 w-6" />,
   },
   {
@@ -129,7 +180,6 @@ const posts: BlogPost[] = [
     date: "March 2026",
     readTime: "5 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Shield className="h-6 w-6" />,
     image: "/blog/yc-w26-email-security-audit.webp",
   },
@@ -142,7 +192,6 @@ const posts: BlogPost[] = [
     date: "March 2026",
     readTime: "12 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Database className="h-6 w-6" />,
     image: "/blog/supabase-email-guide.webp",
   },
@@ -155,7 +204,6 @@ const posts: BlogPost[] = [
     date: "March 2026",
     readTime: "20 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Mail className="h-6 w-6" />,
     image: "/blog/how-email-works.webp",
   },
@@ -168,7 +216,6 @@ const posts: BlogPost[] = [
     date: "February 2026",
     readTime: "10 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Code2 className="h-6 w-6" />,
     image: "/blog/wraps-templates-and-workflows-as-code.webp",
   },
@@ -181,7 +228,6 @@ const posts: BlogPost[] = [
     date: "February 2026",
     readTime: "8 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Inbox className="h-6 w-6" />,
     image: "/blog/wraps-inbound.webp",
   },
@@ -194,7 +240,6 @@ const posts: BlogPost[] = [
     date: "January 2026",
     readTime: "12 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Shield className="h-6 w-6" />,
     image: "/blog/DMARC_EXPLOITED.webp",
   },
@@ -241,7 +286,6 @@ const posts: BlogPost[] = [
     date: "January 2026",
     readTime: "10 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Zap className="h-6 w-6" />,
     image: "/blog/aws-ses-simplified.webp",
   },
@@ -254,162 +298,201 @@ const posts: BlogPost[] = [
     date: "January 2026",
     readTime: "12 min read",
     author: "Wraps Team",
-    featured: true,
     icon: <Server className="h-6 w-6" />,
     image: "/blog/nextjs-vercel-ses-guide.webp",
   },
 ];
 
+const META_RULE = "font-mono text-[11px] uppercase tracking-[0.08em]";
+
+const TRAILING_READ = /\s*read$/;
+
+/** "12 min read" -> "12 min" — the panel has room for the number, not the verb. */
+function shortReadTime(readTime: string) {
+  return readTime.replace(TRAILING_READ, "");
+}
+
+/**
+ * The art slot for a featured post. Posts with cover art use it; posts without
+ * get a typographic panel built from the metadata they already carry, so an
+ * imageless post reads as designed rather than as a hole in the layout.
+ */
+function PostArt({ post }: { post: BlogPost }) {
+  if (post.image) {
+    return (
+      <Image
+        alt=""
+        className="object-cover"
+        fill
+        sizes="(max-width: 768px) 100vw, 300px"
+        src={post.image}
+      />
+    );
+  }
+
+  return (
+    <div className="flex size-full flex-col justify-between bg-muted/40 p-6">
+      <div>
+        <span className="font-mono text-[19px] text-foreground uppercase leading-none tracking-[0.06em] md:text-[22px]">
+          {post.category}
+        </span>
+        <span
+          aria-hidden="true"
+          className="mt-4 block h-px w-10 bg-orange-500"
+        />
+      </div>
+      <div className={`${META_RULE} space-y-1 text-muted-foreground`}>
+        <div>{post.date}</div>
+        <div>{shortReadTime(post.readTime)}</div>
+      </div>
+      <span className={`${META_RULE} text-muted-foreground/50`}>wraps.dev</span>
+    </div>
+  );
+}
+
+function FeaturedCard({ post }: { post: BlogPost }) {
+  return (
+    <a
+      className="group block border-foreground border-t pt-6 transition-colors hover:border-orange-500"
+      href={`/blog/${post.slug}`}
+    >
+      <div className="grid gap-6 md:grid-cols-[minmax(0,300px)_1fr] md:gap-10">
+        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-border md:aspect-[3/2]">
+          <PostArt post={post} />
+        </div>
+
+        <div className="flex flex-col justify-center">
+          <div
+            className={`${META_RULE} mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-muted-foreground`}
+          >
+            <span className="text-orange-600 dark:text-orange-500">
+              {post.category}
+            </span>
+            <span aria-hidden="true">/</span>
+            <span>{post.author}</span>
+            <span aria-hidden="true">/</span>
+            <span>{post.date}</span>
+            <span aria-hidden="true">/</span>
+            <span>{post.readTime}</span>
+          </div>
+
+          <h3 className="font-heading font-semibold text-[22px] text-foreground leading-[1.15] tracking-[-0.02em] transition-colors group-hover:text-orange-600 md:text-[27px] dark:group-hover:text-orange-500">
+            {post.title}
+          </h3>
+
+          <p className="mt-3 max-w-[62ch] text-[14.5px] text-muted-foreground leading-[1.6]">
+            {post.description}
+          </p>
+
+          <span className="mt-5 inline-flex items-center gap-2 font-medium text-[13.5px] text-foreground">
+            Read article
+            <ArrowRight
+              aria-hidden="true"
+              className="size-3.5 transition-transform group-hover:translate-x-1"
+            />
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function PostCard({ post }: { post: BlogPost }) {
+  return (
+    <a
+      className="group block border-foreground border-t pt-5 transition-colors hover:border-orange-500"
+      href={`/blog/${post.slug}`}
+    >
+      <div
+        className={`${META_RULE} mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-muted-foreground`}
+      >
+        <span className="text-orange-600 dark:text-orange-500">
+          {post.category}
+        </span>
+        <span aria-hidden="true">/</span>
+        <span>{shortReadTime(post.readTime)}</span>
+      </div>
+
+      <h3 className="mb-2 font-semibold text-[15px] text-foreground leading-snug transition-colors group-hover:text-orange-600 dark:group-hover:text-orange-500">
+        {post.title}
+      </h3>
+
+      <p className="line-clamp-3 text-[13.5px] text-muted-foreground leading-[1.55]">
+        {post.description}
+      </p>
+
+      <span className={`${META_RULE} mt-3 block text-muted-foreground/70`}>
+        {post.date}
+      </span>
+    </a>
+  );
+}
+
 export default function BlogContent() {
+  const featured = posts.filter((p) => p.featured);
+  const rest = posts.filter((p) => !p.featured);
+
   return (
     <div className="min-h-screen bg-background">
       <LandingNavbar />
 
-      <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mx-auto max-w-3xl text-center">
-          <Badge className="mb-4" variant="outline">
-            Interactive Articles
-          </Badge>
-          <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
-            The Wraps Blog
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Deep dives into email infrastructure, security, and developer
-            experience. Interactive content that makes complex topics tangible.
-          </p>
-        </div>
+      <main>
+        {/* Masthead */}
+        <section className="border-border border-b py-16 md:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[620px]">
+              <SectionKicker>The Wraps blog</SectionKicker>
+              <h1 className="font-heading font-semibold text-[34px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[46px]">
+                Deep dives into email infrastructure.
+              </h1>
+              <p className="mt-4 max-w-[52ch] text-[17px] text-muted-foreground leading-[1.55]">
+                Deliverability, DNS, AWS pricing, and developer experience —
+                researched properly, with the sources and the numbers shown.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        {/* Featured Post */}
-        {posts.filter((p) => p.featured).length > 0 && (
-          <section className="mt-16">
-            <h2 className="mb-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
-              Featured
-            </h2>
-            <div className="space-y-6">
-              {posts
-                .filter((p) => p.featured)
-                .map((post, index) => (
-                  <a
-                    className="group block"
-                    href={`/blog/${post.slug}`}
-                    key={post.slug}
-                  >
-                    <Card className="flex flex-col overflow-hidden py-0 transition-all hover:border-primary/50 hover:shadow-lg md:h-72 md:flex-row">
-                      {post.image && (
-                        <div
-                          className={`md:h-full md:shrink-0 ${index % 2 !== 0 ? "md:order-2" : ""}`}
-                        >
-                          <img
-                            alt={post.title}
-                            className={`aspect-video w-full object-cover ${
-                              index % 2 !== 0
-                                ? "rounded-t-xl md:rounded-r-xl md:rounded-tl-none md:h-full md:w-auto"
-                                : "rounded-t-xl md:rounded-l-xl md:rounded-tr-none md:h-full md:w-auto"
-                            }`}
-                            height={630}
-                            src={post.image}
-                            width={1200}
-                          />
-                        </div>
-                      )}
-                      <div
-                        className={`flex flex-1 flex-col ${post.image && index % 2 !== 0 ? "md:order-1" : ""}`}
-                      >
-                        <CardHeader className="pt-4">
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <Badge className="text-xs" variant="secondary">
-                              {post.category}
-                            </Badge>
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                              <User className="h-3 w-3" />
-                              {post.author}
-                            </span>
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                              <Calendar className="h-3 w-3" />
-                              {post.date}
-                            </span>
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                              <Clock className="h-3 w-3" />
-                              {post.readTime}
-                            </span>
-                          </div>
-                          <CardTitle className="text-lg transition-colors group-hover:text-primary">
-                            {post.title}
-                          </CardTitle>
-                          <CardDescription className="line-clamp-3 max-w-prose text-pretty text-md">
-                            {post.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <div className="px-6 pt-2.5 pb-4">
-                          <span className="inline-flex items-center gap-2 font-medium text-primary text-sm">
-                            Read article{" "}
-                            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-                  </a>
+        {/* Featured */}
+        {featured.length > 0 && (
+          <section className="border-border border-b py-16 md:py-20">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <SectionKicker>Featured</SectionKicker>
+              <div className="mt-2 space-y-12">
+                {featured.map((post) => (
+                  <FeaturedCard key={post.slug} post={post} />
                 ))}
+              </div>
             </div>
           </section>
         )}
 
-        {/* All Posts */}
-        {posts.filter((p) => !p.featured).length > 0 && (
-          <section className="mt-16">
-            <h2 className="mb-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
-              All Articles
-            </h2>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {posts
-                .filter((p) => !p.featured)
-                .map((post) => (
-                  <a
-                    className="group block"
-                    href={`/blog/${post.slug}`}
-                    key={post.slug}
-                  >
-                    <Card className="h-full transition-all hover:border-primary/50 hover:shadow-lg">
-                      <CardHeader>
-                        <div className="mb-2 flex flex-wrap items-center gap-3">
-                          <Badge variant="secondary">{post.category}</Badge>
-                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                            <User className="h-3 w-3" />
-                            {post.author}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {post.readTime}
-                          </span>
-                        </div>
-                        <CardTitle className="transition-colors group-hover:text-primary">
-                          {post.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="mb-4">
-                          {post.description}
-                        </CardDescription>
-                        <span className="inline-flex items-center gap-2 font-medium text-primary text-sm">
-                          Read more{" "}
-                          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </a>
+        {/* Archive */}
+        {rest.length > 0 && (
+          <section className="border-border border-b py-16 md:py-20">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <SectionKicker>All articles</SectionKicker>
+              <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+                {rest.map((post) => (
+                  <PostCard key={post.slug} post={post} />
                 ))}
+              </div>
             </div>
           </section>
         )}
 
-        {/* Coming Soon */}
-        <section className="mt-24 text-center">
-          <div className="mx-auto max-w-xl rounded-xl border border-dashed bg-muted/30 p-8">
-            <h3 className="mb-2 font-semibold text-lg">More coming soon</h3>
-            <p className="text-muted-foreground text-sm">
-              We're working on more interactive deep-dives into email
-              infrastructure, DNS, and developer tooling. Stay tuned.
-            </p>
+        {/* Closer */}
+        <section className="py-16 md:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[52ch] border-foreground border-t pt-5">
+              <h2 className="mb-2 font-semibold text-[15px] text-foreground">
+                More coming soon
+              </h2>
+              <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+                We're working on more deep-dives into email infrastructure, DNS,
+                and developer tooling. Stay tuned.
+              </p>
+            </div>
           </div>
         </section>
       </main>
