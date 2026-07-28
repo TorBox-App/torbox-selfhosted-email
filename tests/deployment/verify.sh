@@ -20,10 +20,18 @@ pass() {
   printf "${GREEN}  PASS${NC} %s\n" "$1"
 }
 
+# Always returns 0. The detail line used to be a `[[ -n … ]] && printf`
+# short-circuit, which made `fail` return 1 whenever it was called without a
+# detail string — and under this file's `set -e` that aborted the whole run at
+# the FIRST failed assertion instead of reporting the rest. Every new verifier
+# would have had to re-discover that, so the guard lives here now.
 fail() {
   FAIL_COUNT+=1
   printf "${RED}  FAIL${NC} %s\n" "$1"
-  [[ -n "${2:-}" ]] && printf "       %s\n" "$2"
+  if [[ -n "${2:-}" ]]; then
+    printf "       %s\n" "$2"
+  fi
+  return 0
 }
 
 section() {
@@ -1750,19 +1758,6 @@ verify_teardown() {
 
 # ─── Dual-Plane Coexistence Verification ─────────────────────────────
 
-# Record a failed assertion, then swallow the status.
-#
-# `fail` ends in a `[[ -n "${2:-}" ]] && printf` short-circuit, so it returns 1
-# whenever it is called without a detail string — and `aws_check` echoes
-# nothing when the AWS call fails, so the detail is empty exactly when a
-# resource is missing. Under this file's `set -euo pipefail` that aborts the
-# entire run at the FIRST failed assertion instead of reporting the rest.
-# Every failure below goes through this wrapper so a run against a missing or
-# half-built deployment reports all of its findings.
-_coexistence_fail() {
-  fail "$@" || true
-}
-
 # Count rule targets whose ARN contains a substring. Echoes the count.
 _coexistence_target_count() {
   local targets_json="$1"
@@ -1788,6 +1783,11 @@ verify_coexistence() {
   local region="${1:-us-east-1}"
   local account_id="${2:?account_id is required}"
   local selfhost_url="${3:?selfhost_url is required}"
+  # "true" (the default) for the coexistence scenario, whose whole point is that
+  # both planes receive events. Pass "false" for an account that has only ever
+  # run `wraps selfhost connect` — there, the absence of a platform target is
+  # the correct end state, not the regression.
+  local expect_platform="${4:-true}"
 
   # Resource names below are spelled out literally, never derived — the harness
   # asserts what the infrastructure code hardcodes. Sources: eventbridge.ts
@@ -1808,10 +1808,10 @@ verify_coexistence() {
     if [[ "$rule_state" == "ENABLED" ]]; then
       pass "EventBridge rule is ENABLED"
     else
-      _coexistence_fail "EventBridge rule state: expected ENABLED, got $rule_state"
+      fail "EventBridge rule state: expected ENABLED, got $rule_state"
     fi
   else
-    _coexistence_fail "EventBridge rule wraps-email-events-to-sqs not found" "$rule_output"
+    fail "EventBridge rule wraps-email-events-to-sqs not found" "$rule_output"
   fi
 
   # Fall back to an empty target list so every assertion below still reports a
@@ -1820,25 +1820,41 @@ verify_coexistence() {
   if ! targets_output=$(aws_check events list-targets-by-rule \
     --rule "wraps-email-events-to-sqs" \
     --region "$region"); then
-    _coexistence_fail "Could not list targets for wraps-email-events-to-sqs" "$targets_output"
+    fail "Could not list targets for wraps-email-events-to-sqs" "$targets_output"
     targets_output='{"Targets":[]}'
   fi
 
   local target_count
   target_count=$(echo "$targets_output" | jq '.Targets | length' 2>/dev/null || echo 0)
 
-  # Deliberately exact, not >= 3. EventBridge allows 5 targets per rule (hard
-  # AWS quota, not adjustable), so an exact count turns "we quietly added a
-  # fifth target" into a failing test instead of a LimitExceeded on a
-  # customer's next deploy.
-  if (( target_count == 4 )); then
-    pass "EventBridge rule has exactly 4 targets (SQS + platform + user + selfhost)"
-  elif (( target_count >= 5 )); then
-    _coexistence_fail "EventBridge rule has $target_count targets, expected exactly 4" \
+  # Expected composition: SQS + platform webhook + selfhost webhook, plus the
+  # user webhook target when the customer configured one. The user target is
+  # the only optional member — `eventbridge.ts` creates it solely when
+  # `config.userWebhook` is set — so it is counted, not assumed. A flat
+  # "exactly 4" reported a false failure on a deployment that simply has no
+  # user webhook, which is the common case (demo.wraps.dev included).
+  #
+  # The ceiling stays exact and stays a failure: EventBridge allows 5 targets
+  # per rule (hard AWS quota, not adjustable), so anything at 5 turns "we
+  # quietly added another target" into a failing test here instead of a
+  # LimitExceeded on a customer's next deploy.
+  local -i user_target_count expected_total
+  user_target_count=$(_coexistence_target_count "$targets_output" "wraps-user-webhook-destination")
+  expected_total=$(( 2 + user_target_count ))
+  [[ "$expect_platform" == "true" ]] && expected_total=$(( expected_total + 1 ))
+
+  if (( target_count >= 5 )); then
+    fail "EventBridge rule has $target_count targets, expected $expected_total" \
       "at the AWS hard quota of 5 targets per rule — the next target will be rejected"
+  elif (( target_count == expected_total )); then
+    if (( user_target_count > 0 )); then
+      pass "EventBridge rule has exactly $target_count targets (SQS + platform + user + selfhost)"
+    else
+      pass "EventBridge rule has exactly $target_count targets (SQS + platform + selfhost; no user webhook configured)"
+    fi
   else
-    _coexistence_fail "EventBridge rule has $target_count target(s), expected exactly 4" \
-      "expected SQS + platform webhook + user webhook + selfhost webhook"
+    fail "EventBridge rule has $target_count target(s), expected $expected_total" \
+      "expected SQS + platform webhook + selfhost webhook, plus a user webhook target only when one is configured"
   fi
 
   local sqs_target_count
@@ -1846,17 +1862,24 @@ verify_coexistence() {
   if (( sqs_target_count == 1 )); then
     pass "Exactly one SQS target (the events pipeline)"
   else
-    _coexistence_fail "Expected exactly 1 SQS target, found $sqs_target_count"
+    fail "Expected exactly 1 SQS target, found $sqs_target_count"
   fi
 
   # THE coexistence regression assertion. If the platform target is missing,
   # a self-hosted connect deleted app.wraps.dev's event delivery.
   local platform_target_count
   platform_target_count=$(_coexistence_target_count "$targets_output" "wraps-webhook-destination")
-  if (( platform_target_count == 1 )); then
+  if [[ "$expect_platform" != "true" ]]; then
+    if (( platform_target_count == 0 )); then
+      pass "No platform target, as expected (this account has never run a non-self-hosted connect)"
+    else
+      fail "Found $platform_target_count wraps-webhook-destination target(s) on an account with no platform identity" \
+        "something is POSTing this account's SES events to app.wraps.dev — check services.email.webhookSecret in connection metadata"
+    fi
+  elif (( platform_target_count == 1 )); then
     pass "Exactly one platform target (wraps-webhook-destination) — app.wraps.dev still receives events"
   else
-    _coexistence_fail "Expected exactly 1 wraps-webhook-destination target, found $platform_target_count" \
+    fail "Expected exactly 1 wraps-webhook-destination target, found $platform_target_count" \
       "the self-hosted target must be an ADDITION; losing this one means app.wraps.dev stopped receiving SES events"
   fi
 
@@ -1865,7 +1888,7 @@ verify_coexistence() {
   if (( selfhost_target_count == 1 )); then
     pass "Exactly one self-hosted target (wraps-selfhost-webhook-destination)"
   else
-    _coexistence_fail "Expected exactly 1 wraps-selfhost-webhook-destination target, found $selfhost_target_count"
+    fail "Expected exactly 1 wraps-selfhost-webhook-destination target, found $selfhost_target_count"
   fi
 
   section "Coexistence: Self-hosted API destination"
@@ -1883,7 +1906,7 @@ verify_coexistence() {
     if [[ "$endpoint" == "$expected_endpoint" ]]; then
       pass "Self-hosted invocation endpoint: $endpoint"
     else
-      _coexistence_fail "Self-hosted invocation endpoint mismatch" \
+      fail "Self-hosted invocation endpoint mismatch" \
         "expected $expected_endpoint, got ${endpoint:-<empty>}"
     fi
 
@@ -1892,7 +1915,7 @@ verify_coexistence() {
     if [[ "$rate_limit" == "300" ]]; then
       pass "Self-hosted API destination rate limit: 300/s"
     else
-      _coexistence_fail "Self-hosted API destination rate limit: expected 300, got $rate_limit"
+      fail "Self-hosted API destination rate limit: expected 300, got $rate_limit"
     fi
 
     # Connection ARN shape: arn:aws:events:<region>:<acct>:connection/<name>/<uuid>
@@ -1902,11 +1925,11 @@ verify_coexistence() {
     if [[ "$conn_name" == "wraps-selfhost-webhook-connection" ]]; then
       pass "Self-hosted API destination uses connection wraps-selfhost-webhook-connection"
     else
-      _coexistence_fail "Self-hosted API destination connection: expected wraps-selfhost-webhook-connection, got ${conn_name:-<empty>}" \
+      fail "Self-hosted API destination connection: expected wraps-selfhost-webhook-connection, got ${conn_name:-<empty>}" \
         "ConnectionArn was ${conn_arn:-<empty>}"
     fi
   else
-    _coexistence_fail "API destination wraps-selfhost-webhook-destination not found" "$dest_output"
+    fail "API destination wraps-selfhost-webhook-destination not found" "$dest_output"
   fi
 
   local conn_output
@@ -1920,7 +1943,7 @@ verify_coexistence() {
     if [[ "$auth_type" == "API_KEY" ]]; then
       pass "Self-hosted connection auth type: API_KEY"
     else
-      _coexistence_fail "Self-hosted connection auth type: expected API_KEY, got $auth_type"
+      fail "Self-hosted connection auth type: expected API_KEY, got $auth_type"
     fi
 
     # Header NAME only. verify.sh output is routinely pasted into issues, so
@@ -1932,10 +1955,10 @@ verify_coexistence() {
     if [[ "$api_key_name" == "X-Wraps-Api-Key" ]]; then
       pass "Self-hosted connection auth header: X-Wraps-Api-Key"
     else
-      _coexistence_fail "Self-hosted connection auth header: expected X-Wraps-Api-Key, got ${api_key_name:-<empty>}"
+      fail "Self-hosted connection auth header: expected X-Wraps-Api-Key, got ${api_key_name:-<empty>}"
     fi
   else
-    _coexistence_fail "EventBridge connection wraps-selfhost-webhook-connection not found" "$conn_output"
+    fail "EventBridge connection wraps-selfhost-webhook-connection not found" "$conn_output"
   fi
 
   section "Coexistence: Self-hosted target config"
@@ -1951,20 +1974,20 @@ verify_coexistence() {
     if [[ -n "$dlq_arn" ]]; then
       pass "Self-hosted target has a DLQ: ${dlq_arn##*:}"
     else
-      _coexistence_fail "Self-hosted target has no DeadLetterConfig.Arn" \
+      fail "Self-hosted target has no DeadLetterConfig.Arn" \
         "undeliverable events would be dropped silently"
     fi
 
     # The self-hosted control plane runs the same apps/api code as the
     # platform and expects the raw SES envelope.
     if echo "$selfhost_target" | jq -e '.InputTransformer' &>/dev/null; then
-      _coexistence_fail "Self-hosted target has an InputTransformer" \
+      fail "Self-hosted target has an InputTransformer" \
         "the self-hosted control plane expects the raw SES event envelope"
     else
       pass "Self-hosted target has no InputTransformer (raw SES envelope)"
     fi
   else
-    _coexistence_fail "No rule target found for wraps-selfhost-webhook-destination"
+    fail "No rule target found for wraps-selfhost-webhook-destination"
   fi
 
   local role_output
@@ -1976,7 +1999,7 @@ verify_coexistence() {
         &>/dev/null; then
       pass "Self-hosted webhook role trusts events.amazonaws.com"
     else
-      _coexistence_fail "Self-hosted webhook role missing events.amazonaws.com trust"
+      fail "Self-hosted webhook role missing events.amazonaws.com trust"
     fi
 
     local policy_names
@@ -1997,13 +2020,13 @@ verify_coexistence() {
       if [[ "$found_invoke" == "true" ]]; then
         pass "Self-hosted webhook role grants events:InvokeApiDestination"
       else
-        _coexistence_fail "Self-hosted webhook role has no inline policy granting events:InvokeApiDestination"
+        fail "Self-hosted webhook role has no inline policy granting events:InvokeApiDestination"
       fi
     else
-      _coexistence_fail "Could not list inline policies for wraps-selfhost-webhook-role" "$policy_names"
+      fail "Could not list inline policies for wraps-selfhost-webhook-role" "$policy_names"
     fi
   else
-    _coexistence_fail "IAM role wraps-selfhost-webhook-role not found" "$role_output"
+    fail "IAM role wraps-selfhost-webhook-role not found" "$role_output"
   fi
 
   section "Coexistence: Legacy reroute is gone"
@@ -2033,10 +2056,10 @@ verify_coexistence() {
   if (( selfhost_endpoint_hits == 1 )); then
     pass "Exactly one target POSTs to the self-hosted control plane"
   elif (( selfhost_endpoint_hits == 0 )); then
-    _coexistence_fail "No target POSTs to the self-hosted control plane" \
+    fail "No target POSTs to the self-hosted control plane" \
       "expected exactly one target at $expected_endpoint"
   else
-    _coexistence_fail "$selfhost_endpoint_hits targets POST to $expected_endpoint" \
+    fail "$selfhost_endpoint_hits targets POST to $expected_endpoint" \
       "the legacy --reroute-events target is still wired alongside wraps-selfhost-webhook-destination — every SES event is delivered twice"
   fi
 }

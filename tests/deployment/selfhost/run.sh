@@ -483,13 +483,44 @@ if echo "$LAMBDA_OUT" | jq -e '.Configuration.FunctionName' &>/dev/null; then
   LAMBDA_ENV=$(echo "$LAMBDA_OUT" | jq -r '.Configuration.Environment.Variables // {}')
   for env_key in DATABASE_URL WRAPS_LICENSE_KEY BATCH_QUEUE_URL BATCH_QUEUE_ARN \
                   RATE_LIMIT_TABLE_NAME WORKFLOW_QUEUE_URL WORKFLOW_QUEUE_ARN \
-                  SCHEDULER_ROLE_ARN SCHEDULER_GROUP_NAME; do
+                  SCHEDULER_ROLE_ARN SCHEDULER_GROUP_NAME WRAPS_CONSOLE_ROLE_NAME; do
     if echo "$LAMBDA_ENV" | jq -e --arg k "$env_key" '.[$k]' &>/dev/null; then
       pass "Lambda env var: $env_key"
     else
       fail "Lambda missing env var: $env_key"
     fi
   done
+
+  # The self-hosted plane assumes its OWN console role. Sharing the platform's
+  # would overwrite that role's single-principal trust policy and break
+  # whichever plane connected first. Literal on both sides on purpose.
+  LAMBDA_CONSOLE_ROLE=$(echo "$LAMBDA_ENV" | jq -r '.WRAPS_CONSOLE_ROLE_NAME // ""')
+  if [[ "$LAMBDA_CONSOLE_ROLE" == "wraps-selfhost-console-access-role" ]]; then
+    pass "Lambda WRAPS_CONSOLE_ROLE_NAME: $LAMBDA_CONSOLE_ROLE"
+  else
+    fail "Lambda WRAPS_CONSOLE_ROLE_NAME: expected wraps-selfhost-console-access-role, got ${LAMBDA_CONSOLE_ROLE:-<unset>}" \
+      "the self-hosted dashboard would assume the PLATFORM's role, whose trust policy names the Wraps account"
+  fi
+
+  # The API builds links into emails. A self-hosted plane that does not know
+  # its own dashboard URL emails recipients links to app.wraps.dev — a server
+  # that has never seen their unsubscribe token.
+  LAMBDA_APP_URL=$(echo "$LAMBDA_ENV" | jq -r '.NEXT_PUBLIC_APP_URL // ""')
+  if [[ "$LAMBDA_APP_URL" == "$APP_URL" ]]; then
+    pass "Lambda NEXT_PUBLIC_APP_URL: $LAMBDA_APP_URL"
+  else
+    fail "Lambda NEXT_PUBLIC_APP_URL: expected $APP_URL, got ${LAMBDA_APP_URL:-<unset>}"
+  fi
+
+  # Injected as WRAPS_LICENSE_KEY, never as the bare LICENSE_KEY the .env file
+  # uses: isSelfHosted() reads the prefixed name, and getting this wrong leaves
+  # rate limits, plan gates and the event cap enforced on a licensed install.
+  if echo "$LAMBDA_ENV" | jq -e 'has("LICENSE_KEY") and (has("WRAPS_LICENSE_KEY") | not)' &>/dev/null; then
+    fail "Lambda has LICENSE_KEY but not WRAPS_LICENSE_KEY" \
+      "the license is injected under a name the API never reads — isSelfHosted() is false on every request"
+  else
+    pass "Lambda license is not injected under the bare LICENSE_KEY name alone"
+  fi
 
   LAMBDA_TAG=$(echo "$LAMBDA_OUT" | jq -r '.Tags.ManagedBy // ""')
   if [[ "$LAMBDA_TAG" == "wraps-cli" ]]; then
