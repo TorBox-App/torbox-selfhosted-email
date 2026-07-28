@@ -671,10 +671,15 @@ pnpm install`,
           Once signed in, register this AWS account with your self-hosted
           control plane. This creates the{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps-selfhost-console-access-role
+          </code>{" "}
+          IAM role — distinct from the platform&apos;s{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
             wraps-console-access-role
           </code>{" "}
-          IAM role and enables event streaming from your email infrastructure to
-          the dashboard:
+          because an IAM trust policy names one principal and your control plane
+          is not the Wraps platform — and enables event streaming from your
+          email infrastructure to the dashboard:
         </p>
         <div className="mb-4">
           <CLICommand command="wraps selfhost connect" />
