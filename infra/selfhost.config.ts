@@ -216,7 +216,14 @@ export default $config({
         DATABASE_URL: process.env.DATABASE_URL ?? "",
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
         UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET ?? "",
-        LICENSE_KEY: process.env.LICENSE_KEY ?? "",
+        // The API reads WRAPS_LICENSE_KEY (apps/api/src/(ee)/lib/license.ts).
+        // The .env.selfhost key stays LICENSE_KEY — scripts/selfhost/deploy.ts
+        // writes it under that name and upgrade.ts reads it back. Only the
+        // injected Lambda variable is renamed. Injecting it as LICENSE_KEY left
+        // isSelfHosted() false on every self-hosted API request, so rate limits,
+        // plan gates and the monthly event cap were all still enforced on a
+        // licensed deployment.
+        WRAPS_LICENSE_KEY: process.env.LICENSE_KEY ?? "",
         // The API builds links into emails and advertises OAuth endpoints, so
         // it needs the deployment's own URLs. It cannot read `api.url`/`web.url`
         // (both are being defined here), so it reads what the first deploy pass
