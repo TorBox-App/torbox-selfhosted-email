@@ -253,18 +253,38 @@ export async function selfhostDeploy(
   }
 
   // 7. Prompt for app URL
+  //
+  // No default, and no fallback. This used to default to https://app.wraps.dev
+  // and fall back to it on empty input, so an operator pressing Enter deployed
+  // a control plane that believed Wraps' own dashboard was its own — and
+  // NEXT_PUBLIC_APP_URL is what builds every unsubscribe, preference and
+  // verification link this deployment emails to ITS customers' recipients.
+  // Failing the prompt is the only safe behaviour; there is nothing sensible
+  // to guess here.
   let appUrl = options.appUrl;
   if (!appUrl) {
     const appUrlAnswer = await clack.text({
       message: "App URL (where your self-hosted dashboard will be served):",
-      defaultValue: "https://app.wraps.dev",
       placeholder: "https://app.yourcompany.com",
+      validate: (value) => {
+        if (!value?.trim()) {
+          return "Required — this URL is baked into every link your deployment emails to recipients.";
+        }
+        const trimmed = value.trim();
+        if (!URL.canParse(trimmed)) {
+          return "Must be a valid URL, for example https://app.yourcompany.com";
+        }
+        const { protocol } = new URL(trimmed);
+        if (protocol !== "https:" && protocol !== "http:") {
+          return "Must be an http(s) URL";
+        }
+      },
     });
     if (clack.isCancel(appUrlAnswer)) {
       clack.cancel("Operation cancelled.");
       process.exit(0);
     }
-    appUrl = (appUrlAnswer as string) || "https://app.wraps.dev";
+    appUrl = (appUrlAnswer as string).trim();
   }
 
   // 8. Confirm deployment (skip if --yes or --preview)

@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import type { EmailConfigOptions } from "../../types/index.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -359,6 +360,10 @@ export async function config(options: EmailConfigOptions): Promise<void> {
   }
 
   displaySuccess({
+    dashboardUrl: await resolveDashboardUrl(
+      identity.accountId,
+      outputs.region!
+    ),
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,
     region: outputs.region!,

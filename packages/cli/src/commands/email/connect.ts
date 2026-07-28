@@ -9,6 +9,7 @@ import {
 } from "../../telemetry/events.js";
 import type { ConnectOptions, EmailStackConfig } from "../../types/index.js";
 import { getPreset } from "../../utils/email/presets.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import {
   getAWSRegion,
   SES_REGIONS,
@@ -506,6 +507,10 @@ export async function connect(options: ConnectOptions): Promise<void> {
   }
 
   displaySuccess({
+    dashboardUrl: await resolveDashboardUrl(
+      identity.accountId,
+      outputs.region!
+    ),
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,
     region: outputs.region!,

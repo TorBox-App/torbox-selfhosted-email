@@ -14,6 +14,7 @@ import type {
 } from "../../types/index.js";
 import { getCostSummary } from "../../utils/email/costs.js";
 import { getPreset, validateConfig } from "../../utils/email/presets.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import {
   getAWSRegion,
   getSESAccountStatus,
@@ -821,6 +822,10 @@ export async function init(options: InitOptions): Promise<void> {
 
   // 12. Display success message
   displaySuccess({
+    dashboardUrl: await resolveDashboardUrl(
+      identity.accountId,
+      outputs.region!
+    ),
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,
     region: outputs.region!,

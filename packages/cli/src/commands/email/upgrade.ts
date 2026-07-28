@@ -17,6 +17,7 @@ import {
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
 import { checkEventPipeline } from "../../utils/email/event-pipeline-check.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import {
   errors,
@@ -2466,6 +2467,10 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   // 15. Display success message
   displaySuccess({
+    dashboardUrl: await resolveDashboardUrl(
+      identity.accountId,
+      outputs.region!
+    ),
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,
     region: outputs.region!,

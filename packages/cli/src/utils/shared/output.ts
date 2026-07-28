@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { getAppBaseUrl } from "./config.js";
 import { isJsonMode } from "./json-output.js";
 
 /**
@@ -135,6 +136,8 @@ export type SuccessOutputs = {
   customTrackingDomain?: string;
   httpsTrackingEnabled?: boolean;
   mailFromDomain?: string;
+  /** This deployment's own dashboard — see resolveDashboardUrl. */
+  dashboardUrl?: string;
 };
 
 /**
@@ -186,7 +189,10 @@ export function displaySuccess(outputs: SuccessOutputs) {
     );
   }
 
-  lines.push(`  2. View dashboard: ${pc.blue("https://app.wraps.dev")}`, "");
+  lines.push(
+    `  2. View dashboard: ${pc.blue(outputs.dashboardUrl ?? getAppBaseUrl())}`,
+    ""
+  );
 
   clack.outro(pc.green("Email infrastructure deployed successfully!"));
   console.log(lines.join("\n"));
@@ -373,6 +379,8 @@ export type StatusOutputs = {
     httpsEnabled?: boolean;
     cloudFrontDomain?: string;
   };
+  /** This deployment's own dashboard — see resolveDashboardUrl. */
+  dashboardUrl?: string;
 };
 
 /**
@@ -618,7 +626,9 @@ export function displayStatus(status: StatusOutputs) {
     );
   }
 
-  console.log(`\n${pc.bold("Dashboard:")} ${pc.blue("https://app.wraps.dev")}`);
+  console.log(
+    `\n${pc.bold("Dashboard:")} ${pc.blue(status.dashboardUrl ?? getAppBaseUrl())}`
+  );
   console.log(`${pc.bold("Docs:")} ${pc.blue("https://wraps.dev/docs")}\n`);
 }
 

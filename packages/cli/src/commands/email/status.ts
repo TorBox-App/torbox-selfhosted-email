@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type { StatusOptions } from "../../types/index.js";
+import { resolveDashboardUrl } from "../../utils/selfhost/dashboard-url.js";
 import {
   getAWSRegion,
   listSESDomains,
@@ -170,6 +171,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
   const statusData = {
     integrationLevel: integrationLevel as "dashboard-only" | "enhanced",
     region,
+    dashboardUrl: await resolveDashboardUrl(identity.accountId, region),
     domains: domainsWithTokens,
     resources: {
       roleArn: stackOutputs.roleArn?.value,
