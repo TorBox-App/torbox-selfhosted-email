@@ -215,3 +215,199 @@ describe("EventBridge replay archive", () => {
     );
   });
 });
+
+/**
+ * Plan 136: a self-hosted control plane running in the same AWS account
+ * should receive the SAME SES event stream as the platform webhook, as a
+ * third target on the existing rule. These tests pin that the new target is
+ * additive (never replaces the platform target), independently configurable
+ * (not nested inside `if (config.webhook)`), and constructs its endpoint and
+ * secrets correctly.
+ */
+describe("EventBridge self-hosted control-plane webhook", () => {
+  const SELFHOST_URL = "https://selfhost.example.com";
+  const SELFHOST_SECRET = "selfhost-secret";
+  const SELFHOST_ACCOUNT = "123456789012";
+
+  beforeEach(() => {
+    awsState.reset();
+  });
+
+  it("creates no selfhost resources when selfhostWebhook is not configured", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      webhook: {
+        awsAccountNumber: "123456789012",
+        webhookSecret: "secret",
+      },
+    });
+
+    const destinations = awsState.created.EventApiDestination ?? [];
+    expect(destinations).toHaveLength(1);
+    const targets = awsState.created.EventTarget ?? [];
+    expect(targets).toHaveLength(2);
+
+    for (const kind of Object.keys(awsState.created)) {
+      for (const entry of awsState.created[kind] ?? []) {
+        expect(entry.logicalName.startsWith("wraps-selfhost-webhook")).toBe(
+          false
+        );
+      }
+    }
+  });
+
+  it("creates two destinations and three targets when both webhooks are configured", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      webhook: {
+        awsAccountNumber: "123456789012",
+        webhookSecret: "secret",
+      },
+      selfhostWebhook: {
+        awsAccountNumber: SELFHOST_ACCOUNT,
+        webhookSecret: SELFHOST_SECRET,
+        webhookUrl: SELFHOST_URL,
+      },
+    });
+
+    const destinations = awsState.created.EventApiDestination ?? [];
+    expect(destinations).toHaveLength(2);
+
+    const targets = awsState.created.EventTarget ?? [];
+    expect(targets).toHaveLength(3);
+
+    const platformTarget = targets.find(
+      (t) => t.logicalName === "wraps-webhook-target"
+    );
+    const selfhostTarget = targets.find(
+      (t) => t.logicalName === "wraps-selfhost-webhook-target"
+    );
+    expect(platformTarget).toBeDefined();
+    expect(selfhostTarget).toBeDefined();
+    expect(pulumiState.unwrap(platformTarget!.args.rule)).toBe(
+      "wraps-email-events-to-sqs"
+    );
+    expect(pulumiState.unwrap(selfhostTarget!.args.rule)).toBe(
+      "wraps-email-events-to-sqs"
+    );
+  });
+
+  it("creates the selfhost destination and target with no platform webhook configured", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      selfhostWebhook: {
+        awsAccountNumber: SELFHOST_ACCOUNT,
+        webhookSecret: SELFHOST_SECRET,
+        webhookUrl: SELFHOST_URL,
+      },
+    });
+
+    const destinations = awsState.created.EventApiDestination ?? [];
+    expect(destinations).toHaveLength(1);
+    expect(destinations[0]!.logicalName).toBe(
+      "wraps-selfhost-webhook-destination"
+    );
+
+    const targets = awsState.created.EventTarget ?? [];
+    expect(targets).toHaveLength(2);
+  });
+
+  it("appends the SES webhook path to the selfhost base URL exactly once", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      selfhostWebhook: {
+        awsAccountNumber: SELFHOST_ACCOUNT,
+        webhookSecret: SELFHOST_SECRET,
+        webhookUrl: SELFHOST_URL,
+      },
+    });
+
+    const destinations = awsState.created.EventApiDestination ?? [];
+    const selfhostDestination = destinations.find(
+      (d) => d.logicalName === "wraps-selfhost-webhook-destination"
+    )!;
+    expect(selfhostDestination.args.invocationEndpoint).toBe(
+      `${SELFHOST_URL}/webhooks/ses/${SELFHOST_ACCOUNT}`
+    );
+  });
+
+  it("gives the platform and selfhost connections independent secrets under the same header", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      webhook: {
+        awsAccountNumber: "123456789012",
+        webhookSecret: "platform-secret",
+      },
+      selfhostWebhook: {
+        awsAccountNumber: SELFHOST_ACCOUNT,
+        webhookSecret: SELFHOST_SECRET,
+        webhookUrl: SELFHOST_URL,
+      },
+    });
+
+    const connections = awsState.created.EventConnection ?? [];
+    const platformConnection = connections.find(
+      (c) => c.logicalName === "wraps-webhook-connection"
+    )!;
+    const selfhostConnection = connections.find(
+      (c) => c.logicalName === "wraps-selfhost-webhook-connection"
+    )!;
+
+    expect(platformConnection.args.authParameters.apiKey.key).toBe(
+      "X-Wraps-Api-Key"
+    );
+    expect(selfhostConnection.args.authParameters.apiKey.key).toBe(
+      "X-Wraps-Api-Key"
+    );
+    expect(platformConnection.args.authParameters.apiKey.value).toBe(
+      "platform-secret"
+    );
+    expect(selfhostConnection.args.authParameters.apiKey.value).toBe(
+      SELFHOST_SECRET
+    );
+    expect(platformConnection.args.authParameters.apiKey.value).not.toBe(
+      selfhostConnection.args.authParameters.apiKey.value
+    );
+  });
+
+  it("attaches the DLQ to the selfhost target and sets physical names on its resources", async () => {
+    await createEventBridgeResources({
+      ...baseConfig(),
+      selfhostWebhook: {
+        awsAccountNumber: SELFHOST_ACCOUNT,
+        webhookSecret: SELFHOST_SECRET,
+        webhookUrl: SELFHOST_URL,
+      },
+    });
+
+    const targets = awsState.created.EventTarget ?? [];
+    const selfhostTarget = targets.find(
+      (t) => t.logicalName === "wraps-selfhost-webhook-target"
+    )!;
+    expect(pulumiState.unwrap(selfhostTarget.args.deadLetterConfig.arn)).toBe(
+      DLQ_ARN
+    );
+
+    const connections = awsState.created.EventConnection ?? [];
+    const selfhostConnection = connections.find(
+      (c) => c.logicalName === "wraps-selfhost-webhook-connection"
+    )!;
+    expect(selfhostConnection.args.name).toBe(
+      "wraps-selfhost-webhook-connection"
+    );
+
+    const destinations = awsState.created.EventApiDestination ?? [];
+    const selfhostDestination = destinations.find(
+      (d) => d.logicalName === "wraps-selfhost-webhook-destination"
+    )!;
+    expect(selfhostDestination.args.name).toBe(
+      "wraps-selfhost-webhook-destination"
+    );
+
+    const roles = awsState.created.Role ?? [];
+    const selfhostRole = roles.find(
+      (r) => r.logicalName === "wraps-selfhost-webhook-role"
+    )!;
+    expect(selfhostRole.args.name).toBe("wraps-selfhost-webhook-role");
+  });
+});

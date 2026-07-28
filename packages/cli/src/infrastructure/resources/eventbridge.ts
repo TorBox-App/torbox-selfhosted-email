@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { createSelfhostWebhookResources } from "./eventbridge-selfhost-webhook.js";
 
 /**
  * EventBridge resources configuration
@@ -26,6 +27,17 @@ export type EventBridgeConfig = {
     url: string;
     secret: string;
   };
+  // Second API-key webhook target for a self-hosted control plane running in
+  // the same AWS account. Delivered ALONGSIDE `webhook`, not instead of it —
+  // each control plane has its own database and its own webhook secret.
+  //
+  // NOTE: EventBridge allows 5 targets per rule (hard quota). This rule uses
+  // SQS + platform webhook + user webhook + selfhost webhook = 4. One left.
+  selfhostWebhook?: {
+    awsAccountNumber: string; // The user's 12-digit AWS account ID
+    webhookSecret: string; // API key issued by the self-hosted control plane
+    webhookUrl: string; // BASE url; required — no default endpoint exists
+  };
 };
 
 /**
@@ -46,6 +58,10 @@ export type EventBridgeResources = {
   userWebhookConnection?: aws.cloudwatch.EventConnection;
   userWebhookApiDestination?: aws.cloudwatch.EventApiDestination;
   userWebhookTarget?: aws.cloudwatch.EventTarget;
+  // Self-hosted control-plane webhook resources (optional)
+  selfhostWebhookConnection?: aws.cloudwatch.EventConnection;
+  selfhostWebhookApiDestination?: aws.cloudwatch.EventApiDestination;
+  selfhostWebhookTarget?: aws.cloudwatch.EventTarget;
 };
 
 /**
@@ -237,6 +253,29 @@ export async function createEventBridgeResources(
     userWebhookTarget = userWebhookResources.target;
   }
 
+  // Create self-hosted control-plane API Destination (if configured).
+  // This is a SECOND platform-shaped target: the `config.webhook` block above
+  // still delivers the same events to api.wraps.dev.
+  let selfhostWebhookConnection: aws.cloudwatch.EventConnection | undefined;
+  let selfhostWebhookApiDestination:
+    | aws.cloudwatch.EventApiDestination
+    | undefined;
+  let selfhostWebhookTarget: aws.cloudwatch.EventTarget | undefined;
+
+  if (config.selfhostWebhook) {
+    const selfhostWebhookResources = createSelfhostWebhookResources({
+      webhookUrl: config.selfhostWebhook.webhookUrl,
+      webhookSecret: config.selfhostWebhook.webhookSecret,
+      awsAccountNumber: config.selfhostWebhook.awsAccountNumber,
+      ruleName: rule.name,
+      eventBusName,
+      dlqArn: config.dlqArn,
+    });
+    selfhostWebhookConnection = selfhostWebhookResources.connection;
+    selfhostWebhookApiDestination = selfhostWebhookResources.apiDestination;
+    selfhostWebhookTarget = selfhostWebhookResources.target;
+  }
+
   // Alarm on delivery failures for the rule's targets. FailedInvocations is
   // per-rule, so this alarm covers both the SQS target and the webhook
   // target (dead target or deauthorized destination). Created even without
@@ -279,5 +318,8 @@ export async function createEventBridgeResources(
     userWebhookConnection,
     userWebhookApiDestination,
     userWebhookTarget,
+    selfhostWebhookConnection,
+    selfhostWebhookApiDestination,
+    selfhostWebhookTarget,
   };
 }

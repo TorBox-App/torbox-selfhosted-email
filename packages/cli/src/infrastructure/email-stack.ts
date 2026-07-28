@@ -198,6 +198,9 @@ export async function deployEmailStack(
       alertTopicArn: alertingResources?.topic.arn,
       // Include webhook config if provided (for Wraps platform integration)
       webhook: config.webhook,
+      // Include self-hosted control-plane webhook if configured (dual feed:
+      // the platform target above still receives the same events)
+      selfhostWebhook: config.selfhostWebhook,
       // Include user webhook config if provided
       userWebhook:
         emailConfig.userWebhook?.enabled &&
