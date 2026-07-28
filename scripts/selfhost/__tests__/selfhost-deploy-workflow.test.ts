@@ -10,13 +10,15 @@ const workflowSource = readFileSync(
   new URL("../../../.github/workflows/selfhost-deploy.yml", import.meta.url),
   "utf-8"
 );
-const deploySource = readFileSync(
-  new URL("../deploy.ts", import.meta.url),
-  "utf-8"
+// Every module that contributes lines to .env.selfhost, not just deploy.ts —
+// the DNS settings are built in dns.ts and are dropped on a CI upgrade in
+// exactly the same way if the workflow forgets them.
+const envFileSources = ["../deploy.ts", "../dns.ts"].map((path) =>
+  readFileSync(new URL(path, import.meta.url), "utf-8")
 );
 
-const envFileKeys = [...deploySource.matchAll(/`([A-Z][A-Z0-9_]*)=\$\{/g)].map(
-  (match) => match[1]
+const envFileKeys = envFileSources.flatMap((source) =>
+  [...source.matchAll(/`([A-Z][A-Z0-9_]*)=\$\{/g)].map((match) => match[1])
 );
 
 describe(".github/workflows/selfhost-deploy.yml", () => {

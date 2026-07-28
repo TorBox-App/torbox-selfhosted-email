@@ -210,7 +210,22 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     }
   }
 
-  const sstEnv = { SELFHOST_AWS_REGION: region };
+  // Read the DNS settings back from the env file for the same reason as the
+  // region: app() is evaluated before the dotenv load, so an upgrade that did
+  // not forward these would silently fall back to the Route 53 adapter and
+  // fail the hosted-zone lookup on a stack that deployed fine the first time.
+  const sstEnv = {
+    SELFHOST_AWS_REGION: region,
+    ...(env.SELFHOST_DNS_PROVIDER && {
+      SELFHOST_DNS_PROVIDER: env.SELFHOST_DNS_PROVIDER,
+    }),
+    ...(env.CLOUDFLARE_API_TOKEN && {
+      CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
+    }),
+    ...(env.SELFHOST_CLOUDFLARE_ZONE_ID && {
+      SELFHOST_CLOUDFLARE_ZONE_ID: env.SELFHOST_CLOUDFLARE_ZONE_ID,
+    }),
+  };
 
   // If a prior deploy already emitted URLs but never wrote them to
   // .env.selfhost (partial first deploy), backfill now so this deploy bakes

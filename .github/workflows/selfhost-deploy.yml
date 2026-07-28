@@ -74,6 +74,13 @@ jobs:
           # here turns error reporting OFF on the next upgrade even if a local
           # deploy had configured it.
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Optional. Which DNS provider owns SELFHOST_WEB_DOMAIN. Omitting
+          # these on a Cloudflare deployment drops it back to the Route 53
+          # adapter, and the upgrade dies on the hosted-zone lookup.
+          SELFHOST_DNS_PROVIDER: ${{ vars.SELFHOST_DNS_PROVIDER }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SELFHOST_CLOUDFLARE_ZONE_ID: ${{ vars.SELFHOST_CLOUDFLARE_ZONE_ID }}
+          SELFHOST_ACM_CERT_ARN: ${{ vars.SELFHOST_ACM_CERT_ARN }}
         run: |
           # Validate required secrets are present
           missing=()
@@ -101,6 +108,10 @@ jobs:
             [ -n "${AUTH_EMAIL_CONFIGURATION_SET}" ] && echo "AUTH_EMAIL_CONFIGURATION_SET=${AUTH_EMAIL_CONFIGURATION_SET}"
             [ -n "${AI_GATEWAY_API_KEY}" ] && echo "AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}"
             [ -n "${SENTRY_DSN}" ] && echo "SENTRY_DSN=${SENTRY_DSN}"
+            [ -n "${SELFHOST_DNS_PROVIDER}" ] && echo "SELFHOST_DNS_PROVIDER=${SELFHOST_DNS_PROVIDER}"
+            [ -n "${CLOUDFLARE_API_TOKEN}" ] && echo "CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}"
+            [ -n "${SELFHOST_CLOUDFLARE_ZONE_ID}" ] && echo "SELFHOST_CLOUDFLARE_ZONE_ID=${SELFHOST_CLOUDFLARE_ZONE_ID}"
+            [ -n "${SELFHOST_ACM_CERT_ARN}" ] && echo "SELFHOST_ACM_CERT_ARN=${SELFHOST_ACM_CERT_ARN}"
             # A false `[ -n ... ]` above is the group's exit status, and the
             # group is this step's last command — without this the step fails
             # whenever the final optional secret is unset.

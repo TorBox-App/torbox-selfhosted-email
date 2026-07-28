@@ -12,6 +12,7 @@ import {
   saveConnectionMetadata,
 } from "../../packages/cli/src/utils/shared/metadata.js";
 import { assertPostgresUrl } from "../../packages/db/src/connection-url.js";
+import { resolveDnsConfig } from "./dns.js";
 import { appendMissingEnvVars, buildDeployedEnvVars } from "./env.js";
 import { describeError } from "./errors.js";
 import { migrateWithProgress } from "./migrate.js";
@@ -29,6 +30,10 @@ export type DeployOptions = {
   licenseKey?: string;
   region?: string;
   webDomain?: string;
+  dnsProvider?: string;
+  cloudflareApiToken?: string;
+  cloudflareZoneId?: string;
+  acmCertArn?: string;
   aiGatewayApiKey?: string;
   sentryDsn?: string;
   yes?: boolean;
@@ -123,6 +128,11 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   ];
   if (options.webDomain)
     envLines.push(`SELFHOST_WEB_DOMAIN=${options.webDomain}`);
+  const dns = await resolveDnsConfig(options);
+  if (options.webDomain) {
+    envLines.push(`SELFHOST_DNS_PROVIDER=${dns.provider}`);
+    envLines.push(...dns.envLines);
+  }
   if (options.aiGatewayApiKey)
     envLines.push(`AI_GATEWAY_API_KEY=${options.aiGatewayApiKey}`);
   // Flag only, never `process.env.SENTRY_DSN` — inheriting an ambient DSN from
@@ -134,7 +144,11 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   await chmod(ENV_PATH, 0o600);
   clack.log.info("Wrote .env.selfhost");
 
-  const sstEnv = { SELFHOST_AWS_REGION: region };
+  const sstEnv = {
+    SELFHOST_AWS_REGION: region,
+    ...(options.webDomain && { SELFHOST_DNS_PROVIDER: dns.provider }),
+    ...dns.sstEnv,
+  };
 
   clack.log.step("Installing SST providers...");
   await runSubprocess(
@@ -315,6 +329,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "license-key",
       "region",
       "web-domain",
+      "dns-provider",
+      "cloudflare-api-token",
+      "cloudflare-zone-id",
+      "acm-cert-arn",
       "ai-gateway-api-key",
       "sentry-dsn",
     ],
@@ -324,6 +342,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "database-url": "databaseUrl",
       "license-key": "licenseKey",
       "web-domain": "webDomain",
+      "dns-provider": "dnsProvider",
+      "cloudflare-api-token": "cloudflareApiToken",
+      "cloudflare-zone-id": "cloudflareZoneId",
+      "acm-cert-arn": "acmCertArn",
       "ai-gateway-api-key": "aiGatewayApiKey",
       "sentry-dsn": "sentryDsn",
       "reroute-events": "rerouteEvents",
@@ -334,6 +356,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     licenseKey: flags["license-key"],
     region: flags.region,
     webDomain: flags["web-domain"],
+    dnsProvider: flags["dns-provider"],
+    cloudflareApiToken: flags["cloudflare-api-token"],
+    cloudflareZoneId: flags["cloudflare-zone-id"],
+    acmCertArn: flags["acm-cert-arn"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
     sentryDsn: flags["sentry-dsn"],
     yes: flags.yes,

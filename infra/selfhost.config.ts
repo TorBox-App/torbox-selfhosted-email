@@ -42,6 +42,15 @@ export default $config({
           region: (process.env.SELFHOST_AWS_REGION ||
             "us-east-1") as aws.Region,
         },
+        // Declared here rather than in run() for the same reason as region:
+        // app() is evaluated before the dotenv load, and `sst install` (which
+        // runs before deploy) needs the provider present to fetch it. The
+        // deploy script puts both vars in the subprocess environment.
+        ...(process.env.SELFHOST_DNS_PROVIDER === "cloudflare" && {
+          cloudflare: {
+            apiToken: process.env.CLOUDFLARE_API_TOKEN,
+          },
+        }),
       },
     };
   },
@@ -60,6 +69,54 @@ export default $config({
     });
 
     const webDomain = process.env.SELFHOST_WEB_DOMAIN;
+
+    // Which DNS provider owns webDomain. This used to be hardcoded to
+    // sst.aws.dns(), which does a Route 53 hosted-zone lookup for both the ACM
+    // validation record and the CloudFront alias — so every customer whose
+    // domain lives anywhere else failed the deploy with "could not find hosted
+    // zone", after the cert had already been created.
+    const dnsProvider = process.env.SELFHOST_DNS_PROVIDER || "route53";
+
+    /**
+     * The `domain` argument for the Nextjs component, or {} when no custom
+     * domain is configured (the deployment then serves on its CloudFront URL).
+     */
+    const webDomainConfig = (() => {
+      if (!webDomain) {
+        return {};
+      }
+      if (dnsProvider === "cloudflare") {
+        return {
+          domain: {
+            name: webDomain,
+            // zone is optional — omitting it makes SST look the zone up from
+            // the domain. We pass it when the deploy script already resolved
+            // it, which also covers subdomains of a zone (mail.example.com
+            // living in the example.com zone).
+            dns: sst.cloudflare.dns({
+              zone: process.env.SELFHOST_CLOUDFLARE_ZONE_ID,
+            }),
+          },
+        };
+      }
+      if (dnsProvider === "none") {
+        // Unsupported DNS provider: the operator validated the cert and adds
+        // the CloudFront alias record by hand. SST touches no DNS at all.
+        const cert = process.env.SELFHOST_ACM_CERT_ARN;
+        if (!cert) {
+          throw new Error(
+            "SELFHOST_DNS_PROVIDER=none requires SELFHOST_ACM_CERT_ARN (an ISSUED certificate in us-east-1, which is the only region CloudFront accepts)."
+          );
+        }
+        return { domain: { name: webDomain, dns: false, cert } };
+      }
+      if (dnsProvider !== "route53") {
+        throw new Error(
+          `Unknown SELFHOST_DNS_PROVIDER "${dnsProvider}". Expected route53, cloudflare, or none.`
+        );
+      }
+      return { domain: { name: webDomain, dns: sst.aws.dns() } };
+    })();
 
     // Optional: point this deployment's error reporting at the operator's OWN
     // Sentry project. Unset means the SDK initializes without a DSN and no-ops,
@@ -363,12 +420,7 @@ export default $config({
           resources: ["*"],
         },
       ],
-      ...(webDomain && {
-        domain: {
-          name: webDomain,
-          dns: sst.aws.dns(),
-        },
-      }),
+      ...webDomainConfig,
     });
 
     // Queue subscribers — declared after api/web so api.url and web.url are
