@@ -300,7 +300,15 @@ export default $config({
           process.env.BETTER_AUTH_URL ||
           process.env.NEXT_PUBLIC_APP_URL ||
           (webDomain ? `https://${webDomain}` : ""),
-        WRAPS_EMAIL_ROLE_ARN: process.env.WRAPS_EMAIL_ROLE_ARN ?? "",
+        // WRAPS_EMAIL_ROLE_ARN is deliberately NOT set here. getWrapsClient()
+        // (packages/email/src/lib/client.ts) treats a present role ARN as
+        // "assume it", and on Lambda that is a literal sts:AssumeRole from this
+        // function's execution role. wraps-email-role is created by the email
+        // stack with a Service-only trust policy (shared/iam.ts, provider
+        // "aws"), which does not admit a role principal — so every auth email
+        // failed with AccessDenied. The hop exists for Vercel's cross-account
+        // OIDC; self-hosted already runs inside the account that owns SES, so
+        // it sends with its own credentials via the ses:SendEmail grant below.
         AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM ?? "",
         AUTH_EMAIL_CONFIGURATION_SET:
           process.env.AUTH_EMAIL_CONFIGURATION_SET ?? "",
@@ -332,8 +340,27 @@ export default $config({
       },
       permissions: [
         {
+          // Still needed: the dashboard assumes wraps-selfhost-console-access-role
+          // to read SES account state. That role DOES trust an account principal.
           actions: ["sts:AssumeRole"],
           resources: ["arn:aws:iam::*:role/wraps-*"],
+        },
+        {
+          // Auth email (verification, password reset, invitations) sends with
+          // this function's own credentials — see the WRAPS_EMAIL_ROLE_ARN note
+          // above. Unscoped because the send names both an identity and a
+          // configuration set, and their ARNs are not known at config time.
+          //
+          // SendTemplatedEmail is the load-bearing one: better-auth's
+          // sendVerificationEmail goes through WrapsEmail.sendTemplate(), so a
+          // grant of SendEmail alone still fails closed with AccessDenied.
+          actions: [
+            "ses:SendEmail",
+            "ses:SendRawEmail",
+            "ses:SendTemplatedEmail",
+            "ses:SendBulkTemplatedEmail",
+          ],
+          resources: ["*"],
         },
       ],
       ...(webDomain && {

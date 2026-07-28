@@ -116,6 +116,7 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
     send = vi.fn().mockRejectedValue(new Error("no creds"));
   },
   ListConfigurationSetsCommand: class {},
+  ListEmailIdentitiesCommand: class {},
 }));
 
 // ── pg / drizzle mocks ────────────────────────────────────────────────────────
@@ -133,6 +134,14 @@ vi.mock("drizzle-orm/node-postgres", () => ({
 
 vi.mock("drizzle-orm/node-postgres/migrator", () => ({
   migrate: mockMigrate,
+}));
+
+// Mocked explicitly rather than relying on the @aws-sdk/client-sesv2 mock
+// above — that one makes the step silently no-op, so nothing here would
+// notice if upgrade stopped calling it.
+const mockProvisionTemplates = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+vi.mock("../templates.js", () => ({
+  provisionTemplatesWithProgress: mockProvisionTemplates,
 }));
 
 // ── email reroute mock ────────────────────────────────────────────────────────
@@ -214,6 +223,15 @@ describe("scripts/selfhost/upgrade", () => {
     await upgrade({ region: "us-east-1", yes: true });
 
     expect(sstDeployCalls().length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("republishes the auth email templates on every upgrade", async () => {
+    // Upsert on upgrade is both how a template edit ships and the recovery
+    // path for installs deployed before provisioning existed.
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(mockProvisionTemplates).toHaveBeenCalledWith("us-east-1");
   });
 
   it("runs a single sst deploy when .env.selfhost is already complete", async () => {

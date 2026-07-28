@@ -11,6 +11,7 @@ import type {
   SelfhostUpgradeOptions,
 } from "../../types/index.js";
 import { normalizeApiUrl } from "../../utils/selfhost/api-url.js";
+import { provisionAuthTemplatesWithProgress } from "../../utils/selfhost/auth-templates.js";
 import { validateAWSCredentialsWithDetails } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
 import {
@@ -259,6 +260,10 @@ export async function selfhostUpgrade(
   };
   metadata.timestamp = upgradedAt;
   await saveConnectionMetadata(metadata);
+
+  // Upsert on upgrade is both how an edited template ships and the recovery
+  // path for control planes deployed before provisioning existed.
+  await provisionAuthTemplatesWithProgress(region, progress);
 
   if (isJsonMode()) {
     jsonSuccess("selfhost.upgrade", {

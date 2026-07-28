@@ -1,9 +1,8 @@
 import { chmod, readFile, writeFile } from "node:fs/promises";
-import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
-import {
-  ListConfigurationSetsCommand,
-  SESv2Client,
-} from "@aws-sdk/client-sesv2";
+// Both self-hosted variants publish the same auth-email config, so the
+// discovery and the from-address rule live in packages/cli where the Pulumi
+// variant's commands can reach them too.
+import { resolveAuthEmailFrom } from "../../packages/cli/src/utils/selfhost/email-stack.js";
 
 export function parseEnvFile(content: string): Record<string, string> {
   return Object.fromEntries(
@@ -69,35 +68,6 @@ export async function upsertEnvVars(
   await chmod(envPath, 0o600);
 }
 
-export async function detectEmailStack(region: string): Promise<{
-  roleArn: string | null;
-  configSetName: string | null;
-}> {
-  try {
-    const iam = new IAMClient({ region });
-    const ses = new SESv2Client({ region });
-    const [roleResult, setsResult] = await Promise.allSettled([
-      iam.send(new GetRoleCommand({ RoleName: "wraps-email-role" })),
-      ses.send(new ListConfigurationSetsCommand({})),
-    ]);
-    const roleArn =
-      roleResult.status === "fulfilled"
-        ? (roleResult.value.Role?.Arn ?? null)
-        : null;
-    const sets =
-      setsResult.status === "fulfilled"
-        ? (setsResult.value.ConfigurationSets ?? []).filter((n) =>
-            n.startsWith("wraps-email-")
-          )
-        : [];
-    const configSetName =
-      sets.find((n) => n !== "wraps-email-tracking") ?? sets[0] ?? null;
-    return { roleArn, configSetName };
-  } catch {
-    return { roleArn: null, configSetName: null };
-  }
-}
-
 /**
  * The env vars a deployed stack needs baked into the web build. Written after
  * the first `sst deploy` emits URLs, consumed by the next `sst deploy`.
@@ -107,7 +77,11 @@ export function buildDeployedEnvVars(options: {
   apiUrl: string;
   webUrl: string;
   webDomain?: string;
-  emailStack: { roleArn: string | null; configSetName: string | null };
+  emailStack: {
+    roleArn: string | null;
+    configSetName: string | null;
+    verifiedDomains: string[];
+  };
 }): Record<string, string | null | undefined> {
   const { apiUrl, webUrl, webDomain, emailStack } = options;
   return {
@@ -116,7 +90,12 @@ export function buildDeployedEnvVars(options: {
     BETTER_AUTH_URL: webUrl,
     WRAPS_EMAIL_ROLE_ARN: emailStack.roleArn,
     AUTH_EMAIL_CONFIGURATION_SET: emailStack.configSetName,
-    AUTH_EMAIL_FROM:
-      emailStack.configSetName && webDomain ? `noreply@${webDomain}` : null,
+    // No longer gated on the configuration set: that only adds event tracking,
+    // and withholding the from-address because of it left auth email dead in
+    // an account that could send perfectly well.
+    AUTH_EMAIL_FROM: resolveAuthEmailFrom({
+      webDomain,
+      verifiedDomains: emailStack.verifiedDomains,
+    }),
   };
 }

@@ -3,6 +3,11 @@ import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { SelfhostEnvOptions } from "../../types/index.js";
 import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
+import {
+  detectEmailStack,
+  domainFromUrl,
+  resolveAuthEmailFrom,
+} from "../../utils/selfhost/email-stack.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
@@ -67,6 +72,30 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
     WRAPS_LICENSE_KEY: config.licenseKey,
     AWS_BACKEND_ACCOUNT_ID: identity.accountId,
   };
+
+  // Auth email config. This command is the ONLY channel by which the Pulumi
+  // variant's operator learns these — it deploys no dashboard, so apps/web is
+  // hosted by them. Omitting these left signup verification, invitations and
+  // password reset unconfigured on every API-only self-hosted install.
+  const emailStack = await detectEmailStack(region);
+  const authEmailFrom = resolveAuthEmailFrom({
+    webDomain: domainFromUrl(config.appUrl),
+    verifiedDomains: emailStack.verifiedDomains,
+  });
+
+  if (authEmailFrom) {
+    env.AUTH_EMAIL_FROM = authEmailFrom;
+  }
+  if (emailStack.configSetName) {
+    env.AUTH_EMAIL_CONFIGURATION_SET = emailStack.configSetName;
+  }
+  // Kept for this variant, unlike the SST one that had it removed: the target
+  // here is apps/web on Vercel, where getWrapsClient() exchanges Vercel's OIDC
+  // token for the role. That path the email role's trust policy does allow —
+  // what it refuses is a plain sts:AssumeRole from a Lambda in-account.
+  if (emailStack.roleArn) {
+    env.WRAPS_EMAIL_ROLE_ARN = emailStack.roleArn;
+  }
 
   if (isJsonMode()) {
     jsonSuccess("selfhost.env", { env });

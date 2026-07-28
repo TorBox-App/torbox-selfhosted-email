@@ -150,3 +150,12 @@ export const LAMBDA_EVENT_PROCESSOR_PATH = resolvePackagePath(
 export const LAMBDA_SMS_EVENT_PROCESSOR_PATH = resolvePackagePath(
   "lambda/sms-event-processor"
 );
+
+// Auth email SES templates, and the publisher both self-hosted deploy paths use
+export type { AuthSesTemplate } from "./auth-templates.js";
+export { AUTH_SES_TEMPLATES } from "./auth-templates.js";
+export type { ProvisionOutcome } from "./provision-auth-templates.js";
+export {
+  describeProvisionOutcomes,
+  provisionAuthTemplates,
+} from "./provision-auth-templates.js";

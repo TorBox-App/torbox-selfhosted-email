@@ -3,6 +3,7 @@ import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import mri from "mri";
 import pc from "picocolors";
+import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
 import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
 import {
@@ -12,7 +13,6 @@ import {
 import {
   appendMissingEnvVars,
   buildDeployedEnvVars,
-  detectEmailStack,
   parseEnvFile,
   upsertEnvVars,
 } from "./env.js";
@@ -20,6 +20,7 @@ import { describeError } from "./errors.js";
 import { migrateWithProgress } from "./migrate.js";
 import { rerouteEmailEvents, sesEventsWebhookUrl } from "./reroute.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
+import { provisionTemplatesWithProgress } from "./templates.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
@@ -254,6 +255,10 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     metadata.services.selfhost?.config?.databaseUrl || env.DATABASE_URL;
 
   await migrateWithProgress(databaseUrl);
+
+  // Runs on upgrade as well as deploy: upsert is how an edited template ships,
+  // and it is the recovery path for an install that predates provisioning.
+  await provisionTemplatesWithProgress(region);
 
   const { apiUrl, webUrl } = await readOutputs();
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import mri from "mri";
 import pc from "picocolors";
+import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
 import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
 import {
@@ -11,15 +12,12 @@ import {
   saveConnectionMetadata,
 } from "../../packages/cli/src/utils/shared/metadata.js";
 import { assertPostgresUrl } from "../../packages/db/src/connection-url.js";
-import {
-  appendMissingEnvVars,
-  buildDeployedEnvVars,
-  detectEmailStack,
-} from "./env.js";
+import { appendMissingEnvVars, buildDeployedEnvVars } from "./env.js";
 import { describeError } from "./errors.js";
 import { migrateWithProgress } from "./migrate.js";
 import { rerouteEmailEvents, sesEventsWebhookUrl } from "./reroute.js";
 import { REPO_ROOT, runSubprocess } from "./subprocess.js";
+import { provisionTemplatesWithProgress } from "./templates.js";
 
 const ENV_PATH = join(REPO_ROOT, ".env.selfhost");
 const SST_DIR = join(REPO_ROOT, "infra");
@@ -257,6 +255,12 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
       `${describeError(error)}\nRe-run ${pc.cyan("pnpm selfhost:upgrade")} once the database is reachable — until migrations apply, signup and login will fail.`
     );
   }
+
+  // The auth email senders address these templates by name. On the SaaS
+  // platform they were created once by hand; nothing creates them in a fresh
+  // account, so without this the whole send path is wired and still dies on
+  // "Template email-verification does not exist" at the first signup.
+  await provisionTemplatesWithProgress(region);
 
   if (metadata.services.email?.webhookSecret) {
     // --yes means "accept defaults", and the interactive default is NO —

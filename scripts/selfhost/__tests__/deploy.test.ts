@@ -109,6 +109,31 @@ vi.mock("drizzle-orm/node-postgres/migrator", () => ({
   migrate: mockMigrate,
 }));
 
+// Unmocked, this reaches SESv2 for real and every test in the file times out.
+const mockProvisionTemplates = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+vi.mock("../templates.js", () => ({
+  provisionTemplatesWithProgress: mockProvisionTemplates,
+}));
+
+// detectEmailStack makes three live AWS calls (GetRole + two SES lists). They
+// were never stubbed here — the try/catch just swallowed the failures — so the
+// file's runtime tracked real network latency and adding the third probe tipped
+// it past the 5s timeout. resolveAuthEmailFrom stays real: buildDeployedEnvVars
+// derives AUTH_EMAIL_FROM through it.
+vi.mock("../../../packages/cli/src/utils/selfhost/email-stack.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../packages/cli/src/utils/selfhost/email-stack.js")
+  >("../../../packages/cli/src/utils/selfhost/email-stack.js");
+  return {
+    ...actual,
+    detectEmailStack: vi.fn().mockResolvedValue({
+      roleArn: null,
+      configSetName: null,
+      verifiedDomains: [],
+    }),
+  };
+});
+
 // ── pulumi mock ───────────────────────────────────────────────────────────────
 const mockStackUp = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 const mockStackRefresh = vi.hoisted(() => vi.fn().mockResolvedValue({}));
@@ -446,6 +471,42 @@ describe("scripts/selfhost/deploy", () => {
     expect(reported).toContain("permission denied for database");
     expect(reported).toContain("42501");
     expect(reported).toContain("GRANT CREATE ON DATABASE");
+    exitSpy.mockRestore();
+  });
+
+  it("publishes the auth email templates into the deploy region", async () => {
+    const { deploy } = await import("../deploy.js");
+    await deploy({
+      databaseUrl: "postgres://user:pass@host/db",
+      licenseKey: "wraps_lic_test",
+      region: "eu-central-1",
+    });
+
+    // Without this the send path is fully wired and still dies at the first
+    // signup on "Template email-verification does not exist". The region must
+    // be the deploy's, not the ambient one — SES templates are per-region.
+    expect(mockProvisionTemplates).toHaveBeenCalledWith("eu-central-1");
+  });
+
+  it("still publishes templates when migrations fail", async () => {
+    // The two steps are independent: an unreachable database must not also
+    // leave the account without templates.
+    mockMigrate.mockRejectedValue(new Error("ECONNREFUSED 10.0.0.1:5432"));
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+
+    const { deploy } = await import("../deploy.js");
+    await expect(
+      deploy({
+        databaseUrl: "postgres://user:pass@host/db",
+        licenseKey: "wraps_lic_test",
+        region: "us-east-1",
+      })
+    ).rejects.toThrow("process.exit called");
+
+    expect(mockProvisionTemplates).toHaveBeenCalledWith("us-east-1");
     exitSpy.mockRestore();
   });
 

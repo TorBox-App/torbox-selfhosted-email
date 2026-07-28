@@ -21,6 +21,7 @@ import type {
   SelfhostStackOutputs,
 } from "../../types/index.js";
 import { normalizeApiUrl } from "../../utils/selfhost/api-url.js";
+import { provisionAuthTemplatesWithProgress } from "../../utils/selfhost/auth-templates.js";
 import {
   buildNeonProjectName,
   provisionNeonProject,
@@ -524,6 +525,11 @@ export async function selfhostDeploy(
   savedMetadata.timestamp = new Date().toISOString();
   await saveConnectionMetadata(savedMetadata);
   progress.info("Deployment metadata saved");
+
+  // The operator hosts apps/web themselves, but its SES sends from THIS
+  // account — so the templates its auth email addresses by name have to be
+  // here. `wraps selfhost env` supplies the matching AUTH_EMAIL_FROM.
+  await provisionAuthTemplatesWithProgress(region as string, progress);
 
   if (isJsonMode()) {
     jsonSuccess("selfhost.deploy", {
