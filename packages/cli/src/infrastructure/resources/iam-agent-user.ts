@@ -1,9 +1,11 @@
 import * as aws from "@pulumi/aws";
 import type * as pulumi from "@pulumi/pulumi";
+import {
+  CONSOLE_ACCESS_ROLE_NAME,
+  SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
+} from "@wraps/core";
 import { getDefaultRegion } from "../../constants.js";
 import { roleExists } from "../shared/resource-checks.js";
-
-const CONSOLE_ACCESS_ROLE = "wraps-console-access-role";
 
 /**
  * Check if IAM user exists (for Pulumi import-vs-create).
@@ -120,39 +122,71 @@ export async function createAgentUser(
 }
 
 /**
- * Grant the platform-connect role (`wraps-console-access-role`) permission to
- * invoke the enforcer — this is what lets the approval flow execute sends via
- * assume-role.
+ * Grant each console access role that exists permission to invoke the enforcer
+ * — this is what lets the approval flow execute sends via assume-role.
  *
- * Skipped with a warning (never a hard failure) when the role is absent, so a
+ * BOTH roles are granted when both exist. A customer can run the Wraps platform
+ * and a self-hosted control plane against the same AWS account (plans 134-138),
+ * and each plane assumes its own role: the platform's
+ * `wraps-console-access-role` and the self-hosted
+ * `wraps-selfhost-console-access-role`. Granting only the platform's left the
+ * approval flow's execute step failing with an IAM denial on every self-hosted
+ * deployment — and silently, because a missing role is skipped with a warning
+ * rather than failing the stack.
+ *
+ * Skipped with a warning (never a hard failure) when a role is absent, so a
  * stack without platform connect still deploys. The create command (Chunk 5)
  * hard-stops earlier when platform connect is required for the approval flow.
  */
 export async function attachConsoleRoleInvoke(config: {
   enforcerArn: pulumi.Output<string>;
 }): Promise<void> {
-  const exists = await roleExists(CONSOLE_ACCESS_ROLE);
-  if (!exists) {
-    console.warn(
-      `⚠ Role ${CONSOLE_ACCESS_ROLE} not found — skipping enforcer invoke grant.\n` +
-        "  Run 'wraps platform connect' first so the approval flow can execute sends."
-    );
-    return;
+  const targets = [
+    {
+      roleName: CONSOLE_ACCESS_ROLE_NAME,
+      // Pulumi keys state by logical name — this literal is the existing one
+      // and MUST NOT change, or every deployed stack replaces the policy.
+      logicalName: "wraps-agent-invoke",
+      connectHint: "wraps platform connect",
+    },
+    {
+      roleName: SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
+      logicalName: "wraps-agent-invoke-selfhost",
+      connectHint: "wraps selfhost connect",
+    },
+  ];
+
+  let granted = 0;
+
+  for (const target of targets) {
+    // Sequential on purpose: `roleExists` is an async IAM probe and Pulumi
+    // resource construction must happen in a deterministic order.
+    if (!(await roleExists(target.roleName))) {
+      continue;
+    }
+
+    new aws.iam.RolePolicy(target.logicalName, {
+      role: target.roleName,
+      policy: config.enforcerArn.apply((arn) =>
+        JSON.stringify({
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Effect: "Allow",
+              Action: "lambda:InvokeFunction",
+              Resource: arn,
+            },
+          ],
+        })
+      ),
+    });
+    granted += 1;
   }
 
-  new aws.iam.RolePolicy("wraps-agent-invoke", {
-    role: CONSOLE_ACCESS_ROLE,
-    policy: config.enforcerArn.apply((arn) =>
-      JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Effect: "Allow",
-            Action: "lambda:InvokeFunction",
-            Resource: arn,
-          },
-        ],
-      })
-    ),
-  });
+  if (granted === 0) {
+    console.warn(
+      `⚠ Neither ${CONSOLE_ACCESS_ROLE_NAME} nor ${SELFHOST_CONSOLE_ACCESS_ROLE_NAME} found — skipping enforcer invoke grant.\n` +
+        `  Run '${targets[0].connectHint}' (or '${targets[1].connectHint}' for a self-hosted control plane) so the approval flow can execute sends.`
+    );
+  }
 }
