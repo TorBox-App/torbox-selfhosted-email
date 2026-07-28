@@ -7,6 +7,7 @@
  * Shared implementation for @wraps/api and @wraps/web.
  */
 
+import { resolveAppUrl } from "@wraps/email/lib/app-url";
 import * as jose from "jose";
 
 // Token payload structure
@@ -119,6 +120,33 @@ export async function verifyUnsubscribeToken(
 }
 
 /**
+ * Resolve the API's public base URL for unsubscribe links embedded in emails.
+ *
+ * The sibling of `resolveAppUrl` in `@wraps/email`, for the other half of the
+ * pair: reads the variables each deployment shape actually sets — the SST
+ * platform and the self-hosted config both set API_BASE_URL on the queue
+ * workers, apps/web gets NEXT_PUBLIC_API_URL.
+ *
+ * Deliberately has no default. A hardcoded fallback to the Wraps platform
+ * pointed self-hosted customers' one-click unsubscribe at the Wraps-operated
+ * API, which has never seen their token — failing the send is the lesser harm,
+ * and it names the fix. Do not wrap this in a try/catch that restores a
+ * default.
+ */
+export function resolveApiBaseUrl(): string {
+  const configured =
+    process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+
+  if (!configured) {
+    throw new Error(
+      "Cannot build an unsubscribe link: neither API_BASE_URL nor NEXT_PUBLIC_API_URL is set. Set the API's public URL in the environment (apps/web/.env.local for local development)."
+    );
+  }
+
+  return configured.replace(/\/+$/, "");
+}
+
+/**
  * Generate the full unsubscribe URL for an email
  *
  * @param contactId - The contact's ID
@@ -136,11 +164,7 @@ export async function generateUnsubscribeUrl(
     organizationId,
     topicId
   );
-  const baseUrl =
-    process.env.API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://api.wraps.dev";
-  return `${baseUrl}/unsubscribe/${token}`;
+  return `${resolveApiBaseUrl()}/unsubscribe/${token}`;
 }
 
 /**
@@ -155,6 +179,5 @@ export async function generatePreferencesUrl(
   organizationId: string
 ): Promise<string> {
   const token = await generateUnsubscribeToken(contactId, organizationId);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
-  return `${baseUrl}/preferences/${token}`;
+  return `${resolveAppUrl()}/preferences/${token}`;
 }

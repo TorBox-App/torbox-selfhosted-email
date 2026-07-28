@@ -204,4 +204,78 @@ describe("Unsubscribe Token", () => {
       vi.useRealTimers();
     });
   });
+
+  // Regression guard for the self-hosted wrong-domain bug: these URLs are
+  // embedded in mail sent to real recipients, so a silent fallback to the Wraps
+  // platform sends a self-hosted customer's contacts to a server that has never
+  // seen their token. Failing the send is the lesser harm.
+  describe("generatePreferencesUrl", () => {
+    it("uses the configured dashboard URL", async () => {
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://mail.customer.test");
+
+      const { generatePreferencesUrl } = await import("../index");
+
+      const url = await generatePreferencesUrl("contact-123", "org-456");
+
+      expect(url).toMatch(/^https:\/\/mail\.customer\.test\/preferences\/.+/);
+    });
+
+    it("throws instead of falling back to the Wraps platform when no URL is configured", async () => {
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+      vi.stubEnv("BETTER_AUTH_URL", "");
+      vi.stubEnv("APP_BASE_URL", "");
+
+      const { generatePreferencesUrl } = await import("../index");
+
+      await expect(
+        generatePreferencesUrl("contact-123", "org-456")
+      ).rejects.toThrow(/NEXT_PUBLIC_APP_URL/);
+
+      const result = await generatePreferencesUrl(
+        "contact-123",
+        "org-456"
+      ).catch((error: Error) => error.message);
+      expect(result).not.toContain("app.wraps.dev");
+    });
+
+    it("strips a trailing slash from the configured URL", async () => {
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://x.test/");
+
+      const { generatePreferencesUrl } = await import("../index");
+
+      const url = await generatePreferencesUrl("contact-123", "org-456");
+
+      expect(url).not.toContain("//preferences");
+      expect(url).toMatch(/^https:\/\/x\.test\/preferences\/.+/);
+    });
+  });
+
+  describe("generateUnsubscribeUrl", () => {
+    it("uses the configured API URL", async () => {
+      vi.stubEnv("API_BASE_URL", "https://api.customer.test");
+
+      const { generateUnsubscribeUrl } = await import("../index");
+
+      const url = await generateUnsubscribeUrl("contact-123", "org-456");
+
+      expect(url).toMatch(/^https:\/\/api\.customer\.test\/unsubscribe\/.+/);
+    });
+
+    it("throws instead of falling back to the Wraps platform when no URL is configured", async () => {
+      vi.stubEnv("API_BASE_URL", "");
+      vi.stubEnv("NEXT_PUBLIC_API_URL", "");
+
+      const { generateUnsubscribeUrl } = await import("../index");
+
+      await expect(
+        generateUnsubscribeUrl("contact-123", "org-456")
+      ).rejects.toThrow(/API_BASE_URL/);
+
+      const result = await generateUnsubscribeUrl(
+        "contact-123",
+        "org-456"
+      ).catch((error: Error) => error.message);
+      expect(result).not.toContain("api.wraps.dev");
+    });
+  });
 });

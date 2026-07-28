@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@wraps/email": "workspace:*",
     "jose": "6.1.3"
   },
   "devDependencies": {
