@@ -562,12 +562,10 @@ pnpm install`,
             to Wraps either way.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
-            If you already deployed Wraps email infrastructure to this account,{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               --reroute-events
             </code>{" "}
-            points its SES event webhook at your self-hosted API instead of the
-            Wraps platform. It works on both{" "}
+            still works on both{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               selfhost:deploy
             </code>{" "}
@@ -575,7 +573,9 @@ pnpm install`,
             <code className="rounded bg-muted px-1.5 py-0.5">
               selfhost:upgrade
             </code>
-            , so a failed reroute can be retried without redeploying.
+            , but it is the legacy way to get SES events into a self-hosted
+            control plane. New deployments should skip it — see SES event
+            routing below.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             The SST stack always deploys to{" "}
@@ -587,6 +587,69 @@ pnpm install`,
               infra/selfhost.config.ts
             </code>{" "}
             before deploying.
+          </p>
+        </div>
+        <h3 className="mt-8 mb-3 font-semibold text-lg">SES event routing</h3>
+        <p className="mb-4 text-muted-foreground">
+          Registering this AWS account with your control plane (step 4 below) is
+          what gets SES events to your self-hosted API. It adds a{" "}
+          <span className="font-medium text-foreground">
+            dedicated EventBridge target
+          </span>{" "}
+          rather than repointing the existing one, so both control planes can
+          receive the same events — run the plain{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps platform connect
+          </code>{" "}
+          as well and app.wraps.dev stays live alongside your own dashboard. The
+          full sequence:
+        </p>
+        <ol className="mb-4 list-decimal space-y-4 pl-6 text-muted-foreground">
+          <li>
+            Writes the dedicated target and migrates any existing reroute:
+            <div className="mt-2">
+              <CLICommand command="wraps selfhost connect" />
+            </div>
+          </li>
+          <li>
+            Rebuilds EventBridge — nothing changes in AWS until this runs:
+            <div className="mt-2">
+              <CLICommand command="wraps email upgrade" />
+            </div>
+          </li>
+          <li>
+            Optional — also keep app.wraps.dev receiving events:
+            <div className="mt-2">
+              <CLICommand command="wraps platform connect" />
+            </div>
+          </li>
+        </ol>
+        <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">
+            Migrating off{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              --reroute-events
+            </code>
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            The reroute is the legacy path, kept working for deployments that
+            already use it. An account that went through it is migrated
+            automatically the next time you run{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps selfhost connect
+            </code>
+            : the CLI clears the old reroute and prints a warning, because two
+            targets pointing at the same API would deliver every event twice.
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            The rebuild takes effect on the next{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps email upgrade
+            </code>
+            , and it replaces rather than renames the EventBridge resources —{" "}
+            <span className="font-medium text-foreground">
+              expect a short gap in event delivery during that step.
+            </span>
           </p>
         </div>
       </section>
