@@ -23,12 +23,20 @@ type OrganizationSettingsTabsProps = {
   };
   userRole: string;
   planId?: string;
+  /**
+   * True on self-hosted deployments. Required so a caller cannot silently fall
+   * back to the platform CloudFormation template. This component is
+   * `"use client"`, so the value must be threaded from a server component
+   * calling `isSelfHosted()` — never read here.
+   */
+  selfHosted: boolean;
 };
 
 export function OrganizationSettingsTabs({
   organization,
   userRole,
   planId,
+  selfHosted,
 }: OrganizationSettingsTabsProps) {
   const [activeTab, setActiveTab] = useQueryState("tab", {
     defaultValue: "general",
@@ -60,6 +68,7 @@ export function OrganizationSettingsTabs({
         <OrganizationSettingsAwsAccounts
           organization={organization}
           planId={planId}
+          selfHosted={selfHosted}
           userRole={userRole}
         />
       </TabsContent>

@@ -57,10 +57,13 @@ type OrganizationSettingsAwsAccountsProps = {
   /** Self-hosted deployments are unlimited — no AWS account cap. */
   unlimited?: boolean;
   /**
-   * True on self-hosted deployments. Threaded from a server component calling
-   * `isSelfHosted()`; the license key must never reach the client bundle.
+   * True on self-hosted deployments. Required, and deliberately has no default:
+   * defaulting to false fails open to the platform CloudFormation template,
+   * which creates a role trusting the Wraps platform account. Must be threaded
+   * from a server component calling `isSelfHosted()`; the license key must
+   * never reach the client bundle.
    */
-  selfHosted?: boolean;
+  selfHosted: boolean;
 };
 
 export function OrganizationSettingsAwsAccounts({
@@ -68,7 +71,7 @@ export function OrganizationSettingsAwsAccounts({
   userRole,
   planId = "starter",
   unlimited = false,
-  selfHosted = false,
+  selfHosted,
 }: OrganizationSettingsAwsAccountsProps) {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
