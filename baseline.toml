@@ -236,9 +236,16 @@ severity = "error"
 pattern = "as any"
 max_count = 104
 glob = "**/*.{ts,tsx}"
-# **/app/blog/** excluded: substring pattern false-positives on marketing prose
-# (e.g. "as any verified identity" in agent-mailboxes/page.tsx), not TS assertions
-exclude_glob = ["**/__tests__/**", "**/*.test.*", "**/*.config.*", "**/app/blog/**"]
+# blog page files excluded: substring pattern false-positives on marketing prose
+# (e.g. "as any verified identity" in agent-mailboxes/page.tsx), not TS assertions.
+# Scoped to prose-bearing page files only — other blog code (charts, OG images) stays covered.
+exclude_glob = [
+  "**/__tests__/**",
+  "**/*.test.*",
+  "**/*.config.*",
+  "**/app/blog/**/page.tsx",
+  "**/app/blog/**/page-content.tsx",
+]
 message = "Reduce 'as any' assertions — use proper types or 'as unknown' (104 remaining, ratchet down)"
 
 
