@@ -155,6 +155,10 @@ jobs:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           BETTER_AUTH_SECRET: test-secret-key-for-testing-only
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # resolveApiBaseUrl() deliberately has no fallback — a self-hosted
+          # deployment must never point unsubscribe links at the Wraps API.
+          # Test sends that build those links throw without this.
+          NEXT_PUBLIC_API_URL: http://localhost:3001
           CORS_ORIGIN: http://localhost:3000
 
   test-db:
