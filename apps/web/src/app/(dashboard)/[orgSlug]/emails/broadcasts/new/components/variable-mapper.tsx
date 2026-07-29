@@ -250,7 +250,7 @@ function VariableMapperRow({
     <div
       className={cn(
         "rounded-lg border p-3",
-        hasError ? "border-yellow-200 bg-yellow-50" : "border-border"
+        hasError ? "border-warning/30 bg-warning/10" : "border-border"
       )}
     >
       <div className="mb-2 flex items-center gap-2">
