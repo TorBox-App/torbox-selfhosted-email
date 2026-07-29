@@ -1032,12 +1032,41 @@ pnpm install`,
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-muted-foreground text-sm">
+            <p className="mb-3 text-muted-foreground text-sm">
               GitHub disables Actions on new forks by default. Go to your fork's{" "}
               <span className="font-medium text-foreground">
                 Settings → Actions → General
               </span>{" "}
               and set "Allow all actions and reusable workflows", then save.
+            </p>
+            <p className="mb-3 text-muted-foreground text-sm">
+              Scheduled workflows need one extra step: GitHub keeps cron
+              triggers in forks disabled even after Actions is enabled. Open{" "}
+              <span className="font-medium text-foreground">
+                Actions → Sync from upstream
+              </span>{" "}
+              and click{" "}
+              <span className="font-medium text-foreground">
+                Enable workflow
+              </span>{" "}
+              on the banner — otherwise the Monday sync never fires. GitHub also
+              suspends cron triggers after 60 days without repository activity;
+              merging the sync PRs counts as activity and keeps it alive.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              If a run sits at "Waiting for a runner to pick up this job", the
+              workflows aren't the cause — both use standard GitHub-hosted
+              runners. Check that your organization allows GitHub-hosted runners
+              for this repository (org{" "}
+              <span className="font-medium text-foreground">
+                Settings → Actions
+              </span>
+              ) and, for private repositories, that your Actions minutes and
+              spending limit under{" "}
+              <span className="font-medium text-foreground">
+                Settings → Billing
+              </span>{" "}
+              aren't exhausted.
             </p>
           </CardContent>
         </Card>
