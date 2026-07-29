@@ -20,7 +20,7 @@ import { Input } from "./input";
 /**
  * Tailwind color palette with hex values
  */
-const tailwindColors = {
+export const tailwindColors = {
   gray: {
     50: "#f9fafb",
     100: "#f3f4f6",
@@ -288,7 +288,7 @@ const tailwindColors = {
 };
 
 // Common colors for quick access
-const quickColors = [
+export const quickColors = [
   { name: "White", value: "#ffffff" },
   { name: "Black", value: "#000000" },
   { name: "Gray 100", value: "#f3f4f6" },
