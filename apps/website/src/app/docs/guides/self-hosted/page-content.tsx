@@ -1560,9 +1560,10 @@ pnpm install`,
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     -pooler
                   </code>{" "}
-                  host. Keep a direct (unpooled) URL for running migrations,
-                  which need session-level features a transaction-mode pooler
-                  does not provide
+                  host. The same URL is used for migrations, and a
+                  transaction-mode pooler is fine for them: Drizzle takes no
+                  advisory locks and applies each run inside a single
+                  transaction
                 </td>
               </tr>
               <tr>
