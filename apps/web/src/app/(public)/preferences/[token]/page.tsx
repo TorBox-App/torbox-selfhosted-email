@@ -11,6 +11,8 @@ import {
 import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PreferenceCenterShell } from "@/components/preference-center/shell";
+import { resolvePreferenceCenterTheme } from "@/lib/preference-theme/resolve";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 import { PreferencesForm } from "./preferences-form";
 
@@ -67,6 +69,9 @@ export default async function PreferencesPage({
   // Verify token
   const payload = await verifyUnsubscribeToken(token);
   if (!payload) {
+    // No org context is available before token verification, so this
+    // branch is intentionally NOT themed — it renders on the app's default
+    // tokens rather than any organization's preference center theme.
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl bg-card p-8 text-center shadow-sm">
@@ -127,6 +132,7 @@ export default async function PreferencesPage({
       brandColor: organization.brandColor,
       preferenceCenterTitle: topicSettings.preferenceCenterTitle,
       preferenceCenterDescription: topicSettings.preferenceCenterDescription,
+      preferenceCenterTheme: topicSettings.preferenceCenterTheme,
     })
     .from(organization)
     .leftJoin(
@@ -203,74 +209,45 @@ export default async function PreferencesPage({
     ? maskEmail(contactRecord.email)
     : "your email";
 
-  const brandColor = orgWithSettings?.brandColor || "#000000"; // Default to black
+  const theme = resolvePreferenceCenterTheme({
+    theme: orgWithSettings?.preferenceCenterTheme ?? null,
+    brandColor: orgWithSettings?.brandColor ?? null,
+  });
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header with branding */}
-        <div className="mb-8 text-center">
-          {orgWithSettings?.logo ? (
-            <img
-              alt={orgWithSettings.name || "Company logo"}
-              className="mx-auto mb-6 h-12 w-auto"
-              src={orgWithSettings.logo}
-            />
-          ) : orgWithSettings?.name ? (
-            <div
-              className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl font-semibold text-lg text-white"
-              style={{ backgroundColor: brandColor }}
-            >
-              {orgWithSettings.name.charAt(0).toUpperCase()}
-            </div>
-          ) : null}
-
-          <h1 className="mb-2 font-semibold text-2xl text-foreground tracking-tight">
-            {orgWithSettings?.preferenceCenterTitle || "Email Preferences"}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {orgWithSettings?.preferenceCenterDescription ? (
-              renderDescription(orgWithSettings.preferenceCenterDescription, {
-                masked_email: maskedEmail,
-                email: contactRecord.email || "",
-                org_name: orgWithSettings.name || "",
-              })
-            ) : (
-              <>
-                Manage subscriptions for{" "}
-                <span className="font-medium text-foreground">
-                  {maskedEmail}
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-
-        {/* Form card */}
-        <div className="rounded-2xl bg-card p-6 shadow-sm ring-1 ring-border">
-          <PreferencesForm
-            brandColor={brandColor}
-            contactId={contactId}
-            hasMultipleChannels={
-              !!(contactRecord.email && contactRecord.phone && orgHasSms)
-            }
-            isGloballyUnsubscribed={
-              contactRecord.emailStatus === "unsubscribed"
-            }
-            organizationId={organizationId}
-            orgName={orgWithSettings?.name || undefined}
-            preferredChannel={contactRecord.preferredChannel}
-            token={token}
-            topics={topicsWithStatus}
-          />
-        </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-muted-foreground text-xs">
-          You can update your preferences anytime using the link in our emails.
-        </p>
-      </div>
-    </div>
+    <PreferenceCenterShell
+      description={
+        orgWithSettings?.preferenceCenterDescription ? (
+          renderDescription(orgWithSettings.preferenceCenterDescription, {
+            masked_email: maskedEmail,
+            email: contactRecord.email || "",
+            org_name: orgWithSettings.name || "",
+          })
+        ) : (
+          <>
+            Manage subscriptions for{" "}
+            <span className="font-medium text-foreground">{maskedEmail}</span>
+          </>
+        )
+      }
+      logo={orgWithSettings?.logo}
+      orgName={orgWithSettings?.name}
+      theme={theme}
+      title={orgWithSettings?.preferenceCenterTitle || "Email Preferences"}
+    >
+      <PreferencesForm
+        contactId={contactId}
+        hasMultipleChannels={
+          !!(contactRecord.email && contactRecord.phone && orgHasSms)
+        }
+        isGloballyUnsubscribed={contactRecord.emailStatus === "unsubscribed"}
+        organizationId={organizationId}
+        orgName={orgWithSettings?.name || undefined}
+        preferredChannel={contactRecord.preferredChannel}
+        token={token}
+        topics={topicsWithStatus}
+      />
+    </PreferenceCenterShell>
   );
 }
 

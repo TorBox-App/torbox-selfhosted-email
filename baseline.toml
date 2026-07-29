@@ -180,10 +180,10 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-(?:white|black)"
 regex = true
-max_count = 42
+max_count = 38
 glob = "apps/web/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
-message = "Migrate hardcoded white/black to theme colors for dark mode support (42 remaining, ratchet down)"
+message = "Migrate hardcoded white/black to theme colors for dark mode support (38 remaining, ratchet down)"
 
 # Banned: react-hook-form (fully migrated to @tanstack/react-form)
 [[rule]]
@@ -211,10 +211,10 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration|from|to|via)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\\d{2,3})"
 regex = true
-max_count = 1174
+max_count = 1150
 glob = "apps/web/src/**/*.tsx"
 exclude_glob = ["**/components/ui/**"]
-message = "Migrate raw color utilities to theme tokens or add dark: variants (1174 remaining, ratchet down)"
+message = "Migrate raw color utilities to theme tokens or add dark: variants (1150 remaining, ratchet down)"
 
 # Ratchet: raw Tailwind colors that should be semantic tokens
 [[rule]]
@@ -223,10 +223,10 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border)-(?:white|black|(?:gray|slate)-(?:50|100|200|300|400|500|600|700|800|900|950))"
 regex = true
-max_count = 105
+max_count = 101
 glob = "apps/web/src/**/*.tsx"
 exclude_glob = ["**/components/ui/**"]
-message = "Use semantic tokens (bg-background, text-foreground, border-border) instead of raw colors (105 remaining, ratchet down)"
+message = "Use semantic tokens (bg-background, text-foreground, border-border) instead of raw colors (101 remaining, ratchet down)"
 
 # Ratchet: reduce `as any` type assertions (baselined at 95)
 [[rule]]

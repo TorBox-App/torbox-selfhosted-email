@@ -24,7 +24,6 @@ type PreferencesFormProps = {
   isGloballyUnsubscribed: boolean;
   hasMultipleChannels: boolean;
   preferredChannel: "email" | "sms" | null;
-  brandColor: string;
   orgName?: string;
 };
 
@@ -36,7 +35,6 @@ export function PreferencesForm({
   isGloballyUnsubscribed: initiallyUnsubscribed,
   hasMultipleChannels,
   preferredChannel: initialPreferredChannel,
-  brandColor,
   orgName,
 }: PreferencesFormProps) {
   const [isPending, startTransition] = useTransition();
@@ -200,13 +198,13 @@ export function PreferencesForm({
         <div
           className={`flex items-center gap-3 rounded-xl p-4 ${
             message.type === "success"
-              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+              ? "bg-success/10 text-success"
               : "bg-destructive/10 text-destructive"
           }`}
         >
           {message.type === "success" ? (
             <svg
-              className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+              className="h-5 w-5 shrink-0 text-success"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -254,22 +252,25 @@ export function PreferencesForm({
                     <div className="relative flex h-5 items-center">
                       <input
                         checked={subscriptions[topic.id] ?? false}
-                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        className={`peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                          subscriptions[topic.id]
+                            ? isPendingConfirmation
+                              ? "bg-warning"
+                              : "bg-primary"
+                            : ""
+                        }`}
                         onChange={(e) =>
                           handleTopicChange(topic.id, e.target.checked)
                         }
-                        style={{
-                          backgroundColor: subscriptions[topic.id]
-                            ? isPendingConfirmation
-                              ? "#f59e0b" // Amber for pending
-                              : brandColor
-                            : undefined,
-                        }}
                         type="checkbox"
                       />
                       {subscriptions[topic.id] && (
                         <svg
-                          className="pointer-events-none absolute left-0 h-4 w-4 text-white"
+                          className={`pointer-events-none absolute left-0 h-4 w-4 ${
+                            isPendingConfirmation
+                              ? "text-warning-foreground"
+                              : "text-primary-foreground"
+                          }`}
                           fill="none"
                           stroke="currentColor"
                           strokeWidth={3}
@@ -297,7 +298,7 @@ export function PreferencesForm({
                           {topic.name}
                         </span>
                         {isPendingConfirmation && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                          <span className="rounded-full bg-warning/20 px-2 py-0.5 font-medium text-foreground text-xs">
                             Pending confirmation
                           </span>
                         )}
@@ -314,7 +315,7 @@ export function PreferencesForm({
                   {isPendingConfirmation && (
                     <div className="mt-2 ml-9">
                       <button
-                        className="rounded-md px-3 py-1.5 font-medium text-amber-700 text-xs transition-colors hover:bg-amber-50 disabled:opacity-50 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                        className="rounded-md px-3 py-1.5 font-medium text-warning text-xs transition-colors hover:bg-warning/10 disabled:opacity-50"
                         disabled={isPending || isResending}
                         onClick={() => handleResendConfirmation(topic.id)}
                         type="button"
@@ -362,20 +363,16 @@ export function PreferencesForm({
                 <div className="relative flex h-5 items-center">
                   <input
                     checked={selectedChannel === option.value}
-                    className="h-4 w-4 cursor-pointer appearance-none rounded-full border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    className={`h-4 w-4 cursor-pointer appearance-none rounded-full border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      selectedChannel === option.value ? "bg-primary" : ""
+                    }`}
                     name="preferredChannel"
                     onChange={() => setSelectedChannel(option.value)}
-                    style={{
-                      backgroundColor:
-                        selectedChannel === option.value
-                          ? brandColor
-                          : undefined,
-                    }}
                     type="radio"
                   />
                   {selectedChannel === option.value && (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
                     </div>
                   )}
                 </div>
@@ -392,10 +389,9 @@ export function PreferencesForm({
       <div className="space-y-3 pt-2">
         {topics.length > 0 && (
           <button
-            className="w-full rounded-xl px-4 py-3 font-medium text-sm text-white transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground text-sm transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
             disabled={isPending}
             onClick={handleSave}
-            style={{ backgroundColor: brandColor }}
             type="button"
           >
             {isPending ? "Saving..." : "Save Preferences"}
