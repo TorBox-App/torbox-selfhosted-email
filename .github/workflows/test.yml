@@ -11,7 +11,11 @@ permissions:
   contents: read
 
 jobs:
+  # Every job here is guarded to the upstream repo — forks (self-hosted
+  # customers) lack the Blacksmith runners and test secrets, so unguarded
+  # jobs queue forever on their pushes and sync PRs.
   test:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     strategy:
@@ -53,6 +57,7 @@ jobs:
         continue-on-error: true
 
   test-api:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
@@ -86,6 +91,7 @@ jobs:
           CORS_ORIGIN: http://localhost:3000
 
   test-auth:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -125,6 +131,7 @@ jobs:
         run: pnpm --filter @wraps/email-send test
 
   test-web:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
@@ -162,6 +169,7 @@ jobs:
           CORS_ORIGIN: http://localhost:3000
 
   test-db:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -192,6 +200,7 @@ jobs:
   # reaches it. Without this job the selfhost deploy/upgrade/migrate/reroute
   # tests protect nothing in CI.
   test-scripts:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -217,6 +226,7 @@ jobs:
         run: pnpm test:scripts
 
   baseline:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -251,6 +261,7 @@ jobs:
         run: pnpm exec baseline scan --format github .
 
   lint:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -279,6 +290,7 @@ jobs:
   # step stops before touching AWS. See project_selfhost_fresh_clone_fixes —
   # six shipped bugs were only visible from a clean clone.
   selfhost-smoke:
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:

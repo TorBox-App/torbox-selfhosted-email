@@ -1040,8 +1040,11 @@ pnpm install`,
               and set "Allow all actions and reusable workflows", then save.
             </p>
             <p className="mb-3 text-muted-foreground text-sm">
-              Scheduled workflows need one extra step: GitHub keeps cron
-              triggers in forks disabled even after Actions is enabled. Open{" "}
+              The sync workflow needs one extra step: GitHub marks workflows
+              with cron triggers as disabled in forks even after Actions is
+              enabled, which blocks{" "}
+              <span className="font-medium text-foreground">both</span> the
+              Monday schedule and manual "Run workflow" triggers. Open{" "}
               <span className="font-medium text-foreground">
                 Actions → Sync from upstream
               </span>{" "}
@@ -1049,9 +1052,10 @@ pnpm install`,
               <span className="font-medium text-foreground">
                 Enable workflow
               </span>{" "}
-              on the banner — otherwise the Monday sync never fires. GitHub also
-              suspends cron triggers after 60 days without repository activity;
-              merging the sync PRs counts as activity and keeps it alive.
+              on the banner — even if you only ever plan to sync manually.
+              GitHub also suspends cron triggers after 60 days without
+              repository activity; merging the sync PRs counts as activity and
+              keeps it alive.
             </p>
             <p className="text-muted-foreground text-sm">
               If a run sits at "Waiting for a runner to pick up this job", the

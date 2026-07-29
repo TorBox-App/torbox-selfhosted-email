@@ -37,6 +37,9 @@ env:
 
 jobs:
   deploy:
+    # Only runs upstream — forks lack the Blacksmith runners and AWS secrets,
+    # so this job would queue forever on a self-hosted customer's fork
+    if: github.repository == 'wraps-team/wraps'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: ${{ github.event.inputs.stage || 'production' }}
 
