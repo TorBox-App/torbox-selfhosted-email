@@ -140,7 +140,10 @@ describe("Better-Auth Environment Configuration", () => {
       }
       vi.resetModules();
     }
-  });
+    // `baseURL` is read at module scope, so this test has to re-import
+    // `../index` cold. That costs seconds and cannot be hoisted, so it needs
+    // more headroom than the 5s default when the full suite runs in parallel.
+  }, 60_000);
 
   it("should require Stripe secret key", () => {
     // In test environment, this might be empty, but the config should reference it

@@ -21,7 +21,15 @@
  *   - `process.env`                           — the Vercel OIDC environment
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const sentCommands: unknown[] = [];
 const oidcCallArgs: unknown[] = [];
@@ -69,7 +77,16 @@ const ROLE_ARN = "arn:aws:iam::111122223333:role/wraps-sms-role";
 
 describe("sendLoginAlertSms on Vercel with OIDC", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
+  let sendLoginAlertSms: typeof import("../index").sendLoginAlertSms;
   const originalEnv = { ...process.env };
+
+  // `../index` pulls in better-auth, Stripe and the DB layer — a cold import
+  // costs seconds. Importing it inside a test body puts that on the 5s test
+  // timeout, which blows up under the parallel load of the full suite. Every
+  // env var this module reads is read at call time, so hoisting is safe.
+  beforeAll(async () => {
+    ({ sendLoginAlertSms } = await import("../index"));
+  }, 60_000);
 
   beforeEach(() => {
     sentCommands.length = 0;
@@ -89,8 +106,6 @@ describe("sendLoginAlertSms on Vercel with OIDC", () => {
   });
 
   it("delivers the SMS when a new device is detected", async () => {
-    const { sendLoginAlertSms } = await import("../index");
-
     await sendLoginAlertSms(PHONE, {
       ipAddress: "203.0.113.7",
       userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
@@ -130,8 +145,6 @@ describe("sendLoginAlertSms on Vercel with OIDC", () => {
     const smsRoleArn = "arn:aws:iam::010836206701:role/wraps-sms-role";
     process.env.WRAPS_SMS_ROLE_ARN = smsRoleArn;
 
-    const { sendLoginAlertSms } = await import("../index");
-
     await sendLoginAlertSms(PHONE, { ipAddress: "203.0.113.7" });
 
     expect(oidcCallArgs).toHaveLength(1);
@@ -141,8 +154,6 @@ describe("sendLoginAlertSms on Vercel with OIDC", () => {
   it("sends the configured origination identity to AWS", async () => {
     // AWS End User Messaging rejects a send with no OriginationIdentity.
     process.env.WRAPS_SMS_ORIGINATION_IDENTITY = "+15550001111";
-
-    const { sendLoginAlertSms } = await import("../index");
 
     await sendLoginAlertSms(PHONE, { ipAddress: "203.0.113.7" });
 

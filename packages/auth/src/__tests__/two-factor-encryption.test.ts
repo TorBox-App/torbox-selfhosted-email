@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * Tests verifying that better-auth encrypts TOTP secrets and backup codes
@@ -24,6 +24,15 @@ import { describe, expect, it } from "vitest";
 import { symmetricDecrypt, symmetricEncrypt } from "better-auth/crypto";
 
 describe("Two-Factor Encryption (better-auth behavior)", () => {
+  let auth: typeof import("../index").auth;
+
+  // Cold-importing `../index` costs seconds (better-auth + Stripe + DB). Kept
+  // out of the test body so it isn't charged against the 5s test timeout when
+  // the full suite runs in parallel.
+  beforeAll(async () => {
+    ({ auth } = await import("../index"));
+  }, 60_000);
+
   it("should encrypt TOTP secret using symmetricEncrypt (not stored as plaintext)", async () => {
     const testSecret = "BETTER_AUTH_SECRET_VALUE_FOR_TEST";
     const totpSeed = "JBSWY3DPEHPK3PXP"; // Example TOTP secret (base32)
@@ -117,8 +126,6 @@ describe("Two-Factor Encryption (better-auth behavior)", () => {
     //   twoFactor({ issuer: "Wraps" })
     //
     // Therefore backup codes are encrypted by default.
-    const { auth } = await import("../index");
-
     const twoFactorPlugin = auth.options.plugins?.find(
       (plugin: any) => plugin?.id === "two-factor"
     );
