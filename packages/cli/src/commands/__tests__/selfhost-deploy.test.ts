@@ -55,6 +55,12 @@ vi.mock("../../utils/selfhost/neon.js", async () => {
 vi.mock("../../utils/selfhost/variant.js", () => ({
   detectSelfhostVariant: vi.fn(),
 }));
+// Unmocked, this reaches SES with the real credential chain. On a developer
+// machine that fails fast; on a runner with no credentials it blocks on the
+// instance metadata endpoint until every test after the deploy call times out.
+vi.mock("../../utils/selfhost/auth-templates.js", () => ({
+  provisionAuthTemplatesWithProgress: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("../../telemetry/events.js");
 
 import * as prompts from "@clack/prompts";
