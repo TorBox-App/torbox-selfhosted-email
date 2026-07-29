@@ -1,8 +1,18 @@
-import { contact, contactTopic, db, eq, organization, topic } from "@wraps/db";
+import {
+  contact,
+  contactTopic,
+  db,
+  eq,
+  organization,
+  topic,
+  topicSettings,
+} from "@wraps/db";
 import { verifyConfirmationToken } from "@wraps/email";
 import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PreferenceCenterShell } from "@/components/preference-center/shell";
+import { resolvePreferenceCenterTheme } from "@/lib/preference-theme/resolve";
 import { ConfirmationForm } from "./confirmation-form";
 
 type ConfirmPageProps = {
@@ -41,6 +51,9 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
   // Verify token
   const payload = await verifyConfirmationToken(token);
   if (!payload) {
+    // No org context is available before token verification, so this
+    // branch is intentionally NOT themed — it renders on the app's default
+    // tokens rather than any organization's preference center theme.
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl bg-card p-8 text-center shadow-sm">
@@ -104,14 +117,23 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
     notFound();
   }
 
-  // Load organization with branding
+  // Load organization with branding and theme (single query with left join)
+  // Join condition includes explicit org check for defense in depth
   const [org] = await db
     .select({
       name: organization.name,
       logo: organization.logo,
       brandColor: organization.brandColor,
+      preferenceCenterTheme: topicSettings.preferenceCenterTheme,
     })
     .from(organization)
+    .leftJoin(
+      topicSettings,
+      and(
+        eq(organization.id, topicSettings.organizationId),
+        eq(topicSettings.organizationId, organizationId) // defense in depth
+      )
+    )
     .where(eq(organization.id, organizationId))
     .limit(1);
 
@@ -137,96 +159,67 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
     ? maskEmail(contactRecord.email)
     : "your email";
 
-  const brandColor = org?.brandColor || "#000000"; // Default to black
+  const theme = resolvePreferenceCenterTheme({
+    theme: org?.preferenceCenterTheme ?? null,
+    brandColor: org?.brandColor ?? null,
+  });
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header with branding */}
-        <div className="mb-8 text-center">
-          {org?.logo ? (
-            <img
-              alt={org.name || "Company logo"}
-              className="mx-auto mb-6 h-12 w-auto"
-              src={org.logo}
-            />
-          ) : org?.name ? (
-            <div
-              className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl font-semibold text-lg text-white"
-              style={{ backgroundColor: brandColor }}
-            >
-              {org.name.charAt(0).toUpperCase()}
-            </div>
-          ) : null}
+    <PreferenceCenterShell
+      description={
+        isAlreadyConfirmed ? (
+          <>
+            <span className="font-medium text-foreground">{maskedEmail}</span>{" "}
+            is already subscribed to this topic.
+          </>
+        ) : (
+          <>
+            Confirm subscription for{" "}
+            <span className="font-medium text-foreground">{maskedEmail}</span>
+          </>
+        )
+      }
+      logo={org?.logo}
+      orgName={org?.name}
+      theme={theme}
+      title={isAlreadyConfirmed ? "Already Subscribed" : "Confirm Subscription"}
+    >
+      {/* Topic info */}
+      <div className="mb-6 rounded-xl bg-muted p-4">
+        <h2 className="font-medium text-foreground">{topicRecord.name}</h2>
+        {topicRecord.description && (
+          <p className="mt-1 text-muted-foreground text-sm">
+            {topicRecord.description}
+          </p>
+        )}
+      </div>
 
-          <h1 className="mb-2 font-semibold text-2xl text-foreground tracking-tight">
-            {isAlreadyConfirmed ? "Already Subscribed" : "Confirm Subscription"}
-          </h1>
+      {isAlreadyConfirmed ? (
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
+            <svg
+              className="h-5 w-5 text-success"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M5 13l4 4L19 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+              />
+            </svg>
+          </div>
           <p className="text-muted-foreground text-sm">
-            {isAlreadyConfirmed ? (
-              <>
-                <span className="font-medium text-foreground">
-                  {maskedEmail}
-                </span>{" "}
-                is already subscribed to this topic.
-              </>
-            ) : (
-              <>
-                Confirm subscription for{" "}
-                <span className="font-medium text-foreground">
-                  {maskedEmail}
-                </span>
-              </>
-            )}
+            You're already subscribed to this topic. You'll continue receiving
+            updates.
           </p>
         </div>
-
-        {/* Confirmation card */}
-        <div className="rounded-2xl bg-card p-6 shadow-sm ring-1 ring-border">
-          {/* Topic info */}
-          <div className="mb-6 rounded-xl bg-muted p-4">
-            <h2 className="font-medium text-foreground">{topicRecord.name}</h2>
-            {topicRecord.description && (
-              <p className="mt-1 text-muted-foreground text-sm">
-                {topicRecord.description}
-              </p>
-            )}
-          </div>
-
-          {isAlreadyConfirmed ? (
-            <div className="text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950">
-                <svg
-                  className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M5 13l4 4L19 7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                </svg>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                You're already subscribed to this topic. You'll continue
-                receiving updates.
-              </p>
-            </div>
-          ) : (
-            <ConfirmationForm brandColor={brandColor} token={token} />
-          )}
-        </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-muted-foreground text-xs">
-          You can manage your subscriptions anytime using the link in our
-          emails.
-        </p>
-      </div>
-    </div>
+      ) : (
+        <ConfirmationForm token={token} />
+      )}
+    </PreferenceCenterShell>
   );
 }
 

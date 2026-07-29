@@ -6,10 +6,9 @@ import { confirmSubscription } from "./actions";
 
 type ConfirmationFormProps = {
   token: string;
-  brandColor: string;
 };
 
-export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
+export function ConfirmationForm({ token }: ConfirmationFormProps) {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
@@ -32,9 +31,9 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
   if (status === "success") {
     return (
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
           <svg
-            className="h-5 w-5 text-green-500"
+            className="h-5 w-5 text-success"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -47,10 +46,10 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
             />
           </svg>
         </div>
-        <h3 className="mb-1 font-medium text-gray-900 dark:text-foreground">
+        <h3 className="mb-1 font-medium text-foreground">
           Subscription Confirmed!
         </h3>
-        <p className="text-gray-500 text-sm dark:text-gray-400">
+        <p className="text-muted-foreground text-sm">
           You're now subscribed and will receive updates.
         </p>
       </div>
@@ -60,16 +59,15 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
   return (
     <div>
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700 text-sm dark:bg-red-900/30 dark:text-red-400">
+        <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
           {error}
         </div>
       )}
 
       <button
-        className="w-full rounded-lg px-4 py-3 font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={status === "loading"}
         onClick={handleConfirm}
-        style={{ backgroundColor: brandColor }}
         type="button"
       >
         {status === "loading" ? (
@@ -100,7 +98,7 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
         )}
       </button>
 
-      <p className="mt-4 text-center text-gray-400 text-xs dark:text-gray-500">
+      <p className="mt-4 text-center text-muted-foreground text-xs">
         By confirming, you agree to receive emails for this topic.
       </p>
     </div>
