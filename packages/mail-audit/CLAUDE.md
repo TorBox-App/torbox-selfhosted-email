@@ -1,4 +1,4 @@
-# Wraps Mail Check (packages/mail-check)
+# Wraps Mail Audit (packages/mail-audit)
 
 Standalone CLI tool (`mail-audit`) for email deliverability auditing: SPF, DKIM, DMARC, MX, blacklists, TLS — returning letter grades A–F.
 
@@ -6,7 +6,7 @@ Standalone CLI tool (`mail-audit`) for email deliverability auditing: SPF, DKIM,
 
 ### 1. This Is a Standalone CLI, Not a Library
 
-`mail-check` publishes a `bin` entry (`mail-audit`) and builds with tsup to `dist/`. It is **not** imported by `apps/web` or `apps/api`. The package name in `package.json` is `mail-audit` (no `@wraps/` scope), meaning it is designed for public distribution, not monorepo workspace import.
+`mail-audit` publishes a `bin` entry (`mail-audit`) and builds with tsup to `dist/`. It is **not** imported by `apps/web` or `apps/api`. The package name in `package.json` is `mail-audit` (no `@wraps/` scope), meaning it is designed for public distribution, not monorepo workspace import.
 
 ### 2. Email Check Logic Lives in `@wraps.dev/email-check`
 
