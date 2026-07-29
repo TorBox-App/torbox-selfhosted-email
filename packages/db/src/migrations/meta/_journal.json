@@ -477,6 +477,13 @@
       "when": 1785350217864,
       "tag": "0067_empty_ultimo",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1785358752044,
+      "tag": "0068_abandoned_mephisto",
+      "breakpoints": true
     }
   ]
 }

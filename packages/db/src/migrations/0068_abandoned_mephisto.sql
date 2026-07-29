@@ -1,0 +1,1 @@
+ALTER TABLE "topic_settings" ADD COLUMN "preference_center_theme" jsonb;

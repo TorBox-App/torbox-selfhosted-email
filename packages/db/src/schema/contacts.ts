@@ -4,6 +4,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -218,6 +219,21 @@ export const topic = pgTable(
   })
 );
 
+/**
+ * Per-organization theme for the public preference center.
+ *
+ * INVARIANT: `light`/`dark` hold shadcn token name -> validated CSS value.
+ * Raw CSS is never stored here — see apps/web/src/lib/preference-theme/parse.ts.
+ * Values are re-validated on serialize, so a tampered row still cannot inject CSS.
+ */
+export type PreferenceCenterTheme = {
+  version: 1;
+  light: Record<string, string>;
+  dark: Record<string, string>;
+  fonts: { body: string | null; heading: string | null };
+  colorScheme: "light" | "dark" | "system";
+};
+
 // Topic Settings (organization-level configuration)
 export const topicSettings = pgTable("topic_settings", {
   organizationId: text("organization_id")
@@ -236,6 +252,9 @@ export const topicSettings = pgTable("topic_settings", {
   // Preference Center Settings
   preferenceCenterTitle: text("preference_center_title"),
   preferenceCenterDescription: text("preference_center_description"),
+  preferenceCenterTheme: jsonb(
+    "preference_center_theme"
+  ).$type<PreferenceCenterTheme>(),
 
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
