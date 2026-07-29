@@ -119,7 +119,9 @@ export default async function TopicsPage({ params }: TopicsPageProps) {
       {/* Topics Tabs */}
       <div className="@container/main px-4 lg:px-6">
         <TopicsTabs
+          brandColor={orgWithMembership.brandColor}
           organizationId={orgWithMembership.id}
+          orgName={orgWithMembership.name}
           orgSlug={orgSlug}
           settings={settings ?? null}
           topics={topics}

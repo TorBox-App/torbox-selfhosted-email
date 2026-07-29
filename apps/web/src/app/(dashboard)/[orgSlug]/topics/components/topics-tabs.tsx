@@ -22,6 +22,8 @@ type TopicsTabsProps = {
   userRole: string;
   settings: TopicSettingsType | null;
   verifiedDomains: string[];
+  brandColor: string | null;
+  orgName: string;
 };
 
 export function TopicsTabs({
@@ -31,6 +33,8 @@ export function TopicsTabs({
   userRole,
   settings,
   verifiedDomains,
+  brandColor,
+  orgName,
 }: TopicsTabsProps) {
   const [activeTab, setActiveTab] = useQueryState("tab", {
     defaultValue: "list",
@@ -63,7 +67,9 @@ export function TopicsTabs({
 
       <TabsContent className="mt-6" value="preference-center">
         <PreferenceCenterSettings
+          brandColor={brandColor}
           organizationId={organizationId}
+          orgName={orgName}
           settings={settings}
         />
       </TabsContent>
