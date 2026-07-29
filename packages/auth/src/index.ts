@@ -5,7 +5,7 @@ import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
 import * as Sentry from "@sentry/nextjs";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
-import { auditLog, db, eq, member } from "@wraps/db";
+import { and, auditLog, db, eq, member } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import * as scimSchema from "@wraps/db/schema/scim-provider";
 import * as ssoSchema from "@wraps/db/schema/sso-provider";
@@ -492,6 +492,61 @@ export async function writeLoginAuditLogs(
   }
 }
 
+/**
+ * Decides whether SCIM provisioning may attach to a Wraps user that already
+ * exists with the pushed email address.
+ *
+ * Without a policy the plugin refuses every match, so SCIM `Create` 409s on
+ * most of an org's team the day they turn it on. The plugin's `true` shortcut
+ * is not usable here: in a multi-tenant app it would let any org's SCIM token
+ * claim — and then deactivate or delete — an account belonging to someone
+ * outside that org, purely by pushing their email address.
+ *
+ * Exported for testing; wired in as `scim({ linkExistingUsers })` below.
+ */
+export async function shouldLinkScimUser({
+  user,
+  email,
+  provider,
+}: {
+  user: { id: string };
+  email: string;
+  provider: { organizationId?: string };
+}): Promise<boolean> {
+  const organizationId = provider.organizationId;
+  // Personal (non-org) tokens have no tenant to check the claim against.
+  if (!organizationId) {
+    return false;
+  }
+
+  // Already in the org — the membership predates SCIM, so letting the org's
+  // token manage it grants nothing the org didn't already have.
+  const membership = await db.query.member.findFirst({
+    where: and(
+      eq(member.userId, user.id),
+      eq(member.organizationId, organizationId)
+    ),
+  });
+  if (membership) {
+    return true;
+  }
+
+  // Otherwise only claim an address at a domain this org has proven it owns via
+  // DNS TXT. Same domain-claim model as Google Workspace, Okta, and Slack.
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) {
+    return false;
+  }
+  // Compared in JS, not SQL: `domain` is stored exactly as the admin typed it
+  // into the SSO form, so an `eq` would miss on casing.
+  const providers = await db.query.ssoProvider.findMany({
+    where: eq(ssoSchema.ssoProvider.organizationId, organizationId),
+  });
+  return providers.some(
+    (p) => p.domainVerified && p.domain.toLowerCase() === domain
+  );
+}
+
 // Only initialize Stripe client if the secret key is available
 // This prevents build-time errors when env vars aren't set (e.g., during Next.js static generation)
 const stripeClient = process.env.STRIPE_SECRET_KEY
@@ -677,7 +732,14 @@ export const auth = betterAuth<BetterAuthOptions>({
         }
       },
     }),
-    scim({}),
+    scim({
+      // Without this, SCIM `Create` 409s on every email that already has a
+      // Wraps user — which is most of an org's team on the day they turn SCIM
+      // on. `true` is not an option in a multi-tenant app: it would let any
+      // org's SCIM token claim, and then deactivate, an account belonging to
+      // someone outside that org purely by pushing their email address.
+      linkExistingUsers: { shouldLinkUser: shouldLinkScimUser },
+    }),
     bearer(),
     deviceAuthorization({
       verificationUri: "/device",

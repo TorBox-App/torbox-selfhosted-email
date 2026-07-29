@@ -2,7 +2,16 @@
 
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
-import { and, auditLog, db, eq, ssoProvider, verification } from "@wraps/db";
+import {
+  and,
+  auditLog,
+  db,
+  eq,
+  scimProvider,
+  ssoProvider,
+  verification,
+} from "@wraps/db";
+import { APIError } from "better-auth/api";
 import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
@@ -53,6 +62,45 @@ async function requireProviderOwnership(orgId: string, providerId: string) {
   });
 }
 
+/**
+ * The SCIM provider id must NOT equal the SSO provider id.
+ *
+ * Since better-auth 1.6, `/scim/generate-token` rejects any providerId that
+ * already exists in `sso_provider` ("Provider id collides with another account
+ * provider"). We only ever offer SCIM for an org that has a verified SSO
+ * provider, so passing the SSO provider id — as we did through 1.5 — now fails
+ * 100% of the time.
+ *
+ * Keyed by organization, not by domain: the SCIM `account` rows the plugin
+ * writes are looked up by this exact providerId, so it has to survive the org
+ * changing or re-adding its SSO domain. Otherwise every previously provisioned
+ * user goes invisible to the IdP.
+ */
+function scimProviderIdFor(orgId: string) {
+  return `scim-${orgId}`;
+}
+
+/**
+ * Better-auth throws `APIError` with an operator-facing message ("You are not a
+ * member of the organization", "Insufficient role for this operation"). These
+ * are the plugin's own HTTP error strings, not internal detail, and they are
+ * the only signal an admin gets while wiring up an IdP — so surface them
+ * instead of letting orgAction flatten them into a generic failure.
+ */
+async function callAuthApi<T>(
+  fn: () => Promise<T>
+): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  try {
+    return { ok: true, value: await fn() };
+  } catch (err) {
+    if (err instanceof APIError) {
+      const message = (err.body as { message?: string } | undefined)?.message;
+      return { ok: false, error: message ?? err.message };
+    }
+    throw err;
+  }
+}
+
 type SaveSsoProviderInput = {
   domain: string;
   issuer: string;
@@ -79,19 +127,22 @@ export const saveSsoProvider = orgAction(
     data: SaveSsoProviderInput
   ): Promise<SaveSsoProviderResult> => {
     const hdrs = await import("next/headers").then((m) => m.headers());
-    await ssoApi.registerSSOProvider({
-      body: {
-        providerId: data.domain,
-        issuer: data.issuer,
-        domain: data.domain,
-        organizationId: orgId,
-        oidcConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
+    const registered = await callAuthApi(() =>
+      ssoApi.registerSSOProvider({
+        body: {
+          providerId: data.domain,
+          issuer: data.issuer,
+          domain: data.domain,
+          organizationId: orgId,
+          oidcConfig: {
+            clientId: data.clientId,
+            clientSecret: data.clientSecret,
+          },
         },
-      },
-      headers: hdrs,
-    });
+        headers: hdrs,
+      })
+    );
+    if (!registered.ok) return { success: false, error: registered.error };
 
     const auditCtx = await getAuditContext();
     after(() =>
@@ -142,10 +193,13 @@ export const deleteSsoProvider = orgAction(
       return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
-    await ssoApi.deleteSSOProvider({
-      body: { providerId },
-      headers: hdrs,
-    });
+    const deleted = await callAuthApi(() =>
+      ssoApi.deleteSSOProvider({
+        body: { providerId },
+        headers: hdrs,
+      })
+    );
+    if (!deleted.ok) return { success: false, error: deleted.error };
 
     await ctx.audited(
       async (_tx) => {},
@@ -184,10 +238,14 @@ export const requestDomainVerification = orgAction(
     if (!provider) return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
-    const result = await ssoApi.requestDomainVerification({
-      body: { providerId },
-      headers: hdrs,
-    });
+    const requested = await callAuthApi(() =>
+      ssoApi.requestDomainVerification({
+        body: { providerId },
+        headers: hdrs,
+      })
+    );
+    if (!requested.ok) return { success: false, error: requested.error };
+    const result = requested.value;
 
     await ctx.audited(
       async (_tx) => {},
@@ -229,10 +287,13 @@ export const verifyDomain = orgAction(
     if (!provider) return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
-    await ssoApi.verifyDomain({
-      body: { providerId },
-      headers: hdrs,
-    });
+    const verified = await callAuthApi(() =>
+      ssoApi.verifyDomain({
+        body: { providerId },
+        headers: hdrs,
+      })
+    );
+    if (!verified.ok) return { success: false, error: verified.error };
 
     await ctx.audited(
       async (_tx) => {},
@@ -375,10 +436,27 @@ export const generateScimToken = orgAction(
       return { success: false, error: "Provider not found" };
 
     const hdrs = await import("next/headers").then((m) => m.headers());
-    const result = await ssoApi.generateSCIMToken({
-      body: { providerId, organizationId: orgId },
-      headers: hdrs,
-    });
+    const generated = await callAuthApi(() =>
+      ssoApi.generateSCIMToken({
+        body: { providerId: scimProviderIdFor(orgId), organizationId: orgId },
+        headers: hdrs,
+      })
+    );
+    if (!generated.ok) return { success: false, error: generated.error };
+    const result = generated.value;
+
+    // Tokens minted before better-auth 1.6 used the SSO provider id. The plugin
+    // only revokes the row matching the id it is generating for, so a legacy row
+    // would survive rotation and keep its token valid — drop it ourselves. After
+    // the new token exists, so a failed rotation leaves the old one working.
+    await db
+      .delete(scimProvider)
+      .where(
+        and(
+          eq(scimProvider.organizationId, orgId),
+          eq(scimProvider.providerId, providerId)
+        )
+      );
 
     await ctx.audited(
       async (_tx) => {},

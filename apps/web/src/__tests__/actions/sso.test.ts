@@ -8,6 +8,7 @@ const {
   mockVerifyDomainApi,
   mockGenerateSCIMToken,
   mockFindFirst,
+  mockDelete,
 } = vi.hoisted(() => ({
   mockVerifyOrgAccess: vi.fn(),
   mockRegisterSSOProvider: vi.fn(),
@@ -16,6 +17,7 @@ const {
   mockVerifyDomainApi: vi.fn(),
   mockGenerateSCIMToken: vi.fn(),
   mockFindFirst: vi.fn(),
+  mockDelete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
 }));
 
 vi.mock("next/headers", () => ({
@@ -65,6 +67,7 @@ vi.mock("@wraps/db", () => ({
   db: {
     query: { ssoProvider: { findFirst: mockFindFirst } },
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
+    delete: mockDelete,
     transaction: vi
       .fn()
       .mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) =>
@@ -74,6 +77,7 @@ vi.mock("@wraps/db", () => ({
   and: vi.fn(),
   eq: vi.fn(),
   ssoProvider: {},
+  scimProvider: {},
   auditLog: {},
   scimToken: {},
 }));
@@ -275,11 +279,62 @@ describe("SSO Actions", () => {
       expect(mockGenerateSCIMToken).toHaveBeenCalledWith(
         expect.objectContaining({
           body: expect.objectContaining({
-            providerId: "provider-1",
             organizationId: TEST_ORG_ID,
           }),
         })
       );
+    });
+
+    // better-auth >=1.6 rejects any SCIM providerId that already exists in
+    // sso_provider. We only offer SCIM once an SSO provider is verified, so
+    // reusing the SSO id made this fail 100% of the time.
+    it("never reuses the SSO provider id as the SCIM provider id", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
+      mockGenerateSCIMToken.mockResolvedValue({ scimToken: "scim_token_xyz" });
+      await generateScimToken(TEST_ORG_ID, "provider-1");
+      const { body } = mockGenerateSCIMToken.mock.calls[0][0];
+      expect(body.providerId).not.toBe("provider-1");
+      expect(body.providerId).toBe(`scim-${TEST_ORG_ID}`);
+    });
+
+    it("revokes a legacy row keyed by the SSO provider id before rotating", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
+      mockGenerateSCIMToken.mockResolvedValue({ scimToken: "scim_token_xyz" });
+      await generateScimToken(TEST_ORG_ID, "provider-1");
+      expect(mockDelete).toHaveBeenCalled();
+    });
+
+    it("surfaces the better-auth error message instead of a generic failure", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
+      const { APIError } = await import("better-auth/api");
+      mockGenerateSCIMToken.mockRejectedValue(
+        new APIError("BAD_REQUEST", {
+          message:
+            "Provider id collides with another account provider and cannot be used for SCIM",
+        })
+      );
+      const result = await generateScimToken(TEST_ORG_ID, "provider-1");
+      expect(result).toEqual({
+        success: false,
+        error:
+          "Provider id collides with another account provider and cannot be used for SCIM",
+      });
+    });
+
+    it("still hides non-APIError failures behind the generic message", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      mockFindFirst.mockResolvedValue(EXISTING_PROVIDER);
+      mockGenerateSCIMToken.mockRejectedValue(
+        new Error('relation "scim_provider" does not exist')
+      );
+      const result = await generateScimToken(TEST_ORG_ID, "provider-1");
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to generate SCIM token",
+      });
     });
   });
 });
