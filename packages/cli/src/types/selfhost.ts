@@ -59,6 +59,14 @@ export type SelfhostConfig = {
   betterAuthSecret: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  /** Selects the AI inference backend; defaults to the Vercel AI Gateway. */
+  aiProvider?: string;
+  aiModel?: string;
+  openaiApiKey?: string;
+  openaiBaseUrl?: string;
+  anthropicApiKey?: string;
+  anthropicBaseUrl?: string;
+  aiRegion?: string;
   sentryDsn?: string;
 };
 

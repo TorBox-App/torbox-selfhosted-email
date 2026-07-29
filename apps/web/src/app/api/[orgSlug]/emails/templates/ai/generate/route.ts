@@ -1,17 +1,17 @@
 import type { JSONContent } from "@tiptap/core";
-import { auth } from "@wraps/auth";
+import { getAIModel, isProviderConfigError } from "@wraps/ai";
 import { aiConversation, brandKit, db, templateVariable } from "@wraps/db";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { and, eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { requireRoutePermission } from "@/app/api/shared/route-permission";
-import { getAIModel } from "@/lib/ai/model";
-import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+import { resolveAIRequest } from "@/app/api/shared/ai-request";
+import { aiEnv } from "@/lib/ai/env";
+import { buildSystemPromptParts } from "@/lib/ai/system-prompt";
 import { extractTipTapJson, validateTipTapJson } from "@/lib/ai/validator";
 import { createRequestLogger } from "@/lib/logger";
-import { getOrganizationWithMembership } from "@/lib/organization";
-import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
+import { trackAiRequest } from "@/lib/usage/ai-usage";
+
+const ROUTE_PATH = "/api/[orgSlug]/emails/templates/ai/generate";
 
 type RouteContext = {
   params: Promise<{
@@ -22,48 +22,13 @@ type RouteContext = {
 // POST /api/[orgSlug]/emails/templates/ai/generate - Generate template content with AI
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const { orgSlug } = await context.params;
-
-    // Authenticate user
-    const session = await auth.api.getSession({
-      headers: await headers(),
+    const gated = await resolveAIRequest(context, {
+      resource: "templates",
+      permissions: ["write"],
+      path: ROUTE_PATH,
     });
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify organization membership
-    const orgWithMembership = await getOrganizationWithMembership(
-      orgSlug,
-      session.user.id
-    );
-
-    if (!orgWithMembership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const denied = requireRoutePermission(
-      orgWithMembership.userRole,
-      "templates",
-      ["write"]
-    );
-    if (denied) return denied;
-
-    // Check AI usage limit before processing
-    const usageCheck = await checkAiUsageLimit(orgWithMembership.id);
-    if (!usageCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: "AI message limit reached",
-          message: `You've used ${usageCheck.current} of ${usageCheck.limit} AI messages this month. Upgrade your plan for more.`,
-          limitReached: true,
-          current: usageCheck.current,
-          limit: usageCheck.limit,
-        },
-        { status: 429 }
-      );
-    }
+    if (!gated.ok) return gated.response;
+    const { orgSlug, org: orgWithMembership, userId, log } = gated;
 
     const {
       messages,
@@ -111,38 +76,56 @@ export async function POST(request: Request, context: RouteContext) {
       where: eq(templateVariable.organizationId, orgWithMembership.id),
     });
 
-    // Build system prompt
-    const systemPrompt = buildSystemPrompt({
-      brandKit: kit || undefined,
-      availableVariables: variables.map((v) => ({
-        name: v.name,
-        label: v.label,
-        type: v.type,
-      })),
-      existingContent: existingContent
-        ? JSON.stringify(existingContent)
-        : undefined,
-    });
+    // Split so the ~15k-token stable half can carry a prompt-cache breakpoint.
+    const { stable: stablePrompt, dynamic: dynamicPrompt } =
+      buildSystemPromptParts({
+        brandKit: kit || undefined,
+        availableVariables: variables.map((v) => ({
+          name: v.name,
+          label: v.label,
+          type: v.type,
+        })),
+        existingContent: existingContent
+          ? JSON.stringify(existingContent)
+          : undefined,
+      });
 
-    const { model, modelId: MODEL_ID } = getAIModel("xai/grok-code-fast-1");
+    // providerOptions is namespaced for whichever provider actually serves this
+    // request. Previously an anthropic thinking block was sent unconditionally,
+    // which did nothing on this route's Grok default.
+    const {
+      model,
+      modelId: MODEL_ID,
+      providerOptions,
+      cache,
+    } = await getAIModel(
+      {
+        model: "grok-code-fast",
+        reasoning: { effort: "medium" },
+      },
+      aiEnv()
+    );
 
     const result = streamText({
       model,
-      system: systemPrompt,
-      messages: modelMessages,
+      // `system` moves into `messages` so the stable half can carry a
+      // per-message cache breakpoint. Order is load-bearing: the cached prefix
+      // must come first or it is not a prefix.
+      messages: [
+        {
+          role: "system" as const,
+          content: stablePrompt,
+          ...(cache.breakpoint && { providerOptions: cache.breakpoint }),
+        },
+        { role: "system" as const, content: dynamicPrompt },
+        ...modelMessages,
+      ],
       maxOutputTokens: 16_000,
       providerOptions: {
-        anthropic: {
-          thinking: { type: "enabled", budgetTokens: 10_000 },
-        },
+        ...providerOptions,
+        ...cache.requestOptions,
       },
       onFinish: async ({ text, usage }) => {
-        const log = createRequestLogger({
-          path: "/api/[orgSlug]/emails/templates/ai/generate",
-          method: "POST",
-          orgSlug,
-        });
-
         // Validate final output
         const json = extractTipTapJson(text);
         if (json) {
@@ -155,29 +138,38 @@ export async function POST(request: Request, context: RouteContext) {
           }
         }
 
-        // Track usage for billing/limits (async)
-        trackAiRequest({
-          organizationId: orgWithMembership.id,
-          userId: session.user.id,
-          featureType: "ai_chat",
-          templateId,
-          inputTokens: usage?.inputTokens,
-          outputTokens: usage?.outputTokens,
-          totalTokens: usage?.totalTokens,
-          model: MODEL_ID,
-        }).catch((error) => {
-          log.error({ err: error }, "Failed to track AI request");
-        });
+        // Awaited, not fire-and-forget: the serverless function can be frozen
+        // the moment the stream ends, dropping an un-awaited write.
+        const results = await Promise.allSettled([
+          trackAiRequest({
+            organizationId: orgWithMembership.id,
+            userId,
+            featureType: "ai_chat",
+            templateId,
+            inputTokens: usage?.inputTokens,
+            // Recorded separately so enabling caching does not read as a drop
+            // in input_tokens. Undefined on providers that do not report it.
+            cachedInputTokens: usage?.cachedInputTokens,
+            outputTokens: usage?.outputTokens,
+            totalTokens: usage?.totalTokens,
+            model: MODEL_ID,
+          }),
+          trackConversation({
+            organizationId: orgWithMembership.id,
+            templateId,
+            messages,
+            userId,
+          }),
+        ]);
 
-        // Track conversation in database (async)
-        trackConversation({
-          organizationId: orgWithMembership.id,
-          templateId,
-          messages,
-          userId: session.user.id,
-        }).catch((error) => {
-          log.error({ err: error }, "Failed to track conversation");
-        });
+        for (const result of results) {
+          if (result.status === "rejected") {
+            log.error(
+              { err: result.reason },
+              "Failed to track AI usage or conversation"
+            );
+          }
+        }
       },
     });
 
@@ -186,12 +178,22 @@ export async function POST(request: Request, context: RouteContext) {
       sendReasoning: true,
     });
   } catch (error) {
-    const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/emails/templates/ai/generate",
+      path: ROUTE_PATH,
       method: "POST",
-      orgSlug,
+      orgSlug: (await context.params).orgSlug,
     });
+    if (isProviderConfigError(error)) {
+      // Operator-facing detail goes to the log, never to the response.
+      log.error(
+        { err: error, issues: error.issues },
+        "AI provider is not configured for this deployment"
+      );
+      return NextResponse.json(
+        { error: "AI generation is not configured for this deployment." },
+        { status: 503 }
+      );
+    }
     log.error({ err: error }, "Error generating AI content");
     return NextResponse.json(
       { error: "Failed to generate content" },
@@ -208,7 +210,7 @@ async function trackConversation(data: {
   userId: string;
 }): Promise<void> {
   const log = createRequestLogger({
-    path: "/api/[orgSlug]/emails/templates/ai/generate",
+    path: ROUTE_PATH,
     method: "POST",
     orgSlug: "system",
   });

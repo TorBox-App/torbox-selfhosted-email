@@ -54,6 +54,14 @@ const GATED_ROUTE_FILES = [
   "onboarding/verify-cli/route.ts",
 ];
 
+/**
+ * The AI routes delegate the whole gate — session, membership, permission,
+ * quota — to resolveAIRequest, so the guard string no longer appears in the
+ * route file itself. Accepting the helper here is only safe because the test
+ * below proves the helper actually enforces the permission.
+ */
+const SHARED_GATE_HELPER = "resolveAIRequest";
+
 describe("Route RBAC — static guard", () => {
   it.each(GATED_ROUTE_FILES)(
     "%s references a permission guard",
@@ -62,10 +70,29 @@ describe("Route RBAC — static guard", () => {
       const content = readFileSync(fullPath, "utf-8");
       const hasGuard =
         content.includes("requireRoutePermission") ||
-        content.includes("checkPermission");
+        content.includes("checkPermission") ||
+        content.includes(SHARED_GATE_HELPER);
       expect(hasGuard).toBe(true);
     }
   );
+
+  it("resolveAIRequest itself enforces the route permission", () => {
+    // Without this, accepting the helper above would let a route opt out of
+    // RBAC entirely just by importing it.
+    const helper = readFileSync(
+      path.resolve(import.meta.dirname, "../shared/ai-request.ts"),
+      "utf-8"
+    );
+    expect(helper).toContain("requireRoutePermission");
+  });
+
+  it("resolveAIRequest checks the AI quota before parsing a body", () => {
+    const helper = readFileSync(
+      path.resolve(import.meta.dirname, "../shared/ai-request.ts"),
+      "utf-8"
+    );
+    expect(helper).toContain("checkAiUsageLimit");
+  });
 });
 
 describe("Route RBAC — behavioral: mapping intent", () => {

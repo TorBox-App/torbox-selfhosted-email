@@ -33,6 +33,16 @@ export type UpgradeOptions = {
   region?: string;
   webDomain?: string;
   aiGatewayApiKey?: string;
+  /** "gateway" (default), "openai", … — see WRAPS_AI_PROVIDER. */
+  aiProvider?: string;
+  aiModel?: string;
+  openaiApiKey?: string;
+  /** For OpenAI-compatible endpoints (proxies, LiteLLM, vLLM). */
+  openaiBaseUrl?: string;
+  anthropicApiKey?: string;
+  anthropicBaseUrl?: string;
+  /** Bedrock region; falls back to the deploy region. */
+  aiRegion?: string;
   sentryDsn?: string;
   yes?: boolean;
   rerouteEvents?: boolean;
@@ -110,10 +120,28 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
   // Docs promise these flags for adding a domain / AI key / Sentry DSN after
   // the first deploy. upsert, not append: rotating a DSN has to replace it.
-  if (options.webDomain || options.aiGatewayApiKey || options.sentryDsn) {
+  if (
+    options.webDomain ||
+    options.aiGatewayApiKey ||
+    options.aiProvider ||
+    options.aiModel ||
+    options.openaiApiKey ||
+    options.openaiBaseUrl ||
+    options.anthropicApiKey ||
+    options.anthropicBaseUrl ||
+    options.aiRegion ||
+    options.sentryDsn
+  ) {
     await upsertEnvVars(ENV_PATH, {
       SELFHOST_WEB_DOMAIN: options.webDomain,
       AI_GATEWAY_API_KEY: options.aiGatewayApiKey,
+      WRAPS_AI_PROVIDER: options.aiProvider,
+      AI_MODEL: options.aiModel,
+      OPENAI_API_KEY: options.openaiApiKey,
+      OPENAI_BASE_URL: options.openaiBaseUrl,
+      ANTHROPIC_API_KEY: options.anthropicApiKey,
+      ANTHROPIC_BASE_URL: options.anthropicBaseUrl,
+      WRAPS_AI_REGION: options.aiRegion,
       SENTRY_DSN: options.sentryDsn,
     });
     clack.log.info("Updated .env.selfhost with provided options");
@@ -362,12 +390,31 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const flags = mri(process.argv.slice(2), {
-    string: ["region", "web-domain", "ai-gateway-api-key", "sentry-dsn"],
+    string: [
+      "region",
+      "web-domain",
+      "ai-gateway-api-key",
+      "ai-provider",
+      "ai-model",
+      "openai-api-key",
+      "openai-base-url",
+      "anthropic-api-key",
+      "anthropic-base-url",
+      "ai-region",
+      "sentry-dsn",
+    ],
     boolean: ["yes", "reroute-events"],
     alias: {
       y: "yes",
       "web-domain": "webDomain",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "ai-provider": "aiProvider",
+      "ai-model": "aiModel",
+      "openai-api-key": "openaiApiKey",
+      "openai-base-url": "openaiBaseUrl",
+      "anthropic-api-key": "anthropicApiKey",
+      "anthropic-base-url": "anthropicBaseUrl",
+      "ai-region": "aiRegion",
       "sentry-dsn": "sentryDsn",
       "reroute-events": "rerouteEvents",
     },
@@ -376,6 +423,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     region: flags.region,
     webDomain: flags["web-domain"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
+    aiProvider: flags["ai-provider"],
+    aiModel: flags["ai-model"],
+    openaiApiKey: flags["openai-api-key"],
+    openaiBaseUrl: flags["openai-base-url"],
+    anthropicApiKey: flags["anthropic-api-key"],
+    anthropicBaseUrl: flags["anthropic-base-url"],
+    aiRegion: flags["ai-region"],
     sentryDsn: flags["sentry-dsn"],
     yes: flags.yes,
     rerouteEvents: flags["reroute-events"],

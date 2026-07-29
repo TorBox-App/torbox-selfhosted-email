@@ -1,15 +1,15 @@
-import { auth } from "@wraps/auth";
+import { getAIModel, isProviderConfigError } from "@wraps/ai";
 import { db, segment, template, topic } from "@wraps/db";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { requireRoutePermission } from "@/app/api/shared/route-permission";
+import { resolveAIRequest } from "@/app/api/shared/ai-request";
 import { buildWorkflowSystemPrompt } from "@/lib/ai/(ee)/workflow-system-prompt";
-import { getAIModel } from "@/lib/ai/model";
+import { aiEnv } from "@/lib/ai/env";
 import { createRequestLogger } from "@/lib/logger";
-import { getOrganizationWithMembership } from "@/lib/organization";
-import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
+import { trackAiRequest } from "@/lib/usage/ai-usage";
+
+const ROUTE_PATH = "/api/[orgSlug]/workflows/ai/generate";
 
 type RouteContext = {
   params: Promise<{
@@ -20,48 +20,13 @@ type RouteContext = {
 // POST /api/[orgSlug]/workflows/ai/generate - Generate workflow with AI
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const { orgSlug } = await context.params;
-
-    // Authenticate user
-    const session = await auth.api.getSession({
-      headers: await headers(),
+    const gated = await resolveAIRequest(context, {
+      resource: "workflows",
+      permissions: ["write"],
+      path: ROUTE_PATH,
     });
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify organization membership
-    const orgWithMembership = await getOrganizationWithMembership(
-      orgSlug,
-      session.user.id
-    );
-
-    if (!orgWithMembership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const denied = requireRoutePermission(
-      orgWithMembership.userRole,
-      "workflows",
-      ["write"]
-    );
-    if (denied) return denied;
-
-    // Check AI usage limit before processing
-    const usageCheck = await checkAiUsageLimit(orgWithMembership.id);
-    if (!usageCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: "AI message limit reached",
-          message: `You've used ${usageCheck.current} of ${usageCheck.limit} AI messages this month. Upgrade your plan for more.`,
-          limitReached: true,
-          current: usageCheck.current,
-          limit: usageCheck.limit,
-        },
-        { status: 429 }
-      );
-    }
+    if (!gated.ok) return gated.response;
+    const { orgSlug, org: orgWithMembership, userId, log } = gated;
 
     const {
       messages,
@@ -147,27 +112,31 @@ export async function POST(request: Request, context: RouteContext) {
       existingWorkflow,
     });
 
-    const { model, modelId: MODEL_ID } = getAIModel();
+    // No reasoning requested: this route never enabled extended thinking, and
+    // A2 is a refactor. providerOptions resolves to undefined today but is
+    // wired through so enabling it later is a one-line change here.
+    const {
+      model,
+      modelId: MODEL_ID,
+      providerOptions,
+    } = await getAIModel({}, aiEnv());
 
     const result = streamText({
       model,
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 8000,
+      providerOptions,
       onFinish: async ({ usage }) => {
-        const log = createRequestLogger({
-          path: "/api/[orgSlug]/workflows/ai/generate",
-          method: "POST",
-          orgSlug,
-        });
-
-        // Track usage for billing/limits (async)
-        trackAiRequest({
+        // Awaited, not fire-and-forget: the serverless function can be frozen
+        // the moment the stream ends, dropping an un-awaited write.
+        await trackAiRequest({
           organizationId: orgWithMembership.id,
-          userId: session.user.id,
+          userId,
           featureType: "workflow_ai",
           templateId: workflowId, // Repurpose field for workflowId
           inputTokens: usage?.inputTokens,
+          cachedInputTokens: usage?.cachedInputTokens,
           outputTokens: usage?.outputTokens,
           totalTokens: usage?.totalTokens,
           model: MODEL_ID,
@@ -182,12 +151,22 @@ export async function POST(request: Request, context: RouteContext) {
       sendReasoning: true,
     });
   } catch (error) {
-    const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/workflows/ai/generate",
+      path: ROUTE_PATH,
       method: "POST",
-      orgSlug,
+      orgSlug: (await context.params).orgSlug,
     });
+    if (isProviderConfigError(error)) {
+      // Operator-facing detail goes to the log, never to the response.
+      log.error(
+        { err: error, issues: error.issues },
+        "AI provider is not configured for this deployment"
+      );
+      return NextResponse.json(
+        { error: "AI generation is not configured for this deployment." },
+        { status: 503 }
+      );
+    }
     log.error({ err: error }, "Error generating AI workflow");
     return NextResponse.json(
       { error: "Failed to generate workflow" },

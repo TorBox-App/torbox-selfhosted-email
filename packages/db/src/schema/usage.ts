@@ -80,6 +80,13 @@ export const aiUsageLog = pgTable(
     outputTokens: integer("output_tokens"),
     totalTokens: integer("total_tokens"),
 
+    // Prompt-cache reads, billed at a fraction of the input rate and reported
+    // separately by the provider. Without this column, enabling prompt caching
+    // would make input_tokens collapse and read as a billing regression.
+    // Null on rows written before caching existed, and on providers that do
+    // not report it — not zero, which would claim a cache miss.
+    cachedInputTokens: integer("cached_input_tokens"),
+
     // Model info
     model: text("model"),
 

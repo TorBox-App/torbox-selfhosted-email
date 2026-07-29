@@ -1746,16 +1746,101 @@ pnpm install`,
               <tr>
                 <td className="p-3 pr-4 align-top">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                    ANTHROPIC_API_KEY
+                    WRAPS_AI_PROVIDER
                   </code>
                 </td>
                 <td className="p-3 pr-4 align-top">Optional</td>
                 <td className="p-3 align-top">
-                  Anthropic API key — alternative to{" "}
+                  Which inference backend serves the template and workflow AI.
+                  Defaults to{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                    AI_GATEWAY_API_KEY
+                    gateway
                   </code>{" "}
-                  for direct Anthropic access without a gateway
+                  (Vercel AI Gateway). Set{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    openai
+                  </code>{" "}
+                  to call OpenAI directly instead — no gateway account needed.
+                  Pass via{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    --ai-provider
+                  </code>{" "}
+                  on deploy or upgrade
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    OPENAI_API_KEY
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">
+                  Required with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    openai
+                  </code>
+                </td>
+                <td className="p-3 align-top">
+                  Your OpenAI API key. Only read when{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    WRAPS_AI_PROVIDER=openai
+                  </code>
+                  ; the gateway provider does not use it. Pair with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    OPENAI_BASE_URL
+                  </code>{" "}
+                  to target an OpenAI-compatible endpoint such as a corporate
+                  proxy, LiteLLM, or vLLM
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    ANTHROPIC_API_KEY
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">
+                  Required with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    anthropic
+                  </code>
+                </td>
+                <td className="p-3 align-top">
+                  Your Anthropic API key, for calling Anthropic directly without
+                  a gateway. Only read when{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    WRAPS_AI_PROVIDER=anthropic
+                  </code>
+                  ; the gateway provider does not use it
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    WRAPS_AI_REGION
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Region for{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    WRAPS_AI_PROVIDER=bedrock
+                  </code>
+                  , which is available on self-hosted deployments only. Falls
+                  back to{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    AWS_REGION
+                  </code>
+                  . Bedrock uses this deployment&apos;s own credentials, never a
+                  role in your SES-connected account, so inference bills to the
+                  account running the dashboard. Two things the deploy cannot do
+                  for you: enable each model under{" "}
+                  <strong>Bedrock → Model access</strong> for that account and
+                  region, and nothing else — IAM is already granted, so an{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    AccessDeniedException
+                  </code>{" "}
+                  almost always means the model was never enabled
                 </td>
               </tr>
               <tr>
@@ -1793,11 +1878,21 @@ pnpm install`,
                 </td>
                 <td className="p-3 pr-4 align-top">Optional</td>
                 <td className="p-3 align-top">
-                  Override the default Claude model used for AI features (e.g.{" "}
+                  Override the model used for AI features. Accepts a catalog
+                  key, which is translated for whichever provider is active —{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                    claude-sonnet-4-6
+                    claude-sonnet-4
+                  </code>{" "}
+                  or{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    gpt-5
+                  </code>{" "}
+                  — or a raw provider-native id, which is passed through
+                  unchanged. Gateway ids must be namespaced (
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    anthropic/claude-sonnet-4
                   </code>
-                  )
+                  ); a bare model name is only valid as a catalog key
                 </td>
               </tr>
               <tr>

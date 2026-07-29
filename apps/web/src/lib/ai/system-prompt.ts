@@ -75,7 +75,22 @@ ${JSON.stringify(example.tiptapJson, null, 2)}
   return sections.join("\n\n");
 }
 
-export function buildSystemPrompt(options: SystemPromptOptions = {}): string {
+/**
+ * The system prompt split at its first request-varying section.
+ *
+ * `stable` holds everything that does not change between requests from the
+ * same organization (~15k tokens: component specs and block examples), which
+ * makes it a valid prompt-cache prefix. `dynamic` holds the current template
+ * and the trailing guidelines.
+ *
+ * Nothing is reordered — the split point is simply where the first
+ * per-request interpolation begins, so concatenating the two halves reproduces
+ * the original prompt exactly.
+ */
+export function buildSystemPromptParts(options: SystemPromptOptions = {}): {
+  stable: string;
+  dynamic: string;
+} {
   const { brandKit, availableVariables = [], existingContent } = options;
 
   const componentDocs = COMPONENT_SPECS.map((c) => ({
@@ -88,7 +103,7 @@ export function buildSystemPrompt(options: SystemPromptOptions = {}): string {
     ),
   }));
 
-  return `You are Wraps Email Studio, an AI assistant that creates beautiful, responsive email templates using React Email components.
+  const stable = `You are Wraps Email Studio, an AI assistant that creates beautiful, responsive email templates using React Email components.
 
 ## Your Role
 You help users create and edit email templates through natural language. You output TipTap JSON that maps directly to React Email components, ensuring all emails render perfectly across email clients.
@@ -195,19 +210,19 @@ A typical email should follow this structure:
 1. Header section with logo
 2. Main content with heading and body text
 3. CTA button
-4. Footer with company info and unsubscribe link
+4. Footer with company info and unsubscribe link`;
 
-${
-  existingContent
-    ? `## Current Template
+  const dynamic = `${
+    existingContent
+      ? `## Current Template
 The user is editing an existing template. Here's the current content:
 \`\`\`json
 ${existingContent}
 \`\`\`
 Make targeted edits based on their request, preserving existing structure where appropriate.
 `
-    : ""
-}
+      : ""
+  }
 
 ## Response Guidelines
 1. Output valid TipTap JSON first (in a json code block)
@@ -222,6 +237,19 @@ Make targeted edits based on their request, preserving existing structure where 
 - Images need src, alt is required for accessibility
 - Use emailSpacer for vertical spacing between sections
 - Use emailDivider for visual separation`;
+
+  return { stable, dynamic };
+}
+
+/**
+ * Backwards-compatible single-string form.
+ *
+ * The two halves are concatenated in the same order they were always emitted,
+ * so this returns a byte-identical prompt to the pre-split version.
+ */
+export function buildSystemPrompt(options: SystemPromptOptions = {}): string {
+  const { stable, dynamic } = buildSystemPromptParts(options);
+  return `${stable}\n\n${dynamic}`;
 }
 
 // Shorter prompt for quick edits

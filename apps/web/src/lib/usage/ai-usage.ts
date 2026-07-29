@@ -122,6 +122,8 @@ export async function logAiUsage(data: {
   featureType?: string;
   templateId?: string;
   inputTokens?: number;
+  /** Prompt-cache reads, reported separately by the provider. */
+  cachedInputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
   model?: string;
@@ -136,6 +138,7 @@ export async function logAiUsage(data: {
     featureType: data.featureType ?? "ai_chat",
     templateId: data.templateId,
     inputTokens: data.inputTokens,
+    cachedInputTokens: data.cachedInputTokens,
     outputTokens: data.outputTokens,
     totalTokens: data.totalTokens,
     model: data.model,
@@ -153,6 +156,8 @@ export async function trackAiRequest(data: {
   featureType?: string;
   templateId?: string;
   inputTokens?: number;
+  /** Prompt-cache reads, reported separately by the provider. */
+  cachedInputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
   model?: string;

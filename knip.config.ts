@@ -38,6 +38,9 @@ const config: KnipConfig = {
       ],
       project: ["src/**/*.{ts,tsx}"],
     },
+    "packages/ai": {
+      project: ["src/**/*.ts"],
+    },
     "packages/cli": {
       project: ["src/**/*.ts"],
     },

@@ -69,6 +69,17 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           AUTH_EMAIL_CONFIGURATION_SET: ${{ secrets.AUTH_EMAIL_CONFIGURATION_SET }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          # Optional. Selects the AI inference backend (default: the Vercel AI
+          # Gateway). Set WRAPS_AI_PROVIDER=openai plus OPENAI_API_KEY to call
+          # OpenAI directly.
+          WRAPS_AI_PROVIDER: ${{ vars.WRAPS_AI_PROVIDER }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          # Bedrock only (self-hosted). Falls back to AWS_REGION.
+          WRAPS_AI_REGION: ${{ vars.WRAPS_AI_REGION }}
           # Optional. Your OWN Sentry project's DSN — this file is the only
           # source infra/selfhost.config.ts reads it from, so leaving it out
           # here turns error reporting OFF on the next upgrade even if a local
@@ -107,6 +118,13 @@ jobs:
             [ -n "${AUTH_EMAIL_FROM}" ] && echo "AUTH_EMAIL_FROM=${AUTH_EMAIL_FROM}"
             [ -n "${AUTH_EMAIL_CONFIGURATION_SET}" ] && echo "AUTH_EMAIL_CONFIGURATION_SET=${AUTH_EMAIL_CONFIGURATION_SET}"
             [ -n "${AI_GATEWAY_API_KEY}" ] && echo "AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}"
+            [ -n "${WRAPS_AI_PROVIDER}" ] && echo "WRAPS_AI_PROVIDER=${WRAPS_AI_PROVIDER}"
+            [ -n "${AI_MODEL}" ] && echo "AI_MODEL=${AI_MODEL}"
+            [ -n "${OPENAI_API_KEY}" ] && echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
+            [ -n "${OPENAI_BASE_URL}" ] && echo "OPENAI_BASE_URL=${OPENAI_BASE_URL}"
+            [ -n "${ANTHROPIC_API_KEY}" ] && echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
+            [ -n "${ANTHROPIC_BASE_URL}" ] && echo "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}"
+            [ -n "${WRAPS_AI_REGION}" ] && echo "WRAPS_AI_REGION=${WRAPS_AI_REGION}"
             [ -n "${SENTRY_DSN}" ] && echo "SENTRY_DSN=${SENTRY_DSN}"
             [ -n "${SELFHOST_DNS_PROVIDER}" ] && echo "SELFHOST_DNS_PROVIDER=${SELFHOST_DNS_PROVIDER}"
             [ -n "${CLOUDFLARE_API_TOKEN}" ] && echo "CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}"
@@ -145,6 +163,13 @@ jobs:
           UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          WRAPS_AI_PROVIDER: ${{ vars.WRAPS_AI_PROVIDER }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          WRAPS_AI_REGION: ${{ vars.WRAPS_AI_REGION }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         # The optional values go in as flags, not env vars: deploy.ts reads
         # DATABASE_URL and WRAPS_LICENSE_KEY from the environment but
@@ -153,6 +178,13 @@ jobs:
         run: |
           args=(--yes)
           [ -n "${AI_GATEWAY_API_KEY}" ] && args+=(--ai-gateway-api-key "${AI_GATEWAY_API_KEY}")
+          [ -n "${WRAPS_AI_PROVIDER}" ] && args+=(--ai-provider "${WRAPS_AI_PROVIDER}")
+          [ -n "${AI_MODEL}" ] && args+=(--ai-model "${AI_MODEL}")
+          [ -n "${OPENAI_API_KEY}" ] && args+=(--openai-api-key "${OPENAI_API_KEY}")
+          [ -n "${OPENAI_BASE_URL}" ] && args+=(--openai-base-url "${OPENAI_BASE_URL}")
+          [ -n "${ANTHROPIC_API_KEY}" ] && args+=(--anthropic-api-key "${ANTHROPIC_API_KEY}")
+          [ -n "${ANTHROPIC_BASE_URL}" ] && args+=(--anthropic-base-url "${ANTHROPIC_BASE_URL}")
+          [ -n "${WRAPS_AI_REGION}" ] && args+=(--ai-region "${WRAPS_AI_REGION}")
           [ -n "${SENTRY_DSN}" ] && args+=(--sentry-dsn "${SENTRY_DSN}")
           pnpm selfhost:deploy "${args[@]}"
 

@@ -76,8 +76,9 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     // which `??` would forward verbatim and resolveAppUrl rejects as unset.
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev",
-    // Anthropic API key for AI workflow generation
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+    // No AI provider config here on purpose: all inference lives in the three
+    // apps/web routes, so the keys belong on the web function. This lambda
+    // carried ANTHROPIC_API_KEY for a workflow generator that never existed.
     SENTRY_DSN: sentryDsn.value,
   },
   link: [rateLimitTable, batchQueue, workflowQueue],

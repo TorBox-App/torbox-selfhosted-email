@@ -320,12 +320,9 @@ export default $config({
         // Pinned to SELFHOST_CONSOLE_ACCESS_ROLE_NAME by
         // scripts/selfhost/__tests__/selfhost-config-role-name.test.ts
         WRAPS_CONSOLE_ROLE_NAME: "wraps-selfhost-console-access-role",
-        ...(process.env.AI_GATEWAY_API_KEY && {
-          AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
-        }),
-        ...(process.env.ANTHROPIC_API_KEY && {
-          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-        }),
+        // No AI provider config here on purpose: all inference lives in the
+        // three apps/web routes, so the keys go on SelfhostWeb below. This
+        // lambda carried them for a generator that never existed.
         ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
       },
       link: [rateLimitTable, batchQueue, workflowQueue],
@@ -399,6 +396,30 @@ export default $config({
         ...(process.env.AI_MODEL && {
           AI_MODEL: process.env.AI_MODEL,
         }),
+        // The three AI routes live in apps/web, so the inference provider is
+        // configured on this function and not on the API lambda.
+        ...(process.env.WRAPS_AI_PROVIDER && {
+          WRAPS_AI_PROVIDER: process.env.WRAPS_AI_PROVIDER,
+        }),
+        ...(process.env.OPENAI_API_KEY && {
+          OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        }),
+        ...(process.env.OPENAI_BASE_URL && {
+          OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+        }),
+        ...(process.env.ANTHROPIC_API_KEY && {
+          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+        }),
+        ...(process.env.ANTHROPIC_BASE_URL && {
+          ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL,
+        }),
+        // Bedrock is self-hosted-only, so this deployment always qualifies.
+        // The value is still passed explicitly rather than defaulted inside
+        // @wraps/ai, so Wraps Cloud can never accidentally satisfy the gate.
+        WRAPS_DEPLOYMENT_MODE: "self-hosted",
+        ...(process.env.WRAPS_AI_REGION && {
+          WRAPS_AI_REGION: process.env.WRAPS_AI_REGION,
+        }),
         // Two vars, one input: the server SDK reads SENTRY_DSN, the browser SDK
         // reads the NEXT_PUBLIC_ copy that Next inlines at build time. A DSN is
         // write-only and ships in the client bundle by design, so mirroring it
@@ -414,6 +435,24 @@ export default $config({
           // to read SES account state. That role DOES trust an account principal.
           actions: ["sts:AssumeRole"],
           resources: ["arn:aws:iam::*:role/wraps-*"],
+        },
+        {
+          // Bedrock inference for the template and workflow AI, when
+          // WRAPS_AI_PROVIDER=bedrock. Granted on this function and not the API
+          // lambda because all three AI routes live in apps/web.
+          //
+          // Unscoped: the model id is chosen at runtime via AI_MODEL, and
+          // cross-region inference profiles resolve to foundation-model ARNs in
+          // several regions at once, so the set is not knowable at config time.
+          //
+          // IAM alone is not sufficient — each Anthropic model must also be
+          // enabled per-account per-region in the Bedrock console, or calls
+          // fail with AccessDeniedException.
+          actions: [
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream",
+          ],
+          resources: ["*"],
         },
         {
           // Auth email (verification, password reset, invitations) sends with

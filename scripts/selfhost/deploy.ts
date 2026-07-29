@@ -36,6 +36,16 @@ export type DeployOptions = {
   cloudflareZoneId?: string;
   acmCertArn?: string;
   aiGatewayApiKey?: string;
+  /** "gateway" (default), "openai", … — see WRAPS_AI_PROVIDER. */
+  aiProvider?: string;
+  aiModel?: string;
+  openaiApiKey?: string;
+  /** For OpenAI-compatible endpoints (proxies, LiteLLM, vLLM). */
+  openaiBaseUrl?: string;
+  anthropicApiKey?: string;
+  anthropicBaseUrl?: string;
+  /** Bedrock region; falls back to the deploy region. */
+  aiRegion?: string;
   sentryDsn?: string;
   yes?: boolean;
   rerouteEvents?: boolean;
@@ -136,6 +146,20 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   }
   if (options.aiGatewayApiKey)
     envLines.push(`AI_GATEWAY_API_KEY=${options.aiGatewayApiKey}`);
+  // Selects which inference backend serves the template and workflow AI.
+  // Defaults to the Vercel AI Gateway when unset.
+  if (options.aiProvider)
+    envLines.push(`WRAPS_AI_PROVIDER=${options.aiProvider}`);
+  if (options.openaiApiKey)
+    envLines.push(`OPENAI_API_KEY=${options.openaiApiKey}`);
+  if (options.openaiBaseUrl)
+    envLines.push(`OPENAI_BASE_URL=${options.openaiBaseUrl}`);
+  if (options.anthropicApiKey)
+    envLines.push(`ANTHROPIC_API_KEY=${options.anthropicApiKey}`);
+  if (options.anthropicBaseUrl)
+    envLines.push(`ANTHROPIC_BASE_URL=${options.anthropicBaseUrl}`);
+  if (options.aiRegion) envLines.push(`WRAPS_AI_REGION=${options.aiRegion}`);
+  if (options.aiModel) envLines.push(`AI_MODEL=${options.aiModel}`);
   // Flag only, never `process.env.SENTRY_DSN` — inheriting an ambient DSN from
   // the operator's shell would point a customer's error stream at whoever ran
   // the deploy. Opting in has to be explicit.
@@ -342,6 +366,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "cloudflare-zone-id",
       "acm-cert-arn",
       "ai-gateway-api-key",
+      "ai-provider",
+      "ai-model",
+      "openai-api-key",
+      "openai-base-url",
+      "anthropic-api-key",
+      "anthropic-base-url",
+      "ai-region",
       "sentry-dsn",
     ],
     boolean: ["yes", "reroute-events"],
@@ -355,6 +386,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "cloudflare-zone-id": "cloudflareZoneId",
       "acm-cert-arn": "acmCertArn",
       "ai-gateway-api-key": "aiGatewayApiKey",
+      "ai-provider": "aiProvider",
+      "ai-model": "aiModel",
+      "openai-api-key": "openaiApiKey",
+      "openai-base-url": "openaiBaseUrl",
+      "anthropic-api-key": "anthropicApiKey",
+      "anthropic-base-url": "anthropicBaseUrl",
+      "ai-region": "aiRegion",
       "sentry-dsn": "sentryDsn",
       "reroute-events": "rerouteEvents",
     },
@@ -369,6 +407,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     cloudflareZoneId: flags["cloudflare-zone-id"],
     acmCertArn: flags["acm-cert-arn"],
     aiGatewayApiKey: flags["ai-gateway-api-key"],
+    aiProvider: flags["ai-provider"],
+    aiModel: flags["ai-model"],
+    openaiApiKey: flags["openai-api-key"],
+    openaiBaseUrl: flags["openai-base-url"],
+    anthropicApiKey: flags["anthropic-api-key"],
+    anthropicBaseUrl: flags["anthropic-base-url"],
+    aiRegion: flags["ai-region"],
     sentryDsn: flags["sentry-dsn"],
     yes: flags.yes,
     rerouteEvents: flags["reroute-events"],
