@@ -69,6 +69,19 @@ export async function upsertEnvVars(
 }
 
 /**
+ * The deployment's own base URL for a configured web domain.
+ *
+ * No trailing slash, and it tolerates one being passed: CORS_ORIGIN is derived
+ * from this value and ends up in better-auth's trustedOrigins, which is
+ * compared against the browser's Origin header — and that never carries a
+ * trailing slash. A stray one reads as a CORS failure with no useful error.
+ */
+export function appUrlForDomain(webDomain: string): string {
+  const host = webDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return `https://${host}`;
+}
+
+/**
  * The env vars a deployed stack needs baked into the web build. Written after
  * the first `sst deploy` emits URLs, consumed by the next `sst deploy`.
  * NEXT_PUBLIC_APP_URL doubles as the completion marker for a finished deploy.

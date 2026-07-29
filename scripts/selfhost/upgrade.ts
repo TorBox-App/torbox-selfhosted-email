@@ -12,6 +12,7 @@ import {
 } from "../../packages/cli/src/utils/shared/metadata.js";
 import {
   appendMissingEnvVars,
+  appUrlForDomain,
   buildDeployedEnvVars,
   parseEnvFile,
   upsertEnvVars,
@@ -237,6 +238,29 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
       clack.log.info(
         `Recovered missing env vars from a previous deploy: ${backfilled.join(", ")}`
       );
+    }
+    env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
+  }
+
+  // A web domain added after the first deploy has to win over whatever URL is
+  // already on file. The first deploy of a domainless stack correctly bakes the
+  // CloudFront URL, and appendMissingEnvVars only ever writes absent keys — so
+  // without this, attaching a domain later leaves the web build calling the old
+  // CloudFront origin for /api/auth and failing CORS against its own dashboard.
+  //
+  // Must run before `sst deploy`: Next.js bakes NEXT_PUBLIC_* at build time, so
+  // reading the deployed URL back out of the outputs afterwards is too late.
+  if (webDomain) {
+    const appUrl = appUrlForDomain(webDomain);
+    if (env.NEXT_PUBLIC_APP_URL !== appUrl || env.BETTER_AUTH_URL !== appUrl) {
+      await upsertEnvVars(ENV_PATH, {
+        NEXT_PUBLIC_APP_URL: appUrl,
+        BETTER_AUTH_URL: appUrl,
+      });
+      clack.log.info(
+        `Repointed app URLs at ${appUrl} (was ${env.NEXT_PUBLIC_APP_URL ?? "unset"})`
+      );
+      env = parseEnvFile(await readFile(ENV_PATH, "utf-8"));
     }
   }
 

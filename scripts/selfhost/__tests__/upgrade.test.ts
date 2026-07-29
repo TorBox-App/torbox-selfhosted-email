@@ -1,3 +1,4 @@
+import * as clack from "@clack/prompts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── subprocess mock ──────────────────────────────────────────────────────────
@@ -384,6 +385,87 @@ describe("scripts/selfhost/upgrade", () => {
     });
 
     expect(files.env).toMatch(/SELFHOST_WEB_DOMAIN=mail\.acme\.com/);
+  });
+
+  // A stack first deployed without a domain bakes its CloudFront URL, and
+  // appendMissingEnvVars only writes absent keys — so attaching a domain later
+  // used to leave the web build calling the old origin for /api/auth, which
+  // then failed CORS against its own dashboard.
+  const CLOUDFRONT_ENV = COMPLETE_ENV.replaceAll(
+    "https://web.selfhost.example.com",
+    "https://d2z0umfq9796jk.cloudfront.net"
+  );
+
+  it("repoints the app URLs when --web-domain is added to a CloudFront deployment", async () => {
+    files.env = CLOUDFRONT_ENV;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({
+      region: "us-east-1",
+      yes: true,
+      webDomain: "mail.acme.com",
+    });
+
+    expect(files.env).toMatch(
+      /NEXT_PUBLIC_APP_URL=https:\/\/mail\.acme\.com$/m
+    );
+    expect(files.env).toMatch(/BETTER_AUTH_URL=https:\/\/mail\.acme\.com$/m);
+    expect(files.env).not.toContain("cloudfront.net");
+  });
+
+  it("repoints from a domain already on file, with no flag passed", async () => {
+    // The customer-shaped case: the domain was added on an earlier run, so
+    // nothing is passed this time and the stale URL has to be caught anyway.
+    files.env = `${CLOUDFRONT_ENV}\nSELFHOST_WEB_DOMAIN=mail.acme.com\n`;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(files.env).toMatch(
+      /NEXT_PUBLIC_APP_URL=https:\/\/mail\.acme\.com$/m
+    );
+    expect(files.env).not.toContain("cloudfront.net");
+  });
+
+  it("strips a trailing slash a hand-edited domain brought with it", async () => {
+    // CORS_ORIGIN is derived from this and compared against the browser's
+    // Origin header, which never has a trailing slash.
+    files.env = CLOUDFRONT_ENV;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({
+      region: "us-east-1",
+      yes: true,
+      webDomain: "https://mail.acme.com/",
+    });
+
+    expect(files.env).toMatch(
+      /NEXT_PUBLIC_APP_URL=https:\/\/mail\.acme\.com$/m
+    );
+    expect(files.env).not.toMatch(/NEXT_PUBLIC_APP_URL=.*\/$/m);
+  });
+
+  it("leaves the URLs alone when they already match the domain", async () => {
+    files.env = `${COMPLETE_ENV}\nSELFHOST_WEB_DOMAIN=web.selfhost.example.com\n`;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    const repointed = vi
+      .mocked(clack.log.info)
+      .mock.calls.filter(([msg]) => String(msg).includes("Repointed"));
+    expect(repointed).toEqual([]);
+  });
+
+  it("leaves a domainless deployment on its CloudFront URL", async () => {
+    files.env = CLOUDFRONT_ENV;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(files.env).toMatch(
+      /NEXT_PUBLIC_APP_URL=https:\/\/d2z0umfq9796jk\.cloudfront\.net$/m
+    );
   });
 
   it("replaces an existing SENTRY_DSN when --sentry-dsn is passed", async () => {
