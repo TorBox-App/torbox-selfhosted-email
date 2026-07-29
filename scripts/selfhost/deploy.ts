@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import mri from "mri";
 import pc from "picocolors";
+import { normalizeApiUrl } from "../../packages/cli/src/utils/selfhost/api-url.js";
 import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
 import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
@@ -167,7 +168,14 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   );
 
   const outputs = JSON.parse(await readFile(OUTPUTS_PATH, "utf-8"));
-  const apiUrl: string = outputs.SelfhostApi?.url ?? outputs.apiUrl ?? "";
+  // Normalized at the read site, not at each write: this one value becomes
+  // WRAPS_API_URL in .env.selfhost, the apiUrl in connection metadata, and the
+  // SES reroute target. SST emits a Lambda Function URL, which always ends in
+  // `/`, and every consumer appends a path to it — `…on.aws//webhooks/ses/{id}`
+  // is a route the API does not have, so events POST into a 404.
+  const apiUrl: string = normalizeApiUrl(
+    outputs.SelfhostApi?.url ?? outputs.apiUrl ?? ""
+  );
   const webUrl: string = outputs.SelfhostWeb?.url ?? outputs.webUrl ?? "";
 
   if (!apiUrl) {

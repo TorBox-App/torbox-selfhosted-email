@@ -258,6 +258,40 @@ describe("scripts/selfhost/deploy", () => {
     );
   });
 
+  it("strips the Lambda Function URL's trailing slash from WRAPS_API_URL and metadata", async () => {
+    // What SST actually emits for `url: true` — AWS Function URLs always carry
+    // the trailing slash. Stored raw, every appended path doubles the slash
+    // (`…on.aws//webhooks/ses/{acct}`) and the API answers 404.
+    mockReadFile.mockResolvedValue(
+      JSON.stringify({
+        SelfhostApi: { url: "https://abc123.lambda-url.us-east-1.on.aws/" },
+        SelfhostWeb: { url: "https://web.selfhost.example.com" },
+      })
+    );
+
+    const { deploy } = await import("../deploy.js");
+    await deploy({
+      databaseUrl: "postgres://user:pass@host/db",
+      licenseKey: "wraps_lic_test",
+      region: "us-east-1",
+    });
+
+    const lastWriteContent = String(
+      mockWriteFile.mock.calls
+        .filter(([path]) => String(path).includes(".env.selfhost"))
+        .at(-1)?.[1] ?? ""
+    );
+    expect(lastWriteContent).toMatch(
+      /^WRAPS_API_URL=https:\/\/abc123\.lambda-url\.us-east-1\.on\.aws$/m
+    );
+
+    const saved = vi.mocked(metadataModule.saveConnectionMetadata).mock
+      .calls[0][0];
+    expect(saved.services.selfhost?.apiUrl).toBe(
+      "https://abc123.lambda-url.us-east-1.on.aws"
+    );
+  });
+
   it("writes SENTRY_DSN to .env.selfhost and metadata when the flag is passed", async () => {
     const { deploy } = await import("../deploy.js");
     await deploy({

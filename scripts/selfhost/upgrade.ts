@@ -3,6 +3,7 @@ import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import mri from "mri";
 import pc from "picocolors";
+import { normalizeApiUrl } from "../../packages/cli/src/utils/selfhost/api-url.js";
 import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
 import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
@@ -41,7 +42,11 @@ async function readOutputs(): Promise<{ apiUrl: string; webUrl: string }> {
   try {
     const outputs = JSON.parse(await readFile(OUTPUTS_PATH, "utf-8"));
     return {
-      apiUrl: outputs.SelfhostApi?.url ?? outputs.apiUrl ?? "",
+      // The one read site every consumer goes through — the env backfill, the
+      // metadata write and the SES reroute all take this value. SST's API is a
+      // Lambda Function URL, whose trailing slash would append as
+      // `…on.aws//webhooks/ses/{id}`: a route the API does not have.
+      apiUrl: normalizeApiUrl(outputs.SelfhostApi?.url ?? outputs.apiUrl ?? ""),
       webUrl: outputs.SelfhostWeb?.url ?? outputs.webUrl ?? "",
     };
   } catch {

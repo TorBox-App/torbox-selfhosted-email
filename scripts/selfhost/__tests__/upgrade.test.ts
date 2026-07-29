@@ -576,6 +576,55 @@ describe("scripts/selfhost/upgrade", () => {
     );
   });
 
+  // What SST actually emits for `url: true`. AWS Function URLs always carry the
+  // trailing slash, and every consumer of this value appends a path to it.
+  const SLASHED_OUTPUTS = JSON.stringify({
+    SelfhostApi: { url: "https://abc123.lambda-url.us-east-1.on.aws/" },
+    SelfhostWeb: { url: "https://web.selfhost.example.com" },
+  });
+
+  it("strips the Lambda Function URL's trailing slash from the saved apiUrl", async () => {
+    files.outputs = SLASHED_OUTPUTS;
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(metadataModule.saveConnectionMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        services: expect.objectContaining({
+          selfhost: expect.objectContaining({
+            apiUrl: "https://abc123.lambda-url.us-east-1.on.aws",
+          }),
+        }),
+      })
+    );
+  });
+
+  it("backfills WRAPS_API_URL without the Function URL's trailing slash", async () => {
+    // Recovery path: the env file is what the deployed API and web build read,
+    // so a doubled slash here reaches the customer's own webhook endpoint.
+    files.env = [
+      "DATABASE_URL=postgres://user:pass@host/db",
+      "LICENSE_KEY=wraps_lic_test",
+      "BETTER_AUTH_SECRET=secret2",
+      "UNSUBSCRIBE_SECRET=secret1",
+      "SELFHOST_AWS_REGION=us-east-1",
+    ].join("\n");
+    files.outputs = null;
+    mockRunSubprocess.mockImplementation(async (_cmd, args) => {
+      if ((args as string[]).includes("deploy")) {
+        files.outputs = SLASHED_OUTPUTS;
+      }
+    });
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(files.env).toMatch(
+      /^WRAPS_API_URL=https:\/\/abc123\.lambda-url\.us-east-1\.on\.aws$/m
+    );
+  });
+
   it("preserves existing selfhost config fields across upgrade", async () => {
     const { upgrade } = await import("../upgrade.js");
     await upgrade({ region: "us-east-1", yes: true });
