@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Server,
   Shield,
+  Sparkles,
   Zap,
 } from "lucide-react";
 
@@ -44,6 +45,25 @@ pnpm selfhost:deploy \\
 
 # Or run without flags — the script will prompt you:
 pnpm selfhost:deploy`;
+
+const aiProviderExample = `# Vercel AI Gateway (the default) — one key, routes to any upstream model.
+pnpm selfhost:upgrade --ai-gateway-api-key "vck_..."
+
+# OpenAI directly — no gateway account needed.
+pnpm selfhost:upgrade --ai-provider openai --openai-api-key "sk-..."
+
+# Anthropic directly.
+pnpm selfhost:upgrade --ai-provider anthropic --anthropic-api-key "sk-ant-..."
+
+# AWS Bedrock — no API key at all. Uses this deployment's own IAM role,
+# so inference bills to the AWS account already running the dashboard.
+pnpm selfhost:upgrade --ai-provider bedrock
+
+# Any OpenAI-compatible endpoint (LiteLLM, vLLM, a corporate proxy).
+pnpm selfhost:upgrade \\
+  --ai-provider openai \\
+  --openai-api-key "sk-..." \\
+  --openai-base-url "https://llm.internal.example.com/v1"`;
 
 const envSelfhostExample = `# Created automatically by pnpm selfhost:deploy
 DATABASE_URL=postgres://user:pass@your-db.neon.tech/wraps
@@ -582,10 +602,15 @@ pnpm install`,
             </code>
             ) and{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
-              --ai-gateway-api-key
+              --ai-provider
             </code>{" "}
-            to enable AI email generation features. Both can be added later by
-            re-running{" "}
+            to enable AI email generation — with the Vercel AI Gateway, OpenAI,
+            Anthropic, or AWS Bedrock, none of which is required for the rest of
+            Wraps. See{" "}
+            <a className="underline" href="#configuring-ai">
+              Configuring AI
+            </a>{" "}
+            for the flags each one takes. Both can be added later by re-running{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               pnpm selfhost:upgrade
             </code>
@@ -1523,6 +1548,188 @@ pnpm install`,
         </Card>
       </section>
 
+      {/* Configuring AI */}
+      <section className="mb-12">
+        {/* id set here, not on the section: docs-toc slugifies heading text to
+            the same value and assigns it to the heading, so an id on the
+            section would duplicate it. Declaring it server-side also makes a
+            cold-load #configuring-ai link work before the TOC effect runs. */}
+        <h2
+          className="mb-4 flex items-center gap-2 font-bold text-2xl"
+          id="configuring-ai"
+        >
+          <Sparkles className="h-6 w-6 text-primary" />
+          Configuring AI
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Two dashboard features call a language model: AI email template
+          generation and AI workflow generation. Everything else in Wraps works
+          without any AI configuration — if you skip this section, those two
+          features return an error and the rest of the dashboard is unaffected.
+        </p>
+        <p className="mb-6 text-muted-foreground">
+          By default inference is routed through the Vercel AI Gateway, which
+          needs a gateway account. Set{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            WRAPS_AI_PROVIDER
+          </code>{" "}
+          to call OpenAI, Anthropic, or AWS Bedrock directly instead. Every flag
+          below works on both{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            pnpm selfhost:deploy
+          </code>{" "}
+          and{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            pnpm selfhost:upgrade
+          </code>
+          , so AI can be added, switched, or rotated at any time by re-running
+          the upgrade.
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "bash",
+              filename: "Pick one",
+              code: aiProviderExample,
+            },
+          ]}
+          defaultValue="bash"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <p className="mb-6 text-muted-foreground text-sm">
+          The values are written to{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+          and injected as Lambda environment variables, so you can also edit
+          that file directly and re-run{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            pnpm selfhost:upgrade
+          </code>
+          .
+        </p>
+
+        <h3 className="mt-8 mb-3 font-semibold text-lg">Choosing a model</h3>
+        <p className="mb-4 text-muted-foreground">
+          You do not have to pick one.{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">AI_MODEL</code> is
+          optional for every provider, and each one has a sensible default:
+          Claude Sonnet 4 for the gateway, Anthropic, and Bedrock; GPT-5 for
+          OpenAI.
+        </p>
+        <p className="mb-4 text-muted-foreground">
+          To override it, pass{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">--ai-model</code>{" "}
+          with either a catalog key —{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            claude-sonnet-4
+          </code>{" "}
+          or <code className="rounded bg-muted px-1.5 py-0.5">gpt-5</code>,
+          translated automatically to whatever id your provider expects — or a
+          raw provider-native id, which is passed through untouched. Raw ids are
+          the escape hatch for models newer than this release:{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            claude-opus-4-1-20250805
+          </code>{" "}
+          for Anthropic,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            anthropic/claude-sonnet-4
+          </code>{" "}
+          for the gateway (gateway ids must be namespaced), a full inference
+          profile ARN for Bedrock.
+        </p>
+        <div className="mb-6 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">
+            A model your provider cannot serve is caught at boot
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Setting{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              AI_MODEL=gpt-5
+            </code>{" "}
+            while{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              WRAPS_AI_PROVIDER=anthropic
+            </code>{" "}
+            is a contradiction, and the dashboard reports it in its startup logs
+            — naming the variable to fix — instead of leaving you to discover it
+            when someone clicks Generate. The rest of the dashboard keeps
+            working either way.
+          </p>
+        </div>
+
+        <h3 className="mt-8 mb-3 font-semibold text-lg">
+          AWS Bedrock, specifically
+        </h3>
+        <p className="mb-4 text-muted-foreground">
+          Bedrock is available on self-hosted deployments only, and it is the
+          one option with no API key to manage. Inference is called with this
+          deployment&apos;s own credentials — the dashboard&apos;s Lambda
+          execution role, which the deploy already grants{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            bedrock:InvokeModel
+          </code>
+          . It never assumes a role into the AWS account you connected for SES,
+          because that account is scoped for email and model spend does not
+          belong on it.
+        </p>
+        <p className="mb-4 text-muted-foreground">
+          Region resolution is{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            WRAPS_AI_REGION
+          </code>{" "}
+          first, then{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">AWS_REGION</code>, so
+          you only need{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">--ai-region</code>{" "}
+          when you want inference in a different region from the rest of the
+          stack. Most Claude models on Bedrock are only reachable through a
+          cross-region inference profile, so the region prefix (
+          <code className="rounded bg-muted px-1.5 py-0.5">us.</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">eu.</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">apac.</code>) is
+          applied for you.
+        </p>
+        <div className="mb-6 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+          <p className="font-medium text-sm">
+            One step the deploy cannot do for you
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Model access on Bedrock is a separate per-account, per-region opt-in
+            in the AWS console under <strong>Bedrock → Model access</strong>.
+            Until you enable the model there, calls fail with{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              AccessDeniedException
+            </code>{" "}
+            — which reads exactly like a credentials problem and sends you off
+            to re-check IAM that was never wrong. IAM is already granted; if you
+            see that error, it is almost certainly model access.
+          </p>
+        </div>
+      </section>
+
       {/* .env.selfhost Reference */}
       <section className="mb-12">
         <h2 className="mb-4 font-bold text-2xl">.env.selfhost Reference</h2>
@@ -1968,20 +2175,16 @@ pnpm install`,
               <Zap className="mb-3 h-5 w-5 text-primary" />
               <h3 className="mb-2 font-medium">Enable AI features</h3>
               <p className="mb-3 text-muted-foreground text-sm">
-                Add{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">
-                  AI_GATEWAY_API_KEY
-                </code>{" "}
-                to your{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">
-                  .env.selfhost
-                </code>{" "}
-                and run{" "}
+                Point Wraps at the Vercel AI Gateway, OpenAI, Anthropic, or AWS
+                Bedrock, then run{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5">
                   pnpm selfhost:upgrade
                 </code>{" "}
-                to enable AI-powered email template generation.
+                to enable AI-powered email template and workflow generation.
               </p>
+              <Button asChild size="sm" variant="outline">
+                <a href="#configuring-ai">Configuring AI →</a>
+              </Button>
             </CardContent>
           </Card>
           <Card>
