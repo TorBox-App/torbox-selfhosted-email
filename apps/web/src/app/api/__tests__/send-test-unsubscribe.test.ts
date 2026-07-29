@@ -655,6 +655,186 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     expect(lastSentEmail!.html).toContain('href=""');
   });
 
+  it("resolves the config set from the sender domain's identity, not the legacy global set", async () => {
+    // Regression (Wamy, 2026-07-29): accounts deployed with per-domain config
+    // sets (wraps-email-<domain>) have no legacy "wraps-email-tracking" set,
+    // so falling back to it hard-fails every test send at the SES level.
+    await db
+      .update(awsAccount)
+      .set({
+        features: {
+          email: {
+            configSetName: "wraps-email-other-domain",
+            identities: [
+              {
+                identity: "example.com",
+                type: "DOMAIN",
+                configSetName: "wraps-email-example-com",
+              },
+            ],
+          },
+        },
+      })
+      .where(eq(awsAccount.id, testAwsAccount.id));
+
+    await db.insert(template).values({
+      id: "test-template-config-set",
+      organizationId: testOrganization.id,
+      name: "Config Set Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      emailType: "transactional",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body><p>Hi.</p></body></html>",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/send-test/route"
+    );
+
+    // Sender is hello@example.com (org default), so the example.com identity's
+    // config set must win over the stored canonical.
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-config-set/send-test`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: ["recipient@example.com"],
+          subject: "Test Subject",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-config-set",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(200);
+
+    expect(lastSentEmail).not.toBeNull();
+    expect(lastSentEmail!.configurationSetName).toBe("wraps-email-example-com");
+
+    await db
+      .update(awsAccount)
+      .set({ features: null })
+      .where(eq(awsAccount.id, testAwsAccount.id));
+  });
+
+  it("falls back to the stored config set when no identity matches the sender domain", async () => {
+    await db
+      .update(awsAccount)
+      .set({
+        features: {
+          email: {
+            configSetName: "wraps-email-stored-canonical",
+            identities: [
+              {
+                identity: "unrelated.com",
+                type: "DOMAIN",
+                configSetName: "wraps-email-unrelated-com",
+              },
+            ],
+          },
+        },
+      })
+      .where(eq(awsAccount.id, testAwsAccount.id));
+
+    await db.insert(template).values({
+      id: "test-template-config-set-stored",
+      organizationId: testOrganization.id,
+      name: "Config Set Stored Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      emailType: "transactional",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body><p>Hi.</p></body></html>",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/send-test/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-config-set-stored/send-test`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: ["recipient@example.com"],
+          subject: "Test Subject",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-config-set-stored",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(200);
+
+    expect(lastSentEmail).not.toBeNull();
+    expect(lastSentEmail!.configurationSetName).toBe(
+      "wraps-email-stored-canonical"
+    );
+
+    await db
+      .update(awsAccount)
+      .set({ features: null })
+      .where(eq(awsAccount.id, testAwsAccount.id));
+  });
+
+  it("falls back to the legacy global config set when the account has no scanned features", async () => {
+    // testAwsAccount.features is null throughout this file
+    await db.insert(template).values({
+      id: "test-template-config-set-legacy",
+      organizationId: testOrganization.id,
+      name: "Config Set Legacy Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      emailType: "transactional",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body><p>Hi.</p></body></html>",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/send-test/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-config-set-legacy/send-test`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: ["recipient@example.com"],
+          subject: "Test Subject",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-config-set-legacy",
+      }),
+    };
+
+    const response = await POST(request, context);
+    expect(response.status).toBe(200);
+
+    expect(lastSentEmail).not.toBeNull();
+    expect(lastSentEmail!.configurationSetName).toBe("wraps-email-tracking");
+  });
+
   it("evaluates `{{#if}}` Handlebars block helpers in the sent HTML and text", async () => {
     // Regression: the test-send route used a dumb regex substituter that
     // only matched `{{var}}` and ignored block helpers, so templates that

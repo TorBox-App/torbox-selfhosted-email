@@ -9,7 +9,7 @@ import {
   organizationExtension,
   template,
 } from "@wraps/db";
-import { sendEmail } from "@wraps/email-send";
+import { resolveConfigurationSetName, sendEmail } from "@wraps/email-send";
 import { renderTemplateStrict } from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -248,6 +248,15 @@ export async function POST(request: Request, context: RouteContext) {
     const fromAddress = senderName
       ? `${senderName} <${senderEmail}>`
       : senderEmail;
+
+    // Resolve the SES config set from the actual sender domain (config sets are
+    // per-domain). Looks up a set discovery confirmed exists; never derives a
+    // name that could hard-fail delivery.
+    const configurationSetName = resolveConfigurationSetName({
+      fromDomain: senderEmail.split("@").at(-1),
+      storedConfigSetName: customerAwsAccount.features?.email?.configSetName,
+      identities: customerAwsAccount.features?.email?.identities,
+    });
     const results = await Promise.allSettled(
       recipients.map(async (recipient: string) => {
         const recipientData = { ...mergedTestData };
@@ -279,8 +288,7 @@ export async function POST(request: Request, context: RouteContext) {
           subject: renderedSubject,
           html,
           text,
-          configurationSetName:
-            customerAwsAccount.features?.email?.configSetName ?? undefined,
+          configurationSetName,
           marketing:
             isMarketing && unsubscribeUrl ? { unsubscribeUrl } : undefined,
           tags: [
