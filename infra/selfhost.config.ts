@@ -128,6 +128,19 @@ export default $config({
     // bake it in and silently stream that customer's errors to us.
     const sentryDsn = envFile.parsed?.SENTRY_DSN;
 
+    // Database env, shared by every function below. Each is its own Lambda with
+    // its own pg pool, so the per-process connection cap is multiplied by
+    // containers AND by functions against the customer's Postgres — which is
+    // how a self-hosted stack exhausts its connection slots under ordinary
+    // load. The cap itself defaults in packages/db; forwarded here only so an
+    // operator who has measured a reason can raise it in .env.selfhost.
+    const dbEnv = {
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+      ...(process.env.DATABASE_POOL_MAX && {
+        DATABASE_POOL_MAX: process.env.DATABASE_POOL_MAX,
+      }),
+    };
+
     // EventBridge Scheduler resources (must come before queues to avoid circular deps)
     const schedulerGroup = new aws.scheduler.ScheduleGroup(
       "SelfhostSchedulerGroup",
@@ -270,7 +283,7 @@ export default $config({
       url: true,
       environment: {
         NODE_ENV: "production",
-        DATABASE_URL: process.env.DATABASE_URL ?? "",
+        ...dbEnv,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
         UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET ?? "",
         // The API reads WRAPS_LICENSE_KEY (apps/api/src/(ee)/lib/license.ts).
@@ -351,7 +364,7 @@ export default $config({
         memory: "1024 MB",
       },
       environment: {
-        DATABASE_URL: process.env.DATABASE_URL ?? "",
+        ...dbEnv,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
         BETTER_AUTH_URL:
           process.env.BETTER_AUTH_URL ||
@@ -435,7 +448,7 @@ export default $config({
         memory: "256 MB",
         environment: {
           NODE_ENV: "production",
-          DATABASE_URL: process.env.DATABASE_URL ?? "",
+          ...dbEnv,
           BATCH_QUEUE_URL: batchQueue.url,
           // Same DSN as the API and dashboard — the workers swallow their own
           // failures by design, so this is where those surface.
@@ -468,7 +481,7 @@ export default $config({
         memory: "512 MB",
         environment: {
           NODE_ENV: "production",
-          DATABASE_URL: process.env.DATABASE_URL ?? "",
+          ...dbEnv,
           UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET ?? "",
           BATCH_QUEUE_URL: batchQueue.url,
           API_BASE_URL: api.url,
@@ -505,7 +518,7 @@ export default $config({
         memory: "256 MB",
         environment: {
           NODE_ENV: "production",
-          DATABASE_URL: process.env.DATABASE_URL ?? "",
+          ...dbEnv,
           ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
         },
         nodejs: {
@@ -528,7 +541,7 @@ export default $config({
         memory: "512 MB",
         environment: {
           NODE_ENV: "production",
-          DATABASE_URL: process.env.DATABASE_URL ?? "",
+          ...dbEnv,
           WORKFLOW_QUEUE_URL: workflowQueue.url,
           WORKFLOW_QUEUE_ARN: workflowQueue.arn,
           SCHEDULER_ROLE_ARN: schedulerRole.arn,

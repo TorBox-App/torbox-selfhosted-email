@@ -1341,6 +1341,23 @@ pnpm install`,
                       dropped on the next run
                     </td>
                   </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        DATABASE_POOL_MAX
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">Optional</td>
+                    <td className="py-2">
+                      Database connections each function may hold. Defaults to{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">2</code>.
+                      Every function runs on Lambda with its own pool, so this
+                      is multiplied by concurrent containers and by the six
+                      functions in the stack — raising it is the fastest way to
+                      exhaust your database&apos;s connection slots. Only raise
+                      it if you have measured a reason to
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1533,7 +1550,19 @@ pnpm install`,
                 </td>
                 <td className="p-3 pr-4 align-top text-foreground">Yes</td>
                 <td className="p-3 align-top">
-                  Postgres connection string for the control plane database
+                  Postgres connection string for the control plane database. If
+                  your provider offers a connection pooler, use its pooled
+                  endpoint here — PlanetScale exposes PgBouncer on port{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    6432
+                  </code>{" "}
+                  and Neon offers a{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    -pooler
+                  </code>{" "}
+                  host. Keep a direct (unpooled) URL for running migrations,
+                  which need session-level features a transaction-mode pooler
+                  does not provide
                 </td>
               </tr>
               <tr>
@@ -1768,6 +1797,35 @@ pnpm install`,
                     claude-sonnet-4-6
                   </code>
                   )
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    DATABASE_POOL_MAX
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Database connections each function may hold. Defaults to{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    2
+                  </code>
+                  . The stack runs six Lambda functions and each warm container
+                  keeps its own pool, so the real connection count is this
+                  number multiplied by containers and by functions. If you see{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    too many connections
+                  </code>{" "}
+                  or{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    remaining connection slots are reserved
+                  </code>
+                  , move{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    DATABASE_URL
+                  </code>{" "}
+                  to your provider&apos;s pooled endpoint before raising this
                 </td>
               </tr>
             </tbody>

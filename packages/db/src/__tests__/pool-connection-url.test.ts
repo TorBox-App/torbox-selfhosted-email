@@ -74,3 +74,44 @@ describe("runtime pool connection string", () => {
     expect(await connectionStringForDatabaseUrl("")).toBe("");
   });
 });
+
+/**
+ * Every warm container holds its own pool, and the self-hosted stack runs six
+ * separate functions, so the per-process cap is multiplied twice over against
+ * the customer's Postgres. node-postgres' default of 10 is what exhausts a
+ * connection-per-process database under ordinary load.
+ */
+describe("runtime pool size", () => {
+  async function poolMaxFor(value?: string): Promise<number | undefined> {
+    vi.stubEnv("DATABASE_URL", "postgres://u:pw@h/db");
+    vi.stubEnv("DATABASE_POOL_MAX", value ?? "");
+    vi.resetModules();
+    await import("../index");
+    const config = mockPoolCtor.mock.calls[0]?.[0] as { max?: number };
+    return config.max;
+  }
+
+  it("uses DATABASE_POOL_MAX when set", async () => {
+    expect(await poolMaxFor("6")).toBe(6);
+  });
+
+  it("caps the pool by default rather than inheriting node-postgres' 10", async () => {
+    // The default is the fix. Deferring to the driver is what exhausted a
+    // customer's Postgres, so an unset value must not mean "10".
+    expect(await poolMaxFor()).toBe(2);
+  });
+
+  it("falls back to the default on a non-numeric value, not a crash", async () => {
+    expect(await poolMaxFor("lots")).toBe(2);
+  });
+
+  it("rejects zero and negatives, which would deadlock or throw", async () => {
+    expect(await poolMaxFor("0")).toBe(2);
+    mockPoolCtor.mockClear();
+    expect(await poolMaxFor("-4")).toBe(2);
+  });
+
+  it("rejects a fractional value pg cannot use", async () => {
+    expect(await poolMaxFor("2.5")).toBe(2);
+  });
+});
