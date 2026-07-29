@@ -6,6 +6,10 @@
  * Handles different step types and routes to next steps.
  */
 
+// Initialize Sentry before all other imports
+import "../../lib/sentry";
+
+import { captureException, flush as flushSentry } from "@sentry/aws-serverless";
 import {
   contact,
   contactIdsMatchingCondition,
@@ -89,6 +93,10 @@ export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
   const batchItemFailures = results
     .map((result, idx) => {
       if (result.status === "rejected") {
+        captureException(result.reason, {
+          tags: { worker: "workflow-processor", stage: "job" },
+          extra: { messageId: event.Records[idx].messageId },
+        });
         log.error("Error processing workflow job", result.reason);
         return { itemIdentifier: event.Records[idx].messageId };
       }
@@ -97,6 +105,11 @@ export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
     .filter((f): f is { itemIdentifier: string } => f !== null);
 
   await flushLogger();
+  // Not wrapHandler(): every job already runs inside allSettled above, so the
+  // captures are explicit, and the wrapper would demand a Lambda context that
+  // this handler's tests do not pass. Flush by hand instead — Lambda freezes
+  // the event loop the moment this returns.
+  await flushSentry(2000).catch(() => {});
   return { batchItemFailures };
 };
 
@@ -403,6 +416,12 @@ async function processScheduleTrigger(
       executionsTriggered: contacts.length,
     });
   } catch (chainError) {
+    // Deliberately not rethrown (see above), so SQS never retries and the
+    // workflow simply stops firing. Nothing else reports this.
+    captureException(chainError, {
+      tags: { worker: "workflow-processor", stage: "schedule-chain" },
+      extra: { workflowId, organizationId, chainBroken: true },
+    });
     log.error(
       "Schedule trigger: CHAIN BROKEN — failed to create next schedule",
       chainError,

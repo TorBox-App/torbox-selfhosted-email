@@ -437,6 +437,9 @@ export default $config({
           NODE_ENV: "production",
           DATABASE_URL: process.env.DATABASE_URL ?? "",
           BATCH_QUEUE_URL: batchQueue.url,
+          // Same DSN as the API and dashboard — the workers swallow their own
+          // failures by design, so this is where those surface.
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
@@ -470,6 +473,7 @@ export default $config({
           BATCH_QUEUE_URL: batchQueue.url,
           API_BASE_URL: api.url,
           APP_BASE_URL: web.url,
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
@@ -502,6 +506,7 @@ export default $config({
         environment: {
           NODE_ENV: "production",
           DATABASE_URL: process.env.DATABASE_URL ?? "",
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
@@ -531,6 +536,7 @@ export default $config({
           UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET ?? "",
           API_BASE_URL: api.url,
           APP_BASE_URL: web.url,
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],

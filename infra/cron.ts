@@ -50,8 +50,9 @@ export const auditLogCleanupCron = new sst.aws.CronV2("AuditLogCleanup", {
         })(),
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
+      SENTRY_DSN: sentryDsn.value,
     },
-    nodejs: { install: ["pg"] },
+    nodejs: { install: ["pg", "@sentry/profiling-node"] },
   },
 });
 
@@ -71,8 +72,11 @@ export const workflowReaperCron = new sst.aws.CronV2("WorkflowReaper", {
         })(),
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
+      // The reaper is itself the backstop — when it cannot fail a stuck
+      // execution it just logs and moves on, once an hour, forever.
+      SENTRY_DSN: sentryDsn.value,
     },
-    nodejs: { install: ["pg"] },
+    nodejs: { install: ["pg", "@sentry/profiling-node"] },
   },
 });
 
@@ -137,8 +141,11 @@ export const accountHealthCron = new sst.aws.CronV2("AccountHealth", {
         })(),
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
+      // Per-account failures are skipped so one broken role cannot abort the
+      // sweep; without this that account silently stops being checked.
+      SENTRY_DSN: sentryDsn.value,
     },
-    nodejs: { install: ["pg"] },
+    nodejs: { install: ["pg", "@sentry/profiling-node"] },
     permissions: [
       // Assume cross-account customer roles to read SES account health
       {

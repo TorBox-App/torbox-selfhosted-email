@@ -7,6 +7,9 @@
  * Respects customer's SES rate limit via SQS delay between chunks.
  */
 
+// Initialize Sentry before all other imports
+import "../lib/sentry";
+
 import {
   type BulkEmailEntry,
   GetAccountCommand,
@@ -16,6 +19,7 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
+import { captureException, wrapHandler } from "@sentry/aws-serverless";
 import {
   awsAccount,
   batchSend,
@@ -144,6 +148,14 @@ async function recordAcceptedSend(
           sentAt: values.sentAt,
         });
       } catch (adoptError) {
+        captureException(adoptError, {
+          tags: { worker: "batch-sender", stage: "orphan-adoption" },
+          extra: {
+            messageId: values.messageId,
+            batchId: ctx.batchId,
+            organizationId: ctx.organizationId,
+          },
+        });
         log.error("Orphan adoption failed; row remains claimed", adoptError, {
           email: recipient.email,
           messageId: values.messageId,
@@ -153,6 +165,17 @@ async function recordAcceptedSend(
       }
       return;
     }
+    // The mail went out; only the row is wrong. Nothing downstream retries
+    // this, and the row stays 'queued' until the stale-claim sweep picks it
+    // up, so the send silently under-counts.
+    captureException(updateError, {
+      tags: { worker: "batch-sender", stage: "record-accepted" },
+      extra: {
+        messageId: values.messageId,
+        batchId: ctx.batchId,
+        organizationId: ctx.organizationId,
+      },
+    });
     log.error(
       "Post-send bookkeeping update failed after retries",
       updateError,
@@ -312,6 +335,10 @@ async function recordSendFailure(
     );
     return true;
   } catch (updateError) {
+    captureException(updateError, {
+      tags: { worker: "batch-sender", stage: "record-failure" },
+      extra: { batchId: ctx.batchId, organizationId: ctx.organizationId },
+    });
     log.error(
       "Failed to record send failure; row remains claimed",
       updateError,
@@ -325,24 +352,23 @@ async function recordSendFailure(
   }
 }
 
-export const handler: SQSHandler = async (
-  event: SQSEvent,
-  context: Context
-) => {
-  if (!QUEUE_URL) {
-    throw new Error(
-      "BATCH_QUEUE_URL not configured — check Lambda environment"
-    );
-  }
-  try {
-    for (const record of event.Records) {
-      const job: BatchJob = JSON.parse(record.body);
-      await processJob(job, context, record);
+export const handler: SQSHandler = wrapHandler(
+  async (event: SQSEvent, context: Context) => {
+    if (!QUEUE_URL) {
+      throw new Error(
+        "BATCH_QUEUE_URL not configured — check Lambda environment"
+      );
     }
-  } finally {
-    await flushLogger();
+    try {
+      for (const record of event.Records) {
+        const job: BatchJob = JSON.parse(record.body);
+        await processJob(job, context, record);
+      }
+    } finally {
+      await flushLogger();
+    }
   }
-};
+);
 
 /**
  * Write a broadcast-finished inbox notification, once per batch. Failed
@@ -435,6 +461,10 @@ async function notifyBroadcastFinished(
       },
     });
   } catch (error) {
+    captureException(error, {
+      tags: { worker: "batch-sender", stage: "finished-notification" },
+      extra: { batchId, organizationId },
+    });
     log.error("Failed to write broadcast-finished notification", error, {
       batchId,
       organizationId,

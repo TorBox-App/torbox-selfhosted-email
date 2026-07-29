@@ -11,6 +11,10 @@
  *   scale   → 365 days
  */
 
+// Initialize Sentry before all other imports
+import "../lib/sentry";
+
+import { wrapHandler } from "@sentry/aws-serverless";
 import { auditLog, db, subscription } from "@wraps/db";
 import type { Handler } from "aws-lambda";
 import { and, eq, inArray, lt } from "drizzle-orm";
@@ -89,7 +93,7 @@ async function deleteOldLogsForOrg(
   return totalDeleted;
 }
 
-export const handler: Handler = async () => {
+export const handler: Handler = wrapHandler(async () => {
   log.info("[audit-log-cleanup] Starting cleanup run");
 
   // 1. Fetch all distinct organizationIds that have audit logs
@@ -124,4 +128,4 @@ export const handler: Handler = async () => {
 
   log.info("[audit-log-cleanup] Cleanup complete", { totalDeleted });
   await flushLogger();
-};
+});

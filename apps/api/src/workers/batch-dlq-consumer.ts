@@ -15,7 +15,11 @@
  * IMPORTANT: this handler must never throw. There is no DLQ-of-DLQ.
  */
 
+// Initialize Sentry before all other imports
+import "../lib/sentry";
+
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
+import { captureException, wrapHandler } from "@sentry/aws-serverless";
 import { and, batchSend, db, eq } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 
@@ -32,7 +36,7 @@ type ChunkFailureEntry = {
   reason: string;
 };
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+export const handler: SQSHandler = wrapHandler(async (event: SQSEvent) => {
   if (process.env.BROADCAST_DLQ_CONSUMER_ENABLED === "false") {
     log.info("broadcast.dlq.disabled", {
       reason: "BROADCAST_DLQ_CONSUMER_ENABLED=false",
@@ -55,6 +59,13 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
 
       await handleDlqRecord(job);
     } catch (error) {
+      // This handler must never throw, so nothing downstream ever sees this
+      // failure: the chunk is not re-enqueued and the batch stalls short of
+      // its recipient count with no retry left to notice.
+      captureException(error, {
+        tags: { worker: "batch-dlq-consumer", stage: "record" },
+        extra: { messageId: record.messageId },
+      });
       log.error("broadcast.dlq.record_failed", error, {
         messageId: record.messageId,
         body: record.body.slice(0, 500),
@@ -63,7 +74,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
   }
 
   await flushLogger().catch(() => {});
-};
+});
 
 function parseJob(body: string): BatchJob | null {
   try {

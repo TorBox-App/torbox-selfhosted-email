@@ -620,6 +620,15 @@ pnpm install`,
             from secrets on every run.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
+            The DSN reaches the background workers too — the broadcast sender,
+            the automation processor, the dead-letter consumers and the hourly
+            sweeps. Those are the ones worth having: they swallow their own
+            failures on purpose, so that one bad recipient cannot abort a
+            broadcast and a dead-letter consumer never throws. A broken cron
+            chain, a bookkeeping write that never landed, or an account whose
+            IAM role has drifted is invisible without a DSN configured.
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
             <code className="rounded bg-muted px-1.5 py-0.5">
               --reroute-events
             </code>{" "}
@@ -1319,8 +1328,8 @@ pnpm install`,
                     <td className="py-2 pr-4">Optional</td>
                     <td className="py-2">
                       DSN for <em>your</em> Sentry project — turns on error
-                      reporting for the API, dashboard and browser. Set it here
-                      even if you passed{" "}
+                      reporting for the API, dashboard, browser and background
+                      workers. Set it here even if you passed{" "}
                       <code className="rounded bg-muted px-1.5 py-0.5">
                         --sentry-dsn
                       </code>{" "}
@@ -1728,8 +1737,9 @@ pnpm install`,
                 <td className="p-3 pr-4 align-top">Optional</td>
                 <td className="p-3 align-top">
                   DSN for <em>your</em> Sentry project — turns on error
-                  reporting for both the API Lambda and the dashboard (the
-                  browser copy,{" "}
+                  reporting for the API Lambda, the dashboard, and the
+                  background workers that send broadcasts and run automations
+                  (the browser copy,{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     NEXT_PUBLIC_SENTRY_DSN
                   </code>

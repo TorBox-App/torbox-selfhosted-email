@@ -16,6 +16,10 @@
  * executions via the dashboard if needed.
  */
 
+// Initialize Sentry before all other imports
+import "../../lib/sentry";
+
+import { captureException, wrapHandler } from "@sentry/aws-serverless";
 import { db, workflowExecution } from "@wraps/db";
 import type { Handler } from "aws-lambda";
 import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
@@ -89,6 +93,13 @@ export async function runReaper(db: DrizzleDB): Promise<void> {
           executionId: id,
         });
       } catch (err) {
+        // The reaper is the backstop for lost scheduler deliveries. When it
+        // cannot fail a stuck execution, that execution stays stuck and every
+        // later run hits the same error — silently, once an hour.
+        captureException(err, {
+          tags: { worker: "workflow-reaper", stage: "fail-paused" },
+          extra: { executionId: id },
+        });
         log.error(
           "[workflow-reaper] Failed to fail paused execution",
           err as Error,
@@ -148,6 +159,10 @@ export async function runReaper(db: DrizzleDB): Promise<void> {
           executionId: id,
         });
       } catch (err) {
+        captureException(err, {
+          tags: { worker: "workflow-reaper", stage: "fail-waiting" },
+          extra: { executionId: id },
+        });
         log.error(
           "[workflow-reaper] Failed to fail waiting execution",
           err as Error,
@@ -170,6 +185,6 @@ export async function runReaper(db: DrizzleDB): Promise<void> {
 /**
  * Lambda entry point — calls runReaper with the real DB instance.
  */
-export const handler: Handler = async () => {
+export const handler: Handler = wrapHandler(async () => {
   await runReaper(db);
-};
+});

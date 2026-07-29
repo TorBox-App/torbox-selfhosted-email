@@ -8,7 +8,7 @@
  */
 
 import { schedulerGroup, schedulerRole } from "./scheduler-resources";
-import { axiomToken } from "./secrets";
+import { axiomToken, sentryDsn } from "./secrets";
 
 // Dead Letter Queue for failed batch jobs.
 // A consumer (apps/api/src/workers/batch-dlq-consumer.ts) drains it and
@@ -66,9 +66,14 @@ batchDlq.subscribe(
       BATCH_QUEUE_URL: batchQueue.url,
       BROADCAST_DLQ_CONSUMER_ENABLED:
         process.env.BROADCAST_DLQ_CONSUMER_ENABLED ?? "true",
+      // There is no DLQ-of-DLQ: a record this consumer cannot process is
+      // dropped, so Sentry is the only place that failure surfaces.
+      SENTRY_DSN: sentryDsn.value,
     },
     nodejs: {
-      install: ["pg"],
+      // @sentry/profiling-node ships native .node binaries that esbuild
+      // cannot bundle; installing it keeps it external.
+      install: ["pg", "@sentry/profiling-node"],
     },
     permissions: [
       // Re-enqueue chunks onto the main batch queue.
@@ -116,9 +121,14 @@ batchQueue.subscribe(
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
       // Wraps platform for activation event emission
       WRAPS_API_KEY: process.env.WRAPS_API_KEY ?? "",
+      // Post-send bookkeeping failures are swallowed so one bad row cannot
+      // abort a broadcast — they only reach Sentry.
+      SENTRY_DSN: sentryDsn.value,
     },
     nodejs: {
-      install: ["pg"], // PostgreSQL driver for Drizzle
+      // PostgreSQL driver for Drizzle; @sentry/profiling-node ships native
+      // binaries that esbuild cannot bundle, so it stays external.
+      install: ["pg", "@sentry/profiling-node"],
     },
     permissions: [
       // Allow assuming cross-account roles for sending via customer's SES
@@ -175,9 +185,12 @@ workflowDlq.subscribe(
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
+      // Last handler in the chain: a record it cannot process leaves the
+      // execution stuck with nothing left to retry it.
+      SENTRY_DSN: sentryDsn.value,
     },
     nodejs: {
-      install: ["pg"],
+      install: ["pg", "@sentry/profiling-node"],
     },
   },
   {
@@ -238,9 +251,14 @@ workflowQueue.subscribe(
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
       // Wraps platform for activation event emission
       WRAPS_API_KEY: process.env.WRAPS_API_KEY ?? "",
+      // A broken cron chain is never retried by SQS — the workflow just stops
+      // firing. That capture is the only warning.
+      SENTRY_DSN: sentryDsn.value,
     },
     nodejs: {
-      install: ["pg"], // PostgreSQL driver for Drizzle
+      // PostgreSQL driver for Drizzle; @sentry/profiling-node ships native
+      // binaries that esbuild cannot bundle, so it stays external.
+      install: ["pg", "@sentry/profiling-node"],
     },
     permissions: [
       // Allow assuming cross-account roles for sending via customer's SES

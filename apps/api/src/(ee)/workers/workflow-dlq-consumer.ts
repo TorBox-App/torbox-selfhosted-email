@@ -9,6 +9,10 @@
  * causes pointless SQS retries with no DLQ-of-DLQ to catch them.
  */
 
+// Initialize Sentry before all other imports
+import "../../lib/sentry";
+
+import { captureException, wrapHandler } from "@sentry/aws-serverless";
 import {
   db,
   eq,
@@ -25,7 +29,7 @@ import { createNextWorkflowSchedule } from "../services/workflow-scheduler";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled", "failed"]);
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+export const handler: SQSHandler = wrapHandler(async (event: SQSEvent) => {
   for (const record of event.Records) {
     try {
       const job: WorkflowJob = JSON.parse(record.body);
@@ -51,7 +55,13 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           break;
       }
     } catch (error) {
-      // Never throw from a DLQ consumer
+      // Never throw from a DLQ consumer — which also means the execution is
+      // left in whatever non-terminal state it was in, invisible to the
+      // dashboard and to SQS alike. This capture is the only signal.
+      captureException(error, {
+        tags: { worker: "workflow-dlq-consumer", stage: "record" },
+        extra: { messageId: record.messageId },
+      });
       log.error("DLQ: failed to process record", error, {
         messageId: record.messageId,
         body: record.body.slice(0, 500),
@@ -59,7 +69,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     }
   }
   await flushLogger().catch(() => {});
-};
+});
 
 async function handleExecute(job: Extract<WorkflowJob, { type: "execute" }>) {
   await failExecution(
@@ -179,6 +189,12 @@ async function handleScheduleTrigger(
       workflowId: wf.id,
     });
   } catch (error) {
+    // Last repair attempt for a broken cron chain: nothing re-schedules this
+    // workflow after this point, so it silently stops running forever.
+    captureException(error, {
+      tags: { worker: "workflow-dlq-consumer", stage: "chain-repair" },
+      extra: { workflowId: wf.id, organizationId: wf.organizationId },
+    });
     log.error("DLQ: schedule-trigger — chain repair failed", error, {
       workflowId: wf.id,
     });

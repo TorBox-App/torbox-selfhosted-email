@@ -17,11 +17,15 @@
  * abort the sweep.
  */
 
+// Initialize Sentry before all other imports
+import "../lib/sentry";
+
 import {
   CloudWatchClient,
   GetMetricDataCommand,
 } from "@aws-sdk/client-cloudwatch";
 import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
+import { captureException, wrapHandler } from "@sentry/aws-serverless";
 import {
   awsAccount,
   db,
@@ -244,7 +248,7 @@ async function checkAccount(account: AccountRow): Promise<void> {
   }
 }
 
-export const handler: Handler = async () => {
+export const handler: Handler = wrapHandler(async () => {
   log.info("[account-health] Starting sweep");
 
   const accounts = await db
@@ -268,6 +272,16 @@ export const handler: Handler = async () => {
       checkedCount++;
     } catch (error) {
       errorCount++;
+      // Skipped by design so one broken role cannot abort the sweep — which
+      // also means an account whose role has drifted stops being health-checked
+      // indefinitely without anything surfacing it.
+      captureException(error, {
+        tags: { worker: "account-health", stage: "check-account" },
+        extra: {
+          accountId: account.id,
+          organizationId: account.organizationId,
+        },
+      });
       log.error("[account-health] Account check failed", error, {
         accountId: account.id,
         organizationId: account.organizationId,
@@ -281,4 +295,4 @@ export const handler: Handler = async () => {
     errorCount,
   });
   await flushLogger();
-};
+});
