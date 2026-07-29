@@ -1,10 +1,17 @@
 "use server";
 
 import { auth } from "@wraps/auth";
-import { contact, db, eq, topicSettings } from "@wraps/db";
+import {
+  contact,
+  db,
+  eq,
+  type PreferenceCenterTheme,
+  topicSettings,
+} from "@wraps/db";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger } from "@/lib/logger";
+import { sanitizeTheme } from "@/lib/preference-theme/validate";
 import { generatePreferencesUrl } from "@/lib/unsubscribe-token";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;
@@ -85,6 +92,7 @@ export async function updateTopicSettings(
     confirmationTemplateId?: string | null;
     preferenceCenterTitle?: string | null;
     preferenceCenterDescription?: string | null;
+    preferenceCenterTheme?: PreferenceCenterTheme | null;
   }
 ): Promise<UpdateTopicSettingsResult> {
   const log = createActionLogger("updateTopicSettings", {
@@ -108,6 +116,20 @@ export async function updateTopicSettings(
       };
     }
 
+    // Never trust client input: re-validate the whole theme object
+    // server-side before it can ever be persisted.
+    let sanitizedData = data;
+    if (data.preferenceCenterTheme !== undefined) {
+      const sanitized =
+        data.preferenceCenterTheme === null
+          ? null
+          : sanitizeTheme(data.preferenceCenterTheme);
+      if (data.preferenceCenterTheme !== null && sanitized === null) {
+        return { success: false, error: "Invalid theme" };
+      }
+      sanitizedData = { ...data, preferenceCenterTheme: sanitized };
+    }
+
     // Check if settings exist
     const existing = await db.query.topicSettings.findFirst({
       where: (s, { eq }) => eq(s.organizationId, organizationId),
@@ -118,7 +140,7 @@ export async function updateTopicSettings(
       await db
         .update(topicSettings)
         .set({
-          ...data,
+          ...sanitizedData,
           updatedAt: new Date(),
         })
         .where(eq(topicSettings.organizationId, organizationId));
@@ -126,7 +148,7 @@ export async function updateTopicSettings(
       // Insert new settings
       await db.insert(topicSettings).values({
         organizationId,
-        ...data,
+        ...sanitizedData,
       });
     }
 
