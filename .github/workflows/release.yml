@@ -43,6 +43,7 @@ jobs:
             cdk)    NPM_PACKAGE="@wraps.dev/cdk";    FILTER="@wraps.dev/cdk" ;;
             pulumi) NPM_PACKAGE="@wraps.dev/pulumi"; FILTER="@wraps.dev/pulumi" ;;
             core)   NPM_PACKAGE="@wraps/core";       FILTER="@wraps/core" ;;
+            mail)   NPM_PACKAGE="mail-audit";        FILTER="mail-audit" ;;
             *)      echo "::error::Unknown package '$PACKAGE'"; exit 1 ;;
           esac
 
