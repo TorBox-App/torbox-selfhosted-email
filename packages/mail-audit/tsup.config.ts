@@ -1,6 +1,12 @@
+import { createRequire } from "node:module";
 import { defineConfig } from "tsup";
 
+const { version } = createRequire(import.meta.url)("./package.json");
+
 export default defineConfig((options) => ({
+  define: {
+    __VERSION__: JSON.stringify(version),
+  },
   entry: ["src/cli.ts"],
   format: ["esm"],
   // Cleaning in watch mode deletes dist on startup, breaking consumers

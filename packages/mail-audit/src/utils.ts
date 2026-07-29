@@ -1,4 +1,7 @@
-export const VERSION = "1.0.1";
+declare const __VERSION__: string;
+
+// Injected from package.json at build time by tsup — see tsup.config.ts
+export const VERSION = __VERSION__;
 
 export function printJson(data: unknown): void {
   console.log(JSON.stringify(data, null, 2));
