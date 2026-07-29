@@ -18,21 +18,22 @@
  * Boundaries mocked (and nothing else):
  *   - `@vercel/oidc-aws-credentials-provider` — Vercel's OIDC token exchange
  *   - `@aws-sdk/client-pinpoint-sms-voice-v2` — the AWS network call
+ *   - `@sentry/nextjs`                        — error reporting
  *   - `process.env`                           — the Vercel OIDC environment
  */
 
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import * as Sentry from "@sentry/nextjs";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sendLoginAlertSms } from "../login-alert-sms";
 
 const sentCommands: unknown[] = [];
 const oidcCallArgs: unknown[] = [];
+
+// Set by an individual test to make the next `send()` call reject, simulating
+// an AWS API failure. Reset to `null` in `beforeEach`.
+let sendRejection: Error | null = null;
+
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 vi.mock("@vercel/oidc-aws-credentials-provider", () => ({
   awsCredentialsProvider: vi.fn((args: unknown) => {
@@ -65,6 +66,9 @@ vi.mock("@aws-sdk/client-pinpoint-sms-voice-v2", () => {
       if (typeof creds === "function") {
         await (creds as () => Promise<unknown>)();
       }
+      if (sendRejection) {
+        throw sendRejection;
+      }
       sentCommands.push(command.input);
       return { MessageId: "test-message-id" };
     }
@@ -77,20 +81,13 @@ const ROLE_ARN = "arn:aws:iam::111122223333:role/wraps-sms-role";
 
 describe("sendLoginAlertSms on Vercel with OIDC", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
-  let sendLoginAlertSms: typeof import("../index").sendLoginAlertSms;
   const originalEnv = { ...process.env };
-
-  // `../index` pulls in better-auth, Stripe and the DB layer — a cold import
-  // costs seconds. Importing it inside a test body puts that on the 5s test
-  // timeout, which blows up under the parallel load of the full suite. Every
-  // env var this module reads is read at call time, so hoisting is safe.
-  beforeAll(async () => {
-    ({ sendLoginAlertSms } = await import("../index"));
-  }, 60_000);
 
   beforeEach(() => {
     sentCommands.length = 0;
     oidcCallArgs.length = 0;
+    sendRejection = null;
+    vi.mocked(Sentry.captureException).mockClear();
     // Simulate a Vercel serverless function with OIDC role assumption.
     process.env.VERCEL = "1";
     process.env.AWS_ROLE_ARN = ROLE_ARN;
@@ -161,5 +158,73 @@ describe("sendLoginAlertSms on Vercel with OIDC", () => {
     expect(sentCommands[0]).toMatchObject({
       OriginationIdentity: "+15550001111",
     });
+  });
+
+  it("describes an undefined user agent as an unknown device", async () => {
+    await sendLoginAlertSms(PHONE, { ipAddress: "203.0.113.7" });
+
+    expect((sentCommands[0] as { MessageBody: string }).MessageBody).toContain(
+      "unknown device"
+    );
+  });
+
+  it("describes an unrecognized user agent as a new device", async () => {
+    await sendLoginAlertSms(PHONE, {
+      ipAddress: "203.0.113.7",
+      userAgent: "curl/8.4.0",
+    });
+
+    expect((sentCommands[0] as { MessageBody: string }).MessageBody).toContain(
+      "new device"
+    );
+  });
+
+  it("describes a macOS Safari user agent as Mac, not Safari browser", async () => {
+    // Pins the branch-order dependency in parseUserAgent: the Mac check must
+    // run before the Safari check, since Safari UA strings contain "Mac".
+    await sendLoginAlertSms(PHONE, {
+      ipAddress: "203.0.113.7",
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    });
+
+    const body = (sentCommands[0] as { MessageBody: string }).MessageBody;
+    expect(body).toContain("Mac");
+    expect(body).not.toContain("Safari browser");
+  });
+
+  it("describes an Android user agent as an Android device", async () => {
+    await sendLoginAlertSms(PHONE, {
+      ipAddress: "203.0.113.7",
+      userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8)",
+    });
+
+    expect((sentCommands[0] as { MessageBody: string }).MessageBody).toContain(
+      "Android device"
+    );
+  });
+
+  it("omits the IP suffix when no ipAddress is supplied", async () => {
+    await sendLoginAlertSms(PHONE, {
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+    });
+
+    expect(
+      (sentCommands[0] as { MessageBody: string }).MessageBody
+    ).not.toContain("(IP:");
+  });
+
+  it("swallows a failed send and reports it to Sentry instead of throwing", async () => {
+    sendRejection = new Error("AccessDeniedException");
+
+    await expect(
+      sendLoginAlertSms(PHONE, { ipAddress: "203.0.113.7" })
+    ).resolves.toBeUndefined();
+
+    expect(Sentry.captureException).toHaveBeenCalledOnce();
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      sendRejection,
+      expect.objectContaining({ tags: { feature: "login-alert-sms" } })
+    );
   });
 });
