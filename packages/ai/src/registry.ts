@@ -35,6 +35,16 @@ export const fail = <T>(...issues: ConfigIssue[]): ConfigResult<T> => ({
 export type ProviderSpec<TProvider> = {
   readonly id: string;
   readonly label: string;
+  /**
+   * Non-secret env vars this spec reads whose value changes what `prepare()`
+   * produces. The resolution cache is keyed on these, so a spec that reads a
+   * var without declaring it here would be served a stale provider.
+   *
+   * Credentials are deliberately NOT listed — they must never become cache-key
+   * material. Rotating a key needs a restart, which is already true of env vars
+   * under Lambda and Next.
+   */
+  readonly selectorEnvVars?: readonly string[];
   readonly prepare: (
     env: ProviderEnv
   ) => ConfigResult<() => Promise<TProvider>>;
@@ -71,6 +81,12 @@ export function isProviderConfigError(
 
 export type Registry<TProvider> = {
   readonly ids: readonly string[];
+  /**
+   * Every env var that selects a provider or changes what it resolves to,
+   * deduped across the specs. Callers key their own caches on this rather than
+   * maintaining a parallel list that silently drifts as specs gain options.
+   */
+  readonly selectorEnvVars: readonly string[];
   /** Pure. Safe at boot, in tests, in CI. Never throws, never instantiates. */
   readonly validate: (env: ProviderEnv) => readonly ConfigIssue[];
   /** Instantiates. Throws ProviderConfigError when the config is invalid. */
@@ -84,6 +100,8 @@ export function createRegistry<TProvider>(opts: {
   readonly specs: readonly ProviderSpec<TProvider>[];
   /** Deployment-level gate, applied before the spec's own validation. */
   readonly gate?: (id: string, env: ProviderEnv) => ConfigIssue | undefined;
+  /** Env vars the gate itself reads, added to `selectorEnvVars`. */
+  readonly gateEnvVars?: readonly string[];
 }): Registry<TProvider> {
   const byId = new Map(opts.specs.map((spec) => [spec.id, spec]));
 
@@ -108,6 +126,13 @@ export function createRegistry<TProvider>(opts: {
 
   return {
     ids: [...byId.keys()],
+    selectorEnvVars: [
+      ...new Set([
+        opts.selectorEnvVar,
+        ...(opts.gateEnvVars ?? []),
+        ...opts.specs.flatMap((spec) => spec.selectorEnvVars ?? []),
+      ]),
+    ],
     validate: (env) => {
       const result = prepare(env);
       return result.ok ? [] : result.issues;

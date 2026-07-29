@@ -45,6 +45,12 @@ export type ResolvedModel = {
   readonly capabilities: ReadonlySet<AICapability>;
   /** Whether modelKey came from the catalog or was inferred from a raw id. */
   readonly catalogued: boolean;
+  /**
+   * The model the caller asked for, when this provider could not serve it and
+   * its own default was substituted. Undefined on the normal path. Log it —
+   * an unannounced model swap is worse than a loud one.
+   */
+  readonly degradedFrom?: string;
   /** Already namespaced for this provider. Spread into streamText(). */
   readonly providerOptions: ProviderOptions | undefined;
   readonly cache: ModelCache;

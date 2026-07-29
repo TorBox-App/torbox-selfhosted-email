@@ -1,7 +1,7 @@
 import { cacheBreakpoint, reasoningOptions } from "../call-options";
 import { DEFAULT_MODEL_KEY } from "../catalog";
 import { fail, ok, type ProviderSpec } from "../registry";
-import { resolveModelId } from "../resolve-model";
+import { resolveModelId, unwrapModelResolution } from "../resolve-model";
 import type { AIProvider } from "../types";
 
 /**
@@ -14,6 +14,7 @@ import type { AIProvider } from "../types";
 export const anthropicSpec: ProviderSpec<AIProvider> = {
   id: "anthropic",
   label: "Anthropic",
+  selectorEnvVars: ["ANTHROPIC_BASE_URL"],
   prepare: (env) => {
     const apiKey = env.ANTHROPIC_API_KEY?.trim();
     if (!apiKey) {
@@ -47,16 +48,15 @@ export const anthropicSpec: ProviderSpec<AIProvider> = {
       return {
         id: "anthropic",
         languageModel: (request) => {
-          const resolved = resolveModelId({
-            providerId: "anthropic",
-            requested: override,
-            fallback: request.model ?? DEFAULT_MODEL_KEY,
-          });
-          if (!resolved.ok) {
-            throw new Error(resolved.issue.message);
-          }
-          const { modelId, modelKey, capabilities, catalogued } =
-            resolved.value;
+          const { modelId, modelKey, capabilities, catalogued, degradedFrom } =
+            unwrapModelResolution(
+              resolveModelId({
+                providerId: "anthropic",
+                requested: override,
+                preferred: request.model,
+                fallback: DEFAULT_MODEL_KEY,
+              })
+            );
 
           return {
             model: anthropic(modelId),
@@ -65,6 +65,7 @@ export const anthropicSpec: ProviderSpec<AIProvider> = {
             providerId: "anthropic",
             capabilities,
             catalogued,
+            degradedFrom,
             providerOptions: capabilities.has("reasoning")
               ? reasoningOptions("anthropic", request.reasoning?.effort)
               : undefined,

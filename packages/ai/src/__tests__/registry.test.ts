@@ -131,6 +131,40 @@ describe("createRegistry", () => {
   it("exposes the registered ids", () => {
     expect(registry.ids).toEqual(["alpha", "needs-key"]);
   });
+
+  it("collects selector env vars from the selector, the gate and every spec", () => {
+    const collected = createRegistry<Fake>({
+      domain: "fake",
+      selectorEnvVar: "FAKE_PROVIDER",
+      defaultId: "alpha",
+      specs: [
+        { ...alpha, selectorEnvVars: ["ALPHA_BASE_URL"] },
+        { ...needsKey, selectorEnvVars: ["NEEDS_REGION"] },
+      ],
+      gateEnvVars: ["MODE"],
+    }).selectorEnvVars;
+
+    expect(collected).toEqual([
+      "FAKE_PROVIDER",
+      "MODE",
+      "ALPHA_BASE_URL",
+      "NEEDS_REGION",
+    ]);
+  });
+
+  it("dedupes env vars two specs both read", () => {
+    const collected = createRegistry<Fake>({
+      domain: "fake",
+      selectorEnvVar: "P",
+      defaultId: "alpha",
+      specs: [
+        { ...alpha, selectorEnvVars: ["AWS_REGION"] },
+        { ...needsKey, selectorEnvVars: ["AWS_REGION"] },
+      ],
+    }).selectorEnvVars;
+
+    expect(collected).toEqual(["P", "AWS_REGION"]);
+  });
 });
 
 describe("memoizeAsync", () => {

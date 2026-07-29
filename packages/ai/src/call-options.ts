@@ -74,3 +74,32 @@ export function cacheBreakpoint(
       return;
   }
 }
+
+/**
+ * Combine provider options, merging WITHIN each namespace.
+ *
+ * A plain spread merges only the top level, so `{openai: {reasoningEffort}}`
+ * spread with `{openai: {promptCacheKey}}` drops the effort — and reasoning
+ * disappearing is exactly the silent failure this module exists to prevent.
+ *
+ * Returns undefined rather than `{}` when there is nothing to send, so callers
+ * can hand the result straight to streamText without inventing an empty block.
+ */
+export function mergeProviderOptions(
+  ...parts: readonly (ProviderOptions | undefined)[]
+): ProviderOptions | undefined {
+  const merged: Record<string, ProviderOptions[string]> = {};
+  let hasAny = false;
+
+  for (const part of parts) {
+    if (!part) {
+      continue;
+    }
+    for (const [namespace, options] of Object.entries(part)) {
+      merged[namespace] = { ...merged[namespace], ...options };
+      hasAny = true;
+    }
+  }
+
+  return hasAny ? merged : undefined;
+}

@@ -1,7 +1,7 @@
 import { reasoningOptions } from "../call-options";
 import { DEFAULT_OPENAI_MODEL } from "../catalog";
 import { fail, ok, type ProviderSpec } from "../registry";
-import { resolveModelId } from "../resolve-model";
+import { resolveModelId, unwrapModelResolution } from "../resolve-model";
 import type { AIProvider } from "../types";
 
 /**
@@ -14,6 +14,7 @@ import type { AIProvider } from "../types";
 export const openaiSpec: ProviderSpec<AIProvider> = {
   id: "openai",
   label: "OpenAI",
+  selectorEnvVars: ["OPENAI_BASE_URL"],
   prepare: (env) => {
     const apiKey = env.OPENAI_API_KEY?.trim();
     if (!apiKey) {
@@ -47,16 +48,15 @@ export const openaiSpec: ProviderSpec<AIProvider> = {
       return {
         id: "openai",
         languageModel: (request) => {
-          const resolved = resolveModelId({
-            providerId: "openai",
-            requested: override,
-            fallback: request.model ?? DEFAULT_OPENAI_MODEL,
-          });
-          if (!resolved.ok) {
-            throw new Error(resolved.issue.message);
-          }
-          const { modelId, modelKey, capabilities, catalogued } =
-            resolved.value;
+          const { modelId, modelKey, capabilities, catalogued, degradedFrom } =
+            unwrapModelResolution(
+              resolveModelId({
+                providerId: "openai",
+                requested: override,
+                preferred: request.model,
+                fallback: DEFAULT_OPENAI_MODEL,
+              })
+            );
 
           return {
             model: openai(modelId),
@@ -65,6 +65,7 @@ export const openaiSpec: ProviderSpec<AIProvider> = {
             providerId: "openai",
             capabilities,
             catalogued,
+            degradedFrom,
             providerOptions: capabilities.has("reasoning")
               ? reasoningOptions("openai", request.reasoning?.effort)
               : undefined,

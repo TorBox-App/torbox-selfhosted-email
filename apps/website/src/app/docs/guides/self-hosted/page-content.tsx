@@ -1833,10 +1833,10 @@ pnpm install`,
                   </code>
                   . Bedrock uses this deployment&apos;s own credentials, never a
                   role in your SES-connected account, so inference bills to the
-                  account running the dashboard. Two things the deploy cannot do
+                  account running the dashboard. One step the deploy cannot do
                   for you: enable each model under{" "}
                   <strong>Bedrock → Model access</strong> for that account and
-                  region, and nothing else — IAM is already granted, so an{" "}
+                  region. IAM is already granted, so an{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     AccessDeniedException
                   </code>{" "}

@@ -33,6 +33,7 @@ export const noopSpec: ProviderSpec<AIProvider> = {
           providerId: "noop",
           capabilities: new Set<never>(),
           catalogued: false,
+          degradedFrom: undefined,
           providerOptions: undefined,
           cache: {},
         }),

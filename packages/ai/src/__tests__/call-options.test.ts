@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cacheBreakpoint, reasoningOptions } from "../call-options";
+import {
+  cacheBreakpoint,
+  mergeProviderOptions,
+  reasoningOptions,
+} from "../call-options";
 
 describe("reasoningOptions", () => {
   it("uses the anthropic thinking shape with a token budget", () => {
@@ -74,5 +78,51 @@ describe("cacheBreakpoint", () => {
 
   it("returns undefined for an unmapped namespace", () => {
     expect(cacheBreakpoint(undefined)).toBeUndefined();
+  });
+});
+
+describe("mergeProviderOptions", () => {
+  it("keeps both keys when two sources share a namespace", () => {
+    // A top-level spread drops reasoningEffort here, and reasoning silently
+    // stops appearing — no error, nothing in the logs.
+    expect(
+      mergeProviderOptions(
+        { openai: { reasoningEffort: "medium" } },
+        { openai: { promptCacheKey: "org-123" } }
+      )
+    ).toEqual({
+      openai: { reasoningEffort: "medium", promptCacheKey: "org-123" },
+    });
+  });
+
+  it("merges disjoint namespaces side by side", () => {
+    expect(
+      mergeProviderOptions(
+        { anthropic: { thinking: { type: "enabled" } } },
+        { openai: { promptCacheKey: "k" } }
+      )
+    ).toEqual({
+      anthropic: { thinking: { type: "enabled" } },
+      openai: { promptCacheKey: "k" },
+    });
+  });
+
+  it("lets a later source win on a genuine key collision", () => {
+    expect(
+      mergeProviderOptions(
+        { openai: { reasoningEffort: "low" } },
+        { openai: { reasoningEffort: "high" } }
+      )
+    ).toEqual({ openai: { reasoningEffort: "high" } });
+  });
+
+  it("skips undefined sources", () => {
+    expect(
+      mergeProviderOptions(undefined, { openai: { reasoningEffort: "low" } })
+    ).toEqual({ openai: { reasoningEffort: "low" } });
+  });
+
+  it("returns undefined rather than an empty block when there is nothing to send", () => {
+    expect(mergeProviderOptions(undefined, undefined)).toBeUndefined();
   });
 });

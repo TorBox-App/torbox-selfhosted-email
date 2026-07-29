@@ -1,5 +1,9 @@
 import type { JSONContent } from "@tiptap/core";
-import { getAIModel, isProviderConfigError } from "@wraps/ai";
+import {
+  getAIModel,
+  isProviderConfigError,
+  mergeProviderOptions,
+} from "@wraps/ai";
 import { aiConversation, brandKit, db, templateVariable } from "@wraps/db";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { and, eq } from "drizzle-orm";
@@ -93,11 +97,16 @@ export async function POST(request: Request, context: RouteContext) {
     // providerOptions is namespaced for whichever provider actually serves this
     // request. Previously an anthropic thinking block was sent unconditionally,
     // which did nothing on this route's Grok default.
+    //
+    // `model` here is a preference, not a requirement: Grok is a gateway-only
+    // model, so on a direct OpenAI/Anthropic/Bedrock deployment the provider
+    // substitutes its own default rather than failing the request.
     const {
       model,
       modelId: MODEL_ID,
       providerOptions,
       cache,
+      degradedFrom,
     } = await getAIModel(
       {
         model: "grok-code-fast",
@@ -105,6 +114,17 @@ export async function POST(request: Request, context: RouteContext) {
       },
       aiEnv()
     );
+
+    if (degradedFrom) {
+      log.info(
+        {
+          event: "ai.model_substituted",
+          requested: degradedFrom,
+          using: MODEL_ID,
+        },
+        "Configured provider cannot serve this route's preferred model; using the provider default"
+      );
+    }
 
     const result = streamText({
       model,
@@ -121,10 +141,13 @@ export async function POST(request: Request, context: RouteContext) {
         ...modelMessages,
       ],
       maxOutputTokens: 16_000,
-      providerOptions: {
-        ...providerOptions,
-        ...cache.requestOptions,
-      },
+      // Merged per namespace, not spread: both sides key by provider, so a
+      // top-level spread would drop reasoning the moment cache.requestOptions
+      // starts carrying an openai.promptCacheKey.
+      providerOptions: mergeProviderOptions(
+        providerOptions,
+        cache.requestOptions
+      ),
       onFinish: async ({ text, usage }) => {
         // Validate final output
         const json = extractTipTapJson(text);

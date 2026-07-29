@@ -9,8 +9,10 @@ import {
   memoizeAsync,
   type ProviderEnv,
 } from "./registry";
+import { AI_DOMAIN } from "./resolve-model";
 import type { AIProvider, ModelRequest, ResolvedModel } from "./types";
 
+export { mergeProviderOptions } from "./call-options";
 export { DEFAULT_MODEL_KEY, MODEL_CATALOG } from "./catalog";
 export type { ConfigIssue, ProviderEnv } from "./registry";
 export { isProviderConfigError } from "./registry";
@@ -40,10 +42,11 @@ export const DEPLOYMENT_MODE_ENV = "WRAPS_DEPLOYMENT_MODE";
 const SELF_HOSTED_ONLY = new Set(["bedrock"]);
 
 export const aiRegistry = createRegistry<AIProvider>({
-  domain: "AI provider",
+  domain: AI_DOMAIN,
   selectorEnvVar: WRAPS_AI_PROVIDER_ENV,
   defaultId: "gateway",
   specs: [gatewaySpec, openaiSpec, anthropicSpec, bedrockSpec, noopSpec],
+  gateEnvVars: [DEPLOYMENT_MODE_ENV],
   gate: (id, env) => {
     if (!SELF_HOSTED_ONLY.has(id)) {
       return;
@@ -78,15 +81,17 @@ const cache = new Map<string, () => Promise<AIProvider>>();
 /**
  * Non-secret env vars that change which provider or model a resolution yields.
  *
+ * Collected from the specs themselves rather than hand-listed here, so a
+ * provider that gains an option cannot drift out of the cache key. AI_MODEL is
+ * added because every spec closes over it at prepare() time.
+ *
  * Credentials are deliberately excluded — they must not become Map keys. A
  * rotated API key therefore needs `resetAIProviderCache()` or a restart, which
  * is already true of env vars under Lambda and Next.
  */
-const CACHE_KEY_ENV = [
-  WRAPS_AI_PROVIDER_ENV,
-  "AI_MODEL",
-  "OPENAI_BASE_URL",
-] as const;
+const CACHE_KEY_ENV: readonly string[] = [
+  ...new Set([...aiRegistry.selectorEnvVars, "AI_MODEL"]),
+];
 
 function providerFor(env: ProviderEnv): Promise<AIProvider> {
   // Keyed by every selector a spec reads at prepare() time, not just the

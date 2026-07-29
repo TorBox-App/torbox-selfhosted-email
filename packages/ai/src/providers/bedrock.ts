@@ -1,7 +1,7 @@
 import { cacheBreakpoint, reasoningOptions } from "../call-options";
 import { DEFAULT_MODEL_KEY } from "../catalog";
 import { fail, ok, type ProviderSpec } from "../registry";
-import { resolveModelId } from "../resolve-model";
+import { resolveModelId, unwrapModelResolution } from "../resolve-model";
 import type { AIProvider } from "../types";
 
 /**
@@ -107,6 +107,7 @@ function withBedrockErrors<T extends object>(model: T, region: string): T {
 export const bedrockSpec: ProviderSpec<AIProvider> = {
   id: "bedrock",
   label: "AWS Bedrock",
+  selectorEnvVars: ["WRAPS_AI_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"],
   prepare: (env) => {
     const region =
       env.WRAPS_AI_REGION?.trim() ||
@@ -153,16 +154,15 @@ export const bedrockSpec: ProviderSpec<AIProvider> = {
       return {
         id: "bedrock",
         languageModel: (request) => {
-          const resolved = resolveModelId({
-            providerId: "bedrock",
-            requested: override,
-            fallback: request.model ?? DEFAULT_MODEL_KEY,
-          });
-          if (!resolved.ok) {
-            throw new Error(resolved.issue.message);
-          }
-          const { modelId, modelKey, capabilities, catalogued } =
-            resolved.value;
+          const { modelId, modelKey, capabilities, catalogued, degradedFrom } =
+            unwrapModelResolution(
+              resolveModelId({
+                providerId: "bedrock",
+                requested: override,
+                preferred: request.model,
+                fallback: DEFAULT_MODEL_KEY,
+              })
+            );
           const nativeId = applyInferenceProfile(modelId, region, catalogued);
 
           return {
@@ -172,6 +172,7 @@ export const bedrockSpec: ProviderSpec<AIProvider> = {
             providerId: "bedrock",
             capabilities,
             catalogued,
+            degradedFrom,
             // The `bedrock` namespace, NOT `anthropic` — Bedrock silently
             // ignores an anthropic block and reasoning just stops appearing.
             providerOptions: capabilities.has("reasoning")

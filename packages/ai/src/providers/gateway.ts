@@ -6,7 +6,7 @@ import {
 } from "../call-options";
 import { DEFAULT_MODEL_KEY } from "../catalog";
 import { fail, ok, type ProviderSpec } from "../registry";
-import { resolveModelId } from "../resolve-model";
+import { resolveModelId, unwrapModelResolution } from "../resolve-model";
 import type { AIProvider } from "../types";
 
 /**
@@ -62,16 +62,15 @@ export const gatewaySpec: ProviderSpec<AIProvider> = {
       Promise.resolve({
         id: "gateway",
         languageModel: (request) => {
-          const resolved = resolveModelId({
-            providerId: "gateway",
-            requested: override,
-            fallback: request.model ?? DEFAULT_MODEL_KEY,
-          });
-          if (!resolved.ok) {
-            throw new Error(resolved.issue.message);
-          }
-          const { modelId, modelKey, capabilities, catalogued } =
-            resolved.value;
+          const { modelId, modelKey, capabilities, catalogued, degradedFrom } =
+            unwrapModelResolution(
+              resolveModelId({
+                providerId: "gateway",
+                requested: override,
+                preferred: request.model,
+                fallback: DEFAULT_MODEL_KEY,
+              })
+            );
           const namespace = upstreamNamespace(modelId);
 
           return {
@@ -81,6 +80,7 @@ export const gatewaySpec: ProviderSpec<AIProvider> = {
             providerId: "gateway",
             capabilities,
             catalogued,
+            degradedFrom,
             providerOptions: capabilities.has("reasoning")
               ? reasoningOptions(namespace, request.reasoning?.effort)
               : undefined,
