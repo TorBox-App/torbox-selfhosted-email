@@ -12,9 +12,10 @@ import {
 } from "../../../utils/email/template-compiler.js";
 import { renderTemplateWithProxy } from "../../../utils/email/template-render.js";
 import {
-  getApiBaseUrl,
-  resolveTokenAsync,
-} from "../../../utils/shared/config.js";
+  type ApiTarget,
+  checkApiTarget,
+  resolveApiTarget,
+} from "../../../utils/shared/api-target.js";
 import { errors } from "../../../utils/shared/errors.js";
 import { isJsonMode, jsonSuccess } from "../../../utils/shared/json-output.js";
 import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
@@ -84,8 +85,8 @@ export async function templatesPush(options: TemplatesPushOptions) {
   const lockfile = await loadLockfile(wrapsDir);
 
   // Fetch remote template slugs to detect deletions
-  const token = await resolveTokenAsync({ token: options.token });
-  const remoteTemplateSlugs = await fetchRemoteTemplateSlugs(token, progress);
+  const target = await resolveApiTarget({ token: options.token });
+  const remoteTemplateSlugs = await fetchRemoteTemplateSlugs(target, progress);
 
   // Compile templates
   const compiled: CompiledTemplate[] = [];
@@ -186,10 +187,10 @@ export async function templatesPush(options: TemplatesPushOptions) {
   );
   const sesSucceeded = compiled.filter((t) => !sesFailed.has(t.slug));
 
-  // Push to API (token already resolved above)
+  // Push to API (target already resolved above)
   const apiResults =
     sesSucceeded.length > 0
-      ? await pushToAPI(sesSucceeded, token, progress, options.force)
+      ? await pushToAPI(sesSucceeded, target, progress, options.force)
       : [];
 
   // Only update lockfile for templates that succeeded in at least one target.
@@ -570,15 +571,15 @@ async function pushToSES(
 // ── API Remote Check ──
 
 async function fetchRemoteTemplateSlugs(
-  token: string | null,
+  target: ApiTarget,
   progress: DeploymentProgress
 ): Promise<Set<string> | null> {
-  if (!token) {
-    // No token = can't check remote, assume all exist (fall back to local-only detection)
+  const { apiBase, token } = target;
+  if (!(apiBase && token)) {
+    // Unreachable control plane = can't check remote, assume all exist
+    // (fall back to local-only detection)
     return null;
   }
-
-  const apiBase = getApiBaseUrl();
 
   try {
     // Use the existing /pull endpoint which returns CLI-pushed templates
@@ -619,18 +620,18 @@ type APIPushResult = {
 
 async function pushToAPI(
   templates: CompiledTemplate[],
-  token: string | null,
+  target: ApiTarget,
   progress: DeploymentProgress,
   force?: boolean
 ): Promise<APIPushResult[]> {
-  if (!token) {
+  const check = checkApiTarget(target);
+  if (!check.ok) {
     progress.info(
-      "No API token — skipping dashboard sync. Run: wraps auth login"
+      `${check.reason} — skipping dashboard sync. ${check.suggestion}`
     );
     return templates.map((t) => ({ slug: t.slug, success: false }));
   }
-
-  const apiBase = getApiBaseUrl();
+  const { apiBase, token } = check.target;
 
   const results: APIPushResult[] = [];
 

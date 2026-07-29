@@ -33,9 +33,10 @@ import {
 } from "../../../utils/email/workflow-ts.js";
 import { validateTransformedWorkflow } from "../../../utils/email/workflow-validator.js";
 import {
-  getApiBaseUrl,
-  resolveTokenAsync,
-} from "../../../utils/shared/config.js";
+  type ApiTarget,
+  checkApiTarget,
+  resolveApiTarget,
+} from "../../../utils/shared/api-target.js";
 import { errors } from "../../../utils/shared/errors.js";
 import {
   isJsonMode,
@@ -259,8 +260,8 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   }
 
   // Push to API
-  const token = await resolveTokenAsync({ token: options.token });
-  const apiResults = await pushToAPI(toProcess, token, progress, {
+  const target = await resolveApiTarget({ token: options.token });
+  const apiResults = await pushToAPI(toProcess, target, progress, {
     force: options.force,
     draft: options.draft,
   });
@@ -352,18 +353,19 @@ type APIPushResult = {
 
 async function pushToAPI(
   workflows: TransformedWorkflowData[],
-  token: string | null,
+  target: ApiTarget,
   progress: DeploymentProgress,
   options: { force?: boolean; draft?: boolean }
 ): Promise<APIPushResult[]> {
-  if (!token) {
+  const check = checkApiTarget(target);
+  if (!check.ok) {
     progress.info(
-      "No API token — skipping dashboard sync. Run: wraps auth login"
+      `${check.reason} — skipping dashboard sync. ${check.suggestion}`
     );
     return workflows.map((w) => ({ slug: w.slug, success: false }));
   }
 
-  const apiBase = getApiBaseUrl();
+  const { apiBase, token } = check.target;
   const results: APIPushResult[] = [];
 
   // Use batch endpoint if multiple workflows

@@ -1,26 +1,38 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
+import { resolveApiTarget } from "../../utils/shared/api-target.js";
 import { readAuthConfig } from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 
 type StatusOptions = { json?: boolean };
 
+/**
+ * Reports the plane the CLI is actually pointed at. Reading only the SaaS slot
+ * told a signed-in self-hosted customer they were signed out.
+ */
 export async function authStatus(_options: StatusOptions = {}): Promise<void> {
-  const config = await readAuthConfig();
+  const target = await resolveApiTarget();
+  const instance = target.selfhosted ? target.appUrl : null;
 
-  if (!config?.auth?.token) {
+  if (!target.token) {
     trackCommand("auth:status", { success: true, authenticated: false });
     if (isJsonMode()) {
-      jsonSuccess("auth.status", { authenticated: false });
+      jsonSuccess("auth.status", { authenticated: false, instance });
     } else {
-      clack.intro(pc.bold("Wraps \u203A Auth Status"));
-      clack.log.info("Not signed in. Run `wraps auth login` to authenticate.");
+      clack.intro(pc.bold("Wraps › Auth Status"));
+      clack.log.info(
+        `Not signed in. Run \`${target.loginCommand}\` to authenticate.`
+      );
     }
     return;
   }
 
-  const { token, tokenType, expiresAt } = config.auth;
+  const config = await readAuthConfig();
+  const expiresAt = instance
+    ? config?.selfhost?.[instance]?.expiresAt
+    : config?.auth?.expiresAt;
+  const { token, tokenType } = target;
   const masked =
     tokenType === "api-key"
       ? `${token.slice(0, 15)}...`
@@ -32,9 +44,13 @@ export async function authStatus(_options: StatusOptions = {}): Promise<void> {
       tokenType,
       tokenPrefix: masked,
       expiresAt: expiresAt || null,
+      instance,
     });
   } else {
-    clack.intro(pc.bold("Wraps \u203A Auth Status"));
+    clack.intro(pc.bold("Wraps › Auth Status"));
+    if (instance) {
+      clack.log.info(`Instance: ${pc.cyan(instance)} (self-hosted)`);
+    }
     clack.log.info(`Token:   ${masked} (${tokenType})`);
     if (expiresAt) {
       clack.log.info(`Expires: ${new Date(expiresAt).toLocaleDateString()}`);

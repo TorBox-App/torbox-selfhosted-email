@@ -6,7 +6,11 @@ import {
   createCliAuthClient,
   fetchOrganizations,
 } from "../../utils/shared/auth-client.js";
-import { getAppBaseUrl, saveAuthConfig } from "../../utils/shared/config.js";
+import {
+  getAppBaseUrl,
+  saveAuthConfig,
+  setActiveInstance,
+} from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 
 type LoginOptions = {
@@ -25,6 +29,9 @@ export async function login(options: LoginOptions): Promise<void> {
         tokenType: "api-key",
       },
     });
+    // Signing in to the SaaS points the CLI back at it, even if a self-hosted
+    // session is also stored.
+    await setActiveInstance(null);
 
     trackCommand("auth:login", {
       success: true,
@@ -122,6 +129,7 @@ export async function login(options: LoginOptions): Promise<void> {
           organizations: organizations.length > 0 ? organizations : undefined,
         },
       });
+      await setActiveInstance(null);
 
       trackCommand("auth:login", {
         success: true,

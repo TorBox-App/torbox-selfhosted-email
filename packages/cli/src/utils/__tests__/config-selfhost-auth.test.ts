@@ -17,6 +17,7 @@ import {
   resolveSelfhostToken,
   saveAuthConfig,
   saveSelfhostAuth,
+  setActiveInstance,
 } from "../shared/config.js";
 
 const INSTANCE_A = "https://self-host.demo.wraps.dev";
@@ -117,5 +118,24 @@ describe("per-instance self-hosted auth", () => {
 
   it("is a no-op when clearing an instance with no stored session", async () => {
     await expect(clearSelfhostAuth(INSTANCE_A)).resolves.toBeUndefined();
+  });
+
+  it("drops the active-instance pointer when that instance signs out", async () => {
+    await saveSelfhostAuth(INSTANCE_A, { token: "sh-a", tokenType: "session" });
+    await setActiveInstance(INSTANCE_A);
+
+    await clearSelfhostAuth(INSTANCE_A);
+
+    expect((await readAuthConfig())?.activeInstance).toBeUndefined();
+  });
+
+  it("leaves the pointer alone when a different instance signs out", async () => {
+    await saveSelfhostAuth(INSTANCE_A, { token: "sh-a", tokenType: "session" });
+    await saveSelfhostAuth(INSTANCE_B, { token: "sh-b", tokenType: "session" });
+    await setActiveInstance(INSTANCE_A);
+
+    await clearSelfhostAuth(INSTANCE_B);
+
+    expect((await readAuthConfig())?.activeInstance).toBe(INSTANCE_A);
   });
 });

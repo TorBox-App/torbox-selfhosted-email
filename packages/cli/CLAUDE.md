@@ -113,6 +113,14 @@ Both sides of every row can exist at once and each flow must leave the other's a
 
 `resources/iam-agent-user.ts` grants `lambda:InvokeFunction` on the agent enforcer to **every** console role that exists, each gated by its own existence probe — not to a hardcoded role name. A missing role is skipped with a warning rather than failing the stack, so a grant aimed at the wrong role name deploys clean and only surfaces later as an IAM denial in the agent approval flow. The platform grant keeps its Pulumi logical name `wraps-agent-invoke` so deployed stacks do not replace the policy; the self-hosted grant has its own.
 
+### Which control plane a command talks to
+
+Any command that calls the control-plane API must get its base URL **and** its token from `resolveApiTarget()` (`utils/shared/api-target.ts`), then narrow with `checkApiTarget()`. Never pair `getApiBaseUrl()` with `resolveTokenAsync()` by hand: `resolveTokenAsync` reads only the SaaS slot, so a customer signed in with `selfhost login` was told "No API token — run wraps auth login", and a token found that way would have been POSTed to api.wraps.dev.
+
+The target follows `config.activeInstance` — a pointer set by `selfhost login`, cleared by `auth login` and by `selfhost logout` of that instance. Whichever login ran last wins, which is how the two planes coexist in one config. An explicit `WRAPS_API_URL` outranks the pointer; `--token`/`WRAPS_API_KEY` override the credential but never switch planes. When the pointer is absent (sessions predating it), a lone self-hosted session with no SaaS session is adopted; anything ambiguous stays on the SaaS.
+
+`platform connect` is the exception and keeps its own resolution — the SaaS and self-hosted flows are separate subcommands there, and `selfhost connect` already reads the per-instance session directly.
+
 ### Region and URL resolution
 
 - Region is `SELFHOST_AWS_REGION`, written to `.env.selfhost` on first deploy from `--region`. On upgrade, read it back from the env file — **never** fall back to ambient `AWS_REGION`, which would target a different region than the deployed stack.

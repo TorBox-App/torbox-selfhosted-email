@@ -2,12 +2,16 @@ import * as clack from "@clack/prompts";
 import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
+import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
 import {
   createCliAuthClient,
   fetchOrganizations,
 } from "../../utils/shared/auth-client.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
-import { saveSelfhostAuth } from "../../utils/shared/config.js";
+import {
+  saveSelfhostAuth,
+  setActiveInstance,
+} from "../../utils/shared/config.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
@@ -49,6 +53,10 @@ export async function selfhostLogin(
   }
 
   const { appUrl: baseURL } = metadata.services.selfhost.config;
+  // Persisted empty before Pulumi runs, so an interrupted deploy leaves the
+  // service present but with no API URL — recover it from the live Function
+  // URL here rather than storing a session no command can use.
+  const apiUrl = await reconcileSelfhostApiUrl(metadata, region);
 
   clack.log.info(`Connecting to: ${pc.cyan(baseURL)}`);
 
@@ -120,7 +128,11 @@ export async function selfhostLogin(
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : undefined,
         organizations: organizations.length > 0 ? organizations : undefined,
+        apiUrl: apiUrl ?? undefined,
       });
+      // Every other command reads this to know it should talk to the
+      // self-hosted control plane instead of the SaaS.
+      await setActiveInstance(baseURL);
 
       trackCommand("selfhost:login", {
         success: true,

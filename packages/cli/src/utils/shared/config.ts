@@ -24,14 +24,23 @@ export type SessionAuth = {
   tokenType: "session" | "api-key";
   expiresAt?: string;
   organizations?: OrgInfo[];
+  // Self-hosted sessions record the instance's API URL next to the app URL
+  // they're keyed by. Commands that talk to the control plane can then reach
+  // it without AWS credentials — the URL otherwise only lives in connection
+  // metadata, which is keyed by account + region.
+  apiUrl?: string;
 };
 
-type AuthConfig = {
+export type AuthConfig = {
   // SaaS (app.wraps.dev) session.
   auth?: SessionAuth;
   // Self-hosted sessions, keyed by the instance's app URL, so they coexist
   // with the SaaS session and with each other instead of sharing one slot.
   selfhost?: Record<string, SessionAuth>;
+  // Which control plane every other command talks to: a `selfhost` key, or
+  // absent for the SaaS. Whichever login ran last wins, so the two planes
+  // coexist in one config without either guessing which one is meant.
+  activeInstance?: string;
 };
 
 const CONFIG_FILE = "config.json";
@@ -72,7 +81,7 @@ export async function clearAuthConfig(): Promise<void> {
 
 // Self-hosted instances are identified by their app URL. Normalize so
 // trailing-slash and case variants resolve to the same stored session.
-function normalizeInstanceKey(baseURL: string): string {
+export function normalizeInstanceKey(baseURL: string): string {
   return baseURL.trim().replace(/\/+$/, "").toLowerCase();
 }
 
@@ -98,7 +107,23 @@ export async function clearSelfhostAuth(baseURL: string): Promise<void> {
   if (!existing?.selfhost) {
     return;
   }
-  delete existing.selfhost[normalizeInstanceKey(baseURL)];
+  const key = normalizeInstanceKey(baseURL);
+  delete existing.selfhost[key];
+  // Signing out of the active instance hands the CLI back to the SaaS rather
+  // than leaving it pointed at a plane it no longer has a session for.
+  if (existing.activeInstance === key) {
+    existing.activeInstance = undefined;
+  }
+  await saveAuthConfig(existing);
+}
+
+/**
+ * Point subsequent commands at a self-hosted instance (by app URL) or, with
+ * `null`, back at the Wraps SaaS.
+ */
+export async function setActiveInstance(baseURL: string | null): Promise<void> {
+  const existing = (await readAuthConfig()) ?? {};
+  existing.activeInstance = baseURL ? normalizeInstanceKey(baseURL) : undefined;
   await saveAuthConfig(existing);
 }
 

@@ -1,6 +1,9 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
-import { getApiBaseUrl, resolveTokenAsync } from "../../utils/shared/config.js";
+import {
+  checkApiTarget,
+  resolveApiTarget,
+} from "../../utils/shared/api-target.js";
 import {
   isJsonMode,
   jsonError,
@@ -78,20 +81,22 @@ function padVisible(str: string, len: number): string {
 export async function emailLogsList(
   options: EmailLogsListOptions
 ): Promise<void> {
-  const token = await resolveTokenAsync({ token: options.token });
-  if (!token) {
+  const check = checkApiTarget(
+    await resolveApiTarget({ token: options.token })
+  );
+  if (!check.ok) {
     if (isJsonMode()) {
       jsonError("email.logs.list", {
         code: "NOT_AUTHENTICATED",
-        message: "No API token found. Run: wraps auth login",
+        message: `${check.reason}. ${check.suggestion}`,
       });
     } else {
-      clack.log.error("No API token found. Run: wraps auth login");
+      clack.log.error(`${check.reason}. ${check.suggestion}`);
     }
     return;
   }
+  const { apiBase, token } = check.target;
 
-  const apiBase = getApiBaseUrl();
   const params = new URLSearchParams();
   if (options.status) params.set("status", options.status);
   if (options.limit) params.set("limit", options.limit);
@@ -170,20 +175,22 @@ export async function emailLogsList(
 export async function emailLogsGet(
   options: EmailLogsGetOptions
 ): Promise<void> {
-  const token = await resolveTokenAsync({ token: options.token });
-  if (!token) {
+  const check = checkApiTarget(
+    await resolveApiTarget({ token: options.token })
+  );
+  if (!check.ok) {
     if (isJsonMode()) {
       jsonError("email.logs.get", {
         code: "NOT_AUTHENTICATED",
-        message: "No API token found. Run: wraps auth login",
+        message: `${check.reason}. ${check.suggestion}`,
       });
     } else {
-      clack.log.error("No API token found. Run: wraps auth login");
+      clack.log.error(`${check.reason}. ${check.suggestion}`);
     }
     return;
   }
+  const { apiBase, token } = check.target;
 
-  const apiBase = getApiBaseUrl();
   const resp = await fetch(
     `${apiBase}/v1/email/logs/${encodeURIComponent(options.messageId)}`,
     { headers: { Authorization: `Bearer ${token}` } }
