@@ -1,9 +1,15 @@
 import path from "node:path";
 import { config } from "dotenv";
 import { defineConfig } from "vitest/config";
+import { resolveTestDatabaseUrl } from "../../scripts/test-db/resolve-branch.mjs";
 
 // Load .env.test from web app (shared test database + config)
 config({ path: path.resolve(import.meta.dirname, "../web/.env.test") });
+
+process.env.DATABASE_URL = await resolveTestDatabaseUrl(
+  process.env.DATABASE_URL ?? "",
+  process.env
+);
 
 export default defineConfig({
   test: {

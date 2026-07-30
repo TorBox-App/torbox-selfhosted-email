@@ -1,14 +1,16 @@
 import path from "node:path";
-import { loadEnv } from "vite";
+import { loadEnv, type UserConfig } from "vite";
 import { defineConfig } from "vitest/config";
+import { resolveTestDatabaseUrl } from "../../scripts/test-db/resolve-branch.mjs";
 
-export default defineConfig(() => {
+export default defineConfig(async (): Promise<UserConfig> => {
   // Load .env.test file from apps/web (shared test environment)
   const env = loadEnv(
     "test",
     path.resolve(import.meta.dirname, "../../apps/web"),
     ""
   );
+  env.DATABASE_URL = await resolveTestDatabaseUrl(env.DATABASE_URL ?? "", env);
 
   return {
     test: {

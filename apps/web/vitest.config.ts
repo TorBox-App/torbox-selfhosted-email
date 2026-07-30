@@ -1,11 +1,21 @@
 import path from "node:path";
-import { loadEnv } from "vite";
+import { loadEnv, type UserConfig } from "vite";
 import { defineConfig } from "vitest/config";
+import { resolveTestDatabaseUrl } from "../../scripts/test-db/resolve-branch.mjs";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   // Load .env.test file
   const env = loadEnv("test", process.cwd(), "");
+  env.DATABASE_URL = await resolveTestDatabaseUrl(env.DATABASE_URL, env);
 
+  // The `as UserConfig` cast (not a function-return-type annotation) is
+  // load-bearing: an untyped async config function makes TS's overload
+  // resolution for `defineConfig` misfire ("no properties in common with
+  // UserConfig") regardless of what's inside. Annotating the function's
+  // return type instead fixes that but then excess-property-checks this
+  // object against the installed vitest types, which are missing fields
+  // (e.g. `environmentMatchGlobs`) this vitest version still supports at
+  // runtime — the cast sidesteps both problems without touching the config.
   return {
     test: {
       globals: true,
@@ -49,5 +59,5 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-  };
+  } as UserConfig;
 });

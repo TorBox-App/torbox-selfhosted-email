@@ -7,7 +7,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["../../scripts/selfhost/__tests__/**/*.test.ts"],
+    include: [
+      "../../scripts/selfhost/__tests__/**/*.test.ts",
+      "../../scripts/test-db/__tests__/**/*.test.ts",
+    ],
     exclude: ["**/node_modules/**"],
   },
 });
