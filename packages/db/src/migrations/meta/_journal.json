@@ -484,6 +484,13 @@
       "when": 1785358752044,
       "tag": "0068_abandoned_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1785385316296,
+      "tag": "0069_abnormal_zuras",
+      "breakpoints": true
     }
   ]
 }

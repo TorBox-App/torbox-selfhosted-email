@@ -99,6 +99,11 @@ export const awsAccount = pgTable(
     emailEnabled: boolean("email_enabled").default(false).notNull(),
     smsEnabled: boolean("sms_enabled").default(false).notNull(),
 
+    // Emails per 24h held back for transactional traffic. Broadcasts refuse to
+    // start (preflight) or pause mid-send (worker) once SES SentLast24Hours
+    // would eat into this reserve. NULL/0 = no reserve.
+    dailyQuotaReserve: integer("daily_quota_reserve"),
+
     // Detailed scanned features (populated by "Scan Features" button)
     features: json("features").$type<{
       email?: {
