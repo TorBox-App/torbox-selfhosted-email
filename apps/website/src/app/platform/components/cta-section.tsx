@@ -1,62 +1,41 @@
-"use client";
-
 import { Button } from "@wraps/ui/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
 
 export function DashboardCtaSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section className="py-24" ref={ref}>
+    <section className="py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          className="relative overflow-hidden rounded-2xl bg-foreground px-8 py-16 text-center text-background"
-          initial={{ opacity: 0, y: 30 }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Background glow */}
-          <div className="absolute -top-24 left-1/2 h-48 w-96 -translate-x-1/2 rounded-full bg-orange-500/20 blur-3xl" />
-
-          <div className="relative">
-            <div className="mb-4 flex items-center justify-center gap-2 text-orange-400">
-              <Sparkles className="size-4" />
-              <span className="font-medium text-sm">Start Your Journey</span>
-            </div>
-
-            <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-              Create. Reach. Scale.
-            </h2>
-            <p className="mx-auto mb-8 max-w-xl text-background/70">
-              Your AWS handles sending. We handle the DX. Unlimited contacts,
-              infrastructure you own.
-            </p>
-
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
-                size="lg"
-              >
-                <a href="https://app.wraps.dev/auth?mode=signup">
-                  Get Started
-                  <ArrowRight className="ml-2 size-4" />
-                </a>
-              </Button>
-              <Button
-                asChild
-                className="border-white/30 bg-transparent text-white hover:bg-white/10"
-                size="lg"
-                variant="outline"
-              >
-                <a href="#pricing">View Pricing</a>
-              </Button>
-            </div>
+        <div className="overflow-hidden rounded-2xl bg-foreground px-8 py-16 text-background">
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-background/60 uppercase tracking-[0.18em]">
+            <span className="size-1.5 rounded-full bg-orange-500" />
+            <span>Start Your Journey</span>
           </div>
-        </motion.div>
+
+          <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight md:text-4xl">
+            Create. Reach. Scale.
+          </h2>
+          <p className="mb-8 max-w-xl text-background/70">
+            Your AWS handles sending. We handle the DX. Unlimited contacts,
+            infrastructure you own.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              asChild
+              className="bg-orange-500 text-white hover:bg-orange-600"
+              size="lg"
+            >
+              <a href="https://app.wraps.dev/auth?mode=signup">Get Started</a>
+            </Button>
+            <Button
+              asChild
+              className="border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background"
+              size="lg"
+              variant="outline"
+            >
+              <a href="#pricing">View Pricing</a>
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );

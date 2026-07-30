@@ -16,7 +16,10 @@ const claudeCodeConfig = `{
   "mcpServers": {
     "wraps": {
       "command": "npx",
-      "args": ["-y", "@wraps.dev/mcp"]
+      "args": ["-y", "@wraps.dev/mcp"],
+      "env": {
+        "AWS_REGION": "us-east-1"
+      }
     }
   }
 }`;
@@ -78,11 +81,16 @@ export function McpSetupSection() {
           </h2>
           <p className="text-lg text-muted-foreground">
             The server resolves AWS credentials from your environment — the same
-            chain the AWS CLI uses. If{" "}
+            chain the AWS CLI uses. One difference from the CLI: the server
+            reads the region from its own environment, so set{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
-              wraps email status
+              AWS_REGION
             </code>{" "}
-            works in your terminal, the MCP server works too.
+            (or{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+              AWS_DEFAULT_REGION
+            </code>
+            ) in the MCP config or it won't start.
           </p>
         </div>
 
@@ -93,8 +101,9 @@ export function McpSetupSection() {
             </h3>
             <ConfigBlock code={claudeCodeConfig} filename=".mcp.json" />
             <p className="mt-3 text-muted-foreground text-sm">
-              Claude Code inherits your shell's AWS environment, so no extra env
-              config is needed.
+              Claude Code inherits your shell's AWS environment, so credentials
+              carry over. Region doesn't come from your AWS profile, so pin it
+              here.
             </p>
           </div>
 

@@ -11,6 +11,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 export const metadata: Metadata = {
   title: "Compare Wraps to Email Platforms — Resend, SendGrid, SES & More",
@@ -57,7 +58,7 @@ const comparisons = [
     href: "/compare/resend-vs-wraps",
     tagline: "Same DX, different economics",
     description:
-      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (30 days vs unlimited), overage pricing ($0.90/1K vs $0.10/1K à la carte), and what happens when you cancel.",
+      "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (Resend purges after 30 days; with Wraps the raw events land in your own DynamoDB and stay there), overage pricing ($0.90/1K vs $0.10/1K à la carte), and what happens when you cancel.",
   },
   {
     competitor: "Amazon SES",
@@ -90,7 +91,7 @@ const comparisons = [
   {
     competitor: "Klaviyo",
     href: "/compare/klaviyo-vs-wraps",
-    tagline: "10x cheaper at scale",
+    tagline: "Up to 5.6x cheaper at scale",
     description:
       "Klaviyo is built for e-commerce marketing with Shopify deep integration. If you're a developer-led team sending transactional and lifecycle email, compare what you're actually paying for.",
   },
@@ -125,9 +126,10 @@ export default function ComparePage() {
 
           {/* Hero */}
           <div className="mb-12">
+            <SectionKicker>Comparisons</SectionKicker>
             <div className="mb-4 flex items-center gap-3">
-              <GitCompareArrows className="size-8 text-primary" />
-              <h1 className="font-bold text-4xl tracking-tight">
+              <GitCompareArrows className="size-8 text-muted-foreground" />
+              <h1 className="font-heading font-semibold text-4xl tracking-tight">
                 Compare Wraps
               </h1>
             </div>
@@ -142,11 +144,11 @@ export default function ComparePage() {
           <div className="mb-16 grid gap-4">
             {comparisons.map((c) => (
               <Link href={c.href} key={c.href}>
-                <Card className="transition-colors hover:border-primary/50">
+                <Card className="transition-colors hover:border-orange-500/50">
                   <CardContent className="flex items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-3">
-                        <h2 className="font-semibold text-xl">
+                        <h2 className="font-heading font-semibold text-xl tracking-tight">
                           {c.competitor} vs Wraps
                         </h2>
                         <span className="text-muted-foreground text-sm">
@@ -166,7 +168,7 @@ export default function ComparePage() {
 
           {/* The Wraps Difference */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               What makes Wraps different
             </h2>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -210,7 +212,9 @@ export default function ComparePage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">Ready to try it?</h2>
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
+              Ready to try it?
+            </h2>
             <p className="mb-6 text-muted-foreground">
               Deploy in 2 minutes. No credit card required.
             </p>
@@ -228,7 +232,7 @@ export default function ComparePage() {
           </section>
 
           <p className="mt-8 text-center text-muted-foreground text-xs">
-            Last updated: March 2026. See something inaccurate?{" "}
+            Last updated: July 2026. See something inaccurate?{" "}
             <a className="underline" href="mailto:support@wraps.dev">
               Let us know
             </a>

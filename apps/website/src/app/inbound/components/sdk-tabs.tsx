@@ -61,14 +61,14 @@ export function SdkTabs({ examples }: { examples: CodeExamples }) {
   return (
     <>
       {/* Tab buttons */}
-      <div className="mb-6 flex flex-wrap justify-center gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {exampleKeys.map((key) => (
           <button
             className={cn(
-              "rounded-lg px-4 py-2 font-medium text-sm transition-all",
+              "cursor-pointer rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.1em] transition-all",
               activeExample === key
-                ? "bg-cyan-500 text-white"
-                : "bg-muted hover:bg-muted/80"
+                ? "bg-orange-500 text-white"
+                : "border border-border bg-card text-muted-foreground hover:text-foreground"
             )}
             key={key}
             onClick={() => setActiveExample(key)}
@@ -121,16 +121,16 @@ export function SdkTabs({ examples }: { examples: CodeExamples }) {
         </div>
 
         {/* JSON preview */}
-        <div className="overflow-hidden rounded-xl border border-cyan-500/30 bg-[#0a0a0a]">
-          <div className="flex items-center justify-between border-b border-cyan-500/20 bg-[#111] px-4 py-3">
-            <span className="font-mono text-cyan-400 text-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between border-border border-b bg-muted/30 px-4 py-3">
+            <span className="font-mono text-muted-foreground text-xs">
               InboundEmail Response
             </span>
-            <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-cyan-500 text-xs">
+            <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
               JSON
             </span>
           </div>
-          <pre className="max-h-[400px] overflow-y-auto p-4 font-mono text-xs text-green-400">
+          <pre className="max-h-[400px] overflow-y-auto p-4 font-mono text-foreground/80 text-xs">
             {jsonPreview}
           </pre>
         </div>

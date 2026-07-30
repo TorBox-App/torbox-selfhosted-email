@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -73,14 +72,16 @@ export default function ToolsPage() {
         <main className="container mx-auto px-4 pt-24 pb-12">
           <div className="mx-auto max-w-4xl">
             {/* Page Header */}
-            <div className="mb-12 text-center">
-              <Badge className="mb-4" variant="outline">
-                Free Tool
-              </Badge>
-              <h1 className="mb-4 font-bold text-2xl tracking-tight sm:text-4xl">
-                Email Deliverability Checker
+            <div className="mb-12">
+              <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+                <span className="size-1.5 rounded-full bg-orange-500" />
+                <span>wraps · free tool</span>
+              </div>
+              <h1 className="mb-4 text-pretty font-heading font-semibold text-3xl tracking-tight sm:text-5xl">
+                Email Deliverability{" "}
+                <span className="text-orange-500">Checker</span>
               </h1>
-              <p className="mx-auto max-w-2xl text-base text-muted-foreground sm:text-lg">
+              <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
                 Check your domain's email authentication setup. We analyze SPF,
                 DKIM, DMARC, and MX records to help you improve deliverability.
               </p>
@@ -92,25 +93,29 @@ export default function ToolsPage() {
             </Suspense>
 
             {/* Info Section */}
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              <Card>
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base">What is SPF?</CardTitle>
+                  <CardTitle className="font-heading text-base tracking-tight">
+                    What is SPF?
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
                   Sender Policy Framework (SPF) specifies which mail servers are
                   authorized to send email on behalf of your domain.{" "}
                   <a
-                    className="text-primary underline underline-offset-2 hover:text-primary/80"
+                    className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
                     href="/tools/spf-builder"
                   >
                     Build your SPF record →
                   </a>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base">What is DKIM?</CardTitle>
+                  <CardTitle className="font-heading text-base tracking-tight">
+                    What is DKIM?
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
                   DomainKeys Identified Mail (DKIM) adds a digital signature to
@@ -118,9 +123,11 @@ export default function ToolsPage() {
                   altered.
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base">What is DMARC?</CardTitle>
+                  <CardTitle className="font-heading text-base tracking-tight">
+                    What is DMARC?
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
                   Domain-based Message Authentication (DMARC) tells receivers
@@ -130,11 +137,11 @@ export default function ToolsPage() {
             </div>
 
             {/* Cost Calculator CTA */}
-            <Card className="mt-8 border-primary/20 bg-primary/5">
+            <Card className="mt-8 border-border bg-card">
               <CardContent className="pt-6">
-                <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
                   <div className="flex-1">
-                    <h3 className="mb-2 font-bold text-xl">
+                    <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">
                       Calculate your AWS SES costs
                     </h3>
                     <p className="text-muted-foreground">
@@ -143,18 +150,19 @@ export default function ToolsPage() {
                       DynamoDB.
                     </p>
                   </div>
-                  <Button asChild size="lg">
-                    <Link href="/tools/ses-calculator">
-                      Open Calculator
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                  <Button
+                    asChild
+                    className="bg-orange-500 text-white hover:bg-orange-600"
+                    size="lg"
+                  >
+                    <Link href="/tools/ses-calculator">Open Calculator</Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
             {/* Learn More */}
-            <div className="mt-8 text-center">
+            <div className="mt-8">
               <p className="mb-4 text-muted-foreground">
                 Want to learn more about email authentication?
               </p>

@@ -3,7 +3,7 @@ import { HeroTerminal } from "./hero-terminal";
 import { SectionKicker } from "./section-kicker";
 
 const proofStats: { n: string; k: string }[] = [
-  { n: "~38s", k: "median first deploy" },
+  { n: "~2 min", k: "typical first deploy" },
   { n: "$0.10", k: "per 1k emails on à la carte, at AWS cost" },
   { n: "0", k: "credentials we store" },
 ];

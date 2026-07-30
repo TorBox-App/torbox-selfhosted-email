@@ -26,15 +26,43 @@ const emailJson = {
   virusVerdict: '"PASS"',
 };
 
-const highlightColors: Record<string, string> = {
-  emailId: "ring-cyan-500 bg-cyan-500/10",
-  from: "ring-blue-500 bg-blue-500/10",
-  to: "ring-green-500 bg-green-500/10",
-  subject: "ring-orange-500 bg-orange-500/10",
-  html: "ring-purple-500 bg-purple-500/10",
-  attachments: "ring-yellow-500 bg-yellow-500/10",
-  spamVerdict: "ring-emerald-500 bg-emerald-500/10",
-};
+// One accent, both panes. The highlight links a rendered element to its parsed
+// field — it isn't a per-field category color.
+const highlight = "ring-1 ring-orange-500 bg-orange-500/10";
+
+const verdictKeys = new Set(["spamVerdict", "virusVerdict"]);
+
+/** Hover/focus target that highlights its counterpart in the other pane. */
+function FieldTarget({
+  children,
+  className,
+  field,
+  isActive,
+  onHover,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  field: Exclude<HighlightKey, null>;
+  isActive: boolean;
+  onHover: (key: HighlightKey) => void;
+}) {
+  return (
+    <button
+      className={cn(
+        "cursor-pointer rounded-lg text-left transition-all",
+        className,
+        isActive && highlight
+      )}
+      onBlur={() => onHover(null)}
+      onFocus={() => onHover(field)}
+      onMouseEnter={() => onHover(field)}
+      onMouseLeave={() => onHover(null)}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
 
 function EmailPreview({
   highlighted,
@@ -44,132 +72,109 @@ function EmailPreview({
   onHover: (key: HighlightKey) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-background">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       {/* Email header */}
-      <div className="border-b bg-muted/30 p-4">
+      <div className="border-border border-b bg-muted/30 p-4">
         <div className="mb-3 flex items-start justify-between">
-          <div
-            className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-all",
-              highlighted === "from" && highlightColors.from
-            )}
-            onMouseEnter={() => onHover("from")}
-            onMouseLeave={() => onHover(null)}
-            role="button"
-            tabIndex={0}
+          <FieldTarget
+            className="flex items-center gap-3 p-2"
+            field="from"
+            isActive={highlighted === "from"}
+            onHover={onHover}
           >
-            <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/10">
-              <User className="size-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="font-medium">John Doe</p>
-              <p className="text-muted-foreground text-sm">
+            <span className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <User className="size-5 text-muted-foreground" />
+            </span>
+            <span className="block">
+              <span className="block font-medium">John Doe</span>
+              <span className="block font-mono text-muted-foreground text-sm">
                 customer@example.com
-              </p>
-            </div>
-          </div>
-          <div
-            className={cn(
-              "cursor-pointer rounded-lg p-2 transition-all",
-              highlighted === "emailId" && highlightColors.emailId
-            )}
-            onMouseEnter={() => onHover("emailId")}
-            onMouseLeave={() => onHover(null)}
-            role="button"
-            tabIndex={0}
+              </span>
+            </span>
+          </FieldTarget>
+
+          <FieldTarget
+            className="p-2"
+            field="emailId"
+            isActive={highlighted === "emailId"}
+            onHover={onHover}
           >
             <span className="font-mono text-muted-foreground text-xs">
               inb_a1b2c3d4
             </span>
-          </div>
+          </FieldTarget>
         </div>
 
-        <div
-          className={cn(
-            "mb-2 cursor-pointer rounded-lg p-2 transition-all",
-            highlighted === "to" && highlightColors.to
-          )}
-          onMouseEnter={() => onHover("to")}
-          onMouseLeave={() => onHover(null)}
-          role="button"
-          tabIndex={0}
+        <FieldTarget
+          className="mb-2 block w-full p-2"
+          field="to"
+          isActive={highlighted === "to"}
+          onHover={onHover}
         >
-          <span className="text-muted-foreground text-sm">
+          <span className="font-mono text-muted-foreground text-sm">
             To: support@yourapp.com
           </span>
-        </div>
+        </FieldTarget>
 
-        <div
-          className={cn(
-            "cursor-pointer rounded-lg p-2 transition-all",
-            highlighted === "subject" && highlightColors.subject
-          )}
-          onMouseEnter={() => onHover("subject")}
-          onMouseLeave={() => onHover(null)}
-          role="button"
-          tabIndex={0}
+        <FieldTarget
+          className="block w-full p-2"
+          field="subject"
+          isActive={highlighted === "subject"}
+          onHover={onHover}
         >
-          <h3 className="font-semibold text-lg">Order #12345 Question</h3>
-        </div>
+          <h3 className="font-heading font-semibold text-lg tracking-tight">
+            Order #12345 Question
+          </h3>
+        </FieldTarget>
       </div>
 
       {/* Email body */}
-      <div
-        className={cn(
-          "cursor-pointer p-4 transition-all",
-          highlighted === "html" && highlightColors.html
-        )}
-        onMouseEnter={() => onHover("html")}
-        onMouseLeave={() => onHover(null)}
-        role="button"
-        tabIndex={0}
+      <FieldTarget
+        className="block w-full rounded-none p-4"
+        field="html"
+        isActive={highlighted === "html"}
+        onHover={onHover}
       >
-        <p className="text-muted-foreground">
+        <span className="block text-muted-foreground">
           Hi, I have a question about my order. Could you please help me track
           the shipment? I ordered it last week and haven't received any updates.
-        </p>
-      </div>
+        </span>
+      </FieldTarget>
 
       {/* Attachments */}
-      <div className="border-t bg-muted/20 p-4">
-        <div
-          className={cn(
-            "inline-flex cursor-pointer items-center gap-2 rounded-lg border bg-background p-3 transition-all",
-            highlighted === "attachments" && highlightColors.attachments
-          )}
-          onMouseEnter={() => onHover("attachments")}
-          onMouseLeave={() => onHover(null)}
-          role="button"
-          tabIndex={0}
+      <div className="border-border border-t bg-muted/20 p-4">
+        <FieldTarget
+          className="inline-flex items-center gap-2 border border-border bg-background p-3"
+          field="attachments"
+          isActive={highlighted === "attachments"}
+          onHover={onHover}
         >
-          <Paperclip className="size-4 text-yellow-500" />
-          <div>
-            <p className="font-medium text-sm">receipt.pdf</p>
-            <p className="text-muted-foreground text-xs">45.6 KB</p>
-          </div>
-        </div>
+          <Paperclip className="size-4 text-muted-foreground" />
+          <span className="block">
+            <span className="block font-medium text-sm">receipt.pdf</span>
+            <span className="block font-mono text-muted-foreground text-xs">
+              45.6 KB
+            </span>
+          </span>
+        </FieldTarget>
       </div>
 
       {/* Security badges */}
-      <div className="flex items-center gap-4 border-t bg-muted/10 p-4">
-        <div
-          className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-lg p-2 transition-all",
-            highlighted === "spamVerdict" && highlightColors.spamVerdict
-          )}
-          onMouseEnter={() => onHover("spamVerdict")}
-          onMouseLeave={() => onHover(null)}
-          role="button"
-          tabIndex={0}
+      <div className="flex items-center gap-4 border-border border-t bg-muted/10 p-4">
+        <FieldTarget
+          className="flex items-center gap-2 p-2"
+          field="spamVerdict"
+          isActive={highlighted === "spamVerdict"}
+          onHover={onHover}
         >
-          <ShieldCheck className="size-4 text-emerald-500" />
-          <span className="font-medium text-emerald-600 text-sm dark:text-emerald-400">
+          <ShieldCheck className="size-4 text-emerald-700 dark:text-emerald-400" />
+          <span className="font-medium text-emerald-700 text-sm dark:text-emerald-400">
             Not Spam
           </span>
-        </div>
+        </FieldTarget>
         <div className="flex items-center gap-2">
-          <ShieldCheck className="size-4 text-emerald-500" />
-          <span className="font-medium text-emerald-600 text-sm dark:text-emerald-400">
+          <ShieldCheck className="size-4 text-emerald-700 dark:text-emerald-400" />
+          <span className="font-medium text-emerald-700 text-sm dark:text-emerald-400">
             No Virus
           </span>
         </div>
@@ -185,41 +190,41 @@ function JsonPreview({
   highlighted: HighlightKey;
   onHover: (key: HighlightKey) => void;
 }) {
-  const renderLine = (key: string, value: string, isLast = false) => {
-    const isHighlighted = highlighted === key;
-    return (
-      <div
+  const renderLine = (key: string, value: string, isLast = false) => (
+    <FieldTarget
+      className="block w-full rounded px-2 py-1"
+      field={key as Exclude<HighlightKey, null>}
+      isActive={highlighted === key}
+      key={key}
+      onHover={onHover}
+    >
+      <span className="text-foreground">"{key}"</span>
+      <span className="text-muted-foreground/60">: </span>
+      <span
         className={cn(
-          "cursor-pointer rounded px-2 py-1 transition-all",
-          isHighlighted && highlightColors[key]
+          "text-muted-foreground",
+          verdictKeys.has(key) && "text-emerald-700 dark:text-emerald-400"
         )}
-        key={key}
-        onMouseEnter={() => onHover(key as HighlightKey)}
-        onMouseLeave={() => onHover(null)}
-        role="button"
-        tabIndex={0}
       >
-        <span className="text-cyan-400">"{key}"</span>
-        <span className="text-white">: </span>
-        <span className="text-green-400">{value}</span>
-        {!isLast && <span className="text-white">,</span>}
-      </div>
-    );
-  };
+        {value}
+      </span>
+      {!isLast && <span className="text-muted-foreground/60">,</span>}
+    </FieldTarget>
+  );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-cyan-500/30 bg-[#0a0a0a]">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-cyan-500/20 bg-[#111] px-4 py-3">
-        <Mail className="size-4 text-cyan-500" />
-        <span className="font-mono text-cyan-400 text-sm">
+      <div className="flex items-center gap-2 border-border border-b bg-muted/30 px-4 py-3">
+        <Mail aria-hidden="true" className="size-3.5 text-orange-500" />
+        <span className="font-mono text-muted-foreground text-xs">
           InboundEmail.json
         </span>
       </div>
 
       {/* JSON content */}
       <div className="overflow-x-auto p-4 font-mono text-sm">
-        <div className="text-white">{"{"}</div>
+        <div className="text-muted-foreground/60">{"{"}</div>
         <div className="pl-4">
           {renderLine("emailId", emailJson.emailId)}
           {renderLine("from", emailJson.from)}
@@ -230,7 +235,7 @@ function JsonPreview({
           {renderLine("spamVerdict", emailJson.spamVerdict)}
           {renderLine("virusVerdict", emailJson.virusVerdict, true)}
         </div>
-        <div className="text-white">{"}"}</div>
+        <div className="text-muted-foreground/60">{"}"}</div>
       </div>
     </div>
   );
@@ -245,7 +250,7 @@ export function AnatomyInteractive() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Email preview */}
         <div>
-          <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
+          <p className="mb-3 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
             Email Preview
           </p>
           <EmailPreview highlighted={highlighted} onHover={setHighlighted} />
@@ -253,7 +258,7 @@ export function AnatomyInteractive() {
 
         {/* JSON structure */}
         <div>
-          <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
+          <p className="mb-3 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
             Parsed Data
           </p>
           <JsonPreview highlighted={highlighted} onHover={setHighlighted} />
@@ -261,7 +266,7 @@ export function AnatomyInteractive() {
       </div>
 
       {/* Mobile hint */}
-      <p className="mt-6 text-center text-muted-foreground text-sm lg:hidden">
+      <p className="mt-6 text-muted-foreground text-sm lg:hidden">
         Tap elements to see the connection
       </p>
     </>

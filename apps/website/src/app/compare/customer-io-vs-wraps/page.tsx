@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -23,6 +22,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -332,7 +332,7 @@ const articleSchema = {
   description:
     "Compare Customer.io and Wraps for email infrastructure. Customer.io charges per contact with high-watermark billing. Wraps deploys to your AWS with unlimited contacts on every tier.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -391,10 +391,8 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* Hero */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Customer.io vs Wraps
             </h1>
             <p className="mb-3 max-w-2xl text-lg text-muted-foreground">
@@ -411,7 +409,9 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">At a Glance</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              At a Glance
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -442,7 +442,9 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* Sound Familiar? */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">Sound Familiar?</h2>
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
+              Sound Familiar?
+            </h2>
             <p className="mb-6 text-muted-foreground">
               Real feedback from Customer.io users on G2, Trustpilot, and
               independent reviews.
@@ -465,7 +467,7 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* The Architectural Difference */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               The Architectural Difference
             </h2>
             <div className="grid gap-6 sm:grid-cols-2">
@@ -485,17 +487,17 @@ export default function CustomerIoVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       <span>
                         Bulk data export requires Premium tier ($1,000/mo)
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       <span>No self-hosted or BYOC option available</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       <span>Workflows and templates cannot be exported</span>
                     </li>
                   </ul>
@@ -546,7 +548,7 @@ export default function CustomerIoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-2 flex items-center gap-3">
               <DollarSign className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Pricing at Real Volumes
               </h2>
             </div>
@@ -602,9 +604,9 @@ export default function CustomerIoVsWrapsPage() {
                             </div>
                           </td>
                           <td className="p-4">
-                            <Badge variant="secondary">
+                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
                               {savingsPercent}% less
-                            </Badge>
+                            </span>
                           </td>
                         </tr>
                       );
@@ -629,7 +631,9 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* Detailed Feature Comparison */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">Feature Comparison</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              Feature Comparison
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -674,7 +678,7 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* When to Choose Customer.io */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Customer.io
             </h2>
             <p className="mb-4 text-muted-foreground">
@@ -704,7 +708,7 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* When to Choose Wraps */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Wraps
             </h2>
             <p className="mb-4 text-muted-foreground">
@@ -735,7 +739,7 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* Switching from Customer.io */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               Switching from Customer.io
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -801,7 +805,7 @@ export default function CustomerIoVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Own your email infrastructure
             </h2>
             <p className="mb-6 text-muted-foreground">

@@ -1,10 +1,10 @@
-import { Card, CardContent } from "@wraps/ui/components/ui/card";
+import { Button } from "@wraps/ui/components/ui/button";
 import { Cloud, Github, Lock, Package, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
-import { CardDecorator } from "@/components/ui/card-decorator";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 export const metadata: Metadata = {
   title: "About Wraps - Our Mission and Values",
@@ -38,7 +38,7 @@ const values = [
     icon: Lock,
     title: "Zero Lock-In",
     description:
-      "Infrastructure stays in your AWS account. Cancel anytime\u2014your infrastructure keeps running. Your choice, always.",
+      "Infrastructure stays in your AWS account. Cancel anytime—your infrastructure keeps running. Your choice, always.",
   },
   {
     icon: Cloud,
@@ -60,10 +60,19 @@ export default function AboutPage() {
       <LandingNavbar />
 
       <main className="container mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-16 max-w-3xl text-center">
-          <h1 className="mb-6 font-bold text-4xl tracking-tight sm:text-5xl">
-            About Wraps
+        <div className="mb-16 max-w-3xl">
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-orange-500"
+            />
+            <span>wraps · about</span>
+          </div>
+
+          <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
+            About <span className="text-orange-500">Wraps</span>
           </h1>
+
           <p className="text-lg text-muted-foreground">
             We believe developers shouldn&apos;t have to choose between AWS
             economics and great developer experience. Wraps brings SaaS-quality
@@ -72,8 +81,9 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <section className="mb-16">
-          <h2 className="mb-8 font-bold text-2xl tracking-tight">
+        <section className="mb-14 border-border border-t pt-12">
+          <SectionKicker>01 — Mission</SectionKicker>
+          <h2 className="mb-6 font-heading font-semibold text-2xl text-foreground tracking-tight sm:text-3xl">
             Our Mission
           </h2>
           <div className="space-y-4 text-foreground/80 text-lg leading-relaxed">
@@ -99,33 +109,35 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="mb-16">
-          <h2 className="mb-8 font-bold text-2xl tracking-tight">
+        <section className="mb-14 border-border border-t pt-12">
+          <SectionKicker>02 — Beliefs</SectionKicker>
+          <h2 className="mb-6 font-heading font-semibold text-2xl text-foreground tracking-tight sm:text-3xl">
             What We Believe
           </h2>
-          <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {values.map((value) => (
-              <Card className="py-2 shadow-xs" key={value.title}>
-                <CardContent className="p-8">
-                  <div className="flex flex-col items-center text-center">
-                    <CardDecorator>
-                      <value.icon aria-hidden className="h-6 w-6" />
-                    </CardDecorator>
-                    <h3 className="mt-6 text-balance font-medium">
-                      {value.title}
-                    </h3>
-                    <p className="mt-3 text-muted-foreground text-sm">
-                      {value.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div
+                className="rounded-xl border border-border bg-card p-6 transition-colors hover:border-orange-500/40"
+                key={value.title}
+              >
+                <value.icon
+                  aria-hidden
+                  className="mb-4 size-5 text-foreground"
+                />
+                <h3 className="mb-2 text-balance font-heading font-semibold text-[15px] text-foreground">
+                  {value.title}
+                </h3>
+                <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+                  {value.description}
+                </p>
+              </div>
             ))}
           </div>
         </section>
 
-        <section className="mb-16">
-          <h2 className="mb-8 font-bold text-2xl tracking-tight">
+        <section className="mb-14 border-border border-t pt-12">
+          <SectionKicker>03 — Open source</SectionKicker>
+          <h2 className="mb-6 font-heading font-semibold text-2xl text-foreground tracking-tight sm:text-3xl">
             Open Source
           </h2>
           <div className="space-y-4 text-foreground/80 text-lg leading-relaxed">
@@ -138,33 +150,37 @@ export default function AboutPage() {
             <p>
               We believe infrastructure tooling should be transparent. When you
               run{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-sm">
+              <code className="rounded bg-muted px-2 py-0.5 font-mono text-sm">
                 wraps email init
               </code>
               , you should know exactly what gets created in your AWS account.
             </p>
           </div>
-          <div className="mt-6 flex gap-4">
-            <a
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium text-sm transition-colors hover:bg-accent"
-              href="https://github.com/wraps-team/wraps"
-              rel="noopener noreferrer"
-              target="_blank"
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              asChild
+              className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
             >
-              <Github aria-hidden className="h-4 w-4" />
-              View on GitHub
-            </a>
-            <Link
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium text-sm transition-colors hover:bg-accent"
-              href="/docs"
-            >
-              Read the Docs
-            </Link>
+              <a
+                href="https://github.com/wraps-team/wraps"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <Github aria-hidden className="size-4" />
+                View on GitHub
+              </a>
+            </Button>
+            <Button asChild className="cursor-pointer" variant="outline">
+              <Link href="/docs">Read the Docs</Link>
+            </Button>
           </div>
         </section>
 
-        <section>
-          <h2 className="mb-8 font-bold text-2xl tracking-tight">Company</h2>
+        <section className="border-border border-t pt-12">
+          <SectionKicker>04 — Company</SectionKicker>
+          <h2 className="mb-6 font-heading font-semibold text-2xl text-foreground tracking-tight sm:text-3xl">
+            Company
+          </h2>
           <div className="text-foreground/80 text-lg leading-relaxed">
             <p>
               Wraps is a product of{" "}
@@ -172,19 +188,13 @@ export default function AboutPage() {
               company registered in the State of Colorado, United States.
             </p>
           </div>
-          <div className="mt-6 flex gap-4">
-            <Link
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium text-sm transition-colors hover:bg-accent"
-              href="/contact"
-            >
-              Contact Us
-            </Link>
-            <Link
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium text-sm transition-colors hover:bg-accent"
-              href="/privacy"
-            >
-              Privacy Policy
-            </Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button asChild className="cursor-pointer" variant="outline">
+              <Link href="/contact">Contact Us</Link>
+            </Button>
+            <Button asChild className="cursor-pointer" variant="outline">
+              <Link href="/privacy">Privacy Policy</Link>
+            </Button>
           </div>
         </section>
       </main>

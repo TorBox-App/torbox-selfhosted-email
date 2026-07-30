@@ -459,7 +459,7 @@ export function ScalePlanContent() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-            href="/pricing"
+            href="/#pricing"
           >
             <h3 className="font-semibold group-hover:text-primary">
               Pricing + plan comparison

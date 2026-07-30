@@ -1,8 +1,5 @@
-"use client";
-
 import { BarChart3, Globe, History, Key, Shield, Users } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 const features = [
   {
@@ -38,24 +35,17 @@ const features = [
 ];
 
 export function DashboardFeaturesSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section className="pt-60 pb-20" id="features" ref={ref}>
+    <section className="pt-60 pb-20" id="features">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Compact header */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-10 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="mb-2 font-semibold text-xl">
+        <div className="mb-10">
+          <SectionKicker>Everything else</SectionKicker>
+          <h2 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
             Plus everything else you need
-          </h3>
-          <p className="text-muted-foreground text-sm">Included in all plans</p>
-        </motion.div>
+          </h2>
+          <p className="mt-2 text-muted-foreground">Included in all plans</p>
+        </div>
 
         {/* Compact feature grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -63,14 +53,15 @@ export function DashboardFeaturesSection() {
             const Icon = feature.icon;
             return (
               <div
-                className="flex items-start gap-3 rounded-lg border bg-background/50 p-4"
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-4 transition-colors hover:border-orange-500/40"
                 key={feature.title}
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
-                  <Icon className="size-4 text-orange-500" />
-                </div>
+                <Icon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                />
                 <div>
-                  <h4 className="font-medium text-sm">{feature.title}</h4>
+                  <h3 className="font-medium text-sm">{feature.title}</h3>
                   <p className="text-muted-foreground text-xs leading-relaxed">
                     {feature.description}
                   </p>

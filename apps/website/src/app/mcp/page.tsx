@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     title: "MCP server for AWS SES email | Wraps",
     description:
-      "Six MCP tools over the AWS SES stack in your account. Read by default, sending behind explicit guardrails.",
+      "Six MCP tools over the AWS SES stack in your account — seven in enforced mode. Read by default, sending behind explicit guardrails.",
   },
   alternates: {
     canonical: "https://wraps.dev/mcp",

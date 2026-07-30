@@ -2,16 +2,13 @@
 
 import {
   BarChart3,
+  BellOff,
   Code2,
-  FileText,
   Key,
-  MessageSquareMore,
+  Layers,
   ShieldCheck,
 } from "lucide-react";
-import {
-  FeatureItem,
-  SectionWrapper,
-} from "@/app/landing/components/section-card";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 const features = [
   {
@@ -23,9 +20,9 @@ const features = [
   },
   {
     icon: ShieldCheck,
-    title: "Guided Registration",
+    title: "Registration Checklist",
     description:
-      "Step-by-step wizard for toll-free and 10DLC registration. No more guessing.",
+      "`wraps sms register` walks you through what toll-free registration needs and opens the AWS console at the right page. 10DLC is guidance only — you file it yourself.",
     highlighted: false,
   },
   {
@@ -36,47 +33,63 @@ const features = [
     highlighted: false,
   },
   {
-    icon: MessageSquareMore,
-    title: "Two-Way Messaging",
+    icon: Layers,
+    title: "Batch Sending",
     description:
-      "Receive and reply to incoming messages. Build conversational SMS experiences.",
+      "`sendBatch()` fans one message out across many recipients and returns a per-recipient result, so a single failure doesn't lose the run.",
     highlighted: false,
   },
   {
-    icon: FileText,
-    title: "Message Templates",
+    icon: BellOff,
+    title: "Opt-Out List",
     description:
-      "Create reusable templates with variables. Perfect for OTP, notifications, and alerts.",
+      "The stack deploys a managed AWS opt-out list. Check, add, and remove numbers from the SDK so STOP replies are honored automatically.",
     highlighted: false,
   },
   {
     icon: BarChart3,
-    title: "Analytics Dashboard",
+    title: "Delivery Events & Dashboard",
     description:
-      "Track delivery rates, failures, and costs. Real-time visibility into your SMS operations.",
+      "Delivery events land in a DynamoDB table in your account. The dashboard reads them for volume, deliverability, and AWS spend limits.",
     highlighted: false,
   },
 ];
 
 export function SmsFeaturesSection() {
   return (
-    <SectionWrapper
-      badge="Features"
-      description="Everything you need to send SMS at scale, without the complexity."
-      id="features"
-      title="Built for developers"
-    >
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature) => (
-          <FeatureItem
-            description={feature.description}
-            highlighted={feature.highlighted}
-            icon={feature.icon}
-            key={feature.title}
-            title={feature.title}
-          />
-        ))}
+    <section className="border-border border-t py-16 sm:py-24" id="features">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 max-w-2xl">
+          <SectionKicker>Features</SectionKicker>
+          <h2 className="font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
+            Built for developers
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Everything you need to send SMS at scale, without the complexity.
+          </p>
+        </div>
+
+        <div className="grid gap-x-10 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature) => (
+            <div className="flex items-start gap-3" key={feature.title}>
+              <feature.icon
+                aria-hidden="true"
+                className={`mt-0.5 size-5 shrink-0 ${
+                  feature.highlighted
+                    ? "text-orange-500"
+                    : "text-muted-foreground"
+                }`}
+              />
+              <div>
+                <h3 className="font-medium">{feature.title}</h3>
+                <p className="mt-1 text-muted-foreground text-sm">
+                  {feature.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </SectionWrapper>
+    </section>
   );
 }

@@ -1,8 +1,4 @@
-"use client";
-
 import { CloudUpload, Sparkles, UserPlus } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
 
 const items = [
   {
@@ -23,27 +19,32 @@ const items = [
 ];
 
 export function HowItWorksSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-40px" });
-
   return (
-    <section className="py-16" ref={ref}>
+    <section className="pb-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-4xl gap-8 sm:grid-cols-3">
-          {items.map((item, i) => (
-            <motion.div
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-              className="flex flex-col items-center text-center"
-              initial={{ opacity: 0, y: 15 }}
+        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
+          {items.map((item, index) => (
+            <div
+              className="rounded-lg border border-border bg-card p-4"
               key={item.title}
-              transition={{ duration: 0.3, delay: i * 0.1 }}
             >
-              <item.icon className="mb-3 size-5 text-orange-500" />
-              <h3 className="mb-1 font-semibold text-sm">{item.title}</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                {item.description}
-              </p>
-            </motion.div>
+              <div className="mb-3 flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+                <span className="h-px w-3 bg-orange-500" />
+                {String(index + 1).padStart(2, "0")}
+              </div>
+              <div className="flex items-start gap-2.5">
+                <item.icon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                />
+                <div>
+                  <h3 className="mb-1 font-medium text-sm">{item.title}</h3>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

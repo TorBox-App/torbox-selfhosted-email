@@ -200,7 +200,7 @@ const data = {
         },
         {
           title: "Pricing",
-          url: "/pricing",
+          url: "/#pricing",
           icon: CreditCard,
         },
       ],

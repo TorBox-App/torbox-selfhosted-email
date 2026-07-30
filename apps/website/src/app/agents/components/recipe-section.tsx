@@ -63,7 +63,9 @@ export function AgentsRecipeSection() {
                 @wraps.dev/email
               </code>{" "}
               from inside an agent tool. It resolves credentials from your
-              environment — no API keys to hand the agent.
+              environment — no API keys to hand the agent. Give the agent its
+              own mailbox credentials and the same call routes through your
+              enforcer, where the caps and allowlist apply.
             </p>
             <CodeBlock
               className="h-auto"
@@ -173,8 +175,8 @@ export function AgentsRecipeSection() {
                   npx -y @wraps.dev/mcp
                 </code>{" "}
                 exposes your send history, delivery events, domain status, and
-                suppression list as MCP tools — plus guarded sending, off by
-                default. Your credentials never leave your machine.{" "}
+                suppression list as MCP tools — plus sending that refuses until
+                you enable it. Your credentials never leave your machine.{" "}
                 <Link
                   className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
                   href="/mcp"

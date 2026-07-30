@@ -35,7 +35,7 @@ export function CodeComparison({
     <div className="grid gap-4 sm:grid-cols-2">
       <Card>
         <CardContent>
-          <p className="mb-3 font-medium text-muted-foreground text-sm">
+          <p className="mb-3 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
             {before.label}
           </p>
           <CodeBlock
@@ -75,10 +75,10 @@ export function CodeComparison({
           </CodeBlock>
         </CardContent>
       </Card>
-      <Card className={after.highlight ? "border-primary/30" : undefined}>
+      <Card className={after.highlight ? "border-orange-500/40" : undefined}>
         <CardContent>
           <p
-            className={`mb-3 font-medium text-sm ${after.highlight ? "text-primary" : "text-muted-foreground"}`}
+            className={`mb-3 font-mono text-[11px] uppercase tracking-[0.08em] ${after.highlight ? "text-orange-600 dark:text-orange-500" : "text-muted-foreground"}`}
           >
             {after.label}
           </p>

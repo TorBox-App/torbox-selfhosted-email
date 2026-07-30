@@ -1,5 +1,3 @@
-"use client";
-
 import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Clock,
@@ -8,8 +6,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { assetUrl } from "@/lib/utils";
 
 const features = [
@@ -42,33 +39,16 @@ const features = [
 ];
 
 export function DashboardAutomationsSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section
-      className="relative overflow-x-clip pt-20"
-      id="automations"
-      ref={ref}
-    >
+    <section className="relative overflow-x-clip pt-20" id="automations">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Chapter indicator */}
-        <motion.div
-          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-          className="mb-16 flex items-center gap-4"
-          initial={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex size-10 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
-            3
-          </div>
-          <div>
-            <p className="font-medium text-orange-500 text-sm">Scale</p>
-            <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
-              Automate Your Growth
-            </h2>
-          </div>
-        </motion.div>
+        <div className="mb-14">
+          <SectionKicker>Scale</SectionKicker>
+          <h2 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
+            Automate Your Growth
+          </h2>
+        </div>
 
         {/* Split layout: Content left, screenshot right (flipped from Ch. 2) */}
         <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -83,15 +63,16 @@ export function DashboardAutomationsSection() {
             <div className="space-y-4">
               {features.map((feature) => (
                 <div className="flex items-start gap-3" key={feature.title}>
-                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
-                    <feature.icon className="size-4 text-orange-500" />
-                  </div>
+                  <feature.icon
+                    aria-hidden="true"
+                    className="mt-1 size-4 shrink-0 text-muted-foreground"
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{feature.title}</span>
                       {feature.badge && (
                         <Badge
-                          className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                          className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]"
                           variant="secondary"
                         >
                           {feature.badge}
@@ -107,17 +88,15 @@ export function DashboardAutomationsSection() {
             </div>
 
             {/* Tier hints */}
-            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 space-y-1">
+            <div className="space-y-1 rounded-lg border border-border bg-muted/40 p-4">
               <p className="text-sm">
-                <span className="font-medium text-orange-600 dark:text-orange-400">
-                  Free:
-                </span>{" "}
+                <span className="font-medium text-foreground">Free:</span>{" "}
                 <span className="text-muted-foreground">
                   1 workflow included
                 </span>
               </p>
               <p className="text-sm">
-                <span className="font-medium text-orange-600 dark:text-orange-400">
+                <span className="font-medium text-foreground">
                   Starter ($19/mo):
                 </span>{" "}
                 <span className="text-muted-foreground">
@@ -128,16 +107,8 @@ export function DashboardAutomationsSection() {
           </div>
 
           {/* Screenshot - overflows right */}
-          <motion.div
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
-            className="group relative order-1 lg:order-2 lg:-mr-32 xl:-mr-48 2xl:-mr-64"
-            initial={{ opacity: 0, x: 40 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            {/* Background glow */}
-            <div className="absolute -inset-4 rounded-3xl bg-orange-500/10 blur-2xl opacity-50" />
-
-            <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/20 bg-card shadow-2xl">
+          <div className="relative order-1 lg:-mr-32 xl:-mr-48 2xl:-mr-64 lg:order-2">
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
               {/* Light mode image */}
               <img
                 alt="Workflow Builder - Light Mode"
@@ -155,7 +126,7 @@ export function DashboardAutomationsSection() {
                 src={assetUrl("automations-builder-dark.avif")}
               />
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

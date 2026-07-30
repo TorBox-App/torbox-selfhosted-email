@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@wraps/ui/components/ui/button";
-import { ArrowRight, Check } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef, useState } from "react";
+import { Check } from "lucide-react";
+import { useState } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import {
   type BillingInterval,
   OVERAGE_RATES,
@@ -16,8 +16,6 @@ import { BillingToggle } from "./billing-toggle";
 const allTiers = PRICING_TIERS;
 
 export function DashboardPricingSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("monthly");
 
@@ -34,10 +32,10 @@ export function DashboardPricingSection() {
   };
 
   return (
-    <section className="relative pt-32 pb-24" id="pricing" ref={ref}>
+    <section className="relative pt-32 pb-24" id="pricing">
       {/* Diagonal transition from premium bg */}
       <div
-        className="absolute inset-x-0 top-0 h-20 bg-stone-100/50 dark:bg-white/[0.06]"
+        className="absolute inset-x-0 top-0 h-20 bg-muted/30"
         style={{
           clipPath: "polygon(0 0, 100% 0, 0 100%)",
         }}
@@ -45,26 +43,20 @@ export function DashboardPricingSection() {
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <p className="mb-2 font-medium text-orange-500 text-sm">
-            Grow Without Limits
-          </p>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+        <div className="mb-12">
+          <SectionKicker>Grow Without Limits</SectionKicker>
+          <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight md:text-4xl">
             Simple, predictable pricing
           </h2>
-          <p className="mx-auto max-w-2xl text-muted-foreground mb-6">
+          <p className="mb-6 max-w-2xl text-muted-foreground">
             Unlimited contacts. Pay per message. No per-seat fees.
           </p>
           <BillingToggle
+            className="items-start"
             onChange={setBillingInterval}
             value={billingInterval}
           />
-        </motion.div>
+        </div>
 
         {/* Pricing cards */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -72,14 +64,14 @@ export function DashboardPricingSection() {
             const overage = OVERAGE_RATES[tier.id];
             return (
               <div
-                className={`relative flex flex-col overflow-hidden rounded-2xl border-2 bg-background ${
+                className={`relative flex flex-col overflow-hidden rounded-2xl border bg-background ${
                   tier.highlight ? "border-orange-500" : "border-border"
                 }`}
                 key={tier.name}
               >
                 {/* Header */}
                 <div
-                  className={`border-b px-6 py-6 ${
+                  className={`border-border border-b px-6 py-6 ${
                     tier.highlight ? "bg-orange-500/5" : "bg-muted/30"
                   }`}
                 >
@@ -98,7 +90,7 @@ export function DashboardPricingSection() {
                   </div>
                   {tier.annualPrice &&
                     (billingInterval === "annual" ? (
-                      <div className="mt-1 text-green-600 text-sm dark:text-green-400">
+                      <div className="mt-1 text-foreground text-sm">
                         ${tier.annualPrice} billed annually{" "}
                       </div>
                     ) : (
@@ -131,7 +123,9 @@ export function DashboardPricingSection() {
                     <li className="flex items-start gap-2 text-sm">
                       <Check
                         className={`mt-0.5 size-4 shrink-0 ${
-                          tier.highlight ? "text-orange-500" : "text-green-500"
+                          tier.highlight
+                            ? "text-orange-500"
+                            : "text-muted-foreground"
                         }`}
                       />
                       <span>Unlimited contacts</span>
@@ -139,7 +133,9 @@ export function DashboardPricingSection() {
                     <li className="flex items-start gap-2 text-sm">
                       <Check
                         className={`mt-0.5 size-4 shrink-0 ${
-                          tier.highlight ? "text-orange-500" : "text-green-500"
+                          tier.highlight
+                            ? "text-orange-500"
+                            : "text-muted-foreground"
                         }`}
                       />
                       <span>Then {overage.display}</span>
@@ -153,7 +149,7 @@ export function DashboardPricingSection() {
                           className={`mt-0.5 size-4 shrink-0 ${
                             tier.highlight
                               ? "text-orange-500"
-                              : "text-green-500"
+                              : "text-muted-foreground"
                           }`}
                         />
                         <span>{feature}</span>
@@ -167,10 +163,7 @@ export function DashboardPricingSection() {
                     size="lg"
                     variant={tier.highlight ? "default" : "outline"}
                   >
-                    <a href={getCtaLink(tier)}>
-                      Get Started
-                      <ArrowRight className="ml-2 size-4" />
-                    </a>
+                    <a href={getCtaLink(tier)}>Get Started</a>
                   </Button>
                 </div>
               </div>
@@ -179,14 +172,14 @@ export function DashboardPricingSection() {
         </div>
 
         {/* Founding Member Program */}
-        <div className="mt-10 rounded-xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <span className="text-xl">🚀</span>
-            <p className="font-semibold text-orange-800 dark:text-orange-200">
+        <div className="mt-10 rounded-xl border border-border bg-muted/30 p-6">
+          <div className="mb-3 flex items-center gap-2">
+            <span aria-hidden="true" className="h-px w-6 bg-orange-500" />
+            <p className="font-semibold text-foreground">
               {PRICING_COPY.foundingMemberTitle}
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 text-orange-700 text-sm dark:text-orange-300 max-w-lg mx-auto">
+          <div className="grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
             {PRICING_COPY.foundingMemberPerks.map((perk) => (
               <div className="flex items-center gap-2" key={perk}>
                 <Check className="size-4 shrink-0" strokeWidth={2.5} />
@@ -197,7 +190,7 @@ export function DashboardPricingSection() {
         </div>
 
         {/* Footer note */}
-        <p className="mt-6 text-center text-muted-foreground text-sm">
+        <p className="mt-6 text-muted-foreground text-sm">
           AWS costs billed separately by AWS (~$0.10 per 1,000 emails à la
           carte, or ~$0.16 on AWS&apos;s new default Essentials plan). Free tier
           available with 5,000 tracked events/month.

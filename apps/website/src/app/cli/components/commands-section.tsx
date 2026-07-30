@@ -1,5 +1,3 @@
-import { Sparkles } from "lucide-react";
-
 const commandGroups = [
   {
     title: "Email",
@@ -21,8 +19,8 @@ const commandGroups = [
     commands: [
       { command: "cdn init", description: "Deploy CDN infrastructure" },
       { command: "cdn status", description: "Show CDN details" },
-      { command: "cdn upload <file>", description: "Upload file to CDN" },
-      { command: "cdn invalidate", description: "Invalidate CDN cache" },
+      { command: "cdn verify", description: "Check DNS & certificates" },
+      { command: "cdn sync", description: "Sync infra with config" },
       { command: "cdn destroy", description: "Remove infrastructure" },
     ],
   },
@@ -50,11 +48,14 @@ const commandGroups = [
 
 export function CliCommandsSection() {
   return (
-    <section className="border-y bg-[#0a0a0a] py-16 sm:py-20" id="commands">
+    <section
+      className="border-border border-y bg-card py-16 sm:py-20"
+      id="commands"
+    >
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Simple inline label */}
-        <p className="mb-8 text-center font-mono text-green-500/70 text-sm">
-          $ wraps --help
+        <p className="mb-8 text-center font-mono text-muted-foreground text-sm">
+          <span className="text-orange-500">$</span> wraps --help
         </p>
 
         {/* Commands grid */}
@@ -63,12 +64,11 @@ export function CliCommandsSection() {
             <div key={group.title}>
               {/* Group header */}
               <div className="mb-4 flex items-center gap-2">
-                <span className="font-mono font-semibold text-green-400">
+                <span className="font-mono font-semibold text-foreground">
                   {group.title}
                 </span>
                 {group.status === "beta" && (
-                  <span className="flex items-center gap-1 rounded bg-blue-500/20 px-1.5 py-0.5 font-mono text-blue-400 text-[10px]">
-                    <Sparkles className="size-2.5" />
+                  <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
                     beta
                   </span>
                 )}
@@ -78,13 +78,13 @@ export function CliCommandsSection() {
               <div className="space-y-1">
                 {group.commands.map((cmd) => (
                   <div
-                    className="group flex items-baseline gap-3 rounded px-2 py-1.5 transition-colors hover:bg-green-500/5"
+                    className="flex items-baseline gap-3 rounded px-2 py-1.5 transition-colors hover:bg-muted/60"
                     key={cmd.command}
                   >
-                    <code className="shrink-0 font-mono text-cyan-400 text-xs">
+                    <code className="shrink-0 font-mono text-orange-500 text-xs">
                       {cmd.command}
                     </code>
-                    <span className="font-mono text-zinc-600 text-[11px]">
+                    <span className="font-mono text-[11px] text-muted-foreground">
                       {cmd.description}
                     </span>
                   </div>

@@ -1,15 +1,12 @@
-"use client";
-
 import { Box, KeyRound, Layers, Lock, Package, Zap } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 const features = [
   {
     icon: Lock,
     title: "Your AWS, Your Data",
     description:
-      "SDKs call AWS APIs directly in your account. No data passes through our servers.",
+      "The SDK calls SES directly in your AWS account. Sends go straight from your app to your infrastructure.",
   },
   {
     icon: Package,
@@ -27,7 +24,7 @@ const features = [
     icon: Layers,
     title: "React Email",
     description:
-      "Build templates with React components. Renders correctly across every email client.",
+      "Build templates with React components. Built on React Email for consistent rendering across major clients — Gmail, Outlook, Apple Mail.",
   },
   {
     icon: Zap,
@@ -44,40 +41,33 @@ const features = [
 ];
 
 export function SdkFeaturesSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section
-      className="relative bg-stone-100/50 py-16 dark:bg-white/[0.06]"
-      ref={ref}
-    >
+    <section className="relative bg-muted/30 py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-10 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="mb-2 font-semibold text-xl">Built for production</h3>
-          <p className="text-muted-foreground text-sm">
+        <div className="mb-10">
+          <SectionKicker>Production</SectionKicker>
+          <h2 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
+            Built for production
+          </h2>
+          <p className="mt-2 max-w-xl text-muted-foreground">
             Ship emails and SMS with the same rigor as your application code
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
               <div
-                className="flex items-start gap-3 rounded-lg border bg-background/50 p-4"
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-4 transition-colors hover:border-orange-500/40"
                 key={feature.title}
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
-                  <Icon className="size-4 text-orange-500" />
-                </div>
+                <Icon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                />
                 <div>
-                  <h4 className="font-medium text-sm">{feature.title}</h4>
+                  <h3 className="font-medium text-sm">{feature.title}</h3>
                   <p className="text-muted-foreground text-xs leading-relaxed">
                     {feature.description}
                   </p>

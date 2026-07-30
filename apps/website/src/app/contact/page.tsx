@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ContactSection } from "@/app/landing/components/contact-section";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { ContactPageContent } from "./page-content";
 
 export const metadata: Metadata = {
   title: "Contact Us - Book a Call with Wraps",
@@ -29,7 +29,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-background">
       <LandingNavbar />
       <main>
-        <ContactSection />
+        <ContactPageContent />
       </main>
       <LandingFooter />
     </div>

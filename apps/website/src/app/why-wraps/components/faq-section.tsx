@@ -43,7 +43,9 @@ const faqItems = [
 export function FaqSection() {
   return (
     <section className="mb-16">
-      <h2 className="mb-6 font-semibold text-2xl">Common Questions</h2>
+      <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+        Common Questions
+      </h2>
       <Accordion className="space-y-2" collapsible type="single">
         {faqItems.map((item) => (
           <AccordionItem

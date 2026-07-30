@@ -1,5 +1,3 @@
-"use client";
-
 import { Badge } from "@wraps/ui/components/ui/badge";
 import {
   CheckCircle,
@@ -9,8 +7,7 @@ import {
   Palette,
   Sparkles,
 } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { assetUrl } from "@/lib/utils";
 
 const features = [
@@ -48,90 +45,66 @@ const features = [
 ];
 
 export function DashboardTemplatesSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section
-      className="relative overflow-x-clip py-24"
-      id="templates"
-      ref={ref}
-    >
+    <section className="relative overflow-x-clip py-24" id="templates">
       {/* Chapter indicator */}
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-          className="mb-16 flex items-center gap-4"
-          initial={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex size-10 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
-            1
-          </div>
-          <div>
-            <p className="font-medium text-orange-500 text-sm">Create</p>
-            <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
-              Build Templates
-            </h2>
-          </div>
-        </motion.div>
+        <div className="mb-14">
+          <SectionKicker>Create</SectionKicker>
+          <h2 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
+            Build Templates
+          </h2>
+        </div>
       </div>
 
       {/* Full-width screenshot - larger on desktop */}
-      <motion.div
-        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-        className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 xl:max-w-[90rem]"
-        initial={{ opacity: 0, y: 40 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        <div className="group relative">
-          {/* Background glow */}
-          <div className="-translate-x-1/2 absolute -top-8 left-1/2 mx-auto h-32 w-[80%] transform rounded-full bg-orange-500/10 blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 xl:max-w-[90rem]">
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+          {/* Light mode image */}
+          <img
+            alt="Template Editor - Light Mode"
+            className="block w-full object-cover dark:hidden"
+            decoding="async"
+            loading="lazy"
+            src={assetUrl("template-editor-full-light.webp")}
+          />
+          {/* Dark mode image */}
+          <img
+            alt="Template Editor - Dark Mode"
+            className="hidden w-full object-cover dark:block"
+            decoding="async"
+            loading="lazy"
+            src={assetUrl("template-editor-full-dark.webp")}
+          />
 
-          <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
-            {/* Light mode image */}
-            <img
-              alt="Template Editor - Light Mode"
-              className="block w-full object-cover dark:hidden"
-              decoding="async"
-              loading="lazy"
-              src={assetUrl("template-editor-full-light.webp")}
-            />
-            {/* Dark mode image */}
-            <img
-              alt="Template Editor - Dark Mode"
-              className="hidden w-full object-cover dark:block"
-              decoding="async"
-              loading="lazy"
-              src={assetUrl("template-editor-full-dark.webp")}
-            />
-
-            {/* Bottom fade effect */}
-            <div className="absolute bottom-0 left-0 h-32 w-full bg-gradient-to-t from-background via-background/80 to-transparent" />
-          </div>
+          {/* Bottom fade effect */}
+          <div className="absolute bottom-0 left-0 h-32 w-full bg-linear-to-t from-background via-background/80 to-transparent" />
         </div>
-      </motion.div>
+      </div>
 
       {/* Content below screenshot */}
       <div className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 lg:px-8">
-        <p className="mx-auto mb-10 max-w-2xl text-center text-lg text-muted-foreground">
+        <p className="mb-10 max-w-2xl text-lg text-muted-foreground">
           AI-first editor with raw code access. Built on React Email for
           pixel-perfect rendering across Gmail, Outlook, Apple Mail, and every
           other client.
         </p>
 
         {/* Feature Pills */}
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap gap-3">
           {features.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 transition-colors hover:border-orange-500/40"
               key={feature.title}
             >
-              <feature.icon className="size-4 text-orange-500" />
+              <feature.icon
+                aria-hidden="true"
+                className="size-4 text-muted-foreground"
+              />
               <span className="font-medium text-sm">{feature.title}</span>
               {feature.badge && (
                 <Badge
-                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                  className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]"
                   variant="secondary"
                 >
                   {feature.badge}
@@ -141,7 +114,7 @@ export function DashboardTemplatesSection() {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-muted-foreground text-sm">
+        <p className="mt-8 text-muted-foreground text-sm">
           Included in all plans — even Free
         </p>
       </div>

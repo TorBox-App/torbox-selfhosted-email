@@ -23,7 +23,7 @@ const softwareSchema = {
     "Free, open-source CLI to deploy email infrastructure to your AWS account. One command deploys everything.",
   url: "https://wraps.dev/cli",
   downloadUrl: "https://www.npmjs.com/package/@wraps.dev/cli",
-  softwareVersion: "1.0.0",
+  softwareVersion: "2.30.3",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -34,7 +34,7 @@ const softwareSchema = {
 };
 
 export const metadata: Metadata = {
-  title: "Wraps CLI - Deploy AWS SES Infrastructure in 30 Seconds",
+  title: "Wraps CLI - Deploy AWS SES Infrastructure in 2 Minutes",
   description:
     "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
   openGraph: {

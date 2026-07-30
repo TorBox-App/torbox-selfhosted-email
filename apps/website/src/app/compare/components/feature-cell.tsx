@@ -22,7 +22,7 @@ export function FeatureCell({ value }: { value: FeatureValue }) {
     return (
       <Minus
         aria-label="Partial"
-        className="size-4 text-yellow-600 dark:text-yellow-400"
+        className="size-4 text-orange-600 dark:text-orange-500"
       />
     );
   }

@@ -41,7 +41,7 @@ const tools = [
     name: "send_email",
     write: true,
     description:
-      "Send a transactional email through your SES account. Off by default; guarded by allowlists and caps when on.",
+      "Send a transactional email through your SES account. Refuses to send until you set WRAPS_WRITE_ENABLED, and caps recipients per call.",
     prompt: "“Email the weekly report to the team.”",
   },
   {

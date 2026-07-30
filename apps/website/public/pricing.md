@@ -100,6 +100,7 @@ These appear on your AWS bill, not your Wraps bill. You keep AWS volume discount
 | Feature | Free | Starter | Growth | Scale |
 | --- | --- | --- | --- | --- |
 | Tracked events/month | 5K | 50K | 250K | 1M |
+| Dashboard history | 7 days | 30 days | 90 days | 1 year |
 | Overage rate | Upgrade | Upgrade | $0.50/1K | $0.15/1K |
 | Contacts | Unlimited | Unlimited | Unlimited | Unlimited |
 | Workflows | 1 | Unlimited | Unlimited | Unlimited |

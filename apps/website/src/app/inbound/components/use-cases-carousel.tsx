@@ -72,25 +72,19 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
           return (
             <div
               className={cn(
-                "w-[85vw] max-w-md shrink-0 snap-center rounded-2xl border-2 bg-background transition-all duration-300 sm:w-[70vw] lg:w-[400px]",
-                useCase.borderColor,
-                activeIndex === index && "shadow-lg"
+                "w-[85vw] max-w-md shrink-0 snap-center overflow-hidden rounded-lg border border-border bg-card transition-colors duration-300 sm:w-[70vw] lg:w-[400px]",
+                activeIndex === index && "border-orange-500/40"
               )}
               data-card
               key={useCase.id}
             >
               {/* Card header */}
-              <div className={cn("border-b p-6", useCase.bgColor)}>
+              <div className="border-border border-b p-6">
                 <div className="mb-4 flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-lg",
-                      useCase.bgColor
-                    )}
-                  >
-                    <Icon className={cn("size-5", useCase.color)} />
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                    <Icon className="size-5 text-orange-500" />
                   </div>
-                  <h3 className={cn("font-bold text-lg", useCase.color)}>
+                  <h3 className="font-heading font-semibold text-lg tracking-tight">
                     {useCase.title}
                   </h3>
                 </div>
@@ -100,9 +94,9 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
               </div>
 
               {/* Code snippet */}
-              <div className="overflow-hidden bg-[#0a0a0a] p-4">
-                <pre className="overflow-x-auto text-xs">
-                  <code className="text-green-400">{useCase.code}</code>
+              <div className="overflow-hidden bg-muted/30 p-4">
+                <pre className="overflow-x-auto font-mono text-xs">
+                  <code className="text-foreground/80">{useCase.code}</code>
                 </pre>
               </div>
             </div>
@@ -118,7 +112,7 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
             className={cn(
               "size-2 rounded-full transition-all",
               activeIndex === index
-                ? "w-6 bg-cyan-500"
+                ? "w-6 bg-orange-500"
                 : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
             )}
             key={useCase.id}

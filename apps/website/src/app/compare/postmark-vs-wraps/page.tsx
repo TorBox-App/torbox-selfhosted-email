@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -23,6 +22,7 @@ import { CodeComparison } from "@/app/compare/components/code-comparison";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -94,7 +94,7 @@ const tldrRows = [
   {
     dimension: "Data retention",
     postmark: "45 days (365 max, paid add-on)",
-    wraps: "You decide (your DynamoDB)",
+    wraps: "Raw events in your DynamoDB, yours forever",
   },
   {
     dimension: "Vendor lock-in",
@@ -124,17 +124,17 @@ const pricingRows = [
     volume: "100K/mo",
     postmark: "$126-$134",
     postmarkDetail: "Pro/Platform + overage",
-    wraps: "$89",
-    wrapsDetail: "$79 Growth + $10 SES",
-    savings: "29-34%",
+    wraps: "$29",
+    wrapsDetail: "$19 Starter + $10 SES",
+    savings: "77-78%",
   },
   {
     volume: "500K/mo",
     postmark: "$606-$654",
     postmarkDetail: "Pro/Platform + overage",
-    wraps: "$249",
-    wrapsDetail: "$199 Scale + $50 SES",
-    savings: "59-62%",
+    wraps: "$129",
+    wrapsDetail: "$79 Growth + $50 SES",
+    savings: "79-80%",
   },
   {
     volume: "1M/mo",
@@ -236,7 +236,7 @@ const featureRows: {
       {
         name: "Data retention",
         postmark: "45 days (365 max, paid)",
-        wraps: "You decide (your DynamoDB)",
+        wraps: "Your DynamoDB forever; dashboard history 7d-1yr by plan",
       },
     ],
   },
@@ -295,7 +295,7 @@ const articleSchema = {
   description:
     "Detailed comparison of Postmark and Wraps for transactional and application email. Pricing at real volumes, feature differences, architecture tradeoffs, and migration guide.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -357,12 +357,12 @@ export default function PostmarkVsWrapsPage() {
           {/* Hero */}
           <section className="mb-16">
             <div className="mb-4 flex items-center gap-2">
-              <Badge variant="secondary">Comparison</Badge>
-              <span className="text-muted-foreground text-sm">
+              <SectionKicker className="mb-0">Comparison</SectionKicker>
+              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
                 Last updated: March 2026
               </span>
             </div>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Postmark vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
@@ -379,7 +379,9 @@ export default function PostmarkVsWrapsPage() {
 
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">At a Glance</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              At a Glance
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -412,7 +414,9 @@ export default function PostmarkVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <MessageSquareQuote className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Sound Familiar?</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Sound Familiar?
+              </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
@@ -463,7 +467,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* The Architectural Difference */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               The Architectural Difference
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -510,7 +514,9 @@ export default function PostmarkVsWrapsPage() {
                       Email events stored in{" "}
                       <span className="font-medium">your</span> DynamoDB
                     </li>
-                    <li>Unlimited retention &mdash; it&apos;s your database</li>
+                    <li>
+                      Raw events kept forever &mdash; it&apos;s your database
+                    </li>
                     <li>Export anytime &mdash; it&apos;s your AWS account</li>
                     <li>Cancel Wraps = SES infrastructure keeps running</li>
                     <li>You control your own sending reputation</li>
@@ -531,7 +537,7 @@ export default function PostmarkVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <DollarSign className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Pricing at Real Volumes
               </h2>
             </div>
@@ -576,7 +582,9 @@ export default function PostmarkVsWrapsPage() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <Badge variant="secondary">{row.savings} less</Badge>
+                          <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                            {row.savings} less
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -619,7 +627,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* Detailed Feature Comparison */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               Detailed Feature Comparison
             </h2>
             <div className="space-y-6">
@@ -665,7 +673,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* When to Choose Postmark */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Postmark
             </h2>
             <Card>
@@ -694,7 +702,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* When to Choose Wraps */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Wraps
             </h2>
             <Card className="border-primary/30">
@@ -708,7 +716,7 @@ export default function PostmarkVsWrapsPage() {
                     "You want to own your email infrastructure in your AWS account, not rent it from a vendor",
                     "You need a full communication platform: automations, broadcasts, segments, and contact management alongside transactional sends",
                     "You're cost-sensitive at scale \u2014 AWS SES pricing ($0.10/1K \u00e0 la carte) is 12-18x cheaper than Postmark's per-email rate",
-                    "You control your own data retention (your DynamoDB, your rules) -- no paid add-ons to keep your event history",
+                    "You want to own your event history -- raw events live in your DynamoDB forever, with no paid add-on to keep them (Wraps dashboard history runs 7 days to 1 year by plan)",
                     "You want SMS alongside email via AWS End User Messaging, from the same platform",
                     "You care about vendor lock-in: cancel Wraps and your SES infrastructure keeps running with no DNS changes or IP warmup required",
                     "You're in a regulated industry where data residency matters \u2014 your sending infrastructure and email events stay in your AWS account, which can be HIPAA-eligible",
@@ -726,7 +734,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* Switching from Postmark */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               Switching from Postmark
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -797,7 +805,7 @@ export default function PostmarkVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Own your email infrastructure
             </h2>
             <p className="mb-6 text-muted-foreground">

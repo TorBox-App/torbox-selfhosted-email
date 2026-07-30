@@ -294,7 +294,7 @@ export const WRAPS_COMPETITIVE = {
 // plan at 100,000 emails/month, verified July 2026 against live pricing pages:
 //   Wraps + SES : 100K × $0.0001 = $10 (AWS SES cost, no platform markup)
 //   Resend      : Pro tops out at $35/mo for 100K
-//   SendGrid    : Pro is $89.95/mo for 100K (Essentials caps at 40K)
+//   SendGrid    : Pro is $89.95/mo for 100K (Essentials caps at 50K for $19.95)
 //   Postmark    : Platform is ~$18 + $108 overage = ~$126/mo at 100K
 // Keep these truthful — re-verify if >6 months old.
 
@@ -351,6 +351,14 @@ export const HOMEPAGE_COMPARE: CompareRow[] = [
     wraps: true,
     resend: true,
     sendgrid: false,
+    postmark: false,
+  },
+  {
+    label: "Workflows-as-code",
+    wraps: true,
+    wrapsNote: "TypeScript, Git-versioned",
+    resend: "Visual builder",
+    sendgrid: "Visual builder",
     postmark: false,
   },
 ];
@@ -479,6 +487,13 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
     scale: "1M",
   },
   {
+    name: "Dashboard history",
+    free: "7 days",
+    starter: "30 days",
+    growth: "90 days",
+    scale: "1 year",
+  },
+  {
     name: "Overage rate",
     free: "Upgrade",
     starter: "Upgrade",
@@ -604,7 +619,7 @@ export const PRICING_COPY = {
     "Your logo on our website",
     "Locked-in pricing for life",
   ],
-  freeHeroHeadline: "Start Free. Deploy in 60 Seconds.",
+  freeHeroHeadline: "Start Free. Deploy in 2 Minutes.",
   freeHeroSubline:
     "No credit card. No time limit. Your AWS account, your data.",
   trackedEventsHeadline: "What are tracked events?",

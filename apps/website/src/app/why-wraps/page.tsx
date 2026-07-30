@@ -17,6 +17,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { CopyLinkButton } from "./components/copy-link-button";
 import { FaqSection } from "./components/faq-section";
 
@@ -64,15 +65,15 @@ const costComparison = [
   {
     volume: "100K/mo",
     saas: "$35-200",
-    wrapsPlatform: "$79",
-    trackedEvents: "250K/mo",
+    wrapsPlatform: "$19",
+    trackedEvents: "50K/mo",
     awsCost: "~$10",
   },
   {
     volume: "500K/mo",
     saas: "$350-720",
-    wrapsPlatform: "$199",
-    trackedEvents: "1M/mo",
+    wrapsPlatform: "$79",
+    trackedEvents: "250K/mo",
     awsCost: "~$50",
   },
 ];
@@ -80,7 +81,7 @@ const costComparison = [
 const securityPoints = [
   "Zero stored credentials — temporary access via OIDC and IAM roles, no API keys to rotate",
   "Infrastructure runs in your AWS account, not ours",
-  "Your data stays in your account (data residency)",
+  "Your sending infrastructure and raw event history live in your AWS account — dashboard features like broadcasts and hosted templates are processed and stored by the Wraps platform",
   "Open source — audit the code yourself",
   "Inherits your existing AWS compliance (SOC2, HIPAA, etc.)",
 ];
@@ -90,7 +91,7 @@ const lockInPoints = [
   "If you stop using Wraps, everything keeps running",
   "Standard AWS services underneath (SES, DynamoDB, Lambda)",
   "Export data anytime - it's in your DynamoDB",
-  "CLI and SDK are open source (AGPLv3 — does not affect your application code)",
+  "CLI is open source under AGPLv3; the SDKs are MIT — neither affects your application code",
 ];
 
 export default function WhyWrapsPage() {
@@ -102,7 +103,8 @@ export default function WhyWrapsPage() {
         <div className="mx-auto max-w-4xl">
           {/* Page Header */}
           <div className="mb-12">
-            <h1 className="mb-4 font-bold text-4xl tracking-tight">
+            <SectionKicker>Wraps · Evaluation guide</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight">
               Why Wraps
             </h1>
             <p className="max-w-2xl text-lg text-muted-foreground">
@@ -115,8 +117,10 @@ export default function WhyWrapsPage() {
           {/* Cost Comparison */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <Calculator className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Cost Comparison</h2>
+              <Calculator className="size-6 text-muted-foreground" />
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Cost Comparison
+              </h2>
             </div>
             <Card>
               <CardContent className="p-0">
@@ -169,7 +173,10 @@ export default function WhyWrapsPage() {
               Customer.io. Wraps Platform is a flat fee for tooling (dashboard,
               workflows, templates, analytics) — not based on email volume. You
               pay AWS directly for sending at $0.10/1K emails on à la carte (AWS
-              defaults new accounts to $0.16/1K).{" "}
+              defaults new accounts to $0.16/1K). Email engagement events
+              (delivered, opened, clicked, bounced) don&apos;t count against
+              your tier &mdash; only custom events you track do, so the tier
+              rows above assume modest custom-event usage.{" "}
               <a className="text-primary underline" href="/platform#pricing">
                 See what each tier includes
               </a>
@@ -179,15 +186,17 @@ export default function WhyWrapsPage() {
           {/* Security & Compliance */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <Lock className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Security & Compliance</h2>
+              <Lock className="size-6 text-muted-foreground" />
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Security & Compliance
+              </h2>
             </div>
             <Card>
               <CardContent className="pt-6">
                 <ul className="space-y-3">
                   {securityPoints.map((point) => (
                     <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
                       <span>{point}</span>
                     </li>
                   ))}
@@ -199,15 +208,17 @@ export default function WhyWrapsPage() {
           {/* No Vendor Lock-in */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <Server className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">No Vendor Lock-in</h2>
+              <Server className="size-6 text-muted-foreground" />
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                No Vendor Lock-in
+              </h2>
             </div>
             <Card>
               <CardContent className="pt-6">
                 <ul className="space-y-3">
                   {lockInPoints.map((point) => (
                     <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
                       <span>{point}</span>
                     </li>
                   ))}
@@ -219,8 +230,10 @@ export default function WhyWrapsPage() {
           {/* Developer Experience */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <Code className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Developer Experience</h2>
+              <Code className="size-6 text-muted-foreground" />
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Developer Experience
+              </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
@@ -277,7 +290,9 @@ export default function WhyWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">Ready to try it?</h2>
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
+              Ready to try it?
+            </h2>
             <p className="mb-6 text-muted-foreground">
               Deploy in 2 minutes. No credit card required.
             </p>

@@ -32,12 +32,12 @@ const tools = [
   },
   {
     name: "send_email",
-    description: "Send via your SES account, guarded",
+    description: "Send via your SES account, once write is on",
     write: true,
   },
   {
     name: "check_send_status",
-    description: "Poll a send awaiting operator approval",
+    description: "Poll a send awaiting approval (enforced mode)",
     write: false,
   },
 ];
@@ -70,10 +70,10 @@ export function McpHeroSection() {
             </pre>
 
             <p className="mb-6 max-w-md text-muted-foreground">
-              Six tools over the AWS SES stack in your account — send history,
-              delivery events, domain status, suppressions, and guarded sending.
-              Runs locally over stdio; your credentials never leave your
-              machine.
+              Six tools over the AWS SES stack in your account — seven in
+              enforced mode — covering send history, delivery events, domain
+              status, suppressions, and guarded sending. Runs locally over
+              stdio; your credentials never leave your machine.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -107,7 +107,7 @@ export function McpHeroSection() {
               <div className="flex items-center gap-2 border-border border-b px-4 py-2.5">
                 <span className="size-1.5 rounded-full bg-orange-500" />
                 <span className="font-mono text-muted-foreground text-xs">
-                  wraps · 6 tools
+                  wraps · 6 tools · 7 in enforced mode
                 </span>
               </div>
               <ul className="divide-y divide-border">

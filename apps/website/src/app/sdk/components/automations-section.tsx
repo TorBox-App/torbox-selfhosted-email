@@ -1,8 +1,5 @@
-"use client";
-
 import { ArrowRight } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -52,7 +49,7 @@ export default defineWorkflow({
   ],
 });`;
 
-const pushCode = `$ wraps automations push
+const pushCode = `$ wraps email workflows push
 
   Push Workflows
 
@@ -73,39 +70,18 @@ const codeData = [
 ];
 
 export function SdkAutomationsSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section
-      className="relative bg-stone-100/50 py-24 dark:bg-white/[0.06]"
-      ref={ref}
-    >
+    <section className="relative bg-muted/30 py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-          className="mb-16 flex items-center gap-4"
-          initial={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex size-10 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
-            2
-          </div>
-          <div>
-            <p className="font-medium text-orange-500 text-sm">Automate</p>
-            <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
-              Automations as Code
-            </h2>
-          </div>
-        </motion.div>
+        <div className="mb-14">
+          <SectionKicker>Automate</SectionKicker>
+          <h2 className="font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
+            Automations as Code
+          </h2>
+        </div>
 
         <div className="grid items-start gap-12 lg:grid-cols-2">
-          <motion.div
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            className="order-2 lg:order-1"
-            initial={{ opacity: 0, y: 30 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <div className="order-2 lg:order-1">
             <CodeBlock data={codeData} defaultValue="ts">
               <CodeBlockHeader>
                 <CodeBlockFiles>
@@ -149,21 +125,24 @@ export function SdkAutomationsSection() {
                 )}
               </CodeBlockBody>
             </CodeBlock>
-          </motion.div>
+          </div>
 
           <div className="order-1 space-y-6 lg:order-2">
             <p className="text-lg text-muted-foreground">
               Define workflows in TypeScript. Triggers, conditions, delays,
               branching &mdash; all type-checked. Deploy with{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
-                wraps automations push
+                wraps email workflows push
               </code>
               .
             </p>
 
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
+                <div
+                  aria-hidden="true"
+                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                />
                 <p className="text-sm">
                   <span className="font-medium">Event triggers</span>
                   <span className="text-muted-foreground">
@@ -174,7 +153,10 @@ export function SdkAutomationsSection() {
                 </p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
+                <div
+                  aria-hidden="true"
+                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                />
                 <p className="text-sm">
                   <span className="font-medium">Wait for events</span>
                   <span className="text-muted-foreground">
@@ -185,7 +167,10 @@ export function SdkAutomationsSection() {
                 </p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
+                <div
+                  aria-hidden="true"
+                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                />
                 <p className="text-sm">
                   <span className="font-medium">Conditional branching</span>
                   <span className="text-muted-foreground">
@@ -196,7 +181,10 @@ export function SdkAutomationsSection() {
                 </p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
+                <div
+                  aria-hidden="true"
+                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                />
                 <p className="text-sm">
                   <span className="font-medium">Multi-channel</span>
                   <span className="text-muted-foreground">

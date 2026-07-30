@@ -13,7 +13,7 @@ const tiles: Tile[] = [
   {
     index: "01",
     title: "One-command deploy",
-    meta: "SES, DynamoDB, Lambda in 38s",
+    meta: "SES, DynamoDB, Lambda in one command",
     video: "/landing/DeployFlow.mp4",
     span: "wide",
     videoClassName: "scale-[1.5]",

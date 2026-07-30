@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -16,6 +15,7 @@ import { CodeComparison } from "@/app/compare/components/code-comparison";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -77,7 +77,7 @@ const tldrComparison = [
   {
     dimension: "Data retention",
     resend: "30 days (non-Enterprise)",
-    wraps: "You decide (your DynamoDB)",
+    wraps: "Raw events in your DynamoDB, yours forever",
   },
   {
     dimension: "If you cancel",
@@ -121,21 +121,21 @@ const pricingComparison = [
     volume: "100K/mo",
     resendTier: "Pro 100K / Scale",
     resendCost: "$35-90",
-    wrapsTier: "Growth",
-    wrapsPlatform: "$79",
+    wrapsTier: "Starter",
+    wrapsPlatform: "$19",
     awsSes: "$10",
-    wrapsTotal: "$89",
-    savings: null,
+    wrapsTotal: "$29",
+    savings: "17-68%",
   },
   {
     volume: "500K/mo",
     resendTier: "Scale 500K tier",
     resendCost: "$350",
-    wrapsTier: "Scale",
-    wrapsPlatform: "$199",
+    wrapsTier: "Growth",
+    wrapsPlatform: "$79",
     awsSes: "$50",
-    wrapsTotal: "$249",
-    savings: "29%",
+    wrapsTotal: "$129",
+    savings: "63%",
   },
 ];
 
@@ -161,7 +161,8 @@ const featureComparison = [
       {
         name: "Data retention",
         resend: "30 days (non-Enterprise)",
-        wraps: "You decide (your DynamoDB)",
+        wraps:
+          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
       },
       {
         name: "Data export",
@@ -228,7 +229,7 @@ const featureComparison = [
       {
         name: "Time to first email",
         resend: "~5 minutes",
-        wraps: "~15 minutes",
+        wraps: "~2 minutes",
       },
       {
         name: "Requires AWS account",
@@ -277,7 +278,7 @@ const articleSchema = {
   description:
     "Resend sends from their AWS. Wraps deploys to yours. Compare pricing, data retention, infrastructure ownership, and developer experience side by side.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -300,8 +301,8 @@ const articleSchema = {
 
 const chooseWrapsReasons = [
   "You already have an AWS account (or your company does)",
-  "You need data retention beyond 7 days -- for debugging, compliance, or analytics",
-  "You're sending 100K+ emails/month and want 45%+ cost savings",
+  "You want to own your raw event history -- it lands in your DynamoDB and stays there, instead of being purged after 30 days",
+  "You're sending 500K+ emails/month and want 60%+ cost savings",
   "You need data residency in a specific region for compliance (GDPR, HIPAA)",
   "You don't want a third party able to suspend your transactional email at the worst possible moment",
   "You want infrastructure that keeps running even if the vendor disappears",
@@ -345,10 +346,8 @@ export default function ResendVsWrapsPage() {
 
           {/* Hero */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Resend vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
@@ -369,7 +368,9 @@ export default function ResendVsWrapsPage() {
 
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">TL;DR</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              TL;DR
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -400,7 +401,9 @@ export default function ResendVsWrapsPage() {
 
           {/* Sound Familiar? */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">Sound familiar?</h2>
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
+              Sound familiar?
+            </h2>
             <p className="mb-6 text-muted-foreground">
               Real quotes from Resend users on Trustpilot, G2, Hacker News, and
               developer blogs.
@@ -435,20 +438,6 @@ export default function ResendVsWrapsPage() {
               <Card>
                 <CardContent>
                   <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;The biggest drawback is data retention on lower-tier
-                    plans, with just 1 day on Free and 3 days on Pro. Historical
-                    data disappears quickly, which can make diagnosing
-                    deliverability issues more challenging.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Aggregated G2 reviews
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
                     &ldquo;They could just be wrapping a 5-line API call to
                     Amazon SES and charge 4x for it. The disappointing thing
                     about all of this is that they&apos;re not being transparent
@@ -462,14 +451,15 @@ export default function ResendVsWrapsPage() {
             </div>
             <p className="mt-4 text-muted-foreground text-sm">
               With Wraps, your infrastructure runs in your AWS account. No third
-              party can suspend your sending, and your logs live in your
-              DynamoDB with configurable retention.
+              party can suspend your sending, and your raw events live in your
+              own DynamoDB &mdash; yours forever, whether or not you keep paying
+              Wraps.
             </p>
           </section>
 
           {/* The Architectural Difference */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               The architectural difference
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -558,7 +548,7 @@ export default function ResendVsWrapsPage() {
 
           {/* Pricing at Real Volumes */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               Pricing at real volumes
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -597,9 +587,9 @@ export default function ResendVsWrapsPage() {
                         </td>
                         <td className="hidden p-4 sm:table-cell">
                           {row.savings ? (
-                            <Badge variant="secondary">
+                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
                               {row.savings} less
-                            </Badge>
+                            </span>
                           ) : null}
                         </td>
                       </tr>
@@ -622,16 +612,20 @@ export default function ResendVsWrapsPage() {
                 for 5K contacts).
               </p>
               <p>
-                At 50K/mo, pricing is comparable -- but with Wraps the events
-                live in your own DynamoDB with retention you control, vs
-                Resend&apos;s 30-day cap.
+                At 50K/mo, pricing is comparable -- but with Wraps the raw
+                events land in your own DynamoDB and stay there, vs
+                Resend&apos;s 30-day cap. (Wraps dashboard history is 7 days to
+                1 year depending on plan; the underlying events are always
+                yours.)
               </p>
             </div>
           </section>
 
           {/* Detailed Feature Comparison */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">Feature comparison</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              Feature comparison
+            </h2>
             {featureComparison.map((category) => (
               <Card
                 className="mb-4 overflow-hidden py-0"
@@ -673,7 +667,7 @@ export default function ResendVsWrapsPage() {
 
           {/* When to Choose Resend */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               When to choose Resend
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -695,7 +689,7 @@ export default function ResendVsWrapsPage() {
 
           {/* When to Choose Wraps */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               When to choose Wraps
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -718,7 +712,7 @@ export default function ResendVsWrapsPage() {
 
           {/* Switching from Resend */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               Switching from Resend
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -756,7 +750,7 @@ export default function ResendVsWrapsPage() {
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     wraps email setup
                   </code>{" "}
-                  (~5 minutes)
+                  (~2 minutes)
                 </li>
                 <li>
                   Swap{" "}
@@ -785,7 +779,7 @@ export default function ResendVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Deploy to your AWS in 2 minutes
             </h2>
             <p className="mb-6 text-muted-foreground">

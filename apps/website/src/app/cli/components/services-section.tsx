@@ -1,22 +1,26 @@
 "use client";
 
-import {
-  HardDrive,
-  Mail,
-  MessageSquare,
-  Sparkles,
-  Terminal,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { HardDrive, Mail, MessageSquare, Terminal } from "lucide-react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 
-const services = [
+type Service = {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  description: string;
+  command: string;
+  features: string[];
+  consoleFeature?: string;
+  status: string;
+};
+
+const services: Service[] = [
   {
     id: "email",
     name: "Email",
     icon: Mail,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/30",
     description: "Production-ready transactional email via AWS SES",
     command: "wraps email init",
     features: [
@@ -26,8 +30,8 @@ const services = [
       "DynamoDB for email history",
       "Lambda for event processing",
       "Bounce & complaint handling",
-      "Inbound email receiving",
-      "Reply & forward with threading",
+      "Inbound email receiving (wraps email inbound init)",
+      "Reply with threading (wraps email reply init)",
     ],
     status: "available",
   },
@@ -35,28 +39,22 @@ const services = [
     id: "cdn",
     name: "CDN",
     icon: HardDrive,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
     description: "S3 + CloudFront CDN for global asset delivery",
     command: "wraps cdn init",
     features: [
       "S3 bucket with CORS configured",
       "CloudFront CDN distribution",
       "Custom domain & SSL certificate",
-      "Browser-based image optimization",
       "Origin Access Control",
-      "Pay AWS directly (~$5-7/mo)",
+      "Pay AWS directly (~$2/mo at typical starter usage)",
     ],
+    consoleFeature: "Browser-based image optimization",
     status: "available",
   },
   {
     id: "sms",
     name: "SMS",
     icon: MessageSquare,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/30",
     description: "Toll-free SMS via AWS End User Messaging",
     command: "wraps sms init",
     features: [
@@ -65,7 +63,7 @@ const services = [
       "10DLC registration support",
       "SMS event tracking",
       "Opt-out handling (STOP/START)",
-      "Delivery receipts via CloudWatch",
+      "Delivery receipts via SNS event pipeline",
     ],
     status: "beta",
   },
@@ -75,11 +73,14 @@ export function CliServicesSection() {
   return (
     <section className="py-16 sm:py-24" id="services">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Inline header - just text, no badge/box */}
-        <p className="mb-12 text-center text-lg text-muted-foreground">
-          One command deploys production-ready AWS infrastructure.{" "}
-          <span className="text-foreground">You own everything.</span>
-        </p>
+        {/* Section header */}
+        <div className="mb-12 flex flex-col items-center text-center">
+          <SectionKicker>Services</SectionKicker>
+          <p className="text-lg text-muted-foreground">
+            One command deploys production-ready AWS infrastructure.{" "}
+            <span className="text-foreground">You own everything.</span>
+          </p>
+        </div>
 
         {/* Service cards */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -88,41 +89,34 @@ export function CliServicesSection() {
 
             return (
               <div
-                className={`relative overflow-hidden rounded-2xl border-2 bg-background ${service.borderColor}`}
+                className="relative overflow-hidden rounded-xl border border-border bg-card"
                 key={service.id}
               >
-                {/* Status Badge */}
-                {service.status === "beta" && (
-                  <div className="absolute top-4 right-4">
-                    <span className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-1 font-medium text-blue-600 text-xs dark:text-blue-400">
-                      <Sparkles className="size-3" />
-                      Beta
-                    </span>
-                  </div>
-                )}
-
                 {/* Header */}
-                <div className={`border-b ${service.bgColor} px-6 py-6`}>
+                <div className="border-border border-b px-6 py-6">
                   <div className="mb-3 flex items-center gap-3">
-                    <div
-                      className={`flex size-10 items-center justify-center rounded-lg ${service.bgColor}`}
-                    >
-                      <Icon className={`size-5 ${service.color}`} />
+                    <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-background">
+                      <Icon className="size-5 text-foreground" />
                     </div>
-                    <h3 className={`font-bold text-xl ${service.color}`}>
+                    <h3 className="font-heading font-semibold text-foreground text-xl tracking-tight">
                       {service.name}
                     </h3>
+                    {service.status === "beta" && (
+                      <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+                        Beta
+                      </span>
+                    )}
                   </div>
                   <p className="mb-4 text-muted-foreground text-sm">
                     {service.description}
                   </p>
-                  <div className="flex items-center justify-between overflow-hidden rounded-lg border border-green-500/20 bg-[#0a0a0a] px-3 py-2">
-                    <code className="flex items-center gap-2 font-mono text-green-400 text-sm">
-                      <Terminal className="size-3.5 text-green-600" />
+                  <div className="flex items-center justify-between overflow-hidden rounded-lg border border-border bg-background px-3 py-2">
+                    <code className="flex items-center gap-2 font-mono text-foreground text-sm">
+                      <Terminal className="size-3.5 text-muted-foreground" />
                       {service.command}
                     </code>
                     <CopyButton
-                      className="text-green-600 hover:text-green-400"
+                      className="text-muted-foreground hover:text-foreground"
                       content={service.command}
                       size="sm"
                       variant="ghost"
@@ -132,7 +126,7 @@ export function CliServicesSection() {
 
                 {/* Features */}
                 <div className="p-6">
-                  <p className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  <p className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]">
                     What gets deployed
                   </p>
                   <ul className="space-y-2">
@@ -141,13 +135,25 @@ export function CliServicesSection() {
                         className="flex items-start gap-2 text-sm"
                         key={feature}
                       >
-                        <span
-                          className={`mt-1.5 size-1.5 shrink-0 rounded-full ${service.color.replace("text-", "bg-")}`}
-                        />
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
+
+                  {service.consoleFeature && (
+                    <>
+                      <p className="mt-6 mb-3 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]">
+                        In the local console
+                      </p>
+                      <ul className="space-y-2">
+                        <li className="flex items-start gap-2 text-sm">
+                          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                          <span>{service.consoleFeature}</span>
+                        </li>
+                      </ul>
+                    </>
+                  )}
                 </div>
               </div>
             );

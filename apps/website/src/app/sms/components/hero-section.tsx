@@ -1,104 +1,94 @@
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Button } from "@wraps/ui/components/ui/button";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
 export function SmsHeroSection() {
   return (
-    <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-32">
+    <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-28">
       {/* Background Pattern */}
       <div className="absolute inset-0">
         <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
       </div>
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center">
-          {/* Main Headline */}
-          <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
-            AWS SMS, simplified.
-          </h1>
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
+          {/* Left column — copy */}
+          <div>
+            {/* Mono tag, no marketing badge */}
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+              <span className="size-1.5 rounded-full bg-orange-500" />
+              <span>wraps · sms</span>
+            </div>
 
-          {/* Subheading */}
-          <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Deploy self-hosted SMS infrastructure to your AWS account. Toll-free
-            first, TypeScript SDK, zero vendor lock-in.
-          </p>
+            {/* Main Headline */}
+            <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
+              AWS SMS, <span className="text-orange-500">simplified.</span>
+            </h1>
 
-          {/* CTA Buttons */}
-          <div className="mx-auto mb-12 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button
-              asChild
-              className="bg-orange-500 hover:bg-orange-600"
-              size="lg"
-            >
-              <Link href="/docs/quickstart/sms">
-                Get Started
-                <ArrowRight className="ml-1.5 size-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/docs/cli-reference/sms">
-                <BookOpen className="mr-1.5 size-4" />
-                CLI Reference
-              </Link>
-            </Button>
+            {/* Subheading */}
+            <p className="mb-8 max-w-md text-lg text-muted-foreground">
+              Deploy self-hosted SMS infrastructure to your AWS account.
+              Toll-free first, TypeScript SDK, zero vendor lock-in.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                asChild
+                className="bg-orange-500 text-white hover:bg-orange-600"
+                size="lg"
+              >
+                <Link href="/docs/quickstart/sms">Get Started</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/docs/cli-reference/sms">
+                  <BookOpen aria-hidden="true" className="me-2 size-4" />
+                  CLI Reference
+                </Link>
+              </Button>
+            </div>
           </div>
 
-          {/* Code Preview */}
-          <div className="mx-auto max-w-xl">
-            <div className="overflow-hidden rounded-xl border-2 shadow-lg">
+          {/* Right column — code preview */}
+          <div className="w-full lg:justify-self-end">
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
               {/* Code header */}
-              <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
-                <div className="flex gap-1.5">
-                  <div className="size-3 rounded-full bg-red-500" />
-                  <div className="size-3 rounded-full bg-yellow-500" />
-                  <div className="size-3 rounded-full bg-green-500" />
-                </div>
-                <span className="ml-2 font-medium text-muted-foreground text-xs">
+              <div className="flex items-center gap-2 border-border border-b px-4 py-3">
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 rounded-full bg-orange-500"
+                />
+                <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
                   index.ts
                 </span>
               </div>
               {/* Code content */}
-              <div className="bg-[#121314] p-6 text-left">
-                <pre className="overflow-x-auto font-mono text-sm">
-                  <code>
-                    <span className="text-purple-400">import</span>
-                    <span className="text-gray-300"> {"{ "}</span>
-                    <span className="text-blue-400">Wraps</span>
-                    <span className="text-gray-300">{" }"} </span>
-                    <span className="text-purple-400">from</span>
-                    <span className="text-green-400"> '@wraps.dev/sms'</span>
-                    <span className="text-gray-300">;</span>
-                    {"\n\n"}
-                    <span className="text-purple-400">const</span>
-                    <span className="text-blue-300"> wraps</span>
-                    <span className="text-gray-300"> = </span>
-                    <span className="text-purple-400">new</span>
-                    <span className="text-yellow-300"> Wraps</span>
-                    <span className="text-gray-300">();</span>
-                    {"\n\n"}
-                    <span className="text-purple-400">await</span>
-                    <span className="text-blue-300"> wraps</span>
-                    <span className="text-gray-300">.sms.</span>
-                    <span className="text-yellow-300">send</span>
-                    <span className="text-gray-300">({"{"}</span>
-                    {"\n"}
-                    <span className="text-blue-300"> to</span>
-                    <span className="text-gray-300">: </span>
-                    <span className="text-green-400">'+14155551234'</span>
-                    <span className="text-gray-300">,</span>
-                    {"\n"}
-                    <span className="text-blue-300"> message</span>
-                    <span className="text-gray-300">: </span>
-                    <span className="text-green-400">
-                      'Your code is 123456'
-                    </span>
-                    <span className="text-gray-300">,</span>
-                    {"\n"}
-                    <span className="text-gray-300">{"}"});</span>
-                  </code>
-                </pre>
-              </div>
+              <pre className="overflow-x-auto p-5 text-left font-mono text-[13px] text-foreground/90 leading-relaxed">
+                <code>
+                  <span className="text-muted-foreground">import</span>
+                  {" { "}
+                  <span className="text-foreground">WrapsSMS</span>
+                  {" } "}
+                  <span className="text-muted-foreground">from</span>{" "}
+                  <span className="text-orange-500">'@wraps.dev/sms'</span>
+                  {";\n\n"}
+                  <span className="text-muted-foreground">const</span> sms ={" "}
+                  <span className="text-muted-foreground">new</span>{" "}
+                  <span className="text-foreground">WrapsSMS</span>();
+                  {"\n\n"}
+                  <span className="text-muted-foreground">await</span> sms.
+                  <span className="text-orange-500">send</span>({"{"}
+                  {"\n  "}
+                  <span className="text-foreground/60">to</span>:{" "}
+                  <span className="text-foreground">'+14155551234'</span>,
+                  {"\n  "}
+                  <span className="text-foreground/60">message</span>:{" "}
+                  <span className="text-foreground">'Your code is 123456'</span>
+                  ,{"\n"}
+                  {"});"}
+                </code>
+              </pre>
             </div>
           </div>
         </div>

@@ -67,7 +67,7 @@ export function BillingToggle({
       </div>
 
       {/* Savings note */}
-      <p className="text-center text-green-600 text-xs font-medium dark:text-green-400">
+      <p className="text-center font-medium text-muted-foreground text-xs">
         Save with annual billing
       </p>
     </div>

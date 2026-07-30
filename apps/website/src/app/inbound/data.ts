@@ -5,54 +5,36 @@ export const pipelineSteps = [
     label: "Sender",
     iconName: "Mail" as const,
     description: "Email arrives at your domain",
-    color: "text-gray-500",
-    bgColor: "bg-gray-500/10",
-    borderColor: "border-gray-500/30",
   },
   {
     id: "ses",
     label: "SES",
     iconName: "Cloud" as const,
     description: "AWS receives and validates",
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
   },
   {
     id: "s3",
     label: "S3",
     iconName: "HardDrive" as const,
     description: "Raw email stored securely",
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/30",
   },
   {
     id: "lambda",
     label: "Lambda",
     iconName: "Code2" as const,
     description: "Parse headers & attachments",
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-    borderColor: "border-yellow-500/30",
   },
   {
     id: "eventbridge",
     label: "EventBridge",
     iconName: "Zap" as const,
     description: "Trigger webhooks & rules",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/30",
   },
   {
     id: "app",
     label: "Your App",
     iconName: "Database" as const,
     description: "Process and respond",
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10",
-    borderColor: "border-cyan-500/30",
   },
 ];
 
@@ -69,9 +51,6 @@ const ticket = await linear.createIssue({
   description: email.text,
   teamId: routeToTeam(email.from),
 });`,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/30",
   },
   {
     id: "orders",
@@ -85,9 +64,6 @@ await db.orders.update({
   where: { email: email.from },
   data: { trackingNumber: tracking },
 });`,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
   },
   {
     id: "tickets",
@@ -102,9 +78,6 @@ await octokit.issues.create({
   title: email.subject,
   body: email.html,
 });`,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/30",
   },
   {
     id: "autorespond",
@@ -118,9 +91,6 @@ await email.inbox.reply(emailId, {
   html: \`Thanks for reaching out!
 We'll respond within 24h.\`,
 });`,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/30",
   },
   {
     id: "leads",
@@ -134,9 +104,6 @@ await hubspot.contacts.create({
   firstname: email.from.name,
   source: 'inbound_email',
 });`,
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/10",
-    borderColor: "border-pink-500/30",
   },
   {
     id: "documents",
@@ -144,15 +111,12 @@ await hubspot.contacts.create({
     title: "Document Processing",
     description:
       "Extract attachments, process PDFs, and trigger document workflows with S3 events.",
-    code: `// Process attachments
-for (const att of email.attachments) {
-  const file = await email.inbox
-    .getAttachment(emailId, att.id);
-  await processDocument(file);
+    code: `// Presigned URL per attachment
+for (const att of inbound.attachments) {
+  const url = await email.inbox
+    .getAttachment(inbound.emailId, att.id);
+  await processDocument(url);
 }`,
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10",
-    borderColor: "border-cyan-500/30",
   },
 ];
 
@@ -163,24 +127,26 @@ export const codeExamples = {
     code: `import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail({
-  inboundBucket: 'your-bucket-name',
+  inboxBucketName: 'your-inbound-bucket',
 });
 
-// List recent inbound emails
-const { emails, cursor } = await email.inbox.list({
-  limit: 20,
-  from: 'customer@example.com', // optional filter
+// List returns summaries: emailId, key, size, lastModified
+const { emails, nextToken } = await email.inbox.list({
+  maxResults: 20,
 });
 
-for (const msg of emails) {
+for (const summary of emails) {
+  const msg = await email.inbox.get(summary.emailId);
   console.log(\`\${msg.from.address}: \${msg.subject}\`);
-}`,
+}
+
+// Next page: list({ continuationToken: nextToken })`,
   },
   get: {
     label: "Get",
     filename: "get-email.ts",
     code: `// Get full email details
-const inbound = await email.inbox.get('inb_a1b2c3d4');
+const inbound = await email.inbox.get('inb_a1b2c3d4e5f6');
 
 console.log('From:', inbound.from.name, inbound.from.address);
 console.log('Subject:', inbound.subject);
@@ -201,7 +167,7 @@ if (inbound.spamVerdict === 'PASS') {
     label: "Reply",
     filename: "reply-email.ts",
     code: `// Reply with proper threading headers
-await email.inbox.reply('inb_a1b2c3d4', {
+await email.inbox.reply('inb_a1b2c3d4e5f6', {
   from: 'support@yourapp.com',
   html: \`
     <p>Thanks for reaching out!</p>
@@ -216,14 +182,22 @@ await email.inbox.reply('inb_a1b2c3d4', {
   forward: {
     label: "Forward",
     filename: "forward-email.ts",
-    code: `// Forward to your team
-await email.inbox.forward('inb_a1b2c3d4', {
+    code: `// Forward to your team. Passthrough is the default:
+// the raw MIME is sent on, so the original body and
+// attachments are preserved.
+await email.inbox.forward('inb_a1b2c3d4e5f6', {
   to: 'team@yourcompany.com',
   from: 'forwarding@yourapp.com',
-  note: 'Please review this customer inquiry.',
+  addPrefix: 'Fwd:',
 });
 
-// Original message and attachments are preserved`,
+// Or wrap the original in a new message with your note
+await email.inbox.forward('inb_a1b2c3d4e5f6', {
+  to: 'team@yourcompany.com',
+  from: 'forwarding@yourapp.com',
+  passthrough: false,
+  text: 'Please review this customer inquiry.',
+});`,
   },
   webhook: {
     label: "Webhook",
@@ -256,36 +230,24 @@ export const architectureNodesData = [
     label: "SES Receipt",
     sublabel: "MX Records",
     iconName: "Cloud" as const,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
   },
   {
     id: "s3",
     label: "S3 Bucket",
     sublabel: "Raw Storage",
     iconName: "HardDrive" as const,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/30",
   },
   {
     id: "lambda",
     label: "Lambda",
     sublabel: "Parser",
     iconName: "Code2" as const,
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-    borderColor: "border-yellow-500/30",
   },
   {
     id: "eventbridge",
     label: "EventBridge",
     sublabel: "Webhooks",
     iconName: "Zap" as const,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/30",
   },
 ];
 

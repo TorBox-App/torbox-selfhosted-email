@@ -553,7 +553,7 @@ export default function ToolsPageContent() {
               />
             </div>
             <Button
-              className="h-12 w-full px-6 sm:w-auto"
+              className="h-12 w-full bg-orange-500 px-6 text-white hover:bg-orange-600 sm:w-auto"
               disabled={isLoading || !domain.trim()}
               onClick={checkDomain}
             >
@@ -829,7 +829,7 @@ export default function ToolsPageContent() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                          <Sparkles className="h-3.5 w-3.5 text-orange-500" />
                           Bonus Points
                         </span>
                         <span className="text-muted-foreground">
@@ -846,7 +846,7 @@ export default function ToolsPageContent() {
                         role="progressbar"
                       >
                         <div
-                          className="h-full bg-purple-500 transition-all"
+                          className="h-full bg-orange-500 transition-all"
                           style={{
                             width: `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
                           }}
@@ -959,10 +959,10 @@ export default function ToolsPageContent() {
 
           {/* Bonuses */}
           {result.bonuses && result.bonuses.length > 0 && (
-            <Card className="border-purple-500/20 bg-purple-500/5">
+            <Card className="border-border bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  <Sparkles className="h-5 w-5 text-orange-500" />
                   Bonus Points Earned ({result.bonuses.length})
                 </CardTitle>
               </CardHeader>
@@ -970,7 +970,7 @@ export default function ToolsPageContent() {
                 <div className="space-y-2">
                   {result.bonuses.map((bonus, i) => (
                     <div
-                      className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background p-3"
+                      className="flex items-center justify-between rounded-lg border border-border bg-background p-3"
                       key={`bonus-${i}`}
                     >
                       <div>
@@ -981,7 +981,7 @@ export default function ToolsPageContent() {
                         </span>
                       </div>
                       <Badge
-                        className="border-purple-500/50 text-purple-600"
+                        className="border-orange-500/50 text-orange-600 dark:text-orange-400"
                         variant="outline"
                       >
                         +{bonus.points} pts
@@ -1394,11 +1394,11 @@ export default function ToolsPageContent() {
           )}
 
           {/* CTA */}
-          <Card className="border-primary/20 bg-primary/5">
+          <Card className="border-border bg-card">
             <CardContent className="pt-6">
-              <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
                 <div className="flex-1">
-                  <h3 className="mb-2 font-bold text-xl">
+                  <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">
                     Need to set up email infrastructure?
                   </h3>
                   <p className="text-muted-foreground">
@@ -1406,11 +1406,12 @@ export default function ToolsPageContent() {
                     AWS account in under 2 minutes.
                   </p>
                 </div>
-                <Button asChild size="lg">
-                  <Link href="/docs/quickstart">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+                <Button
+                  asChild
+                  className="bg-orange-500 text-white hover:bg-orange-600"
+                  size="lg"
+                >
+                  <Link href="/docs/quickstart">Get Started</Link>
                 </Button>
               </div>
             </CardContent>
@@ -1420,11 +1421,14 @@ export default function ToolsPageContent() {
 
       {/* Empty State */}
       {!(result || error || isLoading) && (
-        <Card className="border-dashed">
+        <Card className="border-border bg-card">
           <CardContent className="py-12">
             <div className="flex flex-col items-center text-center">
-              <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
-              <h3 className="mb-2 font-semibold text-lg">
+              <Shield
+                aria-hidden="true"
+                className="mb-4 h-8 w-8 text-muted-foreground"
+              />
+              <h3 className="mb-2 font-heading font-semibold text-lg tracking-tight">
                 Check Your Email Setup
               </h3>
               <p className="mb-6 max-w-md text-muted-foreground">

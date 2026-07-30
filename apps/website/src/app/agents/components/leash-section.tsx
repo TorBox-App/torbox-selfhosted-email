@@ -11,7 +11,7 @@ const checks = [
     outcome: "blocked",
     tone: "text-red-700 dark:text-red-400",
     description:
-      "A killed agent stops sending immediately, and killing is permanent. No IAM console, no key rotation, one click.",
+      "A killed agent stops sending as soon as the kill syncs to your enforcer, and killing is permanent. No IAM console, no key rotation, one click.",
   },
   {
     icon: Fingerprint,

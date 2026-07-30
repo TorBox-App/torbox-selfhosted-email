@@ -30,25 +30,27 @@ const iconMap: Record<IconName, typeof Mail> = {
 function AnimatedArrow({
   isActive,
   delay,
+  showPulse,
 }: {
   isActive: boolean;
   delay: number;
+  showPulse: boolean;
 }) {
   return (
     <div className="relative flex items-center justify-center px-1 sm:px-2">
       <ArrowRight
         className={cn(
-          "size-4 text-muted-foreground/50 transition-all duration-300 sm:size-5",
-          isActive && "text-cyan-500"
+          "size-4 text-muted-foreground/40 transition-all duration-300 sm:size-5",
+          isActive && "text-orange-500"
         )}
         style={{ transitionDelay: `${delay}ms` }}
       />
-      {isActive && (
+      {isActive && showPulse && (
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{ animationDelay: `${delay}ms` }}
         >
-          <div className="size-1.5 animate-ping rounded-full bg-cyan-500" />
+          <div className="size-1.5 animate-ping rounded-full bg-orange-500" />
         </div>
       )}
     </div>
@@ -60,6 +62,13 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
+
+  useEffect(() => {
+    setPrefersReduced(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -83,6 +92,12 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
       return;
     }
 
+    // Reduced motion: light the whole pipeline at once, no looping animation.
+    if (prefersReduced) {
+      setActiveStep(steps.length - 1);
+      return;
+    }
+
     const animateSteps = () => {
       let step = 0;
       const interval = setInterval(() => {
@@ -102,7 +117,7 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
 
     const interval = animateSteps();
     return () => clearInterval(interval);
-  }, [isVisible, steps.length]);
+  }, [isVisible, prefersReduced, steps.length]);
 
   const selectedInfo = selectedStep
     ? steps.find((s) => s.id === selectedStep)
@@ -116,7 +131,7 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
           {steps.map((step, index) => {
             const Icon = iconMap[step.iconName];
             const isActive = activeStep >= index;
-            const isCurrent = activeStep === index;
+            const isCurrent = activeStep === index && !prefersReduced;
 
             return (
               <div className="flex items-center" key={step.id}>
@@ -132,36 +147,30 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
                 >
                   <div
                     className={cn(
-                      "relative flex size-12 items-center justify-center rounded-xl border-2 transition-all duration-300 sm:size-14",
-                      step.bgColor,
-                      step.borderColor,
-                      isActive && "shadow-lg",
-                      isCurrent && "scale-110 ring-2 ring-cyan-500/50",
+                      "relative flex size-12 items-center justify-center rounded-lg border border-border bg-card transition-all duration-300 sm:size-14",
+                      isActive && "border-orange-500/40 bg-orange-500/10",
+                      isCurrent && "scale-110 ring-2 ring-orange-500/40",
                       selectedStep === step.id &&
-                        "ring-2 ring-cyan-500 ring-offset-2 ring-offset-background"
+                        "ring-2 ring-orange-500 ring-offset-2 ring-offset-background"
                     )}
                   >
                     <Icon
                       className={cn(
                         "size-5 transition-all duration-300 sm:size-6",
-                        step.color,
-                        !isActive && "opacity-40"
+                        isActive
+                          ? "text-orange-500"
+                          : "text-muted-foreground/50"
                       )}
                     />
 
                     {isCurrent && (
-                      <div
-                        className={cn(
-                          "absolute inset-0 animate-ping rounded-xl opacity-30",
-                          step.bgColor
-                        )}
-                      />
+                      <div className="absolute inset-0 animate-ping rounded-lg bg-orange-500/20 opacity-40" />
                     )}
                   </div>
 
                   <span
                     className={cn(
-                      "mt-2 font-medium text-xs transition-all duration-300 sm:text-sm",
+                      "mt-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 sm:text-xs",
                       isActive ? "text-foreground" : "text-muted-foreground"
                     )}
                   >
@@ -173,6 +182,7 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
                   <AnimatedArrow
                     delay={index * 100}
                     isActive={activeStep > index}
+                    showPulse={!prefersReduced}
                   />
                 )}
               </div>
@@ -184,10 +194,10 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
       {/* Selected step detail panel */}
       <div
         className={cn(
-          "mx-auto max-w-md overflow-hidden rounded-xl border transition-all duration-300",
+          "mx-auto max-w-md overflow-hidden rounded-lg border bg-card transition-all duration-300",
           selectedInfo
-            ? `opacity-100 ${selectedInfo.borderColor} ${selectedInfo.bgColor}`
-            : "border-border bg-muted/30 opacity-70"
+            ? "border-orange-500/40 opacity-100"
+            : "border-border opacity-70"
         )}
       >
         <div className="p-6 text-center">
@@ -196,12 +206,10 @@ export function PipelineInteractive({ steps }: { steps: PipelineStep[] }) {
               {(() => {
                 const SelectedIcon = iconMap[selectedInfo.iconName];
                 return (
-                  <SelectedIcon
-                    className={cn("mx-auto mb-3 size-8", selectedInfo.color)}
-                  />
+                  <SelectedIcon className="mx-auto mb-3 size-8 text-orange-500" />
                 );
               })()}
-              <h3 className="mb-2 font-semibold text-lg">
+              <h3 className="mb-2 font-heading font-semibold text-lg tracking-tight">
                 {selectedInfo.label}
               </h3>
               <p className="text-muted-foreground">

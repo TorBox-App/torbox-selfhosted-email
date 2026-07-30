@@ -31,7 +31,7 @@ const comparisons = [
   {
     competitor: "Klaviyo",
     href: "/compare/klaviyo-vs-wraps",
-    tagline: "10x cheaper at scale",
+    tagline: "Up to 5.6x cheaper at scale",
   },
   {
     competitor: "Mailgun",
@@ -48,11 +48,13 @@ export function AlsoCompare({ current }: { current: string }) {
 
   return (
     <section className="mb-16">
-      <h2 className="mb-4 font-semibold text-2xl">Also Compare</h2>
+      <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
+        Also Compare
+      </h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {others.map((c) => (
           <Link href={c.href} key={c.href}>
-            <Card className="h-full transition-colors hover:border-primary/50">
+            <Card className="h-full transition-colors hover:border-orange-500/50">
               <CardContent className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">{c.competitor} vs Wraps</p>

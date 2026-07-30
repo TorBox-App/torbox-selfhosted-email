@@ -36,13 +36,12 @@ type Release = {
   version: string;
   date: string;
   icon: LucideIcon;
-  iconColor: string;
   title: string;
   items: ReactNode[];
 };
 
 const Code = ({ children }: { children: ReactNode }) => (
-  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-green-600 text-xs dark:text-green-400">
+  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground text-xs">
     {children}
   </code>
 );
@@ -52,8 +51,6 @@ const releases: Release[] = [
     version: "CLI v2.29.1",
     date: "July 2026",
     icon: Wrench,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Self-Hosted URL Fixes",
     items: [
       <>
@@ -76,8 +73,6 @@ const releases: Release[] = [
     version: "CLI v2.29.0",
     date: "July 2026",
     icon: Terminal,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Self-Hosted Control Plane Hardening",
     items: [
       <>
@@ -121,8 +116,6 @@ const releases: Release[] = [
     version: "CLI v2.28.0",
     date: "July 2026",
     icon: SlidersHorizontal,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "SES Pricing Plan Detection",
     items: [
       <>
@@ -158,8 +151,6 @@ const releases: Release[] = [
     version: "Platform v0.19.0",
     date: "July 2026",
     icon: Inbox,
-    iconColor:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     title: "In-App Notifications",
     items: [
       "Notification bell in the dashboard — account health, billing, team, and send events surface where you already work",
@@ -182,8 +173,6 @@ const releases: Release[] = [
     version: "Workflow Engine v2",
     date: "June 2026",
     icon: ShieldCheck,
-    iconColor:
-      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
     title: "Reliability & Security Hardening",
     items: [
       "Fix: editing a scheduled workflow's schedule no longer fails with AccessDenied in production",
@@ -199,8 +188,6 @@ const releases: Release[] = [
     version: "CLI v2.22.0",
     date: "May 2026",
     icon: Search,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Email Logs Inspection",
     items: [
       <>
@@ -230,9 +217,7 @@ const releases: Release[] = [
     version: "Platform v0.18.0",
     date: "May 2026",
     icon: Bot,
-    iconColor:
-      "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    title: "Wraps MCP Server",
+    title: "Agent Discovery & WebMCP Tools",
     items: [
       <>
         WebMCP tools — <Code>get_pricing</Code>, <Code>get_quickstart</Code>,{" "}
@@ -258,8 +243,9 @@ const releases: Release[] = [
       </>,
       "RFC 8288 Link header on the homepage advertises /docs as the service documentation endpoint for agent discovery",
       <>
-        <Code>robots.txt</Code> AI signals: <Code>ai-train: no</Code>,{" "}
-        <Code>ai-input: yes</Code>, <Code>search: yes</Code>
+        <Code>robots.txt</Code> AI signals via a single{" "}
+        <Code>Content-Signal: ai-train=no, search=yes, ai-input=yes</Code>{" "}
+        response header
       </>,
     ],
   },
@@ -267,8 +253,6 @@ const releases: Release[] = [
     version: "CLI v2.21.0",
     date: "May 2026",
     icon: SlidersHorizontal,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Per-Domain SES Configuration Sets",
     items: [
       <>
@@ -299,8 +283,6 @@ const releases: Release[] = [
     version: "Enterprise v1.0",
     date: "April 2026",
     icon: Building2,
-    iconColor:
-      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
     title: "Okta SSO, SCIM 2.0 & Role-Based Access Control",
     items: [
       "Okta SSO with OIDC-based authentication and IdP-initiated sign-in",
@@ -319,8 +301,6 @@ const releases: Release[] = [
     version: "Platform v0.17.0",
     date: "April 2026",
     icon: Sparkles,
-    iconColor:
-      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
     title: "Broadcast Drafts, Contact externalId & Segment Improvements",
     items: [
       "Broadcast drafts — save work-in-progress broadcasts without sending",
@@ -343,8 +323,6 @@ const releases: Release[] = [
     version: "CLI v2.19.0",
     date: "April 2026",
     icon: MessageSquare,
-    iconColor:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     title: "Signed Reply-To Threading",
     items: [
       <>
@@ -382,8 +360,6 @@ const releases: Release[] = [
     version: "Platform v0.16.0",
     date: "March 2026",
     icon: Compass,
-    iconColor:
-      "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
     title: "Onboarding Activation",
     items: [
       "Choose Path step replaces Welcome — start building or connect AWS first",
@@ -400,8 +376,6 @@ const releases: Release[] = [
     version: "Template Editor v2",
     date: "March 2026",
     icon: Sparkles,
-    iconColor:
-      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
     title: "AI Conversation Persistence & Brand Kits",
     items: [
       "AI chat history persists across sessions — pick up where you left off",
@@ -420,8 +394,6 @@ const releases: Release[] = [
     version: "Agent-Ready Platform",
     date: "March 2026",
     icon: Bot,
-    iconColor:
-      "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
     title: "Built for AI Coding Agents",
     items: [
       <>
@@ -444,8 +416,6 @@ const releases: Release[] = [
     version: "mail-audit v1.1.1",
     date: "March 2026",
     icon: ShieldCheck,
-    iconColor:
-      "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
     title: "Standalone Deliverability CLI",
     items: [
       <>
@@ -462,8 +432,6 @@ const releases: Release[] = [
     version: "CLI v2.14–2.17",
     date: "February 2026",
     icon: Terminal,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "CLI Polish & Multi-Domain Management",
     items: [
       <>
@@ -484,8 +452,6 @@ const releases: Release[] = [
     version: "Platform v0.15.0",
     date: "February 2026",
     icon: LayoutDashboard,
-    iconColor:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     title: "Dashboard Overhaul",
     items: [
       "Unified overview page with channel-granular health monitoring",
@@ -512,8 +478,6 @@ const releases: Release[] = [
     version: "SDK v0.10.0",
     date: "February 2026",
     icon: Package,
-    iconColor:
-      "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     title: "Zero-Config Vercel OIDC & Config Helpers",
     items: [
       <>
@@ -536,8 +500,6 @@ const releases: Release[] = [
     version: "SMS v0.1.2",
     date: "February 2026",
     icon: Smartphone,
-    iconColor:
-      "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
     title: "Multi-Channel SMS Launch",
     items: [
       "SMS moved from waitlist to generally available",
@@ -551,7 +513,6 @@ const releases: Release[] = [
     version: "Workflow Engine",
     date: "February 2026",
     icon: Wrench,
-    iconColor: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
     title: "Workflow Reliability Hardening",
     items: [
       "DLQ consumer with CloudWatch alarms for failed workflow and batch messages",
@@ -567,8 +528,6 @@ const releases: Release[] = [
     version: "Security & Observability",
     date: "February 2026",
     icon: Lock,
-    iconColor:
-      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
     title: "Security Patches & Structured Logging",
     items: [
       "Patched XSS, cross-org IDOR, and RCE vulnerabilities",
@@ -588,8 +547,6 @@ const releases: Release[] = [
     version: "Website",
     date: "February 2026",
     icon: Gauge,
-    iconColor:
-      "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
     title: "14 New Doc Pages & Performance",
     items: [
       "14 new documentation pages: inbound email, EventBridge events, Vercel setup, webhooks, and migration guide",
@@ -607,8 +564,6 @@ const releases: Release[] = [
     version: "CLI v2.13.0",
     date: "February 2026",
     icon: Zap,
-    iconColor:
-      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
     title: "Webhook Events",
     items: [
       "Configure an HTTPS webhook endpoint to receive real-time SES email events",
@@ -630,8 +585,6 @@ const releases: Release[] = [
     version: "Platform v0.14.0",
     date: "February 2026",
     icon: Sparkles,
-    iconColor:
-      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
     title: "AI Template Editor & Workflows-as-Code",
     items: [
       "AI code assistant with live preview pane and resizable split view",
@@ -653,8 +606,6 @@ const releases: Release[] = [
     version: "CLI v2.12",
     date: "February 2026",
     icon: ShieldCheck,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Reliability & Security",
     items: [
       "Batch send security, correctness, and maintainability fixes",
@@ -676,8 +627,6 @@ const releases: Release[] = [
     version: "CLI v2.7.0 + SDK v0.6.0",
     date: "February 2026",
     icon: Inbox,
-    iconColor:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     title: "Inbound Email",
     items: [
       "Receive emails in your AWS account with SES receipt rules",
@@ -701,8 +650,6 @@ const releases: Release[] = [
     version: "CLI v2.6.1",
     date: "February 2026",
     icon: Cloud,
-    iconColor:
-      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
     title: "S3 Remote State",
     items: [
       "Pulumi state automatically stored in S3 for multi-machine deploys",
@@ -719,8 +666,6 @@ const releases: Release[] = [
     version: "Platform v0.13.0",
     date: "January 2026",
     icon: Gift,
-    iconColor:
-      "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400",
     title: "Free Plan",
     items: [
       "Free tier with contacts, topics, broadcasts, and workflows",
@@ -737,7 +682,6 @@ const releases: Release[] = [
     version: "CLI v2.4.0",
     date: "January 2026",
     icon: Layers,
-    iconColor: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
     title: "Infrastructure as Code",
     items: [
       <>
@@ -758,8 +702,6 @@ const releases: Release[] = [
     version: "CLI v2.1.0",
     date: "January 2026",
     icon: HardDrive,
-    iconColor:
-      "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     title: "CDN Infrastructure",
     items: [
       "S3 bucket + CloudFront CDN deployment",
@@ -777,8 +719,6 @@ const releases: Release[] = [
     version: "Platform v0.10.0",
     date: "January 2026",
     icon: Workflow,
-    iconColor:
-      "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
     title: "Workflow Automations",
     items: [
       "Visual workflow builder with React Flow canvas",
@@ -798,8 +738,6 @@ const releases: Release[] = [
     version: "Platform v0.9.0",
     date: "January 2026",
     icon: Send,
-    iconColor:
-      "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     title: "Broadcasts",
     items: [
       "Scheduled broadcasts with bulk SES sending",
@@ -811,8 +749,6 @@ const releases: Release[] = [
     version: "Platform v0.8.0",
     date: "January 2026",
     icon: Tags,
-    iconColor:
-      "border-pink-500/30 bg-pink-500/10 text-pink-600 dark:text-pink-400",
     title: "Topics & Double Opt-In",
     items: [
       "Topics for subscription management",
@@ -827,8 +763,6 @@ const releases: Release[] = [
     version: "CLI v1.5.0",
     date: "December 2025",
     icon: MessageSquare,
-    iconColor:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     title: "SMS Infrastructure",
     items: [
       "SMS support via AWS End User Messaging",
@@ -847,8 +781,6 @@ const releases: Release[] = [
     version: "CLI v1.4.0",
     date: "December 2025",
     icon: Blocks,
-    iconColor:
-      "border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
     title: "Deliverability Check",
     items: [
       <>
@@ -864,8 +796,6 @@ const releases: Release[] = [
     version: "SDK v0.1.0",
     date: "December 2025",
     icon: Blocks,
-    iconColor:
-      "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
     title: "Platform SDK",
     items: [
       <>
@@ -880,8 +810,6 @@ const releases: Release[] = [
     version: "Platform v0.4.0",
     date: "December 2025",
     icon: Users,
-    iconColor:
-      "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
     title: "Contacts Management",
     items: [
       "Contact creation, editing, and deletion",
@@ -898,8 +826,6 @@ const releases: Release[] = [
     version: "Platform v0.3.0",
     date: "December 2025",
     icon: LayoutTemplate,
-    iconColor:
-      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
     title: "Template Editor",
     items: [
       "Visual drag-and-drop template editor",
@@ -911,8 +837,6 @@ const releases: Release[] = [
     version: "CLI v1.0.0",
     date: "November 2025",
     icon: Terminal,
-    iconColor:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     title: "Dashboard & Multi-Service CLI",
     items: [
       "Wraps Platform at app.wraps.dev",
@@ -936,8 +860,6 @@ const releases: Release[] = [
     version: "CLI v0.1.0",
     date: "November 2025",
     icon: Rocket,
-    iconColor:
-      "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400",
     title: "Initial Release",
     items: [
       "One-command AWS SES deployment",
@@ -970,20 +892,24 @@ export function ChangelogReleasesSection() {
                 const Icon = release.icon;
                 return (
                   <div className="relative pl-16" key={release.version}>
-                    {/* Timeline dot - outer circle with shadow */}
-                    <div className="absolute left-0 flex size-12 items-center justify-center rounded-full bg-background shadow-md">
-                      {/* Inner colored circle */}
+                    {/* Timeline dot - outer circle */}
+                    <div className="absolute left-0 flex size-12 items-center justify-center rounded-full bg-background">
+                      {/* Inner node — orange only marks the latest release */}
                       <div
-                        className={`flex size-10 items-center justify-center rounded-full border-2 ${release.iconColor}`}
+                        className={
+                          index === 0
+                            ? "flex size-10 items-center justify-center rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-500"
+                            : "flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
+                        }
                       >
                         <Icon className="size-5" />
                       </div>
                     </div>
 
                     {/* Content */}
-                    <div className="overflow-hidden rounded-xl border bg-background">
+                    <div className="overflow-hidden rounded-xl border border-border bg-card">
                       {/* Header */}
-                      <div className="border-b bg-muted/30 px-6 py-4">
+                      <div className="border-border border-b bg-muted/30 px-6 py-4">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="rounded-full bg-foreground px-3 py-1 font-mono font-semibold text-background text-sm">
                             {release.version.includes("v")
@@ -994,12 +920,12 @@ export function ChangelogReleasesSection() {
                             {release.date}
                           </span>
                           {index === 0 && (
-                            <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 font-medium text-green-600 text-xs dark:text-green-400">
+                            <span className="rounded-full border border-orange-500/40 px-2 py-0.5 font-mono text-[10px] text-orange-500 uppercase tracking-[0.12em]">
                               Latest
                             </span>
                           )}
                         </div>
-                        <h3 className="mt-2 font-semibold text-lg">
+                        <h3 className="mt-2 font-heading font-semibold text-lg tracking-tight">
                           {release.title}
                         </h3>
                       </div>
@@ -1031,21 +957,23 @@ export function ChangelogReleasesSection() {
             <div className="-top-12 absolute left-[24px] h-[72px] w-[1.5px] bg-border" />
 
             {/* Timeline terminator dot - covers end of line */}
-            <div className="absolute left-0 flex size-12 items-center justify-center rounded-full bg-background shadow-md">
-              <div className="flex size-10 items-center justify-center rounded-full border-2 border-foreground/20 bg-foreground/5 text-foreground/60">
+            <div className="absolute left-0 flex size-12 items-center justify-center rounded-full bg-background">
+              <div className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground">
                 <Lightbulb className="size-5" />
               </div>
             </div>
 
             {/* Content */}
-            <div className="overflow-hidden rounded-xl border border-dashed bg-muted/20">
+            <div className="overflow-hidden rounded-xl border border-border border-dashed bg-muted/20">
               <div className="px-6 py-5">
                 <div className="flex items-center gap-3">
                   <span className="text-muted-foreground text-sm">
                     October 30th, 2025
                   </span>
                 </div>
-                <h3 className="mt-2 font-semibold text-lg">The Idea</h3>
+                <h3 className="mt-2 font-heading font-semibold text-lg tracking-tight">
+                  The Idea
+                </h3>
                 <p className="mt-2 text-muted-foreground text-sm">
                   What if deploying email infrastructure to AWS was as simple as
                   one command? No vendor lock-in, no markup on AWS pricing, just

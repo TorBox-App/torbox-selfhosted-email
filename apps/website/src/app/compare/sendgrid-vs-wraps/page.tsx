@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -26,6 +25,7 @@ import { CodeComparison } from "@/app/compare/components/code-comparison";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -82,12 +82,12 @@ const tldrComparison = [
   {
     dimension: "Pricing (100K emails/mo)",
     sendgrid: "$89.95/mo",
-    wraps: "$79 + $10 AWS = $89/mo",
+    wraps: "$19 + $10 AWS = $29/mo",
   },
   {
     dimension: "Pricing (500K emails/mo)",
     sendgrid: "~$499/mo",
-    wraps: "$199 + $50 AWS = $249/mo",
+    wraps: "$79 + $50 AWS = $129/mo",
   },
   {
     dimension: "Account suspension risk",
@@ -131,21 +131,21 @@ const pricingComparison = [
     volume: "100K/mo",
     sendgridTier: "Pro 100K",
     sendgridCost: "$89.95/mo",
-    wrapsTier: "Growth",
-    wrapsPlatform: "$79",
+    wrapsTier: "Starter",
+    wrapsPlatform: "$19",
     wrapsAws: "$10.00",
-    wrapsTotal: "$89.00/mo",
-    savings: null,
+    wrapsTotal: "$29.00/mo",
+    savings: "68%",
   },
   {
     volume: "500K/mo",
     sendgridTier: "Pro 700K",
     sendgridCost: "~$499/mo",
-    wrapsTier: "Scale",
-    wrapsPlatform: "$199",
+    wrapsTier: "Growth",
+    wrapsPlatform: "$79",
     wrapsAws: "$50.00",
-    wrapsTotal: "$249.00/mo",
-    savings: "50%",
+    wrapsTotal: "$129.00/mo",
+    savings: "74%",
   },
 ];
 
@@ -206,7 +206,8 @@ const featureComparison = [
       {
         name: "Email activity history",
         sendgrid: "3-30 days (plan dependent)",
-        wraps: "You decide (your DynamoDB)",
+        wraps:
+          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
       },
       {
         name: "Webhook event delivery",
@@ -236,7 +237,7 @@ const featureComparison = [
       {
         name: "Time to first email",
         sendgrid: "10-30 min (up to 48hr for domain auth)",
-        wraps: "~3 min (wraps email setup)",
+        wraps: "~2 min (wraps email setup)",
       },
     ],
   },
@@ -299,7 +300,7 @@ const articleSchema = {
   description:
     "Compare SendGrid and Wraps side by side. Same developer experience, your AWS account, AWS pricing, no vendor lock-in. See pricing, features, and migration path.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -357,10 +358,8 @@ export default function SendGridVsWrapsPage() {
 
           {/* 1. Hero */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               SendGrid vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
@@ -377,7 +376,9 @@ export default function SendGridVsWrapsPage() {
 
           {/* 2. TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">At a Glance</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              At a Glance
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -410,7 +411,9 @@ export default function SendGridVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <MessageSquareQuote className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Sound Familiar?</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Sound Familiar?
+              </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
               Real quotes from SendGrid users across Trustpilot, Sitejabber, and
@@ -472,7 +475,7 @@ export default function SendGridVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <Server className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 The Architectural Difference
               </h2>
             </div>
@@ -563,7 +566,7 @@ export default function SendGridVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <CircleDollarSign className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Pricing at Real Volumes
               </h2>
             </div>
@@ -607,9 +610,11 @@ export default function SendGridVsWrapsPage() {
                         </td>
                         <td className="p-4">
                           {row.savings ? (
-                            <Badge variant="secondary">{row.savings}</Badge>
+                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                              {row.savings}
+                            </span>
                           ) : (
-                            <span className="text-muted-foreground/60 text-xs">
+                            <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-[0.08em]">
                               Comparable
                             </span>
                           )}
@@ -646,9 +651,9 @@ export default function SendGridVsWrapsPage() {
                 <CardContent>
                   <h3 className="mb-1 font-medium text-sm">Hidden cost #3</h3>
                   <p className="text-muted-foreground text-sm">
-                    Email activity history maxes at 30 days even on Pro. Wraps
-                    Events live in your DynamoDB -- you control retention.
-                    SendGrid offers no equivalent at any price.
+                    Email activity history maxes at 30 days even on Pro. With
+                    Wraps the raw events land in your own DynamoDB and stay
+                    there. SendGrid offers no equivalent at any price.
                   </p>
                 </CardContent>
               </Card>
@@ -665,8 +670,7 @@ export default function SendGridVsWrapsPage() {
                 sendgrid.com/pricing
               </a>
               . Wraps AWS cost = $0.10 per 1,000 emails via SES à la carte (AWS
-              defaults new accounts to $0.16/1,000). All prices as of March
-              2026.{" "}
+              defaults new accounts to $0.16/1,000). All prices as of July 2026.{" "}
               <a
                 className="text-primary underline"
                 href="/tools/ses-calculator"
@@ -678,7 +682,7 @@ export default function SendGridVsWrapsPage() {
 
           {/* 6. Detailed Feature Comparison */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               Detailed Feature Comparison
             </h2>
             <Card className="overflow-hidden py-0">
@@ -730,7 +734,7 @@ export default function SendGridVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <AlertTriangle className="size-6 text-muted-foreground" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 When to Choose SendGrid
               </h2>
             </div>
@@ -744,7 +748,7 @@ export default function SendGridVsWrapsPage() {
                   {[
                     "You need a visual drag-and-drop email editor and built-in A/B testing -- Wraps uses AI-powered editing and code-first templates.",
                     "You need SDKs in Python, Ruby, Go, Java, C#, or PHP -- Wraps supports TypeScript only.",
-                    "You want zero infrastructure management. SendGrid is API-key-in, email-out. Wraps requires an AWS account and a 3-minute deployment.",
+                    "You want zero infrastructure management. SendGrid is API-key-in, email-out. Wraps requires an AWS account and a 2-minute deployment.",
                     "You're buying within a Twilio enterprise contract with bundled pricing.",
                     "Non-developer team members need to build and send emails without code.",
                   ].map((point) => (
@@ -760,18 +764,18 @@ export default function SendGridVsWrapsPage() {
 
           {/* 8. When to Choose Wraps */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Wraps
             </h2>
             <Card className="border-primary/30">
               <CardContent>
                 <ul className="space-y-3">
                   {[
-                    "You care about cost at scale. At 500K emails/month, Wraps saves $200/mo ($2,400/year) over SendGrid.",
+                    "You care about cost at scale. At 500K emails/month, Wraps runs $129/mo against SendGrid's ~$499 -- $370/mo, or $4,440/year.",
                     "You want to own your email infrastructure and data. If you leave Wraps, your SES, DynamoDB, and Lambda stay in your account.",
                     "You need reliability you control. SES reputation is domain-based, and dedicated IPs are available when you need them.",
                     "You're already on AWS and don't want to add another vendor dependency.",
-                    "You want full control over data retention. Events live in your DynamoDB -- keep them as long as you need. SendGrid maxes at 30 days even on Pro.",
+                    "You want to own your event history. Raw events live in your DynamoDB -- yours forever. Wraps dashboard history runs 7 days to 1 year by plan; SendGrid maxes at 30 days even on Pro.",
                     "You value transparency. You can see exactly what infrastructure runs, audit the open-source code, and pay AWS directly.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
@@ -788,7 +792,7 @@ export default function SendGridVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <GitFork className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Switching from SendGrid
               </h2>
             </div>
@@ -844,7 +848,7 @@ export default function SendGridVsWrapsPage() {
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
                   <span>
-                    <strong>Deploy in ~3 minutes.</strong> Run{" "}
+                    <strong>Deploy in ~2 minutes.</strong> Run{" "}
                     <code className="rounded bg-muted px-1">
                       wraps email setup
                     </code>{" "}
@@ -859,7 +863,7 @@ export default function SendGridVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Ready to own your email infrastructure?
             </h2>
             <p className="mb-6 text-muted-foreground">

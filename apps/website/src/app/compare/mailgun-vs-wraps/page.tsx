@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -16,6 +15,7 @@ import { CodeComparison } from "@/app/compare/components/code-comparison";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 export const metadata: Metadata = {
   title: "Mailgun vs Wraps - Compare Email Infrastructure Approaches",
@@ -76,7 +76,7 @@ const tldrComparison = [
   {
     dimension: "Data retention",
     mailgun: "30 days (Foundation), 60 days (Scale)",
-    wraps: "You decide (your DynamoDB)",
+    wraps: "Raw events in your DynamoDB, yours forever",
   },
   {
     dimension: "HIPAA",
@@ -120,21 +120,21 @@ const pricingComparison = [
     volume: "100K/mo",
     mailgunTier: "Foundation 100K / Scale",
     mailgunCost: "$75-90",
-    wrapsTier: "Growth",
-    wrapsPlatform: "$79",
+    wrapsTier: "Starter",
+    wrapsPlatform: "$19",
     awsSes: "$10",
-    wrapsTotal: "$89",
-    savings: null,
+    wrapsTotal: "$29",
+    savings: "61-68%",
   },
   {
     volume: "500K/mo",
     mailgunTier: "Scale 500K",
     mailgunCost: "$400",
-    wrapsTier: "Scale",
-    wrapsPlatform: "$199",
+    wrapsTier: "Growth",
+    wrapsPlatform: "$79",
     awsSes: "$50",
-    wrapsTotal: "$249",
-    savings: "38%",
+    wrapsTotal: "$129",
+    savings: "68%",
   },
 ];
 
@@ -165,7 +165,8 @@ const featureComparison = [
       {
         name: "Data retention",
         mailgun: "30-60 days (plan-dependent)",
-        wraps: "You decide (your DynamoDB)",
+        wraps:
+          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
       },
       {
         name: "Data export",
@@ -237,7 +238,7 @@ const featureComparison = [
       {
         name: "Time to first email",
         mailgun: "~10 minutes",
-        wraps: "~15 minutes",
+        wraps: "~2 minutes",
       },
       {
         name: "Requires AWS account",
@@ -286,7 +287,7 @@ const chooseMailgunReasons = [
 const chooseWrapsReasons = [
   "You already have an AWS account (or your company does)",
   "You need HIPAA compliance without paying for an Enterprise contract",
-  "You're sending 100K+ emails/month and want 49%+ cost savings",
+  "You're sending 100K+ emails/month and want 61%+ cost savings",
   "You need data residency beyond US/EU -- any AWS SES region",
   "You don't want a third party able to suspend your account at the worst possible moment",
   "You want a modern template editor and workflow builder, not just a raw API",
@@ -335,10 +336,8 @@ export default function MailgunVsWrapsPage() {
 
           {/* Hero */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Mailgun vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
@@ -360,7 +359,9 @@ export default function MailgunVsWrapsPage() {
 
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">TL;DR</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              TL;DR
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -391,7 +392,9 @@ export default function MailgunVsWrapsPage() {
 
           {/* Sound Familiar? */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">Sound familiar?</h2>
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
+              Sound familiar?
+            </h2>
             <p className="mb-6 text-muted-foreground">
               Real quotes from Mailgun users on Trustpilot, G2, and developer
               forums.
@@ -455,14 +458,15 @@ export default function MailgunVsWrapsPage() {
             <p className="mt-4 text-muted-foreground text-sm">
               With Wraps, your infrastructure runs in your AWS account. No third
               party can suspend your sending, HIPAA compliance is available on
-              any plan via your own AWS BAA, and your logs live in your DynamoDB
-              with configurable retention.
+              any plan via your own AWS BAA, and your raw events live in your
+              own DynamoDB &mdash; yours forever, whether or not you keep paying
+              Wraps.
             </p>
           </section>
 
           {/* The Architectural Difference */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               The architectural difference
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -541,7 +545,7 @@ export default function MailgunVsWrapsPage() {
 
           {/* Pricing at Real Volumes */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               Pricing at real volumes
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -582,9 +586,9 @@ export default function MailgunVsWrapsPage() {
                         </td>
                         <td className="hidden p-4 sm:table-cell">
                           {row.savings ? (
-                            <Badge variant="secondary">
+                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
                               {row.savings} less
-                            </Badge>
+                            </span>
                           ) : null}
                         </td>
                       </tr>
@@ -607,16 +611,18 @@ export default function MailgunVsWrapsPage() {
                 HIPAA BAA only available on Enterprise (custom pricing).
               </p>
               <p>
-                At 100K/mo, pricing is comparable -- but Wraps includes
-                unlimited contacts and workflow automation vs Mailgun&apos;s
-                API-only approach.
+                At 100K/mo, Wraps runs $29/mo all-in against Mailgun&apos;s
+                $75-90 -- and includes unlimited contacts and workflow
+                automation vs Mailgun&apos;s API-only approach.
               </p>
             </div>
           </section>
 
           {/* Detailed Feature Comparison */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">Feature comparison</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              Feature comparison
+            </h2>
             {featureComparison.map((category) => (
               <Card
                 className="mb-4 overflow-hidden py-0"
@@ -658,7 +664,7 @@ export default function MailgunVsWrapsPage() {
 
           {/* When to Choose Mailgun */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               When to choose Mailgun
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -681,7 +687,7 @@ export default function MailgunVsWrapsPage() {
 
           {/* When to Choose Wraps */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               When to choose Wraps
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -704,7 +710,7 @@ export default function MailgunVsWrapsPage() {
 
           {/* Switching from Mailgun */}
           <section className="mb-16">
-            <h2 className="mb-2 font-semibold text-2xl">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
               Switching from Mailgun
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -744,7 +750,7 @@ export default function MailgunVsWrapsPage() {
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     wraps email setup
                   </code>{" "}
-                  (~5 minutes)
+                  (~2 minutes)
                 </li>
                 <li>
                   Swap{" "}
@@ -779,7 +785,7 @@ export default function MailgunVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Deploy to your AWS in 2 minutes
             </h2>
             <p className="mb-6 text-muted-foreground">

@@ -1,4 +1,4 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   ArrowRight,
@@ -6,7 +6,6 @@ import {
   Cloud,
   Code2,
   HardDrive,
-  Inbox,
   Lock,
   Mail,
   Terminal,
@@ -16,8 +15,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
-import { cn } from "@/lib/utils";
 import { AnatomyInteractive } from "./components/anatomy-interactive";
 import { AnimatedInbox } from "./components/animated-inbox";
 import { PipelineInteractive } from "./components/pipeline-interactive";
@@ -45,6 +44,35 @@ const iconMap: Record<IconName, typeof Mail> = {
   Users: Mail,
   MessageSquare: Mail,
 };
+
+const heroFeatures = [
+  "SES + S3 + Lambda + EventBridge",
+  "Parse headers & attachments",
+  "Spam & virus detection",
+  "Reply with threading",
+];
+
+const architectureRoles = [
+  { title: "SES Receives", description: "MX records route to SES" },
+  { title: "S3 Stores", description: "Raw email saved securely" },
+  { title: "Lambda Parses", description: "Headers, body, attachments" },
+  { title: "EventBridge Triggers", description: "Your webhooks & rules" },
+];
+
+const benefits = [
+  {
+    title: "No Vendor Lock-in",
+    description: "Infrastructure stays in your AWS if you churn",
+  },
+  {
+    title: "Data Residency",
+    description: "Emails never leave your AWS account",
+  },
+  {
+    title: "AWS Pricing",
+    description: "Pay AWS directly, no markup",
+  },
+];
 
 const softwareSchema = {
   "@context": "https://schema.org",
@@ -107,22 +135,25 @@ export default function InboundPage() {
         <main>
           {/* Hero Section */}
           <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-28">
+            <div className="absolute inset-0">
+              <DotPattern
+                className="opacity-100"
+                fadeStyle="ellipse"
+                size="md"
+              />
+            </div>
+
             <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+              <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
                 {/* Left column - Text content */}
                 <div>
-                  <div className="mb-6">
-                    <Badge
-                      className="border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-cyan-600 dark:text-cyan-400"
-                      variant="outline"
-                    >
-                      <Inbox className="mr-2 size-4" />
-                      Inbound Email
-                    </Badge>
+                  <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+                    <span className="size-1.5 rounded-full bg-orange-500" />
+                    <span>wraps · inbound email</span>
                   </div>
 
-                  <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl">
-                    <span className="text-cyan-500">Every inbox.</span>
+                  <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
+                    <span className="text-orange-500">Every inbox.</span>
                     <br />
                     Your infrastructure.
                   </h1>
@@ -134,14 +165,12 @@ export default function InboundPage() {
                   </p>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      "SES + S3 + Lambda + EventBridge",
-                      "Parse headers & attachments",
-                      "Spam & virus detection",
-                      "Reply with threading",
-                    ].map((feature) => (
-                      <div className="flex items-center gap-2" key={feature}>
-                        <div className="size-1.5 rounded-full bg-cyan-500" />
+                    {heroFeatures.map((feature) => (
+                      <div className="flex items-center gap-2.5" key={feature}>
+                        <span
+                          aria-hidden="true"
+                          className="h-px w-3 shrink-0 bg-orange-500"
+                        />
                         <span className="text-muted-foreground text-sm">
                           {feature}
                         </span>
@@ -151,9 +180,11 @@ export default function InboundPage() {
                 </div>
 
                 {/* Right column - Animated Inbox (client component) */}
-                <div className="group relative">
-                  <div className="absolute -inset-4 rounded-3xl bg-cyan-500/10 opacity-50 blur-2xl transition-opacity group-hover:opacity-70" />
-                  <AnimatedInbox />
+                <div className="relative">
+                  <div className="-inset-4 absolute rounded-3xl bg-orange-500/10 opacity-60 blur-2xl" />
+                  <div className="relative">
+                    <AnimatedInbox />
+                  </div>
                 </div>
               </div>
             </div>
@@ -162,8 +193,11 @@ export default function InboundPage() {
           {/* Pipeline Section */}
           <section className="py-16 sm:py-24">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-12 text-center">
-                <h2 className="mb-2 font-bold text-2xl">The Email Pipeline</h2>
+              <div className="mb-12 max-w-2xl">
+                <SectionKicker>Pipeline</SectionKicker>
+                <h2 className="mb-2 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
+                  The Email Pipeline
+                </h2>
                 <p className="text-lg text-muted-foreground">
                   Follow the journey.{" "}
                   <span className="text-foreground">
@@ -189,10 +223,11 @@ export default function InboundPage() {
           </section>
 
           {/* Anatomy Section */}
-          <section className="bg-muted/30 py-16 sm:py-24">
+          <section className="border-border border-y bg-muted/20 py-16 sm:py-24">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-12 text-center">
-                <h2 className="mb-2 font-bold text-2xl">
+              <div className="mb-12 max-w-2xl">
+                <SectionKicker>Anatomy</SectionKicker>
+                <h2 className="mb-2 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
                   Parsed Email Structure
                 </h2>
                 <p className="text-lg text-muted-foreground">
@@ -247,8 +282,11 @@ export default function InboundPage() {
           {/* Use Cases Section */}
           <section className="py-16 sm:py-24">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-8 text-center">
-                <h2 className="mb-2 font-bold text-2xl">What Can You Build?</h2>
+              <div className="mb-8 max-w-2xl">
+                <SectionKicker>Use cases</SectionKicker>
+                <h2 className="mb-2 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
+                  What Can You Build?
+                </h2>
                 <p className="text-lg text-muted-foreground">
                   Endless possibilities.{" "}
                   <span className="text-foreground">
@@ -276,10 +314,13 @@ export default function InboundPage() {
           </section>
 
           {/* SDK Section */}
-          <section className="bg-muted/30 py-16 sm:py-24">
+          <section className="border-border border-y bg-muted/20 py-16 sm:py-24">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-8 text-center">
-                <h2 className="mb-2 font-bold text-2xl">TypeScript SDK</h2>
+              <div className="mb-8 max-w-2xl">
+                <SectionKicker>SDK</SectionKicker>
+                <h2 className="mb-2 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
+                  TypeScript SDK
+                </h2>
                 <p className="text-lg text-muted-foreground">
                   Simple SDK.{" "}
                   <span className="text-foreground">
@@ -309,8 +350,11 @@ export default function InboundPage() {
           {/* Architecture Section - fully server rendered */}
           <section className="py-16 sm:py-24">
             <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-12 text-center">
-                <h2 className="mb-2 font-bold text-2xl">Your Infrastructure</h2>
+              <div className="mb-12 max-w-2xl">
+                <SectionKicker>Architecture</SectionKicker>
+                <h2 className="mb-2 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
+                  Your Infrastructure
+                </h2>
                 <p className="text-lg text-muted-foreground">
                   Your AWS account.{" "}
                   <span className="text-foreground">Your infrastructure.</span>
@@ -318,15 +362,15 @@ export default function InboundPage() {
               </div>
 
               {/* Architecture diagram */}
-              <div className="overflow-hidden rounded-2xl border-2 border-cyan-500/30 bg-background">
-                <div className="flex items-center justify-between border-b bg-cyan-500/5 px-6 py-4">
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="flex items-center justify-between border-border border-b bg-muted/30 px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Lock className="size-4 text-cyan-500" />
+                    <Lock className="size-4 text-orange-500" />
                     <span className="font-medium text-sm">
                       Your AWS Account
                     </span>
                   </div>
-                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-cyan-600 text-xs dark:text-cyan-400">
+                  <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
                     Full Ownership
                   </span>
                 </div>
@@ -337,93 +381,46 @@ export default function InboundPage() {
                       const Icon = iconMap[node.iconName];
                       return (
                         <div className="flex items-center" key={node.id}>
-                          <div
-                            className={cn(
-                              "flex flex-col items-center rounded-xl border-2 p-4 transition-all hover:shadow-lg",
-                              node.bgColor,
-                              node.borderColor
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "mb-2 flex size-12 items-center justify-center rounded-lg",
-                                node.bgColor
-                              )}
-                            >
-                              <Icon className={cn("size-6", node.color)} />
+                          <div className="flex flex-col items-center rounded-lg border border-border bg-background p-4">
+                            <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-muted">
+                              <Icon className="size-6 text-orange-500" />
                             </div>
-                            <span className="font-semibold text-sm">
+                            <span className="font-medium text-sm">
                               {node.label}
                             </span>
-                            <span className="text-muted-foreground text-xs">
+                            <span className="font-mono text-muted-foreground text-xs">
                               {node.sublabel}
                             </span>
                           </div>
 
                           {index < architectureNodesData.length - 1 && (
-                            <ArrowRight className="mx-1 size-5 shrink-0 text-cyan-500 sm:mx-2" />
+                            <ArrowRight className="mx-1 size-5 shrink-0 text-muted-foreground/50 sm:mx-2" />
                           )}
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="mt-8 grid gap-4 text-center sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <p className="font-medium text-orange-500 text-sm">
-                        SES Receives
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        MX records route to SES
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-green-500 text-sm">
-                        S3 Stores
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Raw email saved securely
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-yellow-500 text-sm">
-                        Lambda Parses
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Headers, body, attachments
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-purple-500 text-sm">
-                        EventBridge Triggers
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Your webhooks & rules
-                      </p>
-                    </div>
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {architectureRoles.map((role) => (
+                      <div key={role.title}>
+                        <p className="font-medium text-foreground text-sm">
+                          {role.title}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {role.description}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
               {/* Key benefits */}
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                {[
-                  {
-                    title: "No Vendor Lock-in",
-                    description:
-                      "Infrastructure stays in your AWS if you churn",
-                  },
-                  {
-                    title: "Data Residency",
-                    description: "Emails never leave your AWS account",
-                  },
-                  {
-                    title: "AWS Pricing",
-                    description: "Pay AWS directly, no markup",
-                  },
-                ].map((benefit) => (
+                {benefits.map((benefit) => (
                   <div
-                    className="rounded-lg border bg-muted/30 p-4 text-center"
+                    className="rounded-lg border border-border bg-card p-4"
                     key={benefit.title}
                   >
                     <p className="font-medium text-sm">{benefit.title}</p>
@@ -437,51 +434,44 @@ export default function InboundPage() {
           </section>
 
           {/* CTA Section - mostly server rendered */}
-          <section className="bg-muted/30 py-16 sm:py-24">
-            <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+          <section className="border-border border-t bg-muted/20 py-16 sm:py-24">
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
               <div className="mb-8">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2">
-                  <Inbox className="size-4 text-cyan-500" />
-                  <span className="font-medium text-cyan-600 text-sm dark:text-cyan-400">
-                    Ready to receive?
-                  </span>
-                </div>
-                <h2 className="mb-4 font-bold text-3xl sm:text-4xl">
+                <SectionKicker>Ready to receive?</SectionKicker>
+                <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight sm:text-4xl">
                   Start receiving emails in minutes
                 </h2>
-                <p className="mx-auto max-w-xl text-muted-foreground">
-                  One command deploys inbound email infrastructure to your AWS
+                <p className="max-w-xl text-muted-foreground">
+                  One command — run it after your email stack is deployed with
+                  wraps email init — adds inbound infrastructure to your AWS
                   account. Configure MX records and start processing emails.
                 </p>
               </div>
 
               {/* Install command */}
-              <div className="mx-auto mb-8 max-w-md">
-                <div className="overflow-hidden rounded-xl border border-cyan-500/30 bg-[#0a0a0a] shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                  <div className="flex items-center gap-3 border-b border-cyan-500/20 bg-[#0a0a0a] px-4 py-3">
-                    <div className="flex gap-1.5">
-                      <div className="size-2.5 rounded-full bg-red-500/80" />
-                      <div className="size-2.5 rounded-full bg-yellow-500/80" />
-                      <div className="size-2.5 rounded-full bg-green-500/80" />
-                    </div>
-                    <span className="font-mono text-cyan-400/70 text-sm">
+              <div className="mb-8 max-w-md">
+                <div className="overflow-hidden rounded-lg border border-border bg-card">
+                  <div className="flex items-center gap-3 border-border border-b bg-muted/30 px-4 py-3">
+                    <Terminal
+                      aria-hidden="true"
+                      className="size-3.5 text-orange-500"
+                    />
+                    <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
                       CLI
                     </span>
                   </div>
-                  <div className="p-4 text-left font-mono text-cyan-400">
-                    <span className="inline-flex items-center gap-2">
-                      <Terminal className="size-4 text-cyan-600" />
-                      npx @wraps.dev/cli email inbound init
-                    </span>
+                  <div className="overflow-x-auto p-4 text-left font-mono text-foreground text-sm">
+                    <span className="text-muted-foreground">$ </span>
+                    npx @wraps.dev/cli email inbound init
                   </div>
                 </div>
               </div>
 
               {/* CTA buttons */}
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   asChild
-                  className="gap-2 bg-cyan-500 hover:bg-cyan-600"
+                  className="gap-2 bg-orange-500 text-white hover:bg-orange-600"
                   size="lg"
                 >
                   <Link href="/docs/quickstart/email/inbound">
@@ -498,7 +488,7 @@ export default function InboundPage() {
               </div>
 
               {/* Trust badges */}
-              <div className="mt-12 flex flex-wrap justify-center gap-6 text-muted-foreground text-sm">
+              <div className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-muted-foreground text-sm">
                 <span>No credit card required</span>
                 <span className="hidden sm:inline">•</span>
                 <span>AWS pricing only</span>

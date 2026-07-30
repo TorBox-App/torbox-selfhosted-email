@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -22,6 +21,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -80,7 +80,7 @@ const tldrComparison = [
   {
     dimension: "Setup time",
     ses: "40-80 hours (7-12 AWS services)",
-    wraps: "~5 minutes (one CLI command)",
+    wraps: "~2 minutes (one CLI command)",
   },
   {
     dimension: "Dashboard & analytics",
@@ -153,18 +153,18 @@ const pricingComparison = [
     sesRaw: "$10.00",
     diyTotal: "~$785/mo (yr 1)",
     diyYear2: "~$285/mo",
-    wrapsTier: "Growth ($79)",
-    wrapsCost: "$89.00",
-    wrapsBreakdown: "$79 + $10 SES",
+    wrapsTier: "Starter ($19)",
+    wrapsCost: "$29.00",
+    wrapsBreakdown: "$19 + $10 SES",
   },
   {
     volume: "500K/mo",
     sesRaw: "$50.00",
     diyTotal: "~$830/mo (yr 1)",
     diyYear2: "~$330/mo",
-    wrapsTier: "Scale ($199)",
-    wrapsCost: "$249.00",
-    wrapsBreakdown: "$199 + $50 SES",
+    wrapsTier: "Growth ($79)",
+    wrapsCost: "$129.00",
+    wrapsBreakdown: "$79 + $50 SES",
   },
 ];
 
@@ -326,7 +326,7 @@ const articleSchema = {
   description:
     "Wraps deploys TO Amazon SES, not instead of it. Same AWS pricing, same infrastructure ownership — plus a dashboard, TypeScript SDK, and one-command setup. Compare the two approaches.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -381,10 +381,8 @@ export default function AmazonSesVsWrapsPage() {
           {/* 1. HERO */}
           {/* =========================================== */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Amazon SES vs Wraps
             </h1>
             <p className="mb-3 max-w-2xl text-lg text-muted-foreground">
@@ -401,7 +399,7 @@ export default function AmazonSesVsWrapsPage() {
               </strong>
               . Same service underneath. Same AWS bill. The difference is
               whether you spend 40-80 hours of engineering time building the
-              supporting infrastructure, or let Wraps deploy it in 5 minutes.
+              supporting infrastructure, or let Wraps deploy it in 2 minutes.
             </p>
           </section>
 
@@ -409,7 +407,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 2. TL;DR COMPARISON TABLE */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               TL;DR — The Key Differences
             </h2>
             <Card className="overflow-hidden py-0">
@@ -444,7 +442,9 @@ export default function AmazonSesVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <MessageSquareQuote className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Sound Familiar?</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Sound Familiar?
+              </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
               If you've spent time setting up SES, you've probably felt some of
@@ -482,7 +482,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 4. THE ARCHITECTURAL DIFFERENCE */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               The Architectural Difference
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -581,7 +581,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 5. PRICING AT REAL VOLUMES */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               Pricing at Real Volumes
             </h2>
             <p className="mb-6 text-muted-foreground">
@@ -667,7 +667,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 6. DETAILED FEATURE COMPARISON */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
               Detailed Feature Comparison
             </h2>
 
@@ -730,7 +730,7 @@ export default function AmazonSesVsWrapsPage() {
             <p className="mt-4 text-muted-foreground text-xs">
               <Check className="mb-0.5 inline size-3 text-green-600 dark:text-green-400" />{" "}
               = built-in or included,{" "}
-              <Minus className="mb-0.5 inline size-3 text-yellow-600 dark:text-yellow-400" />{" "}
+              <Minus className="mb-0.5 inline size-3 text-orange-600 dark:text-orange-500" />{" "}
               = possible but requires manual setup,{" "}
               <X className="mb-0.5 inline size-3 text-red-500 dark:text-red-400" />{" "}
               = not available
@@ -741,7 +741,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 7. WHEN TO CHOOSE RAW SES */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Raw SES
             </h2>
             <p className="mb-4 text-muted-foreground">
@@ -767,7 +767,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* 8. WHEN TO CHOOSE WRAPS */}
           {/* =========================================== */}
           <section className="mb-16">
-            <h2 className="mb-4 font-semibold text-2xl">
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
               When to Choose Wraps
             </h2>
             <p className="mb-4 text-muted-foreground">
@@ -795,7 +795,7 @@ export default function AmazonSesVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-4 flex items-center gap-3">
               <Terminal className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Getting Started with Wraps
               </h2>
             </div>
@@ -828,7 +828,7 @@ export default function AmazonSesVsWrapsPage() {
           {/* CTA */}
           {/* =========================================== */}
           <section className="mb-16 rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               SES power, without the setup pain
             </h2>
             <p className="mb-6 text-muted-foreground">

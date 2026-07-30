@@ -1,4 +1,3 @@
-import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
@@ -28,6 +27,7 @@ import { CompareBreadcrumb } from "@/app/compare/components/breadcrumb";
 import { FeatureCell } from "@/app/compare/components/feature-cell";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
@@ -89,7 +89,7 @@ const tldrComparison = [
   },
   {
     dimension: "Contact cost",
-    klaviyo: "$0.014-$0.030 per profile/month",
+    klaviyo: "~$0.014-$0.030 per profile/month",
     wraps: "$0 (unlimited on all tiers)",
   },
   {
@@ -355,7 +355,7 @@ const articleSchema = {
   description:
     "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure. See pricing at real volumes, architecture differences, and which is right for your team.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-03-01T00:00:00.000Z",
+  dateModified: "2026-07-30T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -401,10 +401,8 @@ export default function KlaviyoVsWrapsPage() {
 
           {/* Hero */}
           <section className="mb-16">
-            <Badge className="mb-4" variant="secondary">
-              Comparison
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+            <SectionKicker>Comparison</SectionKicker>
+            <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Klaviyo vs Wraps
             </h1>
             <p className="mb-3 text-lg text-muted-foreground">
@@ -426,7 +424,9 @@ export default function KlaviyoVsWrapsPage() {
 
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
-            <h2 className="mb-6 font-semibold text-2xl">At a Glance</h2>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              At a Glance
+            </h2>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -459,7 +459,9 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <MessageSquareQuote className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Sound Familiar?</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Sound Familiar?
+              </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
@@ -517,7 +519,7 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <Server className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 The Architectural Difference
               </h2>
             </div>
@@ -545,7 +547,7 @@ export default function KlaviyoVsWrapsPage() {
                       All data stored on Klaviyo&rsquo;s AWS, not yours
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       Close your account = all data permanently deleted
                     </li>
                     <li className="flex items-start gap-2">
@@ -596,7 +598,7 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <DollarSign className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 Pricing at Real Volumes
               </h2>
             </div>
@@ -639,7 +641,9 @@ export default function KlaviyoVsWrapsPage() {
                           {row.wrapsTotal}/mo
                         </td>
                         <td className="p-4">
-                          <Badge variant="secondary">{row.savings}</Badge>
+                          <span className="font-mono text-[11px] text-orange-600 tracking-[0.08em] dark:text-orange-500">
+                            {row.savings}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -677,7 +681,7 @@ export default function KlaviyoVsWrapsPage() {
               <CardContent>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>Profile-based billing:</strong> You pay for
                       contacts you never email. Feb 2025 billing change shifted
@@ -686,35 +690,35 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>Auto-upgrade:</strong> Exceeding profile limits
                       triggers automatic tier bumps at the next billing cycle.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>Klaviyo One surcharge:</strong> Mandatory 20% fee
                       once you spend over $10K/month.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>90-day suppression lock:</strong> Suppress a
                       profile and you can&rsquo;t unsuppress for 3 months.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>SMS credits don&rsquo;t roll over:</strong>{" "}
                       Use-it-or-lose-it each month.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                     <span>
                       <strong>CDP add-on:</strong> Advanced data platform starts
                       at $500+/month.
@@ -729,7 +733,9 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <Code className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Feature Comparison</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Feature Comparison
+              </h2>
             </div>
             <div className="space-y-6">
               {featureComparison.map((category) => (
@@ -790,7 +796,7 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <ShoppingCart className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 When Klaviyo Is the Better Choice
               </h2>
             </div>
@@ -856,7 +862,7 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <Terminal className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
                 When Wraps Is the Better Choice
               </h2>
             </div>
@@ -943,7 +949,9 @@ export default function KlaviyoVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
               <Clock className="size-6 text-primary" />
-              <h2 className="font-semibold text-2xl">Switching from Klaviyo</h2>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                Switching from Klaviyo
+              </h2>
             </div>
             <p className="mb-4 text-muted-foreground text-sm">
               Migrating from Klaviyo is a 4-8 week process. The good news: once
@@ -1014,19 +1022,19 @@ export default function KlaviyoVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       Flows (automations) -- no portable format
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       Segments -- criteria must be manually recreated
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       Signup forms -- not exportable
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
                       Predictive properties (CLV, churn) -- Klaviyo-proprietary
                     </li>
                   </ul>
@@ -1052,7 +1060,7 @@ export default function KlaviyoVsWrapsPage() {
 
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
-            <h2 className="mb-2 font-semibold text-xl">
+            <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
               Ready to own your email infrastructure?
             </h2>
             <p className="mb-6 text-muted-foreground">

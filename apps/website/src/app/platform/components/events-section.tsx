@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Activity,
   CircleDollarSign,
@@ -8,8 +6,7 @@ import {
   Infinity as InfinityIcon,
   Zap,
 } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { SectionKicker } from "@/app/landing/components/section-kicker";
 
 const eventTypes = [
   {
@@ -50,35 +47,25 @@ const benefits = [
     icon: Clock,
     title: "Flexible Retention",
     description:
-      "30 days to 1 year history. Tracked events power segments and automations.",
+      "7 days to 1 year history. Tracked events power segments and automations.",
   },
 ];
 
 export function DashboardEventsSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section className="relative py-24" id="events" ref={ref}>
+    <section className="relative py-24" id="events">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5 }}
-        >
-          <p className="mb-2 font-medium text-orange-500 text-sm">
-            Event-Based Pricing
-          </p>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+        <div className="mb-12">
+          <SectionKicker>Event-Based Pricing</SectionKicker>
+          <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight md:text-4xl">
             What counts as an event?
           </h2>
-          <p className="mx-auto max-w-2xl text-muted-foreground">
+          <p className="max-w-2xl text-muted-foreground">
             We only charge for tracked events you explicitly send. Email opens,
             clicks, and delivery events are always free.
           </p>
-        </motion.div>
+        </div>
 
         {/* Event Types Comparison */}
         <div className="mb-16 grid gap-6 md:grid-cols-2">
@@ -86,57 +73,46 @@ export function DashboardEventsSection() {
             const Icon = type.icon;
             return (
               <div
-                className={`relative overflow-hidden rounded-2xl border-2 p-6 ${
+                className={`relative overflow-hidden rounded-2xl border p-6 ${
                   type.counted
-                    ? "border-orange-500 bg-orange-500/5"
-                    : "border-green-500 bg-green-500/5"
+                    ? "border-orange-500/40 bg-orange-500/5"
+                    : "border-border bg-muted/30"
                 }`}
                 key={type.title}
               >
                 {/* Badge */}
                 <div className="absolute top-4 right-4">
-                  <span
-                    className={`rounded-full px-2 py-1 font-medium text-xs ${
-                      type.counted
-                        ? "bg-orange-500 text-white"
-                        : "bg-green-500 text-white"
-                    }`}
-                  >
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
                     {type.counted ? "Counts toward limit" : "Always free"}
                   </span>
                 </div>
 
                 <div className="mb-4 flex items-center gap-3">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-full ${
-                      type.counted ? "bg-orange-500/10" : "bg-green-500/10"
+                  <Icon
+                    aria-hidden="true"
+                    className={`size-5 ${
+                      type.counted ? "text-orange-500" : "text-muted-foreground"
                     }`}
-                  >
-                    <Icon
-                      className={`size-5 ${
-                        type.counted ? "text-orange-500" : "text-green-500"
-                      }`}
-                    />
-                  </div>
+                  />
                   <h3 className="font-semibold text-lg">{type.title}</h3>
                 </div>
 
                 <p className="mb-4 text-muted-foreground">{type.description}</p>
 
                 {/* Code example */}
-                <div className="rounded-lg bg-zinc-900 p-3">
-                  <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
-                    <Code2 className="size-3" />
+                <div className="rounded-lg border border-border bg-card p-3">
+                  <div className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
+                    <Code2 aria-hidden="true" className="size-3" />
                     <span>
                       {type.counted ? "Platform SDK" : "How it works"}
                     </span>
                   </div>
                   {type.counted ? (
-                    <pre className="font-mono text-green-400 text-xs leading-relaxed overflow-x-auto">
+                    <pre className="overflow-x-auto font-mono text-foreground/90 text-xs leading-relaxed">
                       {customEventCode}
                     </pre>
                   ) : (
-                    <code className="font-mono text-green-400 text-sm">
+                    <code className="font-mono text-foreground/90 text-sm">
                       {type.example}
                     </code>
                   )}
@@ -147,18 +123,19 @@ export function DashboardEventsSection() {
         </div>
 
         {/* Benefits Grid */}
-        <div className="rounded-2xl border bg-muted/30 p-8">
-          <h3 className="mb-6 text-center font-semibold text-lg">
+        <div className="rounded-2xl border border-border bg-muted/30 p-8">
+          <h3 className="mb-6 font-heading font-semibold text-lg tracking-tight">
             Why event-based pricing?
           </h3>
           <div className="grid gap-6 md:grid-cols-3">
             {benefits.map((benefit) => {
               const Icon = benefit.icon;
               return (
-                <div className="text-center" key={benefit.title}>
-                  <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-orange-500/10">
-                    <Icon className="size-6 text-orange-500" />
-                  </div>
+                <div key={benefit.title}>
+                  <Icon
+                    aria-hidden="true"
+                    className="mb-3 size-5 text-muted-foreground"
+                  />
                   <h4 className="mb-1 font-medium">{benefit.title}</h4>
                   <p className="text-muted-foreground text-sm">
                     {benefit.description}
@@ -170,7 +147,7 @@ export function DashboardEventsSection() {
         </div>
 
         {/* Comparison note */}
-        <p className="mt-8 text-center text-muted-foreground text-sm">
+        <p className="mt-8 text-muted-foreground text-sm">
           Compare: Customer.io charges $150+/mo for 12K contacts. Wraps gives
           you unlimited contacts on every plan—even the free tier.
         </p>

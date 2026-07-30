@@ -72,7 +72,7 @@ const faqSchema = {
       name: "How much does AWS SES cost per email?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "AWS SES costs $0.10 per 1,000 emails ($0.0001 per email) at the à la carte rate. AWS defaults every new account to the Essentials plan instead, at $0.16 per 1,000 emails — moving back to à la carte takes effect immediately. However, a production email setup also requires infrastructure for event processing and storage — EventBridge, SQS, Lambda, and DynamoDB — which typically adds $1-5/month depending on volume.",
+        text: "AWS SES costs $0.10 per 1,000 emails ($0.0001 per email) at the à la carte rate. AWS defaults every new account to the Essentials plan instead, at $0.16 per 1,000 emails — moving back to à la carte takes effect immediately. However, a production email setup also requires infrastructure for event processing and storage — EventBridge, SQS, Lambda, and DynamoDB — which typically adds $1-10/mo depending on volume.",
       },
     },
     {
@@ -320,7 +320,7 @@ export default function SESCalculatorPage() {
                       However, a production email setup also requires
                       infrastructure for event processing and storage —
                       EventBridge, SQS, Lambda, and DynamoDB — which typically
-                      adds $1-5/month depending on volume.
+                      adds $1-10/mo depending on volume.
                     </p>
                   </CardContent>
                 </Card>
