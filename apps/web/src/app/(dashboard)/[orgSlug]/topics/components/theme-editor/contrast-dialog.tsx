@@ -67,6 +67,7 @@ export function ContrastDialog({
   }, [open, theme, previewMode]);
 
   const failingCount = rows.filter((r) => r.ratio !== null && !r.aa).length;
+  const measuredCount = rows.filter((r) => r.ratio !== null).length;
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -80,8 +81,12 @@ export function ContrastDialog({
               <span className="text-destructive">
                 {failingCount} {failingCount === 1 ? "pair" : "pairs"} fail AA.
               </span>
-            ) : (
+            ) : measuredCount > 0 ? (
               <span className="text-success">All pairs pass AA.</span>
+            ) : (
+              <span className="text-muted-foreground">
+                Contrast couldn't be measured in this browser.
+              </span>
             )}
           </DialogDescription>
         </DialogHeader>

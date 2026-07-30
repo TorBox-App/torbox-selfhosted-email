@@ -81,7 +81,7 @@ export function ImportCssDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import CSS</DialogTitle>
           <DialogDescription>
@@ -91,8 +91,11 @@ export function ImportCssDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* The shared Textarea is field-sizing-content (auto-grows with its
+            content); without a max-height a pasted globals.css expands it past
+            the viewport and pushes the footer buttons out of reach. */}
         <Textarea
-          className="font-mono text-xs"
+          className="max-h-80 min-h-48 overflow-y-auto font-mono text-xs"
           onChange={(e) => setCss(e.target.value)}
           placeholder={PLACEHOLDER}
           rows={16}

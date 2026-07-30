@@ -67,15 +67,21 @@ export function Preview({
         <span className="ml-2 font-mono">app.wraps.dev/preferences/...</span>
       </div>
 
-      <div className="mx-auto max-h-[720px] overflow-y-auto rounded-lg border bg-background">
-        <div
-          className={
-            previewWidth === "mobile"
-              ? "mx-auto w-[390px]"
-              : "mx-auto max-w-2xl"
-          }
-        >
-          <div className="pointer-events-none">
+      {/* Desktop: the shell fills the whole frame, exactly like the real page
+          fills a browser window — its own bg-background (the ORG's token, not
+          the dashboard's) must cover everything under the URL bar or a dark
+          theme reads as a dark stripe on a light page. Mobile: a 390px device
+          screen framed by neutral chrome, so the clamp reads as a device edge
+          rather than as part of the page. */}
+      <div className="mx-auto max-h-[720px] overflow-y-auto overflow-x-hidden rounded-lg border">
+        <div className={previewWidth === "mobile" ? "bg-muted/30 p-6" : ""}>
+          <div
+            className={
+              previewWidth === "mobile"
+                ? "pointer-events-none mx-auto w-[390px] overflow-hidden rounded-md border shadow-sm"
+                : "pointer-events-none"
+            }
+          >
             <PreferenceCenterShell
               description={description}
               logo={logo}

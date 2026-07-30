@@ -74,6 +74,40 @@ export function contrastRatio(
   return (hi + 0.05) / (lo + 0.05);
 }
 
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+/**
+ * Normalize any browser-supported CSS color to sRGB via a 1x1 canvas.
+ * getComputedStyle no longer normalizes modern color functions — Chrome 111+
+ * computes `color: oklch(...)` to the oklch string itself, not rgb() — but
+ * canvas fillStyle accepts them and getImageData always reads back sRGB.
+ * An invalid color leaves fillStyle unchanged, so priming with two different
+ * sentinels detects it: only a valid color serializes identically both times.
+ */
+function colorToSrgb(color: string): [number, number, number] | null {
+  if (measureCtx === undefined) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    measureCtx = canvas.getContext("2d", { willReadFrequently: true });
+  }
+  if (!measureCtx) {
+    return null;
+  }
+  measureCtx.fillStyle = "#000000";
+  measureCtx.fillStyle = color;
+  const first = measureCtx.fillStyle;
+  measureCtx.fillStyle = "#ffffff";
+  measureCtx.fillStyle = color;
+  if (measureCtx.fillStyle !== first) {
+    return null;
+  }
+  measureCtx.clearRect(0, 0, 1, 1);
+  measureCtx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = measureCtx.getImageData(0, 0, 1, 1).data;
+  return [r, g, b];
+}
+
 function computeLuminance(color: string, host: HTMLElement): number | null {
   const span = document.createElement("span");
   span.style.color = color;
@@ -83,13 +117,18 @@ function computeLuminance(color: string, host: HTMLElement): number | null {
   host.removeChild(span);
 
   const match = computed.match(RGB_PATTERN);
-  if (!match) {
+  if (match) {
+    const r = Number.parseInt(match[1], 10);
+    const g = Number.parseInt(match[2], 10);
+    const b = Number.parseInt(match[3], 10);
+    return relativeLuminance(r, g, b);
+  }
+
+  const srgb = colorToSrgb(computed) ?? colorToSrgb(color);
+  if (!srgb) {
     return null;
   }
-  const r = Number.parseInt(match[1], 10);
-  const g = Number.parseInt(match[2], 10);
-  const b = Number.parseInt(match[3], 10);
-  return relativeLuminance(r, g, b);
+  return relativeLuminance(srgb[0], srgb[1], srgb[2]);
 }
 
 export function wcagLevel(ratio: number): { aa: boolean; aaa: boolean } {
