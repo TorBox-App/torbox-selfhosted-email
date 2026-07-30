@@ -1129,6 +1129,142 @@ export async function saveWebhookSecretAction(
   }
 }
 
+export type SaveDailyQuotaReserveResult =
+  | { success: true; message: string }
+  | { success: false; error: string };
+
+// SES's largest published daily-quota tier. A reserve above this is almost
+// certainly a typo (e.g. an extra zero), not a real quota-protection value.
+const MAX_DAILY_QUOTA_RESERVE = 14_000_000;
+
+/**
+ * Save the daily quota reserve for an AWS account: the number of emails/24h
+ * that broadcasts must leave untouched so transactional sending never runs
+ * out of SES daily quota. NULL disables the feature.
+ */
+export async function saveDailyQuotaReserveAction(
+  awsAccountId: string,
+  reserve: number | null,
+  organizationId: string
+): Promise<SaveDailyQuotaReserveResult> {
+  const log = createActionLogger("saveDailyQuotaReserve", {
+    accountId: awsAccountId,
+  });
+
+  try {
+    // Get current user session
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "You must be logged in to update quota reserve settings",
+      };
+    }
+
+    // Verify membership first, then check account belongs to this org
+    const membership = await db.query.member.findFirst({
+      where: (m, { and: andOp, eq: eqOp }) =>
+        andOp(
+          eqOp(m.userId, session.user.id),
+          eqOp(m.organizationId, organizationId)
+        ),
+      with: { organization: { columns: { slug: true } } },
+    });
+
+    if (!membership) {
+      return {
+        success: false,
+        error: "You don't have permission to manage this AWS account",
+      };
+    }
+    const awsWriteError = checkPermission(membership.role, "awsAccounts", [
+      "write",
+    ]);
+    if (awsWriteError) return awsWriteError;
+
+    // Get the AWS account scoped to the caller's org (prevents cross-org enumeration)
+    const account = await db.query.awsAccount.findFirst({
+      where: (a, { and: andOp, eq: eqOp }) =>
+        andOp(eqOp(a.id, awsAccountId), eqOp(a.organizationId, organizationId)),
+    });
+
+    if (!account) {
+      return {
+        success: false,
+        error: "AWS account not found",
+      };
+    }
+
+    // Validate reserve: null (disable) or a non-negative integer within a
+    // sane bound (obvious typo guard).
+    if (
+      reserve !== null &&
+      (!Number.isInteger(reserve) ||
+        reserve < 0 ||
+        reserve > MAX_DAILY_QUOTA_RESERVE)
+    ) {
+      return {
+        success: false,
+        error: `Reserve must be a whole number between 0 and ${MAX_DAILY_QUOTA_RESERVE.toLocaleString()}.`,
+      };
+    }
+
+    // Update the reserve + audit log atomically
+    const auditCtx = await getAuditContext();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(awsAccount)
+        .set({
+          dailyQuotaReserve: reserve,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(awsAccount.id, awsAccountId),
+            eq(awsAccount.organizationId, organizationId)
+          )
+        );
+      await tx.insert(auditLog).values(
+        auditLogEntry(auditCtx, {
+          organizationId,
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          action: "settings.daily_quota_reserve_saved",
+          resource: "aws_account",
+          resourceId: awsAccountId,
+          metadata: { reserve },
+        })
+      );
+    });
+
+    // Revalidate the page
+    revalidatePath(
+      `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`
+    );
+
+    log.info("Daily quota reserve saved");
+    return {
+      success: true,
+      message:
+        reserve === null
+          ? "Daily quota reserve disabled"
+          : "Daily quota reserve saved successfully",
+    };
+  } catch (error) {
+    log.error(
+      { err: serializeError(error) },
+      "Failed to save daily quota reserve"
+    );
+    return {
+      success: false,
+      error: "Something went wrong. Please try again.",
+    };
+  }
+}
+
 /**
  * Remove webhook secret from an AWS account
  * This stops SES events from being sent to the Wraps dashboard

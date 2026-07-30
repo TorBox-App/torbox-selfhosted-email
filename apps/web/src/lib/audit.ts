@@ -70,6 +70,7 @@ export type AuditLogAction =
   | "settings.sender_defaults_updated"
   | "settings.webhook_secret_saved"
   | "settings.webhook_secret_removed"
+  | "settings.daily_quota_reserve_saved"
   | "block.updated"
   | "block.deleted"
   | "template.duplicated"

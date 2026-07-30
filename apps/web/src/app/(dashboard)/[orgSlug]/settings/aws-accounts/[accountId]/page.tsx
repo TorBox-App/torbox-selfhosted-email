@@ -7,6 +7,7 @@ import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { AccountDetails } from "./components/account-details";
 import { AccountFeatures } from "./components/account-features";
 import { EventFeedStaleBanner } from "./components/event-feed-stale-banner";
+import { QuotaReserve } from "./components/quota-reserve";
 import { WebhookConfiguration } from "./components/webhook-configuration";
 
 type AWSAccountPageProps = {
@@ -104,6 +105,9 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
 
       {/* Platform Connection - only show to managers */}
       {permissions.canManage && <WebhookConfiguration account={account} />}
+
+      {/* Daily Quota Reserve - only show to managers */}
+      {permissions.canManage && <QuotaReserve account={account} />}
     </div>
   );
 }
