@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -22,6 +23,22 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+
+const agentPrompt = `Wire Wraps email sending into this Next.js app.
+
+1. Verify AWS credentials with: aws sts get-caller-identity — help me configure them if that fails.
+2. If Wraps isn't deployed yet, run: npx @wraps.dev/cli email init
+   Confirm the estimated monthly cost with me before deploying.
+3. Ask me for my sending domain, then run:
+   npx @wraps.dev/cli email domains add -d <domain>
+   npx @wraps.dev/cli email domains verify -d <domain>
+   Show me the DNS records and re-run verify after I add them.
+4. Install the SDK: npm install @wraps.dev/email
+5. Add a server action (or App Router API route — ask which I prefer) that sends email using WrapsEmail from @wraps.dev/email.
+6. Send a test email through it and report the messageId.
+7. If I deploy on Vercel, show me how to configure AWS credentials there.
+
+Full guide (agent-readable): fetch https://wraps.dev/docs/quickstart/email/nextjs with header "Accept: text/markdown".`;
 
 const serverActionCode = `'use server'
 
@@ -124,6 +141,8 @@ export default function NextjsQuickstartPageContent() {
           application in under 5 minutes.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites */}
       <Card className="mb-8">

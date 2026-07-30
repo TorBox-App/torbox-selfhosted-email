@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { AwsCredentialsPrereqs } from "@/components/docs/aws-credentials-prereqs";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -30,6 +31,18 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Set up Wraps SMS infrastructure in my AWS account and send a test SMS.
+
+1. Verify AWS credentials with: aws sts get-caller-identity
+   If that fails, help me configure credentials before continuing.
+2. Deploy the SMS stack: npx @wraps.dev/cli sms init
+   This provisions a phone number — confirm the number type and estimated monthly cost with me before deploying.
+3. Install the SDK: npm install @wraps.dev/sms
+4. Send a test SMS with the SDK to a phone number I give you. Report the messageId.
+5. Opt-out management is configured automatically, but flag anything that needs my action (e.g. toll-free number verification).
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const installCommands = {
   npm: "npm install @wraps.dev/sms",
@@ -67,6 +80,8 @@ export default function SmsQuickstartPageContent() {
           send your first text message.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites — must come before any command */}
       <AwsCredentialsPrereqs />

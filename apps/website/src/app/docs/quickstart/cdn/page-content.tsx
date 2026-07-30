@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { AwsCredentialsPrereqs } from "@/components/docs/aws-credentials-prereqs";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -30,6 +31,18 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Set up a Wraps CDN (S3 + CloudFront) in my AWS account and upload a test file.
+
+1. Verify AWS credentials with: aws sts get-caller-identity
+   If that fails, help me configure credentials before continuing.
+2. Deploy the CDN stack: npx @wraps.dev/cli cdn init
+   Confirm the configuration and estimated monthly cost with me before deploying.
+3. Ask me if I want a custom domain. If yes, show me the DNS records to add and wait for me to confirm before verifying.
+4. Install @aws-sdk/client-s3, upload a test file to the bucket, and give me its CloudFront URL.
+5. Show me an example image-optimization URL using query parameters.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const installCommands = {
   npm: "npm install @aws-sdk/client-s3",
@@ -106,6 +119,8 @@ export default function CdnQuickstartPageContent() {
           </p>
         </div>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites — must come before any command */}
       <AwsCredentialsPrereqs

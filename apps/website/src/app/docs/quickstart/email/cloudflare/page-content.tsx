@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -22,6 +23,21 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+
+const agentPrompt = `Wire Wraps email sending into a Cloudflare Worker.
+
+1. Verify AWS credentials locally with: aws sts get-caller-identity — help me configure them if that fails.
+2. If Wraps isn't deployed yet, run: npx @wraps.dev/cli email init
+   Confirm the estimated monthly cost with me before deploying.
+3. Ask me for my sending domain, then run:
+   npx @wraps.dev/cli email domains add -d <domain>
+   npx @wraps.dev/cli email domains verify -d <domain>
+   Show me the DNS records and re-run verify after I add them.
+4. Create a Worker and install @wraps.dev/email. Import WrapsEmail from "@wraps.dev/email/workers" — the main entry does not run on Workers.
+5. Store AWS credentials as Worker secrets with wrangler secret put, and set the region in wrangler config.
+6. Send a test email from the Worker with wrangler dev, report the messageId, then deploy with wrangler deploy.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const wranglerConfig = `{
   "name": "email-worker",
@@ -152,6 +168,8 @@ export default function CloudflareQuickstartPageContent() {
           email from a Cloudflare Worker running at the edge.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites */}
       <Card className="mb-8">

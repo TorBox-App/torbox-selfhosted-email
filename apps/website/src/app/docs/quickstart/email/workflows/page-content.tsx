@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -21,6 +22,17 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+
+const agentPrompt = `Set up a Wraps email workflow (automation) in this project.
+
+1. A deployed Wraps email stack is required. If missing, run npx @wraps.dev/cli email init first (confirm the estimated cost with me before deploying).
+2. Scaffold workflows: npx @wraps.dev/cli email workflows init
+3. Ask me what the workflow should do (e.g. welcome sequence, cart recovery), then write it with the TypeScript workflow DSL.
+4. Validate locally: npx @wraps.dev/cli email workflows validate
+5. After I approve, push to production: npx @wraps.dev/cli email workflows push
+6. Trigger a test run using createPlatformClient from @wraps.dev/client and report the result.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const workflowCode = `import {
   defineWorkflow,
@@ -126,6 +138,8 @@ export default function WorkflowsQuickstartPageContent() {
           minutes. No drag-and-drop builders, no YAML — just code.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Outcome Preview */}
       <div className="mb-8 rounded-lg border bg-muted/50 p-4">

@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -21,6 +22,18 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+
+const agentPrompt = `Set up Wraps email templates in this project.
+
+1. A deployed Wraps email stack is required. If missing, run npx @wraps.dev/cli email init first (confirm the estimated cost with me before deploying).
+2. Scaffold the templates directory: npx @wraps.dev/cli email templates init
+3. Ask me what the first template should be, then write it as a React Email component.
+4. Start the preview server: npx @wraps.dev/cli email templates preview
+   Give me the local URL so I can review it, and wait for my approval.
+5. Push to SES: npx @wraps.dev/cli email templates push
+6. Send a test email using the template via WrapsEmail from @wraps.dev/email and report the messageId. Include unsubscribe handling if the template is marketing email.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const scaffoldOutput = `wraps/
 ├── wraps.config.ts          # Project configuration
@@ -169,6 +182,8 @@ export default function TemplatesQuickstartPageContent() {
           hot-reload, and push to AWS SES — all from your codebase.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Outcome Preview */}
       <div className="mb-8 rounded-lg border bg-muted/50 p-4">

@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -22,6 +23,21 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+
+const agentPrompt = `Wire Wraps email sending into this Remix app.
+
+1. Verify AWS credentials with: aws sts get-caller-identity — help me configure them if that fails.
+2. If Wraps isn't deployed yet, run: npx @wraps.dev/cli email init
+   Confirm the estimated monthly cost with me before deploying.
+3. Ask me for my sending domain, then run:
+   npx @wraps.dev/cli email domains add -d <domain>
+   npx @wraps.dev/cli email domains verify -d <domain>
+   Show me the DNS records and re-run verify after I add them.
+4. Install the SDK: npm install @wraps.dev/email
+5. Add a Remix action that sends email using WrapsEmail from @wraps.dev/email.
+6. Send a test email through the action and report the messageId, then walk me through deploying.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const remixActionCode = `import type { ActionFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
@@ -124,6 +140,8 @@ export default function RemixQuickstartPageContent() {
           application.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites */}
       <Card className="mb-8">

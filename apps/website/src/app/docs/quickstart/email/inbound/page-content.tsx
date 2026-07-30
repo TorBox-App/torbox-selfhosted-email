@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -36,6 +37,18 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Set up Wraps inbound email so I can receive, list, and reply to emails.
+
+1. Verify AWS credentials with: aws sts get-caller-identity — help me configure them if that fails.
+2. A deployed Wraps email stack is required. If missing, run npx @wraps.dev/cli email init first (confirm the estimated cost with me before deploying).
+3. Run: npx @wraps.dev/cli email inbound init
+   If it prompts for a webhook URL, ask me whether I want webhook delivery and for the URL.
+4. Show me the MX/DNS records to add and wait for me to confirm they're in place.
+5. Install the SDK (npm install @wraps.dev/email) and write a small script that lists inbound emails via the inbox API.
+6. Have me send a test email to my inbound address, confirm it shows up, and show me how to reply and forward with proper threading.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -166,6 +179,8 @@ export default function InboundEmailQuickstartPageContent() {
           to your team.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites */}
       <Card className="mb-8">

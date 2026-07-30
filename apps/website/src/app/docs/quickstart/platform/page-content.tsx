@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -29,6 +30,16 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Connect this project to the Wraps hosted platform.
+
+1. Ask me for my Wraps API key (I can create one at app.wraps.dev under organization settings). Store it as WRAPS_API_KEY in my env file — never commit it.
+2. Install the SDK: npm install @wraps.dev/client
+3. Initialize the client with createPlatformClient using process.env.WRAPS_API_KEY.
+4. Create a test contact, then list contacts to confirm the connection works.
+5. Show me how to send a batch email to a segment of contacts.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const installCommands = {
   npm: "npm install @wraps.dev/client",
@@ -103,6 +114,8 @@ export default function PlatformQuickstartPageContent() {
           and interact with the Wraps API programmatically.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites — must come before any code */}
       <Card className="mb-8 border-primary/50">

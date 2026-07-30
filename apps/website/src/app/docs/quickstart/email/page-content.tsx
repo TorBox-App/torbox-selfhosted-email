@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { AwsCredentialsPrereqs } from "@/components/docs/aws-credentials-prereqs";
 import { DocsLayout } from "@/components/docs-layout";
 import {
@@ -30,6 +31,22 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Set up Wraps email infrastructure in my AWS account and send a test email.
+
+1. Verify AWS credentials with: aws sts get-caller-identity
+   If that fails, help me configure credentials before continuing.
+2. Deploy the email stack: npx @wraps.dev/cli email init
+   Walk me through the preset choice and confirm the estimated monthly cost with me before deploying.
+3. Ask me for my sending domain, then run:
+   npx @wraps.dev/cli email domains add -d <domain>
+   npx @wraps.dev/cli email domains verify -d <domain>
+   Show me the DNS records I need to add, and re-run verify after I confirm they're in place.
+4. Install the SDK: npm install @wraps.dev/email
+5. Create send-email.ts using WrapsEmail from @wraps.dev/email and send a test email to an address I give you. Report the messageId.
+6. If the AWS account is in the SES sandbox, tell me — I can only send to verified addresses until AWS grants production access.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -73,6 +90,8 @@ export default function EmailQuickstartPageContent() {
           under 2 minutes and send your first email.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       {/* Prerequisites — must come before any command */}
       <AwsCredentialsPrereqs />

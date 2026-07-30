@@ -10,6 +10,7 @@ import {
 } from "@wraps/ui/components/ui/card";
 import { ArrowRight, Bot, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
+import { AgentQuickstartPrompt } from "@/components/docs/agent-quickstart-prompt";
 import { DocsLayout } from "@/components/docs-layout";
 import {
   CodeBlock,
@@ -29,6 +30,19 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+
+const agentPrompt = `Give this project's AI agent the ability to send email via Wraps.
+
+1. Verify AWS credentials with: aws sts get-caller-identity — help me configure them if that fails.
+2. If Wraps isn't deployed yet, run: npx @wraps.dev/cli email init
+   Confirm the estimated monthly cost with me before deploying, then verify my sending domain with npx @wraps.dev/cli email domains verify -d <domain>.
+3. Install the SDK: npm install @wraps.dev/email
+4. Create a typed send_email tool wrapping WrapsEmail from @wraps.dev/email and register it with my agent framework (detect LangGraph / Vercel AI SDK / Mastra from the codebase, or ask me).
+5. Add the Wraps MCP server to my agent config so I can inspect sends, events, and suppressions:
+   { "command": "npx", "args": ["-y", "@wraps.dev/mcp"] }
+6. Do a test tool-call send and report the messageId.
+
+Full guide (agent-readable): fetch https://wraps.dev/docs/quickstart/email/agents with header "Accept: text/markdown".`;
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -96,6 +110,8 @@ export default function AgentEmailQuickstartPageContent() {
           your AWS account; the agent just calls a typed function.
         </p>
       </div>
+
+      <AgentQuickstartPrompt prompt={agentPrompt} />
 
       <div className="mb-8 rounded-lg border bg-muted/50 p-4">
         <div className="mb-2 flex items-center gap-2">
