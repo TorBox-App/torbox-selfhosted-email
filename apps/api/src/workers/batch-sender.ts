@@ -472,6 +472,79 @@ async function notifyBroadcastFinished(
   }
 }
 
+/**
+ * Write a broadcast-paused inbox notification, deduplicated per batch per 24h.
+ * Mirrors notifyBroadcastFinished's shape exactly — never lets a notification
+ * failure break the send loop.
+ */
+async function notifyBroadcastQuotaPaused(
+  batchId: string,
+  organizationId: string,
+  info: { max24HourSend: number; sentLast24Hours: number; reserve: number }
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.quota_paused",
+      since,
+      dataEquals: { key: "batchId", value: batchId },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[batch], [org]] = await Promise.all([
+      db
+        .select({ name: batchSend.name, subject: batchSend.subject })
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, batchId),
+            eq(batchSend.organizationId, organizationId)
+          )
+        )
+        .limit(1),
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
+    if (!(batch && org?.slug)) {
+      return;
+    }
+
+    const label = batch.name || batch.subject || "Broadcast";
+    const title = `Broadcast "${label}" paused to protect your transactional email`;
+    const body = `Daily quota ${info.max24HourSend.toLocaleString()}, ${info.sentLast24Hours.toLocaleString()} sent in the last 24h, ${info.reserve.toLocaleString()} reserved for transactional. Sending resumes automatically as quota frees up.`;
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.quota_paused",
+      title,
+      body,
+      href: `/${org.slug}/emails/broadcasts/${batchId}`,
+      data: {
+        batchId,
+        max24HourSend: info.max24HourSend,
+        sentLast24Hours: info.sentLast24Hours,
+        reserve: info.reserve,
+      },
+    });
+  } catch (error) {
+    captureException(error, {
+      tags: { worker: "batch-sender", stage: "quota-paused-notification" },
+      extra: { batchId, organizationId },
+    });
+    log.error("Failed to write broadcast-quota-paused notification", error, {
+      batchId,
+      organizationId,
+    });
+  }
+}
+
 async function processJob(
   job: BatchJob,
   context: Context,
@@ -602,7 +675,10 @@ async function processJob(
   // Load account email features; the SES config set is resolved later, once
   // the sender domain is known (config sets are per-domain).
   const [accountRow] = await db
-    .select({ features: awsAccount.features })
+    .select({
+      features: awsAccount.features,
+      dailyQuotaReserve: awsAccount.dailyQuotaReserve,
+    })
     .from(awsAccount)
     .where(
       and(
@@ -623,11 +699,17 @@ async function processJob(
     region: credentials.region,
   });
 
-  // Fetch customer's SES rate limit
+  // Fetch customer's SES rate limit (and, for the quota-reserve gate below,
+  // the account's daily quota and rolling 24h usage). A GetAccount failure
+  // leaves max24HourSend/sentLast24Hours undefined, which fails the gate open.
   let maxSendRate = DEFAULT_RATE_LIMIT;
+  let max24HourSend: number | undefined;
+  let sentLast24Hours: number | undefined;
   try {
     const accountInfo = await sesClient.send(new GetAccountCommand({}));
     maxSendRate = accountInfo.SendQuota?.MaxSendRate ?? DEFAULT_RATE_LIMIT;
+    max24HourSend = accountInfo.SendQuota?.Max24HourSend;
+    sentLast24Hours = accountInfo.SendQuota?.SentLast24Hours;
   } catch (error) {
     log.warn("Could not fetch SES rate limit, using default", {
       error: String(error),
@@ -637,6 +719,39 @@ async function processJob(
   // Calculate delay between chunks to respect rate limit
   // CHUNK_SIZE recipients / rate limit = seconds to wait
   const rateLimitDelay = Math.ceil(CHUNK_SIZE / maxSendRate);
+
+  // Daily quota reserve gate: pause this chunk (re-enqueue unchanged, same
+  // chunkIndex/cursor) if sending it would eat into the transactional
+  // reserve. Max24HourSend === -1 means unlimited quota — skip the gate.
+  const reserve = accountRow?.dailyQuotaReserve ?? 0;
+  if (
+    channel === "email" &&
+    reserve > 0 &&
+    typeof max24HourSend === "number" &&
+    max24HourSend > 0 &&
+    typeof sentLast24Hours === "number"
+  ) {
+    const headroom = max24HourSend - sentLast24Hours - reserve;
+    if (headroom < contacts.length) {
+      log.warn("Broadcast paused: would eat into daily quota reserve", {
+        batchId,
+        max24HourSend,
+        sentLast24Hours,
+        reserve,
+        headroom,
+      });
+      await notifyBroadcastQuotaPaused(batchId, organizationId, {
+        max24HourSend,
+        sentLast24Hours,
+        reserve,
+      });
+      // Re-enqueue the SAME chunk (same chunkIndex, same cursor) — matches
+      // the throttle-recovery re-enqueue shape above. 900s is the SQS
+      // DelaySeconds max; the batch resumes as the 24h window rolls.
+      await enqueueNextChunk(job, { delaySeconds: 900 });
+      return;
+    }
+  }
 
   // Load template info and organization name
   let sesTemplateName: string | undefined;
