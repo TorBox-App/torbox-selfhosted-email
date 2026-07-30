@@ -462,8 +462,8 @@ async function validateAndPrepareSend(
   // Daily quota reserve preflight: block broadcasts that would eat into the
   // AWS account's transactional reserve. Best-effort — any AssumeRole/SES
   // failure fails open (the worker still enforces the gate at send time).
-  if (data.channel !== "sms" && (awsAccountRow.dailyQuotaReserve ?? 0) > 0) {
-    const reserve = awsAccountRow.dailyQuotaReserve as number;
+  const reserve = awsAccountRow.dailyQuotaReserve ?? 0;
+  if (data.channel !== "sms" && reserve > 0) {
     try {
       const credentials = await getOrAssumeRole({
         roleArn: awsAccountRow.roleArn,

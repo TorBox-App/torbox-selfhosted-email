@@ -43,6 +43,7 @@ import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { isSelfHosted } from "@/lib/plan-limits";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 import { checkPermission } from "./shared/permissions";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Create server validator
 const serverValidate = createServerValidate({
@@ -1152,35 +1153,14 @@ export async function saveDailyQuotaReserveAction(
   });
 
   try {
-    // Get current user session
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "You must be logged in to update quota reserve settings",
-      };
-    }
-
-    // Verify membership first, then check account belongs to this org
-    const membership = await db.query.member.findFirst({
-      where: (m, { and: andOp, eq: eqOp }) =>
-        andOp(
-          eqOp(m.userId, session.user.id),
-          eqOp(m.organizationId, organizationId)
-        ),
-      with: { organization: { columns: { slug: true } } },
-    });
-
-    if (!membership) {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
       return {
         success: false,
         error: "You don't have permission to manage this AWS account",
       };
     }
-    const awsWriteError = checkPermission(membership.role, "awsAccounts", [
+    const awsWriteError = checkPermission(access.role, "awsAccounts", [
       "write",
     ]);
     if (awsWriteError) return awsWriteError;
@@ -1230,8 +1210,8 @@ export async function saveDailyQuotaReserveAction(
       await tx.insert(auditLog).values(
         auditLogEntry(auditCtx, {
           organizationId,
-          actorId: session.user.id,
-          actorEmail: session.user.email,
+          actorId: access.userId,
+          actorEmail: access.userEmail,
           action: "settings.daily_quota_reserve_saved",
           resource: "aws_account",
           resourceId: awsAccountId,
@@ -1241,9 +1221,7 @@ export async function saveDailyQuotaReserveAction(
     });
 
     // Revalidate the page
-    revalidatePath(
-      `/${membership.organization.slug}/settings/aws-accounts/${awsAccountId}`
-    );
+    revalidatePath(`/${access.orgSlug}/settings/aws-accounts/${awsAccountId}`);
 
     log.info("Daily quota reserve saved");
     return {
