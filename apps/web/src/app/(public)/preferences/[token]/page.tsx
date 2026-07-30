@@ -12,6 +12,7 @@ import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PreferenceCenterShell } from "@/components/preference-center/shell";
+import { PreferenceThemeToggle } from "@/components/preference-center/theme-toggle";
 import { resolvePreferenceCenterTheme } from "@/lib/preference-theme/resolve";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 import { PreferencesForm } from "./preferences-form";
@@ -247,6 +248,7 @@ export default async function PreferencesPage({
         token={token}
         topics={topicsWithStatus}
       />
+      {theme.colorScheme === "system" && <PreferenceThemeToggle />}
     </PreferenceCenterShell>
   );
 }
