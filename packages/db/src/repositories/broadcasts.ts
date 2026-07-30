@@ -38,9 +38,21 @@ export async function findAwsAccountForOrg(
   awsAccountId: string,
   organizationId: string,
   dbClient: DbClient = db
-): Promise<{ id: string } | null> {
+): Promise<{
+  id: string;
+  dailyQuotaReserve: number | null;
+  roleArn: string;
+  externalId: string;
+  region: string;
+} | null> {
   const [result] = await dbClient
-    .select({ id: awsAccount.id })
+    .select({
+      id: awsAccount.id,
+      dailyQuotaReserve: awsAccount.dailyQuotaReserve,
+      roleArn: awsAccount.roleArn,
+      externalId: awsAccount.externalId,
+      region: awsAccount.region,
+    })
     .from(awsAccount)
     .where(
       and(

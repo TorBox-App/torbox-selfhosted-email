@@ -181,6 +181,10 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("next/server", () => ({
+  after: vi.fn((fn: () => unknown) => fn()),
+}));
+
 vi.mock("@wraps/auth", () => ({
   auth: {
     api: {
@@ -212,6 +216,41 @@ vi.mock("@/actions/templates", () => ({
     success: true,
     sesTemplateName: "wraps-test-template",
   })),
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily quota reserve preflight mocks — AssumeRole + SES GetAccount
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getOrAssumeRoleMock = vi.fn().mockResolvedValue({
+  accessKeyId: "AKIA-test",
+  secretAccessKey: "secret-test",
+  sessionToken: "token-test",
+  expiration: new Date("2099-01-01"),
+});
+
+vi.mock("@/lib/aws/credential-cache", () => ({
+  getOrAssumeRole: (...args: unknown[]) => getOrAssumeRoleMock(...args),
+}));
+
+let sesGetAccountShouldThrow = false;
+let sesGetAccountQuota: {
+  Max24HourSend?: number;
+  SentLast24Hours?: number;
+} | null = null;
+
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class {
+    send = vi.fn().mockImplementation(() => {
+      if (sesGetAccountShouldThrow) {
+        return Promise.reject(new Error("GetAccount failed: network error"));
+      }
+      return Promise.resolve({ SendQuota: sesGetAccountQuota ?? {} });
+    });
+  },
+  GetAccountCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,6 +323,14 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sesGetAccountShouldThrow = false;
+  sesGetAccountQuota = null;
+  getOrAssumeRoleMock.mockResolvedValue({
+    accessKeyId: "AKIA-test",
+    secretAccessKey: "secret-test",
+    sessionToken: "token-test",
+    expiration: new Date("2099-01-01"),
+  });
 });
 
 afterAll(async () => {
@@ -675,6 +722,219 @@ describe("promoteDraftToSend — blocks all-fail sends", () => {
         .delete(organizationExtension)
         .where(eq(organizationExtension.organizationId, blockOrgId));
       await db.delete(organization).where(eq(organization.id, blockOrgId));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily quota reserve preflight — blocks/allows sends based on SES
+// Max24HourSend/SentLast24Hours vs. the account's dailyQuotaReserve.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function mockSendApiSuccess() {
+  const realFetch = globalThis.fetch.bind(globalThis);
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (...args: Parameters<typeof fetch>) => {
+      const [url] = args;
+      const asString = typeof url === "string" ? url : url.toString();
+      if (asString.includes("/v1/batch/")) {
+        return new Response(JSON.stringify({ id: "mock-id" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return realFetch(...args);
+    });
+}
+
+describe("promoteDraftToSend — daily quota reserve preflight", () => {
+  it("blocks the send when reserve + usage leave insufficient headroom", async () => {
+    const quotaAwsId = `preflight-quota-block-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-block-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 115_000 };
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Quota Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      // Error message contains recipient count, quota, sent, and reserve.
+      expect(result.error).toMatch(/recipients/);
+      expect(result.error).toContain("120,000");
+      expect(result.error).toContain("115,000");
+      expect(result.error).toContain("40,000");
+
+      const after = await db.query.batchSend.findFirst({
+        where: eq(batchSend.id, draft.batch.id),
+      });
+      expect(after?.status).toBe("draft");
+    } finally {
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("does not call SES/AssumeRole when the reserve is null (feature off)", async () => {
+    // testAwsAccount has no dailyQuotaReserve set (null by fixture default).
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "No Reserve Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      expect(getOrAssumeRoleMock).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+    }
+  });
+
+  it("fails open (send proceeds) when GetAccount rejects", async () => {
+    const quotaAwsId = `preflight-quota-failopen-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-failopen-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    sesGetAccountShouldThrow = true;
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Fail Open Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("skips the quota check for SMS channel even when reserve is set", async () => {
+    const quotaAwsId = `preflight-quota-sms-aws-${RUN_ID}`;
+    const smsContactId = `preflight-quota-sms-contact-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-sms-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(contact)
+      .values({
+        id: smsContactId,
+        organizationId: testOrganization.id,
+        phone: "+15005550006",
+        phoneHash: `hash-sms-${RUN_ID}`,
+        smsStatus: "opted_in",
+        properties: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    // Even though the account has a reserve set, an SES GetAccount call
+    // would fail this test if made — the SMS channel gate should never
+    // reach it. Configure it to throw so any accidental call is caught.
+    sesGetAccountShouldThrow = true;
+
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        channel: "sms",
+        senderId: "wraps",
+        body: "Test SMS body",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      expect(getOrAssumeRoleMock).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(contact).where(eq(contact.id, smsContactId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
     }
   });
 });

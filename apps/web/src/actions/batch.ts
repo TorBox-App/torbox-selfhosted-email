@@ -1,6 +1,7 @@
 "use server";
 // baseline:allow-large-file
 
+import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
 import {
   auditLog,
@@ -33,6 +34,7 @@ import { z } from "zod";
 import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import { trackBroadcastCreated } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
+import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import type {
   BatchStatus,
   CancelBatchResult,
@@ -455,6 +457,49 @@ async function validateAndPrepareSend(
           ? "No contacts with SMS consent found"
           : "No active email contacts found",
     };
+  }
+
+  // Daily quota reserve preflight: block broadcasts that would eat into the
+  // AWS account's transactional reserve. Best-effort — any AssumeRole/SES
+  // failure fails open (the worker still enforces the gate at send time).
+  if (data.channel !== "sms" && (awsAccountRow.dailyQuotaReserve ?? 0) > 0) {
+    const reserve = awsAccountRow.dailyQuotaReserve as number;
+    try {
+      const credentials = await getOrAssumeRole({
+        roleArn: awsAccountRow.roleArn,
+        externalId: awsAccountRow.externalId,
+        region: awsAccountRow.region,
+      });
+      const sesClient = new SESv2Client({
+        region: awsAccountRow.region,
+        credentials,
+      });
+      const accountInfo = await sesClient.send(new GetAccountCommand({}));
+      const max24HourSend = accountInfo.SendQuota?.Max24HourSend;
+      const sentLast24Hours = accountInfo.SendQuota?.SentLast24Hours;
+
+      if (
+        typeof max24HourSend === "number" &&
+        max24HourSend > 0 && // -1 = unlimited quota; skip
+        typeof sentLast24Hours === "number"
+      ) {
+        const headroom = max24HourSend - sentLast24Hours - reserve;
+        if (recipientCount > headroom) {
+          return {
+            ok: false,
+            error: `Broadcast blocked to protect transactional email: ${recipientCount.toLocaleString()} recipients but only ${headroom.toLocaleString()} emails of headroom (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Reduce the audience or lower the reserve in AWS account settings.`,
+          };
+        }
+      }
+    } catch (error) {
+      const log = createActionLogger("validateAndPrepareSend", {
+        organizationId,
+      });
+      log.warn(
+        { err: error },
+        "Could not check daily quota reserve headroom, proceeding"
+      );
+    }
   }
 
   // Block sends where every contact would fail template rendering due to
