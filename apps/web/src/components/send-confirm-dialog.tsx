@@ -19,6 +19,9 @@ type SendConfirmDialogProps = {
   variant: "send" | "schedule";
   scheduledDate?: Date;
   loading?: boolean;
+  /** When the audience exceeds one day's SES capacity, the estimated calendar
+   *  days to drain. Null, undefined, or 1 renders nothing extra. */
+  estimatedDays?: number | null;
 };
 
 export function SendConfirmDialog({
@@ -29,12 +32,18 @@ export function SendConfirmDialog({
   variant,
   scheduledDate,
   loading,
+  estimatedDays,
 }: SendConfirmDialogProps) {
   const formattedCount = recipientCount.toLocaleString();
 
   const scheduleDescription = scheduledDate
     ? `This will schedule emails to ${formattedCount} contacts for ${scheduledDate.toLocaleDateString(undefined, { dateStyle: "medium" })} at ${scheduledDate.toLocaleTimeString(undefined, { timeStyle: "short" })}.`
     : `This will schedule emails to ${formattedCount} contacts.`;
+
+  const durationNote =
+    estimatedDays && estimatedDays > 1
+      ? ` This account's SES daily quota means sending will take about ${estimatedDays} days: it pauses and resumes automatically as quota frees up, and you can cancel any time from the broadcast page.`
+      : "";
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
@@ -44,9 +53,10 @@ export function SendConfirmDialog({
             {variant === "schedule" ? "Confirm schedule" : "Confirm send"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {variant === "schedule"
+            {(variant === "schedule"
               ? scheduleDescription
-              : `This will immediately send emails to ${formattedCount} contacts. This action cannot be undone.`}
+              : `This will immediately send emails to ${formattedCount} contacts. This action cannot be undone.`) +
+              durationNote}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

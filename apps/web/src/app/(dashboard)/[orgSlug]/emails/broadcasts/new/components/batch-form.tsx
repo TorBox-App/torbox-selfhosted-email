@@ -69,6 +69,7 @@ import {
   type AudienceType,
   type CheckTemplateVariableCoverageResult,
   type ContentType,
+  checkBroadcastSendDuration,
   checkTemplateVariableCoverage,
   createBatchSend,
   getRecipientCount,
@@ -87,7 +88,11 @@ import { getMessageUsageQueryKey } from "@/hooks/use-message-usage";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
 import { useRequireAws } from "@/hooks/use-require-aws";
 import { useTemplates } from "@/hooks/use-template-queries";
-import type { CreateDraftBatchInput, SampleContact } from "@/lib/batch";
+import type {
+  CheckSendDurationResult,
+  CreateDraftBatchInput,
+  SampleContact,
+} from "@/lib/batch";
 import { cn } from "@/lib/utils";
 import type { CampaignData, ScheduleType } from "./batch-form-utils";
 import { EmailPreviewCarousel } from "./email-preview-carousel";
@@ -1482,6 +1487,38 @@ function ReviewStep({
       ? coverageResult
       : null;
 
+  const [durationResult, setDurationResult] =
+    useState<CheckSendDurationResult | null>(null);
+
+  // Estimate the multi-day send duration BEFORE the user confirms, so an
+  // 800k-recipient broadcast that will take ~8 days is a decision made before
+  // clicking Send, not a toast discovered after. This wizard is email-only —
+  // there is no SMS variant of CampaignData — so the channel is always "email".
+  useEffect(() => {
+    if (!data.awsAccountId || recipientCount === null) {
+      setDurationResult(null);
+      return;
+    }
+    checkBroadcastSendDuration(
+      organizationId,
+      data.awsAccountId,
+      "email",
+      recipientCount,
+      Boolean(data.scheduleType === "later" && data.scheduledDate)
+    ).then(setDurationResult);
+  }, [
+    organizationId,
+    data.awsAccountId,
+    recipientCount,
+    data.scheduleType,
+    data.scheduledDate,
+  ]);
+
+  const estimatedDays =
+    durationResult?.success && durationResult.available
+      ? durationResult.estimatedDays
+      : null;
+
   // Fetch templates with React Query - auto-updates when templates change
   const { data: templatesData } = useTemplates(orgSlug);
   const templates: Template[] = (templatesData ?? []).map((t) => ({
@@ -1652,6 +1689,7 @@ function ReviewStep({
       </div>
 
       <SendConfirmDialog
+        estimatedDays={estimatedDays}
         loading={isPending}
         onConfirm={() => {
           setShowConfirmDialog(false);

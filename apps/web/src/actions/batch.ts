@@ -40,6 +40,7 @@ import type {
   BatchStatus,
   CancelBatchResult,
   Channel,
+  CheckSendDurationResult,
   CheckTemplateVariableCoverageResult,
   CreateBatchInput,
   CreateBatchResult,
@@ -350,6 +351,138 @@ async function assessVariableCoverage(
 }
 
 /**
+ * Resolves SES send-quota headroom for an org's AWS account and derives the
+ * broadcast warnings from it. Fails open: any AssumeRole/SES/permission
+ * failure returns `{ available: false }` and callers proceed without a
+ * warning, which is the behavior the send preflight has always had.
+ *
+ * Single source of truth for quota-derived warnings — both the send
+ * preflight (validateAndPrepareSend) and the pre-confirmation duration
+ * estimate (checkBroadcastSendDuration) call this rather than re-deriving
+ * the math, so they cannot start disagreeing.
+ *
+ * Performs no auth — callers are responsible (matches assessVariableCoverage).
+ */
+async function assessQuotaHeadroom(params: {
+  organizationId: string;
+  awsAccountRow: {
+    roleArn: string;
+    externalId: string;
+    region: string;
+    dailyQuotaReserve: number | null;
+  };
+  channel: string;
+  recipientCount: number;
+  scheduled: boolean;
+}): Promise<
+  | { available: false }
+  | {
+      available: true;
+      max24HourSend: number;
+      sentLast24Hours: number;
+      reserve: number;
+      dailyCapacity: number;
+      /** Non-null only when the audience exceeds a full day's capacity. */
+      estimatedDays: number | null;
+      /** The blocking error, when dailyCapacity <= 0. */
+      blockError: string | null;
+      /** The warning string, identical to what the send preflight emits today. */
+      quotaWarning: string | undefined;
+    }
+> {
+  const { organizationId, awsAccountRow, channel, recipientCount, scheduled } =
+    params;
+  const reserve = awsAccountRow.dailyQuotaReserve ?? 0;
+
+  // SES daily quota is an email-specific concern — SMS has no bearing on it.
+  // Gated here (not just at each call site) so both callers can't disagree.
+  if (channel === "sms") {
+    return { available: false };
+  }
+
+  try {
+    const credentials = await getOrAssumeRole({
+      roleArn: awsAccountRow.roleArn,
+      externalId: awsAccountRow.externalId,
+      region: awsAccountRow.region,
+    });
+    const sesClient = new SESv2Client({
+      region: awsAccountRow.region,
+      credentials,
+    });
+    const accountInfo = await sesClient.send(new GetAccountCommand({}));
+    const max24HourSend = accountInfo.SendQuota?.Max24HourSend;
+    const sentLast24Hours = accountInfo.SendQuota?.SentLast24Hours;
+
+    if (
+      !(
+        typeof max24HourSend === "number" &&
+        max24HourSend > 0 && // -1 = unlimited quota; skip
+        typeof sentLast24Hours === "number"
+      )
+    ) {
+      return { available: false };
+    }
+
+    const dailyCapacity = max24HourSend - reserve;
+    if (dailyCapacity <= 0) {
+      return {
+        available: true,
+        max24HourSend,
+        sentLast24Hours,
+        reserve,
+        dailyCapacity,
+        estimatedDays: null,
+        blockError: `Broadcast blocked: the transactional reserve (${reserve.toLocaleString()}) is at or above this account's daily SES quota (${max24HourSend.toLocaleString()}), so no broadcast can ever send. Lower the reserve in AWS account settings.`,
+        quotaWarning: undefined,
+      };
+    }
+
+    let estimatedDays: number | null = null;
+    let quotaWarning: string | undefined;
+    if (recipientCount > dailyCapacity) {
+      estimatedDays = Math.ceil(recipientCount / dailyCapacity);
+      quotaWarning =
+        `${recipientCount.toLocaleString()} recipients is more than this account ` +
+        `can send in 24h (daily quota ${max24HourSend.toLocaleString()}` +
+        (reserve
+          ? `, ${reserve.toLocaleString()} reserved for transactional → ` +
+            `${dailyCapacity.toLocaleString()}/day for broadcasts`
+          : "") +
+        "). Sending pauses and resumes automatically and should finish in about " +
+        `${estimatedDays} day${estimatedDays === 1 ? "" : "s"}. You can cancel any time from the ` +
+        "broadcast page.";
+    } else {
+      // Current usage says nothing about usage at a future send time, so a
+      // "right now" warning would be misleading on a scheduled broadcast.
+      const headroom = max24HourSend - sentLast24Hours - reserve;
+      if (!scheduled && recipientCount > headroom) {
+        const sendableNow = Math.max(0, headroom);
+        quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
+      }
+    }
+
+    return {
+      available: true,
+      max24HourSend,
+      sentLast24Hours,
+      reserve,
+      dailyCapacity,
+      estimatedDays,
+      blockError: null,
+      quotaWarning,
+    };
+  } catch (error) {
+    const log = createActionLogger("assessQuotaHeadroom", { organizationId });
+    log.warn(
+      { err: error },
+      "Could not check daily quota reserve headroom, proceeding"
+    );
+    return { available: false };
+  }
+}
+
+/**
  * Pre-flight check: assess whether template custom variables can be resolved
  * for the selected audience. Returned data drives a warning banner in the
  * broadcast form (review step) before the user clicks Send.
@@ -382,6 +515,73 @@ export const checkTemplateVariableCoverage = orgAction(
     );
 
     return { success: true, ...coverage };
+  }
+);
+
+/**
+ * Pre-confirmation check: estimate how many calendar days a broadcast will
+ * take to drain against the account's SES daily quota, so the user learns
+ * this BEFORE confirming the send rather than from a toast afterwards.
+ * Read-only — never blocks or permits a send; that stays in
+ * validateAndPrepareSend. Degrades to `available: false` on any failure to
+ * read quota, which the caller renders as "no estimate", never as an error.
+ */
+export const checkBroadcastSendDuration = orgAction(
+  {
+    name: "checkBroadcastSendDuration",
+    resource: "broadcasts",
+    permission: ["read"],
+    orgId: (
+      organizationId: string,
+      _awsAccountId: string,
+      _channel: string,
+      _recipientCount: number,
+      _scheduled: boolean
+    ) => organizationId,
+    onError: "Failed to estimate send duration",
+  },
+  async (
+    ctx,
+    organizationId: string,
+    awsAccountId: string,
+    channel: string,
+    recipientCount: number,
+    scheduled: boolean
+  ): Promise<CheckSendDurationResult> => {
+    // Scoped by (awsAccountId, organizationId) — this is the only thing
+    // preventing a caller-supplied awsAccountId from disclosing another
+    // tenant's quota.
+    const awsAccountRow = await findAwsAccountForOrg(
+      awsAccountId,
+      organizationId
+    );
+    if (!awsAccountRow) {
+      return { success: true, available: false };
+    }
+
+    const headroom = await assessQuotaHeadroom({
+      organizationId,
+      awsAccountRow: {
+        roleArn: awsAccountRow.roleArn,
+        externalId: awsAccountRow.externalId,
+        region: awsAccountRow.region,
+        dailyQuotaReserve: awsAccountRow.dailyQuotaReserve,
+      },
+      channel,
+      recipientCount,
+      scheduled,
+    });
+
+    if (!headroom.available) {
+      return { success: true, available: false };
+    }
+
+    return {
+      success: true,
+      available: true,
+      estimatedDays: headroom.estimatedDays,
+      dailyCapacity: headroom.dailyCapacity,
+    };
   }
 );
 
@@ -532,70 +732,30 @@ async function validateAndPrepareSend(
   // that can NEVER drain: a reserve at or above the whole daily quota.
   // Anything that merely takes multiple days returns a warning instead.
   // Best-effort — any AssumeRole/SES failure fails open.
-  let quotaWarning: string | undefined;
-  const reserve = awsAccountRow.dailyQuotaReserve ?? 0;
   // Runs regardless of whether a reserve is set: with reserve 0 the whole daily
   // quota is the broadcast budget, and an audience that exceeds it still needs
   // the multi-day warning. Previously gating this on a nonzero reserve made
   // the reserve a cliff — only zero disabled the block, and zero also removed
   // the protection.
+  let quotaWarning: string | undefined;
   if (data.channel !== "sms") {
-    try {
-      const credentials = await getOrAssumeRole({
+    const headroom = await assessQuotaHeadroom({
+      organizationId,
+      awsAccountRow: {
         roleArn: awsAccountRow.roleArn,
         externalId: awsAccountRow.externalId,
         region: awsAccountRow.region,
-      });
-      const sesClient = new SESv2Client({
-        region: awsAccountRow.region,
-        credentials,
-      });
-      const accountInfo = await sesClient.send(new GetAccountCommand({}));
-      const max24HourSend = accountInfo.SendQuota?.Max24HourSend;
-      const sentLast24Hours = accountInfo.SendQuota?.SentLast24Hours;
-
-      if (
-        typeof max24HourSend === "number" &&
-        max24HourSend > 0 && // -1 = unlimited quota; skip
-        typeof sentLast24Hours === "number"
-      ) {
-        const dailyCapacity = max24HourSend - reserve;
-        if (dailyCapacity <= 0) {
-          return {
-            ok: false,
-            error: `Broadcast blocked: the transactional reserve (${reserve.toLocaleString()}) is at or above this account's daily SES quota (${max24HourSend.toLocaleString()}), so no broadcast can ever send. Lower the reserve in AWS account settings.`,
-          };
-        }
-        if (recipientCount > dailyCapacity) {
-          const days = Math.ceil(recipientCount / dailyCapacity);
-          quotaWarning =
-            `${recipientCount.toLocaleString()} recipients is more than this account ` +
-            `can send in 24h (daily quota ${max24HourSend.toLocaleString()}` +
-            (reserve
-              ? `, ${reserve.toLocaleString()} reserved for transactional → ` +
-                `${dailyCapacity.toLocaleString()}/day for broadcasts`
-              : "") +
-            "). Sending pauses and resumes automatically and should finish in about " +
-            `${days} day${days === 1 ? "" : "s"}. You can cancel any time from the ` +
-            "broadcast page.";
-        } else {
-          // Current usage says nothing about usage at a future send time, so a
-          // "right now" warning would be misleading on a scheduled broadcast.
-          const headroom = max24HourSend - sentLast24Hours - reserve;
-          if (!data.scheduledFor && recipientCount > headroom) {
-            const sendableNow = Math.max(0, headroom);
-            quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
-          }
-        }
+        dailyQuotaReserve: awsAccountRow.dailyQuotaReserve,
+      },
+      channel: data.channel ?? "email",
+      recipientCount,
+      scheduled: Boolean(data.scheduledFor),
+    });
+    if (headroom.available) {
+      if (headroom.blockError) {
+        return { ok: false, error: headroom.blockError };
       }
-    } catch (error) {
-      const log = createActionLogger("validateAndPrepareSend", {
-        organizationId,
-      });
-      log.warn(
-        { err: error },
-        "Could not check daily quota reserve headroom, proceeding"
-      );
+      quotaWarning = headroom.quotaWarning;
     }
   }
 

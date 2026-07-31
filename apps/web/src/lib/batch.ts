@@ -299,6 +299,27 @@ export type CheckTemplateVariableCoverageResult =
       error: string;
     };
 
+// Result type for the pre-confirmation send-duration estimate. `available`
+// distinguishes "quota data couldn't be read" (fail open, render nothing)
+// from a real estimate — it is never an error condition on its own, which is
+// why this has no `success: false` variant driven by unavailability.
+export type CheckSendDurationResult =
+  | {
+      success: true;
+      available: false;
+    }
+  | {
+      success: true;
+      available: true;
+      /** Non-null only when the audience exceeds a full day's capacity. */
+      estimatedDays: number | null;
+      dailyCapacity: number;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
 // Helper to calculate progress percentage
 export function calculateProgress(batch: BatchSendWithMeta): number {
   if (batch.totalRecipients === 0) {

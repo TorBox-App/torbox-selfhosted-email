@@ -30,6 +30,7 @@ import {
 } from "vitest";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
+  checkBroadcastSendDuration,
   checkTemplateVariableCoverage,
   createBatchSend,
   promoteDraftToSend,
@@ -1715,6 +1716,231 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
         .where(eq(batchSend.organizationId, testOrganization.id));
       await db.delete(contact).where(eq(contact.id, smsContactId));
       await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkBroadcastSendDuration — pre-confirmation multi-day send estimate.
+// Same quota math as the send preflight (via assessQuotaHeadroom), exposed
+// read-only so ReviewStep can show the estimate BEFORE the user confirms.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("checkBroadcastSendDuration", () => {
+  const otherOrgId = `preflight-duration-other-org-${RUN_ID}`;
+
+  beforeAll(async () => {
+    await db
+      .insert(organization)
+      .values({
+        id: otherOrgId,
+        name: "Other Org (duration IDOR test)",
+        slug: `preflight-duration-other-org-${RUN_ID}`,
+        createdAt: new Date(),
+        logo: null,
+        metadata: null,
+      })
+      .onConflictDoNothing();
+  });
+
+  afterAll(async () => {
+    await db.delete(organization).where(eq(organization.id, otherOrgId));
+  });
+
+  it("returns available:true with estimatedDays computed by hand when the audience exceeds a day's capacity", async () => {
+    const quotaAwsId = `preflight-duration-block-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `duration-block-ext-${RUN_ID}`,
+        dailyQuotaReserve: 99,
+      })
+      .onConflictDoNothing();
+
+    // Capacity = 100 − 99 = 1, below the 2-contact audience.
+    sesGetAccountQuota = { Max24HourSend: 100, SentLast24Hours: 0 };
+
+    try {
+      const result = await checkBroadcastSendDuration(
+        testOrganization.id,
+        quotaAwsId,
+        "email",
+        2,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.available).toBe(true);
+      if (!result.available) return;
+      // Computed by hand from the mocked quota, not merely asserted truthy.
+      expect(result.dailyCapacity).toBe(1);
+      expect(result.estimatedDays).toBe(Math.ceil(2 / 1));
+      expect(result.estimatedDays).toBe(2);
+    } finally {
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("returns estimatedDays: null when the audience fits within a day's capacity", async () => {
+    const quotaAwsId = `preflight-duration-fits-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `duration-fits-ext-${RUN_ID}`,
+        dailyQuotaReserve: 0,
+      })
+      .onConflictDoNothing();
+
+    // Capacity = 120,000 − 0, far above the 2-contact audience.
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 0 };
+
+    try {
+      const result = await checkBroadcastSendDuration(
+        testOrganization.id,
+        quotaAwsId,
+        "email",
+        2,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.available).toBe(true);
+      if (!result.available) return;
+      expect(result.estimatedDays).toBeNull();
+    } finally {
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("fails open: available:false (still success:true) when GetAccount rejects", async () => {
+    const quotaAwsId = `preflight-duration-failopen-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `duration-failopen-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    sesGetAccountShouldThrow = true;
+
+    try {
+      const result = await checkBroadcastSendDuration(
+        testOrganization.id,
+        quotaAwsId,
+        "email",
+        2,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.available).toBe(false);
+    } finally {
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("returns available:false for an awsAccountId belonging to a different organization (IDOR guard)", async () => {
+    const otherOrgAwsId = `preflight-duration-idor-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: otherOrgAwsId,
+        organizationId: otherOrgId,
+        externalId: `duration-idor-ext-${RUN_ID}`,
+        dailyQuotaReserve: 0,
+      })
+      .onConflictDoNothing();
+
+    // A generous quota — if the org-scope guard failed and this account were
+    // read anyway, it would produce available:true. Configure it so this test
+    // fails loudly (not by coincidence) if that guard is ever removed.
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 0 };
+
+    try {
+      const result = await checkBroadcastSendDuration(
+        testOrganization.id,
+        otherOrgAwsId,
+        "email",
+        2,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.available).toBe(false);
+    } finally {
+      await db.delete(awsAccount).where(eq(awsAccount.id, otherOrgAwsId));
+    }
+  });
+
+  it("produces an estimate whether the reserve is set or 0 — reserve 0 is not 'no estimate'", async () => {
+    const reserveAwsId = `preflight-duration-reserve-aws-${RUN_ID}`;
+    const noReserveAwsId = `preflight-duration-noreserve-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values([
+        {
+          ...testAwsAccount,
+          id: reserveAwsId,
+          externalId: `duration-reserve-ext-${RUN_ID}`,
+          dailyQuotaReserve: 99,
+        },
+        {
+          ...testAwsAccount,
+          id: noReserveAwsId,
+          externalId: `duration-noreserve-ext-${RUN_ID}`,
+          dailyQuotaReserve: 0,
+        },
+      ])
+      .onConflictDoNothing();
+
+    try {
+      // Reserve set: capacity = 100 − 99 = 1.
+      sesGetAccountQuota = { Max24HourSend: 100, SentLast24Hours: 0 };
+      const withReserve = await checkBroadcastSendDuration(
+        testOrganization.id,
+        reserveAwsId,
+        "email",
+        2,
+        false
+      );
+      expect(withReserve.success).toBe(true);
+      if (!withReserve.success) return;
+      expect(withReserve.available).toBe(true);
+      if (!withReserve.available) return;
+      expect(withReserve.dailyCapacity).toBe(1);
+      expect(withReserve.estimatedDays).toBe(2);
+
+      // Reserve 0: dailyCapacity === max24HourSend, still produces an estimate
+      // when the audience exceeds it — not "no estimate".
+      sesGetAccountQuota = { Max24HourSend: 1, SentLast24Hours: 0 };
+      const noReserve = await checkBroadcastSendDuration(
+        testOrganization.id,
+        noReserveAwsId,
+        "email",
+        2,
+        false
+      );
+      expect(noReserve.success).toBe(true);
+      if (!noReserve.success) return;
+      expect(noReserve.available).toBe(true);
+      if (!noReserve.available) return;
+      expect(noReserve.dailyCapacity).toBe(1);
+      expect(noReserve.estimatedDays).toBe(2);
+    } finally {
+      await db.delete(awsAccount).where(eq(awsAccount.id, reserveAwsId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, noReserveAwsId));
     }
   });
 });
