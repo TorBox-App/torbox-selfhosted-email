@@ -1770,7 +1770,12 @@ pnpm install`,
           The deploy script creates and maintains{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
           in your repo root. These values are read by SST at deploy time and
-          injected as Lambda environment variables.
+          injected as Lambda environment variables. If you upgrade via the
+          GitHub Actions workflow, every value here must also be set as a
+          repository secret or variable — the upgrade job rebuilds{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">.env.selfhost</code>{" "}
+          from scratch on a fresh runner, so anything that only lives in your
+          local file is dropped on the next automated upgrade.
         </p>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
@@ -2220,7 +2225,10 @@ pnpm install`,
                   signals a stuck send), and one on messages landing in the
                   workflow dead-letter queue. AWS emails a subscription
                   confirmation link to this address after deploy — accept it, or
-                  alarms fire with nowhere to deliver
+                  alarms fire with nowhere to deliver. Set it as a repository
+                  variable for Actions-driven upgrades, or the subscription is
+                  deleted on the next one and the alarms fire into an empty
+                  topic
                 </td>
               </tr>
               <tr>
