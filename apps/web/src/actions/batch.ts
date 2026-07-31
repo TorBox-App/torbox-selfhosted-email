@@ -26,6 +26,7 @@ import {
   listPublishedTemplates,
   listSegmentsForBroadcast,
   listTopicsWithSubscriberCounts,
+  sumInFlightBroadcastRecipients,
   updateDraftBroadcast,
 } from "@wraps/db";
 import { revalidatePath } from "next/cache";
@@ -366,6 +367,7 @@ async function assessVariableCoverage(
 async function assessQuotaHeadroom(params: {
   organizationId: string;
   awsAccountRow: {
+    id: string;
     roleArn: string;
     externalId: string;
     region: string;
@@ -382,12 +384,20 @@ async function assessQuotaHeadroom(params: {
       sentLast24Hours: number;
       reserve: number;
       dailyCapacity: number;
-      /** Non-null only when the audience exceeds a full day's capacity. */
+      /**
+       * Non-null only when the audience, plus recipients still unsent on
+       * other in-flight broadcasts on this AWS account, exceeds a full day's
+       * capacity.
+       */
       estimatedDays: number | null;
       /** The blocking error, when dailyCapacity <= 0. */
       blockError: string | null;
       /** The warning string, identical to what the send preflight emits today. */
       quotaWarning: string | undefined;
+      /** Other queued/processing email broadcasts on this AWS account. */
+      inFlightBatches: number;
+      /** Their combined unsent remainder — the quota this send has to share. */
+      inFlightRecipients: number;
     }
 > {
   const { organizationId, awsAccountRow, channel, recipientCount, scheduled } =
@@ -435,13 +445,35 @@ async function assessQuotaHeadroom(params: {
         estimatedDays: null,
         blockError: `Broadcast blocked: the transactional reserve (${reserve.toLocaleString()}) is at or above this account's daily SES quota (${max24HourSend.toLocaleString()}), so no broadcast can ever send. Lower the reserve in AWS account settings.`,
         quotaWarning: undefined,
+        inFlightBatches: 0,
+        inFlightRecipients: 0,
       };
     }
 
+    let inFlight = { batches: 0, remainingRecipients: 0 };
+    try {
+      inFlight = await sumInFlightBroadcastRecipients(
+        organizationId,
+        awsAccountRow.id
+      );
+    } catch (error) {
+      // Degrade to "nothing else in flight" rather than dropping the whole
+      // quota warning — a stale-optimistic estimate beats no estimate.
+      const log = createActionLogger("assessQuotaHeadroom", {
+        organizationId,
+      });
+      log.warn(
+        { err: error },
+        "Could not sum in-flight broadcasts, assuming none"
+      );
+    }
+
+    const contendedCount = recipientCount + inFlight.remainingRecipients;
+
     let estimatedDays: number | null = null;
     let quotaWarning: string | undefined;
-    if (recipientCount > dailyCapacity) {
-      estimatedDays = Math.ceil(recipientCount / dailyCapacity);
+    if (contendedCount > dailyCapacity) {
+      estimatedDays = Math.ceil(contendedCount / dailyCapacity);
       quotaWarning =
         `${recipientCount.toLocaleString()} recipients is more than this account ` +
         `can send in 24h (daily quota ${max24HourSend.toLocaleString()}` +
@@ -451,14 +483,33 @@ async function assessQuotaHeadroom(params: {
           : "") +
         "). Sending pauses and resumes automatically and should finish in about " +
         `${estimatedDays} day${estimatedDays === 1 ? "" : "s"}. You can cancel any time from the ` +
-        "broadcast page.";
+        "broadcast page." +
+        (inFlight.batches > 0
+          ? ` ${inFlight.batches} other broadcast${inFlight.batches === 1 ? "" : "s"} on this AWS account ` +
+            `${inFlight.batches === 1 ? "still has" : "still have"} ${inFlight.remainingRecipients.toLocaleString()} recipients to send; ` +
+            `this broadcast shares the same daily quota with ${inFlight.batches === 1 ? "it" : "them"}.`
+          : "");
     } else {
       // Current usage says nothing about usage at a future send time, so a
       // "right now" warning would be misleading on a scheduled broadcast.
-      const headroom = max24HourSend - sentLast24Hours - reserve;
+      const headroom =
+        max24HourSend -
+        sentLast24Hours -
+        reserve -
+        inFlight.remainingRecipients;
       if (!scheduled && recipientCount > headroom) {
         const sendableNow = Math.max(0, headroom);
-        quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
+        quotaWarning =
+          `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional` +
+          (inFlight.remainingRecipients > 0
+            ? ` − ${inFlight.remainingRecipients.toLocaleString()} queued in other broadcasts`
+            : "") +
+          "). Sending pauses and resumes automatically as quota frees up." +
+          (inFlight.batches > 0
+            ? ` ${inFlight.batches} other broadcast${inFlight.batches === 1 ? "" : "s"} on this AWS account ` +
+              `${inFlight.batches === 1 ? "still has" : "still have"} ${inFlight.remainingRecipients.toLocaleString()} recipients to send; ` +
+              `this broadcast shares the same daily quota with ${inFlight.batches === 1 ? "it" : "them"}.`
+            : "");
       }
     }
 
@@ -471,6 +522,8 @@ async function assessQuotaHeadroom(params: {
       estimatedDays,
       blockError: null,
       quotaWarning,
+      inFlightBatches: inFlight.batches,
+      inFlightRecipients: inFlight.remainingRecipients,
     };
   } catch (error) {
     const log = createActionLogger("assessQuotaHeadroom", { organizationId });
@@ -562,6 +615,7 @@ export const checkBroadcastSendDuration = orgAction(
     const headroom = await assessQuotaHeadroom({
       organizationId,
       awsAccountRow: {
+        id: awsAccountRow.id,
         roleArn: awsAccountRow.roleArn,
         externalId: awsAccountRow.externalId,
         region: awsAccountRow.region,
@@ -581,6 +635,8 @@ export const checkBroadcastSendDuration = orgAction(
       available: true,
       estimatedDays: headroom.estimatedDays,
       dailyCapacity: headroom.dailyCapacity,
+      inFlightBatches: headroom.inFlightBatches,
+      inFlightRecipients: headroom.inFlightRecipients,
     };
   }
 );
@@ -742,6 +798,7 @@ async function validateAndPrepareSend(
     const headroom = await assessQuotaHeadroom({
       organizationId,
       awsAccountRow: {
+        id: awsAccountRow.id,
         roleArn: awsAccountRow.roleArn,
         externalId: awsAccountRow.externalId,
         region: awsAccountRow.region,
