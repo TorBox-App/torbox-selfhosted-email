@@ -164,6 +164,8 @@ export type CreateBatchResult =
   | {
       success: true;
       batch: BatchSendWithMeta;
+      /** Set when the send will pause partway to protect the quota reserve. */
+      warning?: string;
     }
   | {
       success: false;
@@ -211,7 +213,7 @@ export type UpdateDraftBatchResult =
   | { success: false; error: string };
 
 export type PromoteDraftBatchResult =
-  | { success: true; batch: BatchSendWithMeta }
+  | { success: true; batch: BatchSendWithMeta; warning?: string }
   | { success: false; error: string };
 
 export type DeleteDraftBatchResult =

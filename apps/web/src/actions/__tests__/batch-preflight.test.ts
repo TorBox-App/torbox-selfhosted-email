@@ -749,7 +749,163 @@ function mockSendApiSuccess() {
 }
 
 describe("promoteDraftToSend — daily quota reserve preflight", () => {
-  it("blocks the send when reserve + usage leave insufficient headroom", async () => {
+  it("allows the send with a warning when today's headroom is exhausted but the audience still fits a day's capacity", async () => {
+    // The worker pauses and re-enqueues chunks that would touch the reserve,
+    // so a send with no headroom RIGHT NOW still drains as the rolling 24h
+    // window frees up. It must not be blocked up front.
+    const quotaAwsId = `preflight-quota-warn-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-warn-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    // Capacity = 120,000 − 40,000 = 80,000 (audience of 2 fits easily), but
+    // headroom = 120,000 − 115,000 − 40,000 is negative.
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 115_000 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Quota Warn Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      // Warning explains the pause using quota, usage, and reserve.
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain("120,000");
+      expect(result.warning).toContain("115,000");
+      expect(result.warning).toContain("40,000");
+      expect(result.warning).toMatch(/resumes automatically/i);
+      // Nothing sendable right now, so the warning reports 0.
+      expect(result.warning).toMatch(/^Only 0 of 2 emails/);
+
+      // The preflight handed the send off to the API instead of blocking it.
+      expect(
+        fetchSpy.mock.calls.some(([url]) =>
+          String(url).includes(`/v1/batch/${draft.batch.id}/send`)
+        )
+      ).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("omits the warning on a scheduled send, where current usage is not predictive", async () => {
+    const quotaAwsId = `preflight-quota-sched-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-sched-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    // Same exhausted-headroom numbers that warn on an immediate send.
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 115_000 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Quota Scheduled Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        { scheduledFor: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) }
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("returns no warning when the audience fits inside current headroom", async () => {
+    const quotaAwsId = `preflight-quota-clean-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-clean-ext-${RUN_ID}`,
+        dailyQuotaReserve: 40_000,
+      })
+      .onConflictDoNothing();
+
+    // headroom = 120,000 − 1,000 − 40,000 = 79,000, well above 2 recipients.
+    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 1000 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Quota Clean Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("blocks the send when the audience exceeds a full day's non-reserved capacity", async () => {
     const quotaAwsId = `preflight-quota-block-aws-${RUN_ID}`;
     await db
       .insert(awsAccount)
@@ -757,18 +913,20 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
         ...testAwsAccount,
         id: quotaAwsId,
         externalId: `quota-block-ext-${RUN_ID}`,
-        dailyQuotaReserve: 40_000,
+        dailyQuotaReserve: 99,
       })
       .onConflictDoNothing();
 
-    sesGetAccountQuota = { Max24HourSend: 120_000, SentLast24Hours: 115_000 };
+    // Capacity = 100 − 99 = 1, below the 2-contact audience, so this send
+    // could never drain no matter how long it waited.
+    sesGetAccountQuota = { Max24HourSend: 100, SentLast24Hours: 0 };
 
     try {
       const draft = await saveDraftBatchSend(testOrganization.id, {
         awsAccountId: quotaAwsId,
         templateId: templateNoCustomVars.id,
         from: "sender@example.com",
-        subject: "Quota Test",
+        subject: "Quota Block Test",
       });
       expect(draft.success).toBe(true);
       if (!draft.success) return;
@@ -781,11 +939,56 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
 
       expect(result.success).toBe(false);
       if (result.success) return;
-      // Error message contains recipient count, quota, sent, and reserve.
       expect(result.error).toMatch(/recipients/);
-      expect(result.error).toContain("120,000");
-      expect(result.error).toContain("115,000");
-      expect(result.error).toContain("40,000");
+      expect(result.error).toMatch(/Split the audience/i);
+
+      const after = await db.query.batchSend.findFirst({
+        where: eq(batchSend.id, draft.batch.id),
+      });
+      expect(after?.status).toBe("draft");
+    } finally {
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("blocks every broadcast when the reserve is at or above the daily quota", async () => {
+    const quotaAwsId = `preflight-quota-starved-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `quota-starved-ext-${RUN_ID}`,
+        dailyQuotaReserve: 50_000,
+      })
+      .onConflictDoNothing();
+
+    // Reserve swallows the whole quota — capacity is 0.
+    sesGetAccountQuota = { Max24HourSend: 50_000, SentLast24Hours: 0 };
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Quota Starved Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toMatch(/at or above/i);
+      expect(result.error).toMatch(/Lower the reserve/i);
 
       const after = await db.query.batchSend.findFirst({
         where: eq(batchSend.id, draft.batch.id),

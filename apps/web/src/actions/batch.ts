@@ -367,7 +367,7 @@ type PrepareSendData = {
 };
 
 type PrepareSendResult =
-  | { ok: true; recipientCount: number }
+  | { ok: true; recipientCount: number; quotaWarning?: string }
   | { ok: false; error: string };
 
 async function validateAndPrepareSend(
@@ -459,9 +459,14 @@ async function validateAndPrepareSend(
     };
   }
 
-  // Daily quota reserve preflight: block broadcasts that would eat into the
-  // AWS account's transactional reserve. Best-effort — any AssumeRole/SES
-  // failure fails open (the worker still enforces the gate at send time).
+  // Daily quota reserve preflight. The send worker already pauses and
+  // re-enqueues any chunk that would eat into the transactional reserve, so a
+  // broadcast bigger than the CURRENT headroom is not a problem — it drains
+  // across days as the rolling 24h window frees up. Only block sends that can
+  // never drain: an audience larger than a full day's non-reserved capacity.
+  // Anything that merely has to wait returns a warning instead.
+  // Best-effort — any AssumeRole/SES failure fails open.
+  let quotaWarning: string | undefined;
   const reserve = awsAccountRow.dailyQuotaReserve ?? 0;
   if (data.channel !== "sms" && reserve > 0) {
     try {
@@ -483,12 +488,26 @@ async function validateAndPrepareSend(
         max24HourSend > 0 && // -1 = unlimited quota; skip
         typeof sentLast24Hours === "number"
       ) {
-        const headroom = max24HourSend - sentLast24Hours - reserve;
-        if (recipientCount > headroom) {
+        const dailyCapacity = max24HourSend - reserve;
+        if (dailyCapacity <= 0) {
           return {
             ok: false,
-            error: `Broadcast blocked to protect transactional email: ${recipientCount.toLocaleString()} recipients but only ${headroom.toLocaleString()} emails of headroom (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Reduce the audience or lower the reserve in AWS account settings.`,
+            error: `Broadcast blocked: the transactional reserve (${reserve.toLocaleString()}) is at or above this account's daily SES quota (${max24HourSend.toLocaleString()}), so no broadcast can ever send. Lower the reserve in AWS account settings.`,
           };
+        }
+        if (recipientCount > dailyCapacity) {
+          return {
+            ok: false,
+            error: `Broadcast blocked to protect transactional email: ${recipientCount.toLocaleString()} recipients is more than the ${dailyCapacity.toLocaleString()} a broadcast can send in 24h (daily quota ${max24HourSend.toLocaleString()} − ${reserve.toLocaleString()} reserved for transactional). Split the audience or lower the reserve in AWS account settings.`,
+          };
+        }
+
+        // Current usage says nothing about usage at a future send time, so a
+        // "right now" warning would be misleading on a scheduled broadcast.
+        const headroom = max24HourSend - sentLast24Hours - reserve;
+        if (!data.scheduledFor && recipientCount > headroom) {
+          const sendableNow = Math.max(0, headroom);
+          quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
         }
       }
     } catch (error) {
@@ -519,7 +538,7 @@ async function validateAndPrepareSend(
     }
   }
 
-  return { ok: true, recipientCount };
+  return { ok: true, recipientCount, quotaWarning };
 }
 
 /**
@@ -646,7 +665,10 @@ export const createBatchSend = orgAction(
       templateId: data.templateId,
     });
 
-    return await getBatchSend(result.id, organizationId);
+    const created = await getBatchSend(result.id, organizationId);
+    return created.success && prep.quotaWarning
+      ? { ...created, warning: prep.quotaWarning }
+      : created;
   }
 );
 
@@ -1042,7 +1064,10 @@ export const promoteDraftToSend = orgAction(
       templateId: merged.templateId,
     });
 
-    return loadBatchWithMeta(batchId, organizationId);
+    const promoted = await loadBatchWithMeta(batchId, organizationId);
+    return promoted.success && prep.quotaWarning
+      ? { ...promoted, warning: prep.quotaWarning }
+      : promoted;
   }
 );
 

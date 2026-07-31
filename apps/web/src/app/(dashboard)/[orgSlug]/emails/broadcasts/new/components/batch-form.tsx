@@ -556,6 +556,12 @@ export function BatchForm({
                 : `Sending to ${result.batch.totalRecipients} recipients`,
             }
           );
+          if (result.warning) {
+            toast.warning("Sending will pause to protect transactional email", {
+              description: result.warning,
+              duration: 12_000,
+            });
+          }
           router.push(`/${orgSlug}/emails/broadcasts/${result.batch.id}`);
         } else {
           console.error("[batch-form] Error:", result.error);

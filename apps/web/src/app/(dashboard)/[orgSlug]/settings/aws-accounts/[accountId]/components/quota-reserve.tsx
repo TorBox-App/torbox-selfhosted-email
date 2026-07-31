@@ -67,8 +67,9 @@ export function QuotaReserve({ account }: QuotaReserveProps) {
         </CardTitle>
         <CardDescription>
           Broadcasts will never use this many emails of your daily SES quota,
-          keeping them available for transactional sending. Broadcasts that
-          would exceed it are blocked up front or pause automatically.
+          keeping them available for transactional sending. A broadcast that
+          runs out of headroom pauses and resumes on its own as quota frees up.
+          Only an audience too large to ever fit in a day is blocked outright.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
