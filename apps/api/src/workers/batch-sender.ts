@@ -19,7 +19,11 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
-import { captureException, wrapHandler } from "@sentry/aws-serverless";
+import {
+  captureException,
+  captureMessage,
+  wrapHandler,
+} from "@sentry/aws-serverless";
 import {
   awsAccount,
   batchSend,
@@ -31,15 +35,18 @@ import {
   hasRecentNotification,
   MESSAGE_SEND_UNACCEPTED_STATUSES,
   type MessageSendStatus,
+  member,
   messageSend,
   notifyOrg,
   organization,
   organizationExtension,
   segment,
   template,
+  user,
 } from "@wraps/db";
 import {
   resolveAppUrl,
+  sendBroadcastStuckEmail,
   toSesVariableName,
   transformVariablesForSes,
 } from "@wraps/email";
@@ -63,6 +70,11 @@ import { applyVariableMappings } from "./variable-mappings";
 const CHUNK_SIZE = 50; // SES SendBulkEmail limit per API call
 const DEFAULT_RATE_LIMIT = 14; // Fallback emails/sec if can't fetch from AWS
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
+
+/** No progress for this long on a quota-paused broadcast = stuck, not waiting. */
+export const QUOTA_STUCK_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
+/** Minimum gap between stuck escalations for the same broadcast. */
+export const QUOTA_STUCK_ALERT_INTERVAL_MS = 72 * 60 * 60 * 1000; // 72h
 // Staleness threshold: 3× the Lambda timeout (infra/queues.ts:95 = 5 min).
 // A live execution's claim can never be older than 15 minutes; anything older
 // means the Lambda crashed before completing, so reclaim is safe.
@@ -545,6 +557,137 @@ async function notifyBroadcastQuotaPaused(
   }
 }
 
+/** Owner/admin emails for an org, for escalation mail. Empty array if none. */
+async function getOrgAlertEmails(organizationId: string): Promise<string[]> {
+  const rows = await db
+    .select({ email: user.email, role: member.role })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(eq(member.organizationId, organizationId))
+    .limit(100);
+
+  const wanted = ["owner", "admin"];
+  const emails = rows
+    .filter((r) =>
+      r.role.split(",").some((role) => wanted.includes(role.trim()))
+    )
+    .map((r) => r.email);
+
+  return [...new Set(emails)].slice(0, 10);
+}
+
+/**
+ * Escalate a quota-paused broadcast that has made zero progress for
+ * QUOTA_STUCK_THRESHOLD_MS: a distinct in-app notification (type
+ * broadcast.quota_stuck) plus an email to the org's owners/admins. This is an
+ * escalation ALONGSIDE the routine broadcast.quota_paused notification, not a
+ * replacement — that one fires every 24h regardless of whether the pause is
+ * temporary or permanent; this one only fires once a pause has proven itself
+ * stuck, and its copy says so explicitly (no "resumes automatically" claim).
+ */
+async function alertBroadcastQuotaStuck(
+  batch: {
+    id: string;
+    name: string | null;
+    subject: string | null;
+    awsAccountId: string | null;
+    processedRecipients: number;
+    totalRecipients: number;
+  },
+  organizationId: string,
+  stuckSince: Date,
+  info: { max24HourSend: number; sentLast24Hours: number; reserve: number }
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - QUOTA_STUCK_ALERT_INTERVAL_MS);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.quota_stuck",
+      since,
+      dataEquals: { key: "batchId", value: batch.id },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[org], alertEmails] = await Promise.all([
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+      getOrgAlertEmails(organizationId),
+    ]);
+    if (!org?.slug) {
+      captureMessage("alertBroadcastQuotaStuck: organization slug not found", {
+        level: "warning",
+        tags: { worker: "batch-sender" },
+        extra: { organizationId },
+      });
+      return;
+    }
+
+    const label = batch.name || batch.subject || "Broadcast";
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.quota_stuck",
+      title: `Broadcast "${label}" has been stuck for over 24 hours`,
+      body: `Daily quota ${info.max24HourSend.toLocaleString()}, ${info.sentLast24Hours.toLocaleString()} sent in the last 24h, ${info.reserve.toLocaleString()} reserved for transactional. This broadcast is NOT resuming on its own — raise the SES quota, lower the reserve, or cancel it.`,
+      href: `/${org.slug}/emails/broadcasts/${batch.id}`,
+      data: {
+        batchId: batch.id,
+        max24HourSend: info.max24HourSend,
+        sentLast24Hours: info.sentLast24Hours,
+        reserve: info.reserve,
+      },
+    });
+
+    if (alertEmails.length === 0) {
+      log.info("No owner/admin recipients for quota-stuck email", {
+        batchId: batch.id,
+        organizationId,
+      });
+      return;
+    }
+
+    try {
+      await sendBroadcastStuckEmail({
+        to: alertEmails,
+        broadcastName: label,
+        batchId: batch.id,
+        orgSlug: org.slug,
+        awsAccountId: batch.awsAccountId,
+        stuckSince,
+        processedRecipients: batch.processedRecipients,
+        totalRecipients: batch.totalRecipients,
+        max24HourSend: info.max24HourSend,
+        sentLast24Hours: info.sentLast24Hours,
+        reserve: info.reserve,
+      });
+    } catch (error) {
+      captureException(error, {
+        tags: { worker: "batch-sender", stage: "quota-stuck-email" },
+        extra: { batchId: batch.id, organizationId },
+      });
+      log.error("Failed to send broadcast-quota-stuck email", error, {
+        batchId: batch.id,
+        organizationId,
+      });
+    }
+  } catch (error) {
+    captureException(error, {
+      tags: { worker: "batch-sender", stage: "quota-stuck-notification" },
+      extra: { batchId: batch.id, organizationId },
+    });
+    log.error("Failed to alert broadcast-quota-stuck", error, {
+      batchId: batch.id,
+      organizationId,
+    });
+  }
+}
+
 /**
  * Write a broadcast-stopped-early inbox notification, deduplicated per batch
  * per 24h. Mirrors notifyBroadcastFinished's shape exactly — never lets a
@@ -922,6 +1065,26 @@ async function processJob(
         .update(batchSend)
         .set({ pausedReason: "quota_reserve" })
         .where(eq(batchSend.id, batchId));
+      // A paused cycle returns before the lastChunkAt write further down, so
+      // a stale lastChunkAt on this still-`processing` batch is precisely the
+      // "no progress" signal. Fall back to startedAt, then createdAt, for a
+      // broadcast that paused on its very first chunk (lastChunkAt is only
+      // ever written after a successful chunk). createdAt is NOT NULL in the
+      // schema, so all three being absent should never happen against a real
+      // row — the null check only guards against reading the elapsed time off
+      // an unexpectedly incomplete row rather than crashing the chunk.
+      const stuckSince =
+        batch.lastChunkAt ?? batch.startedAt ?? batch.createdAt ?? null;
+      if (
+        stuckSince &&
+        Date.now() - stuckSince.getTime() > QUOTA_STUCK_THRESHOLD_MS
+      ) {
+        await alertBroadcastQuotaStuck(batch, organizationId, stuckSince, {
+          max24HourSend,
+          sentLast24Hours,
+          reserve,
+        });
+      }
       // Re-enqueue the SAME chunk (same chunkIndex, same cursor) — matches
       // the throttle-recovery re-enqueue shape above. 900s is the SQS
       // DelaySeconds max; the batch resumes as the 24h window rolls.

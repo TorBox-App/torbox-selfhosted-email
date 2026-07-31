@@ -124,6 +124,12 @@ batchQueue.subscribe(
       // Post-send bookkeeping failures are swallowed so one bad row cannot
       // abort a broadcast — they only reach Sentry.
       SENTRY_DSN: sentryDsn.value,
+      // The stuck-broadcast alert emails the org from wraps.dev, which is
+      // verified in the dogfood account (010836206701), not this platform
+      // account. getWrapsClient() assumes this role from the function's
+      // execution role — the sts:AssumeRole grant below on wraps-* already
+      // covers it. Same identity the EventFeedStaleness cron uses.
+      WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
     },
     nodejs: {
       // PostgreSQL driver for Drizzle; @sentry/profiling-node ships native

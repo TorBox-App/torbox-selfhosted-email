@@ -526,6 +526,11 @@ export default $config({
           API_BASE_URL: api.url,
           APP_BASE_URL: web.url,
           ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+          // Sender for platform alert mail (stuck-broadcast escalation). Self-
+          // host has no wraps.dev identity, so it reuses the same verified
+          // sender configured for auth email. Unset → the alert degrades to
+          // an in-app notification only.
+          AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM ?? "",
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
@@ -538,6 +543,14 @@ export default $config({
           {
             actions: ["sqs:SendMessage"],
             resources: [batchQueue.arn],
+          },
+          {
+            // Platform alert mail sends with this function's own credentials —
+            // WRAPS_EMAIL_ROLE_ARN is deliberately unset on self-host (see the
+            // note on the web function). Unscoped because the send names an
+            // identity whose ARN is not known at config time.
+            actions: ["ses:SendEmail", "ses:SendRawEmail"],
+            resources: ["*"],
           },
         ],
       },

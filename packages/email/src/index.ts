@@ -1,5 +1,14 @@
 // Core email client
 
+// Broadcast quota-stuck escalation
+export type {
+  BroadcastStuckContent,
+  SendBroadcastStuckEmailParams,
+} from "./emails/broadcast-stuck";
+export {
+  buildBroadcastStuckEmail,
+  sendBroadcastStuckEmail,
+} from "./emails/broadcast-stuck";
 // Event feed staleness alert
 export type {
   EventFeedStaleContent,
