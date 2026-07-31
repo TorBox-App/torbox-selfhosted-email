@@ -83,11 +83,19 @@ function getTableName(table: unknown): string {
   return "unknown";
 }
 
+// countBroadcastRecipients is mocked directly (spied) rather than going
+// through the real @wraps/db implementation, which would hit a real DB —
+// same reasoning as notifyOrg/hasRecentNotification in the quota-reserve
+// suite. The audience-snapshot recount on chunk 0 (plan 169) now calls it;
+// default resolves 100 to match this file's default batch fixture.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(100);
+
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
 
   return {
     ...actual,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
     db: {
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockImplementation((table: unknown) => {
@@ -278,6 +286,7 @@ describe("processJob cursor passing", () => {
     vi.clearAllMocks();
     sqsSendCalls.length = 0;
     process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
+    countBroadcastRecipientsMock.mockResolvedValue(100);
   });
 
   it("includes cursor from last contact in next chunk SQS message", async () => {
@@ -572,6 +581,12 @@ describe("processJob cursor passing", () => {
         };
       }),
     });
+
+    // This fixture's batch row has totalRecipients: 50 (not this file's
+    // default 100), so the chunk-0 recount must match it — otherwise the
+    // recount would override totalRecipients to 100 and change what
+    // shouldEnqueueNextChunk is actually testing here.
+    countBroadcastRecipientsMock.mockResolvedValueOnce(50);
 
     sqsSendCalls.length = 0;
 

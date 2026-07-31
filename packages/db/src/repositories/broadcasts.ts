@@ -5,6 +5,7 @@ import {
   exists,
   inArray,
   isNotNull,
+  lte,
   type SQL,
   sql,
 } from "drizzle-orm";
@@ -30,6 +31,8 @@ export type BroadcastRecipientFilter = {
   audienceType?: "all" | "topic" | "segment";
   topicId?: string;
   segmentId?: string;
+  /** Upper bound on contact.createdAt — the broadcast's audience snapshot. */
+  createdBefore?: Date;
 };
 
 // ── AWS Account ──────────────────────────────────────────────────────────────
@@ -372,6 +375,10 @@ async function buildRecipientConditions(
   } else {
     conditions.push(isNotNull(contact.phone));
     conditions.push(eq(contact.smsStatus, "opted_in" as never));
+  }
+
+  if (filter?.createdBefore) {
+    conditions.push(lte(contact.createdAt, filter.createdBefore));
   }
 
   if (filter?.audienceType === "topic" && filter.topicId) {

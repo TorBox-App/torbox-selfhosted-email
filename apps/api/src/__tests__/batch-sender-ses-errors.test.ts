@@ -97,10 +97,15 @@ let mockClaimReturning: Array<{ contactId: string }> = [];
 // many SQS sends had happened at that moment — proves delete-before-re-enqueue.
 const deleteWhereCalls: unknown[] = [];
 const sqsCallsAtDelete: number[] = [];
-// notifyOrg / hasRecentNotification are mocked directly (spied) rather than
-// going through the real @wraps/db implementation, which would hit a real DB.
+// notifyOrg / hasRecentNotification / countBroadcastRecipients are mocked
+// directly (spied) rather than going through the real @wraps/db
+// implementation, which would hit a real DB. countBroadcastRecipients is
+// called on chunk 0 by the audience-snapshot recount (plan 169); default
+// resolves 2, matching makeBulkBatch()'s default totalRecipients — tests using
+// setupLargeChunkSelects override it to match their own totalRecipients.
 const notifyOrgMock = vi.fn().mockResolvedValue(undefined);
 const hasRecentNotificationMock = vi.fn().mockResolvedValue(false);
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(2);
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -157,6 +162,7 @@ vi.mock("@wraps/db", async () => {
     sql: (...args: unknown[]) => args,
     notifyOrg: notifyOrgMock,
     hasRecentNotification: hasRecentNotificationMock,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
   };
 });
 
@@ -324,6 +330,10 @@ function setupBulkSelectsForEarlyReturn() {
 function setupLargeChunkSelects(count = 50, totalRecipients = 100) {
   const contacts = makeManyContacts(count);
   mockClaimReturning = contacts.map((c) => ({ contactId: c.id }));
+  // The chunk-0 audience-snapshot recount must match this fixture's own
+  // totalRecipients, or it would silently overwrite it back to the file
+  // default (2) and break shouldEnqueueNextChunk for these large-chunk cases.
+  countBroadcastRecipientsMock.mockResolvedValueOnce(totalRecipients);
   selectResults = [
     [makeBulkBatch({ totalRecipients })],
     contacts,
@@ -407,6 +417,8 @@ beforeEach(() => {
   notifyOrgMock.mockClear();
   hasRecentNotificationMock.mockClear();
   hasRecentNotificationMock.mockResolvedValue(false);
+  countBroadcastRecipientsMock.mockClear();
+  countBroadcastRecipientsMock.mockResolvedValue(2);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

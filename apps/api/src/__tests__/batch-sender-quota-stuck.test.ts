@@ -111,6 +111,12 @@ const hasRecentNotificationMock = vi
   .mockImplementation((params: { type: string }) =>
     Promise.resolve(hasRecentNotificationDedupe[params.type] ?? false)
   );
+// countBroadcastRecipients is called on chunk 0 by the audience-snapshot
+// recount (plan 169); mocked directly like notifyOrg/hasRecentNotification
+// rather than going through the real @wraps/db implementation. Default
+// resolves 800_000, matching makeBatch()'s default totalRecipients used by
+// every test in this file.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(800_000);
 
 function thenable(rows: unknown[]) {
   const obj: Record<string, unknown> = {
@@ -162,6 +168,7 @@ vi.mock("@wraps/db", async () => {
     sql: (...args: unknown[]) => args,
     notifyOrg: notifyOrgMock,
     hasRecentNotification: hasRecentNotificationMock,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
   };
 });
 
@@ -318,6 +325,8 @@ beforeEach(() => {
   }
   sendBroadcastStuckEmailMock.mockClear();
   sendBroadcastStuckEmailMock.mockResolvedValue(undefined);
+  countBroadcastRecipientsMock.mockClear();
+  countBroadcastRecipientsMock.mockResolvedValue(800_000);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

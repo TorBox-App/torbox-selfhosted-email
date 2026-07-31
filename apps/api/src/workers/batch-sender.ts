@@ -28,8 +28,10 @@ import {
   awsAccount,
   batchSend,
   buildConditionSQL,
+  type Channel,
   contact,
   contactTopic,
+  countBroadcastRecipients,
   db,
   eq,
   hasRecentNotification,
@@ -57,7 +59,16 @@ import {
 } from "@wraps/template-render";
 import { resolveApiBaseUrl } from "@wraps/unsubscribe-token";
 import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
-import { and, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
@@ -937,11 +948,45 @@ async function processJob(
     }
   }
 
-  // Mark as processing on first chunk
+  // Freeze the audience on the first chunk. Deliberately NOT stamped at
+  // preflight or schedule time: the preflight counts at T0 and the route would
+  // stamp at T1, so contacts arriving in (T0, T1] would be counted-out but
+  // snapshot-in — reintroducing the over-run this fixes. Stamping here also
+  // gets scheduled sends right for free: a broadcast scheduled three days out
+  // should include contacts added between now and then.
+  let audienceSnapshotAt = batch.audienceSnapshotAt ?? undefined;
   if (chunkIndex === 0) {
+    const startedAt = new Date();
+    audienceSnapshotAt = audienceSnapshotAt ?? startedAt;
+    const snapshotTotal = await countBroadcastRecipients(
+      organizationId,
+      channel as Channel,
+      {
+        audienceType: batch.audienceType as
+          | "all"
+          | "topic"
+          | "segment"
+          | undefined,
+        topicId: batch.topicId ?? undefined,
+        segmentId: batch.segmentId ?? undefined,
+        createdBefore: audienceSnapshotAt,
+      }
+    );
+    // Mutate the in-memory row, not just the DB — every later reference to
+    // batch.totalRecipients in THIS invocation (remainingRecipients below,
+    // and shouldEnqueueNextChunk's termination check further down) must see
+    // the recount, or chunk 0 compares against the stale preflight count and
+    // can terminate the send early (recount > stale) or loop one wasted
+    // invocation (recount < stale).
+    batch.totalRecipients = snapshotTotal;
     await db
       .update(batchSend)
-      .set({ status: "processing", startedAt: new Date() })
+      .set({
+        status: "processing",
+        startedAt,
+        audienceSnapshotAt,
+        totalRecipients: snapshotTotal,
+      })
       .where(eq(batchSend.id, batchId));
   }
 
@@ -971,6 +1016,7 @@ async function processJob(
         | undefined,
       topicId: batch.topicId ?? undefined,
       segmentId: batch.segmentId ?? undefined,
+      createdBefore: audienceSnapshotAt,
     },
     job.cursor
   );
@@ -1844,6 +1890,8 @@ type RecipientFilter = {
   audienceType?: "all" | "topic" | "segment";
   topicId?: string;
   segmentId?: string;
+  /** Upper bound on contact.createdAt — the broadcast's audience snapshot. */
+  createdBefore?: Date;
 };
 
 export type BatchCursor = { id: string };
@@ -1924,6 +1972,13 @@ export async function getContactsChunk(
   // added/deleted between chunks.
   if (cursor) {
     conditions.push(sql`${contact.id} > ${cursor.id}`);
+  }
+
+  // Freeze the audience at send start: a contact created after the snapshot
+  // must never be swept into a broadcast already in progress, no matter how
+  // long the send takes to drain.
+  if (filter?.createdBefore) {
+    conditions.push(lte(contact.createdAt, filter.createdBefore));
   }
 
   return db

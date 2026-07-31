@@ -189,6 +189,12 @@ export const batchSend = pgTable(
     lastChunkIndex: integer("last_chunk_index"),
     lastCursor: json("last_cursor").$type<{ id: string } | null>(),
 
+    // Set by the worker on chunk 0. Every recipient query is bounded by
+    // `contact.created_at <= audienceSnapshotAt`, so a send spanning days
+    // cannot sweep in contacts created after it started. NULL = legacy
+    // behavior (unbounded), so batches in flight at deploy time are unaffected.
+    audienceSnapshotAt: timestamp("audience_snapshot_at"),
+
     // ═══════════════════════════════════════════════════════════════════════
     // TIMING
     // ═══════════════════════════════════════════════════════════════════════

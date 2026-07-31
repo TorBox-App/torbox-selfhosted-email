@@ -1,0 +1,1 @@
+ALTER TABLE "batch_send" ADD COLUMN "audience_snapshot_at" timestamp;
