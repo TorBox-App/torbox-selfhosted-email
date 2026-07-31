@@ -174,6 +174,12 @@ export const batchSend = pgTable(
     errorMessage: text("error_message"),
     errorDetails: json("error_details").$type<Record<string, unknown>>(),
 
+    // Why the worker is currently re-enqueueing this batch without sending.
+    // NULL = not paused. Values: 'quota_reserve' | 'daily_quota'.
+    // Deliberately not a status enum value — 163 excluded a `paused` status to
+    // avoid an enum migration and downstream UI states.
+    pausedReason: text("paused_reason"),
+
     // ═══════════════════════════════════════════════════════════════════════
     // RESUME / HEARTBEAT POINTER
     // Written by the worker after each successful chunk. Read by the DLQ

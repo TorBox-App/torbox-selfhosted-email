@@ -545,6 +545,179 @@ async function notifyBroadcastQuotaPaused(
   }
 }
 
+/**
+ * Write a broadcast-stopped-early inbox notification, deduplicated per batch
+ * per 24h. Mirrors notifyBroadcastFinished's shape exactly — never lets a
+ * notification failure break the send loop. Distinct type from
+ * broadcast.finished (a different 24h dedupe key) so firing this one can
+ * never suppress the genuine completion notification if the operator resumes
+ * the same batch later in the day.
+ */
+async function notifyBroadcastStoppedEarly(
+  batchId: string,
+  organizationId: string,
+  chunkIndex: number
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.stopped_early",
+      since,
+      dataEquals: { key: "batchId", value: batchId },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[batch], [org]] = await Promise.all([
+      db
+        .select({ name: batchSend.name, subject: batchSend.subject })
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, batchId),
+            eq(batchSend.organizationId, organizationId)
+          )
+        )
+        .limit(1),
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
+    if (!(batch && org?.slug)) {
+      return;
+    }
+
+    const label = batch.name || batch.subject || "Broadcast";
+    const title = `Broadcast "${label}" stopped early`;
+    const body =
+      "Every recipient in a chunk failed to send, so the broadcast was " +
+      "stopped to protect the rest of the audience. Most recipients were " +
+      "not contacted. Resume from the broadcast page once the cause is fixed.";
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.stopped_early",
+      title,
+      body,
+      href: `/${org.slug}/emails/broadcasts/${batchId}`,
+      data: { batchId, chunkIndex },
+    });
+  } catch (error) {
+    captureException(error, {
+      tags: { worker: "batch-sender", stage: "stopped-early-notification" },
+      extra: { batchId, organizationId },
+    });
+    log.error("Failed to write broadcast-stopped-early notification", error, {
+      batchId,
+      organizationId,
+    });
+  }
+}
+
+/**
+ * Write a broadcast-paused inbox notification for SES daily quota exhaustion,
+ * deduplicated per batch per 24h. Mirrors notifyBroadcastQuotaPaused's shape
+ * exactly — never lets a notification failure break the send loop. Distinct
+ * from notifyBroadcastQuotaPaused: that one is the transactional-reserve
+ * gate (a self-imposed headroom), this one is the account's actual SES daily
+ * sending limit being exhausted.
+ */
+async function notifyBroadcastDailyQuotaPaused(
+  batchId: string,
+  organizationId: string
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.daily_quota_paused",
+      since,
+      dataEquals: { key: "batchId", value: batchId },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[batch], [org]] = await Promise.all([
+      db
+        .select({ name: batchSend.name, subject: batchSend.subject })
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, batchId),
+            eq(batchSend.organizationId, organizationId)
+          )
+        )
+        .limit(1),
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
+    if (!(batch && org?.slug)) {
+      return;
+    }
+
+    const label = batch.name || batch.subject || "Broadcast";
+    const title = `Broadcast "${label}" paused: SES daily quota exhausted`;
+    const body =
+      "Your AWS account's SES daily sending quota is exhausted. Sending " +
+      "resumes automatically as the 24h window rolls.";
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.daily_quota_paused",
+      title,
+      body,
+      href: `/${org.slug}/emails/broadcasts/${batchId}`,
+      data: { batchId },
+    });
+  } catch (error) {
+    captureException(error, {
+      tags: {
+        worker: "batch-sender",
+        stage: "daily-quota-paused-notification",
+      },
+      extra: { batchId, organizationId },
+    });
+    log.error(
+      "Failed to write broadcast-daily-quota-paused notification",
+      error,
+      { batchId, organizationId }
+    );
+  }
+}
+
+// Releases claims this invocation made but never sent, restoring the exact
+// pre-claim state so a redelivery's INSERT claim works unchanged. Callers that
+// re-enqueue the SAME chunk MUST call this first: the redelivery lands well
+// inside the 15-minute staleness window, so still-queued rows would block both
+// its claim INSERT and its re-claim UPDATE, stranding every unsent contact at
+// 'queued' forever.
+async function releaseUnusedClaims(
+  ctx: { organizationId: string; batchId: string },
+  contacts: { id: string }[]
+): Promise<void> {
+  await db.delete(messageSend).where(
+    and(
+      eq(messageSend.organizationId, ctx.organizationId),
+      eq(messageSend.batchSendId, ctx.batchId),
+      inArray(
+        messageSend.contactId,
+        contacts.map((c) => c.id)
+      ),
+      eq(messageSend.status, "queued")
+    )
+  );
+}
+
 async function processJob(
   job: BatchJob,
   context: Context,
@@ -745,6 +918,10 @@ async function processJob(
         sentLast24Hours,
         reserve,
       });
+      await db
+        .update(batchSend)
+        .set({ pausedReason: "quota_reserve" })
+        .where(eq(batchSend.id, batchId));
       // Re-enqueue the SAME chunk (same chunkIndex, same cursor) — matches
       // the throttle-recovery re-enqueue shape above. 900s is the SQS
       // DelaySeconds max; the batch resumes as the 24h window rolls.
@@ -1112,6 +1289,33 @@ async function processJob(
         // moved below it, so a DB error can never be misread as a send
         // failure. Every branch exits the iteration; rows in this sub-batch
         // are all still 'queued' when the catch runs.
+
+        // SES daily sending quota exhausted. This is a wait, not a failure:
+        // capacity returns as the rolling 24h window rolls. Checked BEFORE
+        // isThrottle because SESv2 may report it as TooManyRequestsException,
+        // which isThrottle would otherwise swallow into a 30s retry loop.
+        const isDailyQuota =
+          error instanceof Error &&
+          (/daily (message )?quota exceeded/i.test(error.message) ||
+            /sending quota .*exceeded/i.test(error.message) ||
+            error.name === "LimitExceededException");
+
+        if (isDailyQuota) {
+          await releaseUnusedClaims({ organizationId, batchId }, emailContacts);
+          await db
+            .update(batchSend)
+            .set({ pausedReason: "daily_quota" })
+            .where(eq(batchSend.id, batchId));
+          log.warn("broadcast.daily_quota_paused", {
+            batchId,
+            chunkIndex,
+            organizationId,
+          });
+          await notifyBroadcastDailyQuotaPaused(batchId, organizationId);
+          await enqueueNextChunk({ ...job }, { delaySeconds: 900 });
+          return;
+        }
+
         // Check if this is a throttle error
         const isThrottle =
           error instanceof Error &&
@@ -1120,28 +1324,9 @@ async function processJob(
             error.message.includes("rate exceeded"));
 
         if (isThrottle) {
-          // Release this invocation's unused claims BEFORE re-enqueueing.
-          // The redelivery lands in ~30s — far below the 15-minute staleness
-          // window — so still-queued rows claimed by THIS invocation would
-          // block both the redelivery's claim INSERT (unique-index conflict)
-          // and its re-claim UPDATE (not stale), stranding every unsent
-          // contact at 'queued' forever. Every contact in emailContacts was
-          // claimed by this invocation (post-claim filter guarantees it), and
-          // the status='queued' predicate skips rows already updated to
-          // sent/failed by earlier sub-batches of this loop. DELETE restores
-          // the exact pre-claim state so the redelivery's INSERT claim works
-          // unchanged.
-          await db.delete(messageSend).where(
-            and(
-              eq(messageSend.organizationId, organizationId),
-              eq(messageSend.batchSendId, batchId),
-              inArray(
-                messageSend.contactId,
-                emailContacts.map((c) => c.id)
-              ),
-              eq(messageSend.status, "queued")
-            )
-          );
+          // Release this invocation's unused claims BEFORE re-enqueueing. See
+          // releaseUnusedClaims for why this must happen before the re-enqueue.
+          await releaseUnusedClaims({ organizationId, batchId }, emailContacts);
 
           // Re-queue this chunk with a longer delay (30 seconds)
           log.warn("SES throttled, requeuing chunk with delay", {
@@ -1412,8 +1597,45 @@ async function processJob(
       lastChunkAt: new Date(),
       lastChunkIndex: chunkIndex,
       lastCursor: nextCursor,
+      // This chunk got through, so whatever paused us is resolved. Both pause
+      // branches (quota reserve, daily quota) return before reaching here, so
+      // this only runs on real progress.
+      pausedReason: null,
     })
     .where(eq(batchSend.id, batchId));
+
+  // Circuit breaker: a chunk that sent nothing and failed everything means the
+  // error is systemic, not per-recipient. Continuing would march the rest of
+  // the audience into 'failed' 50 at a time. Stop and let an operator use
+  // POST /v1/batch/:id/resume once the cause is fixed. No error classifier is
+  // exhaustive, so this — not the classifier above — is the real ceiling on
+  // blast radius.
+  const chunkWhollyFailed =
+    chunkProcessedRecipients > 0 &&
+    sent === 0 &&
+    failed === chunkProcessedRecipients;
+
+  if (chunkWhollyFailed) {
+    log.error("broadcast.chunk_wholly_failed", undefined, {
+      batchId,
+      chunkIndex,
+      organizationId,
+      failed,
+    });
+    await db
+      .update(batchSend)
+      .set({
+        status: "failed",
+        completedAt: new Date(),
+        errorMessage:
+          `Every recipient in chunk ${chunkIndex} failed to send, so the ` +
+          "broadcast was stopped to protect the rest of the audience. Fix " +
+          "the underlying error and resume from the broadcast page.",
+      })
+      .where(eq(batchSend.id, batchId));
+    await notifyBroadcastStoppedEarly(batchId, organizationId, chunkIndex);
+    return;
+  }
 
   const shouldEnqueueNextChunk =
     contacts.length === Math.min(CHUNK_SIZE, remainingRecipients) &&

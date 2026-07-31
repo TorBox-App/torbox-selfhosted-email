@@ -40,6 +40,17 @@ vi.mock("@aws-sdk/client-sqs", () => ({
 
 let sesCallCount = 0;
 let sesErrorToThrow: Error | null = null;
+// When set, the SendBulkEmail call resolves with this per-recipient result
+// shape instead of throwing — lets tests exercise the per-recipient
+// success/failure path (recordAcceptedSend/recordSendFailure) rather than the
+// whole-call catch block.
+let sesBulkResultsOverride: {
+  BulkEmailEntryResults: Array<{
+    Status: string;
+    MessageId?: string;
+    Error?: unknown;
+  }>;
+} | null = null;
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: class {
@@ -48,6 +59,9 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
       // Index 0 = GetAccount, index 1+ = SendBulkEmail
       if (sesCallCount > 1 && sesErrorToThrow) {
         return Promise.reject(sesErrorToThrow);
+      }
+      if (sesCallCount > 1 && sesBulkResultsOverride) {
+        return Promise.resolve(sesBulkResultsOverride);
       }
       return Promise.resolve({ SendQuota: { MaxSendRate: 14 } });
     });
@@ -83,6 +97,10 @@ let mockClaimReturning: Array<{ contactId: string }> = [];
 // many SQS sends had happened at that moment — proves delete-before-re-enqueue.
 const deleteWhereCalls: unknown[] = [];
 const sqsCallsAtDelete: number[] = [];
+// notifyOrg / hasRecentNotification are mocked directly (spied) rather than
+// going through the real @wraps/db implementation, which would hit a real DB.
+const notifyOrgMock = vi.fn().mockResolvedValue(undefined);
+const hasRecentNotificationMock = vi.fn().mockResolvedValue(false);
 
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
@@ -137,6 +155,8 @@ vi.mock("@wraps/db", async () => {
       }),
     },
     sql: (...args: unknown[]) => args,
+    notifyOrg: notifyOrgMock,
+    hasRecentNotification: hasRecentNotificationMock,
   };
 });
 
@@ -256,6 +276,70 @@ function setupBulkSelects() {
   ];
 }
 
+/** Larger contact set for tests that need a full (non-final) chunk. */
+function makeManyContacts(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `c${i}`,
+    email: `user${i}@example.com`,
+    phone: null,
+    firstName: `User${i}`,
+    lastName: null,
+    company: null,
+    jobTitle: null,
+    properties: {},
+    createdAt: new Date("2026-01-15T10:00:00Z"),
+  }));
+}
+
+/**
+ * Setup for tests whose branch returns BEFORE shouldEnqueueNextChunk is
+ * evaluated (daily-quota pause, circuit breaker) — both call one of the
+ * notify* helpers, which issue two extra selects (batch name/subject, org
+ * slug) on top of the standard 5.
+ */
+function setupBulkSelectsForEarlyReturn() {
+  mockClaimReturning = makeContacts().map((c) => ({ contactId: c.id }));
+  selectResults = [
+    [makeBulkBatch()],
+    makeContacts(),
+    [{}], // aws account features
+    [
+      {
+        sesTemplateName: "wraps-tmpl-1",
+        compiledHtml: null,
+        emailType: "marketing",
+      },
+    ],
+    [{ name: "Test Org" }],
+    [{ name: "Test Broadcast", subject: "Test Subject" }], // notify*: batch
+    [{ slug: "test-org" }], // notify*: org
+  ];
+}
+
+/**
+ * Setup for tests that need a FULL chunk (contacts.length === CHUNK_SIZE)
+ * with more of the audience remaining, so shouldEnqueueNextChunk is true and
+ * the worker never reaches notifyBroadcastFinished's extra selects.
+ */
+function setupLargeChunkSelects(count = 50, totalRecipients = 100) {
+  const contacts = makeManyContacts(count);
+  mockClaimReturning = contacts.map((c) => ({ contactId: c.id }));
+  selectResults = [
+    [makeBulkBatch({ totalRecipients })],
+    contacts,
+    [{}], // aws account features
+    [
+      {
+        sesTemplateName: "wraps-tmpl-1",
+        compiledHtml: null,
+        emailType: "marketing",
+      },
+    ],
+    [{ name: "Test Org" }],
+  ];
+  return contacts;
+}
+
 /**
  * Walk a Drizzle SQL tree (real `and`/`eq`/`inArray` objects — the mock spreads
  * `...actual`) and collect every bound Param value. Lets us assert the DELETE's
@@ -312,6 +396,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   sesCallCount = 0;
   sesErrorToThrow = null;
+  sesBulkResultsOverride = null;
   sqsSendCalls.length = 0;
   selectCallIndex = 0;
   selectResults = [];
@@ -319,6 +404,9 @@ beforeEach(() => {
   mockClaimReturning = [];
   deleteWhereCalls.length = 0;
   sqsCallsAtDelete.length = 0;
+  notifyOrgMock.mockClear();
+  hasRecentNotificationMock.mockClear();
+  hasRecentNotificationMock.mockResolvedValue(false);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -445,5 +533,154 @@ describe("SES permission error", () => {
     ).rejects.toThrow();
 
     expect(sqsSendCalls).toHaveLength(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SES daily quota error
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("SES daily quota error", () => {
+  it("re-queues the SAME chunkIndex at 900s, releases claims, marks nothing failed, pauses, and notifies once", async () => {
+    setupBulkSelectsForEarlyReturn();
+    sesErrorToThrow = Object.assign(new Error("Daily message quota exceeded"), {
+      name: "LimitExceededException",
+    });
+
+    await handler(makeSQSEvent(3), makeMockContext(), vi.fn());
+
+    // Re-enqueues the SAME chunkIndex (not incremented) at 900s.
+    expect(sqsSendCalls).toHaveLength(1);
+    expect(sqsSendCalls[0].DelaySeconds).toBe(900);
+    const requeued = JSON.parse(sqsSendCalls[0].MessageBody);
+    expect(requeued.chunkIndex).toBe(3);
+    expect(requeued.batchId).toBe("batch-1");
+
+    // Claim-release DELETE scoped to status='queued', same shape as throttle.
+    expect(deleteWhereCalls).toHaveLength(1);
+    const paramValues = collectParamValues(deleteWhereCalls[0]).flat();
+    expect(paramValues).toContain("queued");
+    expect(paramValues).toContain("org-1");
+    expect(paramValues).toContain("batch-1");
+
+    // No messageSend row is ever marked failed on this path.
+    const failedUpdates = updateSetCalls.filter((u) => u.status === "failed");
+    expect(failedUpdates).toHaveLength(0);
+
+    // batchSend.pausedReason is set to 'daily_quota'.
+    const pausedUpdate = updateSetCalls.find(
+      (u) => u.pausedReason === "daily_quota"
+    );
+    expect(pausedUpdate).toBeDefined();
+
+    // Exactly one notification of the right type.
+    expect(notifyOrgMock).toHaveBeenCalledTimes(1);
+    expect(notifyOrgMock.mock.calls[0][0]).toMatchObject({
+      organizationId: "org-1",
+      type: "broadcast.daily_quota_paused",
+    });
+  });
+
+  it("writes no second notification when one already landed in the dedupe window", async () => {
+    setupBulkSelectsForEarlyReturn();
+    hasRecentNotificationMock.mockResolvedValue(true);
+    sesErrorToThrow = Object.assign(
+      new Error("Sending quota for the account has been exceeded"),
+      { name: "Throttling" } // realistic ambiguity: same name isThrottle matches
+    );
+
+    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
+
+    // Daily-quota branch still wins over isThrottle (ordering gate), so the
+    // chunk is paused at 900s, not retried at 30s.
+    expect(sqsSendCalls[0]?.DelaySeconds).toBe(900);
+    expect(notifyOrgMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Whole-chunk failure circuit breaker
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("whole-chunk failure circuit breaker", () => {
+  it("stops the broadcast when a chunk sends zero and fails every recipient", async () => {
+    setupBulkSelectsForEarlyReturn();
+    sesBulkResultsOverride = {
+      BulkEmailEntryResults: [
+        { Status: "FAILED", Error: "Bounce" },
+        { Status: "FAILED", Error: "Bounce" },
+      ],
+    };
+
+    await handler(makeSQSEvent(5), makeMockContext(), vi.fn());
+
+    // Zero SQS sends — the chain is stopped, not re-enqueued.
+    expect(sqsSendCalls).toHaveLength(0);
+
+    // Batch row ends 'failed' with a non-null errorMessage. (Distinct from the
+    // per-recipient messageSend 'failed' updates, which use `error` not
+    // `errorMessage` and have no `completedAt`.)
+    const statusUpdate = updateSetCalls.find(
+      (u) => u.status === "failed" && "completedAt" in u
+    );
+    expect(statusUpdate).toBeDefined();
+    expect(statusUpdate?.errorMessage).toEqual(expect.any(String));
+    expect(statusUpdate?.errorMessage).not.toBe("");
+
+    // Notification type is 'broadcast.stopped_early', NOT 'broadcast.finished'.
+    expect(notifyOrgMock).toHaveBeenCalledTimes(1);
+    expect(notifyOrgMock.mock.calls[0][0]).toMatchObject({
+      organizationId: "org-1",
+      type: "broadcast.stopped_early",
+    });
+  });
+
+  it("does NOT fire when a chunk has at least one success (partial failure is normal)", async () => {
+    const contacts = setupLargeChunkSelects(50, 100);
+    sesBulkResultsOverride = {
+      BulkEmailEntryResults: contacts.map((_c, i) =>
+        i === 0
+          ? { Status: "SUCCESS", MessageId: `msg-${i}` }
+          : { Status: "FAILED", Error: "Bounce" }
+      ),
+    };
+
+    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
+
+    // The breaker must not trip on partial failure — the chunk chain
+    // continues to the next chunk.
+    expect(sqsSendCalls).toHaveLength(1);
+    const nextJob = JSON.parse(sqsSendCalls[0].MessageBody);
+    expect(nextJob.chunkIndex).toBe(1);
+
+    // No 'stopped_early' or 'finished' notification — this is ordinary
+    // progress, nothing to tell the customer yet.
+    expect(notifyOrgMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// pausedReason lifecycle
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("pausedReason lifecycle", () => {
+  it("clears pausedReason back to null once a chunk actually sends", async () => {
+    const contacts = setupLargeChunkSelects(50, 100);
+    sesBulkResultsOverride = {
+      BulkEmailEntryResults: contacts.map((_c, i) => ({
+        Status: "SUCCESS",
+        MessageId: `msg-${i}`,
+      })),
+    };
+
+    await handler(makeSQSEvent(0), makeMockContext(), vi.fn());
+
+    // The progress UPDATE (the only write reachable on a real send) clears
+    // pausedReason — a batch that paused once must not read as paused forever.
+    const progressUpdate = updateSetCalls.find(
+      (u) => "pausedReason" in u && u.lastChunkIndex !== undefined
+    );
+    expect(progressUpdate).toBeDefined();
+    expect(progressUpdate?.pausedReason).toBeNull();
   });
 });
