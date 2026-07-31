@@ -85,6 +85,14 @@ jobs:
           # here turns error reporting OFF on the next upgrade even if a local
           # deploy had configured it.
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Optional. infra/selfhost.config.ts reads these from .env.selfhost
+          # only (never process.env), so omitting them here deletes the SNS
+          # alert subscription and silently re-enables any cron the operator
+          # opted out of, on the next automated upgrade.
+          ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+          SELFHOST_ACCOUNT_HEALTH_ENABLED: ${{ vars.SELFHOST_ACCOUNT_HEALTH_ENABLED }}
+          SELFHOST_EVENT_FEED_STALENESS_ENABLED: ${{ vars.SELFHOST_EVENT_FEED_STALENESS_ENABLED }}
+          SELFHOST_WORKFLOW_REAPER_ENABLED: ${{ vars.SELFHOST_WORKFLOW_REAPER_ENABLED }}
           # Optional. Which DNS provider owns SELFHOST_WEB_DOMAIN. Omitting
           # these on a Cloudflare deployment drops it back to the Route 53
           # adapter, and the upgrade dies on the hosted-zone lookup.
@@ -126,6 +134,10 @@ jobs:
             [ -n "${ANTHROPIC_BASE_URL}" ] && echo "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}"
             [ -n "${WRAPS_AI_REGION}" ] && echo "WRAPS_AI_REGION=${WRAPS_AI_REGION}"
             [ -n "${SENTRY_DSN}" ] && echo "SENTRY_DSN=${SENTRY_DSN}"
+            [ -n "${ALERT_EMAIL}" ] && echo "ALERT_EMAIL=${ALERT_EMAIL}"
+            [ -n "${SELFHOST_ACCOUNT_HEALTH_ENABLED}" ] && echo "SELFHOST_ACCOUNT_HEALTH_ENABLED=${SELFHOST_ACCOUNT_HEALTH_ENABLED}"
+            [ -n "${SELFHOST_EVENT_FEED_STALENESS_ENABLED}" ] && echo "SELFHOST_EVENT_FEED_STALENESS_ENABLED=${SELFHOST_EVENT_FEED_STALENESS_ENABLED}"
+            [ -n "${SELFHOST_WORKFLOW_REAPER_ENABLED}" ] && echo "SELFHOST_WORKFLOW_REAPER_ENABLED=${SELFHOST_WORKFLOW_REAPER_ENABLED}"
             [ -n "${SELFHOST_DNS_PROVIDER}" ] && echo "SELFHOST_DNS_PROVIDER=${SELFHOST_DNS_PROVIDER}"
             [ -n "${CLOUDFLARE_API_TOKEN}" ] && echo "CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}"
             [ -n "${SELFHOST_CLOUDFLARE_ZONE_ID}" ] && echo "SELFHOST_CLOUDFLARE_ZONE_ID=${SELFHOST_CLOUDFLARE_ZONE_ID}"
