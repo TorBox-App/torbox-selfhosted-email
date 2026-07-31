@@ -1944,3 +1944,652 @@ describe("checkBroadcastSendDuration", () => {
     }
   });
 });
+
+describe("cross-broadcast quota accounting", () => {
+  // testOrganization has exactly 2 active email contacts (contactWithProp,
+  // contactWithoutProp — see fixtures above), so promoteDraftToSend's
+  // real audience is always 2 here. Cases below use small, hand-picked
+  // quota numbers (rather than the literal 16,227 / 29,849 figures from the
+  // production incident) so that contention alone — not the audience size —
+  // is what tips a send from "fits" to "warns". Math.ceil is still asserted
+  // by hand in every case. checkBroadcastSendDuration (case 10) takes
+  // recipientCount as a raw parameter, so it reproduces the incident's exact
+  // numbers directly.
+
+  it("counts recipients still unsent on another in-flight broadcast when estimating a multi-day send (the incident)", async () => {
+    const quotaAwsId = `preflight-crossquota-incident-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-incident-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-incident-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // dailyCapacity = 104 − 100 = 4. The real audience (2) fits comfortably
+    // on its own — see the control case below. Only with the 5 recipients
+    // still unsent on another broadcast does contendedCount (7) exceed
+    // capacity: Math.ceil(7 / 4) = 2.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 5,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Incident Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeDefined();
+      // Computed by hand: contendedCount = 2 (audience) + 5 (in-flight
+      // remainder) = 7; dailyCapacity = 4; Math.ceil(7 / 4) = 2.
+      expect(result.warning).toMatch(/about 2 days?/);
+      expect(result.warning).toMatch(
+        /1 other broadcast on this AWS account still has 5 recipients to send/
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("produces no multi-day warning for the same send when nothing else is in flight (control)", async () => {
+    const quotaAwsId = `preflight-crossquota-control-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-control-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // Same dailyCapacity (4) as the incident case, but no in-flight batch —
+    // proves the warning above was caused by the accounting, not the fixture.
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Control Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("counts only the unsent remainder of an in-flight broadcast, not its total", async () => {
+    const quotaAwsId = `preflight-crossquota-remainder-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-remainder-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-remainder-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // totalRecipients 5, processedRecipients 4 → remainder 1, not 5.
+    // contendedCount = 2 + 1 = 3, which still fits dailyCapacity (4).
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 5,
+      processedRecipients: 4,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Remainder Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("excludes draft, scheduled, completed, failed, and cancelled broadcasts from the in-flight sum", async () => {
+    const quotaAwsId = `preflight-crossquota-statuses-aws-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-statuses-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // Each row has a huge remainder (1,000). If any of these statuses were
+    // wrongly counted, contendedCount would blow past dailyCapacity (4) and
+    // produce a multi-day warning. None should contribute.
+    const excludedStatuses = [
+      "draft",
+      "scheduled",
+      "completed",
+      "failed",
+      "cancelled",
+    ] as const;
+    await db.insert(batchSend).values(
+      excludedStatuses.map(
+        (status) =>
+          ({
+            id: `preflight-crossquota-statuses-${status}-${RUN_ID}`,
+            organizationId: testOrganization.id,
+            awsAccountId: quotaAwsId,
+            channel: "email",
+            status,
+            totalRecipients: 1000,
+            processedRecipients: 0,
+          }) as typeof batchSend.$inferInsert
+      )
+    );
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Statuses Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("does not count an in-flight broadcast on a different AWS account", async () => {
+    const quotaAwsId = `preflight-crossquota-otheraccount-aws-${RUN_ID}`;
+    const otherAwsId = `preflight-crossquota-otheraccount-other-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-otheraccount-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values([
+        {
+          ...testAwsAccount,
+          id: quotaAwsId,
+          externalId: `crossquota-otheraccount-ext-${RUN_ID}`,
+          dailyQuotaReserve: 100,
+        },
+        {
+          ...testAwsAccount,
+          id: otherAwsId,
+          externalId: `crossquota-otheraccount-ext2-${RUN_ID}`,
+          dailyQuotaReserve: 0,
+        },
+      ])
+      .onConflictDoNothing();
+
+    // Huge remainder, but on a DIFFERENT aws_account row — must not count
+    // toward quotaAwsId's headroom.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: otherAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 1000,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Other Account Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, otherAwsId));
+    }
+  });
+
+  it("does not count an in-flight broadcast belonging to a different organization, even on the same AWS account row", async () => {
+    // Artificial — the FK makes a real cross-org row on the same
+    // aws_account id unlikely — but this is exactly the assertion that
+    // proves the organizationId filter in sumInFlightBroadcastRecipients is
+    // live, not just present in the SQL text.
+    const otherOrgId = `preflight-crossquota-otherorg-org-${RUN_ID}`;
+    const quotaAwsId = `preflight-crossquota-otherorg-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-otherorg-inflight-${RUN_ID}`;
+    await db
+      .insert(organization)
+      .values({
+        id: otherOrgId,
+        name: "Cross-Quota Other Org",
+        slug: `preflight-crossquota-otherorg-${RUN_ID}`,
+        createdAt: new Date(),
+        logo: null,
+        metadata: null,
+      })
+      .onConflictDoNothing();
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-otherorg-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // Same awsAccountId, but organizationId belongs to a different org.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: otherOrgId,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 1000,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Other Org Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, otherOrgId));
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+      await db.delete(organization).where(eq(organization.id, otherOrgId));
+    }
+  });
+
+  it("does not count an in-flight SMS broadcast toward the email quota", async () => {
+    const quotaAwsId = `preflight-crossquota-smschannel-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-smschannel-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-smschannel-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // Huge remainder, but channel "sms" — SES quota is email-only.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "sms",
+      status: "processing",
+      totalRecipients: 1000,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota SMS Channel Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("never manufactures a warning from contention alone when the send still fits (rule 5a)", async () => {
+    const quotaAwsId = `preflight-crossquota-benign-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-benign-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-benign-ext-${RUN_ID}`,
+        dailyQuotaReserve: 50,
+      })
+      .onConflictDoNothing();
+
+    // dailyCapacity = 150 − 50 = 100. In-flight remainder = 50.
+    // contendedCount = 2 + 50 = 52, well under capacity (100).
+    // headroom (with in-flight) = 150 − 0 − 50 − 50 = 50, still above the
+    // 2-contact audience. Neither branch should produce a warning.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 50,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 150, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Benign Contention Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("keeps the today-only warning's printed arithmetic correct once the in-flight term is added (rule 5b)", async () => {
+    const quotaAwsId = `preflight-crossquota-arithmetic-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-arithmetic-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-arithmetic-ext-${RUN_ID}`,
+        dailyQuotaReserve: 1000,
+      })
+      .onConflictDoNothing();
+
+    // dailyCapacity = 50,000 − 1,000 = 49,000 — the 2-contact audience plus
+    // the 8,000 in-flight remainder (8,002) fits easily, so this stays in
+    // the today-only branch rather than the multi-day one.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 8000,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    // headroom = 50,000 − 41,000 − 1,000 − 8,000 = 0, below the 2-contact
+    // audience, so the today-only warning fires.
+    sesGetAccountQuota = { Max24HourSend: 50_000, SentLast24Hours: 41_000 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Arithmetic Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeDefined();
+      const warning = result.warning as string;
+      expect(warning).toContain("8,000 queued in other broadcasts");
+
+      // Parse every number out of the "Only N of M ... (quota − sent − reserve
+      // − inFlight)" sentence and verify the printed subtraction actually
+      // reduces to the printed "Only N" figure, so a future edit that drops
+      // a term fails here instead of shipping visibly wrong arithmetic.
+      const match = warning.match(
+        /Only ([\d,]+) of ([\d,]+) emails can send right now \(daily quota ([\d,]+) − ([\d,]+) sent in the last 24h − ([\d,]+) reserved for transactional − ([\d,]+) queued in other broadcasts\)/
+      );
+      expect(match).not.toBeNull();
+      if (!match) return;
+      const [, sendableNow, , maxDaily, sentLast24, reserve, inFlightTerm] =
+        match.map((n) => Number(n.replaceAll(",", "")));
+      expect(sendableNow).toBe(maxDaily - sentLast24 - reserve - inFlightTerm);
+      expect(sendableNow).toBe(0);
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("checkBroadcastSendDuration sees the same in-flight accounting, reproducing the incident's exact numbers", async () => {
+    const quotaAwsId = `preflight-crossquota-duration-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-duration-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-duration-ext-${RUN_ID}`,
+        dailyQuotaReserve: 10_000,
+      })
+      .onConflictDoNothing();
+
+    // Reproduces the production incident exactly: dailyCapacity = 50,000 −
+    // 10,000 = 40,000. Another broadcast has 29,849 recipients left to send.
+    // checkBroadcastSendDuration takes recipientCount as a raw parameter, so
+    // the incident's own audience size (16,227) can be used directly without
+    // needing 16,227 real contact rows.
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 29_849,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 50_000, SentLast24Hours: 0 };
+
+    try {
+      const result = await checkBroadcastSendDuration(
+        testOrganization.id,
+        quotaAwsId,
+        "email",
+        16_227,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.available).toBe(true);
+      if (!result.available) return;
+      expect(result.dailyCapacity).toBe(40_000);
+      expect(result.inFlightBatches).toBe(1);
+      expect(result.inFlightRecipients).toBe(29_849);
+      // Computed by hand: Math.ceil((16,227 + 29,849) / 40,000) = 2.
+      expect(result.estimatedDays).toBe(Math.ceil((16_227 + 29_849) / 40_000));
+      expect(result.estimatedDays).toBe(2);
+    } finally {
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+});

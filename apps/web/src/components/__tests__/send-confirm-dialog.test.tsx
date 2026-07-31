@@ -179,4 +179,45 @@ describe("SendConfirmDialog", () => {
       expect(screen.queryByText("Confirm send")).not.toBeInTheDocument();
     });
   });
+
+  it("should name the other in-flight broadcasts and their remaining recipients when inFlightBatches is set", () => {
+    render(
+      <SendConfirmDialog
+        inFlightBatches={2}
+        inFlightRecipients={29_849}
+        onConfirm={vi.fn()}
+        onOpenChange={vi.fn()}
+        open={true}
+        recipientCount={1500}
+        variant="send"
+      />
+    );
+
+    expect(
+      screen.getByText(/2 other broadcasts on this AWS account still have/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/29,849 recipients to send/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/shares the same daily quota with them/)
+    ).toBeInTheDocument();
+  });
+
+  it("should render the same description as before when inFlightBatches/inFlightRecipients are omitted", () => {
+    render(
+      <SendConfirmDialog
+        onConfirm={vi.fn()}
+        onOpenChange={vi.fn()}
+        open={true}
+        recipientCount={1500}
+        variant="send"
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "This will immediately send emails to 1,500 contacts. This action cannot be undone."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/other broadcast/)).not.toBeInTheDocument();
+  });
 });
