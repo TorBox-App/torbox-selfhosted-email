@@ -311,9 +311,17 @@ export type CheckSendDurationResult =
   | {
       success: true;
       available: true;
-      /** Non-null only when the audience exceeds a full day's capacity. */
+      /**
+       * Non-null only when the audience, plus recipients still unsent on
+       * other in-flight broadcasts on this AWS account, exceeds a full
+       * day's capacity.
+       */
       estimatedDays: number | null;
       dailyCapacity: number;
+      /** Other queued/processing email broadcasts on this AWS account. */
+      inFlightBatches: number;
+      /** Their combined unsent remainder — the quota this send has to share. */
+      inFlightRecipients: number;
     }
   | {
       success: false;

@@ -22,6 +22,11 @@ type SendConfirmDialogProps = {
   /** When the audience exceeds one day's SES capacity, the estimated calendar
    *  days to drain. Null, undefined, or 1 renders nothing extra. */
   estimatedDays?: number | null;
+  /** Other queued/processing email broadcasts on this AWS account. Omitted
+   *  or 0 renders nothing extra. */
+  inFlightBatches?: number;
+  /** Their combined unsent remainder — the quota this send has to share. */
+  inFlightRecipients?: number;
 };
 
 export function SendConfirmDialog({
@@ -33,6 +38,8 @@ export function SendConfirmDialog({
   scheduledDate,
   loading,
   estimatedDays,
+  inFlightBatches,
+  inFlightRecipients,
 }: SendConfirmDialogProps) {
   const formattedCount = recipientCount.toLocaleString();
 
@@ -43,6 +50,11 @@ export function SendConfirmDialog({
   const durationNote =
     estimatedDays && estimatedDays > 1
       ? ` This account's SES daily quota means sending will take about ${estimatedDays} days: it pauses and resumes automatically as quota frees up, and you can cancel any time from the broadcast page.`
+      : "";
+
+  const contentionNote =
+    inFlightBatches && inFlightBatches > 0
+      ? ` ${inFlightBatches} other broadcast${inFlightBatches === 1 ? "" : "s"} on this AWS account ${inFlightBatches === 1 ? "still has" : "still have"} ${(inFlightRecipients ?? 0).toLocaleString()} recipients to send; this broadcast shares the same daily quota with ${inFlightBatches === 1 ? "it" : "them"}.`
       : "";
 
   return (
@@ -56,7 +68,8 @@ export function SendConfirmDialog({
             {(variant === "schedule"
               ? scheduleDescription
               : `This will immediately send emails to ${formattedCount} contacts. This action cannot be undone.`) +
-              durationNote}
+              durationNote +
+              contentionNote}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

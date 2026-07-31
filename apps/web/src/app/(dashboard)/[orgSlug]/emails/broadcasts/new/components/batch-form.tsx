@@ -1519,6 +1519,16 @@ function ReviewStep({
       ? durationResult.estimatedDays
       : null;
 
+  const inFlightBatches =
+    durationResult?.success && durationResult.available
+      ? durationResult.inFlightBatches
+      : 0;
+
+  const inFlightRecipients =
+    durationResult?.success && durationResult.available
+      ? durationResult.inFlightRecipients
+      : 0;
+
   // Fetch templates with React Query - auto-updates when templates change
   const { data: templatesData } = useTemplates(orgSlug);
   const templates: Template[] = (templatesData ?? []).map((t) => ({
@@ -1690,6 +1700,8 @@ function ReviewStep({
 
       <SendConfirmDialog
         estimatedDays={estimatedDays}
+        inFlightBatches={inFlightBatches}
+        inFlightRecipients={inFlightRecipients}
         loading={isPending}
         onConfirm={() => {
           setShowConfirmDialog(false);
