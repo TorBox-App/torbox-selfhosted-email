@@ -212,11 +212,44 @@ is unacceptable, the pattern is:
    `packages/db/scripts/` that uses `@neondatabase/serverless` directly
    (no drizzle-kit involvement), with `CREATE INDEX CONCURRENTLY IF NOT
    EXISTS`. Run manually after the drizzle migration:
-   `DATABASE_URL=... pnpm tsx packages/db/scripts/<name>.ts`.
+   `pnpm --filter @wraps/db exec tsx scripts/<name>.ts`.
 4. **Document the deploy order** in the PR description — e.g., "Run
    `db:migrate` first, then the script, then ship the code that relies
    on the index."
 
 Reference: `packages/db/scripts/create-broadcast-resume-indexes.ts`.
+
+#### These scripts need a DIRECT connection
+
+They resolve their connection via `resolveDirectDatabaseUrl()`, which prefers
+**`DATABASE_DIRECT_URL`** and falls back to `DATABASE_URL`. Set the direct
+variable whenever the database sits behind a transaction-mode pooler
+(PlanetScale PSBouncer on `:6432`, PgBouncer generally): such a pooler assigns
+a server connection per transaction, while `CREATE INDEX CONCURRENTLY` needs
+one session held across several table passes.
+
+The trap is the error text. A pooler rejects it with
+`CREATE INDEX CONCURRENTLY cannot run inside a transaction block` — **byte
+identical** to what the drizzle migrator produces for a completely different
+reason (drizzle wraps all migrations in one transaction). Same message, two
+unrelated causes. `resolveDirectDatabaseUrl` warns when the URL looks pooled
+so the two are distinguishable.
+
+Applications keep using the pooled `DATABASE_URL`; only DDL needs the direct
+endpoint.
+
+#### Verify validity, not just existence
+
+A `CONCURRENTLY` build that fails partway leaves an **invalid** index behind.
+`IF NOT EXISTS` then silently skips it on the next run, so a green re-run can
+still mean no usable index — the planner ignores invalid ones.
+
+```sql
+SELECT c.relname, i.indisvalid
+FROM pg_class c JOIN pg_index i ON i.indexrelid = c.oid
+WHERE c.relname = '<index_name>';
+```
+
+`indisvalid = false` → `DROP INDEX CONCURRENTLY <name>;` and re-run.
 
 Config in `drizzle.config.ts` reads env from `apps/web/.env.local`.

@@ -16,24 +16,28 @@
 
 import { Pool } from "@neondatabase/serverless";
 import dotenv from "dotenv";
-import { normalizeDatabaseUrl } from "../src/connection-url";
+import { resolveDirectDatabaseUrl } from "../src/connection-url";
 
 dotenv.config({ path: "../../apps/web/.env.local" });
 dotenv.config({ path: "../../.env" });
+// Self-hosted operators keep their config here, not in apps/web/.env.local.
+dotenv.config({ path: "../../.env.selfhost" });
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error(
-    "DATABASE_URL is required. Export it or put it in apps/web/.env.local."
-  );
+// Prefers DATABASE_DIRECT_URL. CREATE INDEX CONCURRENTLY cannot run through a
+// transaction-mode pooler, and resolveDirectDatabaseUrl warns when the URL
+// looks pooled. It also strips `sslrootcert=system`, which node-postgres would
+// otherwise read as a filename and die with ENOENT before any SQL runs.
+let CONNECTION_STRING: string;
+try {
+  const resolved = resolveDirectDatabaseUrl();
+  for (const note of resolved.notes) {
+    console.warn(note);
+  }
+  CONNECTION_STRING = resolved.url;
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
 }
-
-// The Neon driver bundles pg-connection-string, which readFileSync()s
-// sslrootcert — a provider URL carrying `sslrootcert=system` dies with ENOENT
-// before any SQL runs.
-const CONNECTION_STRING = normalizeDatabaseUrl(DATABASE_URL).url;
 
 async function run() {
   const pool = new Pool({ connectionString: CONNECTION_STRING });

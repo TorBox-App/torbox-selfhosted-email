@@ -2167,6 +2167,46 @@ pnpm install`,
               <tr>
                 <td className="p-3 pr-4 align-top">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    DATABASE_DIRECT_URL
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">
+                  Required if your database is behind a pooler
+                </td>
+                <td className="p-3 align-top">
+                  A <strong>direct</strong> (non-pooled) Postgres URL, used only
+                  by the index-creation scripts in{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    packages/db/scripts/
+                  </code>
+                  . Those run{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    CREATE INDEX CONCURRENTLY
+                  </code>
+                  , which a transaction-mode pooler cannot execute — PlanetScale
+                  PSBouncer on port{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    6432
+                  </code>{" "}
+                  and PgBouncer generally. Usually the same host on port{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    5432
+                  </code>
+                  . Leave unset if{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    DATABASE_URL
+                  </code>{" "}
+                  is already direct. Without it those scripts fail with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    cannot run inside a transaction block
+                  </code>
+                  , and your database silently runs without the indexes that
+                  keep large broadcasts and the email log fast
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     ALERT_EMAIL
                   </code>
                 </td>

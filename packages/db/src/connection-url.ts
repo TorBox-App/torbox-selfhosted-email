@@ -251,3 +251,69 @@ export function assertPostgresUrl(raw: string): void {
     `DATABASE_URL has an unsupported scheme (${parsed.protocol}//). Wraps requires PostgreSQL: postgresql://USER:PASSWORD@HOST:5432/DATABASE`
   );
 }
+
+/** Ports and hostname markers that indicate a transaction-mode pooler. */
+const POOLER_PORTS = new Set(["6432"]);
+const POOLER_HOST_MARKERS = ["pgbouncer", "psbouncer", "pooler"];
+
+function looksPooled(raw: string): boolean {
+  try {
+    const parsed = new URL(raw.trim());
+    if (POOLER_PORTS.has(parsed.port)) {
+      return true;
+    }
+    const host = parsed.hostname.toLowerCase();
+    return POOLER_HOST_MARKERS.some((marker) => host.includes(marker));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve the connection string for out-of-band DDL — specifically
+ * `CREATE INDEX CONCURRENTLY`, which the scripts in `packages/db/scripts/` run.
+ *
+ * Prefers `DATABASE_DIRECT_URL`, falling back to `DATABASE_URL`.
+ *
+ * Why a second variable: a transaction-mode pooler (PlanetScale PSBouncer on
+ * :6432, PgBouncer generally) cannot run `CREATE INDEX CONCURRENTLY` — it
+ * assigns a server connection per transaction, and CONCURRENTLY needs one
+ * session held across several table passes. Postgres rejects it with
+ * "CREATE INDEX CONCURRENTLY cannot run inside a transaction block", which is
+ * byte-identical to what the drizzle migrator produces for an unrelated reason
+ * (drizzle wraps all migrations in one transaction). Same message, different
+ * cause, very easy to misdiagnose — hence the explicit warning below.
+ *
+ * Applications should keep using the pooled `DATABASE_URL`; only DDL needs the
+ * direct endpoint.
+ */
+export function resolveDirectDatabaseUrl(
+  env: Record<string, string | undefined> = process.env
+): NormalizedDatabaseUrl {
+  const direct = env.DATABASE_DIRECT_URL?.trim();
+  const pooled = env.DATABASE_URL?.trim();
+
+  if (direct) {
+    const normalized = normalizeDatabaseUrl(direct);
+    if (looksPooled(direct)) {
+      normalized.notes.push(
+        "DATABASE_DIRECT_URL looks like a pooled endpoint (port 6432 or a pgbouncer/pooler hostname). CREATE INDEX CONCURRENTLY cannot run through a transaction-mode pooler — point this at the direct endpoint, usually port 5432."
+      );
+    }
+    return normalized;
+  }
+
+  if (!pooled) {
+    throw new Error(
+      "Neither DATABASE_DIRECT_URL nor DATABASE_URL is set. Set DATABASE_DIRECT_URL to a DIRECT (non-pooled) Postgres URL — CREATE INDEX CONCURRENTLY cannot run through a transaction-mode pooler."
+    );
+  }
+
+  const normalized = normalizeDatabaseUrl(pooled);
+  if (looksPooled(pooled)) {
+    normalized.notes.push(
+      "DATABASE_URL looks like a pooled endpoint (port 6432 or a pgbouncer/pooler hostname) and DATABASE_DIRECT_URL is not set. CREATE INDEX CONCURRENTLY will fail through a transaction-mode pooler with 'cannot run inside a transaction block'. Set DATABASE_DIRECT_URL to the direct endpoint (usually the same host on port 5432)."
+    );
+  }
+  return normalized;
+}

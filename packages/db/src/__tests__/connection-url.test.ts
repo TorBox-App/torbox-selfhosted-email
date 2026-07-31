@@ -5,6 +5,7 @@ import {
   describeMigrationFailure,
   migrationHint,
   normalizeDatabaseUrl,
+  resolveDirectDatabaseUrl,
 } from "../connection-url";
 
 // PlanetScale documents this exact shape for Postgres, and pg cannot use it
@@ -321,6 +322,70 @@ describe("describeMigrationFailure", () => {
 
     expect(message).toBe(
       "Database migrations failed: syntax error at or near FOO"
+    );
+  });
+});
+
+describe("resolveDirectDatabaseUrl", () => {
+  const DIRECT = "postgresql://u:p@host.example:5432/wraps?sslmode=require";
+  const POOLED = "postgresql://u:p@host.example:6432/wraps?sslmode=require";
+
+  it("prefers DATABASE_DIRECT_URL over DATABASE_URL", () => {
+    const { url } = resolveDirectDatabaseUrl({
+      DATABASE_DIRECT_URL: DIRECT,
+      DATABASE_URL: POOLED,
+    });
+
+    expect(url).toContain(":5432");
+    expect(url).not.toContain(":6432");
+  });
+
+  it("warns when falling back to a pooled DATABASE_URL", () => {
+    // The failure this prevents: PSBouncer rejects CREATE INDEX CONCURRENTLY
+    // with the SAME message the drizzle migrator produces for an unrelated
+    // reason, so without this note the operator misdiagnoses it.
+    const { url, notes } = resolveDirectDatabaseUrl({ DATABASE_URL: POOLED });
+
+    expect(url).toContain(":6432");
+    expect(notes.join(" ")).toMatch(/DATABASE_DIRECT_URL is not set/);
+    expect(notes.join(" ")).toMatch(/cannot run inside a transaction block/);
+  });
+
+  it("stays silent when DATABASE_URL is already a direct endpoint", () => {
+    const { notes } = resolveDirectDatabaseUrl({ DATABASE_URL: DIRECT });
+
+    expect(notes.join(" ")).not.toMatch(/pooled endpoint/);
+  });
+
+  it("detects a pooler by hostname, not only by port", () => {
+    const { notes } = resolveDirectDatabaseUrl({
+      DATABASE_URL: "postgresql://u:p@ep-1-pooler.example:5432/wraps",
+    });
+
+    expect(notes.join(" ")).toMatch(/pooled endpoint/);
+  });
+
+  it("warns when DATABASE_DIRECT_URL is itself pooled", () => {
+    const { notes } = resolveDirectDatabaseUrl({
+      DATABASE_DIRECT_URL: POOLED,
+    });
+
+    expect(notes.join(" ")).toMatch(/DATABASE_DIRECT_URL looks like a pooled/);
+  });
+
+  it("still strips sslrootcert=system from the direct URL", () => {
+    // PlanetScale's documented URL shape — node-postgres reads `system` as a
+    // filename and dies with ENOENT before any SQL runs.
+    const { url } = resolveDirectDatabaseUrl({
+      DATABASE_DIRECT_URL: `${DIRECT}&sslrootcert=system`,
+    });
+
+    expect(url).not.toContain("sslrootcert");
+  });
+
+  it("throws a directional error when neither variable is set", () => {
+    expect(() => resolveDirectDatabaseUrl({})).toThrow(
+      /DATABASE_DIRECT_URL.*DATABASE_URL/s
     );
   });
 });
