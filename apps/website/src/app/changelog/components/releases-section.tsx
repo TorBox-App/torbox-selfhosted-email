@@ -48,6 +48,49 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v2.30",
+    date: "July 2026",
+    icon: Terminal,
+    title: "Self-Hosted Logs & Control-Plane Routing",
+    items: [
+      <>
+        New <Code>wraps selfhost logs</Code> streams CloudWatch logs from a
+        self-hosted install without opening the AWS console. Scope to a single
+        source with <Code>api</Code>, <Code>web</Code>, or <Code>workers</Code>,
+        tail with <Code>--follow</Code>, rewind with <Code>--since</Code>, and
+        narrow with <Code>--filter</Code> or <Code>--errors</Code>
+      </>,
+      <>
+        Fix: API commands now route to the control plane you signed in to. A
+        self-hosted login no longer sends requests at the Wraps cloud API
+      </>,
+      <>
+        Fix: <Code>wraps status</Code> prints your own dashboard URL on a
+        self-hosted install instead of always printing the Wraps one
+      </>,
+      <>
+        Fix: a self-hosted web domain can live outside Route 53, and adding a
+        domain after the fact repoints the app URLs that unsubscribe,
+        preference, and verification links are built from
+      </>,
+      <>
+        Fix: the SST deployment variant normalizes its API URL, so the two
+        deploy paths agree on what the API is called
+      </>,
+      <>
+        Fix: the database connection pool is capped explicitly rather than
+        inheriting node-postgres&rsquo; default of 10
+      </>,
+      <>
+        Fix: SDK snippets printed by the CLI — deploy output,{" "}
+        <Code>sms init</Code>, and the TUI deploy step — referenced a class and
+        an <Code>emails.send</Code> method that never existed. They now show the
+        real <Code>email.send</Code> API with an explicit region
+      </>,
+      "Workers report failures to Sentry, and the self-hosted deploy workflow configures the Sentry DSN",
+    ],
+  },
+  {
     version: "CLI v2.29.1",
     date: "July 2026",
     icon: Wrench,
