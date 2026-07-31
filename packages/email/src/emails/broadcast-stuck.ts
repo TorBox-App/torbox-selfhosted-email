@@ -1,5 +1,6 @@
 import { resolveAppUrl } from "../lib/app-url";
 import { getWrapsClient } from "../lib/client";
+import { escapeHtml } from "../lib/escape-html";
 
 export type BroadcastStuckContent = {
   broadcastName: string;
@@ -80,16 +81,16 @@ export function buildBroadcastStuckEmail({
   const htmlRemedies = [
     "<li>Raise this AWS account's SES daily sending quota with AWS.</li>",
     reserveSettingsUrl
-      ? `<li>Lower the daily quota reserve: <a href="${reserveSettingsUrl}">account settings</a>.</li>`
+      ? `<li>Lower the daily quota reserve: <a href="${escapeHtml(reserveSettingsUrl)}">account settings</a>.</li>`
       : null,
-    `<li>Cancel the broadcast: <a href="${broadcastUrl}">broadcast page</a>.</li>`,
+    `<li>Cancel the broadcast: <a href="${escapeHtml(broadcastUrl)}">broadcast page</a>.</li>`,
   ].filter((line): line is string => line !== null);
 
   const html = [
-    `<p>Broadcast <strong>${broadcastName}</strong> has made no progress for <strong>${hours} hours</strong>.</p>`,
+    `<p>Broadcast <strong>${escapeHtml(broadcastName)}</strong> has made no progress for <strong>${hours} hours</strong>.</p>`,
     "<p>It is paused to protect transactional email, and it is <strong>not resuming on its own</strong>.</p>",
-    `<p>${progressLine}</p>`,
-    `<p>${quotaLine}</p>`,
+    `<p>${escapeHtml(progressLine)}</p>`,
+    `<p>${escapeHtml(quotaLine)}</p>`,
     "<p>To fix this:</p>",
     `<ul>${htmlRemedies.join("")}</ul>`,
   ].join("\n");

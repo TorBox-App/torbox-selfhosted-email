@@ -88,4 +88,18 @@ describe("buildBroadcastStuckEmail", () => {
       expect(content).not.toMatch(/resumes automatically/i);
     }
   });
+
+  it("escapes a broadcast name carrying markup so it cannot inject a link", () => {
+    // broadcastName is `batch.name || batch.subject`, both set by any org
+    // member with broadcast-write. This mail is sent from a Wraps-verified
+    // sender to the org's owners/admins, so working markup here is a phishing
+    // vector that borrows our sender reputation.
+    const { html } = buildBroadcastStuckEmail({
+      ...BASE_PARAMS,
+      broadcastName: '<a href="https://evil.example">Reset your password</a>',
+    });
+
+    expect(html).not.toContain('<a href="https://evil.example"');
+    expect(html).toContain("&lt;a href=&quot;https://evil.example&quot;");
+  });
 });

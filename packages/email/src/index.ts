@@ -21,7 +21,6 @@ export {
 export { resolveAppUrl } from "./lib/app-url";
 export type { SendEmailParams } from "./lib/client";
 export { getWrapsClient, sendEmail } from "./lib/client";
-
 // Confirmation tokens
 export type { ConfirmationTokenPayload } from "./lib/confirmation-token";
 export {
@@ -29,6 +28,7 @@ export {
   generateConfirmationUrl,
   verifyConfirmationToken,
 } from "./lib/confirmation-token";
+export { escapeHtml } from "./lib/escape-html";
 // SES templates
 export type {
   SESCredentials,

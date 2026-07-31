@@ -91,6 +91,12 @@ let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
 // Track UPDATE set calls for post-send status assertions
 const updateSetCalls: Record<string, unknown>[] = [];
+// Track UPDATE set+where pairs, so a test can prove a status write carries the
+// `status <> 'cancelled'` guard rather than clobbering a concurrent cancel.
+const updateWhereCalls: Array<{
+  values: Record<string, unknown>;
+  predicate: unknown;
+}> = [];
 // Contacts returned by claim INSERT
 let mockClaimReturning: Array<{ contactId: string }> = [];
 // Track DELETE calls (throttle claim-release). For each delete we record how
@@ -136,8 +142,11 @@ vi.mock("@wraps/db", async () => {
         set: vi.fn().mockImplementation((vals: Record<string, unknown>) => {
           updateSetCalls.push(vals);
           return {
-            where: vi.fn().mockReturnValue({
-              returning: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockImplementation((predicate: unknown) => {
+              updateWhereCalls.push({ values: vals, predicate });
+              return {
+                returning: vi.fn().mockResolvedValue([]),
+              };
             }),
           };
         }),
@@ -411,6 +420,7 @@ beforeEach(() => {
   selectCallIndex = 0;
   selectResults = [];
   updateSetCalls.length = 0;
+  updateWhereCalls.length = 0;
   mockClaimReturning = [];
   deleteWhereCalls.length = 0;
   sqsCallsAtDelete.length = 0;
@@ -674,6 +684,38 @@ describe("whole-chunk failure circuit breaker", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // pausedReason lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe("cancel durability", () => {
+  it("guards every batch status write with status <> 'cancelled'", async () => {
+    setupBulkSelectsForEarlyReturn();
+    sesBulkResultsOverride = {
+      BulkEmailEntryResults: [
+        { Status: "FAILED", Error: "Bounce" },
+        { Status: "FAILED", Error: "Bounce" },
+      ],
+    };
+
+    await handler(makeSQSEvent(5), makeMockContext(), vi.fn());
+
+    // processJob reads batch.status once at load, then runs for as long as a
+    // chunk takes. A cancel issued inside that window is invisible to this
+    // invocation, so an unguarded write would flip the row back out of
+    // 'cancelled' — and the next invocation's cancelled check reads that same
+    // column, so the chain would resume sending a stopped broadcast.
+    // Only batchSend writes, not per-recipient messageSend ones — both set
+    // `status`, but messageSend carries `error` while batchSend carries
+    // `errorMessage`/`completedAt`/`startedAt`.
+    const statusWrites = updateWhereCalls.filter(
+      (u) => typeof u.values.status === "string" && !("error" in u.values)
+    );
+    expect(statusWrites.length).toBeGreaterThan(0);
+
+    for (const write of statusWrites) {
+      const params = collectParamValues(write.predicate).flat();
+      expect(params).toContain("cancelled");
+    }
+  });
+});
 
 describe("pausedReason lifecycle", () => {
   it("clears pausedReason back to null once a chunk actually sends", async () => {

@@ -62,13 +62,16 @@ import type { Context, SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import {
   and,
   exists,
+  ilike,
   inArray,
   isNotNull,
   isNull,
   lte,
+  ne,
   or,
   sql,
 } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
@@ -574,7 +577,18 @@ async function getOrgAlertEmails(organizationId: string): Promise<string[]> {
     .select({ email: user.email, role: member.role })
     .from(member)
     .innerJoin(user, eq(user.id, member.userId))
-    .where(eq(member.organizationId, organizationId))
+    .where(
+      and(
+        eq(member.organizationId, organizationId),
+        // Narrow to plausible candidates in SQL. Without this the LIMIT is an
+        // unordered slice of ALL members, so in an org with more than 100 a
+        // role filter applied afterwards in JS can find nobody purely by
+        // chance — and the failure is silent, because notifyOrg still writes
+        // the in-app notification. The substring match is deliberately loose;
+        // the exact comma-split check below is what actually decides.
+        or(ilike(member.role, "%owner%"), ilike(member.role, "%admin%"))
+      )
+    )
     .limit(100);
 
   const wanted = ["owner", "admin"];
@@ -849,6 +863,41 @@ async function notifyBroadcastDailyQuotaPaused(
   }
 }
 
+/**
+ * Write a terminal/transitional status onto a batch, LOSING to a concurrent
+ * cancel.
+ *
+ * processJob reads `batch.status` once (the cancelled check near the top) and
+ * then runs for as long as a chunk takes to send. A cancel issued inside that
+ * window is invisible to this invocation, so an unguarded write would flip the
+ * row back out of 'cancelled' — and because the next invocation's cancelled
+ * check reads that same column, the chain would resume and keep sending a
+ * broadcast the user already stopped.
+ *
+ * A skipped write is the intended outcome here, not an error worth logging:
+ * the batch is cancelled and its status is already correct.
+ *
+ * Note this makes cancel "stop the chain", not "stop instantly" — the chunk
+ * currently in flight still delivers, because those messages are already with
+ * SES and cannot be recalled.
+ *
+ * Every status write on batchSend must go through this. The non-status writes
+ * (the progress heartbeat, the pausedReason set/clear) deliberately do not:
+ * they cannot resurrect a cancelled batch, since only `status` gates the chain.
+ */
+async function setBatchStatus(
+  batchId: string,
+  // PgUpdateSetSource, not Partial<$inferInsert>: several call sites set
+  // counters to `sql` expressions (e.g. `failed + ${n}`), which the plain
+  // insert type rejects as SQL-not-assignable-to-number.
+  values: PgUpdateSetSource<typeof batchSend>
+): Promise<void> {
+  await db
+    .update(batchSend)
+    .set(values)
+    .where(and(eq(batchSend.id, batchId), ne(batchSend.status, "cancelled")));
+}
+
 // Releases claims this invocation made but never sent, restoring the exact
 // pre-claim state so a redelivery's INSERT claim works unchanged. Callers that
 // re-enqueue the SAME chunk MUST call this first: the redelivery lands well
@@ -909,17 +958,14 @@ async function processJob(
       channel,
       organizationId,
     });
-    await db
-      .update(batchSend)
-      .set({
-        status: "failed",
-        completedAt: new Date(),
-        processedRecipients: batch.totalRecipients,
-        failed: batch.totalRecipients,
-        errorMessage: `Unsupported batch channel: ${channel}`,
-        errorDetails: { channel },
-      })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "failed",
+      completedAt: new Date(),
+      processedRecipients: batch.totalRecipients,
+      failed: batch.totalRecipients,
+      errorMessage: `Unsupported batch channel: ${channel}`,
+      errorDetails: { channel },
+    });
     await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
@@ -979,15 +1025,29 @@ async function processJob(
     // can terminate the send early (recount > stale) or loop one wasted
     // invocation (recount < stale).
     batch.totalRecipients = snapshotTotal;
-    await db
-      .update(batchSend)
-      .set({
-        status: "processing",
-        startedAt,
-        audienceSnapshotAt,
-        totalRecipients: snapshotTotal,
-      })
-      .where(eq(batchSend.id, batchId));
+    // KNOWN GAP (deliberately not fixed here): this stamp is not idempotent.
+    // SQS is at-least-once, so chunk 0 can be delivered twice, both
+    // invocations can observe a NULL snapshot, and the second overwrites the
+    // first — leaving later chunks paginating against a window that differs
+    // from the one totalRecipients was counted against.
+    //
+    // Bounded in practice: the messageSend claim INSERT still prevents double
+    // sends, so the damage is a slightly-off totalRecipients/startedAt, and a
+    // high totalRecipients self-heals (the chain runs until getContactsChunk
+    // returns nothing, then marks completed).
+    //
+    // A `COALESCE(audience_snapshot_at, $1)` one-liner was tried and REVERTED:
+    // it broke batch-sender-orphan-adoption and batch-sender-bookkeeping-db
+    // (real-DB suites) — 6 tests — while the mocked suites stayed green,
+    // because they stub `sql`. Closing this properly needs the ~20-line
+    // claim-the-stamp-then-re-read-on-loss shape, which costs an extra query
+    // on a 16,000-invocation path. Not worth it for a chunk-0-only race.
+    await setBatchStatus(batchId, {
+      status: "processing",
+      startedAt,
+      audienceSnapshotAt,
+      totalRecipients: snapshotTotal,
+    });
   }
 
   const remainingRecipients = Math.max(
@@ -995,10 +1055,10 @@ async function processJob(
     0
   );
   if (remainingRecipients === 0) {
-    await db
-      .update(batchSend)
-      .set({ status: "completed", completedAt: new Date() })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "completed",
+      completedAt: new Date(),
+    });
     await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
@@ -1023,10 +1083,10 @@ async function processJob(
 
   if (contacts.length === 0) {
     // No more contacts, mark batch as completed
-    await db
-      .update(batchSend)
-      .set({ status: "completed", completedAt: new Date() })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "completed",
+      completedAt: new Date(),
+    });
     await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
@@ -1317,15 +1377,12 @@ async function processJob(
           )
         );
     }
-    await db
-      .update(batchSend)
-      .set({
-        status: "failed",
-        completedAt: new Date(),
-        processedRecipients: sql`${batchSend.processedRecipients} + ${emailContacts.length}`,
-        failed: sql`${batchSend.failed} + ${emailContacts.length}`,
-      })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "failed",
+      completedAt: new Date(),
+      processedRecipients: sql`${batchSend.processedRecipients} + ${emailContacts.length}`,
+      failed: sql`${batchSend.failed} + ${emailContacts.length}`,
+    });
     await notifyBroadcastFinished(batchId, organizationId);
     return;
   }
@@ -1831,17 +1888,14 @@ async function processJob(
       organizationId,
       failed,
     });
-    await db
-      .update(batchSend)
-      .set({
-        status: "failed",
-        completedAt: new Date(),
-        errorMessage:
-          `Every recipient in chunk ${chunkIndex} failed to send, so the ` +
-          "broadcast was stopped to protect the rest of the audience. Fix " +
-          "the underlying error and resume from the broadcast page.",
-      })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "failed",
+      completedAt: new Date(),
+      errorMessage:
+        `Every recipient in chunk ${chunkIndex} failed to send, so the ` +
+        "broadcast was stopped to protect the rest of the audience. Fix " +
+        "the underlying error and resume from the broadcast page.",
+    });
     await notifyBroadcastStoppedEarly(batchId, organizationId, chunkIndex);
     return;
   }
@@ -1861,15 +1915,12 @@ async function processJob(
     const unaccepted = sql.raw(
       MESSAGE_SEND_UNACCEPTED_STATUSES.map((s) => `'${s}'`).join(", ")
     );
-    await db
-      .update(batchSend)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        sent: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} not in (${unaccepted}))`,
-        failed: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} = 'failed')`,
-      })
-      .where(eq(batchSend.id, batchId));
+    await setBatchStatus(batchId, {
+      status: "completed",
+      completedAt: new Date(),
+      sent: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} not in (${unaccepted}))`,
+      failed: sql`(select count(*)::int from ${messageSend} where ${messageSend.batchSendId} = ${batchId} and ${messageSend.organizationId} = ${organizationId} and ${messageSend.status} = 'failed')`,
+    });
     await notifyBroadcastFinished(batchId, organizationId);
   }
 }

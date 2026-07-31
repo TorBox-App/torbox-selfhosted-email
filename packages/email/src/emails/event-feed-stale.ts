@@ -1,5 +1,6 @@
 import { resolveAppUrl } from "../lib/app-url";
 import { getWrapsClient } from "../lib/client";
+import { escapeHtml } from "../lib/escape-html";
 
 export type EventFeedStaleContent = {
   accountName: string;
@@ -45,9 +46,9 @@ export function buildEventFeedStaleEmail({
   ].join("\n");
 
   const html = [
-    `<p>Your AWS account <strong>${accountName}</strong> (${awsAccountNumber}, ${region}) is still sending email, but no delivery events have arrived since <strong>${since}</strong>.</p>`,
+    `<p>Your AWS account <strong>${escapeHtml(accountName)}</strong> (${escapeHtml(awsAccountNumber)}, ${escapeHtml(region)}) is still sending email, but no delivery events have arrived since <strong>${escapeHtml(since)}</strong>.</p>`,
     "<p>Impact: the email timeline and analytics for this account are frozen, and bounce/complaint handling is blind until the feed recovers.</p>",
-    `<p>To fix this, run <code>wraps email doctor</code> or visit your <a href="${settingsUrl}">account settings</a>.</p>`,
+    `<p>To fix this, run <code>wraps email doctor</code> or visit your <a href="${escapeHtml(settingsUrl)}">account settings</a>.</p>`,
   ].join("\n");
 
   return { subject, html, text };

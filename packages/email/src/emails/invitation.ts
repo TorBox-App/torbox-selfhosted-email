@@ -1,4 +1,5 @@
 import { getWrapsClient } from "../lib/client";
+import { escapeHtml } from "../lib/escape-html";
 
 export type WorkspaceContext = {
   templateCount: number;
@@ -52,7 +53,7 @@ function buildWorkspaceItemsHtml(ctx: WorkspaceContext): string {
   }
 
   return items
-    .map((item) => `<li style="margin-bottom:4px;">${item}</li>`)
+    .map((item) => `<li style="margin-bottom:4px;">${escapeHtml(item)}</li>`)
     .join("");
 }
 
@@ -95,7 +96,7 @@ export function renderInvitationEmail(params: RenderInvitationEmailParams): {
   const { inviteLink, declineLink, organizationName, inviterName, role } =
     params;
 
-  const html = `<!DOCTYPE html><html><body><p>${inviterName} invited you to join ${organizationName} as ${role === "admin" ? "an" : "a"} ${role}.</p><p><a href="${inviteLink}">Accept</a> | <a href="${declineLink}">Decline</a></p></body></html>`;
+  const html = `<!DOCTYPE html><html><body><p>${escapeHtml(inviterName)} invited you to join ${escapeHtml(organizationName)} as ${role === "admin" ? "an" : "a"} ${escapeHtml(role)}.</p><p><a href="${escapeHtml(inviteLink)}">Accept</a> | <a href="${escapeHtml(declineLink)}">Decline</a></p></body></html>`;
   const text = `${inviterName} invited you to join ${organizationName} as ${role === "admin" ? "an" : "a"} ${role}.\n\nAccept: ${inviteLink}\nDecline: ${declineLink}`;
 
   return { html, text };

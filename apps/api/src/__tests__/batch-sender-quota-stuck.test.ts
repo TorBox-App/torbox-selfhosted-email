@@ -103,6 +103,10 @@ vi.mock("@wraps/email", async () => {
 let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
 let mockClaimReturning: Array<{ contactId: string }> = [];
+// WHERE predicates passed to getOrgAlertEmails' member/user join. Captured so a
+// test can prove the owner/admin filter is applied in SQL rather than in JS
+// after an unordered LIMIT — see the "narrows by role in SQL" test.
+const memberJoinWhereCalls: unknown[] = [];
 
 const notifyOrgMock = vi.fn().mockResolvedValue(undefined);
 const hasRecentNotificationDedupe: Record<string, boolean> = {};
@@ -143,7 +147,10 @@ vi.mock("@wraps/db", async () => {
             // getOrgAlertEmails' member/user join — same rows array, since
             // it consumes the next selectResults entry like any other select.
             innerJoin: vi.fn().mockReturnValue({
-              where: vi.fn().mockImplementation(() => thenable(rows)),
+              where: vi.fn().mockImplementation((predicate: unknown) => {
+                memberJoinWhereCalls.push(predicate);
+                return thenable(rows);
+              }),
             }),
           }),
         };
@@ -286,6 +293,34 @@ function appendStuckSelects(
   selectResults.push([{ slug: "test-org" }], memberRows);
 }
 
+/**
+ * Collect every string appearing anywhere in a WHERE predicate.
+ *
+ * This file stubs `sql` as `(...args) => args`, so `ilike()` yields nested raw
+ * template chunks rather than Drizzle SQL objects — the structured
+ * collectParamValues walk used in batch-sender-ses-errors.test.ts finds nothing
+ * here. The tree also closes on itself (a column references its table), hence
+ * the seen-set.
+ */
+function collectStrings(
+  node: unknown,
+  out: string[] = [],
+  seen = new WeakSet<object>()
+): string[] {
+  if (typeof node === "string") {
+    out.push(node);
+    return out;
+  }
+  if (!node || typeof node !== "object" || seen.has(node)) {
+    return out;
+  }
+  seen.add(node);
+  for (const value of Object.values(node as Record<string, unknown>)) {
+    collectStrings(value, out, seen);
+  }
+  return out;
+}
+
 function makeSQSEvent() {
   return {
     Records: [
@@ -327,6 +362,7 @@ beforeEach(() => {
   sendBroadcastStuckEmailMock.mockResolvedValue(undefined);
   countBroadcastRecipientsMock.mockClear();
   countBroadcastRecipientsMock.mockResolvedValue(800_000);
+  memberJoinWhereCalls.length = 0;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -435,6 +471,23 @@ describe("quota-stuck escalation", () => {
     ).toBe(true);
     expect(sqsSendCalls).toHaveLength(1);
     expect(sqsSendCalls[0].DelaySeconds).toBe(900);
+  });
+
+  it("narrows recipients by role in SQL, not in JS after an unordered LIMIT", async () => {
+    const thirtyHoursAgo = new Date(Date.now() - 30 * 60 * 60 * 1000);
+    setupSelectsForPause({ lastChunkAt: thirtyHoursAgo });
+    appendStuckSelects([{ email: "owner@example.com", role: "owner" }]);
+
+    await handler(makeSQSEvent(), makeMockContext(), vi.fn());
+
+    // The query must constrain by role itself. Filtering only in JS means the
+    // LIMIT is an unordered slice of ALL members, so an org with more than 100
+    // can silently yield no owner/admin — and the failure is invisible, since
+    // the in-app notification still gets written.
+    expect(memberJoinWhereCalls).toHaveLength(1);
+    const strings = collectStrings(memberJoinWhereCalls[0]);
+    expect(strings).toContain("%owner%");
+    expect(strings).toContain("%admin%");
   });
 
   it("skips the email when there are no owner/admin recipients, without throwing", async () => {

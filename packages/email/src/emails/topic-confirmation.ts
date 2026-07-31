@@ -4,6 +4,8 @@
  * Sent when a contact subscribes to a topic that requires double opt-in.
  */
 
+import { escapeHtml } from "../lib/escape-html";
+
 export type SendTopicConfirmationEmailParams = {
   to: string;
   url: string;
@@ -44,13 +46,13 @@ export function generateTopicConfirmationEmail({
       <p style="font-size: 16px; margin-bottom: 20px;">Hi there,</p>
 
       <p style="font-size: 16px; margin-bottom: 20px;">
-        You've requested to subscribe to <strong>${topicName}</strong> from ${orgDisplay}.
+        You've requested to subscribe to <strong>${escapeHtml(topicName)}</strong> from ${escapeHtml(orgDisplay)}.
       </p>
 
       ${
         topicDescription
           ? `<p style="font-size: 14px; color: #6b7280; margin-bottom: 20px; padding: 12px; background: #f9fafb; border-radius: 6px;">
-        ${topicDescription}
+        ${escapeHtml(topicDescription)}
       </p>`
           : ""
       }
@@ -60,7 +62,7 @@ export function generateTopicConfirmationEmail({
       </p>
 
       <div style="text-align: center; margin: 40px 0;">
-        <a href="${url}" style="display: inline-block; background: #000000; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+        <a href="${escapeHtml(url)}" style="display: inline-block; background: #000000; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
           Confirm Subscription
         </a>
       </div>
@@ -69,7 +71,7 @@ export function generateTopicConfirmationEmail({
         Or copy and paste this link into your browser:
       </p>
       <p style="font-size: 14px; color: #333333; word-break: break-all; background: #f9fafb; padding: 12px; border-radius: 6px;">
-        ${url}
+        ${escapeHtml(url)}
       </p>
 
       <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin-top: 30px; border-left: 4px solid #000000;">
@@ -81,7 +83,7 @@ export function generateTopicConfirmationEmail({
 
     <div style="text-align: center; margin-top: 30px; color: #9ca3af; font-size: 14px;">
       <p>
-        This email was sent by ${orgDisplay}.
+        This email was sent by ${escapeHtml(orgDisplay)}.
       </p>
     </div>
   </body>
