@@ -23,7 +23,7 @@ const softwareSchema = {
     "Free, open-source CLI to deploy email infrastructure to your AWS account. One command deploys everything.",
   url: "https://wraps.dev/cli",
   downloadUrl: "https://www.npmjs.com/package/@wraps.dev/cli",
-  softwareVersion: "2.30.3",
+  softwareVersion: "3.0.0",
   author: {
     "@type": "Organization",
     name: "Wraps",
