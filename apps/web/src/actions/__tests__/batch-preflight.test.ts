@@ -2006,12 +2006,111 @@ describe("cross-broadcast quota accounting", () => {
       expect(result.success).toBe(true);
       if (!result.success) return;
       expect(result.warning).toBeDefined();
+      const warning = result.warning as string;
       // Computed by hand: contendedCount = 2 (audience) + 5 (in-flight
       // remainder) = 7; dailyCapacity = 4; Math.ceil(7 / 4) = 2.
-      expect(result.warning).toMatch(/about 2 days?/);
-      expect(result.warning).toMatch(
-        /1 other broadcast on this AWS account still has 5 recipients to send/
+      expect(warning).toMatch(/about 2 days?/);
+      // The audience alone (2) does NOT exceed dailyCapacity (4) — only the
+      // combined figure (7) does. The leading clause must say so: it must
+      // name the combined figure, not claim the bare audience alone exceeds
+      // capacity (that would be the exact self-contradicting-arithmetic bug
+      // rule 5b exists to prevent, on this branch instead).
+      expect(warning).not.toMatch(/^2 recipients is more than/);
+      expect(warning).toMatch(
+        /2 recipients, plus 5 already queued on this AWS account, is more than/
       );
+      expect(warning).toMatch(
+        /1 other broadcast on this AWS account shares the same daily quota with this one/
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+      await db.delete(awsAccount).where(eq(awsAccount.id, quotaAwsId));
+    }
+  });
+
+  it("keeps the multi-day warning's leading claim honest against its own printed capacity when contention alone tips it over (rule 5b, multi-day branch)", async () => {
+    const quotaAwsId = `preflight-crossquota-incident-arithmetic-aws-${RUN_ID}`;
+    const inFlightId = `preflight-crossquota-incident-arithmetic-inflight-${RUN_ID}`;
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: quotaAwsId,
+        externalId: `crossquota-incident-arithmetic-ext-${RUN_ID}`,
+        dailyQuotaReserve: 100,
+      })
+      .onConflictDoNothing();
+
+    // Same fixture as the incident case: dailyCapacity = 4, audience = 2
+    // (fits alone), in-flight remainder = 5 (tips contendedCount to 7).
+    await db.insert(batchSend).values({
+      id: inFlightId,
+      organizationId: testOrganization.id,
+      awsAccountId: quotaAwsId,
+      channel: "email",
+      status: "processing",
+      totalRecipients: 5,
+      processedRecipients: 0,
+    } as typeof batchSend.$inferInsert);
+
+    sesGetAccountQuota = { Max24HourSend: 104, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: quotaAwsId,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Cross-Quota Incident Arithmetic Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeDefined();
+      const warning = result.warning as string;
+
+      // Parse the leading claim ("N recipients, plus M already queued on
+      // this AWS account, is more than...") and the printed capacity figure
+      // (".../day for broadcasts") out of the rendered string, then verify
+      // the sentence's own claim holds against its own printed number — the
+      // combined quantity it says exceeds capacity actually does, so a
+      // future edit that reintroduces the bare-audience claim (which does
+      // NOT exceed capacity here) fails this test instead of shipping
+      // visibly wrong arithmetic.
+      const claimMatch = warning.match(
+        /^([\d,]+) recipients, plus ([\d,]+) already queued on this AWS account, is more than/
+      );
+      expect(claimMatch).not.toBeNull();
+      if (!claimMatch) return;
+      const [ownAudience, inFlightRemainder] = claimMatch
+        .slice(1)
+        .map((n) => Number(n.replaceAll(",", "")));
+
+      const capacityMatch = warning.match(/([\d,]+)\/day for broadcasts/);
+      expect(capacityMatch).not.toBeNull();
+      if (!capacityMatch) return;
+      const printedCapacity = Number(capacityMatch[1].replaceAll(",", ""));
+
+      expect(printedCapacity).toBe(4);
+      // The combined figure the sentence claims exceeds capacity really does.
+      expect(ownAudience + inFlightRemainder).toBeGreaterThan(printedCapacity);
+      // And the bare audience alone — what the OLD leading clause would have
+      // named — does NOT exceed the same printed capacity, which is exactly
+      // why naming it bare would have been a lie.
+      expect(ownAudience).toBeLessThanOrEqual(printedCapacity);
     } finally {
       fetchSpy.mockRestore();
       delete process.env.NEXT_PUBLIC_API_URL;

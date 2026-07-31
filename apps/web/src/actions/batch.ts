@@ -474,8 +474,21 @@ async function assessQuotaHeadroom(params: {
     let quotaWarning: string | undefined;
     if (contendedCount > dailyCapacity) {
       estimatedDays = Math.ceil(contendedCount / dailyCapacity);
+      // If the audience alone already exceeds dailyCapacity, "recipients is
+      // more than this account can send" is true as written — leave it
+      // alone. But when contention is what tips contendedCount over (the
+      // audience alone still fits), that leading clause would otherwise
+      // claim recipientCount exceeds a capacity figure printed two clauses
+      // later that recipientCount does NOT exceed — the exact
+      // self-contradicting-arithmetic failure rule 5b exists to prevent, just
+      // on the other branch. Name the combined figure instead.
+      const tippedByContention =
+        recipientCount <= dailyCapacity && inFlight.remainingRecipients > 0;
+      const leadingSubject = tippedByContention
+        ? `${recipientCount.toLocaleString()} recipients, plus ${inFlight.remainingRecipients.toLocaleString()} already queued on this AWS account,`
+        : `${recipientCount.toLocaleString()} recipients`;
       quotaWarning =
-        `${recipientCount.toLocaleString()} recipients is more than this account ` +
+        `${leadingSubject} is more than this account ` +
         `can send in 24h (daily quota ${max24HourSend.toLocaleString()}` +
         (reserve
           ? `, ${reserve.toLocaleString()} reserved for transactional → ` +
@@ -485,9 +498,12 @@ async function assessQuotaHeadroom(params: {
         `${estimatedDays} day${estimatedDays === 1 ? "" : "s"}. You can cancel any time from the ` +
         "broadcast page." +
         (inFlight.batches > 0
-          ? ` ${inFlight.batches} other broadcast${inFlight.batches === 1 ? "" : "s"} on this AWS account ` +
-            `${inFlight.batches === 1 ? "still has" : "still have"} ${inFlight.remainingRecipients.toLocaleString()} recipients to send; ` +
-            `this broadcast shares the same daily quota with ${inFlight.batches === 1 ? "it" : "them"}.`
+          ? tippedByContention
+            ? ` ${inFlight.batches} other broadcast${inFlight.batches === 1 ? "" : "s"} on this AWS account ` +
+              `share${inFlight.batches === 1 ? "s" : ""} the same daily quota with this one.`
+            : ` ${inFlight.batches} other broadcast${inFlight.batches === 1 ? "" : "s"} on this AWS account ` +
+              `${inFlight.batches === 1 ? "still has" : "still have"} ${inFlight.remainingRecipients.toLocaleString()} recipients to send; ` +
+              `this broadcast shares the same daily quota with ${inFlight.batches === 1 ? "it" : "them"}.`
           : "");
     } else {
       // Current usage says nothing about usage at a future send time, so a
