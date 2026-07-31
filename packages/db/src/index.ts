@@ -76,4 +76,8 @@ export {
   getSegmentsByIds,
 } from "./segment-evaluator";
 // Re-export segment filter SQL builder
-export { buildConditionSQL, buildFilterSQL } from "./segment-filter";
+export {
+  bucketIndexSQL,
+  buildConditionSQL,
+  buildFilterSQL,
+} from "./segment-filter";

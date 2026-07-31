@@ -258,7 +258,9 @@ function setupSelects(batch: Record<string, unknown>) {
             logic: "AND",
             groups: [
               {
-                filters: [{ field: "email", operator: "isNotNull", value: "" }],
+                // Must be a real operator: a condition that compiles to no SQL
+                // now fails closed and returns zero contacts.
+                filters: [{ field: "email", operator: "exists" }],
               },
             ],
           },

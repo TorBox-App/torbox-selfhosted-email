@@ -25,6 +25,7 @@ import {
   getSegment,
   listSegments,
   previewSegment,
+  splitSegment,
   updateSegment,
 } from "../segments";
 
@@ -866,6 +867,193 @@ describe("Segments Server Actions", () => {
       if (result.success) {
         expect(result.segment.memberCount).toBe(2);
       }
+    });
+  });
+
+  describe("splitSegment", () => {
+    const seedContacts = async (count: number, tag: string) => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values(
+        Array.from({ length: count }, (_, i) => {
+          const email = `split-${tag}-${i}@example.com`;
+          return {
+            id: crypto.randomUUID(),
+            organizationId: testOrganization.id,
+            email,
+            emailHash: crypto.createHash("sha256").update(email).digest("hex"),
+            status: "active" as const,
+            properties: {},
+          };
+        })
+      );
+    };
+
+    it("partitions the source exactly — no contact lost, none counted twice", async () => {
+      await seedContacts(120, "exact");
+
+      const source = await createSegment(testOrganization.id, {
+        name: "Split Source Exact",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                { field: "email", operator: "contains", value: "split-exact-" },
+              ],
+            },
+          ],
+        },
+      });
+      expect(source.success).toBe(true);
+      if (!source.success) return;
+
+      const result = await splitSegment(
+        source.segment.id,
+        testOrganization.id,
+        6
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      expect(result.segments).toHaveLength(6);
+
+      // The property that makes this safe to send: the partitions tile the
+      // source exactly. A gap silently drops contacts from the campaign; an
+      // overlap double-sends to them.
+      const total = result.segments.reduce((sum, s) => sum + s.memberCount, 0);
+      expect(total).toBe(source.segment.memberCount);
+      expect(total).toBe(120);
+
+      // Every contact must be reachable — no empty partition.
+      for (const s of result.segments) {
+        expect(s.memberCount).toBeGreaterThan(0);
+      }
+    });
+
+    it("names partitions 1-based and preserves the source name", async () => {
+      await seedContacts(30, "names");
+
+      const source = await createSegment(testOrganization.id, {
+        name: "Split Source Names",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                { field: "email", operator: "contains", value: "split-names-" },
+              ],
+            },
+          ],
+        },
+      });
+      if (!source.success) return;
+
+      const result = await splitSegment(
+        source.segment.id,
+        testOrganization.id,
+        3
+      );
+      if (!result.success) return;
+
+      expect(result.segments.map((s) => s.name)).toEqual([
+        "Split Source Names (1/3)",
+        "Split Source Names (2/3)",
+        "Split Source Names (3/3)",
+      ]);
+    });
+
+    it("refuses to split a segment that is already a partition", async () => {
+      await seedContacts(20, "double");
+
+      const source = await createSegment(testOrganization.id, {
+        name: "Split Source Double",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                {
+                  field: "email",
+                  operator: "contains",
+                  value: "split-double-",
+                },
+              ],
+            },
+          ],
+        },
+      });
+      if (!source.success) return;
+
+      const first = await splitSegment(
+        source.segment.id,
+        testOrganization.id,
+        2
+      );
+      if (!first.success) return;
+
+      const again = await splitSegment(
+        first.segments[0].id,
+        testOrganization.id,
+        2
+      );
+
+      expect(again.success).toBe(false);
+      if (!again.success) {
+        expect(again.error).toContain("already a partition");
+      }
+    });
+
+    it.each([1, 0, -1, 51, 2.5])(
+      "rejects a partition count of %s",
+      async (count) => {
+        const source = await createSegment(testOrganization.id, {
+          name: `Split Bad Count ${count}`,
+          condition: {
+            logic: "AND",
+            groups: [
+              {
+                filters: [
+                  { field: "status", operator: "equals", value: "active" },
+                ],
+              },
+            ],
+          },
+        });
+        if (!source.success) return;
+
+        const result = await splitSegment(
+          source.segment.id,
+          testOrganization.id,
+          count
+        );
+        expect(result.success).toBe(false);
+      }
+    );
+
+    it("does not split another organization's segment", async () => {
+      const source = await createSegment(testOrganization.id, {
+        name: "Split Cross Org",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                { field: "status", operator: "equals", value: "active" },
+              ],
+            },
+          ],
+        },
+      });
+      if (!source.success) return;
+
+      const result = await splitSegment(
+        source.segment.id,
+        "some-other-org-id",
+        3
+      );
+
+      expect(result.success).toBe(false);
     });
   });
 

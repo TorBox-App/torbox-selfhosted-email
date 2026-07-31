@@ -9,12 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "@wraps/ui/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
-import { MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import { MoreHorizontal, Pencil, Split, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SegmentWithMeta } from "@/lib/segments";
 
 type ColumnActions = {
   onEdit: (segment: SegmentWithMeta) => void;
+  onSplit: (segment: SegmentWithMeta) => void;
   onDelete: (segment: SegmentWithMeta) => void;
 };
 
@@ -121,6 +122,15 @@ export function createColumns(
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  actions.onSplit(segment);
+                }}
+              >
+                <Split className="mr-2 h-4 w-4" />
+                Split into partitions
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

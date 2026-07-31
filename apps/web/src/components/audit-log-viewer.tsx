@@ -80,6 +80,7 @@ const ACTION_LABELS: Record<AuditLogAction, string> = {
   "segment.created": "Segment Created",
   "segment.updated": "Segment Updated",
   "segment.deleted": "Segment Deleted",
+  "segment.split": "Segment Split Into Partitions",
   "topic.created": "Topic Created",
   "topic.updated": "Topic Updated",
   "topic.deleted": "Topic Deleted",

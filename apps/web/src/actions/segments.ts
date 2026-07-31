@@ -1,18 +1,28 @@
 "use server";
 
-import { buildConditionSQL, contact, db, segment } from "@wraps/db";
+import {
+  bucketIndexSQL,
+  buildConditionSQL,
+  contact,
+  db,
+  segment,
+} from "@wraps/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
   type CreateSegmentResult,
+  conditionHasPartitionFilter,
   type DeleteSegmentResult,
   type FilterCondition,
   type GetSegmentResult,
   type ListSegmentsResult,
+  MAX_SPLIT_PARTITIONS,
   type PreviewSegmentResult,
+  type SplitSegmentResult,
   type UpdateSegmentResult,
   validateCondition,
+  withPartitionFilter,
 } from "@/lib/segments";
 import { orgAction } from "./shared/org-action";
 
@@ -208,6 +218,143 @@ export const createSegment = orgAction(
 
     // Return the created segment
     return await getSegment(newSegment.id, organizationId);
+  }
+);
+
+/**
+ * Split a segment into N deterministic partitions.
+ *
+ * Creates one new segment per partition, each carrying the source segment's
+ * filters plus a partition filter. Every contact in the source lands in exactly
+ * one partition, so the set can be sent as N broadcasts without overlap.
+ */
+export const splitSegment = orgAction(
+  {
+    name: "splitSegment",
+    resource: "segments",
+    permission: ["write"],
+    orgId: (
+      _segmentId: string,
+      organizationId: string,
+      _partitionCount: number
+    ) => organizationId,
+    onError: "Failed to split segment",
+  },
+  async (
+    ctx,
+    segmentId: string,
+    organizationId: string,
+    partitionCount: number
+  ): Promise<SplitSegmentResult> => {
+    const featureCheck = await checkFeatureAccess(organizationId, "segments");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error: featureCheck.message ?? "Segments require a paid plan.",
+      };
+    }
+
+    if (
+      !Number.isInteger(partitionCount) ||
+      partitionCount < 2 ||
+      partitionCount > MAX_SPLIT_PARTITIONS
+    ) {
+      return {
+        success: false,
+        error: `Choose between 2 and ${MAX_SPLIT_PARTITIONS} partitions.`,
+      };
+    }
+
+    const [source] = await db
+      .select()
+      .from(segment)
+      .where(
+        and(
+          eq(segment.id, segmentId),
+          eq(segment.organizationId, organizationId)
+        )
+      );
+
+    if (!source) {
+      return { success: false, error: "Segment not found" };
+    }
+
+    // Splitting an already-partitioned segment would partition a partition —
+    // the counts stop meaning what the names say.
+    if (conditionHasPartitionFilter(source.condition)) {
+      return {
+        success: false,
+        error:
+          "This segment is already a partition. Split the original segment instead.",
+      };
+    }
+
+    const sourceSQL = buildConditionSQL(source.condition);
+    if (!sourceSQL) {
+      return {
+        success: false,
+        error:
+          "This segment has no valid filters, so it cannot be split. Check its filters first.",
+      };
+    }
+
+    // One grouped scan gives every partition's size — N separate counts would
+    // re-scan the whole contact table N times.
+    const countRows = await db
+      .select({
+        partition: sql<number>`${bucketIndexSQL(partitionCount)}`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(contact)
+      .where(and(eq(contact.organizationId, organizationId), sourceSQL))
+      // Group by ordinal: Postgres matches GROUP BY expressions syntactically,
+      // and a second copy of the hash expression binds different parameter
+      // placeholders, so it would not be recognised as the same expression.
+      .groupBy(sql`1`);
+
+    const countByPartition = new Map(
+      countRows.map((r) => [Number(r.partition), r.count])
+    );
+
+    const rows = Array.from({ length: partitionCount }, (_, i) => {
+      const index = i + 1;
+      return {
+        organizationId,
+        name: `${source.name} (${index}/${partitionCount})`,
+        description: `Partition ${index} of ${partitionCount} of "${source.name}"`,
+        condition: withPartitionFilter(source.condition, partitionCount, index),
+        trackMembership: source.trackMembership,
+        memberCount: countByPartition.get(index) ?? 0,
+        lastComputedAt: new Date(),
+        createdBy: ctx.access.userId,
+      };
+    });
+
+    const created = await ctx.audited(
+      (tx) => tx.insert(segment).values(rows).returning(),
+      (result) => ({
+        action: "segment.split" as const,
+        resource: "segment",
+        resourceId: source.id,
+        metadata: {
+          sourceSegmentId: source.id,
+          sourceName: source.name,
+          partitionCount,
+          createdSegmentIds: result.map((r) => r.id),
+        },
+      })
+    );
+
+    revalidatePath(`/${ctx.access.orgSlug}/segments`, "page");
+
+    return {
+      success: true,
+      segments: created.map((s) => ({
+        id: s.id,
+        name: s.name,
+        memberCount: s.memberCount,
+      })),
+    };
   }
 );
 

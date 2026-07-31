@@ -32,7 +32,8 @@ export type FilterOperator =
   | "notHasTopic"
   | "triggered"
   | "triggeredWithin"
-  | "notTriggered"; // Event-based
+  | "notTriggered" // Event-based
+  | "inBucket"; // Deterministic hash partition: { buckets: N, index: K }
 
 export type SegmentFilter = {
   id?: string; // Client-side unique ID for React keys

@@ -5,6 +5,7 @@ import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
 import {
   auditLog,
+  checkSegmentUsable,
   countBroadcastRecipients,
   db,
   deleteDraftBroadcast,
@@ -487,6 +488,32 @@ async function validateAndPrepareSend(
   );
 
   if (recipientCount === 0) {
+    // Recipient counting fails closed on an unusable segment, so a zero count
+    // here can mean "segment is broken" rather than "audience is empty".
+    if (
+      data.recipientFilter?.audienceType === "segment" &&
+      data.recipientFilter.segmentId
+    ) {
+      const usability = await checkSegmentUsable(
+        organizationId,
+        data.recipientFilter.segmentId
+      );
+      if (usability === "missing") {
+        return {
+          ok: false,
+          error:
+            "The selected segment no longer exists. Pick another audience.",
+        };
+      }
+      if (usability === "no-valid-filters") {
+        return {
+          ok: false,
+          error:
+            "The selected segment has no valid filters, so it matches no contacts. Open the segment and check its filters.",
+        };
+      }
+    }
+
     return {
       ok: false,
       error:

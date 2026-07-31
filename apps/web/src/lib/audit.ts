@@ -39,6 +39,7 @@ export type AuditLogAction =
   | "segment.created"
   | "segment.updated"
   | "segment.deleted"
+  | "segment.split"
   | "topic.created"
   | "topic.updated"
   | "topic.deleted"

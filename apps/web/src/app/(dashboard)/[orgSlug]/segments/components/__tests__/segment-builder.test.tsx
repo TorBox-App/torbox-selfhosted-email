@@ -92,4 +92,64 @@ describe("SegmentBuilder value input type", () => {
     expect(valueInput.tagName).toBe("INPUT");
     expect(valueInput).not.toHaveAttribute("type", "number");
   });
+
+  it("renders paired number/count inputs for a partition filter", () => {
+    render(
+      <SegmentBuilder
+        condition={{
+          logic: "AND",
+          groups: [
+            {
+              id: "group-1",
+              filters: [
+                {
+                  id: "filter-1",
+                  field: "bucket",
+                  operator: "inBucket",
+                  value: { buckets: 6, index: 2 },
+                },
+              ],
+            },
+          ],
+        }}
+        onChange={noop}
+        propertyKeys={[]}
+        topics={[]}
+      />
+    );
+
+    expect(screen.getByLabelText("Partition number")).toHaveValue(2);
+    expect(screen.getByLabelText("Partition count")).toHaveValue(6);
+  });
+
+  it("renders a date input when an ordered comparison already holds a date", () => {
+    const { container } = render(
+      <SegmentBuilder
+        condition={{
+          logic: "AND",
+          groups: [
+            {
+              id: "group-1",
+              filters: [
+                {
+                  id: "filter-1",
+                  field: "properties.createdAt",
+                  operator: "greaterThanOrEqual",
+                  value: "2026-07-01",
+                },
+              ],
+            },
+          ],
+        }}
+        onChange={noop}
+        propertyKeys={["createdAt"]}
+        topics={[]}
+      />
+    );
+
+    expect(container.querySelector('input[type="date"]')).toHaveValue(
+      "2026-07-01"
+    );
+    expect(screen.queryByPlaceholderText("0")).not.toBeInTheDocument();
+  });
 });

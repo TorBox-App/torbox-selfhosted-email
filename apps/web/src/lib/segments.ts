@@ -59,11 +59,26 @@ export type PreviewSegmentResult =
   | { success: true; count: number; sampleEmails: string[] }
   | { success: false; error: string };
 
+export type SplitSegmentResult =
+  | {
+      success: true;
+      segments: { id: string; name: string; memberCount: number }[];
+    }
+  | { success: false; error: string };
+
 // Available fields for filtering
 export type FilterFieldDefinition = {
   id: string;
   label: string;
-  type: "string" | "number" | "date" | "boolean" | "array" | "topic" | "event";
+  type:
+    | "string"
+    | "number"
+    | "date"
+    | "boolean"
+    | "array"
+    | "topic"
+    | "event"
+    | "bucket";
   operators: FilterOperator[];
 };
 
@@ -221,6 +236,13 @@ export const FILTER_FIELDS: FilterFieldDefinition[] = [
     type: "topic",
     operators: ["hasTopic", "notHasTopic"],
   },
+  // Deterministic partitioning — splits a large audience into even cohorts
+  {
+    id: "bucket",
+    label: "Partition",
+    type: "bucket",
+    operators: ["inBucket"],
+  },
   // Custom properties - dynamic, represented as properties.*
   {
     id: "properties",
@@ -263,6 +285,7 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   triggered: "has triggered",
   triggeredWithin: "has triggered within",
   notTriggered: "has not triggered",
+  inBucket: "is in partition",
 };
 
 // Contact status options
@@ -312,6 +335,118 @@ export function createEmptyGroup(): FilterGroup {
   };
 }
 
+// Partition filters carry { buckets, index } rather than a scalar value.
+export const MAX_BUCKETS = 1000;
+
+export function validateBucketValue(value: unknown): string | null {
+  if (typeof value !== "object" || value === null) {
+    return "Partition count and number are required";
+  }
+  const { buckets, index } = value as Record<string, unknown>;
+  if (!Number.isInteger(buckets) || (buckets as number) < 2) {
+    return "Partition count must be a whole number of at least 2";
+  }
+  if ((buckets as number) > MAX_BUCKETS) {
+    return `Partition count cannot exceed ${MAX_BUCKETS}`;
+  }
+  // 1-based: "partition 1 of 6" through "partition 6 of 6".
+  if (!Number.isInteger(index) || (index as number) < 1) {
+    return "Partition number must be a whole number of at least 1";
+  }
+  if ((index as number) > (buckets as number)) {
+    return `Partition number must be between 1 and ${buckets as number}`;
+  }
+  return null;
+}
+
+// Splitting creates one segment per partition, so the ceiling is much lower
+// than MAX_BUCKETS — this bounds how many rows one click can insert.
+export const MAX_SPLIT_PARTITIONS = 50;
+
+export function conditionHasPartitionFilter(
+  condition: FilterCondition
+): boolean {
+  return condition.groups.some(
+    (group) =>
+      group.filters.some((f) => f.operator === "inBucket") ||
+      (group.nested ? conditionHasPartitionFilter(group.nested) : false)
+  );
+}
+
+/**
+ * AND a partition filter onto an existing condition, keeping the result flat.
+ *
+ * Nesting via FilterGroup.nested would be the tidier encoding, but neither the
+ * segment builder nor the details sheet renders nested conditions — the source
+ * filters would vanish from the UI while still applying in SQL. So:
+ *
+ *   AND source → append the partition as its own group        (A ∧ B) ∧ P
+ *   OR  source → distribute it into every group, logic intact (A ∧ P) ∨ (B ∧ P)
+ *
+ * The OR case is the one that matters: appending a group there would produce
+ * A ∨ B ∨ P, which matches everyone in the partition regardless of the segment.
+ */
+export function withPartitionFilter(
+  condition: FilterCondition,
+  buckets: number,
+  index: number
+): FilterCondition {
+  const partition: SegmentFilter = {
+    id: crypto.randomUUID(),
+    field: "bucket",
+    operator: "inBucket",
+    value: { buckets, index },
+  };
+
+  if (condition.logic === "OR") {
+    return {
+      logic: "OR",
+      groups: condition.groups.map((group) => ({
+        ...group,
+        id: crypto.randomUUID(),
+        filters: [...group.filters, { ...partition, id: crypto.randomUUID() }],
+      })),
+    };
+  }
+
+  return {
+    logic: "AND",
+    groups: [
+      ...condition.groups.map((group) => ({
+        ...group,
+        id: crypto.randomUUID(),
+      })),
+      { id: crypto.randomUUID(), filters: [partition] },
+    ],
+  };
+}
+
+function validateFilter(filter: SegmentFilter): string | null {
+  if (!filter.field) {
+    return "Filter field is required";
+  }
+  if (!filter.operator) {
+    return "Filter operator is required";
+  }
+
+  // A malformed partition filter compiles to no SQL and would silently widen
+  // the segment to every contact, so reject it before it can be saved.
+  if (filter.operator === "inBucket") {
+    return validateBucketValue(filter.value);
+  }
+
+  // Value is optional for exists/notExists operators
+  if (
+    filter.operator !== "exists" &&
+    filter.operator !== "notExists" &&
+    (filter.value === undefined || filter.value === "")
+  ) {
+    return "Filter value is required";
+  }
+
+  return null;
+}
+
 // Validate a filter condition
 export function validateCondition(condition: FilterCondition): string | null {
   if (!condition.groups || condition.groups.length === 0) {
@@ -324,19 +459,9 @@ export function validateCondition(condition: FilterCondition): string | null {
     }
 
     for (const filter of group.filters) {
-      if (!filter.field) {
-        return "Filter field is required";
-      }
-      if (!filter.operator) {
-        return "Filter operator is required";
-      }
-      // Value is optional for exists/notExists operators
-      if (
-        filter.operator !== "exists" &&
-        filter.operator !== "notExists" &&
-        (filter.value === undefined || filter.value === "")
-      ) {
-        return "Filter value is required";
+      const filterError = validateFilter(filter);
+      if (filterError) {
+        return filterError;
       }
     }
 

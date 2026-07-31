@@ -12,6 +12,96 @@ import type { FilterCondition, SegmentFilter } from "./schema/segments";
 
 const VALID_UNITS = new Set(["days", "hours", "minutes"]);
 
+// Guards for casting a JSON text property before comparing it. Rows whose value
+// doesn't match are folded to NULL by the CASE rather than erroring the query.
+const NUMERIC_GUARD = String.raw`^-?[0-9]*\.?[0-9]+$`;
+const DATE_GUARD = String.raw`^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])`;
+
+// A comparison value shaped like a date ("2026-07-31" or a full ISO-8601
+// timestamp) selects the timestamp path; anything else stays numeric.
+const DATE_VALUE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])([T ]|$)/;
+const BARE_DATE_VALUE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isDateValue(value: unknown): value is string {
+  return typeof value === "string" && DATE_VALUE.test(value);
+}
+
+/**
+ * Build the (left, right) operands for an ordered comparison on a custom
+ * property. Properties are stored as JSON text, so both sides need an explicit
+ * cast — numeric for counts/scores, timestamptz for dates.
+ */
+function orderedPropertyOperands(propertyKey: string, value: unknown) {
+  if (isDateValue(value)) {
+    // A bare "YYYY-MM-DD" carries no zone, so ::timestamptz would resolve it
+    // against the server's timezone. Anchor it to UTC to keep the boundary
+    // identical on Neon and on self-hosted Postgres.
+    const anchored = BARE_DATE_VALUE.test(value) ? `${value}T00:00:00Z` : value;
+    return {
+      left: sql`(CASE WHEN properties->>${propertyKey} ~ ${DATE_GUARD} THEN (properties->>${propertyKey})::timestamptz END)`,
+      right: sql`${anchored}::timestamptz`,
+    };
+  }
+
+  return {
+    left: sql`(CASE WHEN properties->>${propertyKey} ~ ${NUMERIC_GUARD} THEN (properties->>${propertyKey})::numeric END)`,
+    right: sql`${value}`,
+  };
+}
+
+// Upper bound on partition count — generous for splitting a large send, low
+// enough that a typo can't generate a pathological filter.
+const MAX_BUCKETS = 1000;
+
+export type BucketValue = { buckets: number; index: number };
+
+function parseBucketValue(value: unknown): BucketValue | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const { buckets, index } = value as Record<string, unknown>;
+  if (
+    !(Number.isInteger(buckets) && Number.isInteger(index)) ||
+    typeof buckets !== "number" ||
+    typeof index !== "number"
+  ) {
+    return null;
+  }
+  if (buckets < 2 || buckets > MAX_BUCKETS) {
+    return null;
+  }
+  // 1-based: "partition 1 of 6" through "partition 6 of 6".
+  if (index < 1 || index > buckets) {
+    return null;
+  }
+  return { buckets, index };
+}
+
+/**
+ * Split contacts into `buckets` deterministic partitions and match partition
+ * `index`. Every contact lands in exactly one partition, sizes are even to
+ * within sampling noise, and membership is stable across runs.
+ *
+ * Uses md5 rather than hashtext: hashtext is an internal function whose output
+ * is not guaranteed stable across Postgres major versions, which would reshuffle
+ * partitions under a self-hosted customer mid-campaign.
+ *
+ * The double modulo keeps the result non-negative — the bit(32) cast is signed,
+ * so a bare `% n` yields negatives for roughly half of all ids.
+ */
+export function bucketIndexSQL(buckets: number): SQL {
+  return sql`((((('x' || substr(md5("contact"."id"), 1, 8))::bit(32)::int % ${buckets}) + ${buckets}) % ${buckets}) + 1)`;
+}
+
+function buildBucketSQL(value: unknown): SQL | null {
+  const parsed = parseBucketValue(value);
+  if (!parsed) {
+    return null;
+  }
+  const { buckets, index } = parsed;
+  return sql`${bucketIndexSQL(buckets)} = ${index}`;
+}
+
 function validateInterval(
   value: unknown,
   unit: string | undefined
@@ -65,6 +155,11 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
     return sql`NOT EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName})`;
   }
 
+  // Deterministic hash partitioning (field carries no data of its own)
+  if (operator === "inBucket") {
+    return buildBucketSQL(value);
+  }
+
   // Handle topic-based filters via raw SQL (no db dependency)
   if (field === "topics") {
     const topicId = value as string;
@@ -93,14 +188,22 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
         return sql`properties->>${propertyKey} ILIKE ${`${String(value)}%`}`;
       case "endsWith":
         return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}`}`;
-      case "greaterThan":
-        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) > ${value}`;
-      case "lessThan":
-        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) < ${value}`;
-      case "greaterThanOrEqual":
-        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) >= ${value}`;
-      case "lessThanOrEqual":
-        return sql`(CASE WHEN properties->>${propertyKey} ~ '^-?[0-9]*\.?[0-9]+$' THEN (properties->>${propertyKey})::numeric END) <= ${value}`;
+      case "greaterThan": {
+        const { left, right } = orderedPropertyOperands(propertyKey, value);
+        return sql`${left} > ${right}`;
+      }
+      case "lessThan": {
+        const { left, right } = orderedPropertyOperands(propertyKey, value);
+        return sql`${left} < ${right}`;
+      }
+      case "greaterThanOrEqual": {
+        const { left, right } = orderedPropertyOperands(propertyKey, value);
+        return sql`${left} >= ${right}`;
+      }
+      case "lessThanOrEqual": {
+        const { left, right } = orderedPropertyOperands(propertyKey, value);
+        return sql`${left} <= ${right}`;
+      }
       case "exists":
         return sql`properties ? ${propertyKey}`;
       case "notExists":

@@ -509,6 +509,165 @@ describe("buildFilterSQL - property numeric comparisons", () => {
   });
 });
 
+describe("buildFilterSQL - property date comparisons", () => {
+  it("casts to timestamptz when the comparison value is a bare date", () => {
+    const filter: SegmentFilter = {
+      field: "properties.createdAt",
+      operator: "greaterThanOrEqual",
+      value: "2026-07-01",
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.sql).toContain("::timestamptz");
+    expect(query!.sql).not.toContain("::numeric");
+    expect(query!.sql).toContain(">=");
+  });
+
+  it("anchors a bare date to UTC so the boundary is server-timezone independent", () => {
+    const filter: SegmentFilter = {
+      field: "properties.createdAt",
+      operator: "lessThan",
+      value: "2026-08-01",
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.params).toContain("2026-08-01T00:00:00Z");
+  });
+
+  it("passes a full ISO-8601 timestamp through unchanged", () => {
+    const filter: SegmentFilter = {
+      field: "properties.createdAt",
+      operator: "greaterThan",
+      value: "2026-07-31T04:58:18.232021+00:00",
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.sql).toContain("::timestamptz");
+    expect(query!.params).toContain("2026-07-31T04:58:18.232021+00:00");
+  });
+
+  it("keeps the numeric path for numeric comparison values", () => {
+    const filter: SegmentFilter = {
+      field: "properties.score",
+      operator: "greaterThan",
+      value: 80,
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).not.toContain("::timestamptz");
+  });
+
+  it("keeps the numeric path for non-date strings", () => {
+    const filter: SegmentFilter = {
+      field: "properties.score",
+      operator: "greaterThan",
+      value: "not-a-date",
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).not.toContain("::timestamptz");
+  });
+
+  it("guards the cast so non-date property values cannot error the query", () => {
+    const filter: SegmentFilter = {
+      field: "properties.createdAt",
+      operator: "greaterThan",
+      value: "2026-07-01",
+    };
+
+    const query = toSQL(buildFilterSQL(filter));
+    expect(query!.sql).toContain("CASE WHEN");
+    expect(query!.params).toContain(
+      String.raw`^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])`
+    );
+  });
+});
+
+describe("buildFilterSQL - partition buckets", () => {
+  const bucketFilter = (value: unknown): SegmentFilter => ({
+    field: "bucket",
+    operator: "inBucket",
+    value,
+  });
+
+  it("builds a modulo partition over a stable md5 hash of the contact id", () => {
+    const query = toSQL(buildFilterSQL(bucketFilter({ buckets: 6, index: 1 })));
+    expect(query!.sql).toContain("md5");
+    expect(query!.sql).toContain('"contact"."id"');
+    expect(query!.params).toContain(6);
+  });
+
+  it("normalises the modulo to a 1-based partition number", () => {
+    const first = toSQL(buildFilterSQL(bucketFilter({ buckets: 6, index: 1 })));
+    const last = toSQL(buildFilterSQL(bucketFilter({ buckets: 6, index: 6 })));
+
+    // The expression shifts the 0-based modulo into 1..buckets, so the
+    // comparison is against the partition number the user actually typed.
+    expect(first!.sql).toContain("+ 1)");
+    expect(first!.params).toContain(1);
+    expect(last!.params).toContain(6);
+  });
+
+  it("emits a distinct predicate for every partition of a split", () => {
+    const predicates = new Set(
+      Array.from({ length: 6 }, (_, i) => {
+        const q = toSQL(
+          buildFilterSQL(bucketFilter({ buckets: 6, index: i + 1 }))
+        );
+        return JSON.stringify({ sql: q!.sql, params: q!.params });
+      })
+    );
+
+    expect(predicates.size).toBe(6);
+  });
+
+  it.each([
+    ["a partition number below the range", { buckets: 6, index: 0 }],
+    ["a partition number above the range", { buckets: 6, index: 7 }],
+    ["fewer than two partitions", { buckets: 1, index: 1 }],
+    ["more partitions than the cap", { buckets: 1001, index: 1 }],
+    ["a fractional partition count", { buckets: 6.5, index: 1 }],
+    ["a fractional partition number", { buckets: 6, index: 1.5 }],
+    ["a missing index", { buckets: 6 }],
+    ["a missing count", { index: 1 }],
+    ["a non-object value", 6],
+    ["a null value", null],
+  ])("returns null for %s", (_label, value) => {
+    expect(buildFilterSQL(bucketFilter(value))).toBeNull();
+  });
+
+  it("drops an invalid partition filter rather than widening the segment", () => {
+    // A null filter is omitted by buildConditionSQL. If a partition filter were
+    // the only filter in the group, the whole condition must collapse to null
+    // so callers treat it as "no valid segment" instead of "every contact".
+    const condition = {
+      logic: "AND" as const,
+      groups: [{ filters: [bucketFilter({ buckets: 6, index: 99 })] }],
+    };
+    expect(buildConditionSQL(condition)).toBeNull();
+  });
+
+  it("combines a partition with other filters in the same group", () => {
+    const condition = {
+      logic: "AND" as const,
+      groups: [
+        {
+          filters: [
+            { field: "status", operator: "equals" as const, value: "active" },
+            bucketFilter({ buckets: 6, index: 3 }),
+          ],
+        },
+      ],
+    };
+    const query = toSQL(buildConditionSQL(condition));
+    expect(query!.sql).toContain("md5");
+    expect(query!.sql).toContain("status");
+    expect(query!.params).toContain("active");
+  });
+});
+
 describe("buildFilterSQL - property inList/notInList", () => {
   it("handles inList on property fields", () => {
     const filter: SegmentFilter = {

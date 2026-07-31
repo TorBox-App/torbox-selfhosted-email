@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@wraps/ui/components/ui/dialog";
+import { Label } from "@wraps/ui/components/ui/label";
 import {
   Table,
   TableBody,
@@ -33,12 +34,17 @@ import { toast } from "sonner";
 import {
   createSegment,
   deleteSegment,
+  splitSegment,
   updateSegment,
 } from "@/actions/segments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import type { FilterCondition, SegmentWithMeta } from "@/lib/segments";
+import {
+  type FilterCondition,
+  MAX_SPLIT_PARTITIONS,
+  type SegmentWithMeta,
+} from "@/lib/segments";
 import type { TopicWithMeta } from "@/lib/topics";
 import { createColumns } from "./columns";
 import { SegmentDetailsSheet } from "./segment-details-sheet";
@@ -91,6 +97,8 @@ export function SegmentsTable({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [partitionCount, setPartitionCount] = useState("6");
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [selectedSegment, setSelectedSegment] =
     useState<SegmentWithMeta | null>(null);
@@ -101,6 +109,11 @@ export function SegmentsTable({
       onEdit: (segment: SegmentWithMeta) => {
         setSelectedSegment(segment);
         setEditDialogOpen(true);
+      },
+      onSplit: (segment: SegmentWithMeta) => {
+        setSelectedSegment(segment);
+        setPartitionCount("6");
+        setSplitDialogOpen(true);
       },
       onDelete: (segment: SegmentWithMeta) => {
         setSelectedSegment(segment);
@@ -174,6 +187,41 @@ export function SegmentsTable({
           description: "The segment has been updated.",
         });
         setEditDialogOpen(false);
+        setSelectedSegment(null);
+        router.refresh();
+      } else {
+        toast.error("Error", {
+          description: result.error,
+        });
+      }
+    });
+  };
+
+  const handleSplitSegment = async () => {
+    if (!selectedSegment) {
+      return;
+    }
+
+    const count = Number.parseInt(partitionCount, 10);
+    if (!Number.isInteger(count) || count < 2 || count > MAX_SPLIT_PARTITIONS) {
+      toast.error("Error", {
+        description: `Choose between 2 and ${MAX_SPLIT_PARTITIONS} partitions.`,
+      });
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await splitSegment(
+        selectedSegment.id,
+        organizationId,
+        count
+      );
+      if (result.success) {
+        const sizes = result.segments.map((s) => s.memberCount);
+        toast.success(`Created ${result.segments.length} partitions`, {
+          description: `Sizes range from ${Math.min(...sizes).toLocaleString()} to ${Math.max(...sizes).toLocaleString()} contacts.`,
+        });
+        setSplitDialogOpen(false);
         setSelectedSegment(null);
         router.refresh();
       } else {
@@ -334,6 +382,51 @@ export function SegmentsTable({
         segment={selectedSegment}
         topics={topics}
       />
+
+      {/* Split Into Partitions Dialog */}
+      <Dialog onOpenChange={setSplitDialogOpen} open={splitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Split into partitions</DialogTitle>
+            <DialogDescription>
+              Creates one new segment per partition, each with &quot;
+              {selectedSegment?.name}&quot;&apos;s filters plus a partition
+              filter. Every contact lands in exactly one partition, so you can
+              send them as separate broadcasts without overlap.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="partition-count">Number of partitions</Label>
+            <Input
+              id="partition-count"
+              max={MAX_SPLIT_PARTITIONS}
+              min={2}
+              onChange={(e) => setPartitionCount(e.target.value)}
+              type="number"
+              value={partitionCount}
+            />
+            {selectedSegment && selectedSegment.memberCount > 0 && (
+              <p className="text-muted-foreground text-sm">
+                Roughly{" "}
+                {Math.round(
+                  selectedSegment.memberCount /
+                    Math.max(Number.parseInt(partitionCount, 10) || 1, 1)
+                ).toLocaleString()}{" "}
+                contacts each. Sizes vary slightly — partitions are even, not
+                exact.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSplitDialogOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button disabled={isPending} onClick={handleSplitSegment}>
+              {isPending ? "Splitting..." : "Split segment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>

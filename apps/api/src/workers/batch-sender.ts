@@ -1521,9 +1521,17 @@ export async function getContactsChunk(
     }
 
     const segmentSQL = buildConditionSQL(segmentRow.condition);
-    if (segmentSQL) {
-      conditions.push(segmentSQL);
+    if (!segmentSQL) {
+      // Fail closed rather than falling through to an org-wide send. Reachable
+      // when the stored condition uses an operator this build doesn't know —
+      // e.g. a segment authored on a newer release after a rollback.
+      log.error("Segment condition compiled to no SQL; refusing to send", {
+        segmentId: filter.segmentId,
+        organizationId,
+      });
+      return [];
     }
+    conditions.push(segmentSQL);
   }
 
   // Cursor-based (keyset) pagination: skip contacts at or before the cursor

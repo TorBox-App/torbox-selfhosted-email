@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@wraps/ui/components/ui/select";
 import { Plus, Trash2, X } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,12 +24,20 @@ import {
 } from "@/lib/segments";
 import type { TopicWithMeta } from "@/lib/topics";
 
-const NUMERIC_OPERATORS = new Set([
+const ORDERED_OPERATORS = new Set([
   "greaterThan",
   "lessThan",
   "greaterThanOrEqual",
   "lessThanOrEqual",
 ]);
+
+const DATE_LIKE_VALUE = /^\d{4}-\d{2}-\d{2}/;
+
+// Custom properties are untyped JSON, so an ordered comparison could mean
+// either a number or a date. Seed the picker from whatever is already stored.
+function isDateLikeValue(value: unknown): boolean {
+  return typeof value === "string" && DATE_LIKE_VALUE.test(value);
+}
 
 type SegmentBuilderProps = {
   condition: FilterCondition;
@@ -261,6 +269,10 @@ function FilterRow({
   onChange,
   onRemove,
 }: FilterRowProps) {
+  const [propertyValueMode, setPropertyValueMode] = useState<"number" | "date">(
+    isDateLikeValue(filter.value) ? "date" : "number"
+  );
+
   // Get field definition
   const fieldDef =
     FILTER_FIELDS.find((f) => f.id === filter.field) ||
@@ -418,6 +430,54 @@ function FilterRow({
       );
     }
 
+    // Partition: "N of M" — splits the audience into M even, stable cohorts
+    if (filter.operator === "inBucket") {
+      const bucketValue = (filter.value ?? {}) as {
+        buckets?: number;
+        index?: number;
+      };
+      const updateBucket = (patch: { buckets?: number; index?: number }) =>
+        handleValueChange({ ...bucketValue, ...patch });
+
+      return (
+        <div className="flex flex-1 items-center gap-2">
+          <Input
+            aria-label="Partition number"
+            className="w-20"
+            min={1}
+            onChange={(e) =>
+              updateBucket({
+                index:
+                  e.target.value === ""
+                    ? undefined
+                    : Number.parseInt(e.target.value, 10),
+              })
+            }
+            placeholder="1"
+            type="number"
+            value={bucketValue.index?.toString() ?? ""}
+          />
+          <span className="text-muted-foreground text-sm">of</span>
+          <Input
+            aria-label="Partition count"
+            className="w-20"
+            min={2}
+            onChange={(e) =>
+              updateBucket({
+                buckets:
+                  e.target.value === ""
+                    ? undefined
+                    : Number.parseInt(e.target.value, 10),
+              })
+            }
+            placeholder="6"
+            type="number"
+            value={bucketValue.buckets?.toString() ?? ""}
+          />
+        </div>
+      );
+    }
+
     // Number input for numeric fields
     if (fieldDef?.type === "number") {
       return (
@@ -491,20 +551,48 @@ function FilterRow({
               value={currentPropertyKey}
             />
           )}
-          {NUMERIC_OPERATORS.has(filter.operator) ? (
-            <Input
-              className="flex-1"
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                handleValueChange(
-                  e.target.value === "" || !Number.isFinite(n) ? undefined : n
-                );
-              }}
-              placeholder="0"
-              step="any"
-              type="number"
-              value={filter.value?.toString() || ""}
-            />
+          {ORDERED_OPERATORS.has(filter.operator) ? (
+            <div className="flex flex-1 items-center gap-2">
+              <Select
+                onValueChange={(mode) => {
+                  setPropertyValueMode(mode as "number" | "date");
+                  handleValueChange(undefined);
+                }}
+                value={propertyValueMode}
+              >
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="number">number</SelectItem>
+                  <SelectItem value="date">date</SelectItem>
+                </SelectContent>
+              </Select>
+              {propertyValueMode === "date" ? (
+                <Input
+                  className="flex-1"
+                  onChange={(e) => handleValueChange(e.target.value)}
+                  type="date"
+                  value={(filter.value as string) || ""}
+                />
+              ) : (
+                <Input
+                  className="flex-1"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    handleValueChange(
+                      e.target.value === "" || !Number.isFinite(n)
+                        ? undefined
+                        : n
+                    );
+                  }}
+                  placeholder="0"
+                  step="any"
+                  type="number"
+                  value={filter.value?.toString() || ""}
+                />
+              )}
+            </div>
           ) : (
             <Input
               className="flex-1"

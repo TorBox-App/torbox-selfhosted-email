@@ -334,6 +334,28 @@ export async function duplicateBroadcast(
 
 // ── Recipient counting ───────────────────────────────────────────────────────
 
+export type SegmentUsability = "ok" | "missing" | "no-valid-filters";
+
+/**
+ * Why a segment-targeted broadcast resolved to nobody. Recipient counting fails
+ * closed, so an unusable segment is indistinguishable from an empty one by
+ * count alone — call this to tell the user which it was.
+ */
+export async function checkSegmentUsable(
+  organizationId: string,
+  segmentId: string,
+  dbClient: DbClient = db
+): Promise<SegmentUsability> {
+  const seg = await dbClient.query.segment.findFirst({
+    where: (s, { and: a, eq: e }) =>
+      a(e(s.id, segmentId), e(s.organizationId, organizationId)),
+  });
+  if (!seg) {
+    return "missing";
+  }
+  return buildConditionSQL(seg.condition) ? "ok" : "no-valid-filters";
+}
+
 async function buildRecipientConditions(
   organizationId: string,
   channel: Channel,
@@ -369,10 +391,11 @@ async function buildRecipientConditions(
       where: (s, { and: a, eq: e }) =>
         a(e(s.id, filter.segmentId!), e(s.organizationId, organizationId)),
     });
-    if (seg?.condition) {
-      const segmentSQL = buildConditionSQL(seg.condition);
-      if (segmentSQL) conditions.push(segmentSQL);
-    }
+    const segmentSQL = seg?.condition ? buildConditionSQL(seg.condition) : null;
+    // Fail closed. A deleted segment, or one whose filters compile to no SQL
+    // (an operator this build doesn't know, e.g. after a rollback), must match
+    // nobody — falling through would silently target the entire organization.
+    conditions.push(segmentSQL ?? sql`FALSE`);
   }
 
   return conditions;

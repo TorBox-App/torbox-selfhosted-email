@@ -157,6 +157,72 @@ describe("getContactsChunk - segment filtering", () => {
     expect(result).toEqual([]);
   });
 
+  it("returns empty array when the segment condition compiles to no SQL", async () => {
+    // Models a rollback: the stored condition uses a field this build cannot
+    // compile. Falling through to an unfiltered contact query would send the
+    // broadcast to the entire organization.
+    segmentQueryResult = [
+      {
+        id: "seg-unknown",
+        organizationId: "org-123",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                {
+                  field: "fieldFromANewerRelease",
+                  operator: "equals",
+                  value: "x",
+                },
+              ],
+            },
+          ],
+        } as FilterCondition,
+      },
+    ];
+
+    const result = await getContactsChunk("org-123", "email", 100, {
+      audienceType: "segment",
+      segmentId: "seg-unknown",
+    });
+
+    expect(segmentQueried).toBe(true);
+    expect(contactQueried).toBe(false);
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty array when a partition filter is out of range", async () => {
+    segmentQueryResult = [
+      {
+        id: "seg-bad-bucket",
+        organizationId: "org-123",
+        condition: {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                {
+                  field: "bucket",
+                  operator: "inBucket",
+                  value: { buckets: 6, index: 99 },
+                },
+              ],
+            },
+          ],
+        } as FilterCondition,
+      },
+    ];
+
+    const result = await getContactsChunk("org-123", "email", 100, {
+      audienceType: "segment",
+      segmentId: "seg-bad-bucket",
+    });
+
+    expect(contactQueried).toBe(false);
+    expect(result).toEqual([]);
+  });
+
   it("does not query segment table when audienceType is not segment", async () => {
     contactQueryResult = [
       {

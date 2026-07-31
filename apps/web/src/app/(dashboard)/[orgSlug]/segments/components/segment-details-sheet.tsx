@@ -209,6 +209,22 @@ export function SegmentDetailsSheet({
 }
 
 // Helper component to display condition summary
+// Partition filters carry { buckets, index } rather than a scalar value.
+function formatBucket(value: unknown): string {
+  if (typeof value !== "object" || value === null) {
+    return "";
+  }
+  const { buckets, index } = value as { buckets?: number; index?: number };
+  return buckets === undefined || index === undefined
+    ? ""
+    : `${index} of ${buckets}`;
+}
+
+function formatWithinDays(value: string): string {
+  const days = Number.parseInt(value, 10);
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
 function ConditionSummary({
   condition,
   topics,
@@ -242,6 +258,10 @@ function ConditionSummary({
       return getTopicName(value);
     }
 
+    if (fieldId === "bucket") {
+      return formatBucket(value);
+    }
+
     // Handle arrays
     if (Array.isArray(value)) {
       return value.join(", ");
@@ -249,8 +269,7 @@ function ConditionSummary({
 
     // Handle dates for "within" operator
     if (typeof value === "string" && value.endsWith("d")) {
-      const days = Number.parseInt(value, 10);
-      return `${days} day${days !== 1 ? "s" : ""}`;
+      return formatWithinDays(value);
     }
 
     return String(value);
