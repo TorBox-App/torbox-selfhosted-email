@@ -1365,13 +1365,23 @@ describe("broadcast resume schema indexes", () => {
     );
   });
 
-  test("concurrent-index script exists and covers both indexes", () => {
+  test("concurrent-index manifest covers both indexes", () => {
+    // The DDL moved out of create-broadcast-resume-indexes.ts into the shared
+    // manifest, so the per-area scripts and db:migrate-indexes cannot drift.
+    // The contract is unchanged: both indexes must still be created
+    // out-of-band, because migration 0055 deliberately omits them.
+    const manifest = readFile("packages/db/scripts/index-manifest.ts");
+    expect(manifest).toContain("CREATE UNIQUE INDEX CONCURRENTLY");
+    expect(manifest).toContain("message_send_dedup_idx");
+    expect(manifest).toContain("CREATE INDEX CONCURRENTLY");
+    expect(manifest).toContain("contact_keyset_idx");
+
+    // And the named script must still run them — migration `-- NOTE:` comments
+    // point operators at it by name.
     const script = readFile(
       "packages/db/scripts/create-broadcast-resume-indexes.ts"
     );
-    expect(script).toContain("CREATE UNIQUE INDEX CONCURRENTLY");
     expect(script).toContain("message_send_dedup_idx");
-    expect(script).toContain("CREATE INDEX CONCURRENTLY");
     expect(script).toContain("contact_keyset_idx");
   });
 
