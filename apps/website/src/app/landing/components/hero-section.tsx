@@ -47,16 +47,16 @@ export function HeroSection() {
             </div>
 
             {/* Proof stats */}
-            <dl className="flex flex-wrap border-border border-t">
+            <dl className="grid w-full grid-cols-1 border-border border-t sm:grid-cols-3">
               {proofStats.map((stat, i) => (
                 <div
-                  className={`py-4 pr-6 ${i < proofStats.length - 1 ? "mr-6 border-border border-r" : ""}`}
+                  className={`py-4 sm:px-5 sm:first:pl-0 ${i > 0 ? "border-border border-t sm:border-t-0 sm:border-l" : ""}`}
                   key={stat.k}
                 >
                   <dt className="font-mono font-semibold text-[20px] text-foreground tracking-[-0.01em]">
                     {stat.n}
                   </dt>
-                  <dd className="mt-0.5 text-[12.5px] text-muted-foreground">
+                  <dd className="mt-0.5 text-pretty text-[12.5px] text-muted-foreground">
                     {stat.k}
                   </dd>
                 </div>
