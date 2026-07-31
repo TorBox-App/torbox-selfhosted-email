@@ -259,6 +259,89 @@ export default $config({
       },
     });
 
+    // Alerts SNS topic + broadcast queue alarms. A broadcast is a
+    // self-propagating chain — one message in flight at a time — so a single
+    // broken link stalls the whole send with the row still reading
+    // "processing" and nothing else to notice. Mirrors the two batch alarms
+    // in infra/alarms.ts (the cloud stack); NOT unified into a shared module
+    // on purpose — see that file's header for why the two stacks diverge.
+    const alertsTopic = new aws.sns.Topic("SelfhostAlertsTopic", {
+      name: $interpolate`wraps-selfhost-alerts-${$app.stage}`,
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-selfhost",
+      },
+    });
+
+    // Optional: the operator sets ALERT_EMAIL in .env.selfhost. AWS sends a
+    // confirmation email that must be accepted before alarms deliver.
+    //
+    // Read from the env FILE, not process.env — same reasoning as `sentryDsn`
+    // above it: dotenv's `override: true` only overrides keys the file
+    // actually contains, so a Wraps maintainer running a customer deploy from
+    // this repo with ALERT_EMAIL exported in their shell would otherwise
+    // subscribe *our* address to *their* alarms.
+    const alertEmail = envFile.parsed?.ALERT_EMAIL;
+    if (alertEmail) {
+      new aws.sns.TopicSubscription("SelfhostAlertsEmailSubscription", {
+        topic: alertsTopic.arn,
+        protocol: "email",
+        endpoint: alertEmail,
+      });
+    }
+
+    // Alarm: messages visible in the Batch DLQ
+    new aws.cloudwatch.MetricAlarm("SelfhostBatchDlqAlarm", {
+      name: $interpolate`wraps-selfhost-batch-dlq-${$app.stage}`,
+      alarmDescription:
+        "One or more batch jobs landed in the dead-letter queue",
+      namespace: "AWS/SQS",
+      metricName: "ApproximateNumberOfMessagesVisible",
+      dimensions: {
+        QueueName: batchDlq.nodes.queue.name,
+      },
+      statistic: "Maximum",
+      period: 60,
+      evaluationPeriods: 1,
+      threshold: 1,
+      comparisonOperator: "GreaterThanOrEqualToThreshold",
+      treatMissingData: "notBreaching",
+      alarmActions: [alertsTopic.arn],
+      okActions: [alertsTopic.arn],
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-selfhost",
+      },
+    });
+
+    // Alarm: batch messages sitting too long on the main queue.
+    // DLQ alarm only fires AFTER 3 retries — roughly 15+ min of failure before
+    // a broadcast operator sees anything. This fires earlier: if the oldest
+    // message on the main queue has been waiting >= 15 min, something is
+    // blocking the worker and we want to know BEFORE DLQ landing.
+    new aws.cloudwatch.MetricAlarm("SelfhostBatchQueueAgeAlarm", {
+      name: $interpolate`wraps-selfhost-batch-queue-age-${$app.stage}`,
+      alarmDescription:
+        "Oldest batch message has been on the queue for >= 15 minutes — worker likely stalled",
+      namespace: "AWS/SQS",
+      metricName: "ApproximateAgeOfOldestMessage",
+      dimensions: {
+        QueueName: batchQueue.nodes.queue.name,
+      },
+      statistic: "Maximum",
+      period: 60,
+      evaluationPeriods: 3,
+      threshold: 900, // 15 minutes
+      comparisonOperator: "GreaterThanOrEqualToThreshold",
+      treatMissingData: "notBreaching",
+      alarmActions: [alertsTopic.arn],
+      okActions: [alertsTopic.arn],
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-selfhost",
+      },
+    });
+
     // Scheduler IAM policy — allow Scheduler to send to both queues
     new aws.iam.RolePolicy("SelfhostSchedulerSqsPolicy", {
       role: schedulerRole.name,
@@ -492,6 +575,12 @@ export default $config({
           // Same DSN as the API and dashboard — the workers swallow their own
           // failures by design, so this is where those surface.
           ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+          // Kill switch documented in
+          // apps/api/src/workers/BROADCAST_RESUME_RUNBOOK.md. Matches
+          // infra/queues.ts; the consumer reads it as === "false", so any
+          // other value is a no-op.
+          BROADCAST_DLQ_CONSUMER_ENABLED:
+            process.env.BROADCAST_DLQ_CONSUMER_ENABLED ?? "true",
         },
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
@@ -638,6 +727,48 @@ export default $config({
         },
       }
     );
+
+    // Account health: assumes each connected AWS account's role and checks
+    // SES account health (sending paused/enforcement, reputation thresholds,
+    // daily quota, sandbox→production transitions). Writes inbox notifications
+    // (deduped per account per day). See apps/api/src/workers/account-health.ts.
+    // Mirrors accountHealthCron in infra/cron.ts (the cloud stack) with two
+    // self-hosted adaptations: no Axiom secret here (structured logs go to
+    // CloudWatch Logs only), and `enabled` reads an opt-out from the env file
+    // instead of `$app.stage === "production"` — self-hosted stage names
+    // vary, and that guard would silently disable the cron on every real
+    // self-hosted stage.
+    new sst.aws.CronV2("SelfhostAccountHealth", {
+      schedule: "cron(45 * * * ? *)",
+      // Read from the env FILE, not process.env — same maintainer-shell-leak
+      // reasoning as ALERT_EMAIL and SENTRY_DSN above: a Wraps maintainer
+      // running a customer deploy from this repo should not silently disable
+      // the customer's cron because of something in their own shell.
+      enabled: envFile.parsed?.SELFHOST_ACCOUNT_HEALTH_ENABLED !== "false",
+      job: {
+        handler: "../apps/api/src/workers/account-health.handler",
+        runtime: "nodejs24.x",
+        timeout: "10 minutes",
+        memory: "256 MB",
+        environment: {
+          NODE_ENV: "production",
+          ...dbEnv,
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+        },
+        nodejs: {
+          install: ["pg", "@sentry/profiling-node"],
+        },
+        permissions: [
+          // Assume cross-account customer roles to read SES account health.
+          // The self-hosted console role is also wraps-* (see
+          // WRAPS_CONSOLE_ROLE_NAME above), so this pattern covers it too.
+          {
+            actions: ["sts:AssumeRole"],
+            resources: ["arn:aws:iam::*:role/wraps-*"],
+          },
+        ],
+      },
+    });
 
     return {
       apiUrl: api.url,

@@ -2164,6 +2164,44 @@ pnpm install`,
                   to your provider&apos;s pooled endpoint before raising this
                 </td>
               </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    ALERT_EMAIL
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Email address to notify when a broadcast stalls — subscribes
+                  to an SNS topic backing two CloudWatch alarms: one on messages
+                  landing in the batch dead-letter queue, one on the oldest
+                  message on the batch queue sitting for 15+ minutes (a
+                  broadcast is a self-propagating chain of one message at a
+                  time, so either signals a stuck send). AWS emails a
+                  subscription confirmation link to this address after deploy —
+                  accept it, or alarms fire with nowhere to deliver
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    SELFHOST_ACCOUNT_HEALTH_ENABLED
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Set to{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    false
+                  </code>{" "}
+                  to disable the hourly SES account-health check. On by default:
+                  it assumes each connected AWS account&apos;s role and checks
+                  for sending paused, an SES enforcement status other than
+                  healthy, and bounce/complaint rates approaching AWS&apos;s
+                  thresholds — the kind of problem that otherwise surfaces only
+                  when AWS pauses the account mid-send
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
