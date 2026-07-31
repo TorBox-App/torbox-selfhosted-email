@@ -110,6 +110,12 @@ function thenable(rows: unknown[]) {
   return obj;
 }
 
+// countBroadcastRecipients is called on chunk 0 by the audience-snapshot
+// recount (plan 169); mocked directly rather than going through the real
+// @wraps/db implementation, which would hit a real DB. Default resolves 1,
+// matching makeBatch()'s default totalRecipients used by every test here.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(1);
+
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
   return {
@@ -135,6 +141,7 @@ vi.mock("@wraps/db", async () => {
       }),
     },
     sql: (...args: unknown[]) => args,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
   };
 });
 
@@ -266,6 +273,8 @@ describe("batch-sender from address resolution", () => {
       returning: vi.fn().mockResolvedValue([]),
     });
     process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
+    countBroadcastRecipientsMock.mockClear();
+    countBroadcastRecipientsMock.mockResolvedValue(1);
   });
 
   // Note: sesSendCalls captures ALL SES client.send() calls, including

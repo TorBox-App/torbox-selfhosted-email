@@ -103,6 +103,12 @@ const regionSelectResults: unknown[][] = [
   [{ name: "Test Org" }],
 ];
 
+// countBroadcastRecipients is called on chunk 0 by the audience-snapshot
+// recount (plan 169); mocked directly rather than going through the real
+// @wraps/db implementation, which would hit a real DB. Default resolves 1,
+// matching the batch fixture's totalRecipients above.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(1);
+
 function regionThenable(rows: unknown[]) {
   const obj: Record<string, unknown> = {
     then: (resolve: (v: unknown) => void) =>
@@ -143,6 +149,7 @@ vi.mock("@wraps/db", async () => {
       }),
     },
     sql: (...args: unknown[]) => args,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
   };
 });
 
@@ -194,6 +201,8 @@ describe("batch-sender SES region", () => {
     regionSelectIdx = 0;
     process.env.AWS_REGION = "us-east-1";
     process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
+    countBroadcastRecipientsMock.mockClear();
+    countBroadcastRecipientsMock.mockResolvedValue(1);
   });
 
   it("creates SES client with customer's region, not Lambda's AWS_REGION", async () => {

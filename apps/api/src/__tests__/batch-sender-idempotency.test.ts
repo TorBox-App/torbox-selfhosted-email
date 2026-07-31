@@ -135,6 +135,14 @@ function getSqlNumericParams(value: unknown): number[] {
   return numbers;
 }
 
+// countBroadcastRecipients is called on chunk 0 by the audience-snapshot
+// recount (plan 169); mocked directly rather than going through the real
+// @wraps/db implementation, which would hit a real DB. Default resolves 2,
+// matching makeBatch()'s default totalRecipients; setupSelects() below
+// overrides it per-test to match whatever totalRecipients that test's batch
+// fixture actually uses.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(2);
+
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
 
@@ -193,6 +201,7 @@ vi.mock("@wraps/db", async () => {
       }),
     },
     sql: (...args: unknown[]) => args,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
     // Re-export eq/and/inArray so the worker can use them
     get eq() {
       return actual.eq;
@@ -307,6 +316,12 @@ function setupSelects(opts: {
   batch: Record<string, unknown>;
   contacts?: unknown[];
 }) {
+  // The chunk-0 audience-snapshot recount must match this fixture's own
+  // totalRecipients, or it would silently overwrite it and change what the
+  // test is actually exercising.
+  countBroadcastRecipientsMock.mockResolvedValueOnce(
+    (opts.batch.totalRecipients as number | undefined) ?? 2
+  );
   selectResults = [
     // 0. batch
     [opts.batch],
@@ -338,6 +353,8 @@ describe("Batch sender idempotency (claim-before-send)", () => {
     // Default: all contacts claimed successfully by INSERT
     claimReturning = [{ contactId: "contact-1" }, { contactId: "contact-2" }];
     reclaimReturning = [];
+    countBroadcastRecipientsMock.mockClear();
+    countBroadcastRecipientsMock.mockResolvedValue(2);
   });
 
   it("claims all contacts before SES send on first invocation", async () => {

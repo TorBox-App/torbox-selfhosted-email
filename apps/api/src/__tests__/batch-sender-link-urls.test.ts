@@ -61,6 +61,12 @@ let selectCallIndex = 0;
 let selectResults: unknown[][] = [];
 let mockClaimReturning: Array<{ contactId: string }> = [];
 
+// countBroadcastRecipients is called on chunk 0 by the audience-snapshot
+// recount (plan 169); mocked directly rather than going through the real
+// @wraps/db implementation, which would hit a real DB. Default resolves 1,
+// matching setupBulkSelects()'s batch fixture totalRecipients.
+const countBroadcastRecipientsMock = vi.fn().mockResolvedValue(1);
+
 vi.mock("@wraps/db", async () => {
   const actual = await vi.importActual("@wraps/db");
 
@@ -104,6 +110,7 @@ vi.mock("@wraps/db", async () => {
       }),
     },
     sql: (...args: unknown[]) => args,
+    countBroadcastRecipients: countBroadcastRecipientsMock,
   };
 });
 
@@ -240,6 +247,8 @@ beforeEach(() => {
   selectCallIndex = 0;
   selectResults = [];
   mockClaimReturning = [];
+  countBroadcastRecipientsMock.mockClear();
+  countBroadcastRecipientsMock.mockResolvedValue(1);
 });
 
 afterEach(() => {
