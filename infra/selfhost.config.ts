@@ -346,6 +346,30 @@ export default $config({
       },
     });
 
+    // Alarm: messages visible in the Workflow DLQ
+    new aws.cloudwatch.MetricAlarm("SelfhostWorkflowDlqAlarm", {
+      name: $interpolate`wraps-selfhost-workflow-dlq-${$app.stage}`,
+      alarmDescription:
+        "One or more workflow jobs landed in the dead-letter queue",
+      namespace: "AWS/SQS",
+      metricName: "ApproximateNumberOfMessagesVisible",
+      dimensions: {
+        QueueName: workflowDlq.nodes.queue.name,
+      },
+      statistic: "Maximum",
+      period: 60,
+      evaluationPeriods: 1,
+      threshold: 1,
+      comparisonOperator: "GreaterThanOrEqualToThreshold",
+      treatMissingData: "notBreaching",
+      alarmActions: [alertsTopic.arn],
+      okActions: [alertsTopic.arn],
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-selfhost",
+      },
+    });
+
     // Scheduler IAM policy — allow Scheduler to send to both queues
     new aws.iam.RolePolicy("SelfhostSchedulerSqsPolicy", {
       role: schedulerRole.name,
