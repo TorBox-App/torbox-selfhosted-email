@@ -806,6 +806,64 @@ export default $config({
       },
     });
 
+    // Event-feed staleness: flags accounts whose SES event feed has gone
+    // quiet while sends are still happening — a broadcast can drain
+    // perfectly while the dashboard timeline silently freezes and
+    // bounce/complaint handling goes blind. Mirrors eventFeedStalenessCron
+    // in infra/cron.ts (the cloud stack) with the same two Cron/enabled
+    // adaptations as SelfhostAccountHealth above, plus three more because
+    // this worker sends email (see apps/api/src/workers/event-feed-staleness.ts):
+    //
+    // - APP_BASE_URL comes from web.url, not process.env. resolveAppUrl()
+    //   (packages/email/src/lib/app-url.ts) throws rather than defaulting to
+    //   app.wraps.dev, and APP_BASE_URL is not a .env.selfhost key, so
+    //   process.env.APP_BASE_URL would be "" and the send would throw forever.
+    //   web.url matches the two other APP_BASE_URL lines in this file.
+    // - EMAIL_FROM, not AUTH_EMAIL_FROM. event-feed-stale.ts:65 reads
+    //   `process.env.EMAIL_FROM || "Wraps <hello@wraps.dev>"` with no
+    //   AUTH_EMAIL_FROM fallback (unlike broadcast-stuck.ts), so setting only
+    //   AUTH_EMAIL_FROM here would leave `from` at hello@wraps.dev — an
+    //   identity this customer's SES account does not own — and every send
+    //   would be rejected. Feed the operator's verified auth sender in under
+    //   the name this code actually reads. Still unset means the alert
+    //   cannot deliver; that is documented in the self-hosted docs, not
+    //   silent.
+    // - No sts:AssumeRole permission and no WRAPS_EMAIL_ROLE_ARN. This
+    //   worker calls no AWS API but the email send, and
+    //   WRAPS_EMAIL_ROLE_ARN is deliberately unset on self-host (see the
+    //   note on the web function above) — the customer's wraps-email-role
+    //   has a Service-only trust policy that a role-principal AssumeRole
+    //   cannot satisfy. Sends with this function's own ses:SendEmail grant.
+    new sst.aws.Cron("SelfhostEventFeedStaleness", {
+      schedule: "cron(15 * * * ? *)",
+      // Read from the env FILE — same maintainer-shell-leak reasoning as
+      // SELFHOST_ACCOUNT_HEALTH_ENABLED above.
+      enabled:
+        envFile.parsed?.SELFHOST_EVENT_FEED_STALENESS_ENABLED !== "false",
+      job: {
+        handler: "../apps/api/src/workers/event-feed-staleness.handler",
+        runtime: "nodejs24.x",
+        timeout: "5 minutes",
+        memory: "256 MB",
+        environment: {
+          NODE_ENV: "production",
+          ...dbEnv,
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+          APP_BASE_URL: web.url,
+          EMAIL_FROM: process.env.AUTH_EMAIL_FROM ?? "",
+        },
+        nodejs: {
+          install: ["pg", "@sentry/profiling-node"],
+        },
+        permissions: [
+          {
+            actions: ["ses:SendEmail", "ses:SendRawEmail"],
+            resources: ["*"],
+          },
+        ],
+      },
+    });
+
     return {
       apiUrl: api.url,
       webUrl: web.url,
