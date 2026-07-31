@@ -17,6 +17,7 @@ import {
 } from "@wraps/ui/components/ui/collapsible";
 import { Label } from "@wraps/ui/components/ui/label";
 import {
+  BotIcon,
   CalendarIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
@@ -35,6 +36,7 @@ import { toast } from "sonner";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AgentPromptOption } from "./agent-prompt-option";
 
 type CliDeployConnectStepProps = {
   onNext: () => void;
@@ -42,6 +44,8 @@ type CliDeployConnectStepProps = {
   onSkip: () => void;
   onConnected?: () => void;
   organizationId: string;
+  orgName?: string;
+  orgSlug?: string;
 };
 
 const CLI_STEPS = [
@@ -83,6 +87,36 @@ const PREREQUISITES = [
 const CAL_BOOKING_URL = "https://cal.com/wraps/get-started-with-wraps";
 
 /**
+ * Prompt handed to the user's coding agent. Mirrors the CLI path — every command
+ * here is one of CLI_STEPS — but calls out the interactive points an agent would
+ * otherwise stall on (device code, region/preset prompts, org selection).
+ */
+function buildAgentPrompt(orgName?: string): string {
+  const orgLine = orgName
+    ? `   If it asks which organization to connect, choose "${orgName}".`
+    : "   If it asks which organization to connect, ask me which one to pick.";
+
+  return `Deploy Wraps email infrastructure into my AWS account and connect it to my Wraps dashboard.
+
+1. Check my AWS credentials: aws sts get-caller-identity
+   If that fails, help me set up credentials before continuing — AWS SSO, access keys, environment variables, and AWS_PROFILE all work.
+2. Install the CLI: npm install -g @wraps.dev/cli
+   (or: curl -fsSL https://get.wraps.dev | sh)
+3. Sign in: wraps auth login
+   This is a device-code flow — it prints a code like XXXX-XXXX and tries to open a browser. Show me the code and wait for me to confirm I approved it before moving on.
+4. Deploy the infrastructure: wraps email init
+   It prompts for an AWS region and a preset (starter / production / enterprise), then shows estimated monthly AWS cost. Show me those and let me choose — don't accept the deploy on my behalf.
+5. Connect the deployment to my dashboard: wraps platform connect
+${orgLine}
+6. Confirm it worked: wraps email status --json
+   Report the region, the SES configuration set, and whether the account is still in the SES sandbox (sandbox means I can only send to verified addresses until AWS grants production access).
+
+When you're done, tell me — I'll click "I've finished — check connection" in the Wraps onboarding tab.
+
+Full Wraps docs (agent-readable): https://wraps.dev/llms-full.txt`;
+}
+
+/**
  * Generate a cryptographically secure webhook secret
  */
 function generateSecureWebhookSecret(): string {
@@ -121,10 +155,13 @@ export function CliDeployConnectStep({
   onSkip,
   onConnected,
   organizationId,
+  orgName,
 }: CliDeployConnectStepProps) {
   const queryClient = useQueryClient();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [cfnDeployed, setCfnDeployed] = useState(false);
+
+  const agentPrompt = useMemo(() => buildAgentPrompt(orgName), [orgName]);
 
   // Generate a cryptographically secure webhook secret once on mount
   const [webhookSecret] = useState(() => generateSecureWebhookSecret());
@@ -302,6 +339,24 @@ export function CliDeployConnectStep({
     });
   };
 
+  const handleAgentExpanded = () => {
+    posthog.capture("onboarding_deployment_method_selected", {
+      step: 4,
+      step_name: "Deploy & Connect",
+      organization_id: organizationId,
+      method: "agent",
+    });
+  };
+
+  const handleAgentPromptCopied = () => {
+    toast.success("Prompt copied — paste it into your agent");
+    posthog.capture("onboarding_agent_prompt_copied", {
+      step: 4,
+      step_name: "Deploy & Connect",
+      organization_id: organizationId,
+    });
+  };
+
   const handleCloudFormationDeploy = () => {
     posthog.capture("onboarding_deployment_started", {
       step: 4,
@@ -312,6 +367,29 @@ export function CliDeployConnectStep({
     window.open(quickCreateUrl, "_blank", "noopener,noreferrer");
     setCfnDeployed(true);
   };
+
+  // Shared by the CLI and agent paths — both finish with `wraps platform connect`
+  const checkConnectionBlock = (
+    <div className="space-y-3">
+      <Button
+        className="w-full"
+        loading={isChecking}
+        onClick={handleCheckConnection}
+      >
+        <RefreshCwIcon className="mr-2 h-4 w-4" />
+        I&apos;ve finished — check connection
+      </Button>
+      {checkFailed && (
+        <p className="text-center text-muted-foreground text-sm">
+          No connection found. Make sure the deploy and{" "}
+          <code className="rounded bg-muted px-1 py-0.5">
+            wraps platform connect
+          </code>{" "}
+          both finished, then try again.
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <Card>
@@ -622,22 +700,35 @@ export function CliDeployConnectStep({
               </div>
 
               {/* Check Connection */}
-              <div className="space-y-3">
-                <Button
-                  className="w-full"
-                  loading={isChecking}
-                  onClick={handleCheckConnection}
-                >
-                  <RefreshCwIcon className="mr-2 h-4 w-4" />
-                  I&apos;ve finished — check connection
-                </Button>
-                {checkFailed && (
-                  <p className="text-center text-muted-foreground text-sm">
-                    No connection found. Make sure you&apos;ve run all 4
-                    commands above, then try again.
-                  </p>
-                )}
-              </div>
+              {checkConnectionBlock}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Agent — collapsible secondary path */}
+        {!cfnDeployed && (
+          <Collapsible onOpenChange={(open) => open && handleAgentExpanded()}>
+            <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-dashed p-3 text-muted-foreground text-sm transition-colors hover:bg-muted/50 hover:text-foreground [&[data-state=open]>svg:last-child]:rotate-180">
+              <BotIcon className="h-4 w-4" />
+              <span className="font-medium">
+                Prefer to let your AI agent run it?
+              </span>
+              <ChevronDownIcon className="ml-auto h-4 w-4 transition-transform" />
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-6 pt-4">
+              <p className="text-muted-foreground text-sm">
+                Same CLI path as above, driven by your coding agent. It still
+                needs AWS credentials on your machine, and it will stop for the
+                sign-in code and the region/preset choices.
+              </p>
+
+              <AgentPromptOption
+                onCopyPrompt={handleAgentPromptCopied}
+                prompt={agentPrompt}
+              />
+
+              {checkConnectionBlock}
             </CollapsibleContent>
           </Collapsible>
         )}

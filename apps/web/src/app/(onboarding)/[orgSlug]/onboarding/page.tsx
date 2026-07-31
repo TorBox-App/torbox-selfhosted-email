@@ -441,6 +441,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
         onNext={handleNext}
         onSkip={handleSkip}
         organizationId={currentOrg.id}
+        orgName={currentOrg.name}
         orgSlug={orgSlug}
       />
     </div>
