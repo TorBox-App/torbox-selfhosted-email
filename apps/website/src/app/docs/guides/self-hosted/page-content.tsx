@@ -2242,6 +2242,55 @@ pnpm install`,
                   when AWS pauses the account mid-send
                 </td>
               </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    SELFHOST_EVENT_FEED_STALENESS_ENABLED
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Set to{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    false
+                  </code>{" "}
+                  to disable the hourly check for SES event feeds that have gone
+                  silent while sends are still happening. On by default: without
+                  it, a broken event pipeline is invisible — sends keep going,
+                  the dashboard timeline freezes, and bounce/complaint handling
+                  goes blind, with no alert. The in-dashboard flag on the AWS
+                  account still appears either way. The check emails the org
+                  owner, and this requires{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    AUTH_EMAIL_FROM
+                  </code>{" "}
+                  to deliver: with it unset, the send falls back to an
+                  unverified{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    hello@wraps.dev
+                  </code>{" "}
+                  sender, SES rejects it, and the check silently retries every
+                  hour without ever reaching anyone
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    SELFHOST_WORKFLOW_REAPER_ENABLED
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Set to{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    false
+                  </code>{" "}
+                  to disable the hourly sweep that fails workflow executions
+                  stuck past their scheduled resume. On by default: it is a
+                  backstop for lost EventBridge Scheduler deliveries — disabling
+                  it means a stuck execution stays stuck indefinitely
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
