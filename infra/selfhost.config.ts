@@ -738,7 +738,15 @@ export default $config({
     // instead of `$app.stage === "production"` — self-hosted stage names
     // vary, and that guard would silently disable the cron on every real
     // self-hosted stage.
-    new sst.aws.CronV2("SelfhostAccountHealth", {
+    // `Cron`, not `CronV2` (which infra/cron.ts uses on the cloud stack): the
+    // self-hosted stack's SST platform under infra/.sst is pinned at 4.0.6,
+    // which has no CronV2 component — `sst deploy` there would fail on an
+    // undefined constructor. `Cron` exists in both 4.0.6 and the 4.2.4 the
+    // root stack runs, and supports everything used here (job, schedule,
+    // enabled), so it is correct regardless of which platform version the
+    // customer's deploy resolves. It provisions an EventBridge Rule rather
+    // than a Scheduler entry; for an hourly health check that is equivalent.
+    new sst.aws.Cron("SelfhostAccountHealth", {
       schedule: "cron(45 * * * ? *)",
       // Read from the env FILE, not process.env — same maintainer-shell-leak
       // reasoning as ALERT_EMAIL and SENTRY_DSN above: a Wraps maintainer
