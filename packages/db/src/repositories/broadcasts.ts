@@ -429,6 +429,46 @@ export async function countBroadcastRecipients(
   return result?.count ?? 0;
 }
 
+/**
+ * Sums the recipients still unsent across broadcasts already in flight on the
+ * same AWS account — the work a newly created broadcast has to share the SES
+ * daily quota with.
+ *
+ * `queued` and `processing` only: `draft`/`scheduled` have not been admitted,
+ * and `completed`/`failed`/`cancelled` are done. A broadcast paused on the
+ * quota reserve is still `processing` (there is no `paused` status), which is
+ * precisely the contention this measures.
+ *
+ * Counts the REMAINDER (`total − processed`), not the total: whatever a
+ * running broadcast has already sent is already inside SES's
+ * `SentLast24Hours`, so counting it again would double-charge it.
+ */
+export async function sumInFlightBroadcastRecipients(
+  organizationId: string,
+  awsAccountId: string,
+  dbClient: DbClient = db
+): Promise<{ batches: number; remainingRecipients: number }> {
+  const [result] = await dbClient
+    .select({
+      batches: sql<number>`count(*)::int`,
+      remainingRecipients: sql<number>`coalesce(sum(greatest(${batchSend.totalRecipients} - ${batchSend.processedRecipients}, 0)), 0)::int`,
+    })
+    .from(batchSend)
+    .where(
+      and(
+        eq(batchSend.organizationId, organizationId),
+        eq(batchSend.awsAccountId, awsAccountId),
+        eq(batchSend.channel, "email"),
+        inArray(batchSend.status, ["queued", "processing"])
+      )
+    );
+
+  return {
+    batches: result?.batches ?? 0,
+    remainingRecipients: result?.remainingRecipients ?? 0,
+  };
+}
+
 export type SampleRecipient = {
   id: string;
   email: string | null;
