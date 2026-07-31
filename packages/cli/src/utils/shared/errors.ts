@@ -1054,7 +1054,7 @@ export const errors = {
     new WrapsError(
       `No ${source} log groups in this deployment`,
       "SELFHOST_NO_LOG_GROUPS_FOR_SOURCE",
-      `This deployment has: ${available}.\n\nThe API-only control plane (wraps selfhost deploy) has no dashboard or worker Lambdas — those ship with the full SST platform.\n\nDrop the filter to see everything:\n  wraps selfhost logs`,
+      `This deployment has: ${available}.\n\nA deployment that did not finish may be missing its dashboard or worker Lambdas.\n\nDrop the filter to see everything:\n  wraps selfhost logs`,
       "https://wraps.dev/docs/self-hosting"
     ),
 

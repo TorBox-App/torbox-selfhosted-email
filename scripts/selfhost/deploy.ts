@@ -6,7 +6,7 @@ import mri from "mri";
 import pc from "picocolors";
 import { normalizeApiUrl } from "../../packages/cli/src/utils/selfhost/api-url.js";
 import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
-import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
+import { hasExistingSelfhostResources } from "../../packages/cli/src/utils/selfhost/existing-deployment.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
 import {
   loadConnectionMetadata,
@@ -71,23 +71,13 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     process.env.AWS_DEFAULT_REGION ||
     "us-east-1";
 
-  // Both selfhost variants create the account-global IAM role
+  // The selfhost stack creates the account-global IAM role
   // wraps-selfhost-scheduler-role — deploying over an existing deployment
   // fails partway through with EntityAlreadyExists. Fail fast, before
   // .env.selfhost is written (its existence blocks this command forever).
-  const deployedVariant = await detectSelfhostVariant(region);
-  if (deployedVariant === "pulumi") {
+  if (await hasExistingSelfhostResources(region)) {
     clack.log.error(
-      "An API-only selfhost control plane (deployed by `wraps selfhost deploy`) already exists in this AWS account."
-    );
-    clack.log.info(
-      `The two selfhost variants share IAM resources and cannot coexist. Run ${pc.cyan("wraps selfhost destroy")} first, or keep using the API-only control plane.`
-    );
-    process.exit(1);
-  }
-  if (deployedVariant === "sst") {
-    clack.log.error(
-      "A full-platform (SST) selfhost deployment already exists in this AWS account, but .env.selfhost is missing."
+      "A selfhost deployment already exists in this AWS account, but .env.selfhost is missing."
     );
     clack.log.info(
       `Deploying now would generate new secrets and invalidate every issued session and unsubscribe token.\nRecreate .env.selfhost from your saved secrets (see the reconstruct step in .github/workflows/selfhost-deploy.yml), then run ${pc.cyan("pnpm selfhost:upgrade")}.`
@@ -281,7 +271,6 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
     apiUrl,
     webUrl,
     deployedAt: now,
-    variant: "sst",
   };
   metadata.timestamp = now;
   await saveConnectionMetadata(metadata);

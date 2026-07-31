@@ -70,14 +70,9 @@ export type { LicenseGenerateOptions } from "./license.js";
 // Re-export selfhost types
 export type {
   SelfhostConfig,
-  SelfhostDeployOptions,
-  SelfhostDestroyOptions,
   SelfhostEnvOptions,
   SelfhostLogsOptions,
-  SelfhostStackConfig,
-  SelfhostStackOutputs,
   SelfhostStatusOptions,
-  SelfhostUpgradeOptions,
 } from "./selfhost.js";
 // Re-export shared types
 export type {

@@ -99,11 +99,14 @@ vi.mock("../../../packages/cli/src/utils/shared/aws.js", () => ({
   }),
 }));
 
-// ── variant probe mock (never hit real AWS from unit tests) ──────────────────
-const mockDetectVariant = vi.hoisted(() => vi.fn().mockResolvedValue(null));
-vi.mock("../../../packages/cli/src/utils/selfhost/variant.js", () => ({
-  detectSelfhostVariant: mockDetectVariant,
-}));
+// ── existing-deployment probe mock (never hit real AWS from unit tests) ──────
+const mockHasExisting = vi.hoisted(() => vi.fn().mockResolvedValue(false));
+vi.mock(
+  "../../../packages/cli/src/utils/selfhost/existing-deployment.js",
+  () => ({
+    hasExistingSelfhostResources: mockHasExisting,
+  })
+);
 
 // ── email stack detection (avoid live AWS SDK calls) ─────────────────────────
 vi.mock("@aws-sdk/client-iam", () => ({
@@ -206,7 +209,7 @@ describe("scripts/selfhost/upgrade", () => {
     mockConfirm.mockResolvedValue(true);
     mockMigrate.mockResolvedValue(undefined);
     mockChmod.mockResolvedValue(undefined);
-    mockDetectVariant.mockResolvedValue(null);
+    mockHasExisting.mockResolvedValue(false);
     mockRerouteEmailEvents.mockResolvedValue(undefined);
     files.env = COMPLETE_ENV;
     files.outputs = OUTPUTS_JSON;
@@ -255,9 +258,9 @@ describe("scripts/selfhost/upgrade", () => {
     expect(env).toMatchObject({ SELFHOST_AWS_REGION: "eu-west-1" });
   });
 
-  it("blocks recovery when a pulumi control plane exists in the account", async () => {
+  it("blocks recovery when foreign scheduler resources exist (crashed earlier attempt)", async () => {
     files.env = "DATABASE_URL=postgres://user:pass@host/db"; // incomplete deploy
-    mockDetectVariant.mockResolvedValue("pulumi");
+    mockHasExisting.mockResolvedValue(true);
 
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit called");
@@ -273,30 +276,12 @@ describe("scripts/selfhost/upgrade", () => {
     exitSpy.mockRestore();
   });
 
-  it("blocks recovery when foreign scheduler resources exist (orphans / CLI variant)", async () => {
-    files.env = "DATABASE_URL=postgres://user:pass@host/db"; // incomplete deploy
-    mockDetectVariant.mockResolvedValue("sst");
-
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
-
-    const { upgrade } = await import("../upgrade.js");
-    await expect(upgrade({ region: "us-east-1", yes: true })).rejects.toThrow(
-      "process.exit called"
-    );
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(mockRunSubprocess).not.toHaveBeenCalled();
-    exitSpy.mockRestore();
-  });
-
-  it("skips the variant probe entirely once a deploy has completed", async () => {
+  it("skips the existing-deployment probe entirely once a deploy has completed", async () => {
     // COMPLETE_ENV has NEXT_PUBLIC_APP_URL — the completion marker
     const { upgrade } = await import("../upgrade.js");
     await upgrade({ region: "us-east-1", yes: true });
 
-    expect(mockDetectVariant).not.toHaveBeenCalled();
+    expect(mockHasExisting).not.toHaveBeenCalled();
     expect(sstDeployCalls()).toHaveLength(1);
   });
 

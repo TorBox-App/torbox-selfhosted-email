@@ -4,11 +4,10 @@
 # Source this AFTER verify.sh — it uses `pass`, `fail`, `section` and
 # `aws_check` from there and defines nothing they need.
 #
-# Split out of verify.sh because the self-hosted surface has its own shape: two
-# deploy variants (Pulumi `wraps selfhost deploy`, SST `pnpm selfhost:deploy`),
-# a second console access role, a second control-plane identity, and a second
-# SES event target. verify.sh stays the shared library for the four platform
-# deployment paths.
+# Split out of verify.sh because the self-hosted surface has its own shape: an
+# SST deploy from a fork (`pnpm selfhost:deploy`), a second console access role,
+# a second control-plane identity, and a second SES event target. verify.sh
+# stays the shared library for the four platform deployment paths.
 #
 # Everything here is READ-ONLY against AWS except verify_selfhost_event_delivery,
 # which sends one email to the SES mailbox simulator.

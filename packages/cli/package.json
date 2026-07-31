@@ -26,9 +26,8 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "pnpm build:console && pnpm build:lambda && pnpm build:selfhost-lambda && tsup",
+    "build": "pnpm build:console && pnpm build:lambda && tsup",
     "build:lambda": "tsx scripts/build-lambda.ts",
-    "build:selfhost-lambda": "tsx scripts/build-selfhost-lambda.ts",
     "build:console": "pnpm --filter @wraps/console build",
     "test": "vitest run",
     "test:watch": "vitest --watch",

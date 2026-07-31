@@ -25,15 +25,10 @@ export type SelfhostLogEntry = {
 };
 
 /**
- * Both selfhost variants prefix their Lambdas identically, so one
- * DescribeLogGroups call covers each of them:
- *
- * - pulumi → `/aws/lambda/wraps-selfhost-api`
- * - sst    → `/aws/lambda/wraps-selfhost-production-<Logical>-<suffix>`
- *
- * This is why the logs path needs no `detectSelfhostVariant()` probe and no
- * paginated ListFunctions scan the way `api-url.ts` does — the prefix is the
- * one thing the two stacks agree on.
+ * The selfhost stack prefixes every Lambda log group identically
+ * (`/aws/lambda/wraps-selfhost-production-<Logical>-<suffix>`), so one
+ * DescribeLogGroups call covers all of them — no paginated ListFunctions
+ * scan the way `api-url.ts` needs.
  */
 export const SELFHOST_LOG_GROUP_PREFIX = "/aws/lambda/wraps-selfhost";
 
@@ -104,9 +99,8 @@ export const SELFHOST_LOG_SOURCES = Object.keys(
 export function classifyLogGroup(logGroupName: string): SelfhostLogSource {
   const name = logGroupName.toLowerCase();
 
-  // The Pulumi variant's single Lambda is `wraps-selfhost-api` exactly; the SST
-  // variant's is `...-SelfhostApiFunction-<suffix>`.
-  if (name.endsWith("wraps-selfhost-api") || name.includes("selfhostapi")) {
+  // The API Lambda is named `...-SelfhostApiFunction-<suffix>`.
+  if (name.includes("selfhostapi")) {
     return "api";
   }
   // sst.aws.Nextjs expands into several Lambdas (server, image optimizer,

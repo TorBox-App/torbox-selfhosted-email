@@ -26,8 +26,9 @@ import { selfhostLogs } from "../selfhost/logs.js";
 const logsMock = mockClient(CloudWatchLogsClient);
 
 const PULUMI_GROUP = {
-  logGroupName: "/aws/lambda/wraps-selfhost-api",
-  arn: "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-api:*",
+  logGroupName:
+    "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+  arn: "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345:*",
 };
 const SST_WEB_GROUP = {
   logGroupName:
@@ -305,7 +306,9 @@ describe("selfhostLogs", () => {
       const queried = logsMock
         .commandCalls(FilterLogEventsCommand)
         .map((call) => call.args[0].input.logGroupName);
-      expect(queried).toEqual(["/aws/lambda/wraps-selfhost-api"]);
+      expect(queried).toEqual([
+        "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+      ]);
     });
 
     it("queries every group when no source is given", async () => {
@@ -482,7 +485,7 @@ describe("selfhostLogs", () => {
         logsMock.commandCalls(StartLiveTailCommand)[0].args[0].input
           .logGroupIdentifiers
       ).toEqual([
-        "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-api",
+        "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
       ]);
     });
 
@@ -497,7 +500,7 @@ describe("selfhostLogs", () => {
                   message: '{"level":"error","msg":"streamed failure"}',
                   logStreamName: "stream-1",
                   logGroupIdentifier:
-                    "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-api",
+                    "arn:aws:logs:us-east-1:115690362111:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
                 },
               ],
             },
@@ -547,7 +550,10 @@ describe("selfhostLogs", () => {
       expect(parsed.command).toBe("selfhost.logs");
       expect(parsed.data.region).toBe("us-east-1");
       expect(parsed.data.groups).toEqual([
-        { name: "/aws/lambda/wraps-selfhost-api", source: "api" },
+        {
+          name: "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          source: "api",
+        },
       ]);
       expect(parsed.data.entries).toEqual([
         {
@@ -555,7 +561,8 @@ describe("selfhostLogs", () => {
           time: "1970-01-01T00:00:01.000Z",
           source: "api",
           level: "ERROR",
-          logGroup: "/aws/lambda/wraps-selfhost-api",
+          logGroup:
+            "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
           logStream: "2026/07/28/[$LATEST]abc",
           message: '{"level":"error","msg":"send rejected"}',
         },

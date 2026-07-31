@@ -8,8 +8,7 @@
 #
 # This script does NOT deploy or tear down the self-hosted control plane. It
 # verifies an EXISTING deployment. Deploy one first with
-# `wraps selfhost deploy` (see tests/deployment/selfhost/run.sh) and point
-# WRAPS_SELFHOST_API_URL at it.
+# `pnpm selfhost:deploy` from a fork and point WRAPS_SELFHOST_API_URL at it.
 #
 # Not wired into run-all.sh or CI on purpose: it needs real AWS credentials
 # and a live self-hosted control plane that neither of those provisions.

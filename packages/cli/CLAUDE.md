@@ -83,14 +83,11 @@ Inline Pulumi programs via `pulumi.automation.LocalWorkspace`:
 
 ## Selfhost Surface
 
-Customers can run the control plane in their own AWS account. Two variants ship, and they are not interchangeable:
+Customers can run the control plane in their own AWS account. There is exactly one way to deploy it: `pnpm selfhost:deploy` from a fork, driven by `infra/selfhost.config.ts` + `scripts/selfhost/*` (SST). It deploys the full platform — API Lambda, dashboard on CloudFront, DynamoDB rate limit, SQS batch/workflow queues + DLQ consumers, scheduler group, alarms.
 
-| Variant | Entry point | Infra code | What it deploys |
-|---|---|---|---|
-| `pulumi` | `wraps selfhost deploy` | `infrastructure/selfhost-stack.ts` | API Lambda + Function URL, DynamoDB rate limit, SQS batch/workflow queues, scheduler group. **No dashboard** — the customer hosts `apps/web` themselves from `wraps selfhost env` |
-| `sst` | `pnpm selfhost:deploy` from a fork | `infra/selfhost.config.ts` + `scripts/selfhost/*` | Full platform: the above plus the dashboard on CloudFront |
+A second, Pulumi-based API-only variant (`wraps selfhost deploy`, `infrastructure/selfhost-stack.ts`) shipped alongside it and was **deleted 2026-07-31** — no customer ever deployed it, and it had diverged: its Lambda multiplexer crashed on every SQS batch invocation and its batch DLQ had no consumer, so broadcasts stalled permanently. Do not reintroduce a second deploy path. `wraps selfhost` keeps only the commands that operate on an existing deployment: `login`, `logout`, `status`, `logs`, `env`, `connect`, `update-role`.
 
-**They cannot coexist in one account.** Both create the account-global `wraps-selfhost-scheduler-role` and `wraps-selfhost-schedulers` group, so the second deploy fails partway with `EntityAlreadyExists`. Probe with `detectSelfhostVariant(region)` (`utils/selfhost/variant.ts`) before any deploy path. Probe order matters: the Pulumi Lambda `wraps-selfhost-api` is unique to Pulumi, the scheduler role is created by both — so the role only implies SST when the Lambda is absent.
+Deploying over an existing deployment fails partway with `EntityAlreadyExists`, because the stack creates the account-global `wraps-selfhost-scheduler-role` and `wraps-selfhost-schedulers` group. `deploy`/`upgrade` fail fast on that with `hasExistingSelfhostResources(region)` (`utils/selfhost/existing-deployment.ts`) before writing `.env.selfhost` — whose existence would otherwise lock the customer out of the deploy path forever.
 
 `scripts/selfhost/` lives at the repo root, not in this package, and imports `packages/cli/src/**` through relative paths. It is not part of the tsup bundle and customers run it from a clone — so it must build against workspace deps (`pnpm selfhost:build-deps`), never against `dist/`.
 
@@ -125,10 +122,10 @@ The target follows `config.activeInstance` — a pointer set by `selfhost login`
 
 - Region is `SELFHOST_AWS_REGION`, written to `.env.selfhost` on first deploy from `--region`. On upgrade, read it back from the env file — **never** fall back to ambient `AWS_REGION`, which would target a different region than the deployed stack.
 - Always store the API URL through `normalizeApiUrl()` (`utils/selfhost/api-url.ts`). The raw Lambda Function URL's trailing slash produces a double slash in webhook paths that the API will not route.
-- SST names resources `{app}-{stage}-{logical}-{suffix}`, so nothing can be fetched by exact name — recovering the SST variant's API URL is a paginated Lambda scan, not a lookup.
+- SST names resources `{app}-{stage}-{logical}-{suffix}`, so nothing can be fetched by exact name — recovering the API URL is a paginated Lambda scan, not a lookup.
 - The API reads `WRAPS_LICENSE_KEY`, not the `LICENSE_KEY` that `.env.selfhost` stores. `infra/selfhost.config.ts` maps one to the other; a bare `LICENSE_KEY` on the function is an unlicensed deployment.
 
-Deployment tests for all of this are `tests/deployment/selfhost/`, `selfhost-sst/`, and `coexistence/` — see `tests/deployment/README.md`. They need real AWS and are kept out of CI.
+Deployment tests for all of this are `tests/deployment/selfhost-sst/` and `coexistence/` — see `tests/deployment/README.md`. They need real AWS and are kept out of CI.
 
 ## Key Directories
 
@@ -137,11 +134,11 @@ Deployment tests for all of this are `tests/deployment/selfhost/`, `selfhost-sst
 - `src/utils/shared/` — Cross-service utilities (errors, config, metadata, output)
 - `src/utils/email/` — Email-specific utilities
 - `src/utils/sms/` — SMS-specific utilities
-- `src/utils/selfhost/` — Variant detection, API URL normalization, Neon provisioning
+- `src/utils/selfhost/` — Existing-deployment probe, API URL resolution/normalization, Neon provisioning
 - `src/types/` — Shared TypeScript types
 - `lambda/` — Lambda function source (bundled by esbuild into deployments)
 
-Outside this package but part of its surface: `scripts/selfhost/` (SST variant's deploy/upgrade/destroy) and `infra/selfhost.config.ts`, both at the repo root.
+Outside this package but part of its surface: `scripts/selfhost/` (the deploy/upgrade/destroy entry points) and `infra/selfhost.config.ts`, both at the repo root.
 
 ## Build
 

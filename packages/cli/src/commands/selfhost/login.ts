@@ -46,7 +46,7 @@ export async function selfhostLogin(
   if (!metadata?.services?.selfhost) {
     clack.log.error("No self-hosted deployment found.");
     console.log(
-      `\nRun ${pc.cyan("wraps selfhost deploy")} to deploy the self-hosted control plane first.\n`
+      `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to deploy the self-hosted control plane first.\n`
     );
     process.exit(1);
     return;

@@ -363,22 +363,19 @@ wraps cdn init --provider vercel --region us-east-1 --domain cdn.myapp.com
 Run the Wraps control plane in your own AWS account instead of app.wraps.dev.
 Requires an enterprise license key.
 
+Deploy it with `pnpm selfhost:deploy` from a fork — see the
+[self-hosted guide](https://wraps.dev/docs/guides/self-hosted). These commands
+operate on a deployment that already exists:
+
 | Command | Description |
 |---------|-------------|
-| `wraps selfhost deploy` | Deploy an API-only control plane to your AWS account |
-| `wraps selfhost upgrade` | Rebuild and redeploy the self-hosted API |
 | `wraps selfhost status` | Show self-hosted deployment details |
 | `wraps selfhost env` | Print env vars for hosting `apps/web` against your control plane |
 | `wraps selfhost login` | Sign in to your self-hosted instance (not wraps.dev) |
 | `wraps selfhost logout` | Sign out of your self-hosted instance |
 | `wraps selfhost connect` | Connect your AWS account to your self-hosted instance |
 | `wraps selfhost update-role` | Refresh your self-hosted console role's permissions |
-| `wraps selfhost destroy` | Tear down the self-hosted control plane |
-
-`wraps selfhost deploy` gives you the API only — you host the dashboard
-yourself. For the full platform (API, dashboard, and workers) deployed via SST
-from a fork, see the [self-hosted guide](https://wraps.dev/docs/guides/self-hosted).
-The two variants cannot coexist in one AWS account.
+| `wraps selfhost logs` | Stream logs from your self-hosted API, dashboard, and workers |
 
 `selfhost connect` and `selfhost update-role` write
 `wraps-selfhost-console-access-role`, which trusts your own AWS account. Their

@@ -2,13 +2,6 @@ import type { ConnectionMetadata } from "../shared/metadata.js";
 import { saveConnectionMetadata } from "../shared/metadata.js";
 
 /**
- * Name of the self-hosted control-plane Lambda created by `selfhost deploy`.
- * The Lambda's Function URL is the source of truth for the API endpoint —
- * connection metadata only caches it.
- */
-export const SELFHOST_API_FUNCTION_NAME = "wraps-selfhost-api";
-
-/**
  * Strip trailing slashes from a base URL. Lambda Function URLs always carry a
  * trailing slash (`https://….on.aws/`), which would produce a double slash
  * (`//v1/connections`) when a path is appended — Elysia won't match that route
@@ -22,7 +15,7 @@ export function normalizeApiUrl(url: string): string {
 /**
  * SST v3 derives physical names as `{app}-{stage}-{logicalName}-{suffix}` where
  * the suffix is 8 random characters, so the function cannot be fetched by exact
- * name the way the Pulumi one can. List and match on the stable prefix instead.
+ * name. List and match on the stable prefix instead.
  *
  * App name and stage are pinned by the deploy path: `infra/selfhost.config.ts`
  * sets `name: "wraps-selfhost"` and `scripts/selfhost/deploy.ts` always passes
@@ -35,35 +28,19 @@ const SST_FUNCTION_PREFIX = "wraps-selfhost-production-";
 const SST_API_LOGICAL_NAME = "SelfhostApi";
 
 /**
- * Pulumi variant: the Lambda's physical name is fixed, so one API call answers
- * the question.
- */
-async function resolvePulumiApiUrl(region: string): Promise<string | null> {
-  try {
-    const { LambdaClient, GetFunctionUrlConfigCommand } = await import(
-      "@aws-sdk/client-lambda"
-    );
-    const lambda = new LambdaClient({ region });
-    const result = await lambda.send(
-      new GetFunctionUrlConfigCommand({
-        FunctionName: SELFHOST_API_FUNCTION_NAME,
-      })
-    );
-    return result.FunctionUrl ? normalizeApiUrl(result.FunctionUrl) : null;
-    // baseline:allow-next-line no-swallowed-errors — recovery is best-effort
-  } catch {
-    return null;
-  }
-}
-
-/**
- * SST variant: scan the account's Lambdas for the one the selfhost stack named.
+ * Resolve the live API URL for the self-hosted control plane directly from AWS
+ * by scanning the account's Lambdas for the one the selfhost stack named.
+ * Returns null when no deployment is found in the account/region, or when
+ * credentials don't permit the lookup — recovery is always best-effort so
+ * callers can fall back to their own error messaging.
  *
  * `ListFunctions` is paged — an account with many functions will not carry the
  * target on page one, so the whole listing must be walked or recovery fails
  * only on busy accounts.
  */
-async function resolveSstApiUrl(region: string): Promise<string | null> {
+export async function resolveSelfhostApiUrl(
+  region: string
+): Promise<string | null> {
   try {
     const { LambdaClient, ListFunctionsCommand, GetFunctionUrlConfigCommand } =
       await import("@aws-sdk/client-lambda");
@@ -105,26 +82,6 @@ async function resolveSstApiUrl(region: string): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-/**
- * Resolve the live API URL for the self-hosted control plane directly from AWS.
- * Returns null when no deployment is found in the account/region, or when
- * credentials don't permit the lookup — recovery is always best-effort so
- * callers can fall back to their own error messaging.
- *
- * Tries the Pulumi variant first: its function name is exact and the lookup is
- * one API call, whereas the SST variant needs a paginated ListFunctions scan.
- * The two variants cannot coexist in one account (both create the
- * account-global `wraps-selfhost-scheduler-role`), so ordering is a cost
- * decision, not a correctness one.
- */
-export async function resolveSelfhostApiUrl(
-  region: string
-): Promise<string | null> {
-  return (
-    (await resolvePulumiApiUrl(region)) ?? (await resolveSstApiUrl(region))
-  );
 }
 
 /**

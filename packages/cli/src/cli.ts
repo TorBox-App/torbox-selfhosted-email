@@ -72,14 +72,11 @@ import { connect as platformConnect } from "./commands/platform/connect.js";
 import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
 // Self-hosted commands
-import { selfhostDeploy } from "./commands/selfhost/deploy.js";
-import { selfhostDestroy } from "./commands/selfhost/destroy.js";
 import { selfhostEnv } from "./commands/selfhost/env.js";
 import { selfhostLogin } from "./commands/selfhost/login.js";
 import { selfhostLogout } from "./commands/selfhost/logout.js";
 import { selfhostLogs } from "./commands/selfhost/logs.js";
 import { selfhostStatus } from "./commands/selfhost/status.js";
-import { selfhostUpgrade } from "./commands/selfhost/upgrade.js";
 // Shared commands
 import { dashboard } from "./commands/shared/dashboard.js";
 import { destroy } from "./commands/shared/destroy.js";
@@ -280,16 +277,10 @@ function showHelp() {
   );
   console.log("Self-Hosted Commands:");
   console.log(
-    `  ${pc.cyan("selfhost deploy")}      Deploy Wraps API to your AWS account`
-  );
-  console.log(
     `  ${pc.cyan("selfhost login")}       Sign in to your self-hosted Wraps instance`
   );
   console.log(
     `  ${pc.cyan("selfhost logout")}      Sign out of your self-hosted Wraps instance`
-  );
-  console.log(
-    `  ${pc.cyan("selfhost upgrade")}     Rebuild and redeploy the self-hosted API`
   );
   console.log(
     `  ${pc.cyan("selfhost status")}      Show self-hosted deployment details`
@@ -304,10 +295,7 @@ function showHelp() {
     `  ${pc.cyan("selfhost connect")}     Connect your AWS account to your self-hosted instance`
   );
   console.log(
-    `  ${pc.cyan("selfhost update-role")} Refresh your self-hosted console role's permissions`
-  );
-  console.log(
-    `  ${pc.cyan("selfhost destroy")}     Tear down the self-hosted deployment\n`
+    `  ${pc.cyan("selfhost update-role")} Refresh your self-hosted console role's permissions\n`
   );
   console.log("Local Development:");
   console.log(
@@ -1204,29 +1192,6 @@ async function run() {
     // Handle selfhost subcommands (e.g., wraps selfhost deploy)
     if (primaryCommand === "selfhost" && subCommand) {
       switch (subCommand) {
-        case "deploy":
-          await selfhostDeploy({
-            region: flags.region,
-            databaseUrl: flags.databaseUrl,
-            neonApiKey: flags.neonApiKey,
-            neonOrgId: flags.neonOrgId,
-            licenseKey: flags.licenseKey,
-            appUrl: flags.appUrl,
-            yes: flags.yes,
-            preview: flags.preview,
-            json: flags.json,
-          });
-          break;
-
-        case "upgrade":
-          await selfhostUpgrade({
-            region: flags.region,
-            yes: flags.yes,
-            preview: flags.preview,
-            json: flags.json,
-          });
-          break;
-
         case "status":
           await selfhostStatus({
             region: flags.region,
@@ -1268,14 +1233,6 @@ async function run() {
           await selfhostLogout({
             region: flags.region,
             json: flags.json,
-          });
-          break;
-
-        case "destroy":
-          await selfhostDestroy({
-            region: flags.region,
-            yes: flags.yes,
-            force: flags.force,
           });
           break;
 

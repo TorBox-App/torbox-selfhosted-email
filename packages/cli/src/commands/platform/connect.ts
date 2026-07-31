@@ -686,7 +686,7 @@ async function authenticatedConnect(
         `No reachable self-hosted deployment found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
       );
       console.log(
-        `\nRun ${pc.cyan("wraps selfhost deploy")} to finish deploying the self-hosted control plane first.\n`
+        `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to finish deploying the self-hosted control plane first.\n`
       );
       process.exit(1);
     }

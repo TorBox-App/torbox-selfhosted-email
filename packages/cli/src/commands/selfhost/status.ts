@@ -3,13 +3,9 @@ import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import type { SelfhostStatusOptions } from "../../types/index.js";
 import { reconcileSelfhostApiUrl } from "../../utils/selfhost/api-url.js";
-import { detectSelfhostVariant } from "../../utils/selfhost/variant.js";
 import { validateAWSCredentials } from "../../utils/shared/aws.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
-import {
-  loadConnectionMetadata,
-  saveConnectionMetadata,
-} from "../../utils/shared/metadata.js";
+import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { resolveRegionForCommand } from "../../utils/shared/region-resolver.js";
 
@@ -23,7 +19,6 @@ function displaySelfhostStatus(options: {
   neonProjectId?: string;
   appUrl: string;
   licenseKeyPrefix: string;
-  variant?: "sst" | "pulumi";
 }) {
   const lines: string[] = [];
 
@@ -46,11 +41,6 @@ function displaySelfhostStatus(options: {
   lines.push(`  URL: ${pc.cyan(options.apiUrl || "(not deployed)")}`);
   lines.push(`  Region: ${pc.cyan(options.region)}`);
   lines.push(`  Deployed: ${pc.dim(options.deployedAt)}`);
-  if (options.variant) {
-    lines.push(
-      `  Type: ${pc.cyan(options.variant === "sst" ? "Full platform (SST, deployed from fork)" : "API-only control plane (CLI)")}`
-    );
-  }
   lines.push("");
 
   lines.push(pc.bold("Configuration"));
@@ -97,7 +87,7 @@ export async function selfhostStatus(
     progress.stop();
     clack.log.error("No self-hosted deployment found");
     console.log(
-      `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to deploy the full platform (API + dashboard),\nor ${pc.cyan("wraps selfhost deploy")} for the API-only control plane.\n`
+      `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to deploy the self-hosted platform.\n`
     );
     process.exit(1);
   }
@@ -109,19 +99,6 @@ export async function selfhostStatus(
   const apiUrl =
     (await reconcileSelfhostApiUrl(metadata, region)) ?? selfhostService.apiUrl;
 
-  // Self-heal pre-variant metadata: probe AWS for which implementation owns
-  // this deployment and stamp it so every later command gives the right
-  // guidance.
-  if (!selfhostService.variant) {
-    const inferred = await detectSelfhostVariant(region);
-    if (inferred) {
-      selfhostService.variant = inferred;
-      metadata.timestamp = new Date().toISOString();
-      await saveConnectionMetadata(metadata);
-    }
-  }
-  const variant = selfhostService.variant;
-
   const statusData = {
     region,
     apiUrl,
@@ -129,7 +106,6 @@ export async function selfhostStatus(
     neonProjectId: config.neonProjectId,
     appUrl: config.appUrl,
     licenseKeyPrefix: config.licenseKey.slice(0, 12),
-    variant,
   };
 
   if (isJsonMode()) {
@@ -143,9 +119,7 @@ export async function selfhostStatus(
   console.log("");
   clack.log.info(pc.bold("Commands:"));
   console.log(
-    variant === "sst"
-      ? `  ${pc.cyan("pnpm selfhost:upgrade")} (from your fork) - Redeploy the platform and run migrations`
-      : `  ${pc.cyan("wraps selfhost upgrade")} - Rebuild and redeploy the API Lambda`
+    `  ${pc.cyan("pnpm selfhost:upgrade")} (from your fork) - Redeploy the platform and run migrations`
   );
 
   // 5. Track status command

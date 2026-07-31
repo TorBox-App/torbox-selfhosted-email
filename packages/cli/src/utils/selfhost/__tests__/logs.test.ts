@@ -36,10 +36,6 @@ function group(
 }
 
 describe("classifyLogGroup", () => {
-  it("classifies the Pulumi variant's single API Lambda", () => {
-    expect(classifyLogGroup("/aws/lambda/wraps-selfhost-api")).toBe("api");
-  });
-
   // SST appends an 8-char random suffix to every physical name, so matching is
   // on the logical-name substring rather than the full string.
   it("classifies the SST variant's suffixed API Lambda", () => {
@@ -234,16 +230,16 @@ describe("liveTailIdentifier", () => {
   it("strips the trailing wildcard", () => {
     expect(
       liveTailIdentifier(
-        "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-api:*"
+        "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345:*"
       )
     ).toBe(
-      "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-api"
+      "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345"
     );
   });
 
   it("leaves an already-clean ARN alone", () => {
     const arn =
-      "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-api";
+      "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345";
     expect(liveTailIdentifier(arn)).toBe(arn);
   });
 });
@@ -295,9 +291,13 @@ describe("discoverSelfhostLogGroups", () => {
   it("skips groups missing a name or ARN", async () => {
     logsMock.on(DescribeLogGroupsCommand).resolves({
       logGroups: [
-        { logGroupName: "/aws/lambda/wraps-selfhost-api" },
         {
-          logGroupName: "/aws/lambda/wraps-selfhost-api",
+          logGroupName:
+            "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+        },
+        {
+          logGroupName:
+            "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
           arn: "arn:aws:logs:us-east-1:1:log-group:api:*",
         },
       ],
@@ -331,7 +331,8 @@ describe("fetchLogs", () => {
   it("merges groups into one chronological stream", async () => {
     logsMock
       .on(FilterLogEventsCommand, {
-        logGroupName: "/aws/lambda/wraps-selfhost-api",
+        logGroupName:
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
       })
       .resolves({
         events: [
@@ -349,7 +350,10 @@ describe("fetchLogs", () => {
     const entries = await fetchLogs({
       region: REGION,
       groups: [
-        group("/aws/lambda/wraps-selfhost-api", "api"),
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
         group("/aws/lambda/wraps-selfhost-worker", "workers"),
       ],
       startTime: 0,
@@ -372,7 +376,8 @@ describe("fetchLogs", () => {
     });
     logsMock
       .on(FilterLogEventsCommand, {
-        logGroupName: "/aws/lambda/wraps-selfhost-api",
+        logGroupName:
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
       })
       .resolves({ events: [{ eventId: "1", timestamp: 1, message: "alive" }] })
       .on(FilterLogEventsCommand, {
@@ -383,7 +388,10 @@ describe("fetchLogs", () => {
     const entries = await fetchLogs({
       region: REGION,
       groups: [
-        group("/aws/lambda/wraps-selfhost-api", "api"),
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
         group("/aws/lambda/wraps-selfhost-gone", "workers"),
       ],
       startTime: 0,
@@ -397,7 +405,12 @@ describe("fetchLogs", () => {
 
     await fetchLogs({
       region: REGION,
-      groups: [group("/aws/lambda/wraps-selfhost-api", "api")],
+      groups: [
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
+      ],
       startTime: 0,
       filterPattern: "?ERROR",
     });
@@ -417,7 +430,12 @@ describe("createLogPoller", () => {
     logsMock.on(FilterLogEventsCommand).resolves({ events: [] });
     const poll = createLogPoller({
       region: REGION,
-      groups: [group("/aws/lambda/wraps-selfhost-api", "api")],
+      groups: [
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
+      ],
       since: 100_000,
       now: () => 200_000,
     });
@@ -453,7 +471,12 @@ describe("createLogPoller", () => {
 
     const poll = createLogPoller({
       region: REGION,
-      groups: [group("/aws/lambda/wraps-selfhost-api", "api")],
+      groups: [
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
+      ],
       since: 0,
       now: () => 10_000,
     });
@@ -475,7 +498,12 @@ describe("createLogPoller", () => {
 
     const poll = createLogPoller({
       region: REGION,
-      groups: [group("/aws/lambda/wraps-selfhost-api", "api")],
+      groups: [
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
+      ],
       since: 0,
       now: () => 10_000,
     });
@@ -487,7 +515,8 @@ describe("createLogPoller", () => {
   it("interleaves fresh events from multiple groups by timestamp", async () => {
     logsMock
       .on(FilterLogEventsCommand, {
-        logGroupName: "/aws/lambda/wraps-selfhost-api",
+        logGroupName:
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
       })
       .resolves({
         events: [{ eventId: "a", timestamp: 3000, message: "api" }],
@@ -502,7 +531,10 @@ describe("createLogPoller", () => {
     const poll = createLogPoller({
       region: REGION,
       groups: [
-        group("/aws/lambda/wraps-selfhost-api", "api"),
+        group(
+          "/aws/lambda/wraps-selfhost-production-SelfhostApiFunction-abc12345",
+          "api"
+        ),
         group("/aws/lambda/wraps-selfhost-worker", "workers"),
       ],
       since: 0,

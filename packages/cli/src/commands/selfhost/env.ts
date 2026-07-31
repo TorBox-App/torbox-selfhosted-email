@@ -42,7 +42,7 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
   if (!metadata?.services?.selfhost) {
     clack.log.error("No self-hosted deployment found");
     console.log(
-      `\nRun ${pc.cyan("wraps selfhost deploy")} to deploy the self-hosted control plane.\n`
+      `\nRun ${pc.cyan("pnpm selfhost:deploy")} from your fork to deploy the self-hosted control plane.\n`
     );
     process.exit(1);
     return;
@@ -56,7 +56,7 @@ export async function selfhostEnv(options: SelfhostEnvOptions): Promise<void> {
       "Self-hosted deployment is incomplete — API URL is not available yet."
     );
     console.log(
-      `\nThe deployment may have failed partway through. Run ${pc.cyan("pnpm selfhost:upgrade")} from your fork (SST deployments) or re-run ${pc.cyan("wraps selfhost deploy")} (API-only deployments) to complete it.\n`
+      `\nThe deployment may have failed partway through. Run ${pc.cyan("pnpm selfhost:upgrade")} from your fork to complete it.\n`
     );
     process.exit(1);
     return;

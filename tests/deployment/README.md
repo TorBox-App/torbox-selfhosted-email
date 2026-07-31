@@ -29,22 +29,19 @@ Scenarios invoke `packages/cli/dist/cli.js` directly, so build the CLI first.
 | Scenario | Command | Notes |
 |---|---|---|
 | Default suite | `./run-all.sh` | CLI / CDK / CFN / Pulumi deployment paths |
-| Self-hosted, Pulumi variant | `./selfhost/run.sh` | Deploys, verifies, and tears down a throwaway control plane. |
-| Self-hosted, SST variant | `./selfhost-sst/run.sh` | Verifies an EXISTING deployment (demo.wraps.dev). Never deploys, never tears down. |
+| Self-hosted | `./selfhost-sst/run.sh` | Verifies an EXISTING deployment (demo.wraps.dev). Never deploys, never tears down. |
 | Dual-plane coexistence | `./coexistence/run.sh` | Verifies an EXISTING deployment. Not in `run-all.sh`. |
 
 None of the self-hosted scenarios are in `run-all.sh`: they need a live control
 plane and credentials that `run-all.sh` does not provision.
 
-## Self-hosted, SST variant (`selfhost-sst/run.sh`)
+## Self-hosted (`selfhost-sst/run.sh`)
 
-`selfhost/run.sh` covers the Pulumi variant (`wraps selfhost deploy`) end to
-end and can hardcode its fixed physical names. The SST variant
-(`pnpm selfhost:deploy` from a fork) derives every name as
-`{app}-{stage}-{logical}-{suffix}`, so nothing can be fetched by exact name —
-the same constraint that made the CLI's own API URL recovery a paginated scan.
-It also deploys a dashboard and send-path workers that the Pulumi variant does
-not, and it is what the demo control plane at **demo.wraps.dev** runs.
+Self-hosting deploys via `pnpm selfhost:deploy` from a fork (SST), which derives
+every physical name as `{app}-{stage}-{logical}-{suffix}` — so nothing can be
+fetched by exact name, the same constraint that makes the CLI's own API URL
+recovery a paginated scan. It is what the demo control plane at
+**demo.wraps.dev** runs.
 
 This scenario verifies that deployment in place. It never deploys and never
 tears down — the account is a live demo, not a scratch account.
@@ -64,7 +61,7 @@ untouched — that domain drives throwaway SES deploys into the CLI test account
 | Phase | What it proves | Mutates |
 |---|---|---|
 | 1. Deployed SST resources | The license reaches the API as `WRAPS_LICENSE_KEY` (not the bare `LICENSE_KEY` the API never reads), the dashboard Lambda is licensed too, the API/dashboard/workers all point at this deployment's own URLs, the console role name is the self-hosted one, Sentry is the self-hoster's | no |
-| 2. CLI resolution | `selfhost status` and `selfhost env` find an **SST** deployment — the Pulumi-only lookup silently no-opped here, leaving `selfhost connect` unable to find the plane | no |
+| 2. CLI resolution | `selfhost status` and `selfhost env` find the deployment via the paginated Lambda scan, so `selfhost connect` can reach the plane | no |
 | 3. Console roles + identity | Both console roles exist with the right principals, neither connect flow overwrote the other's trust policy, the enforcer invoke grant reached the self-hosted role, and the two control-plane identities are distinct | no |
 | 4. SES event delivery | Both planes' targets coexist on one rule; with `WRAPS_SELFHOST_LIVE_SEND=1`, one real send proves events are actually accepted | one send |
 | 5. `update-role`, both forms | Both forms of the command write the role they claim and leave the other plane's role alone | IAM trust policies |
@@ -104,7 +101,7 @@ actually created are only checked here.
 
 - An AWS account with `wraps email deploy` already run.
 - A **deployed** self-hosted control plane. This script does not deploy or tear
-  one down. Use `wraps selfhost deploy` (or `selfhost/run.sh`) first.
+  one down. Use `pnpm selfhost:deploy` from a fork first.
 - `WRAPS_SELFHOST_API_URL` — the self-hosted API's base URL, no trailing slash.
 - `WRAPS_TEST_REGION` and `AWS_PROFILE_CLI`, as with every other scenario.
 

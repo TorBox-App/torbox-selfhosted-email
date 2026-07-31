@@ -5,7 +5,7 @@ import mri from "mri";
 import pc from "picocolors";
 import { normalizeApiUrl } from "../../packages/cli/src/utils/selfhost/api-url.js";
 import { detectEmailStack } from "../../packages/cli/src/utils/selfhost/email-stack.js";
-import { detectSelfhostVariant } from "../../packages/cli/src/utils/selfhost/variant.js";
+import { hasExistingSelfhostResources } from "../../packages/cli/src/utils/selfhost/existing-deployment.js";
 import { validateAWSCredentials } from "../../packages/cli/src/utils/shared/aws.js";
 import {
   loadConnectionMetadata,
@@ -162,41 +162,31 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
   const webDomain = options.webDomain || env.SELFHOST_WEB_DOMAIN;
 
   // NEXT_PUBLIC_APP_URL marks a completed deploy. Until one has completed,
-  // any existing wraps-selfhost-* scheduler resources in the account belong
-  // to something else — the Pulumi CLI control plane or a crashed earlier
-  // attempt — and `sst deploy` would die partway with EntityAlreadyExists
-  // (the scheduler IAM role name is account-global, shared by both variants).
-  if (!env.NEXT_PUBLIC_APP_URL) {
-    const deployedVariant = await detectSelfhostVariant(region);
-    if (deployedVariant === "pulumi") {
-      clack.log.error(
-        "An API-only selfhost control plane (deployed by `wraps selfhost deploy`) already exists in this AWS account."
-      );
-      clack.log.info(
-        `The two selfhost variants share IAM resources and cannot coexist. Run ${pc.cyan("wraps selfhost destroy")} first, then re-run ${pc.cyan("pnpm selfhost:upgrade")}.`
-      );
-      process.exit(1);
-    }
-    if (deployedVariant === "sst") {
-      clack.log.error(
-        "Found existing wraps-selfhost scheduler resources not created by this deployment — likely a previous `wraps selfhost deploy` (CLI) or a crashed earlier attempt."
-      );
-      clack.log.info(
-        [
-          "Deploying over them fails with EntityAlreadyExists. Remove them, then re-run:",
-          pc.cyan(
-            "  aws scheduler delete-schedule-group --name wraps-selfhost-schedulers"
-          ),
-          pc.cyan(
-            '  for p in $(aws iam list-role-policies --role-name wraps-selfhost-scheduler-role --query "PolicyNames[]" --output text); do aws iam delete-role-policy --role-name wraps-selfhost-scheduler-role --policy-name "$p"; done'
-          ),
-          pc.cyan(
-            "  aws iam delete-role --role-name wraps-selfhost-scheduler-role"
-          ),
-        ].join("\n")
-      );
-      process.exit(1);
-    }
+  // any existing wraps-selfhost-* scheduler resources in the account belong to
+  // a crashed earlier attempt, and `sst deploy` would die partway with
+  // EntityAlreadyExists (the scheduler IAM role name is account-global).
+  if (
+    !env.NEXT_PUBLIC_APP_URL &&
+    (await hasExistingSelfhostResources(region))
+  ) {
+    clack.log.error(
+      "Found existing wraps-selfhost scheduler resources not created by this deployment — likely a crashed earlier attempt."
+    );
+    clack.log.info(
+      [
+        "Deploying over them fails with EntityAlreadyExists. Remove them, then re-run:",
+        pc.cyan(
+          "  aws scheduler delete-schedule-group --name wraps-selfhost-schedulers"
+        ),
+        pc.cyan(
+          '  for p in $(aws iam list-role-policies --role-name wraps-selfhost-scheduler-role --query "PolicyNames[]" --output text); do aws iam delete-role-policy --role-name wraps-selfhost-scheduler-role --policy-name "$p"; done'
+        ),
+        pc.cyan(
+          "  aws iam delete-role --role-name wraps-selfhost-scheduler-role"
+        ),
+      ].join("\n")
+    );
+    process.exit(1);
   }
 
   let metadata = await loadConnectionMetadata(identity.accountId, region);

@@ -1,13 +1,15 @@
 /**
  * AWS Lambda Handler for Wraps API
  *
- * Handles two event shapes:
- *   - HTTP  (API Gateway v2 / Lambda Function URL) → Elysia app
- *   - SQS   (batch queue, workflow queue)          → worker handlers
+ * HTTP only (API Gateway v2 / Lambda Function URL) → Elysia app.
  *
- * The selfhost control-plane Lambda receives all three via a single function:
- * HTTP requests arrive via the Function URL, queue messages arrive via event
- * source mappings on the same function.
+ * This used to also multiplex SQS events to the batch/workflow workers, for the
+ * deleted Pulumi selfhost variant that ran the whole control plane on one
+ * function. Both the cloud stack (`infra/api.ts`) and the selfhost stack
+ * (`infra/selfhost.config.ts`) give every queue its own dedicated worker
+ * function, so no event source mapping targets this handler. Do not reintroduce
+ * the multiplexer: its SQS branch fell through into the HTTP branch and threw
+ * on `rawPath` after every chunk it processed.
  */
 
 // Initialize Sentry before all other imports
@@ -17,48 +19,13 @@ import { wrapHandler } from "@sentry/aws-serverless";
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
-  Context,
-  SQSBatchResponse,
-  SQSEvent,
 } from "aws-lambda";
-import { handler as workflowProcessorHandler } from "./(ee)/workers/workflow-processor";
 import { app } from "./index";
 import { flushLogger } from "./lib/logger";
-import { handler as batchSenderHandler } from "./workers/batch-sender";
-
-function isSQSEvent(event: unknown): event is SQSEvent {
-  return (
-    typeof event === "object" &&
-    event !== null &&
-    "Records" in event &&
-    Array.isArray((event as SQSEvent).Records) &&
-    (event as SQSEvent).Records.length > 0 &&
-    "eventSource" in (event as SQSEvent).Records[0] &&
-    (event as SQSEvent).Records[0].eventSource === "aws:sqs"
-  );
-}
 
 export const handler = wrapHandler(async function handler(
-  event: APIGatewayProxyEventV2 | SQSEvent,
-  context: Context
-): Promise<APIGatewayProxyResultV2 | SQSBatchResponse> {
-  // Route SQS events to the appropriate worker
-  if (isSQSEvent(event)) {
-    const queueArn = event.Records[0].eventSourceARN ?? "";
-    if (queueArn.includes("wraps-selfhost-workflow")) {
-      return workflowProcessorHandler(event);
-    }
-    // batchSenderHandler is typed as SQSHandler (callback-based) but is async
-    await (
-      batchSenderHandler as unknown as (
-        e: SQSEvent,
-        c: Context
-      ) => Promise<void>
-    )(event, context);
-  }
-
-  // HTTP event — serve via Elysia
-  const httpEvent = event as APIGatewayProxyEventV2;
+  httpEvent: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
   try {
     // Normalize rawPath: strip leading double-slashes before building the URL.
     // A trailing slash on NEXT_PUBLIC_API_URL + /v1/path produces //v1/path.

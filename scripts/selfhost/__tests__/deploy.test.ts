@@ -63,11 +63,14 @@ vi.mock("../../../packages/cli/src/utils/shared/aws.js", () => ({
   getAWSRegion: vi.fn().mockResolvedValue("us-east-1"),
 }));
 
-// ── variant probe mock (never hit real AWS from unit tests) ──────────────────
-const mockDetectVariant = vi.hoisted(() => vi.fn().mockResolvedValue(null));
-vi.mock("../../../packages/cli/src/utils/selfhost/variant.js", () => ({
-  detectSelfhostVariant: mockDetectVariant,
-}));
+// ── existing-deployment probe mock (never hit real AWS from unit tests) ──────
+const mockHasExisting = vi.hoisted(() => vi.fn().mockResolvedValue(false));
+vi.mock(
+  "../../../packages/cli/src/utils/selfhost/existing-deployment.js",
+  () => ({
+    hasExistingSelfhostResources: mockHasExisting,
+  })
+);
 
 // ── metadata mock ─────────────────────────────────────────────────────────────
 vi.mock("../../../packages/cli/src/utils/shared/metadata.js", async () => {
@@ -207,7 +210,7 @@ describe("scripts/selfhost/deploy", () => {
 
     mockConfirm.mockResolvedValue(false);
     mockText.mockResolvedValue("");
-    mockDetectVariant.mockResolvedValue(null);
+    mockHasExisting.mockResolvedValue(false);
     mockMigrate.mockResolvedValue(undefined);
     mockEnsurePulumiInstalled.mockResolvedValue(false);
 
@@ -674,25 +677,8 @@ describe("scripts/selfhost/deploy", () => {
     );
   });
 
-  it("stamps variant 'sst' on saved metadata", async () => {
-    const { deploy } = await import("../deploy.js");
-    await deploy({
-      databaseUrl: "postgres://user:pass@host/db",
-      licenseKey: "wraps_lic_test",
-      region: "us-east-1",
-    });
-
-    expect(metadataModule.saveConnectionMetadata).toHaveBeenCalledWith(
-      expect.objectContaining({
-        services: expect.objectContaining({
-          selfhost: expect.objectContaining({ variant: "sst" }),
-        }),
-      })
-    );
-  });
-
-  it("refuses to deploy when a pulumi control plane exists, before writing .env.selfhost", async () => {
-    mockDetectVariant.mockResolvedValue("pulumi");
+  it("refuses to redeploy over an existing deployment without .env.selfhost", async () => {
+    mockHasExisting.mockResolvedValue(true);
 
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit called");
@@ -710,27 +696,6 @@ describe("scripts/selfhost/deploy", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
     // Must fail BEFORE the .env.selfhost write — its existence permanently
     // locks customers out of the deploy path
-    expect(mockWriteFile).not.toHaveBeenCalled();
-    exitSpy.mockRestore();
-  });
-
-  it("refuses to redeploy over an existing SST deployment without .env.selfhost", async () => {
-    mockDetectVariant.mockResolvedValue("sst");
-
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
-
-    const { deploy } = await import("../deploy.js");
-    await expect(
-      deploy({
-        databaseUrl: "postgres://user:pass@host/db",
-        licenseKey: "wraps_lic_test",
-        region: "us-east-1",
-      })
-    ).rejects.toThrow("process.exit called");
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
     expect(mockWriteFile).not.toHaveBeenCalled();
     exitSpy.mockRestore();
   });
