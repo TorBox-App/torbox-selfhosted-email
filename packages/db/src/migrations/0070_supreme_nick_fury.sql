@@ -1,0 +1,4 @@
+-- NOTE: contact_org_id_idx is created out-of-band, CONCURRENTLY, via
+-- packages/db/scripts/create-broadcast-audience-index.ts.
+-- The contact table is large in production; a blocking index build is not
+-- acceptable. Run that script after this migration and before relying on it.

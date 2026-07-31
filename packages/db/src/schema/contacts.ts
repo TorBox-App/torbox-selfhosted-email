@@ -175,14 +175,22 @@ export const contact = pgTable(
       table.status
     ),
 
-    // Keyset pagination for batch-sender chunking. Ordering tuple:
-    // (organizationId, createdAt, id). Created CONCURRENTLY in prod via
+    // Supports (organizationId, createdAt, id) ordering. The batch-sender
+    // chunk query does not currently use this ordering — see orgIdIdx below
+    // for the index it actually needs. Created CONCURRENTLY in prod via
     // packages/db/scripts/create-broadcast-resume-indexes.ts.
     keysetIdx: index("contact_keyset_idx").on(
       table.organizationId,
       table.createdAt,
       table.id
     ),
+
+    // Serves the batch-sender chunk query, which filters by organizationId and
+    // paginates with `id > cursor ORDER BY id` (see getContactsChunk in
+    // apps/api/src/workers/batch-sender.ts). keysetIdx above leads with
+    // createdAt and cannot serve that ordering. Created CONCURRENTLY in prod
+    // via packages/db/scripts/create-broadcast-audience-index.ts.
+    orgIdIdx: index("contact_org_id_idx").on(table.organizationId, table.id),
   })
 );
 
