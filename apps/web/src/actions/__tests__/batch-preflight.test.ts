@@ -31,6 +31,7 @@ import {
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
   checkTemplateVariableCoverage,
+  createBatchSend,
   promoteDraftToSend,
   saveDraftBatchSend,
 } from "../batch";
@@ -575,6 +576,95 @@ describe("checkTemplateVariableCoverage — static mappings cover variables", ()
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Unit 6b: contact-field mappings resolve from the column, not properties
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("checkTemplateVariableCoverage — contact-field mappings", () => {
+  it("reads the mapped contact column instead of a same-named custom property", async () => {
+    // dashboardUrl is mapped to the contact's email column. Neither sampled
+    // contact has a dashboardUrl property, but both have an email, so the
+    // variable resolves for everyone.
+    const result = await checkTemplateVariableCoverage(
+      testOrganization.id,
+      templateWithCustomVar.id,
+      { audienceType: "all" },
+      [
+        {
+          variableName: "dashboardUrl",
+          source: { type: "contact", field: "email" },
+        },
+      ]
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.allFail).toBe(false);
+    expect(result.missingCount).toBe(0);
+  });
+
+  it("still reports contacts whose mapped column is empty", async () => {
+    // firstName is unset on both fixture contacts, so a mapping to it leaves
+    // every contact unresolved.
+    const result = await checkTemplateVariableCoverage(
+      testOrganization.id,
+      templateWithCustomVar.id,
+      { audienceType: "all" },
+      [
+        {
+          variableName: "dashboardUrl",
+          source: { type: "contact", field: "firstName" },
+        },
+      ]
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.missingCount).toBe(result.totalSampled);
+    expect(result.missingVariables).toContain("dashboardUrl");
+  });
+
+  it("resolves a properties.<key> mapping the same way the send worker does", async () => {
+    // The API accepts any field string and the worker resolves the
+    // "properties." prefix, so the preflight has to as well. The variable
+    // (ctaUrl) is deliberately named differently from the property it maps
+    // to (dashboardUrl) — reading the variable name off properties, as the
+    // unmapped path does, would report every contact as missing.
+    const renamedVarTemplate = {
+      ...templateWithCustomVar,
+      id: `preflight-tmpl-renamed-${RUN_ID}`,
+      name: "Renamed Var Template",
+      variables: [{ name: "ctaUrl", fallback: undefined }],
+      sesTemplateName: `wraps-org-preflight-renamed-${RUN_ID}`,
+    };
+
+    await db.insert(template).values(renamedVarTemplate).onConflictDoNothing();
+
+    try {
+      const result = await checkTemplateVariableCoverage(
+        testOrganization.id,
+        renamedVarTemplate.id,
+        { audienceType: "all" },
+        [
+          {
+            variableName: "ctaUrl",
+            source: { type: "contact", field: "properties.dashboardUrl" },
+          },
+        ]
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      // contactWithProp resolves through the mapping, contactWithoutProp does not.
+      expect(result.allFail).toBe(false);
+      expect(result.missingCount).toBeGreaterThan(0);
+      expect(result.missingCount).toBeLessThan(result.totalSampled);
+    } finally {
+      await db.delete(template).where(eq(template.id, renamedVarTemplate.id));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Unit 7: promoteDraftToSend blocks when all contacts would fail rendering
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -722,6 +812,447 @@ describe("promoteDraftToSend — blocks all-fail sends", () => {
         .delete(organizationExtension)
         .where(eq(organizationExtension.organizationId, blockOrgId));
       await db.delete(organization).where(eq(organization.id, blockOrgId));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit 7b: a static mapping unblocks a send no contact could otherwise pass
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("promoteDraftToSend — static mappings unblock all-fail sends", () => {
+  it("sends when the required variable is covered by a static mapping instead of contact properties", async () => {
+    // Regression: the send-time coverage check ignored variableMappings, so a
+    // variable mapped to a static value in the wizard still blocked the send.
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    const orgId = `preflight-static-org-${RUN_ID}`;
+    const contactId = `preflight-static-contact-${RUN_ID}`;
+    const memberId = `preflight-static-member-${RUN_ID}`;
+    const awsId = `preflight-static-aws-${RUN_ID}`;
+    const subId = `sub_preflight_static_${RUN_ID}`;
+
+    await db
+      .insert(organization)
+      .values({
+        id: orgId,
+        name: "Static Mapping Org",
+        slug: `static-map-org-${RUN_ID}`,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(organizationExtension)
+      .values({ organizationId: orgId })
+      .onConflictDoNothing();
+
+    await db
+      .insert(subscription)
+      .values({
+        id: subId,
+        plan: "growth",
+        referenceId: orgId,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(member)
+      .values({
+        id: memberId,
+        organizationId: orgId,
+        userId: testUser.id,
+        role: "owner" as const,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: awsId,
+        organizationId: orgId,
+        externalId: `static-map-ext-${RUN_ID}`,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(contact)
+      .values({
+        id: contactId,
+        organizationId: orgId,
+        email: `static-map-${RUN_ID}@example.com`,
+        emailHash: `hash-static-map-${RUN_ID}`,
+        emailStatus: "active" as const,
+        properties: {}, // no changelogLink — only the static mapping covers it
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    const staticTemplate = {
+      id: `preflight-static-tmpl-${RUN_ID}`,
+      organizationId: orgId,
+      name: "Static Mapping Template",
+      subject: "What's new",
+      content: {},
+      sourceFormat: "react-email" as const,
+      variables: [{ name: "changelogLink", fallback: undefined }],
+      status: "PUBLISHED" as const,
+      type: "EMAIL" as const,
+      sesTemplateName: `wraps-static-map-${RUN_ID}`,
+      publishedAt: new Date("2026-01-01"),
+      createdAt: new Date(),
+      updatedAt: new Date("2025-12-01"),
+      createdBy: testUser.id,
+    };
+
+    await db.insert(template).values(staticTemplate).onConflictDoNothing();
+
+    try {
+      const draft = await saveDraftBatchSend(orgId, {
+        awsAccountId: awsId,
+        templateId: staticTemplate.id,
+        from: "sender@example.com",
+        subject: "What's new",
+        variableMappings: [
+          {
+            variableName: "changelogLink",
+            source: { type: "static", value: "https://torbox.cooking" },
+          },
+        ],
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(draft.batch.id, orgId, {});
+
+      expect(result.success).toBe(true);
+      expect(
+        fetchSpy.mock.calls.some(([url]) =>
+          String(url).includes(`/v1/batch/${draft.batch.id}/send`)
+        )
+      ).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db.delete(batchSend).where(eq(batchSend.organizationId, orgId));
+      await db.delete(template).where(eq(template.id, staticTemplate.id));
+      await db.delete(contact).where(eq(contact.id, contactId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, awsId));
+      await db.delete(member).where(eq(member.id, memberId));
+      await db.delete(subscription).where(eq(subscription.id, subId));
+      await db
+        .delete(organizationExtension)
+        .where(eq(organizationExtension.organizationId, orgId));
+      await db.delete(organization).where(eq(organization.id, orgId));
+    }
+  });
+
+  it("still blocks when the static mapping value is blank", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    const orgId = `preflight-blank-org-${RUN_ID}`;
+    const contactId = `preflight-blank-contact-${RUN_ID}`;
+    const memberId = `preflight-blank-member-${RUN_ID}`;
+    const awsId = `preflight-blank-aws-${RUN_ID}`;
+    const subId = `sub_preflight_blank_${RUN_ID}`;
+
+    await db
+      .insert(organization)
+      .values({
+        id: orgId,
+        name: "Blank Mapping Org",
+        slug: `blank-map-org-${RUN_ID}`,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(organizationExtension)
+      .values({ organizationId: orgId })
+      .onConflictDoNothing();
+
+    await db
+      .insert(subscription)
+      .values({
+        id: subId,
+        plan: "growth",
+        referenceId: orgId,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(member)
+      .values({
+        id: memberId,
+        organizationId: orgId,
+        userId: testUser.id,
+        role: "owner" as const,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: awsId,
+        organizationId: orgId,
+        externalId: `blank-map-ext-${RUN_ID}`,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(contact)
+      .values({
+        id: contactId,
+        organizationId: orgId,
+        email: `blank-map-${RUN_ID}@example.com`,
+        emailHash: `hash-blank-map-${RUN_ID}`,
+        emailStatus: "active" as const,
+        properties: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    const blankTemplate = {
+      id: `preflight-blank-tmpl-${RUN_ID}`,
+      organizationId: orgId,
+      name: "Blank Mapping Template",
+      subject: "What's new",
+      content: {},
+      sourceFormat: "react-email" as const,
+      variables: [{ name: "changelogLink", fallback: undefined }],
+      status: "PUBLISHED" as const,
+      type: "EMAIL" as const,
+      sesTemplateName: `wraps-blank-map-${RUN_ID}`,
+      publishedAt: new Date("2026-01-01"),
+      createdAt: new Date(),
+      updatedAt: new Date("2025-12-01"),
+      createdBy: testUser.id,
+    };
+
+    await db.insert(template).values(blankTemplate).onConflictDoNothing();
+
+    try {
+      const draft = await saveDraftBatchSend(orgId, {
+        awsAccountId: awsId,
+        templateId: blankTemplate.id,
+        from: "sender@example.com",
+        subject: "What's new",
+        variableMappings: [
+          {
+            variableName: "changelogLink",
+            source: { type: "static", value: "  " },
+          },
+        ],
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(draft.batch.id, orgId, {});
+
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.error).toContain("changelogLink");
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db.delete(batchSend).where(eq(batchSend.organizationId, orgId));
+      await db.delete(template).where(eq(template.id, blankTemplate.id));
+      await db.delete(contact).where(eq(contact.id, contactId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, awsId));
+      await db.delete(member).where(eq(member.id, memberId));
+      await db.delete(subscription).where(eq(subscription.id, subId));
+      await db
+        .delete(organizationExtension)
+        .where(eq(organizationExtension.organizationId, orgId));
+      await db.delete(organization).where(eq(organization.id, orgId));
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit 7c: the direct-send path (no draft) applies the same mapping rules
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("createBatchSend — coverage gate honours variable mappings", () => {
+  it("blocks without a mapping and reaches the API with one", async () => {
+    // createBatchSend is the "Send" button's path when the wizard was never
+    // saved as a draft. It builds its own preflight payload, so it can drop
+    // variableMappings independently of promoteDraftToSend.
+    const orgId = `preflight-direct-org-${RUN_ID}`;
+    const contactId = `preflight-direct-contact-${RUN_ID}`;
+    const memberId = `preflight-direct-member-${RUN_ID}`;
+    const awsId = `preflight-direct-aws-${RUN_ID}`;
+    const subId = `sub_preflight_direct_${RUN_ID}`;
+
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+
+    // Reject the enqueue with a distinctive error. Passing the coverage gate
+    // is then observable as "got the API's error, not the variable error",
+    // without needing the downstream row/tracking machinery to succeed.
+    const realFetch = globalThis.fetch.bind(globalThis);
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (...args: Parameters<typeof fetch>) => {
+        const [url] = args;
+        const asString = typeof url === "string" ? url : url.toString();
+        if (asString.endsWith("/v1/batch")) {
+          return new Response(JSON.stringify({ error: "enqueue-refused" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return realFetch(...args);
+      });
+
+    await db
+      .insert(organization)
+      .values({
+        id: orgId,
+        name: "Direct Send Org",
+        slug: `direct-send-org-${RUN_ID}`,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(organizationExtension)
+      .values({ organizationId: orgId })
+      .onConflictDoNothing();
+
+    await db
+      .insert(subscription)
+      .values({
+        id: subId,
+        plan: "growth",
+        referenceId: orgId,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(member)
+      .values({
+        id: memberId,
+        organizationId: orgId,
+        userId: testUser.id,
+        role: "owner" as const,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(awsAccount)
+      .values({
+        ...testAwsAccount,
+        id: awsId,
+        organizationId: orgId,
+        externalId: `direct-send-ext-${RUN_ID}`,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(contact)
+      .values({
+        id: contactId,
+        organizationId: orgId,
+        email: `direct-send-${RUN_ID}@example.com`,
+        emailHash: `hash-direct-send-${RUN_ID}`,
+        emailStatus: "active" as const,
+        properties: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    const directTemplate = {
+      id: `preflight-direct-tmpl-${RUN_ID}`,
+      organizationId: orgId,
+      name: "Direct Send Template",
+      subject: "What's new",
+      content: {},
+      sourceFormat: "react-email" as const,
+      variables: [{ name: "changelogLink", fallback: undefined }],
+      status: "PUBLISHED" as const,
+      type: "EMAIL" as const,
+      sesTemplateName: `wraps-direct-send-${RUN_ID}`,
+      publishedAt: new Date("2026-01-01"),
+      createdAt: new Date(),
+      updatedAt: new Date("2025-12-01"),
+      createdBy: testUser.id,
+    };
+
+    await db.insert(template).values(directTemplate).onConflictDoNothing();
+
+    const payload = {
+      awsAccountId: awsId,
+      templateId: directTemplate.id,
+      from: "sender@example.com",
+      subject: "What's new",
+      recipientFilter: { audienceType: "all" as const },
+    };
+
+    try {
+      // Control: no mapping, no contact property, no fallback → blocked
+      // before the API is ever called.
+      const blocked = await createBatchSend(orgId, payload);
+      expect(blocked.success).toBe(false);
+      if (blocked.success) return;
+      expect(blocked.error).toContain("changelogLink");
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      // Same send with a static mapping clears the gate and hands off.
+      const sent = await createBatchSend(orgId, {
+        ...payload,
+        variableMappings: [
+          {
+            variableName: "changelogLink",
+            source: { type: "static", value: "https://torbox.cooking" },
+          },
+        ],
+      });
+
+      expect(sent.success).toBe(false);
+      if (sent.success) return;
+      expect(sent.error).toContain("enqueue-refused");
+      expect(sent.error).not.toContain("changelogLink");
+
+      const enqueue = fetchSpy.mock.calls.find(([url]) =>
+        String(url).endsWith("/v1/batch")
+      );
+      expect(enqueue).toBeDefined();
+      const body = JSON.parse(String(enqueue?.[1]?.body)) as {
+        variableMappings?: { variableName: string }[];
+      };
+      expect(body.variableMappings?.[0]?.variableName).toBe("changelogLink");
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db.delete(batchSend).where(eq(batchSend.organizationId, orgId));
+      await db.delete(template).where(eq(template.id, directTemplate.id));
+      await db.delete(contact).where(eq(contact.id, contactId));
+      await db.delete(awsAccount).where(eq(awsAccount.id, awsId));
+      await db.delete(member).where(eq(member.id, memberId));
+      await db.delete(subscription).where(eq(subscription.id, subId));
+      await db
+        .delete(organizationExtension)
+        .where(eq(organizationExtension.organizationId, orgId));
+      await db.delete(organization).where(eq(organization.id, orgId));
     }
   });
 });

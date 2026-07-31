@@ -446,6 +446,7 @@ export async function getSampleBroadcastRecipients(
 }
 
 export type SampleRecipientWithProperties = SampleRecipient & {
+  jobTitle: string | null;
   properties: Record<string, unknown> | null;
 };
 
@@ -477,6 +478,7 @@ export async function getSampleRecipientsWithProperties(
         firstName: contact.firstName,
         lastName: contact.lastName,
         company: contact.company,
+        jobTitle: contact.jobTitle,
         properties: contact.properties,
       })
       .from(contact)

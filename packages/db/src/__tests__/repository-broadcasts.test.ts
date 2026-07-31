@@ -12,6 +12,7 @@ const contactA = {
   email: "a@example.com",
   emailHash: `hash-a-${crypto.randomUUID().slice(0, 8)}`,
   emailStatus: "active" as const,
+  jobTitle: "Head of Growth",
   properties: { companyName: "Acme", dashboardUrl: "https://acme.example.com" },
   createdAt: new Date("2026-01-01"),
   updatedAt: new Date("2026-01-01"),
@@ -62,6 +63,17 @@ describe("Repository: getSampleRecipientsWithProperties", () => {
       companyName: "Acme",
       dashboardUrl: "https://acme.example.com",
     });
+  });
+
+  it("includes jobTitle, which broadcast variable mappings can target", async () => {
+    const { contacts } = await getSampleRecipientsWithProperties(
+      orgId,
+      "email"
+    );
+
+    const contactWithJobTitle = contacts.find((c) => c.id === contactA.id);
+    expect(contactWithJobTitle?.jobTitle).toBe("Head of Growth");
+    expect(contacts.find((c) => c.id === contactB.id)?.jobTitle).toBeNull();
   });
 
   it("returns contacts with empty properties as empty object", async () => {

@@ -211,10 +211,22 @@ async function assessVariableCoverage(
   const templateData = await findTemplateVariables(templateId, organizationId);
   if (!templateData) return EMPTY;
 
+  // A variable with a non-empty static value is satisfied for every contact.
   const staticMappedVars = new Set(
     (variableMappings ?? [])
-      .filter((m) => m.source.type === "static")
+      .filter((m) => m.source.type === "static" && m.source.value.trim() !== "")
       .map((m) => m.variableName)
+  );
+
+  // A variable mapped to a contact field resolves from that column, not from
+  // a same-named custom property, so it has to be checked against the column.
+  const contactFieldMappedVars = new Map(
+    (variableMappings ?? [])
+      .filter((m) => m.source.type === "contact" && m.source.field)
+      .map((m) => [
+        m.variableName,
+        (m.source as { type: "contact"; field: string }).field,
+      ])
   );
 
   // Names the batch sender always provides from contact columns (not properties)
@@ -290,15 +302,40 @@ async function assessVariableCoverage(
     };
   }
 
-  const missingContacts = contacts.filter(
-    (c: { properties: Record<string, unknown> | null }) => {
-      const props = c.properties ?? {};
-      return riskyVars.some((varName) => {
-        const val = props[varName];
-        return val == null || val === "";
-      });
+  // Mirrors resolveContactField in apps/api/src/workers/variable-mappings.ts —
+  // the preflight must agree with what the sender actually resolves.
+  const PROPERTY_PREFIX = "properties.";
+  const resolveMappedField = (
+    c: (typeof contacts)[number],
+    field: string
+  ): unknown => {
+    if (field.startsWith(PROPERTY_PREFIX)) {
+      return c.properties?.[field.slice(PROPERTY_PREFIX.length)];
     }
-  );
+    switch (field) {
+      case "firstName":
+        return c.firstName;
+      case "lastName":
+        return c.lastName;
+      case "email":
+        return c.email;
+      case "company":
+        return c.company;
+      case "jobTitle":
+        return c.jobTitle;
+      default:
+        return;
+    }
+  };
+
+  const missingContacts = contacts.filter((c) => {
+    const props = c.properties ?? {};
+    return riskyVars.some((varName) => {
+      const field = contactFieldMappedVars.get(varName);
+      const val = field ? resolveMappedField(c, field) : props[varName];
+      return val == null || val === "";
+    });
+  });
 
   return {
     allFail: missingContacts.length === contacts.length,
@@ -533,7 +570,7 @@ async function validateAndPrepareSend(
     if (coverage.allFail && coverage.missingVariables.length > 0) {
       return {
         ok: false,
-        error: `All contacts are missing required template variables: ${coverage.missingVariables.join(", ")}. Add these attributes to your contacts or set a fallback in the template.`,
+        error: `All contacts are missing required template variables: ${coverage.missingVariables.join(", ")}. Set a value under Template Variables, add these attributes to your contacts, or set a fallback in the template.`,
       };
     }
   }
@@ -563,6 +600,7 @@ export const createBatchSend = orgAction(
       templateId: data.templateId,
       recipientFilter: data.recipientFilter,
       scheduledFor: data.scheduledFor,
+      variableMappings: data.variableMappings,
     });
 
     if (!prep.ok) {
@@ -955,6 +993,7 @@ export const promoteDraftToSend = orgAction(
       templateId: merged.templateId,
       recipientFilter: merged.recipientFilter,
       scheduledFor: merged.scheduledFor,
+      variableMappings: merged.variableMappings,
     });
 
     if (!prep.ok) {
