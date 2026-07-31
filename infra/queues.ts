@@ -113,8 +113,15 @@ batchQueue.subscribe(
         $app.stage === "production"
           ? "https://app.wraps.dev"
           : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
-      // Secret for signing unsubscribe tokens (must match API and web)
-      UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+      // Secret for signing unsubscribe tokens (must match API and web).
+      // Fail the deploy rather than ship an unset key — a mismatch silently
+      // breaks every unsubscribe link. `||` not `??`: CI forwards an unset
+      // secret as an empty string, which `??` would pass through.
+      UNSUBSCRIBE_SECRET:
+        process.env.UNSUBSCRIBE_SECRET ||
+        (() => {
+          throw new Error("UNSUBSCRIBE_SECRET is required");
+        })(),
       // Allow enqueuing the next chunk after processing current one
       BATCH_QUEUE_URL: batchQueue.url,
       // PostHog for activation tracking
@@ -251,8 +258,15 @@ workflowQueue.subscribe(
         $app.stage === "production"
           ? "https://app.wraps.dev"
           : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
-      // Secret for signing unsubscribe tokens (must match API and web)
-      UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+      // Secret for signing unsubscribe tokens (must match API and web).
+      // Fail the deploy rather than ship an unset key — a mismatch silently
+      // breaks every unsubscribe link. `||` not `??`: CI forwards an unset
+      // secret as an empty string, which `??` would pass through.
+      UNSUBSCRIBE_SECRET:
+        process.env.UNSUBSCRIBE_SECRET ||
+        (() => {
+          throw new Error("UNSUBSCRIBE_SECRET is required");
+        })(),
       // PostHog for activation tracking
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
       // Wraps platform for activation event emission

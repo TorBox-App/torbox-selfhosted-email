@@ -108,7 +108,11 @@ export default $config({
             "SELFHOST_DNS_PROVIDER=none requires SELFHOST_ACM_CERT_ARN (an ISSUED certificate in us-east-1, which is the only region CloudFront accepts)."
           );
         }
-        return { domain: { name: webDomain, dns: false, cert } };
+        // `as const` keeps this `false`, not `boolean`. SST accepts
+        // `false | AwsDns | CloudflareDns | VercelDns`; widening it to
+        // `boolean` makes the whole union unassignable to NextjsArgs, because
+        // `true` is not a valid DNS adapter.
+        return { domain: { name: webDomain, dns: false as const, cert } };
       }
       if (dnsProvider !== "route53") {
         throw new Error(

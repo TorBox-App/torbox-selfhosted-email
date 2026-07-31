@@ -15,11 +15,16 @@ trap 'rm -rf "$LOGDIR"' EXIT
 export TURBO_UI=stream
 
 typeset -a STEPS CMDS
-STEPS=(lint migrations typecheck baseline build test scripts)
+STEPS=(lint migrations typecheck infra baseline build test scripts)
 CMDS=(
   "pnpm check:errors"
   "pnpm --filter @wraps/db exec drizzle-kit check"
   "pnpm typecheck"
+  # infra/ is outside the pnpm workspace, so `turbo run typecheck` never visits
+  # it — same blind spot as scripts/ below. It cost us a self-host deploy
+  # failure: plan 170 used sst.aws.CronV2, which does not exist in the SST
+  # platform version pinned under infra/.sst, and nothing caught it.
+  "pnpm typecheck:infra"
   "pnpm test:baseline"
   "pnpm build"
   "pnpm test"
@@ -119,7 +124,7 @@ if [[ $FAIL -gt 0 ]]; then
       fi
       ;;
 
-    typecheck)
+    typecheck|infra)
       # TypeScript errors: extract "error TS" lines
       echo "--- type errors ---"
       grep -E 'error TS[0-9]+' "$logfile" | head -40 || true

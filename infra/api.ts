@@ -70,8 +70,18 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     // Workflow automation queue
     WORKFLOW_QUEUE_URL: workflowQueue.url,
     WORKFLOW_QUEUE_ARN: workflowQueue.arn,
-    // Confirmation email tokens (double opt-in)
-    UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+    // Confirmation email tokens (double opt-in). Fail the deploy rather than
+    // ship an unset signing key: the API, web and the batch workers all sign
+    // and verify unsubscribe tokens with this, so a missing or mismatched
+    // value silently breaks every unsubscribe link — a CAN-SPAM and
+    // deliverability problem, not a degraded feature. `||` not `??` because CI
+    // forwards an unset secret as an empty string (see NEXT_PUBLIC_APP_URL
+    // below), which `??` would pass through as a valid-looking key.
+    UNSUBSCRIBE_SECRET:
+      process.env.UNSUBSCRIBE_SECRET ||
+      (() => {
+        throw new Error("UNSUBSCRIBE_SECRET is required");
+      })(),
     // `||` not `??`: CI passes an unset secret through as an empty string,
     // which `??` would forward verbatim and resolveAppUrl rejects as unset.
     NEXT_PUBLIC_APP_URL:
