@@ -47,10 +47,10 @@ export function SmsPricingSection() {
             Transparent pricing
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Pay AWS directly at $0.0075/segment plus around $0.003 in carrier
-            fees and $2/mo for a toll-free number. No monthly platform
-            subscription, no per-seat fees, and no markup on top of carrier
-            costs.
+            Estimates below: roughly $0.0075/segment plus carrier fees and $2/mo
+            for a toll-free number. AWS passes carrier fees through at cost and
+            they vary by carrier, so your exact rate comes from AWS. No monthly
+            platform subscription, no per-seat fees, and no markup from us.
           </p>
         </div>
 
@@ -95,10 +95,12 @@ export function SmsPricingSection() {
               </table>
               <p className="mt-4 text-muted-foreground text-xs">
                 * Estimated at $0.0075/segment plus an average $0.003 carrier
-                fee and $2/mo for one toll-free number. AWS and mobile carriers
-                set these rates, and they vary by destination and message type —
-                check the AWS End User Messaging pricing page for current
-                figures. You pay AWS directly. Wraps Platform sold separately.
+                fee and $2/mo for one toll-free number — the same figures{" "}
+                <code className="font-mono">wraps sms init</code> quotes. AWS
+                does not publish a single US rate: carrier fees are passed
+                through at cost and vary by carrier and message type, so your
+                exact per-message price shows up in your AWS usage report. You
+                pay AWS directly. Wraps Platform sold separately.
               </p>
             </div>
           </div>

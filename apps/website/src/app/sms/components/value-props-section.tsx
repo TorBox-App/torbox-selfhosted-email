@@ -20,8 +20,8 @@ const valueProps = [
     icon: DollarSign,
     title: "AWS Pricing",
     description:
-      "Pay AWS directly at $0.0075/segment plus carrier fees. No platform markups, no surprise fees. Just transparent cloud pricing you can actually understand.",
-    highlight: "$0.0075/segment",
+      "Pay AWS directly — roughly $0.0075/segment plus carrier fees, which AWS passes through at cost. No platform markups, no surprise fees. Just transparent cloud pricing you can actually understand.",
+    highlight: "~$0.01/segment all-in",
   },
 ];
 
