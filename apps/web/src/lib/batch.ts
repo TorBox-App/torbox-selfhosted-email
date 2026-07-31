@@ -40,6 +40,40 @@ export const BATCH_STATUS_COLORS: Record<BatchStatus, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
+/** A paused broadcast keeps status 'processing' — batchSendStatusEnum has no
+ *  'paused' value on purpose (see plan 163). Callers render the paused
+ *  presentation when this returns non-null. */
+export function getPausedPresentation(
+  status: string,
+  pausedReason: string | null
+): { label: string; color: string; explanation: string } | null {
+  if (status !== "processing" || !pausedReason) {
+    return null;
+  }
+  const color = "bg-amber-100 text-amber-800";
+  if (pausedReason === "daily_quota") {
+    return {
+      label: "Paused — daily quota",
+      color,
+      explanation:
+        "This account has sent its full SES 24-hour quota. Sending resumes automatically as the rolling window frees up.",
+    };
+  }
+  if (pausedReason === "quota_reserve") {
+    return {
+      label: "Paused — quota reserve",
+      color,
+      explanation:
+        "Sending is held back so transactional email keeps its reserved quota. It resumes automatically as quota frees up.",
+    };
+  }
+  return {
+    label: "Paused",
+    color,
+    explanation: "Sending is paused and will resume automatically.",
+  };
+}
+
 // Channel display
 export const CHANNEL_LABELS: Record<Channel, string> = {
   email: "Email",
@@ -72,6 +106,13 @@ export type BatchSendWithMeta = {
   complained: number;
   // Error
   errorMessage: string | null;
+  /** Non-null while the worker is re-enqueueing without sending. Set by the
+   *  batch-sender; `'quota_reserve'` = held back to protect transactional mail,
+   *  `'daily_quota'` = the account's SES 24h quota is spent. Cleared on the
+   *  first chunk that actually sends. */
+  pausedReason: string | null;
+  /** Last chunk the worker completed. Used to show how long a pause has run. */
+  lastChunkAt: Date | null;
   // Timing
   scheduledFor: Date | null;
   startedAt: Date | null;

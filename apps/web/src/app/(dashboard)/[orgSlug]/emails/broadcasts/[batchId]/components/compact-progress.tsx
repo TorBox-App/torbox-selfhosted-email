@@ -2,11 +2,16 @@
 
 import { Badge } from "@wraps/ui/components/ui/badge";
 import { Progress } from "@wraps/ui/components/ui/progress";
+import { formatDistanceToNow } from "date-fns";
 import { CheckCircle, Clock, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { BATCH_STATUS_COLORS, BATCH_STATUS_LABELS } from "@/lib/batch";
+import {
+  BATCH_STATUS_COLORS,
+  BATCH_STATUS_LABELS,
+  getPausedPresentation,
+} from "@/lib/batch";
 
 type CompactProgressProps = {
   status: string;
@@ -14,6 +19,8 @@ type CompactProgressProps = {
   processedRecipients: number;
   startedAt: Date | null;
   completedAt: Date | null;
+  pausedReason?: string | null;
+  lastChunkAt?: Date | string | null;
 };
 
 function formatDuration(
@@ -49,10 +56,13 @@ export function CompactProgress({
   processedRecipients,
   startedAt,
   completedAt,
+  pausedReason,
+  lastChunkAt,
 }: CompactProgressProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [autoRefresh, setAutoRefresh] = useState(isActive(status));
+  const paused = getPausedPresentation(status, pausedReason ?? null);
 
   const progress =
     totalRecipients === 0
@@ -93,12 +103,18 @@ export function CompactProgress({
         <div className="flex items-center gap-3">
           <Badge
             className={
-              BATCH_STATUS_COLORS[status as keyof typeof BATCH_STATUS_COLORS]
+              paused
+                ? paused.color
+                : BATCH_STATUS_COLORS[
+                    status as keyof typeof BATCH_STATUS_COLORS
+                  ]
             }
             variant="secondary"
           >
-            {statusIcon}
-            {BATCH_STATUS_LABELS[status as keyof typeof BATCH_STATUS_LABELS]}
+            {!paused && statusIcon}
+            {paused
+              ? paused.label
+              : BATCH_STATUS_LABELS[status as keyof typeof BATCH_STATUS_LABELS]}
           </Badge>
 
           {/* Timing info */}
@@ -125,6 +141,15 @@ export function CompactProgress({
           <RefreshCw className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
         </Button>
       </div>
+
+      {/* Paused explanation */}
+      {paused && (
+        <p className="text-muted-foreground text-xs">
+          {paused.explanation}
+          {lastChunkAt &&
+            ` No progress for ${formatDistanceToNow(new Date(lastChunkAt))}.`}
+        </p>
+      )}
 
       {/* Row 2: Progress bar (only shown when active) */}
       {!isTerminal(status) && status !== "draft" && (

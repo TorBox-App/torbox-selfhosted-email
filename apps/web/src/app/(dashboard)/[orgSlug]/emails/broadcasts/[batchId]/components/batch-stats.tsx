@@ -20,6 +20,8 @@ type BatchStatsProps = {
     failed: number;
     hardBounced: number;
     softBounced: number;
+    pausedReason?: string | null;
+    lastChunkAt?: Date | null;
     startedAt: Date | null;
     completedAt: Date | null;
   };
@@ -40,6 +42,8 @@ export function BatchStats({
       <CardContent className="flex flex-col gap-4 py-4">
         <CompactProgress
           completedAt={batch.completedAt}
+          lastChunkAt={batch.lastChunkAt}
+          pausedReason={batch.pausedReason}
           processedRecipients={batch.processedRecipients}
           startedAt={batch.startedAt}
           status={batch.status}

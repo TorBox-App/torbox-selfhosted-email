@@ -92,4 +92,84 @@ describe("CompactProgress", () => {
     );
     expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
   });
+
+  it("renders the normal Processing label when pausedReason is null (regression guard)", () => {
+    render(
+      <CompactProgress
+        completedAt={null}
+        pausedReason={null}
+        processedRecipients={6250}
+        startedAt={new Date("2026-02-22T08:36:50Z")}
+        status="processing"
+        totalRecipients={12_500}
+      />
+    );
+    expect(screen.getByText("Sending")).toBeTruthy();
+    expect(screen.queryByText(/Paused/)).toBeNull();
+  });
+
+  it("renders a paused badge and the transactional-reserve explanation for quota_reserve", () => {
+    render(
+      <CompactProgress
+        completedAt={null}
+        pausedReason="quota_reserve"
+        processedRecipients={6250}
+        startedAt={new Date("2026-02-22T08:36:50Z")}
+        status="processing"
+        totalRecipients={12_500}
+      />
+    );
+    expect(screen.getByText(/Paused/)).toBeTruthy();
+    expect(
+      screen.getByText(/transactional email keeps its reserved quota/)
+    ).toBeTruthy();
+    expect(screen.queryByText(/24-hour quota/)).toBeNull();
+  });
+
+  it("renders the daily-quota explanation for daily_quota, not the reserve wording", () => {
+    render(
+      <CompactProgress
+        completedAt={null}
+        pausedReason="daily_quota"
+        processedRecipients={6250}
+        startedAt={new Date("2026-02-22T08:36:50Z")}
+        status="processing"
+        totalRecipients={12_500}
+      />
+    );
+    expect(screen.getByText(/Paused/)).toBeTruthy();
+    expect(screen.getByText(/24-hour quota/)).toBeTruthy();
+    expect(
+      screen.queryByText(/transactional email keeps its reserved quota/)
+    ).toBeNull();
+  });
+
+  it("renders a generic Paused badge for an unknown pausedReason instead of crashing", () => {
+    render(
+      <CompactProgress
+        completedAt={null}
+        pausedReason="something_new"
+        processedRecipients={6250}
+        startedAt={new Date("2026-02-22T08:36:50Z")}
+        status="processing"
+        totalRecipients={12_500}
+      />
+    );
+    expect(screen.getByText("Paused")).toBeTruthy();
+  });
+
+  it("never shows paused for a terminal batch, even with a stale non-null pausedReason", () => {
+    render(
+      <CompactProgress
+        completedAt={new Date("2026-02-22T09:06:50Z")}
+        pausedReason="daily_quota"
+        processedRecipients={12_500}
+        startedAt={new Date("2026-02-22T08:36:50Z")}
+        status="completed"
+        totalRecipients={12_500}
+      />
+    );
+    expect(screen.getByText("Completed")).toBeTruthy();
+    expect(screen.queryByText(/Paused/)).toBeNull();
+  });
 });

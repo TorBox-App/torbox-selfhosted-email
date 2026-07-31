@@ -77,6 +77,7 @@ import {
   BATCH_STATUS_LABELS,
   type BatchSendWithMeta,
   calculateProgress,
+  getPausedPresentation,
 } from "@/lib/batch";
 import { broadcastCSVColumns } from "@/lib/csv-columns";
 import { exportTableToCSV } from "@/lib/csv-export";
@@ -274,10 +275,11 @@ export function BatchTable({
         cell: ({ row }: { row: { original: BatchSendWithMeta } }) => {
           const batch = row.original;
           const status = batch.status;
+          const paused = getPausedPresentation(status, batch.pausedReason);
           return (
             <div className="space-y-1">
               <Badge
-                className={BATCH_STATUS_COLORS[status]}
+                className={paused ? paused.color : BATCH_STATUS_COLORS[status]}
                 variant="secondary"
               >
                 {status === "processing" && (
@@ -291,7 +293,7 @@ export function BatchTable({
                 {status === "scheduled" && (
                   <CalendarClock className="mr-1 h-3 w-3" />
                 )}
-                {BATCH_STATUS_LABELS[status]}
+                {paused ? paused.label : BATCH_STATUS_LABELS[status]}
               </Badge>
               {status === "scheduled" && batch.scheduledFor && (
                 <p className="text-muted-foreground text-xs">

@@ -167,6 +167,8 @@ export default async function BatchDetailPage({
           failed: batch.failed,
           hardBounced,
           softBounced,
+          pausedReason: batch.pausedReason,
+          lastChunkAt: batch.lastChunkAt,
           startedAt: batch.startedAt,
           completedAt: batch.completedAt,
         }}
