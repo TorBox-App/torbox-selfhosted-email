@@ -9,6 +9,8 @@
 #   T9  no console.log (needs template literal awareness)
 #   T12 metadata save order (needs ordering semantics within function)
 #   T13 duplicate infrastructure helpers (cross-file uniqueness)
+#   T14 tailwind v3 css-var syntax (baseline skips files with lines >= 500
+#       chars, which is exactly the dense-className files this rule targets)
 
 [baseline]
 name = "wraps"

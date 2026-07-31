@@ -1384,3 +1384,42 @@ describe("broadcast resume schema indexes", () => {
     expect(migration).not.toMatch(hasConcurrentIndexCreate);
   });
 });
+
+// Test 14: Tailwind v3 CSS-variable shorthand
+//
+// `size-[--cell-size]` was v3 shorthand for `size-[var(--cell-size)]`.
+// Tailwind v4 dropped the implicit var() and requires `size-(--cell-size)`.
+// The v3 form still compiles — to `width: --cell-size`, which browsers
+// discard. No build error, no type error, no lint error, just missing
+// styles. It broke the broadcast date picker and time select in July 2026.
+//
+// This lives here rather than in baseline.toml because baseline skips any
+// file containing a line >= 500 chars, and long className strings are
+// precisely where this bug hides.
+// ─────────────────────────────────────────────────────────
+
+describe("no tailwind v3 css-variable shorthand", () => {
+  test("all ts/tsx files use the v4 paren form", () => {
+    const files = [
+      ...findFiles("apps/*/src/**/*.{ts,tsx}"),
+      ...findFiles("packages/*/src/**/*.{ts,tsx}"),
+    ];
+
+    const violations: string[] = [];
+    // `-[--foo]` but not `[--foo:value]`, which still sets a variable in v4.
+    const v3VarSyntax = /-\[(--[a-zA-Z0-9-]+)\]/g;
+
+    for (const file of files) {
+      const lines = readFile(file).split("\n");
+      for (const [i, line] of lines.entries()) {
+        for (const match of line.matchAll(v3VarSyntax)) {
+          violations.push(
+            `${file}:${i + 1} — ${match[0]} should be -(${match[1]})`
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
