@@ -525,14 +525,19 @@ async function validateAndPrepareSend(
 
   // Daily quota reserve preflight. The send worker already pauses and
   // re-enqueues any chunk that would eat into the transactional reserve, so a
-  // broadcast bigger than the CURRENT headroom is not a problem — it drains
-  // across days as the rolling 24h window frees up. Only block sends that can
-  // never drain: an audience larger than a full day's non-reserved capacity.
-  // Anything that merely has to wait returns a warning instead.
+  // broadcast bigger than a single day's capacity is not a problem — it
+  // drains across days as the rolling 24h window frees up. Only block sends
+  // that can NEVER drain: a reserve at or above the whole daily quota.
+  // Anything that merely takes multiple days returns a warning instead.
   // Best-effort — any AssumeRole/SES failure fails open.
   let quotaWarning: string | undefined;
   const reserve = awsAccountRow.dailyQuotaReserve ?? 0;
-  if (data.channel !== "sms" && reserve > 0) {
+  // Runs regardless of whether a reserve is set: with reserve 0 the whole daily
+  // quota is the broadcast budget, and an audience that exceeds it still needs
+  // the multi-day warning. Previously gating this on a nonzero reserve made
+  // the reserve a cliff — only zero disabled the block, and zero also removed
+  // the protection.
+  if (data.channel !== "sms") {
     try {
       const credentials = await getOrAssumeRole({
         roleArn: awsAccountRow.roleArn,
@@ -560,18 +565,25 @@ async function validateAndPrepareSend(
           };
         }
         if (recipientCount > dailyCapacity) {
-          return {
-            ok: false,
-            error: `Broadcast blocked to protect transactional email: ${recipientCount.toLocaleString()} recipients is more than the ${dailyCapacity.toLocaleString()} a broadcast can send in 24h (daily quota ${max24HourSend.toLocaleString()} − ${reserve.toLocaleString()} reserved for transactional). Split the audience or lower the reserve in AWS account settings.`,
-          };
-        }
-
-        // Current usage says nothing about usage at a future send time, so a
-        // "right now" warning would be misleading on a scheduled broadcast.
-        const headroom = max24HourSend - sentLast24Hours - reserve;
-        if (!data.scheduledFor && recipientCount > headroom) {
-          const sendableNow = Math.max(0, headroom);
-          quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
+          const days = Math.ceil(recipientCount / dailyCapacity);
+          quotaWarning =
+            `${recipientCount.toLocaleString()} recipients is more than this account ` +
+            `can send in 24h (daily quota ${max24HourSend.toLocaleString()}` +
+            (reserve
+              ? `, ${reserve.toLocaleString()} reserved for transactional → ` +
+                `${dailyCapacity.toLocaleString()}/day for broadcasts`
+              : "") +
+            "). Sending pauses and resumes automatically and should finish in about " +
+            `${days} day${days === 1 ? "" : "s"}. You can cancel any time from the ` +
+            "broadcast page.";
+        } else {
+          // Current usage says nothing about usage at a future send time, so a
+          // "right now" warning would be misleading on a scheduled broadcast.
+          const headroom = max24HourSend - sentLast24Hours - reserve;
+          if (!data.scheduledFor && recipientCount > headroom) {
+            const sendableNow = Math.max(0, headroom);
+            quotaWarning = `Only ${sendableNow.toLocaleString()} of ${recipientCount.toLocaleString()} emails can send right now (daily quota ${max24HourSend.toLocaleString()} − ${sentLast24Hours.toLocaleString()} sent in the last 24h − ${reserve.toLocaleString()} reserved for transactional). Sending pauses and resumes automatically as quota frees up.`;
+          }
         }
       }
     } catch (error) {

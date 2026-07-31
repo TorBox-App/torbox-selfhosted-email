@@ -557,7 +557,7 @@ export function BatchForm({
             }
           );
           if (result.warning) {
-            toast.warning("Sending will pause to protect transactional email", {
+            toast.warning("Sending will pause and resume", {
               description: result.warning,
               duration: 12_000,
             });

@@ -200,6 +200,45 @@ vi.mock("@/actions/templates", () => ({
   })),
 }));
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily quota reserve preflight mocks — AssumeRole + SES GetAccount.
+// validateAndPrepareSend now consults SES for every email broadcast (not only
+// reserve-enabled ones), so this suite would otherwise attempt a real
+// sts:AssumeRole against a fake ARN. Generous default quota so no assertion
+// in this file changes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getOrAssumeRoleMock = vi.fn().mockResolvedValue({
+  accessKeyId: "AKIA-test",
+  secretAccessKey: "secret-test",
+  sessionToken: "token-test",
+  expiration: new Date("2099-01-01"),
+});
+
+vi.mock("@/lib/aws/credential-cache", () => ({
+  getOrAssumeRole: (...args: unknown[]) => getOrAssumeRoleMock(...args),
+}));
+
+let sesGetAccountShouldThrow = false;
+let sesGetAccountQuota: {
+  Max24HourSend?: number;
+  SentLast24Hours?: number;
+} | null = { Max24HourSend: 1_000_000, SentLast24Hours: 0 };
+
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class {
+    send = vi.fn().mockImplementation(() => {
+      if (sesGetAccountShouldThrow) {
+        return Promise.reject(new Error("GetAccount failed: network error"));
+      }
+      return Promise.resolve({ SendQuota: sesGetAccountQuota ?? {} });
+    });
+  },
+  GetAccountCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+
 beforeAll(async () => {
   await db
     .insert(user)
@@ -297,6 +336,14 @@ beforeEach(async () => {
     .delete(batchSend)
     .where(eq(batchSend.organizationId, testSecondaryOrganization.id));
   vi.clearAllMocks();
+  sesGetAccountShouldThrow = false;
+  sesGetAccountQuota = { Max24HourSend: 1_000_000, SentLast24Hours: 0 };
+  getOrAssumeRoleMock.mockResolvedValue({
+    accessKeyId: "AKIA-test",
+    secretAccessKey: "secret-test",
+    sessionToken: "token-test",
+    expiration: new Date("2099-01-01"),
+  });
 });
 
 afterAll(async () => {

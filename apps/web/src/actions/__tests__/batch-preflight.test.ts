@@ -1436,7 +1436,7 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
     }
   });
 
-  it("blocks the send when the audience exceeds a full day's non-reserved capacity", async () => {
+  it("warns instead of blocking when the audience needs multiple days", async () => {
     const quotaAwsId = `preflight-quota-block-aws-${RUN_ID}`;
     await db
       .insert(awsAccount)
@@ -1448,9 +1448,12 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
       })
       .onConflictDoNothing();
 
-    // Capacity = 100 − 99 = 1, below the 2-contact audience, so this send
-    // could never drain no matter how long it waited.
+    // Capacity = 100 − 99 = 1, below the 2-contact audience. The worker's
+    // reserve gate drains this across days as the rolling 24h window frees
+    // up, so it must warn — not block — with an estimated duration.
     sesGetAccountQuota = { Max24HourSend: 100, SentLast24Hours: 0 };
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
 
     try {
       const draft = await saveDraftBatchSend(testOrganization.id, {
@@ -1468,16 +1471,21 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
         {}
       );
 
-      expect(result.success).toBe(false);
-      if (result.success) return;
-      expect(result.error).toMatch(/recipients/);
-      expect(result.error).toMatch(/Split the audience/i);
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toMatch(/about \d+ days?/);
+      expect(result.warning).toMatch(/resumes automatically/i);
 
-      const after = await db.query.batchSend.findFirst({
-        where: eq(batchSend.id, draft.batch.id),
-      });
-      expect(after?.status).toBe("draft");
+      // The preflight handed the send off to the API instead of blocking it.
+      expect(
+        fetchSpy.mock.calls.some(([url]) =>
+          String(url).includes(`/v1/batch/${draft.batch.id}/send`)
+        )
+      ).toBe(true);
     } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
       await db
         .delete(batchSend)
         .where(eq(batchSend.organizationId, testOrganization.id));
@@ -1533,8 +1541,10 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
     }
   });
 
-  it("does not call SES/AssumeRole when the reserve is null (feature off)", async () => {
+  it("consults SES even with no reserve set — the whole quota is the broadcast budget", async () => {
     // testAwsAccount has no dailyQuotaReserve set (null by fixture default).
+    // With reserve 0, the whole daily quota IS the broadcast budget, so the
+    // preflight must still check it — only the SMS channel skips this now.
     process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
     const fetchSpy = mockSendApiSuccess();
 
@@ -1555,7 +1565,7 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(getOrAssumeRoleMock).not.toHaveBeenCalled();
+      expect(getOrAssumeRoleMock).toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();
       delete process.env.NEXT_PUBLIC_API_URL;
@@ -1608,6 +1618,42 @@ describe("promoteDraftToSend — daily quota reserve preflight", () => {
     }
   });
 
+  it("fails open (send proceeds) when GetAccount rejects, even with no reserve set", async () => {
+    // testAwsAccount has no dailyQuotaReserve set (null by fixture default).
+    // The quota check now runs unconditionally, so this fail-open path must
+    // hold at reserve 0 too, not only when a reserve is configured.
+    sesGetAccountShouldThrow = true;
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    const fetchSpy = mockSendApiSuccess();
+
+    try {
+      const draft = await saveDraftBatchSend(testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
+        templateId: templateNoCustomVars.id,
+        from: "sender@example.com",
+        subject: "Fail Open No Reserve Test",
+      });
+      expect(draft.success).toBe(true);
+      if (!draft.success) return;
+
+      const result = await promoteDraftToSend(
+        draft.batch.id,
+        testOrganization.id,
+        {}
+      );
+
+      expect(result.success).toBe(true);
+    } finally {
+      fetchSpy.mockRestore();
+      delete process.env.NEXT_PUBLIC_API_URL;
+      await db
+        .delete(batchSend)
+        .where(eq(batchSend.organizationId, testOrganization.id));
+    }
+  });
+
+  // Now the sole guard keeping SMS out of the SES quota-check path — the
+  // quota check itself no longer gates on `reserve > 0`.
   it("skips the quota check for SMS channel even when reserve is set", async () => {
     const quotaAwsId = `preflight-quota-sms-aws-${RUN_ID}`;
     const smsContactId = `preflight-quota-sms-contact-${RUN_ID}`;
