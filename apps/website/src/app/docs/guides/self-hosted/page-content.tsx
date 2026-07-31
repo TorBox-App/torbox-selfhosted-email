@@ -235,7 +235,7 @@ export default function SelfHostedPageContent() {
         </Card>
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">
-            Two self-hosted variants — this guide covers the full platform
+            One deploy path — from a fork, via SST
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
             <code className="rounded bg-muted px-1.5 py-0.5">
@@ -247,28 +247,15 @@ export default function SelfHostedPageContent() {
             and EventBridge Scheduler.
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
+            An earlier API-only variant deployed by{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               wraps selfhost deploy
             </code>{" "}
-            — the CLI command — deploys an{" "}
-            <span className="font-medium text-foreground">API-only</span>{" "}
-            control plane via Pulumi with no clone and no dashboard. You host{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">apps/web</code>{" "}
-            yourself (Vercel or anywhere else) using the values from{" "}
+            was removed in July 2026. The{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
-              wraps selfhost env
-            </code>
-            .
-          </p>
-          <p className="mt-2 text-muted-foreground text-sm">
-            The two{" "}
-            <span className="font-medium text-foreground">cannot coexist</span>{" "}
-            in one AWS account — both create the account-global{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">
-              wraps-selfhost-scheduler-role
-            </code>
-            . Deploying the second one fails fast with a message naming the
-            variant already present. Everything after this point —{" "}
+              wraps selfhost
+            </code>{" "}
+            CLI now only operates on an existing deployment —{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               selfhost login
             </code>
@@ -280,7 +267,25 @@ export default function SelfHostedPageContent() {
             <code className="rounded bg-muted px-1.5 py-0.5">
               selfhost status
             </code>
-            , SES event routing, the console access role — is identical on both.
+            ,{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">selfhost env</code>
+            ,{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              selfhost logs
+            </code>
+            .
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            One self-hosted plane per AWS account — the deploy creates the
+            account-global{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps-selfhost-scheduler-role
+            </code>
+            . If a previous deploy left that role behind, a fresh{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              pnpm selfhost:deploy
+            </code>{" "}
+            fails fast rather than colliding partway through.
           </p>
         </div>
       </section>
