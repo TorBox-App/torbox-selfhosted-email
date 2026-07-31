@@ -2212,14 +2212,15 @@ pnpm install`,
                 </td>
                 <td className="p-3 pr-4 align-top">Optional</td>
                 <td className="p-3 align-top">
-                  Email address to notify when a broadcast stalls — subscribes
-                  to an SNS topic backing two CloudWatch alarms: one on messages
-                  landing in the batch dead-letter queue, one on the oldest
-                  message on the batch queue sitting for 15+ minutes (a
-                  broadcast is a self-propagating chain of one message at a
-                  time, so either signals a stuck send). AWS emails a
-                  subscription confirmation link to this address after deploy —
-                  accept it, or alarms fire with nowhere to deliver
+                  Email address for infrastructure alerts — subscribes to an SNS
+                  topic backing three CloudWatch alarms: one on messages landing
+                  in the batch dead-letter queue, one on the oldest message on
+                  the batch queue sitting for 15+ minutes (a broadcast is a
+                  self-propagating chain of one message at a time, so either
+                  signals a stuck send), and one on messages landing in the
+                  workflow dead-letter queue. AWS emails a subscription
+                  confirmation link to this address after deploy — accept it, or
+                  alarms fire with nowhere to deliver
                 </td>
               </tr>
               <tr>
