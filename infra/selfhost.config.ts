@@ -864,6 +864,32 @@ export default $config({
       },
     });
 
+    // Workflow reaper: backstop for lost EventBridge Scheduler deliveries.
+    // A workflow execution paused/waiting on a one-time schedule that never
+    // fires (delivery lost, target misconfigured) would otherwise stay stuck
+    // forever. Mirrors workflowReaperCron in infra/cron.ts. DB-only — no
+    // permissions block, no email.
+    new sst.aws.Cron("SelfhostWorkflowReaper", {
+      schedule: "rate(1 hour)",
+      enabled: envFile.parsed?.SELFHOST_WORKFLOW_REAPER_ENABLED !== "false",
+      job: {
+        handler: "../apps/api/src/(ee)/workers/workflow-reaper.handler",
+        runtime: "nodejs24.x",
+        timeout: "5 minutes",
+        memory: "256 MB",
+        environment: {
+          NODE_ENV: "production",
+          ...dbEnv,
+          // The reaper is itself the backstop — when it cannot fail a stuck
+          // execution it logs and moves on, once an hour, forever.
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+        },
+        nodejs: {
+          install: ["pg", "@sentry/profiling-node"],
+        },
+      },
+    });
+
     return {
       apiUrl: api.url,
       webUrl: web.url,
