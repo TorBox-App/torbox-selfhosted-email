@@ -21,6 +21,31 @@ const envFileKeys = envFileSources.flatMap((source) =>
   [...source.matchAll(/`([A-Z][A-Z0-9_]*)=\$\{/g)].map((match) => match[1])
 );
 
+const selfhostConfigSource = readFileSync(
+  new URL("../../../infra/selfhost.config.ts", import.meta.url),
+  "utf-8"
+);
+
+// Keys the SST config reads from the env FILE (never process.env, on purpose).
+// .env.selfhost is gitignored and the upgrade job rebuilds it from repository
+// secrets/vars, so any key here that the workflow does not re-emit ceases to
+// exist on the next CI upgrade: ALERT_EMAIL silently deletes the SNS
+// subscription, and a *_ENABLED flag set to "false" silently flips back on.
+const envFileOnlyKeys = [
+  ...new Set(
+    [
+      ...selfhostConfigSource.matchAll(/envFile\.parsed\?\.([A-Z][A-Z0-9_]*)/g),
+    ].map((match) => match[1])
+  ),
+];
+
+// The reconstruct step, env: mapping AND write block. Scoped rather than
+// searching the whole workflow: a key added to the first-time deploy job
+// would satisfy a file-wide match while leaving the upgrade job still broken.
+const reconstructStep = workflowSource.match(
+  /- name: Reconstruct \.env\.selfhost \(upgrade\)[\s\S]*?\} > \.env\.selfhost/
+)?.[0];
+
 describe(".github/workflows/selfhost-deploy.yml", () => {
   it("finds the keys deploy.ts writes to .env.selfhost", () => {
     // Guards the regex above, not the workflow.
@@ -50,4 +75,27 @@ describe(".github/workflows/selfhost-deploy.yml", () => {
     const lastLine = block?.split("\n").at(-2)?.trim();
     expect(lastLine).toBe("true");
   });
+
+  it("finds the keys selfhost.config.ts reads from the env file", () => {
+    // Guards the regex above, not the workflow.
+    expect(reconstructStep).toBeDefined();
+    expect(envFileOnlyKeys).toContain("ALERT_EMAIL");
+    expect(envFileOnlyKeys.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it.each(envFileOnlyKeys)(
+    "writes %s into .env.selfhost on upgrade — the SST config reads it from the env file only",
+    (key) => {
+      expect(reconstructStep).toContain(`echo "${key}=`);
+    }
+  );
+
+  it.each(envFileOnlyKeys)(
+    "maps %s into the reconstruct step's environment — an echo line with no env entry writes nothing",
+    (key) => {
+      expect(reconstructStep).toMatch(
+        new RegExp(`^\\s+${key}: \\$\\{\\{ (vars|secrets)\\.`, "m")
+      );
+    }
+  );
 });
