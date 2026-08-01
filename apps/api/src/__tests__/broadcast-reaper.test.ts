@@ -14,7 +14,14 @@
  * generated predicate.
  */
 
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/** Render the captured WHERE clause to real SQL so the guards can be asserted. */
+function renderSQL(clause: unknown): string {
+  return new PgDialect().sqlToQuery(clause as SQL).sql;
+}
 
 process.env.BATCH_QUEUE_URL =
   "https://sqs.us-east-1.amazonaws.com/123456789/mock-queue";
@@ -31,9 +38,11 @@ vi.mock("../lib/logger", () => ({
 }));
 
 const { captureMessage } = await import("@sentry/aws-serverless");
-const { BROADCAST_STALL_THRESHOLD_MS, runBroadcastReaper } = await import(
-  "../workers/broadcast-reaper"
-);
+const {
+  BROADCAST_STALL_THRESHOLD_MS,
+  PAUSE_STALL_THRESHOLD_MS,
+  runBroadcastReaper,
+} = await import("../workers/broadcast-reaper");
 
 type Row = {
   id: string;
@@ -45,6 +54,7 @@ type Row = {
   processedRecipients: number;
   totalRecipients: number;
   errorDetails: Record<string, unknown> | null;
+  pausedReason: string | null;
 };
 
 function makeRow(overrides: Partial<Row> = {}): Row {
@@ -58,17 +68,20 @@ function makeRow(overrides: Partial<Row> = {}): Row {
     processedRecipients: 800,
     totalRecipients: 1200,
     errorDetails: null,
+    pausedReason: null,
     ...overrides,
   };
 }
 
 function makeMockDb(rows: Row[]) {
   const updates: Array<Record<string, unknown>> = [];
+  const captured: { where?: unknown } = {};
   const mockDb = {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue(rows),
+        where: vi.fn().mockImplementation((clause: unknown) => {
+          captured.where = clause;
+          return { limit: vi.fn().mockResolvedValue(rows) };
         }),
       }),
     }),
@@ -79,7 +92,7 @@ function makeMockDb(rows: Row[]) {
       }),
     }),
   };
-  return { mockDb, updates };
+  return { mockDb, updates, captured };
 }
 
 beforeEach(() => {
@@ -249,6 +262,67 @@ describe("runBroadcastReaper", () => {
     expect(result.reaped).toBe(1);
     expect(result.skipped).toBe(1);
     expect(enqueue).toHaveBeenCalledTimes(2);
+  });
+
+  it("revives a paused batch whose pause loop died, recording why", async () => {
+    // The case that motivated pausedAt: a send larger than the daily quota
+    // spends most of its wall-clock in the pause loop, and before this the
+    // reaper skipped every paused batch — so a lost re-enqueue there was
+    // unrecoverable AND unalerted.
+    const { mockDb, updates } = makeMockDb([
+      makeRow({ pausedReason: "daily_quota" }),
+    ]);
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+
+    const result = await runBroadcastReaper(mockDb as never, { enqueue });
+
+    expect(result.reaped).toBe(1);
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ chunkIndex: 16 })
+    );
+    const details = updates[0].errorDetails as Record<string, unknown>;
+    const entries = details.chunksReaped as Array<{ reason: string }>;
+    // The audit entry must distinguish a dead pause loop from a dead send
+    // chain — they have different causes and different operator responses.
+    expect(entries[0].reason).toContain("daily_quota");
+  });
+
+  it("never selects a paused batch with no pause heartbeat", async () => {
+    const { mockDb, captured } = makeMockDb([]);
+    await runBroadcastReaper(mockDb as never, {
+      enqueue: vi.fn().mockResolvedValue(undefined),
+    });
+    const where = renderSQL(captured.where);
+
+    // pausedAt NULL means "paused by a build predating the column" — it may be
+    // a perfectly live chain, so it must be excluded in SQL. Without this
+    // guard the first sweep after deploy double-enqueues every paused batch.
+    expect(where).toMatch(/"paused_at" is not null/i);
+  });
+
+  it("judges paused and unpaused batches on their own clocks", async () => {
+    const { mockDb, captured } = makeMockDb([]);
+    await runBroadcastReaper(mockDb as never, {
+      enqueue: vi.fn().mockResolvedValue(undefined),
+    });
+    const where = renderSQL(captured.where);
+
+    // Unpaused batches are judged on lastChunkAt at 30 min; paused ones on the
+    // pause heartbeat at 45 min. Collapsing these into one predicate would
+    // either reap every healthy quota pause (lastChunkAt is stale by design
+    // while paused) or never reap a dead one.
+    expect(where).toMatch(/"paused_reason" is null/i);
+    expect(where).toContain("30 minutes");
+    expect(where).toContain("45 minutes");
+    expect(where).toMatch(/"status" = /i);
+  });
+
+  it("keeps the pause threshold clear of the 900s pause cycle", () => {
+    // The pause loop re-enqueues every 900s. Reaping at or near that interval
+    // would treat a perfectly healthy quota pause as dead and enqueue a
+    // duplicate chain on every sweep.
+    const pauseCycleMs = 900 * 1000;
+    expect(PAUSE_STALL_THRESHOLD_MS).toBeGreaterThan(pauseCycleMs * 2);
   });
 
   it("keeps the stall threshold clear of the DLQ recovery path", () => {

@@ -1167,9 +1167,13 @@ async function processJob(
         sentLast24Hours,
         reserve,
       });
+      // pausedAt, not lastChunkAt: the stuck-alert below reads lastChunkAt's
+      // staleness as its "no progress" signal, so the pause path must leave it
+      // alone. pausedAt is the separate liveness heartbeat that lets
+      // broadcast-reaper tell an alive pause loop from a dead one.
       await db
         .update(batchSend)
-        .set({ pausedReason: "quota_reserve" })
+        .set({ pausedReason: "quota_reserve", pausedAt: new Date() })
         .where(eq(batchSend.id, batchId));
       // A paused cycle returns before the lastChunkAt write further down, so
       // a stale lastChunkAt on this still-`processing` batch is precisely the
@@ -1568,9 +1572,13 @@ async function processJob(
 
         if (isDailyQuota) {
           await releaseUnusedClaims({ organizationId, batchId }, emailContacts);
+          // See the quota_reserve pause above for why this heartbeats pausedAt
+          // rather than lastChunkAt. This branch matters most in practice: a
+          // send larger than the account's daily quota spends the majority of
+          // its wall-clock right here, cycling every 900s for days.
           await db
             .update(batchSend)
-            .set({ pausedReason: "daily_quota" })
+            .set({ pausedReason: "daily_quota", pausedAt: new Date() })
             .where(eq(batchSend.id, batchId));
           log.warn("broadcast.daily_quota_paused", {
             batchId,
@@ -1865,8 +1873,11 @@ async function processJob(
       lastCursor: nextCursor,
       // This chunk got through, so whatever paused us is resolved. Both pause
       // branches (quota reserve, daily quota) return before reaching here, so
-      // this only runs on real progress.
+      // this only runs on real progress. pausedAt clears with it — a stale
+      // pausedAt left on a running batch would make broadcast-reaper treat a
+      // healthy chain as a dead pause loop and enqueue a duplicate.
       pausedReason: null,
+      pausedAt: null,
     })
     .where(eq(batchSend.id, batchId));
 

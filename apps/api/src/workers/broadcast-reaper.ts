@@ -46,7 +46,7 @@ import {
 } from "@sentry/aws-serverless";
 import { batchSend, db } from "@wraps/db";
 import type { Handler } from "aws-lambda";
-import { and, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
 import type { BatchJob } from "../services/queue";
@@ -65,6 +65,16 @@ type DrizzleDB = typeof db;
  * which encodes the same "delivery was lost" judgement.
  */
 export const BROADCAST_STALL_THRESHOLD_MS = 30 * 60 * 1000;
+
+/**
+ * How long a PAUSED batch may go without a pause-loop heartbeat before we treat
+ * its re-enqueued message as lost.
+ *
+ * Must exceed the 900s pause cycle by enough that ordinary jitter (SQS delivery
+ * latency, a slow invocation) never looks like death. 45 minutes = three missed
+ * cycles.
+ */
+export const PAUSE_STALL_THRESHOLD_MS = 45 * 60 * 1000;
 
 /** Cap per run so one sweep can't spawn unbounded work. */
 const MAX_REAPS_PER_RUN = 200;
@@ -87,11 +97,25 @@ export async function runBroadcastReaper(
 ): Promise<{ reaped: number; skipped: number }> {
   log.info("broadcast.reaper.start");
 
-  // Deliberately NOT reaping batches with a pausedReason. A quota-paused
-  // broadcast re-enqueues itself on a 900s delay and therefore still has a live
-  // message in the queue; its lastChunkAt is stale by design (the pause path
-  // returns before the progress write, which is exactly what the quota-stuck
-  // alert keys off). Reaping those would duplicate a chain that is working.
+  // Two different staleness questions, because a paused batch and a sending
+  // batch advance on completely different clocks:
+  //
+  //   not paused — a healthy chain lands a chunk every few seconds, so
+  //     lastChunkAt older than 30 minutes means the chain is gone.
+  //
+  //   paused — lastChunkAt is stale BY DESIGN (the pause path returns before
+  //     the progress write, and the quota-stuck alert reads that staleness as
+  //     its signal), so judging a paused batch by it would reap every healthy
+  //     quota pause. pausedAt is the pause loop's own heartbeat, rewritten on
+  //     each 900s cycle; older than 45 minutes means three cycles were missed
+  //     and the re-enqueued message is gone. This case is the one that matters
+  //     for a send larger than the daily quota, which spends most of its life
+  //     paused — exactly the window nothing used to be able to recover.
+  //
+  // A paused batch with pausedAt NULL was paused by a build predating the
+  // column. Skipped rather than reaped: it may well be a live chain, and
+  // double-enqueueing one is worse than waiting for its next cycle to stamp
+  // the heartbeat.
   //
   // guardrail:allow-unscoped — privileged system Lambda; sweeps all orgs by design
   const candidates = await dbClient
@@ -105,18 +129,28 @@ export async function runBroadcastReaper(
       processedRecipients: batchSend.processedRecipients,
       totalRecipients: batchSend.totalRecipients,
       errorDetails: batchSend.errorDetails,
+      pausedReason: batchSend.pausedReason,
     })
     .from(batchSend)
     .where(
       and(
         eq(batchSend.status, "processing"),
-        isNull(batchSend.pausedReason),
-        // lastChunkAt is only written after a chunk lands, so a batch that died
-        // on its very first chunk has none — fall back to startedAt, then
-        // createdAt (NOT NULL in the schema, so the COALESCE always resolves).
-        lt(
-          sql`COALESCE(${batchSend.lastChunkAt}, ${batchSend.startedAt}, ${batchSend.createdAt})`,
-          sql`NOW() - INTERVAL '30 minutes'`
+        or(
+          and(
+            isNull(batchSend.pausedReason),
+            // lastChunkAt is only written after a chunk lands, so a batch that
+            // died on its very first chunk has none — fall back to startedAt,
+            // then createdAt (NOT NULL in the schema, so this always resolves).
+            lt(
+              sql`COALESCE(${batchSend.lastChunkAt}, ${batchSend.startedAt}, ${batchSend.createdAt})`,
+              sql`NOW() - INTERVAL '30 minutes'`
+            )
+          ),
+          and(
+            isNotNull(batchSend.pausedReason),
+            isNotNull(batchSend.pausedAt),
+            lt(batchSend.pausedAt, sql`NOW() - INTERVAL '45 minutes'`)
+          )
         )
       )
     )
@@ -169,7 +203,9 @@ export async function runBroadcastReaper(
       const entry: ReapEntry = {
         reapedChunkIndex: resumeChunkIndex,
         at: new Date().toISOString(),
-        reason: "stalled chain — chunk message never delivered",
+        reason: batch.pausedReason
+          ? `stalled pause loop (${batch.pausedReason}) — re-enqueued chunk never delivered`
+          : "stalled chain — chunk message never delivered",
       };
 
       // Audit trail lands BEFORE the enqueue. If the enqueue then fails we have
@@ -211,6 +247,7 @@ export async function runBroadcastReaper(
       log.warn("broadcast.reaper.revived", {
         batchId: batch.id,
         organizationId: batch.organizationId,
+        pausedReason: batch.pausedReason ?? null,
         resumeChunkIndex,
         resumeFromCursor: Boolean(resumeCursor),
         priorReaps: existingReaped.length,

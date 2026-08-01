@@ -180,6 +180,22 @@ export const batchSend = pgTable(
     // avoid an enum migration and downstream UI states.
     pausedReason: text("paused_reason"),
 
+    // Liveness heartbeat for the pause loop, rewritten on EVERY paused cycle.
+    //
+    // A pause re-enqueues the same chunk on a 900s delay and returns before the
+    // lastChunkAt write below, so lastChunkAt is stale by design while paused —
+    // that staleness is what the quota-stuck alert keys off, which is why the
+    // pause path must not touch it. But it also means a paused batch whose
+    // re-enqueued message is LOST looks identical to one that is pausing
+    // normally, and the broadcast stalls forever with nothing able to tell the
+    // difference. This column is that difference: it advances every ~15 minutes
+    // while the pause loop is alive, and goes stale only when the chain is dead.
+    //
+    // NULL on a paused batch means "paused by a build that predates this
+    // column" — broadcast-reaper deliberately declines to revive those rather
+    // than risk double-enqueueing a live chain.
+    pausedAt: timestamp("paused_at"),
+
     // ═══════════════════════════════════════════════════════════════════════
     // RESUME / HEARTBEAT POINTER
     // Written by the worker after each successful chunk. Read by the DLQ
