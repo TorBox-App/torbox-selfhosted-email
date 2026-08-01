@@ -629,7 +629,7 @@ export default $config({
     );
 
     // Batch sender
-    batchQueue.subscribe(
+    const batchSenderSubscription = batchQueue.subscribe(
       {
         handler: "../apps/api/src/workers/batch-sender.handler",
         runtime: "nodejs24.x",
@@ -677,6 +677,36 @@ export default $config({
         },
       }
     );
+
+    // Opt the batch sender out of Lambda's recursive-loop termination.
+    //
+    // A broadcast advances by design as a self-referential chain: batch-sender
+    // sends the next chunk to batchQueue, which invokes batch-sender again.
+    // That is exactly the shape Lambda's loop detection is built to kill, and
+    // it kills it at the DEFAULT THRESHOLD OF 16 HOPS — so every broadcast
+    // stopped dead at 16 x CHUNK_SIZE = 800 recipients, silently. No error, no
+    // throttle, no log line, because the invocation is dropped before the
+    // handler runs; the only evidence is the RecursiveInvocationsDropped metric
+    // and an AWS Health "runaway termination" alert. Reproduced twice on
+    // 2026-07-31, and it is account-independent — nothing to do with
+    // concurrency limits, which is why it bites self-hosters whose accounts
+    // have the default 1000.
+    //
+    // "Allow" is AWS's sanctioned opt-out for intentional recursion. It is safe
+    // here because the chain is BOUNDED, not runaway: each hop advances a
+    // keyset cursor over a frozen audience snapshot, and the worker stops
+    // enqueueing once contacts run out or processedRecipients reaches
+    // totalRecipients. SelfhostBroadcastReaper remains the backstop for a chunk
+    // lost for any other reason.
+    //
+    // Note the resource's own warning: DESTROYING this reverts recursiveLoop to
+    // "Terminate", which silently reinstates the 800-recipient ceiling.
+    new aws.lambda.FunctionRecursionConfig("SelfhostBatchSenderRecursion", {
+      functionName: batchSenderSubscription.nodes.function.apply(
+        (fn) => fn.name
+      ),
+      recursiveLoop: "Allow",
+    });
 
     // Workflow DLQ consumer
     workflowDlq.subscribe(
@@ -887,6 +917,47 @@ export default $config({
         nodejs: {
           install: ["pg", "@sentry/profiling-node"],
         },
+      },
+    });
+
+    // Broadcast reaper: backstop for a chunk message SQS delivered to nobody.
+    // Self-hosted deployments are the ones that actually need this. A fresh
+    // AWS account is provisioned with a low Lambda concurrency limit (10 on the
+    // test account), and a broadcast's own SES delivery-event webhooks invoke
+    // the API function about twice per recipient — enough to saturate that
+    // limit and starve the batch queue's event source mapping, which then
+    // receives a chunk it can never invoke. Reproduced 2026-07-31: the
+    // broadcast stopped dead at 800 with no error anywhere, because the worker
+    // code was never reached. Reserved concurrency is not a usable mitigation
+    // (AWS rejects any reservation that drops unreserved account concurrency
+    // below its minimum), so the chain has to survive lost delivery instead.
+    // Mirrors broadcastReaperCron in infra/cron.ts.
+    new sst.aws.Cron("SelfhostBroadcastReaper", {
+      schedule: "rate(15 minutes)",
+      enabled: envFile.parsed?.SELFHOST_BROADCAST_REAPER_ENABLED !== "false",
+      job: {
+        handler: "../apps/api/src/workers/broadcast-reaper.handler",
+        runtime: "nodejs24.x",
+        timeout: "5 minutes",
+        memory: "256 MB",
+        environment: {
+          NODE_ENV: "production",
+          ...dbEnv,
+          // Where the revived chunk goes. Without it the reaper throws on every
+          // batch it tries to revive — the one failure it cannot back off from,
+          // since it IS the backstop.
+          BATCH_QUEUE_URL: batchQueue.url,
+          ...(sentryDsn && { SENTRY_DSN: sentryDsn }),
+        },
+        nodejs: {
+          install: ["pg", "@sentry/profiling-node"],
+        },
+        permissions: [
+          {
+            actions: ["sqs:SendMessage"],
+            resources: [batchQueue.arn],
+          },
+        ],
       },
     });
 

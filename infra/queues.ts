@@ -93,7 +93,7 @@ batchDlq.subscribe(
 
 // Subscribe batch worker to the queue
 // The worker is defined in apps/api/src/workers/batch-sender.ts
-batchQueue.subscribe(
+const batchSenderSubscription = batchQueue.subscribe(
   {
     handler: "apps/api/src/workers/batch-sender.handler",
     runtime: "nodejs24.x",
@@ -162,6 +162,32 @@ batchQueue.subscribe(
     },
   }
 );
+
+// Opt the batch sender out of Lambda's recursive-loop termination.
+//
+// A broadcast advances by design as a self-referential chain: batch-sender
+// sends the next chunk to batchQueue, which invokes batch-sender again. That is
+// exactly the shape Lambda's loop detection is built to kill, and it kills it
+// at the DEFAULT THRESHOLD OF 16 HOPS — so every broadcast stopped dead at
+// 16 x CHUNK_SIZE = 800 recipients, silently. No error, no throttle, no log
+// line, because the invocation is dropped before the handler runs; the only
+// evidence is the RecursiveInvocationsDropped metric and an AWS Health alert.
+// Reproduced twice on 2026-07-31, and it is account-independent (it has nothing
+// to do with concurrency limits).
+//
+// "Allow" is AWS's sanctioned opt-out for intentional recursion. It is safe
+// here because the chain is BOUNDED, not runaway: each hop advances a keyset
+// cursor over a frozen audience snapshot, and the worker stops enqueueing once
+// contacts run out or processedRecipients reaches totalRecipients. The
+// broadcast reaper (infra/cron.ts) remains the backstop for a chunk lost for
+// any other reason.
+//
+// Note the resource's own warning: DESTROYING this reverts recursiveLoop to
+// "Terminate", which silently reinstates the 800-recipient ceiling.
+new aws.lambda.FunctionRecursionConfig("BatchSenderRecursionConfig", {
+  functionName: batchSenderSubscription.nodes.function.apply((fn) => fn.name),
+  recursiveLoop: "Allow",
+});
 
 /**
  * Workflow Queue for Wraps Automations

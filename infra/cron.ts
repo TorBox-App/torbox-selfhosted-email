@@ -15,6 +15,15 @@
  *   paused/waiting execution also has its own one-time schedule that
  *   normally resumes it. Always-on so the backstop is never disarmed.
  *
+ * BroadcastReaper:
+ * - Runs every 15 minutes in production
+ * - Revives broadcasts stuck in `processing` with no progress for 30 minutes,
+ *   re-enqueueing the next chunk from the durable heartbeat. Backstop for a
+ *   chunk message that SQS delivered to nobody — observed when the broadcast's
+ *   own SES delivery-event webhooks saturate the account's Lambda concurrency
+ *   and starve the batch queue's event source mapping. See
+ *   apps/api/src/workers/broadcast-reaper.ts.
+ *
  * EventFeedStaleness:
  * - Runs hourly at :15 in production
  * - Flags connected AWS accounts whose SES event feed has gone silent
@@ -32,7 +41,43 @@
  *   per account per day). See apps/api/src/workers/account-health.ts.
  */
 
+import { batchQueue } from "./queues";
 import { axiomToken, sentryDsn } from "./secrets";
+
+export const broadcastReaperCron = new sst.aws.CronV2("BroadcastReaper", {
+  // 15-minute sweep against a 30-minute staleness threshold, so a dead chain
+  // is revived within 45 minutes worst case. The threshold cannot go lower
+  // without racing the DLQ recovery path (3 receives x 300s = 15 min).
+  schedule: "rate(15 minutes)",
+  enabled: $app.stage === "production",
+  job: {
+    handler: "apps/api/src/workers/broadcast-reaper.handler",
+    runtime: "nodejs24.x",
+    timeout: "5 minutes",
+    memory: "256 MB",
+    environment: {
+      DATABASE_URL:
+        process.env.DATABASE_URL ||
+        (() => {
+          throw new Error("DATABASE_URL is required");
+        })(),
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
+      // Where the revived chunk goes. Without it the reaper throws on every
+      // batch it tries to revive, which is the one failure it cannot back off
+      // from — it IS the backstop.
+      BATCH_QUEUE_URL: batchQueue.url,
+      SENTRY_DSN: sentryDsn.value,
+    },
+    permissions: [
+      {
+        actions: ["sqs:SendMessage"],
+        resources: [batchQueue.arn],
+      },
+    ],
+    nodejs: { install: ["pg", "@sentry/profiling-node"] },
+  },
+});
 
 export const auditLogCleanupCron = new sst.aws.CronV2("AuditLogCleanup", {
   schedule: "cron(0 2 * * ? *)",
