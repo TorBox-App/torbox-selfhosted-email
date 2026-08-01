@@ -110,6 +110,7 @@ function buildPolicyStatements(config: ResolvedConfig): object[] {
       "ses:GetIdentityVerificationAttributes",
       "ses:ListEmailIdentities",
       "ses:GetEmailIdentity",
+      "ses:ListConfigurationSets",
       "ses:GetConfigurationSet",
       "ses:GetConfigurationSetEventDestinations",
       "cloudwatch:GetMetricData",

@@ -80,6 +80,15 @@ const trustPolicyFromUpdate = () => {
   return JSON.parse(updateCalls[0].args[0].input.PolicyDocument!);
 };
 
+/** Every action granted by the inline policy the command writes, flattened. */
+const grantedActionsFromPut = (): string[] => {
+  const putCalls = iamMock.commandCalls(PutRolePolicyCommand);
+  expect(putCalls).toHaveLength(1);
+  // biome-ignore lint/style/noNonNullAssertion: the SDK input is always set here
+  const doc = JSON.parse(putCalls[0].args[0].input.PolicyDocument!);
+  return doc.Statement.flatMap((s: { Action: string[] }) => s.Action);
+};
+
 describe("platform update-role - console role selection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -211,5 +220,25 @@ describe("platform update-role - console role selection", () => {
     expect(
       trustPolicy.Statement[0].Condition.StringEquals["sts:ExternalId"]
     ).toBe("plat-ext-1");
+  });
+
+  it("grants ses:ListConfigurationSets alongside the config-set Get actions", async () => {
+    // The dashboard's config-set scan calls ListConfigurationSets to discover
+    // set names before Get-ing each one. The policy granted only the Get pair,
+    // so the scan raised AccessDeniedException for every customer — and the
+    // caller swallowed that specific error, so it never surfaced. Get without
+    // List is unreachable: assert the whole trio ships together.
+    await updateRole({ force: true });
+
+    const actions = grantedActionsFromPut();
+    expect(actions).toContain("ses:ListConfigurationSets");
+    expect(actions).toContain("ses:GetConfigurationSet");
+    expect(actions).toContain("ses:GetConfigurationSetEventDestinations");
+  });
+
+  it("grants ses:ListConfigurationSets on the self-hosted role too", async () => {
+    await updateRole({ selfhosted: true, force: true });
+
+    expect(grantedActionsFromPut()).toContain("ses:ListConfigurationSets");
   });
 });

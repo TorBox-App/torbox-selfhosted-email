@@ -376,7 +376,9 @@ function buildConsolePolicyDocument(
       // SES v2 API for listing/getting email identities (domains)
       "ses:ListEmailIdentities",
       "ses:GetEmailIdentity",
-      // SES v2 API for configuration set scanning (needed by dashboard)
+      // SES v2 API for configuration set scanning (needed by dashboard).
+      // List is what makes Get reachable — Get takes a name only List can find.
+      "ses:ListConfigurationSets",
       "ses:GetConfigurationSet",
       "ses:GetConfigurationSetEventDestinations",
       "cloudwatch:GetMetricData",

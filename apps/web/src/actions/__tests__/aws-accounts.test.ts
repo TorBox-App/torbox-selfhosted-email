@@ -268,6 +268,23 @@ vi.mock("@/lib/activation-tracking", () => ({
   trackAwsConnected: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Capture warnings so tests can assert on them. `serializeError` stays real —
+// the actions module uses it to shape what gets logged.
+const mockLogWarn = vi.fn();
+
+vi.mock("@/lib/logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/logger")>();
+  return {
+    ...actual,
+    createActionLogger: () => ({
+      info: vi.fn(),
+      warn: (...args: unknown[]) => mockLogWarn(...args),
+      error: vi.fn(),
+      debug: vi.fn(),
+    }),
+  };
+});
+
 // Set up test database
 beforeAll(async () => {
   // Insert test users
@@ -1351,6 +1368,9 @@ describe("scanAWSAccountFeatures — config set detection", () => {
 
   beforeEach(() => {
     setupQuietScanDefaults();
+    // No clearMocks in the vitest config — warnings would otherwise accumulate
+    // across tests and make the count assertions below pass for the wrong reason.
+    mockLogWarn.mockClear();
   });
 
   it("stores wraps-email-tracking when global config set exists", async () => {
@@ -1629,5 +1649,83 @@ describe("scanAWSAccountFeatures — config set detection", () => {
       where: (a, { eq }) => eq(a.id, scanTestAccount.id),
     });
     expect(row?.emailEnabled).toBe(true);
+  });
+
+  it("warns when ListConfigurationSets is denied instead of failing silently", async () => {
+    // No role template granted ses:ListConfigurationSets, so this call was
+    // denied for every customer — and the catch suppressed AccessDeniedException
+    // specifically, so nothing was ever logged. The dashboard just reported
+    // event tracking as disabled. A denial here now means a stale role, which
+    // is exactly the signal needed to tell customers to run `update-role`.
+    const accessDenied = Object.assign(new Error("AccessDeniedException"), {
+      name: "AccessDeniedException",
+    });
+
+    mockSend.mockImplementation((command: { _type: string }) => {
+      if (command._type === "ListConfigurationSetsCommand") {
+        return Promise.reject(accessDenied);
+      }
+      switch (command._type) {
+        case "GetAccountCommand":
+          return Promise.resolve({ ProductionAccessEnabled: true });
+        case "GetDedicatedIpsCommand":
+          return Promise.resolve({ DedicatedIps: [] });
+        case "ListEmailIdentitiesCommand":
+          return Promise.resolve({ EmailIdentities: [] });
+        default:
+          return Promise.reject(
+            new Error(`Unexpected SES command: ${command._type}`)
+          );
+      }
+    });
+
+    await scanAWSAccountFeatures(scanTestAccount.id, testOrganization.id);
+
+    const configSetWarnings = mockLogWarn.mock.calls.filter((call) =>
+      String(call[1]).includes("config set")
+    );
+    expect(configSetWarnings).toHaveLength(1);
+
+    // The message must name the missing permission and the repair command —
+    // a bare "error listing config sets" does not tell an operator what to do.
+    const [context, message] = configSetWarnings[0];
+    expect(message).toContain("ses:ListConfigurationSets");
+    expect(message).toContain("update-role");
+    expect(context).toMatchObject({
+      err: expect.objectContaining({ name: "AccessDeniedException" }),
+    });
+  });
+
+  it("still warns when ListConfigurationSets fails for a non-permission reason", async () => {
+    const throttled = Object.assign(new Error("TooManyRequestsException"), {
+      name: "TooManyRequestsException",
+    });
+
+    mockSend.mockImplementation((command: { _type: string }) => {
+      if (command._type === "ListConfigurationSetsCommand") {
+        return Promise.reject(throttled);
+      }
+      switch (command._type) {
+        case "GetAccountCommand":
+          return Promise.resolve({ ProductionAccessEnabled: true });
+        case "GetDedicatedIpsCommand":
+          return Promise.resolve({ DedicatedIps: [] });
+        case "ListEmailIdentitiesCommand":
+          return Promise.resolve({ EmailIdentities: [] });
+        default:
+          return Promise.reject(
+            new Error(`Unexpected SES command: ${command._type}`)
+          );
+      }
+    });
+
+    await scanAWSAccountFeatures(scanTestAccount.id, testOrganization.id);
+
+    const configSetWarnings = mockLogWarn.mock.calls.filter((call) =>
+      String(call[1]).includes("config set")
+    );
+    expect(configSetWarnings).toHaveLength(1);
+    // A throttle is not a stale role — it must not claim a missing permission.
+    expect(configSetWarnings[0][1]).not.toContain("ses:ListConfigurationSets");
   });
 });

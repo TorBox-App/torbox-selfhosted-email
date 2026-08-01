@@ -592,7 +592,17 @@ export async function scanAWSAccountFeatures(
       }
       trackedEvents = Array.from(allEventTypes).sort();
     } catch (error: any) {
-      if (error.name !== "AccessDeniedException") {
+      // Never silent: this was suppressed for AccessDeniedException, which is
+      // precisely the case that matters. Every role template granted
+      // GetConfigurationSet without ListConfigurationSets, so the call was
+      // denied for every customer and the dashboard just showed event tracking
+      // as disabled. A denial here now means the account is on a stale role.
+      if (error.name === "AccessDeniedException") {
+        log.warn(
+          { err: error },
+          "Denied listing config sets during scan — role is missing ses:ListConfigurationSets, run `wraps platform update-role`"
+        );
+      } else {
         log.warn({ err: error }, "Error listing config sets during scan");
       }
     }

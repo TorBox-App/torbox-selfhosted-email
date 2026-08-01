@@ -1393,6 +1393,24 @@ describe("broadcast resume schema indexes", () => {
       /^\s*CREATE\s+(UNIQUE\s+)?INDEX\s+(CONCURRENTLY\s+)?(IF NOT EXISTS\s+)?"?(message_send_dedup_idx|contact_keyset_idx)"?/m;
     expect(migration).not.toMatch(hasConcurrentIndexCreate);
   });
+
+  // Self-hosted operators run these against their OWN Postgres. The Neon
+  // serverless driver talks only to Neon's WebSocket proxy, so importing it
+  // here means every statement dies in the handshake on RDS, Supabase, Docker
+  // — anything that isn't Neon. It is also a devDependency, so a production
+  // install would not even resolve it. Use `pg`, like the app runtime and the
+  // selfhost migrator do.
+  test.each([
+    "packages/db/scripts/migrate-indexes.ts",
+    "packages/db/scripts/run-index-subset.ts",
+  ])("%s connects with pg, not the Neon serverless driver", (path) => {
+    const script = readFile(path);
+    // Match imports only — the scripts explain in prose why they avoid it.
+    expect(script).not.toMatch(
+      /^import[\s\S]*?from "@neondatabase\/serverless";$/m
+    );
+    expect(script).toMatch(/^import \{ Pool \} from "pg";$/m);
+  });
 });
 
 // Test 14: Tailwind v3 CSS-variable shorthand
@@ -1427,6 +1445,70 @@ describe("no tailwind v3 css-variable shorthand", () => {
             `${file}:${i + 1} — ${match[0]} should be -(${match[1]})`
           );
         }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test: SES config-set list/get permission parity
+//
+// `ses:GetConfigurationSet` takes a set NAME, so it is unreachable without
+// `ses:ListConfigurationSets` to discover the names first. Every role template
+// granted the Get pair and none granted List, which silently broke config-set
+// discovery for every customer — the dashboard reported event tracking as
+// disabled on accounts that had it fully configured.
+//
+// The policy is duplicated across six sources (two CloudFormation templates,
+// the CLI's console-role builder, the CLI Pulumi stack, and the standalone
+// Pulumi and CDK packages), so the pair can drift apart in any one of them.
+// Paths are hardcoded rather than globbed: a repo-wide glob would match test
+// fixtures and the gitignored .next-docs tree.
+// ─────────────────────────────────────────────────────────
+
+describe("ses config-set list/get permission parity", () => {
+  test("every policy source granting GetConfigurationSet also grants ListConfigurationSets", () => {
+    const POLICY_SOURCES = [
+      "cloudformation/wraps-console-access-role.yaml",
+      "cloudformation/wraps-email-infrastructure.yaml",
+      "packages/cli/src/commands/platform/update-role.ts",
+      "packages/cli/src/infrastructure/resources/iam.ts",
+      "packages/pulumi/src/resources/iam.ts",
+      "packages/cdk/src/email.ts",
+    ];
+
+    const violations: string[] = [];
+
+    // Counted, not just present: three of these files define more than one
+    // policy document (wraps-email-infrastructure.yaml alone carries three,
+    // including a second copy of wraps-console-access-role), so a file-level
+    // `includes` would pass while a block still went unfixed.
+    // The negative lookahead keeps GetConfigurationSetEventDestinations —
+    // which contains GetConfigurationSet as a substring — out of the count.
+    const getRe = /ses:GetConfigurationSet(?!EventDestinations)/g;
+    const listRe = /ses:ListConfigurationSets/g;
+
+    for (const file of POLICY_SOURCES) {
+      const content = readFile(file);
+      const getCount = (content.match(getRe) ?? []).length;
+      const listCount = (content.match(listRe) ?? []).length;
+
+      if (getCount === 0) {
+        violations.push(
+          `${file} — expected a ses:GetConfigurationSet grant, found none. ` +
+            "Did the policy move? Update POLICY_SOURCES."
+        );
+        continue;
+      }
+      if (listCount < getCount) {
+        violations.push(
+          `${file} — ${getCount} ses:GetConfigurationSet grant(s) but only ` +
+            `${listCount} ses:ListConfigurationSets. Get takes a set name that ` +
+            "only List can discover, so config-set scanning fails with " +
+            "AccessDeniedException."
+        );
       }
     }
 
