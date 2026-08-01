@@ -71,6 +71,31 @@ jobs:
       - name: Remove system Pulumi (SST compatibility fix)
         run: sudo rm -f /usr/local/bin/pulumi-language-nodejs
 
+      # Migrate BEFORE deploying, not after. `sst deploy` publishes each
+      # Lambda's new code the moment that function updates — well before the
+      # command returns — so migrating afterwards leaves a window where new code
+      # runs against the old schema. Any read or write touching a column the
+      # migration has not added yet throws, and for the queue workers that means
+      # burned SQS retries and dead-lettered chunks on a live broadcast.
+      #
+      # Until now this step did not exist at all and every schema change relied
+      # on someone running db:migrate by hand: batch_send.paused_at shipped in
+      # the same commit as the broadcast-reaper query that reads it, nobody ran
+      # it, and the reaper threw on every run against production.
+      #
+      # Safe because migrations are expected to be backward compatible: the
+      # still-running old code ignores columns it does not know about. A
+      # migration that REMOVES or renames still has to be split expand/contract
+      # across two releases — no ordering makes that safe on its own.
+      #
+      # Failing this way round is also the better failure: a migration that dies
+      # leaves old code on the old schema, which works. The other order leaves
+      # new code on the old schema, which does not.
+      - name: Run database migrations
+        run: pnpm --filter @wraps/db db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Deploy SST
         run: pnpm exec sst deploy --stage ${{ github.event.inputs.stage || 'production' }}
         env:
