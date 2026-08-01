@@ -4,11 +4,19 @@
  * Runs a named subset of the manifest, pulling in any prerequisite the subset
  * depends on. `migrate-indexes.ts` runs the whole set; these exist so a single
  * area can be re-run, and because migration `-- NOTE:` comments name them.
+ *
+ * Uses `pg` for the same reason migrate-indexes.ts does: the Neon serverless
+ * driver only reaches Neon's WebSocket proxy, so it cannot connect to a
+ * self-hosted Postgres at all.
  */
 
-import { Pool } from "@neondatabase/serverless";
 import dotenv from "dotenv";
-import { resolveDirectDatabaseUrl } from "../src/connection-url";
+import { Pool } from "pg";
+import {
+  describeMigrationError,
+  migrationHint,
+  resolveDirectDatabaseUrl,
+} from "../src/connection-url";
 import { CONCURRENT_INDEXES, INDEX_PREREQUISITES } from "./index-manifest";
 
 dotenv.config({ path: "../../apps/web/.env.local" });
@@ -16,8 +24,11 @@ dotenv.config({ path: "../../.env" });
 // Self-hosted operators keep their config here, not in apps/web/.env.local.
 dotenv.config({ path: "../../.env.selfhost" });
 
+/** The failure plus the fix, when we recognize one. */
 function describe(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  const description = describeMigrationError(err);
+  const hint = migrationHint(description);
+  return hint ? `${description}\n  ${hint}` : description;
 }
 
 export function runIndexSubset(names: string[]): void {

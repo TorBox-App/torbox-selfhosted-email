@@ -110,6 +110,36 @@ export function normalizeDatabaseUrl(raw: string): NormalizedDatabaseUrl {
 }
 
 /**
+ * The message of anything thrown, not just an `Error`.
+ *
+ * Not everything in this path rejects with an Error. A WebSocket driver rejects
+ * with a DOM-style `ErrorEvent`, which carries a perfectly good `message` but
+ * fails `instanceof Error` — so the old Error-only walk fell through to
+ * `String(error)` and printed the literal text `[object ErrorEvent]`.
+ */
+function messageOf(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null) {
+    return;
+  }
+  const { message } = value as { message?: unknown };
+  return typeof message === "string" && message.length > 0
+    ? message
+    : undefined;
+}
+
+/**
+ * The next link in a failure chain. `cause` is the standard one; `error` is
+ * where event-style throwables put the underlying failure.
+ */
+function nextCause(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) {
+    return;
+  }
+  const { cause, error } = value as { cause?: unknown; error?: unknown };
+  return cause ?? error;
+}
+
+/**
  * Flatten an error's `cause` chain into one line.
  *
  * The libraries in the selfhost path bury the actionable reason: Drizzle
@@ -122,19 +152,22 @@ export function describeMigrationError(error: unknown): string {
   let current: unknown = error;
   const seen = new Set<unknown>();
 
-  while (current instanceof Error && !seen.has(current)) {
+  while (current != null && !seen.has(current)) {
     seen.add(current);
-    const code = (current as { code?: string }).code;
-    // DrizzleQueryError's message embeds the whole query plus a `params:` line
-    // — keep the statement, drop the rest. Every other message stays intact.
-    const message = current.message.startsWith("Failed query:")
-      ? current.message.split("\n")[0]
-      : current.message;
-    const described = code ? `${message} (${code})` : message;
-    if (!parts.includes(described)) {
-      parts.push(described);
+    const raw = messageOf(current);
+    if (raw !== undefined) {
+      const code = (current as { code?: string }).code;
+      // DrizzleQueryError's message embeds the whole query plus a `params:`
+      // line — keep the statement, drop the rest. Other messages stay intact.
+      const message = raw.startsWith("Failed query:")
+        ? (raw.split("\n")[0] ?? raw)
+        : raw;
+      const described = code ? `${message} (${code})` : message;
+      if (!parts.includes(described)) {
+        parts.push(described);
+      }
     }
-    current = current.cause;
+    current = nextCause(current);
   }
 
   return parts.length > 0 ? parts.join(" — ") : String(error);

@@ -253,6 +253,42 @@ describe("describeMigrationError", () => {
   it("stringifies non-Error throws", () => {
     expect(describeMigrationError("plain string")).toBe("plain string");
   });
+
+  it("reads the message off an event-style throwable", () => {
+    // A WebSocket driver rejects with a DOM-style ErrorEvent, which carries a
+    // message but is not an Error. A self-hosted operator saw every index
+    // failure reported as the literal text "[object ErrorEvent]".
+    const errorEvent = {
+      type: "error",
+      message: "Unexpected server response: 404",
+    };
+
+    expect(describeMigrationError(errorEvent)).toBe(
+      "Unexpected server response: 404"
+    );
+  });
+
+  it("follows the `error` property an event-style throwable wraps", () => {
+    const errorEvent = {
+      type: "error",
+      message: "connection failed",
+      error: Object.assign(new Error("connect ECONNREFUSED 10.0.0.1:5432"), {
+        code: "ECONNREFUSED",
+      }),
+    };
+
+    expect(describeMigrationError(errorEvent)).toBe(
+      "connection failed — connect ECONNREFUSED 10.0.0.1:5432 (ECONNREFUSED)"
+    );
+  });
+
+  it("keeps walking past a link that carries no message", () => {
+    // The outer wrapper is messageless; the reason underneath still has to
+    // reach the operator rather than being swallowed with it.
+    const outer = { cause: new Error("relation does not exist") };
+
+    expect(describeMigrationError(outer)).toBe("relation does not exist");
+  });
 });
 
 describe("migrationHint", () => {

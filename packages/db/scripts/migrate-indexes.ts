@@ -17,17 +17,35 @@
  *    IF NOT EXISTS then silently skips it forever, so a green re-run can still
  *    mean no usable index — the planner ignores invalid ones. Hence the
  *    pg_index.indisvalid check rather than a mere existence check.
+ *
+ * Connect with `pg`, the same driver the app runtime and the selfhost migrator
+ * use. @neondatabase/serverless speaks only to Neon's WebSocket proxy, so on any
+ * other Postgres every statement here died in the handshake — reported, before
+ * describeMigrationError learned to read event-style throwables, as the useless
+ * `[object ErrorEvent]`. It is also a devDependency, absent from a production
+ * self-hosted install.
  */
 
-import { Pool } from "@neondatabase/serverless";
 import dotenv from "dotenv";
-import { resolveDirectDatabaseUrl } from "../src/connection-url";
+import { Pool } from "pg";
+import {
+  describeMigrationError,
+  migrationHint,
+  resolveDirectDatabaseUrl,
+} from "../src/connection-url";
 import { CONCURRENT_INDEXES, INDEX_PREREQUISITES } from "./index-manifest";
 
 dotenv.config({ path: "../../apps/web/.env.local" });
 dotenv.config({ path: "../../.env" });
 // Self-hosted operators keep their config here, not in apps/web/.env.local.
 dotenv.config({ path: "../../.env.selfhost" });
+
+/** The failure plus the fix, when we recognize one. */
+function describe(err: unknown): string {
+  const description = describeMigrationError(err);
+  const hint = migrationHint(description);
+  return hint ? `${description}\n  ${hint}` : description;
+}
 
 let CONNECTION_STRING: string;
 try {
@@ -37,12 +55,8 @@ try {
   }
   CONNECTION_STRING = resolved.url;
 } catch (err) {
-  console.error(err instanceof Error ? err.message : String(err));
+  console.error(describe(err));
   process.exit(1);
-}
-
-function describe(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 async function run() {
