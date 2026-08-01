@@ -1313,6 +1313,7 @@ async function processJob(
             ),
             and(
               eq(messageSend.status, "queued"),
+              isNull(messageSend.messageId),
               sql`${messageSend.claimedAt} < now() - interval '${sql.raw(String(CLAIM_STALE_MINUTES))} minutes'`
             )
           )

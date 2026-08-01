@@ -68,6 +68,9 @@ async function runClaim(
 /**
  * Run the re-claim UPDATE (failed rows + stale queued rows).
  * Returns the contactIds that were re-claimed.
+ *
+ * This helper matches the FIXED implementation in batch-sender.ts
+ * (with messageId guard for queued rows).
  */
 async function runReclaim(
   orgId: string,
@@ -83,9 +86,17 @@ async function runReclaim(
         eq(messageSend.batchSendId, BATCH_ID),
         inArray(messageSend.contactId, notClaimedIds),
         or(
-          eq(messageSend.status, "failed"),
+          // Only genuinely-unsent failures: a 'failed' row carrying a
+          // messageId was accepted by SES (e.g. a bookkeeping error was
+          // misfiled as a send failure) — re-claiming it would send a
+          // duplicate, and SES has no idempotency token to stop it.
+          and(
+            eq(messageSend.status, "failed"),
+            sql`${messageSend.messageId} IS NULL`
+          ),
           and(
             eq(messageSend.status, "queued"),
+            sql`${messageSend.messageId} IS NULL`,
             sql`${messageSend.claimedAt} < now() - interval '${sql.raw(String(CLAIM_STALE_MINUTES))} minutes'`
           )
         )
@@ -318,5 +329,54 @@ describe("Batch sender claim-before-send (real DB)", () => {
     // Re-claim should NOT touch the fresh row (would steal a live execution's claim)
     const reclaimed2 = await runReclaim(orgId, [CONTACT_A_ID]);
     expect(reclaimed2).toHaveLength(0);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 5. Stale queued row with messageId must NOT be re-claimed (duplicate-send guard)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  it("stale queued row with messageId is NOT re-claimed (prevents duplicate sends)", async () => {
+    const orgId = fixture.ids.org;
+    const awsAccountId = fixture.ids.awsAccount;
+
+    const staleTime = new Date(Date.now() - 20 * 60 * 1000); // 20 minutes ago
+
+    // Seed a stale queued row WITH a messageId (simulates bookkeeping failure:
+    // SES accepted the message, but recordAcceptedSend() failed before writing messageId)
+    await db.insert(messageSend).values({
+      organizationId: orgId,
+      contactId: CONTACT_A_ID,
+      awsAccountId,
+      channel: "email",
+      batchSendId: BATCH_ID,
+      sourceType: "batch",
+      recipient: `${TEST_PREFIX}-ca@example.com`,
+      status: "queued",
+      claimedAt: staleTime,
+      messageId: "ses-message-123", // Row has a messageId = SES already accepted it
+    } as typeof messageSend.$inferInsert);
+
+    // Re-claim should NOT pick up this row (messageId guard prevents duplicate send)
+    const reclaimed = await runReclaim(orgId, [CONTACT_A_ID]);
+    expect(reclaimed).toHaveLength(0);
+
+    // Verify the row remains unchanged
+    const [row] = await db
+      .select({
+        status: messageSend.status,
+        messageId: messageSend.messageId,
+        claimedAt: messageSend.claimedAt,
+      })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, orgId),
+          eq(messageSend.batchSendId, BATCH_ID),
+          eq(messageSend.contactId, CONTACT_A_ID)
+        )
+      );
+    expect(row.status).toBe("queued");
+    expect(row.messageId).toBe("ses-message-123");
+    expect(row.claimedAt?.getTime()).toBe(staleTime.getTime());
   });
 });
