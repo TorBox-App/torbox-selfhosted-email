@@ -57,6 +57,16 @@ const testOrg = {
   metadata: null,
 };
 
+// Second org, used to prove externalId uniqueness is scoped per organization.
+const otherOrg = {
+  id: `${TEST_PREFIX}-org-2`,
+  name: "API Contacts Other Org",
+  slug: `${TEST_PREFIX}-org-other`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
 const testMember = {
   id: `${TEST_PREFIX}-member-1`,
   organizationId: testOrg.id,
@@ -124,6 +134,14 @@ beforeAll(async () => {
       set: { name: testOrg.name },
     });
 
+  await db
+    .insert(organization)
+    .values(otherOrg)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: otherOrg.name },
+    });
+
   // Insert test member
   await db
     .insert(member)
@@ -154,6 +172,7 @@ beforeAll(async () => {
 // Clean up contacts before each test and reset mocks
 beforeEach(async () => {
   await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
+  await db.delete(contact).where(eq(contact.organizationId, otherOrg.id));
   vi.clearAllMocks();
 });
 
@@ -161,9 +180,11 @@ beforeEach(async () => {
 afterAll(async () => {
   // contactTopic rows cascade-delete when contacts are deleted
   await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
+  await db.delete(contact).where(eq(contact.organizationId, otherOrg.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrg.id));
   await db.delete(member).where(eq(member.organizationId, testOrg.id));
   await db.delete(organization).where(eq(organization.id, testOrg.id));
+  await db.delete(organization).where(eq(organization.id, otherOrg.id));
   await db.delete(user).where(eq(user.id, testUser.id));
 });
 
@@ -995,6 +1016,244 @@ describe("Contacts API Integration", () => {
   });
 
   describe("PATCH /v1/contacts/:id", () => {
+    it("updates a contact addressed by a UUID-shaped externalId", async () => {
+      const customerUuid = crypto.randomUUID();
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          externalId: customerUuid,
+          email: "uuid-extid@example.com",
+          emailHash: "hash-uuid-extid",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${customerUuid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName: "Ada" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.id).toBe(existing.id);
+      expect(body.firstName).toBe("Ada");
+
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.firstName).toBe("Ada");
+    });
+
+    it("sets externalId on a contact that had none", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "set-extid@example.com",
+          emailHash: "hash-set-extid",
+          properties: {},
+        })
+        .returning();
+
+      const customerUuid = crypto.randomUUID();
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: customerUuid }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.externalId).toBe(customerUuid);
+
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.externalId).toBe(customerUuid);
+    });
+
+    it("makes the contact addressable by a newly assigned externalId", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "addressable@example.com",
+          emailHash: "hash-addressable",
+          properties: {},
+        })
+        .returning();
+
+      const customerUuid = crypto.randomUUID();
+      const app = createTestApp();
+
+      await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: customerUuid }),
+        })
+      );
+
+      const followUp = await app.handle(
+        new Request(`http://localhost/v1/contacts/${customerUuid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName: "Grace" }),
+        })
+      );
+
+      expect(followUp.status).toBe(200);
+      const body = await followUp.json();
+      expect(body.id).toBe(existing.id);
+      expect(body.firstName).toBe("Grace");
+    });
+
+    it("returns 409 when the externalId belongs to another contact", async () => {
+      const takenUuid = crypto.randomUUID();
+      await db.insert(contact).values({
+        organizationId: testOrg.id,
+        externalId: takenUuid,
+        email: "owner@example.com",
+        emailHash: "hash-owner",
+        properties: {},
+      });
+
+      const [target] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "claimant@example.com",
+          emailHash: "hash-claimant",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${target.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: takenUuid, firstName: "Nope" }),
+        })
+      );
+
+      expect(response.status).toBe(409);
+
+      // The whole update is rejected — no partial write.
+      const [unchanged] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, target.id));
+      expect(unchanged.externalId).toBeNull();
+      expect(unchanged.firstName).toBeNull();
+    });
+
+    it("allows re-sending a contact's own externalId unchanged", async () => {
+      const ownUuid = crypto.randomUUID();
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          externalId: ownUuid,
+          email: "idempotent@example.com",
+          emailHash: "hash-idempotent",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: ownUuid, firstName: "Alan" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.externalId).toBe(ownUuid);
+      expect(body.firstName).toBe("Alan");
+    });
+
+    it("clears externalId when passed null", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          externalId: crypto.randomUUID(),
+          email: "clear-extid@example.com",
+          emailHash: "hash-clear-extid",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: null }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.externalId).toBeNull();
+
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.externalId).toBeNull();
+    });
+
+    it("does not collide with an identical externalId in another org", async () => {
+      const sharedUuid = crypto.randomUUID();
+      await db.insert(contact).values({
+        organizationId: otherOrg.id,
+        externalId: sharedUuid,
+        email: "other-org@example.com",
+        emailHash: "hash-other-org",
+        properties: {},
+      });
+
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "same-extid@example.com",
+          emailHash: "hash-same-extid",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ externalId: sharedUuid }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.externalId).toBe(sharedUuid);
+    });
+
     it("updates contact email", async () => {
       const [existing] = await db
         .insert(contact)

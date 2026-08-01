@@ -49,6 +49,50 @@ export function hashContactValue(value: string): string {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Partial unique indexes on `contact`, keyed by the field that collided. */
+const CONTACT_UNIQUE_CONSTRAINTS = {
+  externalId: "contact_unique_org_external_id_idx",
+  email: "contact_unique_org_email_idx",
+  phone: "contact_unique_org_phone_idx",
+} as const;
+
+export type ContactUniqueField = keyof typeof CONTACT_UNIQUE_CONSTRAINTS;
+
+/**
+ * Identifies which contact field a Postgres unique violation came from, so
+ * callers can answer 409 instead of 500. Returns null for anything else —
+ * including unique violations on other indexes — so callers re-throw rather
+ * than reporting a conflict that did not happen.
+ */
+export function contactUniqueViolationField(
+  error: unknown
+): ContactUniqueField | null {
+  // Drizzle wraps driver errors in DrizzleQueryError, so the Postgres `code`
+  // and `constraint` sit on `.cause` rather than on the thrown error itself.
+  let current: unknown = error;
+  let depth = 0;
+
+  while (typeof current === "object" && current !== null && depth < 5) {
+    const { code, constraint, cause } = current as {
+      code?: string;
+      constraint?: string;
+      cause?: unknown;
+    };
+
+    if (code === "23505") {
+      const match = Object.entries(CONTACT_UNIQUE_CONSTRAINTS).find(
+        ([, indexName]) => constraint === indexName
+      );
+      return match ? (match[0] as ContactUniqueField) : null;
+    }
+
+    current = cause;
+    depth += 1;
+  }
+
+  return null;
+}
+
 export function detectContactIdType(
   id: string
 ): "uuid" | "email" | "externalId" {
@@ -107,23 +151,43 @@ export async function listContacts(
   return { contacts, total };
 }
 
-export async function findContact(
-  id: string,
-  organizationId: string,
-  dbClient: DbClient = db
-): Promise<(ContactRecord & { topics: ContactTopicRecord[] }) | null> {
+/**
+ * A contact path param may be a Wraps UUID, an email, or a caller-supplied
+ * externalId — and those namespaces overlap, since callers commonly store
+ * their own UUIDs (or emails) in externalId. Shape detection alone therefore
+ * cannot decide which column to match, so every lookup also considers
+ * externalId; the shape-implied column wins when two contacts both match.
+ */
+function contactIdMatch(id: string) {
   const idType = detectContactIdType(id);
-  const idCondition =
+  const primary =
     idType === "email"
       ? eq(contact.email, id)
       : idType === "uuid"
         ? eq(contact.id, id)
         : eq(contact.externalId, id);
 
+  return {
+    where:
+      idType === "externalId"
+        ? primary
+        : or(primary, eq(contact.externalId, id)),
+    preference: sql`case when ${primary} then 0 else 1 end`,
+  };
+}
+
+export async function findContact(
+  id: string,
+  organizationId: string,
+  dbClient: DbClient = db
+): Promise<(ContactRecord & { topics: ContactTopicRecord[] }) | null> {
+  const { where, preference } = contactIdMatch(id);
+
   const [result] = await dbClient
     .select()
     .from(contact)
-    .where(and(idCondition, eq(contact.organizationId, organizationId)))
+    .where(and(where, eq(contact.organizationId, organizationId)))
+    .orderBy(preference)
     .limit(1);
 
   if (!result) return null;
@@ -147,18 +211,13 @@ export async function resolveContactId(
   organizationId: string,
   dbClient: DbClient = db
 ): Promise<string | null> {
-  const idType = detectContactIdType(id);
-  const idCondition =
-    idType === "email"
-      ? eq(contact.email, id)
-      : idType === "uuid"
-        ? eq(contact.id, id)
-        : eq(contact.externalId, id);
+  const { where, preference } = contactIdMatch(id);
 
   const [result] = await dbClient
     .select({ id: contact.id })
     .from(contact)
-    .where(and(idCondition, eq(contact.organizationId, organizationId)))
+    .where(and(where, eq(contact.organizationId, organizationId)))
+    .orderBy(preference)
     .limit(1);
 
   return result?.id ?? null;

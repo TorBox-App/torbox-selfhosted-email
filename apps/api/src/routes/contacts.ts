@@ -13,7 +13,9 @@
 
 import {
   bulkDeleteContacts,
+  type ContactRecord,
   contact,
+  contactUniqueViolationField,
   deleteContact,
   fetchContactSubscriptions,
   fetchTopicsForSubscription,
@@ -152,6 +154,12 @@ const createContactSchema = t.Object({
 });
 
 const updateContactSchema = t.Object({
+  externalId: t.Optional(
+    t.Union([t.String({ maxLength: 255 }), t.Null()], {
+      description:
+        "Caller-supplied external ID, unique per organization (null to clear)",
+    })
+  ),
   email: t.Optional(
     t.String({ description: "Email address", maxLength: 255, format: "email" })
   ),
@@ -660,11 +668,28 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         return { error: "Contact not found" };
       }
 
+      // Reassigning an externalId already held by a sibling contact would
+      // trip contact_unique_org_external_id_idx. Reject it up front so the
+      // rest of the patch is not applied either.
+      if (body.externalId) {
+        const holder = await findContactByExternalId(
+          body.externalId,
+          authContext.organizationId
+        );
+        if (holder && holder.id !== contactId) {
+          ctx.set.status = 409;
+          return { error: "Contact with this externalId already exists" };
+        }
+      }
+
       // Build update values
       const updateValues: Record<string, unknown> = {
         updatedAt: new Date(),
       };
 
+      if (body.externalId !== undefined) {
+        updateValues.externalId = body.externalId;
+      }
       if (body.email !== undefined) {
         updateValues.email = body.email;
         updateValues.emailHash = body.email
@@ -692,11 +717,24 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         updateValues.preferredChannel = body.preferredChannel;
 
       // Update contact (scoped by org for defense-in-depth)
-      const updated = await updateContactFields(
-        contactId,
-        authContext.organizationId,
-        updateValues
-      );
+      let updated: ContactRecord;
+      try {
+        updated = await updateContactFields(
+          contactId,
+          authContext.organizationId,
+          updateValues
+        );
+      } catch (err) {
+        // Race: a concurrent write claimed the value between the check above
+        // and this update. Anything that is not a contact uniqueness
+        // violation is a real failure and must keep propagating.
+        const field = contactUniqueViolationField(err);
+        if (!field) {
+          throw err;
+        }
+        ctx.set.status = 409;
+        return { error: `Contact with this ${field} already exists` };
+      }
 
       // Add topic subscriptions if specified (PATCH adds, doesn't replace)
       const pendingTopics: string[] = [];
@@ -979,6 +1017,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           ),
         }),
         404: errorResponse,
+        409: errorResponse,
       },
       detail: {
         tags: ["contacts"],
