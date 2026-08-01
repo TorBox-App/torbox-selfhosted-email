@@ -724,4 +724,31 @@ describe("scripts/selfhost/upgrade", () => {
     expect(mockRunSubprocess).not.toHaveBeenCalled();
     exitSpy.mockRestore();
   });
+
+  it("runs migrations BEFORE deploying new code", async () => {
+    // `sst deploy` publishes each Lambda's new code as it updates, well before
+    // the command returns. Migrating afterwards leaves a window where new code
+    // runs against the old schema: any write touching a not-yet-added column
+    // throws, and for the queue workers that means burned SQS retries and
+    // dead-lettered chunks on a live broadcast. Order is the whole guarantee
+    // here, so assert the order, not just that both happened.
+    const order: string[] = [];
+    mockMigrate.mockImplementation(() => {
+      order.push("migrate");
+      return Promise.resolve();
+    });
+    mockRunSubprocess.mockImplementation((_cmd: string, args: string[]) => {
+      if (args.includes("deploy")) {
+        order.push("deploy");
+      }
+      return Promise.resolve();
+    });
+
+    const { upgrade } = await import("../upgrade.js");
+    await upgrade({ region: "us-east-1", yes: true });
+
+    expect(order[0]).toBe("migrate");
+    expect(order).toContain("deploy");
+    expect(order.indexOf("migrate")).toBeLessThan(order.indexOf("deploy"));
+  });
 });

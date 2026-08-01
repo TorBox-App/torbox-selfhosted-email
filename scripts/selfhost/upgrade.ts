@@ -287,6 +287,27 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
     }
   }
 
+  const databaseUrl =
+    metadata.services.selfhost?.config?.databaseUrl || env.DATABASE_URL;
+
+  // Migrate BEFORE deploying, not after. `sst deploy` publishes new Lambda code
+  // the moment each function updates — well before the command returns — so
+  // migrating afterwards leaves a window where new code runs against the old
+  // schema. Any write touching a column the migration has not added yet throws,
+  // and for the queue workers that means burned SQS retries and dead-lettered
+  // chunks on a live broadcast.
+  //
+  // Safe because migrations here are expected to be backward compatible: the
+  // still-running old code ignores columns it does not know about. A migration
+  // that REMOVES or renames something must be split expand/contract across two
+  // releases regardless of which order this script uses — neither order makes a
+  // destructive migration safe against code that is still running.
+  //
+  // Failing this way round is also the better failure: a migration that dies
+  // leaves the old code on the old schema (working). The other order leaves new
+  // code on the old schema (broken).
+  await migrateWithProgress(databaseUrl);
+
   clack.log.step("Deploying updated infrastructure...");
   await runSubprocess(
     "sst",
@@ -312,11 +333,6 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<void> {
       );
     }
   }
-
-  const databaseUrl =
-    metadata.services.selfhost?.config?.databaseUrl || env.DATABASE_URL;
-
-  await migrateWithProgress(databaseUrl);
 
   // Runs on upgrade as well as deploy: upsert is how an edited template ships,
   // and it is the recovery path for an install that predates provisioning.
