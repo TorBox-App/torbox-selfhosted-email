@@ -13,6 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { isSelfHostedImageUrl } from "@/lib/organization-logo";
 
 // Metadata for the landing page
 export const metadata: Metadata = {
@@ -177,6 +178,10 @@ export default async function HomePage() {
                     className="h-12 w-12 rounded-lg object-cover"
                     height={48}
                     src={org.logo}
+                    // Self-hosted logos are served from this deployment's own
+                    // domain, which cannot be in next.config remotePatterns
+                    // (unknown at build time) — optimizing them would throw.
+                    unoptimized={isSelfHostedImageUrl(org.logo)}
                     width={48}
                   />
                 ) : (

@@ -463,10 +463,30 @@ export default $config({
       ],
     });
 
+    // Uploads bucket for organization logos. Private on purpose: objects are
+    // served through the web app's /api/images route (which validates the key
+    // prefix before reading), never via direct S3 URLs. The app stores the
+    // absolute URL because emails need one. next/image rejects any absolute
+    // src whose host is not in remotePatterns — same-origin is not exempt —
+    // and this deployment's host is not knowable when next.config is frozen
+    // at build time, so the two dashboard render sites pass `unoptimized`
+    // instead. Mail clients fetch the raw URL either way.
+    const uploadsBucket = new sst.aws.Bucket("SelfhostUploads", {
+      transform: {
+        bucket: {
+          tags: {
+            ManagedBy: "sst",
+            Service: "wraps-selfhost",
+          },
+        },
+      },
+    });
+
     // Next.js web app via OpenNext
     const web = new sst.aws.Nextjs("SelfhostWeb", {
       path: "../apps/web",
-      link: [api],
+      // The bucket link grants the server function s3 Get/Put/Delete on it.
+      link: [api, uploadsBucket],
       server: {
         timeout: "120 seconds",
         memory: "1024 MB",
@@ -494,6 +514,10 @@ export default $config({
         WRAPS_LICENSE_KEY: process.env.LICENSE_KEY ?? "",
         WRAPS_API_URL: api.url,
         NEXT_PUBLIC_API_URL: api.url,
+        // Logo uploads (apps/web /api/upload/organization-logo) switch from
+        // Vercel Blob to this bucket when set — that is the entire feature
+        // flag. Unset on Vercel, so the platform app keeps its blob storage.
+        UPLOADS_BUCKET_NAME: uploadsBucket.name,
         NEXT_PUBLIC_APP_URL:
           process.env.NEXT_PUBLIC_APP_URL ||
           (webDomain ? `https://${webDomain}` : ""),

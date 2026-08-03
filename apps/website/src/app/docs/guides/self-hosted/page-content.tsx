@@ -1491,6 +1491,9 @@ pnpm install`,
                       <code className="rounded bg-muted px-1.5 py-0.5">
                         SELFHOST_WEB_DOMAIN
                       </code>
+                      . Uploaded organization logos store this URL, so changing
+                      it later leaves existing logos pointing at the old domain
+                      — re-upload them, or keep the old domain resolving
                     </td>
                   </tr>
                 </tbody>

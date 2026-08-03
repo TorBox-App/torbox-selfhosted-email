@@ -4,6 +4,7 @@ import { ImageIcon, Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { isSelfHostedImageUrl, isVercelBlobUrl } from "@/lib/organization-logo";
 import { cn } from "@/lib/utils";
 
 type ImageUploadProps = {
@@ -13,19 +14,6 @@ type ImageUploadProps = {
   orgSlug: string;
   className?: string;
 };
-
-/**
- * Securely check if a URL is from Vercel Blob storage
- * Uses proper URL parsing to prevent bypass attacks
- */
-function isVercelBlobUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.endsWith(".vercel-storage.com");
-  } catch {
-    return false;
-  }
-}
 
 export function ImageUpload({
   value,
@@ -103,8 +91,8 @@ export function ImageUpload({
     setError(null);
 
     try {
-      // Only call delete API if it's a Vercel Blob URL
-      if (isVercelBlobUrl(value)) {
+      // Only call delete API if the URL lives in this deployment's storage
+      if (isVercelBlobUrl(value) || isSelfHostedImageUrl(value)) {
         const response = await fetch(
           `/api/upload/organization-logo?url=${encodeURIComponent(value)}&orgSlug=${orgSlug}`,
           {
@@ -136,6 +124,11 @@ export function ImageUpload({
               className="object-cover"
               fill
               src={value}
+              // A self-hosted logo URL carries that deployment's own domain,
+              // which cannot be in next.config remotePatterns (unknown at
+              // build time). Without this, next/image throws "Invalid src
+              // prop ... hostname is not configured" and the page dies.
+              unoptimized={isSelfHostedImageUrl(value)}
             />
           ) : (
             <div className="flex h-full items-center justify-center">
