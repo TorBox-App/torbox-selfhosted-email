@@ -30,24 +30,32 @@ describe("SCIM session revocation — databaseHooks.user.update.after", () => {
     deleteSpy.mockRestore();
   });
 
-  it("deletes sessions from the session table for the user when active becomes false", async () => {
-    await hook({ id: "user-123", active: false });
+  it("deletes sessions from the session table for the user when banned becomes true", async () => {
+    await hook({ id: "user-123", banned: true });
     expect(deleteSpy).toHaveBeenCalledWith(schema.session);
     expect(mockWhere).toHaveBeenCalledTimes(1);
   });
 
-  it("does not delete sessions when active is true", async () => {
-    await hook({ id: "user-123", active: true });
+  it("does not delete sessions when banned is false (reactivation)", async () => {
+    await hook({ id: "user-123", banned: false });
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it("does not delete sessions when active field is absent", async () => {
+  it("does not delete sessions when banned field is absent", async () => {
     await hook({ id: "user-123" });
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it("does not delete sessions when active is undefined", async () => {
-    await hook({ id: "user-123", active: undefined });
+  it("does not delete sessions when banned is null", async () => {
+    await hook({ id: "user-123", banned: null });
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  // The IdP-facing name for deactivation. It must NOT drive this hook: the SCIM
+  // plugin translates it to `banned` before the write, so an `active` key here
+  // would mean the hook is keyed off a field the DB layer never sees.
+  it("ignores a raw SCIM `active: false` payload", async () => {
+    await hook({ id: "user-123", active: false });
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 });

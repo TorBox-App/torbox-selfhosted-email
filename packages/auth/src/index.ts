@@ -12,6 +12,7 @@ import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import {
+  admin,
   bearer,
   deviceAuthorization,
   haveIBeenPwned,
@@ -19,6 +20,7 @@ import {
   organization,
   twoFactor,
 } from "better-auth/plugins";
+import { userAc } from "better-auth/plugins/admin/access";
 import { inbox } from "better-inbox";
 import { desc } from "drizzle-orm";
 import { PostHog } from "posthog-node";
@@ -584,7 +586,6 @@ export const auth = betterAuth<BetterAuthOptions>({
     },
   },
   plugins: [
-    nextCookies(),
     haveIBeenPwned({
       customPasswordCompromisedMessage:
         "This password has been exposed in a data breach. Please choose a more secure password.",
@@ -601,6 +602,25 @@ export const auth = betterAuth<BetterAuthOptions>({
       issuer: "Wraps",
     }),
     organization({ ac, roles }),
+    // Carried only for SCIM deprovisioning. `banned` is the sole enforced
+    // disabled-user state in better-auth, and @better-auth/scim maps SCIM
+    // `active: false` onto it — without this plugin the SCIM plugin rejects
+    // every IdP deactivate push with 400, and reports every user as active
+    // because it reads `active` back from `!user.banned`.
+    //
+    // Keeping it from becoming a platform-admin surface takes `roles`, not
+    // `adminRoles`. `adminRoles` only decides whether a *target* account is
+    // treated as an admin (impersonation protection); it is not consulted when
+    // authorizing the caller. That goes through `hasPermission`, which resolves
+    // `user.role` against this map — and better-auth's default map carries an
+    // `admin` role holding cross-tenant list/ban/impersonate/set-password over
+    // every user in the database.
+    //
+    // Handing it only `user` (better-auth's own empty-permission role) means
+    // `user.role = "admin"` resolves to nothing and authorizes nothing, so a
+    // stray DB edit or a future feature that starts writing `role` cannot open
+    // that door by accident. Tenancy stays the organization plugin's job.
+    admin({ adminRoles: [], roles: { user: userAc } }),
     inbox(),
     sso({
       domainVerification: { enabled: true },
@@ -626,6 +646,21 @@ export const auth = betterAuth<BetterAuthOptions>({
       // org's SCIM token claim, and then deactivate, an account belonging to
       // someone outside that org purely by pushing their email address.
       linkExistingUsers: { shouldLinkUser: shouldLinkScimUser },
+      // A SCIM token is a bearer credential that can enumerate an org's
+      // directory and deactivate its people, and the plugin's default is to
+      // keep it in `scim_provider.scim_token` in the clear. Hash it: the token
+      // is 24 characters of CSPRNG output, so a plain SHA-256 (what the plugin
+      // does for "hashed") is the right primitive — there is nothing to brute
+      // force and no password-style stretching to justify.
+      //
+      // "encrypted" was the alternative and is worse here: it is reversible by
+      // anyone holding BETTER_AUTH_SECRET, and nothing in Wraps ever needs to
+      // read a SCIM token back. The UI already treats them as show-once.
+      //
+      // One-way, so this invalidates any token minted while the default was in
+      // force — a token stored in plain text can never match a hash of itself.
+      // Rotating in Settings → SSO & SCIM issues a working one.
+      storeSCIMToken: "hashed",
     }),
     bearer(),
     deviceAuthorization({
@@ -685,6 +720,10 @@ export const auth = betterAuth<BetterAuthOptions>({
           }),
         ]
       : []),
+    // Must stay last: better-auth forwards Set-Cookie into the Next.js cookie
+    // store from this plugin's `after` hook, so any plugin listed after it can
+    // set a cookie that never reaches the browser.
+    nextCookies(),
   ],
   databaseHooks: {
     user: {
@@ -721,8 +760,13 @@ export const auth = betterAuth<BetterAuthOptions>({
         },
       },
       update: {
+        // SCIM deactivation. The IdP sends `active: false`, but nothing ever
+        // lands on the user row under that name — @better-auth/scim maps it
+        // onto the admin plugin's `banned` column before writing. Keyed off
+        // `active` this hook never fired once, so a deactivated employee kept
+        // every live session until it expired on its own.
         after: async (user) => {
-          if ((user as { active?: boolean }).active === false) {
+          if ((user as { banned?: boolean | null }).banned === true) {
             await db
               .delete(schema.session)
               .where(eq(schema.session.userId, user.id));

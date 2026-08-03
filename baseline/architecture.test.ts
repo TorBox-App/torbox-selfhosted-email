@@ -1515,3 +1515,33 @@ describe("ses config-set list/get permission parity", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Better-auth catch-all route serves every SCIM verb
+// ─────────────────────────────────────────────────────────
+
+describe("auth catch-all route exports every HTTP method", () => {
+  test("apps/web/src/app/api/auth/[...all]/route.ts exports GET, POST, PUT, PATCH and DELETE", () => {
+    // The SCIM plugin serves user updates on PUT and PATCH and deprovisioning
+    // on DELETE. Next.js answers any verb the route file does not export with
+    // 405, so dropping one silently breaks IdP sync for every enterprise
+    // customer while Create (a POST) keeps working and hides it.
+    const content = readFile("apps/web/src/app/api/auth/[...all]/route.ts");
+    const missing = ["GET", "POST", "PUT", "PATCH", "DELETE"].filter(
+      (method) =>
+        !(
+          new RegExp(`export\\s+(async\\s+)?function\\s+${method}\\b`).test(
+            content
+          ) ||
+          new RegExp(`export\\s*\\{[^}]*\\b${method}\\b`, "s").test(content)
+        )
+    );
+
+    expect(
+      missing,
+      `apps/web/src/app/api/auth/[...all]/route.ts does not export: ${missing.join(", ")}. ` +
+        "better-auth's toNextJsHandler returns all five — re-export them or SCIM " +
+        "update/deactivate/delete pushes 405."
+    ).toEqual([]);
+  });
+});

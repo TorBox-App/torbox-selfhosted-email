@@ -25,6 +25,14 @@ export const user = pgTable("user", {
   phoneNumber: text("phone_number"),
   // Whether to send SMS alerts on new device/IP login
   loginAlertsEnabled: boolean("login_alerts_enabled").default(false),
+  // Admin plugin fields. Carried for SCIM, not for a platform admin console:
+  // `banned` is the only enforced disabled-user state in better-auth, and the
+  // SCIM plugin maps `active: false` onto it. Without these columns an IdP's
+  // deactivate push is rejected outright.
+  role: text("role"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
 });
 
 export const session = pgTable("session", {
@@ -39,6 +47,9 @@ export const session = pgTable("session", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   activeOrganizationId: text("active_organization_id"),
+  // Admin plugin field — required by its schema even though impersonation is
+  // never exposed (adminRoles is empty; see packages/auth/src/index.ts).
+  impersonatedBy: text("impersonated_by"),
 });
 
 export const account = pgTable("account", {

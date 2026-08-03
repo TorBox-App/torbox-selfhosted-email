@@ -4,8 +4,13 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
 
-const { GET, POST: authPOST } = toNextJsHandler(auth);
-export { GET };
+// PUT/PATCH/DELETE are not optional: the SCIM plugin serves user updates on
+// PUT and PATCH and deprovisioning on DELETE (/api/auth/scim/v2/Users/:id).
+// Exporting only GET and POST made Next.js answer every IdP update, deactivate
+// and delete push with 405, so provisioning appeared to work (Create is a POST)
+// and then silently stopped syncing.
+const { GET, POST: authPOST, PUT, PATCH, DELETE } = toNextJsHandler(auth);
+export { GET, PUT, PATCH, DELETE };
 
 export async function POST(request: NextRequest) {
   const url = new URL(request.url);
