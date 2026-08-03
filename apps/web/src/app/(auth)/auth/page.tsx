@@ -1,24 +1,22 @@
-"use client";
+import { auth } from "@wraps/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import AuthForms from "./auth-forms";
+import { resolveRedirect, type SearchParams } from "./resolve-redirect";
 
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+export default async function AuthPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const [params, session] = await Promise.all([
+    searchParams,
+    auth.api.getSession({ headers: await headers() }),
+  ]);
 
-const authModes = ["signin", "signup"] as const;
+  if (session?.user) {
+    redirect(resolveRedirect(params));
+  }
 
-export default function AuthPage() {
-  const [mode, setMode] = useQueryState(
-    "mode",
-    parseAsStringLiteral(authModes).withDefault("signin")
-  );
-
-  return (
-    <>
-      {mode === "signin" ? (
-        <SignInForm onSwitchToSignUp={() => setMode("signup")} />
-      ) : (
-        <SignUpForm onSwitchToSignIn={() => setMode("signin")} />
-      )}
-    </>
-  );
+  return <AuthForms />;
 }

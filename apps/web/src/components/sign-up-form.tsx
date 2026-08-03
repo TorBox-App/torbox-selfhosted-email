@@ -222,11 +222,6 @@ export default function SignUpForm({
     return <Loader />;
   }
 
-  // Only show loader on initial page load, not during/after form submission
-  if (isPending && !form.state.isSubmitting && !form.state.isSubmitted) {
-    return <Loader />;
-  }
-
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>

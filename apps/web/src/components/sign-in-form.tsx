@@ -50,8 +50,12 @@ export default function SignInForm({
     isGitHubLoading ||
     isSsoLoading;
 
-  // Get the last used login method
-  const lastMethod = authClient.getLastUsedLoginMethod();
+  // Read after mount only — the cookie is invisible during SSR, so reading it
+  // during render would desync the "Last used" badge from the server HTML
+  const [lastMethod, setLastMethod] = useState<string | null>(null);
+  useEffect(() => {
+    setLastMethod(authClient.getLastUsedLoginMethod());
+  }, []);
 
   const form = useForm({
     defaultValues: {
@@ -153,11 +157,6 @@ export default function SignInForm({
   }, [isPending, session, router, redirectTo]);
 
   if (!isPending && session) {
-    return <Loader />;
-  }
-
-  // Only show loader on initial page load, not during/after form submission
-  if (isPending && !form.state.isSubmitting && !form.state.isSubmitted) {
     return <Loader />;
   }
 
