@@ -260,6 +260,10 @@ export const topicSettings = pgTable("topic_settings", {
   // Preference Center Settings
   preferenceCenterTitle: text("preference_center_title"),
   preferenceCenterDescription: text("preference_center_description"),
+  // Optional logo shown at the top of the public preference center and
+  // confirm pages. Falls back to `organization.logo` when null, so orgs that
+  // want one identity everywhere set nothing here.
+  preferenceCenterLogo: text("preference_center_logo"),
   preferenceCenterTheme: jsonb(
     "preference_center_theme"
   ).$type<PreferenceCenterTheme>(),

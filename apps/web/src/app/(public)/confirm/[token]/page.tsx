@@ -125,6 +125,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
       name: organization.name,
       logo: organization.logo,
       brandColor: organization.brandColor,
+      preferenceCenterLogo: topicSettings.preferenceCenterLogo,
       preferenceCenterTheme: topicSettings.preferenceCenterTheme,
     })
     .from(organization)
@@ -180,7 +181,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
           </>
         )
       }
-      logo={org?.logo}
+      logo={org?.preferenceCenterLogo ?? org?.logo}
       orgName={org?.name}
       theme={theme}
       title={isAlreadyConfirmed ? "Already Subscribed" : "Confirm Subscription"}

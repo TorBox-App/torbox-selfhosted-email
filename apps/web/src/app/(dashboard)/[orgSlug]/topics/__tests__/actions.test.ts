@@ -357,6 +357,117 @@ describe("Topic Settings Server Actions", () => {
         expect(result.error).toContain("Only owners and admins");
       }
     });
+
+    it("should persist a valid https preference center logo", async () => {
+      const logo =
+        "https://abc123.public.blob.vercel-storage.com/organization-logos/org_1/logo.png";
+
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: logo,
+      });
+
+      expect(result.success).toBe(true);
+
+      const getResult = await getTopicSettings(testOrganization.id);
+      expect(getResult.success).toBe(true);
+      if (getResult.success) {
+        expect(getResult.settings?.preferenceCenterLogo).toBe(logo);
+      }
+    });
+
+    it("should clear the preference center logo when passed null", async () => {
+      await db.insert(topicSettings).values({
+        organizationId: testOrganization.id,
+        preferenceCenterLogo: "https://example.com/old-logo.png",
+      });
+
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: null,
+      });
+
+      expect(result.success).toBe(true);
+
+      const getResult = await getTopicSettings(testOrganization.id);
+      expect(getResult.success).toBe(true);
+      if (getResult.success) {
+        expect(getResult.settings?.preferenceCenterLogo).toBeNull();
+      }
+    });
+
+    it("should reject a non-https logo and leave the stored value untouched", async () => {
+      const stored = "https://example.com/keep-me.png";
+      await db.insert(topicSettings).values({
+        organizationId: testOrganization.id,
+        preferenceCenterLogo: stored,
+      });
+
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: "http://example.com/logo.png",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe("Invalid logo URL");
+      }
+
+      const getResult = await getTopicSettings(testOrganization.id);
+      expect(getResult.success).toBe(true);
+      if (getResult.success) {
+        expect(getResult.settings?.preferenceCenterLogo).toBe(stored);
+      }
+    });
+
+    it("should reject a javascript: logo URL", async () => {
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: "javascript:alert(1)",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe("Invalid logo URL");
+      }
+    });
+
+    it("should persist both theme and logo in a single call", async () => {
+      // Guards the sanitizedData spread: sanitizing the logo must not discard
+      // the already-sanitized theme.
+      const logo = "https://example.com/logo.png";
+
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: logo,
+        preferenceCenterTheme: {
+          version: 1,
+          light: { primary: "oklch(0.5 0.1 20)" },
+          dark: { primary: "oklch(0.9 0.1 20)" },
+          fonts: { body: null, heading: null },
+          colorScheme: "light",
+        },
+      });
+
+      expect(result.success).toBe(true);
+
+      const getResult = await getTopicSettings(testOrganization.id);
+      expect(getResult.success).toBe(true);
+      if (getResult.success) {
+        expect(getResult.settings?.preferenceCenterLogo).toBe(logo);
+        expect(getResult.settings?.preferenceCenterTheme?.light.primary).toBe(
+          "oklch(0.5 0.1 20)"
+        );
+      }
+    });
+
+    it("should reject a logo update by a regular member", async () => {
+      currentMockUserId = testMemberUser.id;
+
+      const result = await updateTopicSettings(testOrganization.id, {
+        preferenceCenterLogo: "https://example.com/logo.png",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("Only owners and admins");
+      }
+    });
   });
 
   describe("generatePreferenceCenterPreviewUrl", () => {

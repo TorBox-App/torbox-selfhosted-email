@@ -11,7 +11,10 @@ import {
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger } from "@/lib/logger";
-import { sanitizeTheme } from "@/lib/preference-theme/validate";
+import {
+  sanitizeLogoUrl,
+  sanitizeTheme,
+} from "@/lib/preference-theme/validate";
 import { generatePreferencesUrl } from "@/lib/unsubscribe-token";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;
@@ -92,6 +95,7 @@ export async function updateTopicSettings(
     confirmationTemplateId?: string | null;
     preferenceCenterTitle?: string | null;
     preferenceCenterDescription?: string | null;
+    preferenceCenterLogo?: string | null;
     preferenceCenterTheme?: PreferenceCenterTheme | null;
   }
 ): Promise<UpdateTopicSettingsResult> {
@@ -128,6 +132,20 @@ export async function updateTopicSettings(
         return { success: false, error: "Invalid theme" };
       }
       sanitizedData = { ...data, preferenceCenterTheme: sanitized };
+    }
+
+    // Same rule for the logo: it ends up as an <img src> on a public page.
+    // Spread sanitizedData, not data — spreading data would discard the
+    // sanitized theme above.
+    if (data.preferenceCenterLogo !== undefined) {
+      const sanitizedLogo =
+        data.preferenceCenterLogo === null
+          ? null
+          : sanitizeLogoUrl(data.preferenceCenterLogo);
+      if (data.preferenceCenterLogo !== null && sanitizedLogo === null) {
+        return { success: false, error: "Invalid logo URL" };
+      }
+      sanitizedData = { ...sanitizedData, preferenceCenterLogo: sanitizedLogo };
     }
 
     // Check if settings exist

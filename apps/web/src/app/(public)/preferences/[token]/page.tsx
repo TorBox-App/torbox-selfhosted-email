@@ -133,6 +133,7 @@ export default async function PreferencesPage({
       brandColor: organization.brandColor,
       preferenceCenterTitle: topicSettings.preferenceCenterTitle,
       preferenceCenterDescription: topicSettings.preferenceCenterDescription,
+      preferenceCenterLogo: topicSettings.preferenceCenterLogo,
       preferenceCenterTheme: topicSettings.preferenceCenterTheme,
     })
     .from(organization)
@@ -231,7 +232,7 @@ export default async function PreferencesPage({
           </>
         )
       }
-      logo={orgWithSettings?.logo}
+      logo={orgWithSettings?.preferenceCenterLogo ?? orgWithSettings?.logo}
       orgName={orgWithSettings?.name}
       theme={theme}
       title={orgWithSettings?.preferenceCenterTitle || "Email Preferences"}

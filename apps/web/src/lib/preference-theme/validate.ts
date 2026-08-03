@@ -178,3 +178,28 @@ export function sanitizeTheme(input: unknown): PreferenceCenterTheme | null {
     colorScheme: data.colorScheme,
   };
 }
+
+const MAX_LOGO_URL_LENGTH = 2048;
+
+/**
+ * Server-side validation for an operator-supplied logo URL before it is
+ * persisted and later rendered as an <img src> on a public, unauthenticated
+ * page. Only absolute https URLs are accepted — this rejects javascript:,
+ * data:, and protocol-relative values, and keeps subscriber pages free of
+ * mixed content. Returns null for anything that doesn't qualify.
+ */
+export function sanitizeLogoUrl(input: unknown): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const trimmed = input.trim();
+  if (!trimmed || trimmed.length > MAX_LOGO_URL_LENGTH) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}

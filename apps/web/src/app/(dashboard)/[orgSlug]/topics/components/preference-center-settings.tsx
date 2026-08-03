@@ -40,6 +40,7 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Input } from "@/components/ui/input";
 import {
   CONTRAST_PAIRS,
@@ -68,9 +69,11 @@ type TopicSettingsType = typeof topicSettings.$inferSelect;
 
 type PreferenceCenterSettingsProps = {
   organizationId: string;
+  orgSlug: string;
   settings: TopicSettingsType | null;
   brandColor: string | null;
   orgName: string;
+  orgLogo: string | null;
 };
 
 type FailingContrast = { light: number; dark: number; total: number };
@@ -113,9 +116,11 @@ function countFailingContrastPairs(
 
 export function PreferenceCenterSettings({
   organizationId,
+  orgSlug,
   settings,
   brandColor,
   orgName,
+  orgLogo,
 }: PreferenceCenterSettingsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -151,6 +156,15 @@ export function PreferenceCenterSettings({
     reset,
   } = useThemeDraft(initialTheme);
 
+  // Deliberately not a TanStack form field: this component reads
+  // form.state.values during render without subscribing, so a form-bound logo
+  // would not live-update the preview. Parent state does, and it gives an
+  // honest dirty flag.
+  const [logo, setLogo] = useState<string | null>(
+    settings?.preferenceCenterLogo ?? null
+  );
+  const logoDirty = logo !== (settings?.preferenceCenterLogo ?? null);
+
   const [previewState, setPreviewState] = useState<PreviewState>("default");
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("desktop");
   const [previewMode, setPreviewMode] = useState<PreviewMode>(() =>
@@ -172,7 +186,7 @@ export function PreferenceCenterSettings({
   }, [draft.colorScheme, previewMode]);
 
   useEffect(() => {
-    if (!isDirty) {
+    if (!(isDirty || logoDirty)) {
       return;
     }
     const handler = (e: BeforeUnloadEvent) => {
@@ -180,7 +194,7 @@ export function PreferenceCenterSettings({
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
+  }, [isDirty, logoDirty]);
 
   const form = useForm({
     defaultValues: {
@@ -195,6 +209,7 @@ export function PreferenceCenterSettings({
         preferenceCenterTitle: form.state.values.preferenceCenterTitle || null,
         preferenceCenterDescription:
           form.state.values.preferenceCenterDescription || null,
+        preferenceCenterLogo: logo,
         preferenceCenterTheme: draft,
       });
 
@@ -311,6 +326,28 @@ export function PreferenceCenterSettings({
             </form.Field>
 
             <Field>
+              <FieldLabel>Logo</FieldLabel>
+              <FieldContent>
+                {/* value is the preference-center logo ONLY, never the
+                    orgLogo fallback: ImageUpload sends its value as
+                    oldLogoUrl and the API deletes that object on
+                    replace/remove. Binding the fallback here would delete the
+                    organization's logo out from under the dashboard. */}
+                <ImageUpload
+                  disabled={isPending}
+                  onChange={setLogo}
+                  orgSlug={orgSlug}
+                  value={logo}
+                />
+                <FieldDescription>
+                  Shown above the title on the preference center and
+                  confirmation pages. Leave empty to use your organization logo.
+                  PNG, JPEG, or WebP. Max 5MB.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+
+            <Field>
               <FieldLabel>What subscribers see</FieldLabel>
               <FieldContent>
                 <ToggleGroup
@@ -337,7 +374,7 @@ export function PreferenceCenterSettings({
 
       <Toolbar
         draft={draft}
-        isDirty={isDirty}
+        isDirty={isDirty || logoDirty}
         isSaving={isPending}
         onOpenContrastCheck={() => setContrastOpen(true)}
         onOpenImportCss={() => setImportCssOpen(true)}
@@ -357,7 +394,7 @@ export function PreferenceCenterSettings({
 
       <Preview
         description={previewDescription}
-        logo={null}
+        logo={logo ?? orgLogo}
         orgName={orgName}
         previewMode={previewMode}
         previewState={previewState}
@@ -433,6 +470,7 @@ export function PreferenceCenterSettings({
             <AlertDialogAction
               onClick={() => {
                 reset();
+                setLogo(settings?.preferenceCenterLogo ?? null);
                 setDiscardConfirmOpen(false);
               }}
             >

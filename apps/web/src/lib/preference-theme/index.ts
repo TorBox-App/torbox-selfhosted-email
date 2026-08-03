@@ -22,5 +22,6 @@ export {
   isValidColorValue,
   isValidRadiusValue,
   normalizeLegacyHsl,
+  sanitizeLogoUrl,
   sanitizeTheme,
 } from "./validate";

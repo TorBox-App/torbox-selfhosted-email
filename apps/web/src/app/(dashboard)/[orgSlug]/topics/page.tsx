@@ -121,6 +121,7 @@ export default async function TopicsPage({ params }: TopicsPageProps) {
         <TopicsTabs
           brandColor={orgWithMembership.brandColor}
           organizationId={orgWithMembership.id}
+          orgLogo={orgWithMembership.logo}
           orgName={orgWithMembership.name}
           orgSlug={orgSlug}
           settings={settings ?? null}

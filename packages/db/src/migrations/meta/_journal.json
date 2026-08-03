@@ -526,6 +526,13 @@
       "when": 1785606376753,
       "tag": "0074_goofy_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1785727473258,
+      "tag": "0075_brave_terror",
+      "breakpoints": true
     }
   ]
 }
