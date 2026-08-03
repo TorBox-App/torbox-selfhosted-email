@@ -130,6 +130,7 @@ export const navItems: NavSection[] = [
           { title: "Webhooks", href: "/docs/guides/webhooks" },
           { title: "Templates as Code", href: "/docs/guides/templates" },
           { title: "Building Workflows", href: "/docs/guides/workflows" },
+          { title: "Better Auth", href: "/docs/guides/better-auth" },
           {
             title: "Configuration Presets",
             href: "/docs/guides/configuration-presets",
