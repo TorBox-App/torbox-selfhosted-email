@@ -7,7 +7,7 @@
  * Shared implementation for @wraps/api and @wraps/web.
  */
 
-import { resolveAppUrl } from "@wraps/email";
+import { resolveAppUrl } from "@wraps/email/lib/app-url";
 import * as jose from "jose";
 
 // Token payload structure
