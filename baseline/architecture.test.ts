@@ -1545,3 +1545,53 @@ describe("auth catch-all route exports every HTTP method", () => {
     ).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// pnpm settings live where pnpm 11 reads them
+// ─────────────────────────────────────────────────────────
+
+const OVERRIDES_BLOCK = /^overrides:\n((?:[ \t]+\S.*\n|[ \t]*\n)*)/m;
+const YAML_ENTRY_LINE = /^\s+\S/;
+
+describe("pnpm config is not stranded in package.json", () => {
+  // pnpm 11 stopped reading the "pnpm" field in package.json. It warns on
+  // stderr and exits 0, so an overrides block left behind there goes on
+  // looking authoritative in review while resolving nothing — CVE floors
+  // silently unenforced, duplicate transitive copies back in the tree.
+  test("no package.json declares a top-level pnpm field", () => {
+    const manifests = [
+      "package.json",
+      ...findFiles("apps/*/package.json"),
+      ...findFiles("packages/*/package.json"),
+      "wraps/package.json",
+    ];
+
+    const violations = manifests
+      .filter((file) => "pnpm" in JSON.parse(readFile(file)))
+      .map(
+        (file) =>
+          `${file} — pnpm 11 ignores the "pnpm" field. Move overrides, ` +
+          "packageExtensions and onlyBuiltDependencies (now allowBuilds) " +
+          "into pnpm-workspace.yaml. See https://pnpm.io/settings."
+      );
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  // Deleting the dead field without moving its contents is the other way to
+  // lose the pins, and it looks like a clean diff.
+  test("pnpm-workspace.yaml declares a non-empty overrides block", () => {
+    const content = readFile("pnpm-workspace.yaml");
+    const block = OVERRIDES_BLOCK.exec(content);
+    const entries = (block?.[1] ?? "")
+      .split("\n")
+      .filter((line) => YAML_ENTRY_LINE.test(line));
+
+    expect(
+      entries.length,
+      "pnpm-workspace.yaml has no overrides: block. Most of those entries are " +
+        "CVE floors for transitive deps; dropping them re-admits the advisory " +
+        "versions without any install-time signal."
+    ).toBeGreaterThan(0);
+  });
+});

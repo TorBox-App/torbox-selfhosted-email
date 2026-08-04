@@ -13,6 +13,95 @@ minimumReleaseAgeExclude:
   - better-inbox
   - '@wraps.dev/better-auth'
 
+# Version pins for transitive deps: tiptap sub-extensions kept in lockstep with
+# the direct pins in apps/web, plus advisory/CVE floors for indirect packages.
+overrides:
+  '@tiptap/core': 3.13.0
+  '@tiptap/extension-blockquote': 3.13.0
+  '@tiptap/extension-bold': 3.13.0
+  '@tiptap/extension-bubble-menu': 3.13.0
+  '@tiptap/extension-bullet-list': 3.13.0
+  '@tiptap/extension-code': 3.13.0
+  '@tiptap/extension-code-block': 3.13.0
+  '@tiptap/extension-color': 3.13.0
+  '@tiptap/extension-document': 3.13.0
+  '@tiptap/extension-dropcursor': 3.13.0
+  '@tiptap/extension-floating-menu': 3.13.0
+  '@tiptap/extension-font-family': 3.13.0
+  '@tiptap/extension-gapcursor': 3.13.0
+  '@tiptap/extension-hard-break': 3.13.0
+  '@tiptap/extension-heading': 3.13.0
+  '@tiptap/extension-highlight': 3.13.0
+  '@tiptap/extension-horizontal-rule': 3.13.0
+  '@tiptap/extension-italic': 3.13.0
+  '@tiptap/extension-link': 3.13.0
+  '@tiptap/extension-list': 3.13.0
+  '@tiptap/extension-list-item': 3.13.0
+  '@tiptap/extension-list-keymap': 3.13.0
+  '@tiptap/extension-mention': 3.13.0
+  '@tiptap/extension-ordered-list': 3.13.0
+  '@tiptap/extension-paragraph': 3.13.0
+  '@tiptap/extension-placeholder': 3.13.0
+  '@tiptap/extension-strike': 3.13.0
+  '@tiptap/extension-text': 3.13.0
+  '@tiptap/extension-text-align': 3.13.0
+  '@tiptap/extension-text-style': 3.13.0
+  '@tiptap/extension-underline': 3.13.0
+  '@tiptap/extensions': 3.13.0
+  '@tiptap/pm': 3.13.0
+  '@tiptap/react': 3.13.0
+  '@tiptap/starter-kit': 3.13.0
+  '@tiptap/suggestion': 3.13.0
+  '@types/react': 19.2.4
+  '@types/react-dom': 19.2.3
+  hono: ^4.11.7
+  '@modelcontextprotocol/sdk': ^1.26.0
+  nodemailer: ^7.0.12
+  'path-to-regexp@6': ^6.3.0
+  tar: ^7.5.11
+  '@smithy/types': ^4.12.0
+  '@aws-sdk/util-dynamodb': 3.996.5
+  fast-xml-parser: ^5.3.8
+  '@isaacs/brace-expansion': ^5.0.1
+  'brace-expansion@<2': ^1.1.13
+  'brace-expansion@>=2 <5': ^2.0.3
+  lodash: ^4.18.1
+  loader-utils: ^2.0.4
+  defu: ^6.1.5
+  'picomatch@<3': ^2.3.2
+  'picomatch@>=3 <5': ^4.0.4
+  'path-to-regexp@<1': ^0.1.13
+  'path-to-regexp@8': ^8.4.0
+  qs: ^6.14.2
+  markdown-it: ^14.1.1
+  seroval: ^1.4.1
+  stage-js: 1.0.0-alpha.17
+  'zod@>=4': 4.4.3
+  '@better-fetch/fetch': 1.3.1
+  better-call: 1.3.7
+  '@better-auth/utils': 0.4.2
+  react-router: ^7.12.0
+  undici: ^7.28.0
+  'diff@<5': ^4.0.4
+  'diff@>=5 <8': ^5.2.2
+  'diff@>=8': ^8.0.3
+  tmp: ^0.2.4
+  'minimatch@<4': ^3.1.4
+  'minimatch@>=9 <10': ^9.0.7
+  'minimatch@>=10': ^10.2.3
+  dompurify: ^3.3.2
+  flatted: ^3.4.0
+  serialize-javascript: ^7.0.3
+  rollup: ^4.59.0
+  vite: ^7.3.2
+  'ajv@<7': ^6.14.0
+  'ajv@>=8': ^8.18.0
+  esbuild: ^0.28.0
+  '@opentelemetry/api': 1.9.0
+  protobufjs: ^7.5.5
+  samlify: ^2.13.0
+  shell-quote: ^1.8.4
+
 catalog:
   '@aws-sdk/client-acm': 3.1074.0
   '@aws-sdk/client-cloudformation': 3.1074.0
