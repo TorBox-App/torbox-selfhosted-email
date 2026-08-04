@@ -354,14 +354,14 @@ const featureComparison: {
         diy: "no",
         diyNote: "SNS retries, then drops silently",
         wraps: "yes",
-        wrapsNote: "SQS + DLQ + DLQ depth alarm",
+        wrapsNote: "SQS + DLQ; depth alarm on Production/Enterprise",
       },
       {
         name: "Reputation alarms below AWS thresholds",
         diy: "no",
         diyNote: "Build CloudWatch alarms yourself",
-        wraps: "yes",
-        wrapsNote: "Bounce 2%/4%, complaint 0.05%/0.08%",
+        wraps: "partial",
+        wrapsNote: "Production/Enterprise presets only — off on Starter",
       },
       {
         name: "Queryable event history",
@@ -638,7 +638,10 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                     above 10%; for complaints it's 0.1% and 0.5%. The handler
                     records events but watches nothing. By the time you notice
                     in the SES console, the number is an account-wide average
-                    that takes real volume to pull back down.
+                    that takes real volume to pull back down. Wraps deploys
+                    alarms at 2%/4% bounce and 0.05%/0.08% complaint — but on
+                    the Production and Enterprise presets only, so this gap is
+                    one you can also have with Wraps if you deploy Starter.
                   </p>
                 </CardContent>
               </Card>

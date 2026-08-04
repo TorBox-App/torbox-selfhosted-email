@@ -249,40 +249,64 @@ export default function BounceHandlingPageContent() {
           deploys the full event pipeline into your AWS account — an SES
           configuration set, EventBridge rules, an SQS queue with a dead-letter
           queue, a Lambda event processor, and a DynamoDB event history table.
-          It also creates CloudWatch alarms that fire{" "}
-          <strong className="text-foreground">before</strong> the AWS
-          thresholds, not at them:
+        </p>
+        <p className="mb-4 text-muted-foreground">
+          Reputation alarms are part of that pipeline, but{" "}
+          <strong className="text-foreground">
+            which ones you get depends on the preset you deploy
+          </strong>
+          . The Starter preset ships with alerting turned off; Production and
+          Enterprise add CloudWatch alarms that fire well before the AWS
+          thresholds:
         </p>
         <Card className="mb-4 overflow-hidden py-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-4 text-left font-medium">Alarm</th>
-                  <th className="p-4 text-left font-medium">Warning</th>
-                  <th className="p-4 text-left font-medium">Critical</th>
-                  <th className="p-4 text-left font-medium">AWS acts at</th>
+                  <th className="p-4 text-left font-medium">Preset</th>
+                  <th className="p-4 text-left font-medium">
+                    Bounce warn / critical
+                  </th>
+                  <th className="p-4 text-left font-medium">
+                    Complaint warn / critical
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 <tr>
-                  <td className="p-4 font-medium">Bounce rate</td>
-                  <td className="p-4 text-muted-foreground">2%</td>
-                  <td className="p-4 text-muted-foreground">4%</td>
-                  <td className="p-4 text-muted-foreground">5%</td>
+                  <td className="p-4 font-medium">Starter</td>
+                  <td className="p-4 text-muted-foreground" colSpan={2}>
+                    Alerting disabled — no reputation alarms deployed
+                  </td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium">Complaint rate</td>
-                  <td className="p-4 text-muted-foreground">0.05%</td>
-                  <td className="p-4 text-muted-foreground">0.08%</td>
-                  <td className="p-4 text-muted-foreground">0.1%</td>
+                  <td className="p-4 font-medium">Production</td>
+                  <td className="p-4 text-muted-foreground">2% / 4%</td>
+                  <td className="p-4 text-muted-foreground">0.05% / 0.08%</td>
+                </tr>
+                <tr>
+                  <td className="p-4 font-medium">Enterprise</td>
+                  <td className="p-4 text-muted-foreground">1% / 2%</td>
+                  <td className="p-4 text-muted-foreground">0.03% / 0.05%</td>
+                </tr>
+                <tr className="bg-muted/30">
+                  <td className="p-4 font-medium">AWS acts at</td>
+                  <td className="p-4 text-muted-foreground">
+                    5% recommended / 10% may pause
+                  </td>
+                  <td className="p-4 text-muted-foreground">
+                    0.1% recommended / 0.5% may pause
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </Card>
         <p className="text-muted-foreground text-sm">
-          Thresholds are configurable per deployment. See{" "}
+          Production and Enterprise also alarm on dead-letter queue depth, so a
+          failing event processor surfaces instead of silently dropping events.
+          Thresholds are overridable per deployment — see{" "}
           <a
             className="font-medium text-primary underline"
             href="/docs/guides/configuration-presets"
