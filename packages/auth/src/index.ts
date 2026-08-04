@@ -414,6 +414,73 @@ export const subscriptionPlans = [
   },
 ] as const;
 
+/**
+ * Identity-provider origins the SSO plugin is allowed to reach.
+ *
+ * The SSO plugin refuses to fetch an OIDC discovery document — and refuses
+ * every endpoint URL *inside* that document — unless the origin appears in
+ * `trustedOrigins`. An issuer missing here makes `registerSSOProvider` fail
+ * outright with "Untrusted OIDC discovery URL", the org never gets an
+ * `sso_provider` row, and SCIM (which we only offer on top of a verified SSO
+ * provider) is unreachable.
+ *
+ * This list is an allowlist because 6d79604d (2026-04-27) replaced a
+ * `trustedOrigins` *function* that returned `https://*` on `/sso/` paths. That
+ * accepted every IdP; narrowing it to five patterns silently dropped support
+ * for everything else, with "can be added as needed" as the migration plan and
+ * no way to do the adding without a code change. Hence
+ * WRAPS_SSO_TRUSTED_ORIGINS below.
+ *
+ * Google is the reason this list carries more than issuer hosts: its issuer is
+ * `accounts.google.com` but its discovery document points `token_endpoint` at
+ * `oauth2.googleapis.com` and `userinfo_endpoint` at `openidconnect.googleapis.com`.
+ * With only the issuer trusted, discovery got one step further and then failed
+ * on the token endpoint.
+ */
+const IDP_TRUSTED_ORIGINS = [
+  // Okta. `*.okta.com` covers US cell tenants only — EMEA tenants are served
+  // from okta-emea.com and gov tenants from okta-gov.com, both of which are
+  // ordinary paid Okta, not an edge case. Custom Okta domains (login.acme.com)
+  // are unmatchable by any pattern and need WRAPS_SSO_TRUSTED_ORIGINS.
+  "https://*.okta.com",
+  "https://*.okta-emea.com",
+  "https://*.okta-gov.com",
+  "https://*.oktapreview.com",
+  // Microsoft Entra ID — issuer, token, and JWKS all live on this host.
+  "https://login.microsoftonline.com",
+  // Google Workspace: issuer plus the two other hosts its discovery doc names.
+  "https://accounts.google.com",
+  "https://oauth2.googleapis.com",
+  "https://openidconnect.googleapis.com",
+  "https://www.googleapis.com",
+  "https://*.auth0.com",
+  "https://*.onelogin.com",
+  "https://oauth.id.jumpcloud.com",
+  "https://*.pingone.com",
+  "https://*.pingidentity.com",
+  "https://*.workos.com",
+];
+
+/**
+ * Extra IdP origins from the environment, comma-separated.
+ *
+ * Self-hosted deployments are the case the built-in list cannot serve: an
+ * enterprise running Keycloak at `sso.internal.example.com`, or Okta on a
+ * custom domain, has an issuer nobody can enumerate ahead of time. Without this
+ * their only route to working SSO is forking `packages/auth` and rebuilding.
+ *
+ * Values are origins (`https://sso.example.com`) or better-auth wildcard
+ * patterns (`https://*.example.com`); anything that is not `http(s)` is dropped
+ * rather than handed to better-auth, since a malformed entry there silently
+ * widens nothing and hides the typo.
+ */
+function extraTrustedIdpOrigins(): string[] {
+  return (process.env.WRAPS_SSO_TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter((origin) => /^https?:\/\/.+/.test(origin));
+}
+
 export const auth = betterAuth<BetterAuthOptions>({
   baseURL: process.env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {
@@ -442,11 +509,8 @@ export const auth = betterAuth<BetterAuthOptions>({
   },
   trustedOrigins: [
     process.env.CORS_ORIGIN,
-    "https://*.okta.com",
-    "https://*.oktapreview.com",
-    "https://login.microsoftonline.com",
-    "https://accounts.google.com",
-    "https://*.auth0.com",
+    ...IDP_TRUSTED_ORIGINS,
+    ...extraTrustedIdpOrigins(),
   ].filter((v): v is string => !!v),
   socialProviders: {
     google: {

@@ -525,6 +525,11 @@ export default $config({
           process.env.NEXT_PUBLIC_APP_URL ||
           (webDomain ? `https://${webDomain}` : ""),
         AWS_BACKEND_ACCOUNT_ID: aws.getCallerIdentityOutput({}).accountId,
+        // Enterprise IdPs the built-in allowlist in packages/auth cannot name:
+        // an Okta custom domain, an internal Keycloak. better-auth 1.6 refuses
+        // OIDC discovery against any origin outside trustedOrigins, so without
+        // this a self-hoster's only path to working SSO is forking the repo.
+        WRAPS_SSO_TRUSTED_ORIGINS: process.env.WRAPS_SSO_TRUSTED_ORIGINS ?? "",
         ...(process.env.AI_GATEWAY_API_KEY && {
           AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
         }),

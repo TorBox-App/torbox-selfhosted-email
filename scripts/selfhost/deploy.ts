@@ -154,6 +154,13 @@ export async function deploy(options: DeployOptions = {}): Promise<void> {
   // the operator's shell would point a customer's error stream at whoever ran
   // the deploy. Opting in has to be explicit.
   if (options.sentryDsn) envLines.push(`SENTRY_DSN=${options.sentryDsn}`);
+  // Unlike SENTRY_DSN this is read from the shell: it is an allowlist of the
+  // operator's own IdP origins, carries nothing sensitive, and a value dropped
+  // here silently reverts SSO registration to failing on their issuer.
+  if (process.env.WRAPS_SSO_TRUSTED_ORIGINS)
+    envLines.push(
+      `WRAPS_SSO_TRUSTED_ORIGINS=${process.env.WRAPS_SSO_TRUSTED_ORIGINS}`
+    );
 
   await writeFile(ENV_PATH, `${envLines.join("\n")}\n`, "utf-8");
   await chmod(ENV_PATH, 0o600);

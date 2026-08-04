@@ -153,6 +153,57 @@ describe("SSO Actions", () => {
         })
       );
     });
+
+    /**
+     * better-auth refuses OIDC discovery against any origin outside
+     * `trustedOrigins` and reports it by naming that config — a server-side
+     * array the admin clicking Save cannot see. Every IdP outside the built-in
+     * allowlist (Okta custom domain, self-hosted Keycloak) arrives here, so the
+     * message has to name the knob that fixes it.
+     */
+    it("rewrites better-auth's untrusted-origin error into an actionable one", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      const { APIError } = await import("better-auth/api");
+      mockRegisterSSOProvider.mockRejectedValue(
+        new APIError("BAD_REQUEST", {
+          message:
+            'Untrusted OIDC discovery URL: The main discovery endpoint "https://login.acme.com/.well-known/openid-configuration" is not trusted by your trusted origins configuration.',
+        })
+      );
+      const result = await saveSsoProvider(TEST_ORG_ID, {
+        domain: "acme.com",
+        issuer: "https://login.acme.com",
+        clientId: "client123",
+        clientSecret: "secret123",
+      });
+      expect(result.success).toBe(false);
+      const error = (result as { error: string }).error;
+      expect(error).toContain("WRAPS_SSO_TRUSTED_ORIGINS");
+      expect(error).toContain(
+        "https://login.acme.com/.well-known/openid-configuration"
+      );
+      expect(error).not.toContain("trusted origins configuration");
+    });
+
+    it("leaves other better-auth messages untouched", async () => {
+      mockVerifyOrgAccess.mockResolvedValue(OWNER_ACCESS);
+      const { APIError } = await import("better-auth/api");
+      mockRegisterSSOProvider.mockRejectedValue(
+        new APIError("BAD_REQUEST", {
+          message: "SSO provider with this providerId already exists",
+        })
+      );
+      const result = await saveSsoProvider(TEST_ORG_ID, {
+        domain: "acme.com",
+        issuer: "https://acme.okta.com",
+        clientId: "client123",
+        clientSecret: "secret123",
+      });
+      expect(result).toEqual({
+        success: false,
+        error: "SSO provider with this providerId already exists",
+      });
+    });
   });
 
   describe("deleteSsoProvider", () => {

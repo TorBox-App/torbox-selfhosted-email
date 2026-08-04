@@ -1983,6 +1983,26 @@ pnpm install`,
               <tr>
                 <td className="p-3 pr-4 align-top">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    WRAPS_SSO_TRUSTED_ORIGINS
+                  </code>
+                </td>
+                <td className="p-3 pr-4 align-top">Optional</td>
+                <td className="p-3 align-top">
+                  Comma-separated identity-provider origins the SSO plugin is
+                  allowed to reach for OIDC discovery, e.g.{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                    https://login.yourcompany.com,https://*.internal.yourcompany.com
+                  </code>
+                  . Okta, Entra ID, Google Workspace, Auth0, OneLogin,
+                  JumpCloud, Ping and WorkOS are trusted out of the box — set
+                  this for an Okta custom domain, a self-hosted Keycloak, or any
+                  other IdP. Saving an SSO provider whose issuer is not trusted
+                  fails with an untrusted-discovery-URL error
+                </td>
+              </tr>
+              <tr>
+                <td className="p-3 pr-4 align-top">
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                     AI_GATEWAY_API_KEY
                   </code>
                 </td>

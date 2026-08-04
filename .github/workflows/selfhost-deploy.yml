@@ -94,6 +94,12 @@ jobs:
           SELFHOST_EVENT_FEED_STALENESS_ENABLED: ${{ vars.SELFHOST_EVENT_FEED_STALENESS_ENABLED }}
           SELFHOST_WORKFLOW_REAPER_ENABLED: ${{ vars.SELFHOST_WORKFLOW_REAPER_ENABLED }}
           SELFHOST_BROADCAST_REAPER_ENABLED: ${{ vars.SELFHOST_BROADCAST_REAPER_ENABLED }}
+          # Optional. Comma-separated IdP origins the SSO plugin may reach for
+          # OIDC discovery (an Okta custom domain, an internal Keycloak).
+          # Omitting it here breaks SSO provider registration on the next
+          # automated upgrade for any org whose IdP is not in the built-in
+          # allowlist in packages/auth.
+          WRAPS_SSO_TRUSTED_ORIGINS: ${{ vars.WRAPS_SSO_TRUSTED_ORIGINS }}
           # Optional. Which DNS provider owns SELFHOST_WEB_DOMAIN. Omitting
           # these on a Cloudflare deployment drops it back to the Route 53
           # adapter, and the upgrade dies on the hosted-zone lookup.
@@ -140,6 +146,7 @@ jobs:
             [ -n "${SELFHOST_EVENT_FEED_STALENESS_ENABLED}" ] && echo "SELFHOST_EVENT_FEED_STALENESS_ENABLED=${SELFHOST_EVENT_FEED_STALENESS_ENABLED}"
             [ -n "${SELFHOST_WORKFLOW_REAPER_ENABLED}" ] && echo "SELFHOST_WORKFLOW_REAPER_ENABLED=${SELFHOST_WORKFLOW_REAPER_ENABLED}"
             [ -n "${SELFHOST_BROADCAST_REAPER_ENABLED}" ] && echo "SELFHOST_BROADCAST_REAPER_ENABLED=${SELFHOST_BROADCAST_REAPER_ENABLED}"
+            [ -n "${WRAPS_SSO_TRUSTED_ORIGINS}" ] && echo "WRAPS_SSO_TRUSTED_ORIGINS=${WRAPS_SSO_TRUSTED_ORIGINS}"
             [ -n "${SELFHOST_DNS_PROVIDER}" ] && echo "SELFHOST_DNS_PROVIDER=${SELFHOST_DNS_PROVIDER}"
             [ -n "${CLOUDFLARE_API_TOKEN}" ] && echo "CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}"
             [ -n "${SELFHOST_CLOUDFLARE_ZONE_ID}" ] && echo "SELFHOST_CLOUDFLARE_ZONE_ID=${SELFHOST_CLOUDFLARE_ZONE_ID}"

@@ -81,6 +81,19 @@ function scimProviderIdFor(orgId: string) {
 }
 
 /**
+ * Better-auth's untrusted-origin message ends in "is not trusted by your
+ * trusted origins configuration", which names a server-side array the admin
+ * hitting this button cannot see and has no way to guess at. Every IdP outside
+ * the built-in allowlist in `packages/auth` lands here — an Okta custom domain,
+ * a self-hosted Keycloak — so say what actually has to happen instead.
+ */
+function explainAuthError(message: string): string {
+  if (!message.includes("trusted origins configuration")) return message;
+  const url = /"([^"]+)"/.exec(message)?.[1];
+  return `Wraps is not allowed to reach ${url ?? "this identity provider"}. Add its origin to WRAPS_SSO_TRUSTED_ORIGINS (comma-separated) on the dashboard deployment and redeploy, then save this provider again.`;
+}
+
+/**
  * Better-auth throws `APIError` with an operator-facing message ("You are not a
  * member of the organization", "Insufficient role for this operation"). These
  * are the plugin's own HTTP error strings, not internal detail, and they are
@@ -95,7 +108,7 @@ async function callAuthApi<T>(
   } catch (err) {
     if (err instanceof APIError) {
       const message = (err.body as { message?: string } | undefined)?.message;
-      return { ok: false, error: message ?? err.message };
+      return { ok: false, error: explainAuthError(message ?? err.message) };
     }
     throw err;
   }
