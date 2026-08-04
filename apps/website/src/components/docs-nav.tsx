@@ -128,6 +128,14 @@ export const navItems: NavSection[] = [
           },
           { title: "SMTP Credentials", href: "/docs/guides/smtp" },
           { title: "Webhooks", href: "/docs/guides/webhooks" },
+          {
+            title: "Bounce Handling",
+            href: "/docs/guides/bounce-handling",
+          },
+          {
+            title: "Suppression Lists",
+            href: "/docs/guides/suppression-lists",
+          },
           { title: "Templates as Code", href: "/docs/guides/templates" },
           { title: "Building Workflows", href: "/docs/guides/workflows" },
           { title: "Better Auth", href: "/docs/guides/better-auth" },

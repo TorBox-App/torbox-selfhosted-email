@@ -95,6 +95,20 @@ const comparisons = [
     description:
       "Klaviyo is built for e-commerce marketing with Shopify deep integration. If you're a developer-led team sending transactional and lifecycle email, compare what you're actually paying for.",
   },
+  {
+    competitor: "Mailgun",
+    href: "/compare/mailgun-vs-wraps",
+    tagline: "Your infra, AWS pricing, no suspensions",
+    description:
+      "Mailgun's Flex tier is gone and account suspensions are a recurring complaint. Compare pricing at real volumes, deliverability controls, and what owning the sending infrastructure changes.",
+  },
+  {
+    competitor: "Hand-rolled bounce handling",
+    href: "/compare/ses-bounce-handling-hand-rolled-vs-wraps",
+    tagline: "152 honest lines, and what they don't cover",
+    description:
+      "The real alternative to Wraps usually isn't a competitor — it's writing it yourself. We show the full 85-line SNS signature verification, confirm it's correct, and then make the case for what the code doesn't cover.",
+  },
 ];
 
 export default function ComparePage() {

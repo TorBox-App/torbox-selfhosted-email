@@ -169,6 +169,8 @@ plans are set per account and per Region. Pass `sesPlan` to model either.
 - [Custom Events](https://wraps.dev/docs/guides/custom-events): Track and trigger on custom events
 - [Orchestration](https://wraps.dev/docs/guides/orchestration): Cross-channel cascades and advanced orchestration
 - [Webhooks](https://wraps.dev/docs/guides/webhooks): Webhook event delivery setup
+- [Bounce Handling](https://wraps.dev/docs/guides/bounce-handling): Hard vs soft bounces, complaint handling, SES bounce/complaint rate thresholds (5%/0.1%), and testing with the SES mailbox simulator
+- [Suppression Lists](https://wraps.dev/docs/guides/suppression-lists): Manage the SES account-level suppression list (BOUNCE and COMPLAINT), filter campaigns pre-send, and know when removal is safe
 - [Reply Threading](https://wraps.dev/docs/guides/reply-threading): HMAC-signed reply-to addresses for verified conversation threading on inbound email
 - [Production Access](https://wraps.dev/docs/guides/production-access): Get SES production access
 - [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
@@ -193,6 +195,8 @@ plans are set per account and per Region. Pass `sesPlan` to model either.
 - [Postmark vs Wraps](https://wraps.dev/compare/postmark-vs-wraps)
 - [Customer.io vs Wraps](https://wraps.dev/compare/customer-io-vs-wraps)
 - [Klaviyo vs Wraps](https://wraps.dev/compare/klaviyo-vs-wraps)
+- [Mailgun vs Wraps](https://wraps.dev/compare/mailgun-vs-wraps)
+- [SES Bounce Handling: Hand-Rolled vs Wraps](https://wraps.dev/compare/ses-bounce-handling-hand-rolled-vs-wraps): The full 85-line SNS signature verification implementation, honest line counts, and what hand-rolled bounce handling does not cover
 
 ## Tools
 

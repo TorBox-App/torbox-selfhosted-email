@@ -38,6 +38,11 @@ const comparisons = [
     href: "/compare/mailgun-vs-wraps",
     tagline: "Your infra, AWS pricing, no suspensions",
   },
+  {
+    competitor: "Hand-rolled bounce handling",
+    href: "/compare/ses-bounce-handling-hand-rolled-vs-wraps",
+    tagline: "152 honest lines, and what they don't cover",
+  },
 ];
 
 /**

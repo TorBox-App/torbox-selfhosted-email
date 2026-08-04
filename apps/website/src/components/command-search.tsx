@@ -296,6 +296,20 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
       icon: Zap,
     },
     {
+      title: "Bounce Handling",
+      description: "Hard vs soft bounces, complaints, and rate thresholds",
+      url: "/docs/guides/bounce-handling",
+      group: "Email",
+      icon: Zap,
+    },
+    {
+      title: "Suppression Lists",
+      description: "Manage the SES account-level suppression list",
+      url: "/docs/guides/suppression-lists",
+      group: "Email",
+      icon: ShieldCheck,
+    },
+    {
       title: "Templates Guide",
       description: "Create, edit, and deploy email templates",
       url: "/docs/guides/templates",

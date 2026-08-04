@@ -841,6 +841,8 @@ Detailed comparisons:
 - Postmark vs Wraps: https://wraps.dev/compare/postmark-vs-wraps
 - Customer.io vs Wraps: https://wraps.dev/compare/customer-io-vs-wraps
 - Klaviyo vs Wraps: https://wraps.dev/compare/klaviyo-vs-wraps
+- Mailgun vs Wraps: https://wraps.dev/compare/mailgun-vs-wraps
+- SES Bounce Handling, Hand-Rolled vs Wraps: https://wraps.dev/compare/ses-bounce-handling-hand-rolled-vs-wraps
 
 ## MCP Server (@wraps.dev/mcp)
 
@@ -976,6 +978,8 @@ Install in Claude Code: `claude install-skill https://wraps.dev/.well-known/skil
 - Custom Events Guide: https://wraps.dev/docs/guides/custom-events
 - Orchestration Guide: https://wraps.dev/docs/guides/orchestration
 - Webhooks Guide: https://wraps.dev/docs/guides/webhooks
+- Bounce Handling Guide: https://wraps.dev/docs/guides/bounce-handling
+- Suppression Lists Guide: https://wraps.dev/docs/guides/suppression-lists
 - Production Access: https://wraps.dev/docs/guides/production-access
 - Domain Verification: https://wraps.dev/docs/guides/domain-verification
 - Migration Guide: https://wraps.dev/docs/guides/migration
