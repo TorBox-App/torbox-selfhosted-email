@@ -145,7 +145,7 @@ export async function check(options: CheckOptions): Promise<void> {
  * Display check results in a beautiful CLI format
  */
 function displayResults(result: EmailCheckResult, options: CheckOptions): void {
-  const { score, spf, dkim, dmarc, mx, blacklist } = result;
+  const { score, spf, dkim, dmarc, mx, blacklist, bimi } = result;
 
   // Score box
   console.log();
@@ -164,6 +164,9 @@ function displayResults(result: EmailCheckResult, options: CheckOptions): void {
 
   // DMARC
   displayDmarcResult(dmarc);
+
+  // BIMI
+  displayBimiResult(bimi, result.domain);
 
   console.log();
 
@@ -510,6 +513,62 @@ function displayDmarcResult(dmarc: EmailCheckResult["dmarc"]): void {
     );
   } else {
     console.log(`  ${status} ${pc.dim("DMARC")}            Not found`);
+  }
+
+  console.log();
+}
+
+/**
+ * Display BIMI result
+ */
+function displayBimiResult(
+  bimi: EmailCheckResult["bimi"],
+  domain: string
+): void {
+  // BIMI cannot work until DMARC is enforcing — show a gate, not setup steps.
+  if (!bimi.dmarcCompatible) {
+    console.log(
+      `  ${pc.dim("○")} ${pc.dim("BIMI")}             Blocked on DMARC enforcement`
+    );
+    console.log(
+      `                     ${pc.dim("Move DMARC to p=quarantine or p=reject first — BIMI cannot work until DMARC enforces.")}`
+    );
+    console.log();
+    return;
+  }
+
+  if (bimi.configured) {
+    const status =
+      bimi.logoValid && bimi.vmcValid
+        ? pc.green("✓")
+        : bimi.logoValid || bimi.logoAccessible
+          ? pc.yellow("⚠")
+          : pc.red("✗");
+
+    console.log(`  ${status} ${pc.dim("BIMI")}             ${bimi.record}`);
+    const parts = [
+      `Logo: ${bimi.logoValid ? "valid" : bimi.logoAccessible ? "accessible, invalid" : "unreachable"}`,
+      `VMC: ${bimi.vmcUrl ? (bimi.vmcAccessible ? "reachable (not verified)" : "unreachable") : "none (self-asserted)"}`,
+    ];
+    console.log(`                     ${pc.dim(parts.join(" • "))}`);
+    if (!bimi.vmcUrl) {
+      console.log(
+        `                     ${pc.dim("Self-asserted BIMI (no VMC): shows in Yahoo, AOL, Fastmail. Gmail requires a VMC or CMC to display your logo.")}`
+      );
+    }
+    for (const error of bimi.errors) {
+      console.log(`                     ${pc.yellow(`⚠ ${error}`)}`);
+    }
+  } else {
+    console.log(
+      `  ${pc.dim("○")} ${pc.dim("BIMI")}             Not configured`
+    );
+    console.log(
+      `                     ${pc.dim(`default._bimi.${domain} TXT "v=BIMI1; l=https://${domain}/logo.svg; a=https://${domain}/vmc.pem"`)}`
+    );
+    console.log(
+      `                     ${pc.dim("Host a square SVG Tiny P/S logo over HTTPS to enable BIMI. a= (VMC/CMC) is optional — required by Gmail, not by Yahoo/AOL/Fastmail.")}`
+    );
   }
 
   console.log();
