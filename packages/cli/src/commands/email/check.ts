@@ -99,6 +99,9 @@ export async function check(options: CheckOptions): Promise<void> {
       skipBlacklists: options.skipBlacklists,
       skipTls: options.skipTls,
       timeout: options.timeout,
+      // Trusted, user-initiated invocation — safe to fetch the BIMI logo/VMC
+      // over HTTPS. The public /tools/email-check API must not set this.
+      fetchBimiAssets: true,
     });
 
     spinner?.stop(`Check complete in ${result.duration}ms`);

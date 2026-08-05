@@ -58,7 +58,12 @@ export async function runEmailCheck(
     throw new Error(`Invalid domain: ${domain}`);
   }
 
-  const { quick = false, skipBlacklists = false, skipTls = false } = options;
+  const {
+    quick = false,
+    skipBlacklists = false,
+    skipTls = false,
+    fetchBimiAssets = false,
+  } = options;
 
   // Run core authentication checks in parallel
   const [spfResult, dkimResult, dmarcResult, mxResult] = await Promise.all([
@@ -193,7 +198,11 @@ export async function runEmailCheck(
     iodefUri: null,
   };
 
-  const bimiResult = await checkBimi(normalizedDomain, dmarcResult.policy);
+  const bimiResult = await checkBimi(
+    normalizedDomain,
+    dmarcResult.policy,
+    fetchBimiAssets
+  );
 
   // Calculate score
   const score = calculateScore({

@@ -21,20 +21,37 @@ function mockDns(records: Record<string, string[]>): void {
   setDnsProvider(provider);
 }
 
-function mockFetch(
-  responses: Record<string, { ok: boolean; status?: number; body?: string }>
-) {
-  return vi.fn((url: string) => {
+type MockFetchResponse = {
+  ok: boolean;
+  status?: number;
+  body?: string;
+  contentLength?: number;
+};
+
+function mockFetch(responses: Record<string, MockFetchResponse>) {
+  const textSpy = vi.fn((body: string) => Promise.resolve(body));
+  const fetchSpy = vi.fn((url: string) => {
     const response = responses[url];
     if (!response) {
       return Promise.reject(new Error(`unexpected fetch: ${url}`));
     }
+    const status = response.status ?? (response.ok ? 200 : 404);
+    const contentLength =
+      response.contentLength ??
+      (response.body ? Buffer.byteLength(response.body, "utf8") : undefined);
     return Promise.resolve({
       ok: response.ok,
-      status: response.status ?? (response.ok ? 200 : 404),
-      text: () => Promise.resolve(response.body ?? ""),
-    } as Response);
+      status,
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "content-length" && contentLength != null
+            ? String(contentLength)
+            : null,
+      },
+      text: () => textSpy(response.body ?? ""),
+    } as unknown as Response);
   });
+  return { fetchSpy, textSpy };
 }
 
 afterEach(() => {
@@ -67,21 +84,19 @@ describe("checkBimi", () => {
     expect(result.dmarcCompatible).toBe(false);
   });
 
-  it("parses a valid record with l= and a=", async () => {
+  it("parses a valid record with l= and a= (fetch opted in)", async () => {
     mockDns({
       "default._bimi.example.com": [
         "v=BIMI1; l=https://x.com/logo.svg; a=https://x.com/vmc.pem",
       ],
     });
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({
-        "https://x.com/logo.svg": { ok: true, body: VALID_SVG },
-        "https://x.com/vmc.pem": { ok: true },
-      })
-    );
+    const { fetchSpy } = mockFetch({
+      "https://x.com/logo.svg": { ok: true, body: VALID_SVG },
+      "https://x.com/vmc.pem": { ok: true },
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.configured).toBe(true);
     expect(result.logoUrl).toBe("https://x.com/logo.svg");
@@ -92,12 +107,12 @@ describe("checkBimi", () => {
     mockDns({
       "default._bimi.example.com": ["v=BIMI1; l=https://x.com/logo.svg"],
     });
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({ "https://x.com/logo.svg": { ok: true, body: VALID_SVG } })
-    );
+    const { fetchSpy } = mockFetch({
+      "https://x.com/logo.svg": { ok: true, body: VALID_SVG },
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.configured).toBe(true);
     expect(result.vmcUrl).toBeNull();
@@ -135,12 +150,12 @@ describe("checkBimi", () => {
     expect(result.errors.length).toBeGreaterThan(0);
   });
 
-  it("rejects an http: logo URL with logoValid false and a scheme error", async () => {
+  it("rejects an http: logo URL with logoValid false and a scheme error (fetch opted in)", async () => {
     mockDns({
       "default._bimi.example.com": ["v=BIMI1; l=http://x.com/logo.svg"],
     });
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.logoValid).toBe(false);
     expect(result.errors.some((e) => e.toLowerCase().includes("https"))).toBe(
@@ -148,48 +163,48 @@ describe("checkBimi", () => {
     );
   });
 
-  it("marks a compliant tiny-ps SVG with a title as logoValid", async () => {
+  it("marks a compliant tiny-ps SVG with a title as logoValid (fetch opted in)", async () => {
     mockDns({
       "default._bimi.example.com": ["v=BIMI1; l=https://x.com/logo.svg"],
     });
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({ "https://x.com/logo.svg": { ok: true, body: VALID_SVG } })
-    );
+    const { fetchSpy } = mockFetch({
+      "https://x.com/logo.svg": { ok: true, body: VALID_SVG },
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.logoAccessible).toBe(true);
     expect(result.logoValid).toBe(true);
   });
 
-  it("marks an SVG containing <script> as logoValid false", async () => {
+  it("marks an SVG containing <script> as logoValid false (fetch opted in)", async () => {
     mockDns({
       "default._bimi.example.com": ["v=BIMI1; l=https://x.com/logo.svg"],
     });
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({ "https://x.com/logo.svg": { ok: true, body: SCRIPT_SVG } })
-    );
+    const { fetchSpy } = mockFetch({
+      "https://x.com/logo.svg": { ok: true, body: SCRIPT_SVG },
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.logoValid).toBe(false);
   });
 
-  it("marks an oversized SVG as logoValid false", async () => {
+  it("marks an oversized SVG as logoValid false (fetch opted in)", async () => {
     const bigSvg = `<svg version="1.2" baseProfile="tiny-ps" viewBox="0 0 100 100"><title>Example Co</title><!-- ${"x".repeat(
       33 * 1024
     )} --></svg>`;
     mockDns({
       "default._bimi.example.com": ["v=BIMI1; l=https://x.com/logo.svg"],
     });
-    vi.stubGlobal(
-      "fetch",
-      mockFetch({ "https://x.com/logo.svg": { ok: true, body: bigSvg } })
-    );
+    const { fetchSpy } = mockFetch({
+      "https://x.com/logo.svg": { ok: true, body: bigSvg },
+    });
+    vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await checkBimi("example.com", "reject");
+    const result = await checkBimi("example.com", "reject", true);
 
     expect(result.logoValid).toBe(false);
   });
@@ -209,5 +224,67 @@ describe("checkBimi", () => {
     const result = await checkBimi("example.com", "reject");
 
     expect(result.errors.some((e) => e.includes("DNS timeout"))).toBe(true);
+  });
+
+  describe("SSRF: asset fetching is opt-in", () => {
+    it("does not fetch the logo/VMC by default (fetchAssets omitted)", async () => {
+      mockDns({
+        "default._bimi.example.com": [
+          "v=BIMI1; l=https://x.com/logo.svg; a=https://x.com/vmc.pem",
+        ],
+      });
+      const fetchSpy = vi.fn(() => {
+        throw new Error("fetch should not be called when fetchAssets=false");
+      });
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const result = await checkBimi("example.com", "reject");
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.configured).toBe(true);
+      expect(result.logoUrl).toBe("https://x.com/logo.svg");
+      expect(result.logoAccessible).toBe(false);
+      expect(result.logoValid).toBe(false);
+      expect(
+        result.warnings.some((w) => w.toLowerCase().includes("not fetched"))
+      ).toBe(true);
+    });
+
+    it("fetches the logo/VMC when fetchAssets=true is passed explicitly", async () => {
+      mockDns({
+        "default._bimi.example.com": [
+          "v=BIMI1; l=https://x.com/logo.svg; a=https://x.com/vmc.pem",
+        ],
+      });
+      const { fetchSpy } = mockFetch({
+        "https://x.com/logo.svg": { ok: true, body: VALID_SVG },
+        "https://x.com/vmc.pem": { ok: true },
+      });
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const result = await checkBimi("example.com", "reject", true);
+
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(result.logoValid).toBe(true);
+    });
+
+    it("rejects an oversized content-length without reading the response body", async () => {
+      mockDns({
+        "default._bimi.example.com": ["v=BIMI1; l=https://x.com/logo.svg"],
+      });
+      const { fetchSpy, textSpy } = mockFetch({
+        "https://x.com/logo.svg": {
+          ok: true,
+          body: VALID_SVG,
+          contentLength: 33 * 1024,
+        },
+      });
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const result = await checkBimi("example.com", "reject", true);
+
+      expect(result.logoValid).toBe(false);
+      expect(textSpy).not.toHaveBeenCalled();
+    });
   });
 });

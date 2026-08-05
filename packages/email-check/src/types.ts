@@ -28,6 +28,11 @@ export type EmailCheckOptions = {
   skipBlacklists?: boolean;
   /** Skip MX TLS checks (if port 25 blocked) */
   skipTls?: boolean;
+  /** Fetch and validate the BIMI logo/VMC over HTTPS. Off by default: callers
+   * that run this on untrusted, caller-supplied domains (e.g. the public
+   * /tools/email-check API) must not make outbound requests to URLs an
+   * attacker controls via DNS. */
+  fetchBimiAssets?: boolean;
 };
 
 // =============================================================================

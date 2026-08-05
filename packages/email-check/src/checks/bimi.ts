@@ -10,6 +10,15 @@
  * no x=/y= on the root <svg>, and should not exceed 32KB. Full X.509
  * certificate verification is not implemented here (see vmcValid below) —
  * the VMC is only checked for HTTPS reachability.
+ *
+ * SSRF: `runEmailCheck` (and therefore this check) is called from the public,
+ * unauthenticated `/tools/email-check` API with a caller-supplied domain. The
+ * `l=`/`a=` URLs in a BIMI record are attacker-controlled via DNS, so fetching
+ * them is a network request an unauthenticated caller can aim anywhere. Asset
+ * fetching is therefore opt-in (`fetchAssets`, default false) — DNS lookup and
+ * record parsing always run (DNS is not a fetch-to-arbitrary-URL vector), but
+ * the outbound HTTP calls only happen when the caller explicitly asks for them
+ * (the CLI does, since it is a trusted, user-initiated invocation).
  */
 
 import { DEFAULT_TIMEOUT } from "../constants.js";
@@ -19,11 +28,17 @@ import type { BimiResult, DmarcResult } from "../types.js";
 const MAX_SVG_BYTES = 32 * 1024; // bimigroup.org: "should not exceed 32 kilobytes"
 
 /**
- * Check BIMI record, logo, and VMC for a domain
+ * Check BIMI record, logo, and VMC for a domain.
+ *
+ * @param fetchAssets - Fetch and validate the logo/VMC over HTTPS. Defaults to
+ * false because the domain (and therefore the `l=`/`a=` URLs) can be
+ * caller-supplied on an unauthenticated path — see the SSRF note above. Only
+ * pass true for trusted, user-initiated callers (the CLI).
  */
 export async function checkBimi(
   domain: string,
-  dmarcPolicy: DmarcResult["policy"]
+  dmarcPolicy: DmarcResult["policy"],
+  fetchAssets = false
 ): Promise<BimiResult> {
   const result: BimiResult = {
     configured: false,
@@ -68,10 +83,16 @@ export async function checkBimi(
     const vmcUrl = tags.get("a");
     result.vmcUrl = vmcUrl ? vmcUrl : null;
 
-    await checkLogo(logoUrl, result);
+    if (fetchAssets) {
+      await checkLogo(logoUrl, result);
 
-    if (result.vmcUrl) {
-      await checkVmc(result.vmcUrl, result);
+      if (result.vmcUrl) {
+        await checkVmc(result.vmcUrl, result);
+      }
+    } else {
+      result.warnings.push(
+        "Logo and VMC were not fetched (network validation disabled); record syntax only."
+      );
     }
   } catch (error: any) {
     result.errors.push(error.message);
@@ -124,6 +145,14 @@ async function checkLogo(logoUrl: string, result: BimiResult): Promise<void> {
     if (!response.ok) {
       result.errors.push(
         `Logo URL returned HTTP ${response.status.toString()}`
+      );
+      return;
+    }
+
+    const contentLength = response.headers.get("content-length");
+    if (contentLength && Number(contentLength) > MAX_SVG_BYTES) {
+      result.errors.push(
+        `SVG exceeds the 32KB BIMI limit (content-length: ${contentLength} bytes)`
       );
       return;
     }
@@ -232,11 +261,17 @@ function validateBimiSvg(svg: string): { valid: boolean; errors: string[] } {
   const hrefMatches = svg.matchAll(
     /\b(?:xlink:href|href)\s*=\s*["']([^"']*)["']/gi
   );
+  let externalRefCount = 0;
   for (const match of hrefMatches) {
     const value = match[1] ?? "";
     if (value && !value.startsWith("#") && !value.startsWith("data:")) {
-      errors.push(`SVG must not contain external references (found ${value})`);
+      externalRefCount += 1;
     }
+  }
+  if (externalRefCount > 0) {
+    errors.push(
+      `SVG must not contain external references (found ${externalRefCount.toString()})`
+    );
   }
 
   const viewBoxMatch = svgTag.match(/viewBox\s*=\s*["']([^"']*)["']/i);
