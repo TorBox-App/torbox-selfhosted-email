@@ -230,7 +230,7 @@ export async function POST(request: Request, context: RouteContext) {
           content: defaultContent,
           source: typeof source === "string" ? source : null,
           compiledHtml: typeof compiledHtml === "string" ? compiledHtml : null,
-          sourceFormat: templateChannel === "sms" ? "tiptap" : "react-email",
+          sourceFormat: "react-email",
           createdBy: session.user.id,
           status: "DRAFT",
         })

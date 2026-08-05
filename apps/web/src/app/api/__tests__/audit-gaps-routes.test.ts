@@ -1,8 +1,8 @@
 /**
  * Audit Log Instrumentation Tests — Route Handler Gaps
  *
- * Verifies that blocks PUT/DELETE, template duplicate POST, and
- * template versions POST each write correctly-shaped audit log rows.
+ * Verifies that template duplicate POST and template versions POST each
+ * write correctly-shaped audit log rows.
  */
 
 import {
@@ -10,7 +10,6 @@ import {
   db,
   member,
   organization,
-  reusableBlock,
   template,
   templateVersion,
   user,
@@ -95,17 +94,6 @@ const fixMember = {
   createdAt: new Date(),
 };
 
-const fixBlock = {
-  id: "audit-routes-block-a",
-  organizationId: fixOrg.id,
-  name: "Audit Routes Block",
-  category: "custom",
-  content: { html: "<p>Test</p>" },
-  createdBy: fixUser.id,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
 const fixTemplate = {
   id: "audit-routes-template-a",
   organizationId: fixOrg.id,
@@ -141,14 +129,6 @@ beforeAll(async () => {
     .onConflictDoUpdate({ target: member.id, set: { role: fixMember.role } });
 
   await db
-    .insert(reusableBlock)
-    .values(fixBlock)
-    .onConflictDoUpdate({
-      target: reusableBlock.id,
-      set: { updatedAt: new Date() },
-    });
-
-  await db
     .insert(template)
     .values(fixTemplate)
     .onConflictDoUpdate({
@@ -164,7 +144,6 @@ afterAll(async () => {
     .where(eq(templateVersion.templateId, fixTemplate.id));
   // Duplicated templates share org, so clean by org and name pattern
   await db.delete(template).where(eq(template.organizationId, fixOrg.id));
-  await db.delete(reusableBlock).where(eq(reusableBlock.id, fixBlock.id));
   await db.delete(member).where(eq(member.organizationId, fixOrg.id));
   await db.delete(organization).where(eq(organization.id, fixOrg.id));
   await db.delete(user).where(eq(user.id, fixUser.id));
@@ -174,142 +153,6 @@ afterAll(async () => {
 function makeContext(params: Record<string, string>): any {
   return { params: Promise.resolve(params) };
 }
-
-// ============================================================
-// blocks/[id]/route.ts — PUT
-// ============================================================
-
-describe("PUT /api/[orgSlug]/blocks/[id] — writes block.updated audit log", () => {
-  afterEach(async () => {
-    await db
-      .delete(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, fixOrg.id),
-          eq(auditLog.action, "block.updated")
-        )
-      );
-  });
-
-  it("inserts a block.updated audit log row after updating a block", async () => {
-    const { PUT } = await import("../[orgSlug]/blocks/[id]/route");
-
-    const request = new Request(
-      "http://localhost/api/audit-routes-org-a/blocks/audit-routes-block-a",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Updated Block Name" }),
-      }
-    );
-
-    const response = await PUT(
-      request,
-      makeContext({ orgSlug: fixOrg.slug, id: fixBlock.id })
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body.id).toBe(fixBlock.id);
-
-    const rows = await db
-      .select()
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, fixOrg.id),
-          eq(auditLog.action, "block.updated")
-        )
-      );
-
-    expect(rows.length).toBeGreaterThan(0);
-    const row = rows[rows.length - 1];
-    expect(row.organizationId).toBe(fixOrg.id);
-    expect(row.userId).toBe(fixUser.id);
-    expect(row.actorEmail).toBe(fixUser.email);
-    expect(row.action).toBe("block.updated");
-    expect(row.resource).toBe("block");
-    expect(row.resourceId).toBe(fixBlock.id);
-  });
-});
-
-// ============================================================
-// blocks/[id]/route.ts — DELETE
-// ============================================================
-
-describe("DELETE /api/[orgSlug]/blocks/[id] — writes block.deleted audit log", () => {
-  const ephemeralBlock = {
-    id: "audit-routes-block-delete",
-    organizationId: fixOrg.id,
-    name: "Audit Routes Block Delete",
-    category: "custom",
-    content: { html: "<p>Delete me</p>" },
-    createdBy: fixUser.id,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  beforeEach(async () => {
-    await db
-      .insert(reusableBlock)
-      .values(ephemeralBlock)
-      .onConflictDoUpdate({
-        target: reusableBlock.id,
-        set: { updatedAt: new Date() },
-      });
-  });
-
-  afterEach(async () => {
-    await db
-      .delete(reusableBlock)
-      .where(eq(reusableBlock.id, ephemeralBlock.id));
-    await db
-      .delete(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, fixOrg.id),
-          eq(auditLog.action, "block.deleted")
-        )
-      );
-  });
-
-  it("inserts a block.deleted audit log row after deleting a block", async () => {
-    const { DELETE } = await import("../[orgSlug]/blocks/[id]/route");
-
-    const request = new Request(
-      "http://localhost/api/audit-routes-org-a/blocks/audit-routes-block-delete",
-      {
-        method: "DELETE",
-      }
-    );
-
-    const response = await DELETE(
-      request,
-      makeContext({ orgSlug: fixOrg.slug, id: ephemeralBlock.id })
-    );
-
-    expect(response.status).toBe(200);
-
-    const rows = await db
-      .select()
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, fixOrg.id),
-          eq(auditLog.action, "block.deleted")
-        )
-      );
-
-    expect(rows.length).toBeGreaterThan(0);
-    const row = rows[rows.length - 1];
-    expect(row.organizationId).toBe(fixOrg.id);
-    expect(row.userId).toBe(fixUser.id);
-    expect(row.actorEmail).toBe(fixUser.email);
-    expect(row.action).toBe("block.deleted");
-    expect(row.resource).toBe("block");
-    expect(row.resourceId).toBe(ephemeralBlock.id);
-  });
-});
 
 // ============================================================
 // emails/templates/[id]/duplicate/route.ts — POST

@@ -13,45 +13,8 @@ minimumReleaseAgeExclude:
   - better-inbox
   - '@wraps.dev/better-auth'
 
-# Version pins for transitive deps: tiptap sub-extensions kept in lockstep with
-# the direct pins in apps/web, plus advisory/CVE floors for indirect packages.
+# Version pins for transitive deps: advisory/CVE floors for indirect packages.
 overrides:
-  '@tiptap/core': 3.13.0
-  '@tiptap/extension-blockquote': 3.13.0
-  '@tiptap/extension-bold': 3.13.0
-  '@tiptap/extension-bubble-menu': 3.13.0
-  '@tiptap/extension-bullet-list': 3.13.0
-  '@tiptap/extension-code': 3.13.0
-  '@tiptap/extension-code-block': 3.13.0
-  '@tiptap/extension-color': 3.13.0
-  '@tiptap/extension-document': 3.13.0
-  '@tiptap/extension-dropcursor': 3.13.0
-  '@tiptap/extension-floating-menu': 3.13.0
-  '@tiptap/extension-font-family': 3.13.0
-  '@tiptap/extension-gapcursor': 3.13.0
-  '@tiptap/extension-hard-break': 3.13.0
-  '@tiptap/extension-heading': 3.13.0
-  '@tiptap/extension-highlight': 3.13.0
-  '@tiptap/extension-horizontal-rule': 3.13.0
-  '@tiptap/extension-italic': 3.13.0
-  '@tiptap/extension-link': 3.13.0
-  '@tiptap/extension-list': 3.13.0
-  '@tiptap/extension-list-item': 3.13.0
-  '@tiptap/extension-list-keymap': 3.13.0
-  '@tiptap/extension-mention': 3.13.0
-  '@tiptap/extension-ordered-list': 3.13.0
-  '@tiptap/extension-paragraph': 3.13.0
-  '@tiptap/extension-placeholder': 3.13.0
-  '@tiptap/extension-strike': 3.13.0
-  '@tiptap/extension-text': 3.13.0
-  '@tiptap/extension-text-align': 3.13.0
-  '@tiptap/extension-text-style': 3.13.0
-  '@tiptap/extension-underline': 3.13.0
-  '@tiptap/extensions': 3.13.0
-  '@tiptap/pm': 3.13.0
-  '@tiptap/react': 3.13.0
-  '@tiptap/starter-kit': 3.13.0
-  '@tiptap/suggestion': 3.13.0
   '@types/react': 19.2.4
   '@types/react-dom': 19.2.3
   hono: ^4.11.7

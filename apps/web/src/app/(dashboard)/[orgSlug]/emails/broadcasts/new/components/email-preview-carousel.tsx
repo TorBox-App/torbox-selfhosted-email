@@ -1,6 +1,5 @@
 "use client";
 
-import type { JSONContent } from "@tiptap/core";
 import {
   Card,
   CardContent,
@@ -14,7 +13,6 @@ import type { RecipientFilter } from "@/actions/batch";
 import { getSampleContacts, getTemplateContent } from "@/actions/batch";
 import { Button } from "@/components/ui/button";
 import type { SampleContact } from "@/lib/batch";
-import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 
 type EmailPreviewCarouselProps = {
   organizationId: string;
@@ -35,11 +33,7 @@ export function EmailPreviewCarousel({
   variableMappings,
 }: EmailPreviewCarouselProps) {
   const [contacts, setContacts] = useState<SampleContact[]>([]);
-  const [templateContent, setTemplateContent] = useState<JSONContent | null>(
-    null
-  );
   const [compiledHtml, setCompiledHtml] = useState<string | null>(null);
-  const [sourceFormat, setSourceFormat] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState<string>("");
@@ -58,9 +52,7 @@ export function EmailPreviewCarousel({
         setContacts(contactsResult.contacts);
       }
       if (templateResult.success) {
-        setTemplateContent(templateResult.content as JSONContent);
         setCompiledHtml(templateResult.compiledHtml);
-        setSourceFormat(templateResult.sourceFormat);
       }
 
       setLoading(false);
@@ -129,48 +121,28 @@ export function EmailPreviewCarousel({
     //
     // The Handlebars module is ~120KB, so we lazy-import it instead of
     // pulling it into every visitor's broadcast page bundle.
-    if (sourceFormat === "react-email" && compiledHtml) {
-      import("@/lib/handlebars")
-        .then(({ nestKeys, renderForPreview }) => {
-          if (!cancelled) {
-            setHtmlContent(renderForPreview(compiledHtml, nestKeys(testData)));
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            // Fall back to raw compiled html so the preview pane isn't
-            // blank if the dynamic import somehow fails.
-            setHtmlContent(compiledHtml);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (!templateContent) {
+    if (!compiledHtml) {
       return;
     }
 
-    async function renderHtml() {
-      try {
-        const html = await renderTipTapToHtml(templateContent!, testData);
+    import("@/lib/handlebars")
+      .then(({ nestKeys, renderForPreview }) => {
         if (!cancelled) {
-          setHtmlContent(html);
+          setHtmlContent(renderForPreview(compiledHtml, nestKeys(testData)));
         }
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) {
-          setHtmlContent("<p>Error rendering preview</p>");
+          // Fall back to raw compiled html so the preview pane isn't
+          // blank if the dynamic import somehow fails.
+          setHtmlContent(compiledHtml);
         }
-      }
-    }
-
-    renderHtml();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [templateContent, testData, sourceFormat, compiledHtml]);
+  }, [testData, compiledHtml]);
 
   const currentContact = contacts[currentIndex];
 

@@ -411,7 +411,6 @@ export function CodeTemplateEditor({
             {showVersionHistory && (
               <div className="h-full w-72 shrink-0 overflow-y-auto">
                 <VersionHistoryPanel
-                  editor={null}
                   orgSlug={orgSlug}
                   templateId={templateId}
                 />
@@ -419,8 +418,7 @@ export function CodeTemplateEditor({
             )}
           </div>
 
-          {/* Send Test Modal — editor=null since code templates don't use TipTap.
-              Pass compiled HTML + variables + testData so the modal can render
+          {/* Send Test Modal — pass compiled HTML + variables + testData so the modal can render
               variable inputs, seed defaults, and produce a real preview via
               Handlebars (matching what recipients see at send time).
               stableTestData / stableTemplateVariables are memoized at the top
@@ -431,7 +429,6 @@ export function CodeTemplateEditor({
             compiledHtml={previewHtml}
             defaultFrom={senderDefaults?.defaultFrom}
             defaultFromName={senderDefaults?.defaultFromName}
-            editor={null}
             isOpen={showSendTestModal}
             onClose={() => setShowSendTestModal(false)}
             orgSlug={orgSlug}

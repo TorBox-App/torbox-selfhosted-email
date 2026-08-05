@@ -11,7 +11,7 @@ export default async function TemplateEditorPage({ params }: PageProps) {
   const { orgSlug, id } = await params;
 
   // Negative margins cancel out the dashboard layout padding
-  // Key forces remount when navigating between templates (TipTap editor caching issue)
+  // Key forces remount when navigating between templates
   return (
     <TemplateEditor
       className="-my-4 md:-my-6"

@@ -26,11 +26,6 @@ vi.mock("@/hooks/use-template-queries", () => ({
   useTemplates: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-// Mock the template editor dialog
-vi.mock("@/components/template-editor/wrappers/template-editor-dialog", () => ({
-  TemplateEditorDialog: () => null,
-}));
-
 // Mock the aws-accounts server actions
 vi.mock("@/actions/aws-accounts", () => ({
   getVerifiedDomains: vi.fn(() =>

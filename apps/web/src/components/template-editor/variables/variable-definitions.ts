@@ -1,4 +1,5 @@
-import type { VariableContext } from "../core/editor-context";
+/** Which set of template variables applies, keyed by how the email is sent */
+export type VariableContext = "broadcast" | "confirmation" | "automation";
 
 /**
  * Variable definition for email templates

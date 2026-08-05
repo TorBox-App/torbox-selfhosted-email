@@ -2,7 +2,7 @@
  * Audit Log Instrumentation Tests — Templates (Chunk 2)
  *
  * Verifies that publishTemplateToSES, bulkDeleteTemplates,
- * bulkUpdateTemplateType, bulkUpdateTemplateStatus, and convertTiptapTemplate
+ * bulkUpdateTemplateType, and bulkUpdateTemplateStatus
  * each write a correctly-shaped audit log row after a successful mutation.
  */
 
@@ -29,7 +29,6 @@ import {
   bulkDeleteTemplates,
   bulkUpdateTemplateStatus,
   bulkUpdateTemplateType,
-  convertTiptapTemplate,
   publishTemplateToSES,
 } from "../templates";
 
@@ -135,11 +134,6 @@ vi.mock("@/lib/activation-tracking", () => ({
   trackTemplatePublished: vi.fn(),
 }));
 
-vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
-  tiptapToReactEmail: vi.fn(() => null),
-  toBrandKitColors: vi.fn(() => ({})),
-}));
-
 // --- Helpers ---
 
 async function createTemplate(
@@ -150,8 +144,11 @@ async function createTemplate(
     id,
     organizationId: testOrg.id,
     name: `Audit V2 Template ${id}`,
-    content: { type: "doc", content: [] },
-    sourceFormat: "tiptap",
+    content: {},
+    // publishTemplateToSES uploads compiledHtml — templates are compiled on save
+    compiledHtml: "<html><body><p>Test template body</p></body></html>",
+    compiledText: "Test template body",
+    sourceFormat: "react-email",
     status: "DRAFT",
     emailType: "marketing",
     createdAt: new Date(),
@@ -202,67 +199,6 @@ afterAll(async () => {
 });
 
 // --- Tests ---
-
-describe("convertTiptapTemplate — writes template.converted audit log", () => {
-  afterEach(async () => {
-    await db.delete(template).where(eq(template.organizationId, testOrg.id));
-    await db.delete(auditLog).where(eq(auditLog.organizationId, testOrg.id));
-  });
-
-  it("inserts a template.converted audit log row with correct fields", async () => {
-    const templateId = await createTemplate({
-      sourceFormat: "tiptap",
-      channel: "email",
-    });
-
-    const result = await convertTiptapTemplate(testOrg.id, templateId);
-
-    expect(result.success).toBe(true);
-
-    const rows = await db
-      .select()
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, testOrg.id),
-          eq(auditLog.action, "template.converted")
-        )
-      );
-
-    expect(rows.length).toBeGreaterThan(0);
-    const row = rows[rows.length - 1];
-    expect(row.organizationId).toBe(testOrg.id);
-    expect(row.userId).toBe(testUser.id);
-    expect(row.actorEmail).toBe(testUser.email);
-    expect(row.action).toBe("template.converted");
-    expect(row.resource).toBe("template");
-    expect(row.resourceId).toBe(templateId);
-    expect(row.metadata).toMatchObject({ templateId });
-  });
-
-  it("does not write an audit log when template is already react-email format", async () => {
-    const templateId = await createTemplate({
-      sourceFormat: "react-email",
-      channel: "email",
-    });
-
-    const result = await convertTiptapTemplate(testOrg.id, templateId);
-
-    expect(result.success).toBe(true);
-
-    const rows = await db
-      .select()
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.organizationId, testOrg.id),
-          eq(auditLog.action, "template.converted")
-        )
-      );
-
-    expect(rows).toHaveLength(0);
-  });
-});
 
 describe("bulkDeleteTemplates — writes template.deleted audit log", () => {
   afterEach(async () => {
@@ -403,7 +339,7 @@ describe("publishTemplateToSES — writes template.published audit log", () => {
     const templateId = await createTemplate({
       name: "Publish Audit Test",
       subject: "Hello {{firstName}}",
-      sourceFormat: "tiptap",
+      sourceFormat: "react-email",
       channel: "email",
     });
 

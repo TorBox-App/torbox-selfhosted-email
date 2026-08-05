@@ -188,11 +188,12 @@ describe("Save Source API - POST /api/[orgSlug]/emails/templates/[id]/save-sourc
   });
 
   it("should reject non-react-email templates", async () => {
-    // Create a TipTap template (non-react-email)
+    // "tiptap" is a retired source format, but the column still permits it,
+    // so the route must keep rejecting anything that isn't react-email.
     await db.insert(template).values({
       id: "test-savesrc-tmpl-2",
       organizationId: testOrganization.id,
-      name: "TipTap Template",
+      name: "Legacy Format Template",
       content: { type: "doc", content: [] },
       status: "DRAFT",
       createdBy: testUser.id,

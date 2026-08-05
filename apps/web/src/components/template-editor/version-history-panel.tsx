@@ -1,6 +1,5 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,13 +47,11 @@ import {
 import { cn } from "@/lib/utils";
 
 type VersionHistoryPanelProps = {
-  editor: Editor | null;
   orgSlug: string;
   templateId: string;
 };
 
 export function VersionHistoryPanel({
-  editor,
   orgSlug,
   templateId,
 }: VersionHistoryPanelProps) {

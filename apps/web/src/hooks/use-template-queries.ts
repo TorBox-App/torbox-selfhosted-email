@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { JSONContent } from "@tiptap/core";
 import type { Template, TemplateVersion } from "@wraps/db";
 
 // Extended version type with user info
@@ -67,7 +66,6 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
 
   return useMutation({
     mutationFn: async (data: {
-      content?: JSONContent;
       name?: string;
       description?: string;
       subject?: string;

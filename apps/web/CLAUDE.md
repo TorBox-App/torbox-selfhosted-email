@@ -1,6 +1,6 @@
 # Wraps Dashboard (apps/web)
 
-Next.js 16 App Router dashboard with React 19, TanStack Form, TipTap editor, React Flow, and Drizzle ORM.
+Next.js 16 App Router dashboard with React 19, TanStack Form, React Email template editor, React Flow, and Drizzle ORM.
 
 ## Critical Rules
 
@@ -132,15 +132,15 @@ export async function createContact(organizationId: string, data: Input) {
 | `src/actions/` | Server actions (contacts, templates, workflows, orgs, etc.) |
 | `src/app/(dashboard)/[orgSlug]/` | Dashboard pages |
 | `src/components/(ee)/workflow-builder/` | Workflow builder (React Flow + Zustand) |
-| `src/components/template-editor/` | Email template editor (TipTap + React Email) |
+| `src/components/template-editor/` | Email template editor (React Email TSX + AI chat) |
 | `src/hooks/` | Custom hooks (template queries, org context, etc.) |
 | `src/lib/` | Utilities (auth, logger, contacts, validation, serializers) |
 | `src/lib/forms/` | Zod schemas + TanStack Form options |
 
 ## Template Editor
 
-- TipTap editor with custom extensions for email-safe HTML
-- `tiptapToReactEmail(content, testData, options)` converts to React Email JSX
+- React Email TSX source edited in Monaco, with an AI chat panel that writes the source
+- Source compiles to `compiledHtml` / `compiledText` on save (`lib/compile-template.ts`)
 - Variables: `{{variableName}}` or `{{variableName|fallback}}` for SES substitution
 - `transformVariablesForSes(html)` flattens nested vars: `{{contact.email}}` to `{{contactEmail}}`
 - SMS templates are separate — no SES publishing needed

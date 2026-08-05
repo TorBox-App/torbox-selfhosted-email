@@ -1,10 +1,9 @@
 "use server";
 
-import { render, toPlainText } from "@react-email/render";
-import type { JSONContent } from "@tiptap/core";
+import { toPlainText } from "@react-email/render";
 import { auth } from "@wraps/auth";
 import type { EmailType } from "@wraps/db";
-import { auditLog, awsAccount, brandKit, db, template } from "@wraps/db";
+import { auditLog, awsAccount, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
   generateSESTemplateName,
@@ -23,11 +22,6 @@ import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
 import { auditLogEntry, getAuditContext } from "@/lib/audit";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import { extractHandlebarsVariables } from "@/lib/handlebars";
-import {
-  tiptapToReactEmail,
-  toBrandKitColors,
-} from "@/lib/serializers/tiptap-to-react-email";
 import { orgAction } from "./shared/org-action";
 
 export type PublishTemplateResult =
@@ -64,10 +58,9 @@ function revalidateTemplates(orgSlug: string): void {
  * Publish a template to SES.
  *
  * This function handles:
- * 1. Converting TipTap content to HTML with variables as placeholders
- * 2. Transforming variables to SES-compatible format
- * 3. Uploading to SES
- * 4. Updating the template record with sesTemplateName
+ * 1. Transforming the template's compiled HTML variables to SES format
+ * 2. Uploading to SES
+ * 3. Updating the template record with sesTemplateName
  *
  * Can be called from:
  * - The publish API route (for manual publish from UI)
@@ -78,22 +71,13 @@ export const publishTemplateToSES = orgAction(
     name: "publishTemplateToSES",
     resource: "templates",
     permission: ["write"],
-    orgId: (
-      _templateId: string,
-      organizationId: string,
-      _options?: {
-        brandKitId?: string;
-      }
-    ) => organizationId,
+    orgId: (_templateId: string, organizationId: string) => organizationId,
     onError: "Something went wrong. Please try again.",
   },
   async (
     ctx,
     templateId: string,
-    organizationId: string,
-    options: {
-      brandKitId?: string;
-    } = {}
+    organizationId: string
   ): Promise<PublishTemplateResult> => {
     // Fetch template
     const templateData = await db.query.template.findFirst({
@@ -154,49 +138,19 @@ export const publishTemplateToSES = orgAction(
       region: customerAwsAccount.region,
     });
 
-    // Fetch brand kit (use specified one or default for org)
-    let selectedBrandKit = null;
-    if (options.brandKitId) {
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.id, options.brandKitId),
-          eq(brandKit.organizationId, organizationId)
-        ),
-      });
-    } else {
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.organizationId, organizationId),
-          eq(brandKit.isDefault, true)
-        ),
-      });
+    // Templates compile to HTML on save (or on CLI push). Without that there
+    // is nothing to upload — publishing an uncompiled template would ship an
+    // empty body to SES.
+    if (!templateData.compiledHtml) {
+      return {
+        success: false,
+        error:
+          "Template must be compiled before publishing. Open it in the editor and save first.",
+      };
     }
 
-    // Build HTML and text from the appropriate source format
-    let rawHtml: string;
-    let rawText: string;
-
-    if (
-      templateData.sourceFormat === "react-email" &&
-      templateData.compiledHtml
-    ) {
-      // React-email templates already have compiled HTML from save-source or CLI push
-      rawHtml = templateData.compiledHtml;
-      rawText = templateData.compiledText ?? toPlainText(rawHtml);
-    } else {
-      // TipTap templates need on-the-fly serialization
-      const emailComponent = tiptapToReactEmail(
-        templateData.content as JSONContent,
-        {},
-        {
-          keepVariablesAsPlaceholders: true,
-          brandKit: toBrandKitColors(selectedBrandKit),
-        }
-      );
-
-      rawHtml = await render(emailComponent);
-      rawText = toPlainText(rawHtml);
-    }
+    const rawHtml = templateData.compiledHtml;
+    const rawText = templateData.compiledText ?? toPlainText(rawHtml);
 
     // Transform variables for SES compatibility
     // {{contact.email}} → {{contactEmail}}
@@ -659,112 +613,5 @@ export const bulkUpdateTemplateStatus = orgAction(
       skipped,
       errors,
     };
-  }
-);
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TIPTAP → REACT-EMAIL CONVERSION (JIT on template open)
-// ═══════════════════════════════════════════════════════════════════════════
-
-export type ConvertTemplateResult =
-  | { success: true }
-  | { success: false; error: string };
-
-/**
- * Convert a TipTap email template to react-email format.
- *
- * Called automatically when a user opens a legacy TipTap email template.
- * Non-destructive: keeps original TipTap `content` column, adds compiledHtml,
- * and flips sourceFormat to "react-email".
- *
- * Idempotent: no-ops if already converted or not a TipTap email template.
- */
-export const convertTiptapTemplate = orgAction(
-  {
-    name: "convertTiptapTemplate",
-    resource: "templates",
-    permission: ["write"],
-    orgId: (organizationId: string, _templateId: string) => organizationId,
-    onError: "Something went wrong. Please try again.",
-  },
-  async (
-    ctx,
-    organizationId: string,
-    templateId: string
-  ): Promise<ConvertTemplateResult> => {
-    const templateData = await db.query.template.findFirst({
-      where: and(
-        eq(template.id, templateId),
-        eq(template.organizationId, organizationId)
-      ),
-    });
-
-    if (!templateData) {
-      return { success: false, error: "Template not found" };
-    }
-
-    // Only convert tiptap email templates
-    if (
-      templateData.sourceFormat !== "tiptap" ||
-      templateData.channel !== "email"
-    ) {
-      return { success: true };
-    }
-
-    // Fetch default brand kit for styling
-    const selectedBrandKit = await db.query.brandKit.findFirst({
-      where: and(
-        eq(brandKit.organizationId, organizationId),
-        eq(brandKit.isDefault, true)
-      ),
-    });
-
-    const emailComponent = tiptapToReactEmail(
-      templateData.content as JSONContent,
-      {},
-      {
-        keepVariablesAsPlaceholders: true,
-        brandKit: toBrandKitColors(selectedBrandKit),
-      }
-    );
-
-    const compiledHtml = await render(emailComponent);
-    const compiledText = normalizePlainTextForSes(
-      toPlainText(compiledHtml),
-      compiledHtml
-    );
-
-    // Extract variables from rendered HTML ({{variableName}} or {{name|fallback}})
-    const variables = extractHandlebarsVariables(compiledHtml);
-
-    // Update template + write audit log in one transaction
-    await ctx.audited(
-      async (tx) => {
-        await tx
-          .update(template)
-          .set({
-            sourceFormat: "react-email",
-            compiledHtml,
-            compiledText,
-            variables,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(template.id, templateId),
-              eq(template.organizationId, organizationId)
-            )
-          );
-      },
-      () => ({
-        action: "template.converted" as const,
-        resource: "template",
-        resourceId: templateId,
-        metadata: { templateId },
-      })
-    );
-
-    ctx.log.info({ templateId }, "Converted TipTap template to react-email");
-    return { success: true };
   }
 );

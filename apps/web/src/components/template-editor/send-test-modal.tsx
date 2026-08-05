@@ -1,7 +1,6 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import type { Editor } from "@tiptap/react";
 import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
 import {
   Dialog,
@@ -38,7 +37,6 @@ import { renderForPreview } from "@/lib/handlebars";
 type TemplateVariable = { name: string; fallback?: string };
 
 type SendTestModalProps = {
-  editor: Editor | null;
   orgSlug: string;
   templateId: string;
   isOpen: boolean;
@@ -46,8 +44,7 @@ type SendTestModalProps = {
   defaultFrom?: string | null;
   defaultFromName?: string | null;
   /**
-   * Compiled template HTML for code templates (where there is no TipTap
-   * editor instance). When provided, the preview is rendered with
+   * Compiled template HTML. When provided, the preview is rendered with
    * `renderForPreview` so `{{#if}}` blocks and `{{var}}` substitutions
    * match what recipients will actually see at send time.
    */
@@ -84,7 +81,6 @@ function extractVariables(content: string): string[] {
 }
 
 export function SendTestModal({
-  editor,
   orgSlug,
   templateId,
   isOpen,
@@ -103,16 +99,13 @@ export function SendTestModal({
   // Get user's email for "Send to Self" feature
   const userEmail = session?.user?.email;
 
-  // Source of truth for the template body. TipTap editor wins when present
-  // (WYSIWYG templates); otherwise fall back to the compiled HTML supplied
-  // by code templates. Either source contains raw `{{var}}` placeholders
-  // that get substituted at preview/send time.
-  const templateContent = editor?.getHTML() ?? compiledHtml ?? "";
+  // Source of truth for the template body. Contains raw `{{var}}`
+  // placeholders that get substituted at preview/send time.
+  const templateContent = compiledHtml ?? "";
 
-  // For code templates we trust the compiler's variable list (which has
-  // canonical fallbacks attached). For TipTap templates we extract via
-  // regex from the editor's HTML output, since TipTap doesn't track
-  // variables structurally.
+  // Prefer the compiler's variable list (which has canonical fallbacks
+  // attached); fall back to regex extraction for templates compiled before
+  // the compiler started emitting one.
   const variables = useMemo(() => {
     if (templateVariables && templateVariables.length > 0) {
       return templateVariables.map((v) => v.name);
@@ -260,13 +253,12 @@ export function SendTestModal({
   // Generate preview HTML with variables replaced.
   //
   // Two paths:
-  //   1. Code templates (compiledHtml provided): use the canonical
-  //      `renderForPreview` Handlebars renderer so `{{#if}}` blocks and
-  //      nested-key substitution work the same way they will at send time.
-  //   2. TipTap templates (no compiledHtml): use the legacy regex
-  //      substitution. TipTap output never contains conditionals so the
-  //      simple replacement is sufficient and avoids pulling Handlebars
-  //      across content that wasn't authored for it.
+  //   1. compiledHtml provided: use the canonical `renderForPreview`
+  //      Handlebars renderer so `{{#if}}` blocks and nested-key
+  //      substitution work the same way they will at send time.
+  //   2. No compiledHtml (template never compiled): use the legacy regex
+  //      substitution, which avoids pulling Handlebars across content that
+  //      wasn't authored for it.
   const generatePreview = useCallback(() => {
     const values = form.state.values;
 

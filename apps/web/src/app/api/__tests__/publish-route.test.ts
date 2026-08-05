@@ -159,7 +159,7 @@ async function createTestTemplate(
     organizationId: testOrganization.id,
     name: `Test Template ${id}`,
     content: { type: "doc", content: [] },
-    sourceFormat: "tiptap",
+    sourceFormat: "react-email",
     status: "DRAFT",
     emailType: "marketing",
     createdAt: now,

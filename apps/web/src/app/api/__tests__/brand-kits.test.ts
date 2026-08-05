@@ -1266,11 +1266,11 @@ describe("Brand Kits API - POST /api/[orgSlug]/brand-kits/from-template", () => 
   });
 
   it("should return 400 for non-react-email template", async () => {
-    // Create a tiptap template (not react-email)
+    // "tiptap" is a retired source format the column still permits.
     await db.insert(template).values({
-      id: "test-brandkit-tiptap-template",
+      id: "test-brandkit-legacy-template",
       organizationId: testOrganization.id,
-      name: "TipTap Template",
+      name: "Legacy Format Template",
       content: { type: "doc", content: [] },
       createdBy: testUser.id,
       sourceFormat: "tiptap",
@@ -1284,7 +1284,7 @@ describe("Brand Kits API - POST /api/[orgSlug]/brand-kits/from-template", () => 
       `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
       {
         method: "POST",
-        body: JSON.stringify({ templateId: "test-brandkit-tiptap-template" }),
+        body: JSON.stringify({ templateId: "test-brandkit-legacy-template" }),
       }
     );
     const context = {

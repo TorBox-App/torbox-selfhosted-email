@@ -182,12 +182,6 @@ vi.mock("@/lib/activation-tracking", () => ({
   trackTemplatePublished: vi.fn(),
 }));
 
-// Mock the tiptap serializer
-vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
-  tiptapToReactEmail: vi.fn(() => null),
-  toBrandKitColors: vi.fn(() => {}),
-}));
-
 // Helper to create test templates
 async function createTestTemplate(
   overrides: Partial<typeof template.$inferInsert> = {}
@@ -198,8 +192,11 @@ async function createTestTemplate(
     id,
     organizationId: testOrganization.id,
     name: `Test Template ${id}`,
-    content: { type: "doc", content: [] },
-    sourceFormat: "tiptap",
+    content: {},
+    // publishTemplateToSES uploads compiledHtml — templates are compiled on save
+    compiledHtml: "<html><body><p>Test template body</p></body></html>",
+    compiledText: "Test template body",
+    sourceFormat: "react-email",
     status: "DRAFT",
     emailType: "marketing",
     createdAt: now,

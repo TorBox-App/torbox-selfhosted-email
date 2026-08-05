@@ -518,15 +518,15 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     ).toBeUndefined();
   });
 
-  it("should inject valid unsubscribe URL into TipTap-rendered marketing template", async () => {
+  it("should inject valid unsubscribe URL into a dashboard-rendered marketing template", async () => {
     await createTestContact("recipient@example.com");
 
-    // Create a marketing template using TipTap content (not code-pushed)
-    // that includes unsubscribe variable
+    // Marketing template rendered in the dashboard (not code-pushed) whose
+    // compiled HTML includes the unsubscribe variable
     await db.insert(template).values({
-      id: "test-marketing-tiptap-unsub",
+      id: "test-marketing-dashboard-unsub",
       organizationId: testOrganization.id,
-      name: "TipTap Marketing Template",
+      name: "Dashboard Marketing Template",
       compiledHtml:
         '<html><body><p>Hello!</p><p>Click here to <a href="{{unsubscribeUrl}}">unsubscribe</a></p></body></html>',
       content: {
@@ -564,7 +564,7 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     );
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/emails/templates/test-marketing-tiptap-unsub/send-test`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-marketing-dashboard-unsub/send-test`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -577,7 +577,7 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
     const context = {
       params: Promise.resolve({
         orgSlug: testOrganization.slug,
-        id: "test-marketing-tiptap-unsub",
+        id: "test-marketing-dashboard-unsub",
       }),
     };
 
