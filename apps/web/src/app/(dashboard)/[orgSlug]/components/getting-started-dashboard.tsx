@@ -51,6 +51,12 @@ import {
   saveWebhookSecretAction,
   scanAWSAccountFeatures,
 } from "@/actions/aws-accounts";
+import {
+  getOwnEmailVerificationStatus,
+  sendSimulatorTestEmail,
+  sendWelcomeTestEmail,
+  verifyOwnEmailIdentity,
+} from "@/actions/ses-onboarding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -64,6 +70,7 @@ type GettingStartedDashboardProps = {
   setupStatus: SetupStatus;
   completionPercent: number;
   awsAccount: AwsAccountData;
+  userEmail: string;
 };
 
 const SDK_CODE = `import { WrapsEmail } from '@wraps.dev/email';
@@ -581,20 +588,236 @@ function DomainVerification({ verifiedDomains }: DomainVerificationProps) {
   );
 }
 
-function SendFirstEmailGuide({ orgSlug }: { orgSlug: string }) {
+type RealInboxSectionProps = {
+  organizationId: string;
+  userEmail: string;
+  sandboxStatus: boolean | null;
+};
+
+function RealInboxSection({
+  organizationId,
+  userEmail,
+  sandboxStatus,
+}: RealInboxSectionProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isCheckingStatus, startCheckStatus] = useTransition();
+  const [isVerifying, startVerify] = useTransition();
+  const [isSendingWelcome, startWelcomeSend] = useTransition();
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [verifyMessage, setVerifyMessage] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [welcomeResult, setWelcomeResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const canSendDirectly = sandboxStatus === false || verified === true;
+
+  const checkStatus = () => {
+    startCheckStatus(async () => {
+      const result = await getOwnEmailVerificationStatus(organizationId);
+      if (result.success) {
+        setVerified(result.verified);
+      }
+    });
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && verified === null && sandboxStatus !== false) {
+      checkStatus();
+    }
+  };
+
+  const handleVerify = () => {
+    startVerify(async () => {
+      setVerifyMessage(null);
+      const result = await verifyOwnEmailIdentity(organizationId);
+      if (!result.success) {
+        setVerifyMessage({ success: false, message: result.error });
+        return;
+      }
+      if (result.alreadyVerified) {
+        setVerified(true);
+        return;
+      }
+      setVerifyMessage({
+        success: true,
+        message: `Verification email sent to ${result.email}. Click the link, then check again below.`,
+      });
+    });
+  };
+
+  const handleWelcomeSend = () => {
+    startWelcomeSend(async () => {
+      setWelcomeResult(null);
+      const result = await sendWelcomeTestEmail(organizationId);
+      if (result.success) {
+        setWelcomeResult({
+          success: true,
+          message: `Check your inbox — sent to ${userEmail}.`,
+        });
+      } else {
+        setWelcomeResult({ success: false, message: result.error });
+      }
+    });
+  };
+
+  return (
+    <Collapsible onOpenChange={handleOpenChange} open={isOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          className="flex items-center gap-1 text-primary text-sm underline underline-offset-4"
+          type="button"
+        >
+          Send to my real inbox instead
+          <ChevronDownIcon
+            className={cn(
+              "h-3.5 w-3.5 transition-transform",
+              isOpen && "rotate-180"
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-3">
+        <div className="space-y-3 rounded-lg border p-3">
+          {isCheckingStatus && (
+            <p className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Loader2Icon className="h-3 w-3 animate-spin" />
+              Checking verification status...
+            </p>
+          )}
+
+          {!isCheckingStatus && canSendDirectly && (
+            <>
+              <p className="text-muted-foreground text-sm">
+                Send a test email straight to {userEmail}.
+              </p>
+              <Button
+                disabled={isSendingWelcome}
+                onClick={handleWelcomeSend}
+                size="sm"
+              >
+                {isSendingWelcome ? (
+                  <>
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send myself a test email"
+                )}
+              </Button>
+            </>
+          )}
+
+          {!(isCheckingStatus || canSendDirectly) && (
+            <>
+              <p className="text-muted-foreground text-sm">
+                Your AWS account is in SES sandbox mode — verify {userEmail} to
+                send test emails to your own inbox.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  disabled={isVerifying}
+                  onClick={handleVerify}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isVerifying ? (
+                    <>
+                      <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    `Verify ${userEmail}`
+                  )}
+                </Button>
+                <Button onClick={checkStatus} size="sm" variant="ghost">
+                  I&apos;ve clicked the link — check
+                </Button>
+              </div>
+            </>
+          )}
+
+          {verifyMessage && (
+            <ResultMessage
+              message={verifyMessage.message}
+              success={verifyMessage.success}
+            />
+          )}
+          {welcomeResult && (
+            <ResultMessage
+              message={welcomeResult.message}
+              success={welcomeResult.success}
+            />
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+type SendFirstEmailGuideProps = {
+  orgSlug: string;
+  organizationId: string;
+  userEmail: string;
+  sandboxStatus: boolean | null;
+};
+
+function SendFirstEmailGuide({
+  orgSlug,
+  organizationId,
+  userEmail,
+  sandboxStatus,
+}: SendFirstEmailGuideProps) {
+  const router = useRouter();
+  const [isSendingSimulator, startSimulatorSend] = useTransition();
+  const [simulatorResult, setSimulatorResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleSimulatorSend = () => {
+    startSimulatorSend(async () => {
+      setSimulatorResult(null);
+      const result = await sendSimulatorTestEmail(organizationId);
+      if (result.success) {
+        setSimulatorResult({
+          success: true,
+          message: "It works — test email sent.",
+        });
+        router.refresh();
+      } else {
+        setSimulatorResult({ success: false, message: result.error });
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
-        Before sending, configure your sender defaults to set a consistent
-        &quot;From&quot; name and email address.
+        Send a test email through your infrastructure right now — no sender
+        verification required.
       </p>
       <div className="flex flex-wrap gap-2">
+        <Button disabled={isSendingSimulator} onClick={handleSimulatorSend}>
+          {isSendingSimulator ? (
+            <>
+              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            "Send a test email"
+          )}
+        </Button>
         <Button asChild size="sm" variant="outline">
           <Link href={`/${orgSlug}/settings/sender-defaults`}>
             Configure Sender Defaults
           </Link>
         </Button>
-        <Button asChild size="sm" variant="default">
+        <Button asChild size="sm" variant="outline">
           <a
             href="https://wraps.dev/docs/quickstart/email"
             rel="noopener noreferrer"
@@ -604,6 +827,29 @@ function SendFirstEmailGuide({ orgSlug }: { orgSlug: string }) {
           </a>
         </Button>
       </div>
+
+      {simulatorResult && (
+        <div className="space-y-1">
+          <ResultMessage
+            message={simulatorResult.message}
+            success={simulatorResult.success}
+          />
+          {simulatorResult.success && (
+            <Link
+              className="text-primary text-xs underline underline-offset-4"
+              href={`/${orgSlug}/events`}
+            >
+              View it in your event log
+            </Link>
+          )}
+        </div>
+      )}
+
+      <RealInboxSection
+        organizationId={organizationId}
+        sandboxStatus={sandboxStatus}
+        userEmail={userEmail}
+      />
     </div>
   );
 }
@@ -1027,6 +1273,7 @@ export function GettingStartedDashboard({
   setupStatus,
   completionPercent,
   awsAccount,
+  userEmail,
 }: GettingStartedDashboardProps) {
   const router = useRouter();
   const {
@@ -1175,22 +1422,33 @@ export function GettingStartedDashboard({
                       !hasSentEmail && (
                         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
                           <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                          <p className="text-sm">
-                            Your AWS account is in SES sandbox mode. You can
-                            only send to verified email addresses.{" "}
-                            <a
-                              className="font-medium underline underline-offset-4"
-                              href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              Request production access
-                            </a>{" "}
-                            in the AWS console.
-                          </p>
+                          <div className="space-y-2 text-sm">
+                            <p>
+                              AWS starts every new account in SES sandbox mode,
+                              so you can only send to verified addresses.{" "}
+                              <a
+                                className="font-medium underline underline-offset-4"
+                                href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                Request production access
+                              </a>{" "}
+                              (usually approved in ~24h) to email anyone.
+                            </p>
+                            <p className="font-medium">
+                              Meanwhile, send yourself a test below — it works
+                              in sandbox right now.
+                            </p>
+                          </div>
                         </div>
                       )}
-                    <SendFirstEmailGuide orgSlug={orgSlug} />
+                    <SendFirstEmailGuide
+                      organizationId={organizationId}
+                      orgSlug={orgSlug}
+                      sandboxStatus={setupStatus.sandboxStatus}
+                      userEmail={userEmail}
+                    />
                   </div>
                 </ExpandableChecklistItem>
               </CardContent>

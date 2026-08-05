@@ -212,6 +212,7 @@ export default async function OrganizationDashboard({
       organizationName={orgWithMembership.name}
       orgSlug={orgSlug}
       setupStatus={setupStatus}
+      userEmail={session.user.email}
     />
   );
 }

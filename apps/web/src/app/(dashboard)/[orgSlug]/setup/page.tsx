@@ -57,6 +57,7 @@ export default async function SetupPage({ params }: SetupPageProps) {
       organizationName={orgWithMembership.name}
       orgSlug={orgSlug}
       setupStatus={setupStatus}
+      userEmail={session.user.email}
     />
   );
 }
