@@ -113,6 +113,18 @@ export async function findDmarcRecord(domain: string): Promise<string | null> {
 }
 
 /**
+ * Find BIMI record (default selector). Matches any "v=BIMI" record (not just
+ * the current v=BIMI1) so an unsupported/future version reaches checkBimi's
+ * own version validation instead of being silently treated as "no record".
+ */
+export async function findBimiRecord(domain: string): Promise<string | null> {
+  const bimiDomain = `default._bimi.${domain}`;
+  const txtRecords = await resolveTxtRecords(bimiDomain);
+  const bimiRecord = txtRecords.find((r) => r.startsWith("v=BIMI"));
+  return bimiRecord || null;
+}
+
+/**
  * Batch DNS queries with concurrency control
  */
 export async function batchDnsQuery<T, R>(

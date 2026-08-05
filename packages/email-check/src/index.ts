@@ -3,6 +3,7 @@
  * Comprehensive email deliverability auditing
  */
 
+import { checkBimi } from "./checks/bimi.js";
 import { checkBlacklist } from "./checks/blacklist.js";
 import { checkDkim } from "./checks/dkim.js";
 import { checkDmarc } from "./checks/dmarc.js";
@@ -12,7 +13,6 @@ import { checkDomainAge } from "./checks/rdap.js";
 import { checkSpf } from "./checks/spf.js";
 import { calculateScore } from "./scoring.js";
 import type {
-  BimiResult,
   CaaResult,
   DnssecResult,
   EmailCheckOptions,
@@ -24,6 +24,7 @@ import type {
 } from "./types.js";
 import { isValidDomain, toAsciiDomain } from "./utils/domain.js";
 
+export { checkBimi } from "./checks/bimi.js";
 export { checkBlacklist, formatBlacklistResults } from "./checks/blacklist.js";
 export { checkDkim, formatDkimResults } from "./checks/dkim.js";
 export { checkDmarc, formatDmarcResult } from "./checks/dmarc.js";
@@ -192,20 +193,7 @@ export async function runEmailCheck(
     iodefUri: null,
   };
 
-  const bimiResult: BimiResult = {
-    configured: false,
-    record: null,
-    logoUrl: null,
-    vmcUrl: null,
-    logoAccessible: false,
-    logoValid: false,
-    vmcAccessible: false,
-    vmcValid: false,
-    dmarcCompatible:
-      dmarcResult.policy === "quarantine" || dmarcResult.policy === "reject",
-    errors: [],
-    warnings: [],
-  };
+  const bimiResult = await checkBimi(normalizedDomain, dmarcResult.policy);
 
   // Calculate score
   const score = calculateScore({
