@@ -114,7 +114,7 @@ export function ExploreFirstDashboard({
             Welcome to {organizationName}
           </h1>
           <p className="text-muted-foreground">
-            Start building your communication platform.
+            Explore the product below. Connect AWS when you're ready to send.
           </p>
         </div>
 
@@ -150,6 +150,37 @@ export function ExploreFirstDashboard({
 
       {/* Main Content */}
       <div className="@container/main px-4 lg:px-6">
+        {/* Connect AWS Card - primary CTA */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <CloudIcon className="h-5 w-5" />
+            </div>
+            <CardTitle className="text-lg">
+              Connect AWS to start sending
+            </CardTitle>
+            <CardDescription>
+              You can explore templates and contacts now, but sending requires
+              your AWS account. Connect it to send your first email — your
+              infrastructure, your data, AWS pricing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button asChild className="w-full sm:w-auto">
+              <Link href={`/${orgSlug}/setup`}>Connect AWS</Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
+              <a
+                href="https://wraps.dev/docs"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Learn more
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - Activity Cards */}
           <div className="lg:col-span-2">
@@ -192,34 +223,6 @@ export function ExploreFirstDashboard({
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Connect AWS Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <CloudIcon className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-lg">Ready to send?</CardTitle>
-                <CardDescription>
-                  When you&apos;re ready to send emails, connect your AWS
-                  account. Your infrastructure, your data, AWS pricing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button asChild className="w-full" variant="outline">
-                  <Link href={`/${orgSlug}/setup`}>Connect AWS</Link>
-                </Button>
-                <Button asChild className="w-full" size="sm" variant="ghost">
-                  <a
-                    href="https://wraps.dev/docs"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    Learn more
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* Help Card */}
             <HelpCard />
           </div>
