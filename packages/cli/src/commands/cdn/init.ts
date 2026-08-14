@@ -42,6 +42,8 @@ import {
 } from "../../utils/shared/output.js";
 import {
   confirmDeploy,
+  ensureInteractive,
+  isInteractive,
   promptProvider,
   promptRegion,
   promptVercelConfig,
@@ -69,6 +71,8 @@ export type CdnInitOptions = {
  * Prompt for CDN configuration preset
  */
 async function promptCdnPreset(): Promise<CdnConfigPreset> {
+  ensureInteractive("Preset", "--preset <starter|production|custom>");
+
   const starterInfo = getPresetInfo("starter");
   const productionInfo = getPresetInfo("production");
   const customInfo = getPresetInfo("custom");
@@ -106,6 +110,11 @@ async function promptCdnPreset(): Promise<CdnConfigPreset> {
  * Prompt for custom CDN configuration
  */
 async function promptCustomCdnConfig(): Promise<WrapsCdnConfig> {
+  ensureInteractive(
+    "Custom CDN configuration",
+    "--preset starter|production (custom requires an interactive terminal)"
+  );
+
   // CDN enabled?
   const cdnEnabled = await clack.confirm({
     message: "Enable CloudFront CDN for fast global delivery?",
@@ -259,6 +268,8 @@ async function promptCustomCdnConfig(): Promise<WrapsCdnConfig> {
  * Prompt for custom CDN domain
  */
 async function promptCustomDomain(): Promise<string | undefined> {
+  ensureInteractive("Custom domain confirmation", "--domain <domain>");
+
   const wantCustomDomain = await clack.confirm({
     message: "Configure a custom CDN domain? (e.g., cdn.yourapp.com)",
     initialValue: false,
@@ -306,6 +317,14 @@ async function promptEstimatedUsage(): Promise<{
   storageGB: number;
   bandwidthGB: number;
 }> {
+  // No CLI flag exists for estimated usage today — closest available lever
+  // is --preset, which carries its own cost profile. Documented gap; see
+  // commit message. Do not add a new flag in this plan.
+  ensureInteractive(
+    "Estimated usage",
+    "--preset <starter|production> (usage estimate requires an interactive terminal)"
+  );
+
   const usage = await clack.select({
     message: "Estimated monthly usage (for cost estimate):",
     options: [
@@ -849,14 +868,19 @@ export async function init(options: CdnInitOptions): Promise<void> {
             );
           }
 
-          // Ask for confirmation
-          const shouldCreate = await clack.confirm({
-            message:
-              conflictCount > 0
-                ? `Create ${newCount + conflictCount} DNS record(s)? (${conflictCount} will overwrite existing)`
-                : `Create ${newCount} DNS record(s) in Route53?`,
-            initialValue: true,
-          });
+          // Ask for confirmation. Optional flourish, not required input —
+          // skip silently (default to not creating records) rather than
+          // throw when there's no one to answer it.
+          const shouldCreate =
+            isInteractive() && !isJsonMode()
+              ? await clack.confirm({
+                  message:
+                    conflictCount > 0
+                      ? `Create ${newCount + conflictCount} DNS record(s)? (${conflictCount} will overwrite existing)`
+                      : `Create ${newCount} DNS record(s) in Route53?`,
+                  initialValue: true,
+                })
+              : false;
 
           if (!clack.isCancel(shouldCreate) && shouldCreate) {
             progress.start("Creating DNS records in Route53");

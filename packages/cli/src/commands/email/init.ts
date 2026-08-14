@@ -47,6 +47,7 @@ import {
 } from "../../utils/shared/output.js";
 import {
   confirmDeploy,
+  isInteractive,
   promptConfigPreset,
   promptCustomConfig,
   promptDomain,
@@ -326,7 +327,7 @@ export async function init(options: InitOptions): Promise<void> {
     );
     const preflight = await progress.execute(
       "Scanning for existing resources",
-      async () => runPreflightScan(region, domain)
+      async () => runPreflightScan(region, domain, { force: options.force })
     );
 
     if (!preflight.shouldContinue) {
@@ -872,8 +873,16 @@ export async function init(options: InitOptions): Promise<void> {
     // baseline:allow-next-line no-swallowed-errors — sandbox detection is non-fatal, skip notice if API fails
   } catch {}
 
-  // 14. Post-deploy: offer to send a test email (skip in preview mode)
-  if (!options.preview) {
+  // 14. Post-deploy: offer to send a test email (skip in preview mode).
+  // Optional flourish, not required input — skip silently rather than throw
+  // when there's no one to answer it.
+  if (
+    !options.preview &&
+    !options.quick &&
+    !options.yes &&
+    isInteractive() &&
+    !isJsonMode()
+  ) {
     console.log("");
     const wantTest = await clack.confirm({
       message: "Send a test email to verify everything works?",

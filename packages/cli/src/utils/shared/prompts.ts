@@ -6,6 +6,8 @@ import type {
   DomainPurpose,
   SESEventType,
 } from "../../types/index.js";
+import { errors } from "./errors.js";
+import { isJsonMode } from "./json-output.js";
 
 /**
  * BOUNCE and COMPLAINT are never offered as choices in the event-type
@@ -54,6 +56,20 @@ export function isInteractive(): boolean {
 }
 
 /**
+ * Guard for every interactive prompt in this file (and any raw `clack.*`
+ * call in a command file). Throws a machine-readable `NON_INTERACTIVE_INPUT`
+ * error naming the flag that supplies the value instead of letting Clack
+ * hang silently without a TTY, or corrupting `--json` stdout with prompt
+ * output. Call this BEFORE any spinner/log output so JSON stdout stays
+ * clean, and before the `clack.*` call itself.
+ */
+export function ensureInteractive(what: string, flagHint: string): void {
+  if (!isInteractive() || isJsonMode()) {
+    throw errors.nonInteractiveInput(what, flagHint);
+  }
+}
+
+/**
  * Hosting provider type
  */
 export type Provider = "vercel" | "aws" | "railway" | "other";
@@ -67,6 +83,8 @@ export type DNSProviderType = "route53" | "vercel" | "cloudflare" | "manual";
  * Prompt for hosting provider
  */
 export async function promptProvider(): Promise<Provider> {
+  ensureInteractive("Provider", "--provider <vercel|aws|railway|other>");
+
   const provider = await clack.select({
     message: "Where is your app hosted?",
     options: [
@@ -105,6 +123,8 @@ export async function promptProvider(): Promise<Provider> {
  * Prompt for AWS region
  */
 export async function promptRegion(defaultRegion: string): Promise<string> {
+  ensureInteractive("Region", "--region <aws-region>");
+
   const region = await clack.select({
     message: "Select AWS region:",
     options: [
@@ -198,6 +218,8 @@ export async function promptRegion(defaultRegion: string): Promise<string> {
  * Prompt for domain to verify (optional)
  */
 export async function promptDomain(): Promise<string> {
+  ensureInteractive("Domain", "--domain <domain>");
+
   const domain = await clack.text({
     message: "Domain to verify (optional):",
     placeholder: "myapp.com",
@@ -231,6 +253,8 @@ export type VercelConfig = {
  * Prompt for Vercel configuration
  */
 export async function promptVercelConfig(): Promise<VercelConfig> {
+  ensureInteractive("Vercel configuration", "--provider aws (or interactive run)");
+
   const config = await clack.group(
     {
       teamSlug: () =>
@@ -271,6 +295,8 @@ export async function promptVercelConfig(): Promise<VercelConfig> {
 export async function promptIntegrationLevel(): Promise<
   "dashboard-only" | "enhanced"
 > {
+  ensureInteractive("Integration level", "run interactively");
+
   const level = await clack.select({
     message: "Integration level:",
     options: [
@@ -299,6 +325,8 @@ export async function promptIntegrationLevel(): Promise<
  * Confirm deployment
  */
 export async function confirmDeploy(): Promise<boolean> {
+  ensureInteractive("Deployment confirmation", "--yes");
+
   const confirmed = await clack.confirm({
     message: "Deploy infrastructure to your AWS account?",
     initialValue: true,
@@ -365,6 +393,8 @@ export function getAvailableFeatures(): FeatureOption[] {
 export async function promptFeatureSelection(
   preselected?: string[]
 ): Promise<string[]> {
+  ensureInteractive("Feature selection", "run interactively");
+
   const features = getAvailableFeatures();
 
   const selected = await clack.multiselect({
@@ -399,6 +429,8 @@ export async function promptConflictResolution(
   resourceType: string,
   existingResourceName: string
 ): Promise<ConflictAction> {
+  ensureInteractive("Conflict resolution", "run interactively");
+
   const action = await clack.select({
     message: `Found existing ${resourceType}: ${pc.cyan(existingResourceName)}. How should we handle this?`,
     options: [
@@ -434,6 +466,8 @@ export async function promptConflictResolution(
 export async function promptSelectIdentities(
   identities: Array<{ name: string; verified: boolean }>
 ): Promise<string[]> {
+  ensureInteractive("Identity selection", "run interactively");
+
   const selected = await clack.multiselect({
     message: "Select identities to connect with Wraps:",
     options: identities.map((id) => ({
@@ -456,6 +490,8 @@ export async function promptSelectIdentities(
  * Confirm connection deployment
  */
 export async function confirmConnect(): Promise<boolean> {
+  ensureInteractive("Connection confirmation", "--yes");
+
   const confirmed = await clack.confirm({
     message: "Connect to existing AWS infrastructure?",
     initialValue: true,
@@ -475,6 +511,8 @@ export async function confirmConnect(): Promise<boolean> {
 export async function promptConfigPreset(): Promise<
   "starter" | "production" | "enterprise" | "custom"
 > {
+  ensureInteractive("Preset", "--preset <starter|production|enterprise>");
+
   const { getAllPresetInfo } = await import("../email/presets.js");
   const presets = getAllPresetInfo();
 
@@ -503,6 +541,8 @@ export async function promptConfigPreset(): Promise<
  * Prompt for estimated monthly email volume
  */
 export async function promptEstimatedVolume(): Promise<number> {
+  ensureInteractive("Estimated volume", "--quick");
+
   const volume = await clack.select({
     message: "Estimated monthly email volume:",
     options: [
@@ -540,6 +580,8 @@ export async function promptEmailArchiving(): Promise<{
   enabled: boolean;
   retention: ArchiveRetention;
 }> {
+  ensureInteractive("Email archiving", "--quick");
+
   const enabled = await clack.confirm({
     message:
       "Enable email archiving? (Store full email content with HTML for viewing in dashboard)",
@@ -601,6 +643,11 @@ export async function promptEmailArchiving(): Promise<{
 }
 
 export async function promptCustomConfig(existingConfig?: any): Promise<any> {
+  ensureInteractive(
+    "Custom configuration",
+    "--preset starter|production|enterprise (custom requires an interactive terminal)"
+  );
+
   clack.log.info("Custom configuration builder");
   clack.log.info("Configure each feature individually");
 
@@ -993,6 +1040,7 @@ export async function promptDNSConfirmation(preview: {
   }
 
   // Ask if user wants to create DNS records
+  ensureInteractive("DNS record confirmation", "run interactively");
   const shouldCreate = await clack.confirm({
     message: "Create DNS records in Route53?",
     initialValue: !preview.hasConflicts, // Default to no if there are conflicts
@@ -1077,6 +1125,8 @@ export async function promptDNSConfirmation(preview: {
  * Ask user if they want to manage DNS records via Route53
  */
 export async function promptDNSManagement(domain: string): Promise<boolean> {
+  ensureInteractive("DNS management confirmation", "run interactively");
+
   const manage = await clack.confirm({
     message: `Manage DNS records for ${pc.cyan(domain)} via Route53?`,
     initialValue: true,
@@ -1108,6 +1158,8 @@ export async function promptDNSProvider(
   domain: string,
   availableProviders: DNSProviderOption[]
 ): Promise<DNSProviderType> {
+  ensureInteractive("DNS provider", "run interactively");
+
   const options = availableProviders.map((p) => {
     let label: string;
     let hint: string;
@@ -1167,6 +1219,8 @@ export async function promptDNSProvider(
  * Returns "" for root domain, or a subdomain string like "inbound"
  */
 export async function promptInboundSubdomain(domain: string): Promise<string> {
+  ensureInteractive("Inbound subdomain", "--subdomain <subdomain>");
+
   const choice = await clack.select({
     message: `Where should ${pc.cyan(domain)} receive inbound email?`,
     options: [
@@ -1220,6 +1274,8 @@ export async function promptInboundSubdomain(domain: string): Promise<string> {
  * Prompt for webhook URL for inbound email events
  */
 export async function promptWebhookUrl(): Promise<string | undefined> {
+  ensureInteractive("Webhook URL confirmation", "run interactively");
+
   const wantsWebhook = await clack.confirm({
     message: "Send inbound email events to a webhook URL?",
     initialValue: false,
@@ -1275,6 +1331,8 @@ export async function promptDNSRecordSelection(
   }>,
   providerName: string
 ): Promise<{ shouldCreate: boolean; selectedCategories: Set<string> }> {
+  ensureInteractive("DNS record selection", "run interactively");
+
   // Import descriptions here to avoid circular deps
   const { DNS_RECORD_DESCRIPTIONS } = await import("../dns/create-records.js");
 
@@ -1345,6 +1403,8 @@ export async function promptDNSRecordSelection(
  * Prompt to continue with manual DNS setup when credentials are missing
  */
 export async function promptContinueManualDNS(): Promise<boolean> {
+  ensureInteractive("Manual DNS continuation confirmation", "run interactively");
+
   const continueManual = await clack.confirm({
     message: "Continue with manual DNS setup?",
     initialValue: true,
@@ -1365,6 +1425,8 @@ export async function promptContinueManualDNS(): Promise<boolean> {
 export async function promptSubdomainSuggestions(
   primaryDomain: string
 ): Promise<string> {
+  ensureInteractive("Subdomain suggestion", "--domain <subdomain.domain>");
+
   clack.log.info(
     pc.dim(
       "Using subdomains isolates sender reputation — a bounce spike on marketing won't affect transactional mail."
@@ -1429,6 +1491,8 @@ export async function promptSubdomainSuggestions(
  * Prompt for the purpose of a domain (informational label).
  */
 export async function promptDomainPurpose(): Promise<DomainPurpose> {
+  ensureInteractive("Domain purpose", "--quick");
+
   const purpose = await clack.select({
     message: "What will this domain be used for?",
     options: [
@@ -1467,6 +1531,8 @@ export async function promptDomainPurpose(): Promise<DomainPurpose> {
  * Prompt for the MAIL FROM subdomain (defaults to `mail.{domain}`).
  */
 export async function promptMailFromSubdomain(domain: string): Promise<string> {
+  ensureInteractive("MAIL FROM subdomain", "--preset (non-custom)");
+
   const subdomain = await clack.text({
     message: `MAIL FROM subdomain for ${pc.cyan(domain)}:`,
     placeholder: "mail",

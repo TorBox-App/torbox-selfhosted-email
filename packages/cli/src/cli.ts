@@ -604,6 +604,7 @@ async function run() {
             preview: flags.preview,
             quick: flags.quick,
             json: flags.json,
+            force: flags.force,
           });
           break;
 
@@ -1284,6 +1285,9 @@ async function run() {
             yes: flags.yes,
             preview: flags.preview,
             json: flags.json,
+            quick: flags.quick,
+            countries: flags.countries,
+            volume: flags.volume,
           });
           break;
 
@@ -1546,9 +1550,7 @@ async function run() {
     if (primaryCommand === "aws" && subCommand) {
       switch (subCommand) {
         case "setup":
-          await awsSetup({
-            yes: flags.yes,
-          });
+          await awsSetup({});
           break;
 
         case "doctor":

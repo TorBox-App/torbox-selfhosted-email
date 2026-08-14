@@ -1,5 +1,8 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { errors } from "./errors.js";
+import { isJsonMode } from "./json-output.js";
+import { isInteractive } from "./prompts.js";
 import {
   type AWSResourceScan,
   checkWrapsResourcesExist,
@@ -12,9 +15,15 @@ export type PreflightResult = {
   scan: AWSResourceScan;
 };
 
+export type PreflightOptions = {
+  /** Skip the "Continue anyway?" confirm and proceed despite conflicts. */
+  force?: boolean;
+};
+
 export async function runPreflightScan(
   region: string,
-  domain?: string
+  domain?: string,
+  opts?: PreflightOptions
 ): Promise<PreflightResult> {
   const scan = await scanAWSResources(region);
   const filtered = filterWrapsResources(scan);
@@ -68,6 +77,16 @@ export async function runPreflightScan(
   }
 
   if (hasConflicts) {
+    if (!isInteractive() || isJsonMode()) {
+      if (opts?.force) {
+        clack.log.warn("Conflicts detected — continuing due to --force.");
+        return { shouldContinue: true, scan };
+      }
+      throw errors.resourceConflict(
+        resourceTypes.length > 0 ? resourceTypes.join(", ") : (domain ?? "domain")
+      );
+    }
+
     const shouldContinue = await clack.confirm({
       message: "Continue anyway?",
       initialValue: false,

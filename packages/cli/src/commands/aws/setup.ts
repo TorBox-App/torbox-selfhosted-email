@@ -16,12 +16,15 @@ import {
   parseSSOProfiles,
   type SSOProfile,
 } from "../../utils/shared/aws-detection.js";
-import { promptProvider, promptRegion } from "../../utils/shared/prompts.js";
+import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode } from "../../utils/shared/json-output.js";
+import {
+  isInteractive,
+  promptProvider,
+  promptRegion,
+} from "../../utils/shared/prompts.js";
 
-type SetupOptions = {
-  /** Skip interactive prompts where possible */
-  yes?: boolean;
-};
+type SetupOptions = Record<string, never>;
 
 /**
  * Display current AWS state with icons
@@ -710,6 +713,13 @@ function showNextSteps(_state: AWSSetupState): void {
  * AWS Setup Wizard entry point
  */
 export async function setup(_options: SetupOptions = {}): Promise<void> {
+  if (!isInteractive() || isJsonMode()) {
+    throw errors.nonInteractiveInput(
+      "AWS Setup Wizard",
+      "manual setup — see https://wraps.dev/docs/guides/aws-setup"
+    );
+  }
+
   const startTime = Date.now();
   clack.intro(pc.bold("AWS Setup Wizard"));
 

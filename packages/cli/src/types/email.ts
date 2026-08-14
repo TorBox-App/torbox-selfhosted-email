@@ -340,6 +340,8 @@ export type EmailInitOptions = {
   preview?: boolean;
   quick?: boolean;
   json?: boolean;
+  /** Continue past the pre-flight resource-conflict check without prompting. */
+  force?: boolean;
 };
 
 /**

@@ -734,6 +734,14 @@ export const errors = {
       "https://wraps.dev/docs/cli-reference"
     ),
 
+  nonInteractiveInput: (what: string, flagHint: string) =>
+    new WrapsError(
+      `${what} is required in non-interactive mode`,
+      "NON_INTERACTIVE_INPUT",
+      `Pass ${flagHint} (or run in an interactive terminal).`,
+      "https://wraps.dev/docs/reference/json-output"
+    ),
+
   pulumiError: (message: string) =>
     new WrapsError(
       `Infrastructure deployment failed: ${message}`,
@@ -805,6 +813,22 @@ export const errors = {
       "SMS_INVALID_PHONE_NUMBER",
       "Phone numbers must be in E.164 format:\n  Example: +14155551234 (US)\n  Example: +447911123456 (UK)",
       "https://wraps.dev/docs/sms-sdk-reference"
+    ),
+
+  smsInvalidCountries: (raw: string) =>
+    new WrapsError(
+      `Invalid --countries value: ${raw}`,
+      "SMS_INVALID_COUNTRIES",
+      "Pass a comma-separated list of ISO 3166-1 alpha-2 codes.\n  Example: --countries US,CA,GB",
+      "https://wraps.dev/docs/cli-reference"
+    ),
+
+  smsInvalidVolume: (raw: string) =>
+    new WrapsError(
+      `Invalid --volume value: ${raw}`,
+      "SMS_INVALID_VOLUME",
+      "Pass a positive whole number of messages per month.\n  Example: --volume 10000",
+      "https://wraps.dev/docs/cli-reference"
     ),
 
   smsSimulatorLimit: () =>
