@@ -247,6 +247,8 @@ vi.mock("../utils/email/costs.js", () => ({
 
 // Mock prompts
 vi.mock("../utils/shared/prompts.js", () => ({
+  isInteractive: vi.fn().mockReturnValue(true),
+  ensureInteractive: vi.fn(),
   promptProvider: vi.fn().mockResolvedValue("other"),
   promptRegion: vi.fn().mockResolvedValue("us-east-1"),
   promptDomain: vi.fn().mockResolvedValue("example.com"),

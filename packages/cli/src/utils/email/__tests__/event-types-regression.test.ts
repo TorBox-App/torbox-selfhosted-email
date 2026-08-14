@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Plan 182 (round 2): the pure-function tests in
@@ -47,6 +47,21 @@ import { promptCustomConfig } from "../../shared/prompts.js";
 import { getPreset } from "../presets.js";
 
 describe("every real config path resolves to all ten event types by default", () => {
+  // promptCustomConfig() below is the real implementation (only
+  // @clack/prompts is mocked), and it's now guarded by ensureInteractive —
+  // simulate an interactive TTY so the guard is a no-op here, matching
+  // pre-guard behavior.
+  beforeEach(() => {
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
+    delete process.env.CI;
+  });
+
+  afterEach(() => {
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
+  });
+
   const presetNames = ["starter", "production", "enterprise"] as const;
 
   it.each(presetNames)("preset %s", (presetName) => {

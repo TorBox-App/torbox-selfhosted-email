@@ -28,10 +28,19 @@ describe("init pre-flight scan", () => {
     vi.mocked(prompts.log).warn = vi.fn();
     vi.mocked(prompts.log).error = vi.fn();
     vi.mocked(prompts.isCancel).mockReturnValue(false);
+
+    // runPreflightScan now guards its "Continue anyway?" confirm with
+    // isInteractive() — simulate an interactive TTY so the guard is a
+    // no-op here, matching pre-guard behavior (prompt still occurs).
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
+    delete process.env.CI;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
   });
 
   it("should warn when wraps-* resources already exist and prompt user", async () => {

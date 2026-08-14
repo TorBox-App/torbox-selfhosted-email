@@ -1,6 +1,6 @@
 import * as clack from "@clack/prompts";
 import { ALL_EVENT_TYPES } from "@wraps/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   confirmConnect,
   confirmDeploy,
@@ -46,6 +46,19 @@ describe("Prompts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clack.isCancel).mockReturnValue(false);
+
+    // Every prompt* helper is now guarded by ensureInteractive() — simulate
+    // an interactive TTY so the guard is a no-op here, matching pre-guard
+    // behavior. See utils/shared/__tests__/prompts.test.ts for guard-specific
+    // coverage (non-TTY / JSON-mode throw behavior).
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
+    delete process.env.CI;
+  });
+
+  afterEach(() => {
+    process.stdin.isTTY = true;
+    process.stdout.isTTY = true;
   });
 
   describe("promptProvider", () => {
