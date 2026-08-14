@@ -184,7 +184,7 @@ export default function CloudflareQuickstartPageContent() {
             Before you begin, make sure you have:
           </p>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-            <li>Node.js 18 or later installed</li>
+            <li>Node.js 20 or later installed</li>
             <li>A Cloudflare account with Wrangler installed</li>
             <li>
               AWS credentials configured (

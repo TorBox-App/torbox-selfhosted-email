@@ -653,12 +653,15 @@ ${jsonErrorEnvelopeCode}
 const SECTION_MD = {
   sdkEmailErrors: `## SDK Error Classes — Email SDK (@wraps.dev/email)
 
+- **WrapsEmailError** — Base class every other email SDK error extends. Catch-all \`instanceof\` check.
 - **SESError** — AWS SES API error. Properties: \`code\` (string), \`requestId\` (string), \`retryable\` (boolean). Common codes: MessageRejected, Throttling, AccountSuspended, MailFromDomainNotVerified.
 - **DynamoDBError** — Email history read/write error. Properties: \`code\` (string), \`requestId\` (string), \`retryable\` (boolean).
-- **ValidationError** — Invalid input. Properties: \`field\` (string), \`message\` (string).`,
+- **ValidationError** — Invalid input. Properties: \`field\` (string), \`message\` (string).
+- **BatchError** — Exported for type compatibility but **not currently thrown**. \`sendBatch()\` never throws on partial failure — it reports per-entry outcomes in its resolved \`SendBatchResult\` (\`results\`, \`successCount\`, \`failureCount\`) instead. Always inspect the result rather than relying on a catch block.`,
 
   sdkSmsErrors: `## SDK Error Classes — SMS SDK (@wraps.dev/sms)
 
+- **WrapsSMSError** — Base class every other SMS SDK error extends. Catch-all \`instanceof\` check.
 - **SMSError** — AWS End User Messaging error. Properties: \`code\` (string), \`retryable\` (boolean).
 - **ValidationError** — Invalid input. Properties: \`field\` (string), \`message\` (string).
 - **OptedOutError** — Recipient opted out. Properties: \`phoneNumber\` (string).
@@ -955,6 +958,22 @@ export default function PageContent() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
+                <CardTitle className="text-base">WrapsEmailError</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Base class every other email SDK error extends. Use it for a
+                  single catch-all{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    instanceof
+                  </code>{" "}
+                  check that covers all of them.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="text-base">SESError</CardTitle>
               </CardHeader>
               <CardContent>
@@ -1125,6 +1144,83 @@ export default function PageContent() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">BatchError</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-3 text-muted-foreground text-sm">
+                  Exported for type compatibility but{" "}
+                  <strong className="text-foreground">
+                    not currently thrown
+                  </strong>
+                  .{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    sendBatch()
+                  </code>{" "}
+                  never throws on partial failure — it reports per-entry
+                  outcomes in its resolved{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    SendBatchResult
+                  </code>{" "}
+                  instead. Always inspect the result rather than relying on a
+                  catch block.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="px-4 py-2 text-left font-medium">
+                          Property
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium">
+                          Type
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium">
+                          Description
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-muted-foreground">
+                      <tr className="border-b">
+                        <td className="px-4 py-2">
+                          <code className="rounded bg-muted px-1.5 py-0.5">
+                            results
+                          </code>
+                        </td>
+                        <td className="px-4 py-2">BatchEntryResult[]</td>
+                        <td className="px-4 py-2">
+                          Per-entry results in the same order as input
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="px-4 py-2">
+                          <code className="rounded bg-muted px-1.5 py-0.5">
+                            successCount
+                          </code>
+                        </td>
+                        <td className="px-4 py-2">number</td>
+                        <td className="px-4 py-2">
+                          Number of entries sent successfully
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2">
+                          <code className="rounded bg-muted px-1.5 py-0.5">
+                            failureCount
+                          </code>
+                        </td>
+                        <td className="px-4 py-2">number</td>
+                        <td className="px-4 py-2">
+                          Number of entries that failed
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -1138,6 +1234,22 @@ export default function PageContent() {
             )
           </h3>
           <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">WrapsSMSError</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Base class every other SMS SDK error extends. Use it for a
+                  single catch-all{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    instanceof
+                  </code>{" "}
+                  check that covers all of them.
+                </p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">SMSError</CardTitle>

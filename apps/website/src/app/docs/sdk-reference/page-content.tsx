@@ -90,7 +90,27 @@ const wrapsEmailConfigCode = `type WrapsEmailConfig = {
   historyTableName?: string;    // DynamoDB table for email event history
   dynamodbClient?: DynamoDBDocumentClient; // Pre-configured DynamoDB client
   sesv2Client?: SESv2Client;    // Pre-configured SES v2 client for suppression
+  replyThreading?: ReplyThreadingConfig; // Enables signed reply-to threading
 };`;
+
+const cloudflareWorkersCode = `import { SESError, ValidationError, WrapsEmail } from '@wraps.dev/email/workers';
+
+const email = new WrapsEmail({
+  region: env.AWS_REGION,          // required — no credential chain at the edge
+  credentials: {
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+const result = await email.send({
+  from: 'hello@example.com',
+  to: 'user@example.com',
+  subject: 'Hello from the edge!',
+  html: '<h1>Hi there</h1>',
+});
+
+console.log(result.messageId);`;
 
 const basicEmailCode = `const result = await email.send({
   from: 'hello@yourdomain.com',
@@ -163,6 +183,31 @@ await email.send({
     { filename: 'data.csv', content: csvBuffer },
   ],
 });`;
+
+const replyThreadingConfigCode = `const email = new WrapsEmail({
+  region: 'us-east-1',
+  replyThreading: {
+    // Defaults shown — all fields optional
+    parameterPrefix: '/wraps/email/reply-secret/', // SSM prefix written by the CLI
+    ttlSeconds: 90 * 86_400,                       // 90 days; 0 = infinite
+    cacheTtlMs: 5 * 60 * 1000,                     // per-domain secret cache
+    // replyDomain: 'r.mail.yourapp.com',          // defaults to r.mail.{fromDomain}
+  },
+});`;
+
+const replyThreadingSendCode = `const conversationId = email.replyThreading.newConversation();
+
+const result = await email.send({
+  from: 'agent@yourapp.com',
+  to: 'user@example.com',
+  subject: 'Re: your support request',
+  html: '<p>Hey — following up on your ticket.</p>',
+  conversationId,
+});
+
+// result.conversationId === conversationId
+// result.sendId is a fresh 11-char id for this specific send
+await saveThread({ conversationId: result.conversationId, sendId: result.sendId });`;
 
 const createTemplateCode = `// Create a template with variables
 await email.templates.create({
@@ -520,6 +565,7 @@ new WrapsEmail(config?: WrapsEmailConfig)
 - \`endpoint\` (optional): Custom SES endpoint (for testing with LocalStack).
 - \`inboxBucketName\` (optional): S3 bucket for inbound email storage. Enables \`inbox\` API.
 - \`historyTableName\` (optional): DynamoDB table for email event history. Enables \`events\` API.
+- \`replyThreading\` (optional): Enables signed reply-to threading — see the [Reply Threading](#reply-threading) section below.
 
 ### Authentication Order
 1. Pre-configured client (\`client\` option)
@@ -546,6 +592,40 @@ ${localStackCode}
 \`\`\`typescript
 ${wrapsEmailConfigCode}
 \`\`\``,
+
+  cloudflareWorkers: `## Cloudflare Workers / Edge
+
+The \`@wraps.dev/email/workers\` subpath is a zero-Node-APIs build (~5 KiB) that runs on Cloudflare Workers, Deno Deploy, and any other \`workerd\`-based runtime. It uses \`aws4fetch\` (Web Crypto) to sign requests and the SESv2 REST API directly — no AWS SDK, no \`Buffer\`.
+
+### Constructor
+\`\`\`typescript
+new WrapsEmail(config: WrapsEmailWorkerConfig)
+\`\`\`
+
+\`region\` and \`credentials\` are both **required** — there is no AWS credential chain in a Worker. Store them as [Wrangler secrets](https://developers.cloudflare.com/workers/configuration/secrets/):
+
+\`\`\`sh
+wrangler secret put AWS_ACCESS_KEY_ID
+wrangler secret put AWS_SECRET_ACCESS_KEY
+\`\`\`
+
+### Example
+\`\`\`typescript
+${cloudflareWorkersCode}
+\`\`\`
+
+### Supported fields
+\`from\`, \`to\`, \`cc\`, \`bcc\`, \`replyTo\`, \`subject\`, \`html\`, \`text\`, \`tags\`, \`configurationSetName\`. When \`html\` is provided without \`text\`, plain text is auto-generated — same as the Node entry.
+
+### Not supported at the edge
+| Feature | Why |
+|---------|-----|
+| \`react\` | Requires \`react-dom/server\` (Node built-ins) — render to HTML first |
+| \`attachments\` | MIME serialization requires \`Buffer\` |
+| \`conversationId\` / \`sendId\` / \`replyTtlSeconds\` | Reply threading requires AWS SSM |
+| Templates / inbox / events / suppression | The edge client only exposes \`send()\` |
+
+See the [Cloudflare Workers quickstart](/docs/quickstart/email/cloudflare) for the full Wrangler setup.`,
 
   sendEmail: `## Send Email
 
@@ -624,6 +704,43 @@ ${attachmentsCode}
 - Maximum 100 attachments per email
 - Maximum message size: 10 MB (AWS SES limit)
 - Works with both HTML and React.email components`,
+
+  replyThreading: `## Reply Threading
+
+Mint a signed \`Reply-To\` address per send so an inbound reply can be matched back to its conversation — without trusting the \`From:\` address or parsing \`In-Reply-To\` headers clients love to drop. The Wraps-deployed inbound Lambda verifies the signature and extracts the conversation id.
+
+**Prerequisite:** reply threading ships as part of the Wraps CLI inbound stack. Run \`wraps email reply init --domain yourapp.com\` once per sending domain — it provisions the signing secret in SSM, the \`r.mail.{domain}\` MX record, and the inbound Lambda. See the [Reply threading guide](/docs/guides/reply-threading) for the full CLI flow and the inbound event shape.
+
+### Configure the client
+\`\`\`typescript
+${replyThreadingConfigCode}
+\`\`\`
+
+### ReplyThreadingConfig
+| Field | Type | Description |
+|-------|------|-------------|
+| \`parameterPrefix\` | string | SSM parameter prefix. Defaults to \`/wraps/email/reply-secret/\` |
+| \`replyDomain\` | string | Override the reply domain. Defaults to \`r.mail.{fromDomain}\` |
+| \`ssmClient\` | SSMClient | Pre-configured SSM client (optional) |
+| \`ttlSeconds\` | number | Default token TTL in seconds. \`0\` = infinite. Defaults to 90 days |
+| \`cacheTtlMs\` | number | Per-domain secret cache TTL in ms. Defaults to 5 minutes |
+
+One \`WrapsEmail\` instance handles any number of sending domains — the per-domain signing secret is fetched from SSM on first use and cached for \`cacheTtlMs\`.
+
+### Send a threaded message
+Pass \`conversationId\` to \`send()\` / \`sendTemplate()\` / etc. to opt in per-message. It cannot be combined with an explicit \`replyTo\` — passing both throws \`ValidationError\`.
+
+\`\`\`typescript
+${replyThreadingSendCode}
+\`\`\`
+
+### ID format
+Both \`conversationId\` and \`sendId\` must be 11-character base64url strings (8 raw bytes) — other formats throw \`ValidationError\`. Generate them with \`generateConversationId()\` / \`generateSendId()\` (exported from \`@wraps.dev/email\`), or the instance helper \`email.replyThreading.newConversation()\`.
+
+### Limits
+- Default token TTL is 90 days. Pass \`replyTtlSeconds: 0\` on \`send()\` for an infinite-lifetime token, or set \`ttlSeconds\` on the client config.
+- A valid token proves the reply came back to an address you minted — it does not prove sender identity. Verify \`From:\` (SPF/DKIM/DMARC) before taking sensitive actions.
+- Not supported on the \`@wraps.dev/email/workers\` edge entry — reply threading requires AWS SSM.`,
 
   templates: `## Template Management
 
@@ -1210,6 +1327,13 @@ export default function SDKReferencePageContent() {
                   <code className="rounded bg-muted px-1.5 py-0.5">events</code>{" "}
                   API.
                 </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    replyThreading
+                  </code>{" "}
+                  (optional): Enables signed reply-to threading. See the Reply
+                  Threading section below.
+                </li>
               </ul>
             </div>
             <div className="mt-4">
@@ -1371,6 +1495,177 @@ export default function SDKReferencePageContent() {
             </CodeBlock>
           </div>
         </div>
+      </section>
+
+      {/* Cloudflare Workers / Edge */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="cloudflare-workers"
+          markdown={SECTION_MD.cloudflareWorkers}
+          title="Cloudflare Workers / Edge"
+        />
+        <p className="mb-4 text-muted-foreground">
+          The{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            @wraps.dev/email/workers
+          </code>{" "}
+          subpath is a zero-Node-APIs build (~5 KiB) that runs on Cloudflare
+          Workers, Deno Deploy, and any other{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">workerd</code>
+          -based runtime. It uses{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">aws4fetch</code> (Web
+          Crypto) to sign requests and the SESv2 REST API directly — no AWS SDK,
+          no <code className="rounded bg-muted px-1.5 py-0.5">Buffer</code>.
+        </p>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Code2 className="h-5 w-5" />
+              Constructor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <code className="block rounded bg-muted p-4 font-mono text-sm">
+              new WrapsEmail(config: WrapsEmailWorkerConfig)
+            </code>
+            <p className="mt-4 text-muted-foreground text-sm">
+              <code className="rounded bg-muted px-1.5 py-0.5">region</code> and{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                credentials
+              </code>{" "}
+              are both required — there is no AWS credential chain in a Worker.
+              Store them as{" "}
+              <a
+                className="text-primary underline underline-offset-4"
+                href="https://developers.cloudflare.com/workers/configuration/secrets/"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Wrangler secrets
+              </a>
+              , never in{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                wrangler.toml
+              </code>{" "}
+              source.
+            </p>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-4 font-medium text-lg">Example</h3>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "worker.ts",
+              code: cloudflareWorkersCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <h3 className="mb-4 font-medium text-lg">Not supported at the edge</h3>
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Feature</th>
+                  <th className="pb-2 text-left">Why</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      react
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Requires react-dom/server (Node built-ins) — render to HTML
+                    first
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      attachments
+                    </code>
+                  </td>
+                  <td className="py-2">MIME serialization requires Buffer</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      conversationId / sendId / replyTtlSeconds
+                    </code>
+                  </td>
+                  <td className="py-2">Reply threading requires AWS SSM</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    Templates / inbox / events / suppression
+                  </td>
+                  <td className="py-2">
+                    The edge client only exposes{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      send()
+                    </code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+        <p className="text-muted-foreground text-sm">
+          Supported fields:{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">from</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">to</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">cc</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">bcc</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">replyTo</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">subject</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">html</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">text</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">tags</code>,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            configurationSetName
+          </code>
+          . See the{" "}
+          <a
+            className="text-primary underline underline-offset-4"
+            href="/docs/quickstart/email/cloudflare"
+          >
+            Cloudflare Workers quickstart
+          </a>{" "}
+          for the full Wrangler setup.
+        </p>
       </section>
 
       {/* Send Email */}
@@ -1767,6 +2062,263 @@ export default function SDKReferencePageContent() {
             </ul>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Reply Threading */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="reply-threading"
+          markdown={SECTION_MD.replyThreading}
+          title="Reply Threading"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Mint a signed{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">Reply-To</code>{" "}
+          address per send so an inbound reply can be matched back to its
+          conversation — without trusting the{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">From:</code> address
+          or parsing{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">In-Reply-To</code>{" "}
+          headers clients love to drop. The Wraps-deployed inbound Lambda
+          verifies the signature and extracts the conversation id.
+        </p>
+        <p className="mb-4 text-muted-foreground text-sm">
+          <strong className="text-foreground">Prerequisite:</strong> run{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps email reply init --domain yourapp.com
+          </code>{" "}
+          once per sending domain — it provisions the signing secret in SSM, the{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            r.mail.{"{domain}"}
+          </code>{" "}
+          MX record, and the inbound Lambda. See the{" "}
+          <a
+            className="text-primary underline underline-offset-4"
+            href="/docs/guides/reply-threading"
+          >
+            Reply threading guide
+          </a>{" "}
+          for the full CLI flow and the inbound event shape.
+        </p>
+
+        <h3 className="mb-4 font-medium text-lg">Configure the client</h3>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "config.ts",
+              code: replyThreadingConfigCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Field</th>
+                  <th className="pb-2 text-left">Type</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      parameterPrefix
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    SSM parameter prefix. Defaults to{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      /wraps/email/reply-secret/
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      replyDomain
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    Override the reply domain. Defaults to{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      r.mail.{"{fromDomain}"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      ssmClient
+                    </code>
+                  </td>
+                  <td className="py-2">SSMClient</td>
+                  <td className="py-2">Pre-configured SSM client (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      ttlSeconds
+                    </code>
+                  </td>
+                  <td className="py-2">number</td>
+                  <td className="py-2">
+                    Default token TTL in seconds. 0 = infinite. Defaults to 90
+                    days
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      cacheTtlMs
+                    </code>
+                  </td>
+                  <td className="py-2">number</td>
+                  <td className="py-2">
+                    Per-domain secret cache TTL in ms. Defaults to 5 minutes
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-4 font-medium text-lg">Send a threaded message</h3>
+        <p className="mb-4 text-muted-foreground">
+          Pass{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">conversationId</code>{" "}
+          to <code className="rounded bg-muted px-1.5 py-0.5">send()</code> /{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">sendTemplate()</code>{" "}
+          / etc. to opt in per-message. It cannot be combined with an explicit{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">replyTo</code> —
+          passing both throws{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            ValidationError
+          </code>
+          .
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "send-threaded.ts",
+              code: replyThreadingSendCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <p className="mb-4 text-muted-foreground text-sm">
+          Both{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">conversationId</code>{" "}
+          and <code className="rounded bg-muted px-1.5 py-0.5">sendId</code>{" "}
+          must be 11-character base64url strings (8 raw bytes) — other formats
+          throw{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            ValidationError
+          </code>
+          . Generate them with{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            generateConversationId()
+          </code>{" "}
+          /{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            generateSendId()
+          </code>{" "}
+          (exported from{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            @wraps.dev/email
+          </code>
+          ), or the instance helper{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            email.replyThreading.newConversation()
+          </code>
+          .
+        </p>
+
+        <h3 className="mb-4 font-medium text-lg">Limits</h3>
+        <ul className="list-inside list-disc text-muted-foreground text-sm">
+          <li>
+            Default token TTL is 90 days. Pass{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              replyTtlSeconds: 0
+            </code>{" "}
+            on <code className="rounded bg-muted px-1.5 py-0.5">send()</code>{" "}
+            for an infinite-lifetime token, or set{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">ttlSeconds</code>{" "}
+            on the client config.
+          </li>
+          <li>
+            A valid token proves the reply came back to an address you minted —
+            it does not prove sender identity. Verify{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">From:</code>{" "}
+            (SPF/DKIM/DMARC) before taking sensitive actions.
+          </li>
+          <li>
+            Not supported on the{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              @wraps.dev/email/workers
+            </code>{" "}
+            edge entry — reply threading requires AWS SSM.
+          </li>
+        </ul>
       </section>
 
       {/* Template Management */}
