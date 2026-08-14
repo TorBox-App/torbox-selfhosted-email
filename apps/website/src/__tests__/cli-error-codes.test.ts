@@ -83,7 +83,13 @@ describe("CLI error codes documented on the errors reference page", () => {
     codes.add(UNKNOWN_ERROR_FALLBACK_CODE);
 
     const pageContent = readFileSync(pageContentPath, "utf8");
-    const missing = [...codes].filter((code) => !pageContent.includes(code));
+    // Word-boundary match, not `.includes()` — a plain substring check is
+    // satisfied by any longer code that contains a shorter one (e.g.
+    // REGION_REQUIRED_FOR_SET silently "covers" REGION_REQUIRED), which
+    // would let a documented code disappear without the test noticing.
+    const missing = [...codes].filter(
+      (code) => !new RegExp(`\\b${code}\\b`).test(pageContent)
+    );
 
     expect(
       missing,
