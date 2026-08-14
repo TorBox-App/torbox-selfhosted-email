@@ -1,6 +1,41 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
-import type { ArchiveRetention, DomainPurpose } from "../../types/index.js";
+import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
+import type {
+  ArchiveRetention,
+  DomainPurpose,
+  SESEventType,
+} from "../../types/index.js";
+
+/**
+ * BOUNCE and COMPLAINT are never offered as choices in the event-type
+ * prompts (here and in `commands/email/upgrade.ts`) — they're always
+ * included in the result. See `validateEventTypes` in
+ * `infrastructure/resources/ses.ts` for the deploy-time backstop; the
+ * prompts just make the invalid combination impossible to select in the
+ * first place. Exported so every event-type prompt shares one list rather
+ * than each keeping its own copy.
+ */
+export const REQUIRED_SUPPRESSION_EVENT_TYPES: SESEventType[] = [
+  "BOUNCE",
+  "COMPLAINT",
+];
+
+/**
+ * Display labels for the optional (non-suppression) SES event types offered
+ * in event-type prompts.
+ */
+export const OPTIONAL_EVENT_TYPE_LABELS: Partial<Record<SESEventType, string>> =
+  {
+    SEND: "Send — email accepted by SES",
+    DELIVERY: "Delivery — delivered to recipient's mail server",
+    OPEN: "Open — recipient opened the email",
+    CLICK: "Click — recipient clicked a tracked link",
+    REJECT: "Reject — SES rejected the email (virus, policy)",
+    RENDERING_FAILURE: "Rendering Failure — template rendering failed",
+    DELIVERY_DELAY: "Delivery Delay — temporary delivery issue, SES will retry",
+    SUBSCRIPTION: "Subscription — recipient changed subscription preferences",
+  };
 
 /**
  * Is the current process attached to an interactive terminal?
@@ -603,6 +638,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
   }
 
   let archiveRetention: string | symbol = "90days";
+  let selectedEventTypes: SESEventType[] = [...ALL_EVENT_TYPES];
 
   if (eventTrackingEnabled) {
     archiveRetention = await clack.select({
@@ -629,6 +665,44 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
       clack.cancel("Operation cancelled.");
       process.exit(0);
     }
+
+    const optionalEventTypes = ALL_EVENT_TYPES.filter(
+      (type) => !REQUIRED_SUPPRESSION_EVENT_TYPES.includes(type)
+    );
+    const existingEventTypes = existingConfig?.eventTracking?.events as
+      | SESEventType[]
+      | undefined;
+
+    const eventTypeSelection = await clack.multiselect({
+      message:
+        "Which event types should reach your EventBridge bus and DynamoDB history?",
+      options: optionalEventTypes.map((type) => ({
+        value: type,
+        label: OPTIONAL_EVENT_TYPE_LABELS[type] ?? type,
+      })),
+      initialValues: existingEventTypes
+        ? optionalEventTypes.filter((type) => existingEventTypes.includes(type))
+        : optionalEventTypes,
+      required: false,
+    });
+
+    if (clack.isCancel(eventTypeSelection)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    clack.log.info(
+      pc.dim(
+        "BOUNCE and COMPLAINT are always included — dropping them would leave your pipeline blind to bounces and complaints, and your domain reputation would degrade."
+      )
+    );
+
+    const selected = eventTypeSelection as SESEventType[];
+    selectedEventTypes = ALL_EVENT_TYPES.filter(
+      (type) =>
+        REQUIRED_SUPPRESSION_EVENT_TYPES.includes(type) ||
+        selected.includes(type)
+    );
   }
 
   // Security
@@ -770,16 +844,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
       ? {
           enabled: true,
           eventBridge: true,
-          events: [
-            "SEND",
-            "DELIVERY",
-            "OPEN",
-            "CLICK",
-            "BOUNCE",
-            "COMPLAINT",
-            "REJECT",
-            "RENDERING_FAILURE",
-          ],
+          events: selectedEventTypes,
           dynamoDBHistory: true,
           archiveRetention:
             typeof archiveRetention === "string" ? archiveRetention : "90days",

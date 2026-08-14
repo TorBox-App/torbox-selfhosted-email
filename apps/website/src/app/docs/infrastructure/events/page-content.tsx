@@ -1222,61 +1222,27 @@ export default function InfrastructureEventsPageContent() {
           </Link>
           .
         </p>
-        <CodeBlock
-          className="mb-3 h-auto"
-          data={[
-            {
-              language: "ts",
-              filename: "wraps.config.ts",
-              code: `eventTracking: {
-  enabled: true,
-  // Only these event types reach your EventBridge bus and DynamoDB
-  // history. BOUNCE and COMPLAINT are required — dropping either
-  // leaves your pipeline blind to bounces/complaints, so bad
-  // addresses keep getting sent to and your reputation degrades.
-  events: [
-    "SEND",
-    "DELIVERY",
-    "BOUNCE",
-    "COMPLAINT",
-    "REJECT",
-    "RENDERING_FAILURE",
-    "DELIVERY_DELAY",
-    "SUBSCRIPTION",
-    // "OPEN" and "CLICK" omitted — no engagement tracking
-  ],
-},`,
-            },
-          ]}
-          defaultValue="ts"
-        >
-          <CodeBlockHeader>
-            <CodeBlockFiles>
-              {(item) => (
-                <CodeBlockFilename key={item.language} value={item.language}>
-                  {item.filename}
-                </CodeBlockFilename>
-              )}
-            </CodeBlockFiles>
-            <CodeBlockCopyButton />
-          </CodeBlockHeader>
-          <CodeBlockBody>
-            {(item) => (
-              <CodeBlockItem
-                key={item.language}
-                lineNumbers={false}
-                value={item.language}
-              >
-                <CodeBlockContent language={item.language}>
-                  {item.code}
-                </CodeBlockContent>
-              </CodeBlockItem>
-            )}
-          </CodeBlockBody>
-        </CodeBlock>
         <p className="mb-3 text-muted-foreground text-sm">
-          <code>BOUNCE</code> and <code>COMPLAINT</code> can&apos;t be dropped
-          &mdash; deploy rejects a config that omits either.
+          Event types aren&apos;t set in a config file &mdash; there isn&apos;t
+          one for infrastructure. They&apos;re chosen at the CLI: on a new
+          deployment, run{" "}
+          <code className="rounded bg-muted px-1 py-0.5">wraps email init</code>{" "}
+          and pick the <strong>Custom</strong> configuration path (the Starter
+          and Production presets always track all ten event types and don&apos;t
+          prompt). On an existing deployment, run{" "}
+          <code className="rounded bg-muted px-1 py-0.5">
+            wraps email upgrade
+          </code>{" "}
+          and choose the event types action. Either way, you&apos;re asked which
+          event types should reach your EventBridge bus and DynamoDB history
+          &mdash; Send, Delivery, Open, Click, Reject, Rendering Failure,
+          Delivery Delay, and Subscription are all offered, and all are selected
+          by default. Deselect <code>Open</code> and <code>Click</code> there to
+          stop engagement tracking. <code>Bounce</code> and{" "}
+          <code>Complaint</code> aren&apos;t offered as choices &mdash;
+          they&apos;re always included, since dropping either would leave your
+          pipeline blind to bounces and complaints and your domain reputation
+          would degrade.
         </p>
         <div className="mb-6 space-y-3">
           <ExpandableSection title="Open &mdash; Recipient opened the email">

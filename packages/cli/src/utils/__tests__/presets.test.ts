@@ -65,8 +65,14 @@ describe("Preset Configurations", () => {
       expect(PRODUCTION_PRESET.eventTracking?.eventBridge).toBe(true);
     });
 
-    it("should track 8 event types", () => {
-      expect(PRODUCTION_PRESET.eventTracking?.events).toHaveLength(8);
+    // Plan 182: PRODUCTION_PRESET used to hardcode an eight-type list that
+    // dropped DELIVERY_DELAY/SUBSCRIPTION. That was harmless while
+    // config.eventTypes was dead code, but became a silent regression once
+    // the SES resource builder started reading it — every Production
+    // deployment would have started missing two event types. It now shares
+    // ALL_EVENT_TYPES with every other config path.
+    it("should track all 10 event types", () => {
+      expect(PRODUCTION_PRESET.eventTracking?.events).toHaveLength(10);
       expect(PRODUCTION_PRESET.eventTracking?.events).toEqual([
         "SEND",
         "DELIVERY",
@@ -76,6 +82,8 @@ describe("Preset Configurations", () => {
         "COMPLAINT",
         "REJECT",
         "RENDERING_FAILURE",
+        "DELIVERY_DELAY",
+        "SUBSCRIPTION",
       ]);
     });
 
@@ -563,15 +571,21 @@ describe("Preset Configurations", () => {
       expect(PRODUCTION_PRESET.eventTracking?.archiveRetention).toBe("90days");
     });
 
-    it("should have increasing event types coverage", () => {
+    // Plan 182: starter disables event tracking entirely (no events reach
+    // EventBridge at all), while every preset that enables it — production
+    // and enterprise alike — tracks the full set. There's no preset that
+    // enables event tracking with a reduced event-type list; only the
+    // Custom path (promptCustomConfig / `wraps email upgrade`) can do that.
+    it("tracks no events on starter, and the full set on production and enterprise", () => {
       const starterEvents = STARTER_PRESET.eventTracking?.events?.length || 0;
       const productionEvents =
         PRODUCTION_PRESET.eventTracking?.events?.length || 0;
       const enterpriseEvents =
         ENTERPRISE_PRESET.eventTracking?.events?.length || 0;
 
-      expect(starterEvents).toBeLessThan(productionEvents);
-      expect(productionEvents).toBeLessThan(enterpriseEvents);
+      expect(starterEvents).toBe(0);
+      expect(productionEvents).toBe(10);
+      expect(enterpriseEvents).toBe(10);
     });
   });
 

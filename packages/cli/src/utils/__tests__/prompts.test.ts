@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
 import {
   confirmConnect,
   confirmDeploy,
@@ -15,7 +16,12 @@ import {
   promptRegion,
   promptSelectIdentities,
   promptVercelConfig,
+  REQUIRED_SUPPRESSION_EVENT_TYPES,
 } from "../shared/prompts.js";
+
+const OPTIONAL_EVENT_TYPES = ALL_EVENT_TYPES.filter(
+  (type) => !REQUIRED_SUPPRESSION_EVENT_TYPES.includes(type)
+);
 
 // Mock @clack/prompts
 vi.mock("@clack/prompts", () => ({
@@ -646,6 +652,7 @@ describe("Prompts", () => {
         .mockResolvedValueOnce(false); // email archiving
 
       vi.mocked(clack.select).mockResolvedValue("90days");
+      vi.mocked(clack.multiselect).mockResolvedValue(OPTIONAL_EVENT_TYPES);
 
       const result = await promptCustomConfig();
 
@@ -687,6 +694,7 @@ describe("Prompts", () => {
         .mockResolvedValueOnce(false); // email archiving
 
       vi.mocked(clack.select).mockResolvedValue("1year");
+      vi.mocked(clack.multiselect).mockResolvedValue(OPTIONAL_EVENT_TYPES);
 
       const result = await promptCustomConfig();
 
@@ -710,7 +718,13 @@ describe("Prompts", () => {
       expect(clack.select).not.toHaveBeenCalled();
     });
 
-    it("should include all event types when event tracking is enabled", async () => {
+    // Plan 182: the event-type prompt defaults to every optional type
+    // selected, and BOUNCE/COMPLAINT are never offered as choices — they're
+    // unconditionally unioned into the result. Accepting the defaults must
+    // produce all ten types, byte-identical to ALL_EVENT_TYPES; that was not
+    // true before this plan (a hardcoded eight-type literal silently dropped
+    // DELIVERY_DELAY and SUBSCRIPTION even when the user picked "everything").
+    it("should include all event types when event tracking is enabled and every option is accepted", async () => {
       vi.mocked(clack.confirm)
         .mockResolvedValueOnce(true) // reputation metrics (first)
         .mockResolvedValueOnce(true) // tracking
@@ -721,14 +735,42 @@ describe("Prompts", () => {
         .mockResolvedValueOnce(false); // email archiving
 
       vi.mocked(clack.select).mockResolvedValue("90days");
+      vi.mocked(clack.multiselect).mockResolvedValue(OPTIONAL_EVENT_TYPES);
 
       const result = await promptCustomConfig();
 
-      expect(result.eventTracking.events).toHaveLength(8);
-      expect(result.eventTracking.events).toContain("SEND");
-      expect(result.eventTracking.events).toContain("DELIVERY");
-      expect(result.eventTracking.events).toContain("BOUNCE");
-      expect(result.eventTracking.events).toContain("COMPLAINT");
+      expect(result.eventTracking.events).toEqual(ALL_EVENT_TYPES);
+      expect(result.eventTracking.events).toHaveLength(10);
+
+      // BOUNCE/COMPLAINT must not even be selectable — the prompt should
+      // make the invalid combination impossible to produce, not just reject
+      // it after the fact.
+      const multiselectArgs = vi.mocked(clack.multiselect).mock.calls[0][0];
+      const offeredValues = multiselectArgs.options.map(
+        (option: { value: unknown }) => option.value
+      );
+      expect(offeredValues).not.toContain("BOUNCE");
+      expect(offeredValues).not.toContain("COMPLAINT");
+    });
+
+    it("always includes BOUNCE and COMPLAINT even when deselected from the event-type prompt", async () => {
+      vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(true) // reputation metrics (first)
+        .mockResolvedValueOnce(true) // tracking
+        .mockResolvedValueOnce(true) // event tracking (stores in DynamoDB)
+        .mockResolvedValueOnce(true) // TLS
+        .mockResolvedValueOnce(false) // custom MAIL FROM
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
+
+      vi.mocked(clack.select).mockResolvedValue("90days");
+      // BOUNCE/COMPLAINT aren't offered as options at all, so a caller can't
+      // deselect them — simulate the user picking nothing.
+      vi.mocked(clack.multiselect).mockResolvedValue([]);
+
+      const result = await promptCustomConfig();
+
+      expect(result.eventTracking.events).toEqual(["BOUNCE", "COMPLAINT"]);
     });
 
     it("should always enable suppression list", async () => {

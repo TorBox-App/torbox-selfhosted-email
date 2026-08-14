@@ -2,6 +2,7 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
 import { trackError, trackServiceUpgrade } from "../../telemetry/events.js";
 import type { UpgradeOptions, WrapsEmailConfig } from "../../types/index.js";
 import {
@@ -45,8 +46,10 @@ import {
 } from "../../utils/shared/output.js";
 import {
   type DNSProviderType,
+  OPTIONAL_EVENT_TYPE_LABELS,
   promptDNSProvider,
   promptVercelConfig,
+  REQUIRED_SUPPRESSION_EVENT_TYPES,
 } from "../../utils/shared/prompts.js";
 import {
   ensurePulumiInstalled,
@@ -835,49 +838,24 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     }
 
     case "events": {
+      const optionalEventTypes = ALL_EVENT_TYPES.filter(
+        (type) => !REQUIRED_SUPPRESSION_EVENT_TYPES.includes(type)
+      );
+      const existingEventTypes = config.eventTracking?.events;
+
       const selectedEvents = await clack.multiselect({
-        message: "Select SES event types to track:",
-        options: [
-          { value: "SEND", label: "Send", hint: "Email sent to SES" },
-          {
-            value: "DELIVERY",
-            label: "Delivery",
-            hint: "Email delivered successfully",
-          },
-          { value: "OPEN", label: "Open", hint: "Recipient opened email" },
-          { value: "CLICK", label: "Click", hint: "Recipient clicked link" },
-          { value: "BOUNCE", label: "Bounce", hint: "Email bounced" },
-          {
-            value: "COMPLAINT",
-            label: "Complaint",
-            hint: "Spam complaint received",
-          },
-          { value: "REJECT", label: "Reject", hint: "Email rejected by SES" },
-          {
-            value: "RENDERING_FAILURE",
-            label: "Rendering Failure",
-            hint: "Template rendering failed",
-          },
-          {
-            value: "DELIVERY_DELAY",
-            label: "Delivery Delay",
-            hint: "Temporary delivery delay",
-          },
-          {
-            value: "SUBSCRIPTION",
-            label: "Subscription",
-            hint: "List subscription event",
-          },
-        ],
-        initialValues: config.eventTracking?.events || [
-          "SEND",
-          "DELIVERY",
-          "OPEN",
-          "CLICK",
-          "BOUNCE",
-          "COMPLAINT",
-        ],
-        required: true,
+        message:
+          "Select optional SES event types to track (BOUNCE and COMPLAINT are always included):",
+        options: optionalEventTypes.map((type) => ({
+          value: type,
+          label: OPTIONAL_EVENT_TYPE_LABELS[type] ?? type,
+        })),
+        initialValues: existingEventTypes
+          ? optionalEventTypes.filter((type) =>
+              existingEventTypes.includes(type)
+            )
+          : optionalEventTypes,
+        required: false,
       });
 
       if (clack.isCancel(selectedEvents)) {
@@ -885,12 +863,24 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         process.exit(0);
       }
 
+      clack.log.info(
+        pc.dim(
+          "BOUNCE and COMPLAINT are always included — dropping them would leave your pipeline blind to bounces and complaints, and your domain reputation would degrade."
+        )
+      );
+
+      const events = ALL_EVENT_TYPES.filter(
+        (type) =>
+          REQUIRED_SUPPRESSION_EVENT_TYPES.includes(type) ||
+          (selectedEvents as string[]).includes(type)
+      );
+
       updatedConfig = {
         ...config,
         eventTracking: {
           ...config.eventTracking,
           enabled: true,
-          events: selectedEvents as any,
+          events,
         },
       };
       newPreset = undefined; // Custom config
@@ -1195,14 +1185,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           eventTracking: {
             enabled: true,
             eventBridge: true,
-            events: [
-              "SEND",
-              "DELIVERY",
-              "OPEN",
-              "CLICK",
-              "BOUNCE",
-              "COMPLAINT",
-            ],
+            events: [...ALL_EVENT_TYPES],
             dynamoDBHistory: config.eventTracking?.dynamoDBHistory ?? false,
             archiveRetention:
               config.eventTracking?.archiveRetention ?? "90days",
@@ -1299,14 +1282,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
             ...config.eventTracking,
             enabled: true,
             eventBridge: true,
-            events: config.eventTracking?.events || [
-              "SEND",
-              "DELIVERY",
-              "OPEN",
-              "CLICK",
-              "BOUNCE",
-              "COMPLAINT",
-            ],
+            events: config.eventTracking?.events || [...ALL_EVENT_TYPES],
           },
         };
       }
@@ -1356,14 +1332,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           eventTracking: {
             enabled: true,
             eventBridge: true,
-            events: [
-              "SEND",
-              "DELIVERY",
-              "OPEN",
-              "CLICK",
-              "BOUNCE",
-              "COMPLAINT",
-            ],
+            events: [...ALL_EVENT_TYPES],
             dynamoDBHistory: config.eventTracking?.dynamoDBHistory ?? false,
             archiveRetention:
               config.eventTracking?.archiveRetention ?? "90days",

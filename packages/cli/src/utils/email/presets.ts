@@ -1,3 +1,4 @@
+import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
 import type { ConfigPreset, WrapsEmailConfig } from "../../types/index.js";
 import { calculateCosts, formatCost } from "./costs.js";
 
@@ -59,16 +60,9 @@ export const PRODUCTION_PRESET: WrapsEmailConfig = {
   eventTracking: {
     enabled: true,
     eventBridge: true,
-    events: [
-      "SEND",
-      "DELIVERY",
-      "OPEN",
-      "CLICK",
-      "BOUNCE",
-      "COMPLAINT",
-      "REJECT",
-      "RENDERING_FAILURE",
-    ],
+    // All ten types — omitting DELIVERY_DELAY/SUBSCRIPTION here was drift,
+    // not intent (plan 182). Keep this the single canonical default.
+    events: [...ALL_EVENT_TYPES],
     dynamoDBHistory: true,
     archiveRetention: "90days",
   },
@@ -107,18 +101,7 @@ export const ENTERPRISE_PRESET: WrapsEmailConfig = {
   eventTracking: {
     enabled: true,
     eventBridge: true,
-    events: [
-      "SEND",
-      "DELIVERY",
-      "OPEN",
-      "CLICK",
-      "BOUNCE",
-      "COMPLAINT",
-      "REJECT",
-      "RENDERING_FAILURE",
-      "DELIVERY_DELAY",
-      "SUBSCRIPTION",
-    ],
+    events: [...ALL_EVENT_TYPES],
     dynamoDBHistory: true,
     archiveRetention: "1year",
   },
