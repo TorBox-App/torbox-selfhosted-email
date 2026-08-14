@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -154,44 +157,61 @@ describe("email init — already-deployed exit respects --json", () => {
   });
 });
 
-describe("telemetry first-run notice — gated in --json mode", () => {
-  // cli.ts is an executable script (parses real process.argv and calls its
-  // unexported run()/interactiveMenu() at module load, per plan 121's
-  // fallback clause) — not drivable as a function in isolation without
-  // restructuring it, which is out of scope for this plan. Per the test
-  // plan's explicit fallback, this exercises the extracted guard condition
-  // — `!isJsonMode() && telemetry.shouldShowNotification()` — verbatim as
-  // it now appears at both notice sites in cli.ts (confirmed via
-  // `rg -n 'shouldShowNotification' src/cli.ts`), against the real
-  // isJsonMode() implementation, in both directions.
-  afterEach(() => {
-    setJsonMode(false);
+/**
+ * cli.ts is an executable script — it parses real `process.argv` and calls
+ * its unexported `run()`/`interactiveMenu()` at module load, so it can't be
+ * imported and driven as a function in a test without restructuring it
+ * (out of scope for this plan). A behavioral test that instead re-typed the
+ * guard expression inline (`!isJsonMode() && (() => true)()`) would pass or
+ * fail based only on the `&&` operator, not on anything in cli.ts — it
+ * couldn't catch the guard being deleted. So this is a source-level
+ * regression test instead, modeled on
+ * `readme-resource-inventory.test.ts` (readFileSync + fileURLToPath) and
+ * `dashboard-url-hardcode.test.ts` (a "no unguarded occurrence" source
+ * guard): it reads cli.ts's actual text and asserts every
+ * `shouldShowNotification()` call site is guarded by `isJsonMode()`, so it
+ * fails if the guard is ever removed or a new, unguarded notice site is
+ * added.
+ */
+describe("telemetry first-run notice — gated in --json mode (source guard)", () => {
+  const cliPath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../cli.ts"
+  );
+  // Collapse whitespace/newlines to single spaces so a future formatter
+  // pass (different line wraps or indentation) can't produce a false
+  // failure here.
+  const cliSource = readFileSync(cliPath, "utf-8").replace(/\s+/g, " ");
+
+  function countOccurrences(haystack: string, needle: string): number {
+    return haystack.split(needle).length - 1;
+  }
+
+  const totalCallSites = countOccurrences(
+    cliSource,
+    "shouldShowNotification("
+  );
+  const guardedCallSites = countOccurrences(
+    cliSource,
+    "!isJsonMode() && telemetry.shouldShowNotification()"
+  );
+
+  it("finds shouldShowNotification() call sites to guard (guards the extraction itself)", () => {
+    // If this is 0, the string search below stopped matching and every
+    // assertion in this file about telemetry gating is vacuous.
+    expect(totalCallSites).toBeGreaterThan(0);
   });
 
-  it("suppresses the notice when isJsonMode() is true", () => {
-    setJsonMode(true);
-    const shouldShowNotification = () => true;
-
-    const shouldPrint = !isJsonMode() && shouldShowNotification();
-
-    expect(shouldPrint).toBe(false);
+  it("guards every shouldShowNotification() call site with isJsonMode()", () => {
+    // Derived from totalCallSites rather than hardcoded to 2, so this
+    // still passes if a third notice site is added guarded, and still
+    // fails if one is added unguarded.
+    expect(guardedCallSites).toBe(totalCallSites);
   });
 
-  it("still shows the notice outside --json mode when shouldShowNotification() is true", () => {
-    setJsonMode(false);
-    const shouldShowNotification = () => true;
-
-    const shouldPrint = !isJsonMode() && shouldShowNotification();
-
-    expect(shouldPrint).toBe(true);
-  });
-
-  it("stays suppressed in --json mode even when shouldShowNotification() is false", () => {
-    setJsonMode(true);
-    const shouldShowNotification = () => false;
-
-    const shouldPrint = !isJsonMode() && shouldShowNotification();
-
-    expect(shouldPrint).toBe(false);
+  it("has no bare, unguarded `if (telemetry.shouldShowNotification())` left", () => {
+    expect(cliSource).not.toContain(
+      "if (telemetry.shouldShowNotification())"
+    );
   });
 });
