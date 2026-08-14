@@ -1,6 +1,6 @@
 import * as clack from "@clack/prompts";
+import { ALL_EVENT_TYPES } from "@wraps/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
 import {
   confirmConnect,
   confirmDeploy,

@@ -1,4 +1,4 @@
-import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
+import { ALL_EVENT_TYPES } from "@wraps/core";
 import type { ConfigPreset, WrapsEmailConfig } from "../../types/index.js";
 import { calculateCosts, formatCost } from "./costs.js";
 

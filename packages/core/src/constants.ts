@@ -68,6 +68,42 @@ export const VERCEL_OIDC_THUMBPRINT =
 export const RESOURCE_PREFIX = "wraps-email";
 
 /**
+ * Physical AWS resource names shared by both email-stack implementations
+ * (`packages/cli/src/infrastructure/resources/` and `packages/pulumi/src/resources/`).
+ * A customer using either must see the same names in their AWS account —
+ * `wraps email status`, the dashboard's feature detection, and every IAM
+ * policy scoped to `wraps-email-*` all key off these strings. Defined once
+ * here so divergence between the two implementations is impossible for
+ * these values; see plan 183.
+ */
+
+/** EventBridge rule that routes all SES events to SQS */
+export const EVENTBRIDGE_RULE_NAME = "wraps-email-events-to-sqs";
+
+/** SQS queue that buffers SES events for the event-processor Lambda */
+export const EVENTS_QUEUE_NAME = "wraps-email-events";
+
+/** Dead letter queue for the events queue */
+export const EVENTS_DLQ_NAME = "wraps-email-events-dlq";
+
+/** IAM role the customer's own app/SDK assumes to send via SES */
+export const EMAIL_ROLE_NAME = "wraps-email-role";
+
+/** DynamoDB table storing email delivery history */
+export const HISTORY_TABLE_NAME = "wraps-email-history";
+
+/** 30-day EventBridge archive of raw SES events, for outage replay */
+export const EVENTS_ARCHIVE_NAME = "wraps-email-events-archive";
+
+/**
+ * EventBridge rule pattern matching all SES events on the default bus. No
+ * `detail-type` filter — SES emits different detail-types per event type,
+ * and both implementations deliberately capture all of them rather than
+ * filtering, so a customer's own pipeline sees the full stream.
+ */
+export const SES_EVENT_PATTERN = { source: ["aws.ses"] } as const;
+
+/**
  * Tags applied to all resources
  */
 export const DEFAULT_TAGS = {

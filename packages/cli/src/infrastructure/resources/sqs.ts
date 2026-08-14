@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { EVENTS_DLQ_NAME, EVENTS_QUEUE_NAME } from "@wraps/core";
 import { sqsQueueExists } from "../shared/resource-checks.js";
 
 /**
@@ -38,8 +39,8 @@ export type SQSConfig = {
 export async function createSQSResources(
   config: SQSConfig
 ): Promise<SQSResources> {
-  const dlqName = "wraps-email-events-dlq";
-  const queueName = "wraps-email-events";
+  const dlqName = EVENTS_DLQ_NAME;
+  const queueName = EVENTS_QUEUE_NAME;
 
   const dlqUrl = await sqsQueueExists(dlqName, config.region);
   const queueUrl = await sqsQueueExists(queueName, config.region);

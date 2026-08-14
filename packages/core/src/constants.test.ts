@@ -8,9 +8,16 @@ import {
   DEFAULT_MAIL_FROM_SUBDOMAIN,
   DEFAULT_SUPPRESSION_REASONS,
   DEFAULT_TAGS,
+  EMAIL_ROLE_NAME,
+  EVENTBRIDGE_RULE_NAME,
+  EVENTS_ARCHIVE_NAME,
+  EVENTS_DLQ_NAME,
+  EVENTS_QUEUE_NAME,
   EXTERNAL_ID_PREFIX,
+  HISTORY_TABLE_NAME,
   RESOURCE_PREFIX,
   SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
+  SES_EVENT_PATTERN,
   VERCEL_OIDC_THUMBPRINT,
   VERCEL_OIDC_URL,
 } from "./constants.js";
@@ -94,6 +101,43 @@ describe("Resource naming constants", () => {
 
   it("has correct default history retention", () => {
     expect(DEFAULT_HISTORY_RETENTION).toBe("90days");
+  });
+});
+
+describe("shared email-stack resource names (plan 183)", () => {
+  it("has the expected literal values — both email-stack implementations import these", () => {
+    expect(EVENTBRIDGE_RULE_NAME).toBe("wraps-email-events-to-sqs");
+    expect(EVENTS_QUEUE_NAME).toBe("wraps-email-events");
+    expect(EVENTS_DLQ_NAME).toBe("wraps-email-events-dlq");
+    expect(EMAIL_ROLE_NAME).toBe("wraps-email-role");
+    expect(HISTORY_TABLE_NAME).toBe("wraps-email-history");
+    expect(EVENTS_ARCHIVE_NAME).toBe("wraps-email-events-archive");
+  });
+
+  it("the DLQ name is the queue name plus -dlq, not an independent string", () => {
+    expect(EVENTS_DLQ_NAME).toBe(`${EVENTS_QUEUE_NAME}-dlq`);
+  });
+
+  it("the archive name is the queue name plus -archive", () => {
+    expect(EVENTS_ARCHIVE_NAME).toBe(`${EVENTS_QUEUE_NAME}-archive`);
+  });
+
+  it("every resource name carries the wraps-email- prefix", () => {
+    for (const name of [
+      EVENTBRIDGE_RULE_NAME,
+      EVENTS_QUEUE_NAME,
+      EVENTS_DLQ_NAME,
+      EMAIL_ROLE_NAME,
+      HISTORY_TABLE_NAME,
+      EVENTS_ARCHIVE_NAME,
+    ]) {
+      expect(name.startsWith(RESOURCE_PREFIX)).toBe(true);
+    }
+  });
+
+  it("the EventBridge rule pattern matches all SES events with no detail-type filter", () => {
+    expect(SES_EVENT_PATTERN).toEqual({ source: ["aws.ses"] });
+    expect(SES_EVENT_PATTERN).not.toHaveProperty("detail-type");
   });
 });
 

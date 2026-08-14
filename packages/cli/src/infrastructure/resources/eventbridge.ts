@@ -1,5 +1,10 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import {
+  EVENTBRIDGE_RULE_NAME,
+  EVENTS_ARCHIVE_NAME,
+  SES_EVENT_PATTERN,
+} from "@wraps/core";
 import { createSelfhostWebhookResources } from "./eventbridge-selfhost-webhook.js";
 
 /**
@@ -80,14 +85,12 @@ export async function createEventBridgeResources(
 
   // EventBridge rule to capture all SES events on default bus
   const rule = new aws.cloudwatch.EventRule("wraps-email-events-rule", {
-    name: "wraps-email-events-to-sqs",
+    name: EVENTBRIDGE_RULE_NAME,
     description: "Route all SES email events to SQS for processing",
     eventBusName,
-    eventPattern: JSON.stringify({
-      source: ["aws.ses"],
-      // SES sends events with various detail-types based on event type
-      // We capture all by not filtering on detail-type
-    }),
+    // SES sends events with various detail-types based on event type.
+    // SES_EVENT_PATTERN captures all by not filtering on detail-type.
+    eventPattern: JSON.stringify(SES_EVENT_PATTERN),
     tags: {
       ManagedBy: "wraps-cli",
       Service: "email",
@@ -138,12 +141,12 @@ export async function createEventBridgeResources(
   const archive = new aws.cloudwatch.EventArchive(
     "wraps-email-events-archive",
     {
-      name: "wraps-email-events-archive",
+      name: EVENTS_ARCHIVE_NAME,
       eventSourceArn: config.eventBusArn,
       description:
         "Wraps: 30-day archive of SES events for outage replay (see wraps email doctor)",
       retentionDays: 30,
-      eventPattern: JSON.stringify({ source: ["aws.ses"] }),
+      eventPattern: JSON.stringify(SES_EVENT_PATTERN),
     }
   );
 
@@ -290,7 +293,7 @@ export async function createEventBridgeResources(
       name: "wraps-email-events-delivery-failures",
       namespace: "AWS/Events",
       metricName: "FailedInvocations",
-      dimensions: { RuleName: "wraps-email-events-to-sqs" },
+      dimensions: { RuleName: EVENTBRIDGE_RULE_NAME },
       statistic: "Sum",
       period: 300,
       evaluationPeriods: 3,

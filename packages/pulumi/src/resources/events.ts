@@ -1,5 +1,12 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import {
+  EVENTBRIDGE_RULE_NAME,
+  EVENTS_DLQ_NAME,
+  EVENTS_QUEUE_NAME,
+  HISTORY_TABLE_NAME,
+  SES_EVENT_PATTERN,
+} from "@wraps/core";
 import type {
   ResolvedConfig,
   TransformFunctions,
@@ -43,7 +50,7 @@ export function createHistoryTable(
   opts?: pulumi.ComponentResourceOptions
 ): DynamoDBResult {
   let args: aws.dynamodb.TableArgs = {
-    name: "wraps-email-history",
+    name: HISTORY_TABLE_NAME,
     billingMode: "PAY_PER_REQUEST",
     hashKey: "messageId",
     rangeKey: "sentAt",
@@ -91,7 +98,7 @@ export function createEventQueues(
 ): SQSResult {
   // Dead Letter Queue for failed event processing
   let dlqArgs: aws.sqs.QueueArgs = {
-    name: "wraps-email-events-dlq",
+    name: EVENTS_DLQ_NAME,
     messageRetentionSeconds: 1_209_600, // 14 days
     tags: {
       ...tags,
@@ -107,7 +114,7 @@ export function createEventQueues(
 
   // Main queue for SES events
   let queueArgs: aws.sqs.QueueArgs = {
-    name: "wraps-email-events",
+    name: EVENTS_QUEUE_NAME,
     visibilityTimeoutSeconds: 300, // 5 minutes (Lambda timeout)
     messageRetentionSeconds: 345_600, // 4 days
     receiveWaitTimeSeconds: 20, // Long polling
@@ -146,12 +153,10 @@ export function createEventBridgeRule(
 ): EventBridgeResult {
   // EventBridge rule to capture all SES events on default bus
   let ruleArgs: aws.cloudwatch.EventRuleArgs = {
-    name: "wraps-email-events-to-sqs",
+    name: EVENTBRIDGE_RULE_NAME,
     description: "Route all SES email events to SQS for processing",
     eventBusName: "default", // SES only sends to default bus
-    eventPattern: JSON.stringify({
-      source: ["aws.ses"],
-    }),
+    eventPattern: JSON.stringify(SES_EVENT_PATTERN),
     tags,
   };
 

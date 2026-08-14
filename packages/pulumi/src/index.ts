@@ -70,6 +70,7 @@ export {
   createSMTPCredentials,
   // OIDC
   createVercelOIDCProvider,
+  resolveMatchingEventTypes,
 } from "./resources/index.js";
 // Types
 export type {

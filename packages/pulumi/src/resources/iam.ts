@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { EMAIL_ROLE_NAME } from "@wraps/core";
 import type {
   OIDCConfig,
   ResolvedConfig,
@@ -216,7 +217,7 @@ export function createIAMRole(
   const assumeRolePolicy = buildAssumeRolePolicy(roleConfig);
 
   let roleArgs: aws.iam.RoleArgs = {
-    name: "wraps-email-role",
+    name: EMAIL_ROLE_NAME,
     assumeRolePolicy,
     tags: {
       ...tags,

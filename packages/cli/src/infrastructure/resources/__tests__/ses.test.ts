@@ -1,10 +1,7 @@
+import { ALL_EVENT_TYPES } from "@wraps/core";
 import { describe, expect, it } from "vitest";
 import { WrapsError } from "../../../utils/shared/errors.js";
-import {
-  ALL_EVENT_TYPES,
-  resolveMatchingEventTypes,
-  validateEventTypes,
-} from "../ses.js";
+import { resolveMatchingEventTypes, validateEventTypes } from "../ses.js";
 
 /**
  * Plan 182: `eventTracking.events` was declared on the type but never read —

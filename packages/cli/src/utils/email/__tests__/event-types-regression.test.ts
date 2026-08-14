@@ -38,8 +38,8 @@ vi.mock("@clack/prompts", () => {
   return { confirm, select, multiselect, text, isCancel, cancel, log };
 });
 
+import { ALL_EVENT_TYPES } from "@wraps/core";
 import {
-  ALL_EVENT_TYPES,
   resolveMatchingEventTypes,
   validateEventTypes,
 } from "../../../infrastructure/resources/ses.js";

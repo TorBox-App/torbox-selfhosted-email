@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { HISTORY_TABLE_NAME } from "@wraps/core";
 import type { ArchiveRetention } from "../../types/index.js";
 import { tableExists } from "../shared/resource-checks.js";
 
@@ -24,7 +25,7 @@ export async function createDynamoDBTables(
   config: DynamoDBConfig
 ): Promise<DynamoDBTables> {
   // Check if table already exists
-  const tableName = "wraps-email-history";
+  const tableName = HISTORY_TABLE_NAME;
   const exists = await tableExists(tableName, config.region);
 
   // Email history table (TTL is set based on retention in Lambda via expiresAt field)

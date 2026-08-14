@@ -50,6 +50,7 @@ export {
   createEventDestination,
   createMailFromAttributes,
   createSESResources,
+  resolveMatchingEventTypes,
   type SESResourcesResult,
 } from "./ses.js";
 // SMTP credentials resources

@@ -1,27 +1,8 @@
 import * as aws from "@pulumi/aws";
+import { ALL_EVENT_TYPES, DEFAULT_CONFIG_SET_NAME } from "@wraps/core";
 import type { SESEventType } from "../../types/index.js";
 import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
 import { errors } from "../../utils/shared/errors.js";
-
-/**
- * All SES event types. This is the default `matchingEventTypes` set for the
- * EventBridge event destination when `eventTracking.events` is not configured
- * (or configured as an empty array) — must stay byte-identical to what SES
- * has always received so an unset field never silently reduces what lands in
- * the customer's own event bus/DynamoDB history.
- */
-export const ALL_EVENT_TYPES: SESEventType[] = [
-  "SEND",
-  "DELIVERY",
-  "OPEN",
-  "CLICK",
-  "BOUNCE",
-  "COMPLAINT",
-  "REJECT",
-  "RENDERING_FAILURE",
-  "DELIVERY_DELAY",
-  "SUBSCRIPTION",
-];
 
 /**
  * Event types that gate suppression visibility. BOUNCE and COMPLAINT are
@@ -200,7 +181,7 @@ export async function createSESResources(
   // Configuration set for tracking (using SESv2 which supports tags)
   const configSetName = config.domain
     ? domainToConfigSetName(config.domain)
-    : "wraps-email-tracking";
+    : DEFAULT_CONFIG_SET_NAME;
   const configSetOptions: aws.sesv2.ConfigurationSetArgs = {
     configurationSetName: configSetName,
     deliveryOptions: config.tlsRequired

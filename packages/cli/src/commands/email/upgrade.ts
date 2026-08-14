@@ -1,8 +1,8 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+import { ALL_EVENT_TYPES } from "@wraps/core";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
-import { ALL_EVENT_TYPES } from "../../infrastructure/resources/ses.js";
 import { trackError, trackServiceUpgrade } from "../../telemetry/events.js";
 import type { UpgradeOptions, WrapsEmailConfig } from "../../types/index.js";
 import {

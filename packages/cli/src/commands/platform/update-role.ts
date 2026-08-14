@@ -357,7 +357,7 @@ type PolicyDocument = {
   Statement: PolicyStatement[];
 };
 
-function buildConsolePolicyDocument(
+export function buildConsolePolicyDocument(
   emailConfig: Record<string, unknown> | undefined,
   smsConfig?: Record<string, unknown> | undefined
 ): PolicyDocument {

@@ -2,11 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  ALL_EVENT_TYPES,
   CONSOLE_ACCESS_ROLE_NAME,
   SELFHOST_CONSOLE_ACCESS_ROLE_NAME,
 } from "@wraps/core";
 import { describe, expect, it } from "vitest";
-import { ALL_EVENT_TYPES } from "../infrastructure/resources/ses.js";
 
 /**
  * Plan 180: the docs that fed the BYOC spec its wrong facts were never
