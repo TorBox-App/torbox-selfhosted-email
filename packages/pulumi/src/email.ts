@@ -1,6 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { retentionToDays } from "@wraps/core";
+import { DEFAULT_CONFIG_SET_NAME, retentionToDays } from "@wraps/core";
 import { applyDefaults } from "./defaults.js";
 import {
   createCustomOIDCProvider,
@@ -320,7 +320,7 @@ export class WrapsEmail extends pulumi.ComponentResource {
     if (config.smtp?.enabled) {
       smtpResult = createSMTPCredentials(
         name,
-        sesResult.configSet.name ?? "wraps-email-tracking",
+        sesResult.configSet.name ?? DEFAULT_CONFIG_SET_NAME,
         region.name,
         tags,
         { parent: this }
@@ -340,7 +340,7 @@ export class WrapsEmail extends pulumi.ComponentResource {
     this.roleArn = iamResult.role.arn;
     this.region = region.name;
     this.configSetName = pulumi.output(
-      sesResult.configSet.name ?? "wraps-email-tracking"
+      sesResult.configSet.name ?? DEFAULT_CONFIG_SET_NAME
     );
 
     // Domain outputs
@@ -391,7 +391,7 @@ export class WrapsEmail extends pulumi.ComponentResource {
       archiveResult = createMailManagerArchive(
         name,
         config,
-        sesResult.configSet.name ?? "wraps-email-tracking",
+        sesResult.configSet.name ?? DEFAULT_CONFIG_SET_NAME,
         region.name,
         tags,
         { parent: this }

@@ -4,6 +4,7 @@ import {
   ListEmailIdentitiesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
+import { DEFAULT_CONFIG_SET_NAME, EMAIL_ROLE_NAME } from "@wraps/core";
 
 /**
  * Discovery of the `wraps email init` stack a self-hosted dashboard sends its
@@ -31,7 +32,7 @@ export async function detectEmailStack(region: string): Promise<EmailStack> {
     const ses = new SESv2Client({ region });
     const [roleResult, setsResult, identitiesResult] = await Promise.allSettled(
       [
-        iam.send(new GetRoleCommand({ RoleName: "wraps-email-role" })),
+        iam.send(new GetRoleCommand({ RoleName: EMAIL_ROLE_NAME })),
         ses.send(new ListConfigurationSetsCommand({})),
         ses.send(new ListEmailIdentitiesCommand({})),
       ]
@@ -49,7 +50,7 @@ export async function detectEmailStack(region: string): Promise<EmailStack> {
           )
         : [];
     const configSetName =
-      sets.find((n) => n !== "wraps-email-tracking") ?? sets[0] ?? null;
+      sets.find((n) => n !== DEFAULT_CONFIG_SET_NAME) ?? sets[0] ?? null;
 
     // EMAIL_ADDRESS identities are excluded on purpose: they authorise exactly
     // one address, which is almost never the noreply@ the dashboard sends as.

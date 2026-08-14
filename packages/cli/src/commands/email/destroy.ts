@@ -1,5 +1,10 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
+import {
+  EVENTBRIDGE_RULE_NAME,
+  EVENTS_DLQ_NAME,
+  EVENTS_QUEUE_NAME,
+} from "@wraps/core";
 import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { WrapsEmailConfig } from "../../types/email.js";
@@ -216,7 +221,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         ? `Domain(s): ${domainList.join(", ")}`
         : "Domain(s): none configured",
       "SES configuration sets and event destinations for the above domain(s)",
-      "Event pipeline: wraps-email-events / wraps-email-events-dlq queues, wraps-email-event-processor Lambda, EventBridge rule wraps-email-events-to-sqs",
+      `Event pipeline: ${EVENTS_QUEUE_NAME} / ${EVENTS_DLQ_NAME} queues, wraps-email-event-processor Lambda, EventBridge rule ${EVENTBRIDGE_RULE_NAME}`,
       "",
       pc.yellow(
         "Event streaming stops: the Wraps dashboard email timeline and event history for THIS ENTIRE AWS ACCOUNT stop receiving events. Historical events in DynamoDB are destroyed with the table. This cannot be undone."

@@ -8,18 +8,22 @@
  * throws and never blocks the rest of the checks from running.
  */
 
+import {
+  DEFAULT_CONFIG_SET_NAME,
+  EVENTBRIDGE_RULE_NAME,
+  HISTORY_TABLE_NAME,
+} from "@wraps/core";
 import { isAWSNotFoundError } from "../shared/errors.js";
 import { domainToConfigSetName } from "./config-set-slug.js";
 
 const EVENT_DESTINATION_NAME = "wraps-email-eventbridge";
-const CONFIG_SET_FALLBACK = "wraps-email-tracking";
-const RULE_NAME = "wraps-email-events-to-sqs";
+const CONFIG_SET_FALLBACK = DEFAULT_CONFIG_SET_NAME;
+const RULE_NAME = EVENTBRIDGE_RULE_NAME;
 const QUEUE_NAME = "wraps-email-events";
 const DLQ_NAME = "wraps-email-events-dlq";
 const LAMBDA_FUNCTION_NAME = "wraps-email-event-processor";
 const WEBHOOK_DESTINATION_NAME = "wraps-webhook-destination";
 const WEBHOOK_CONNECTION_NAME = "wraps-webhook-connection";
-const HISTORY_TABLE_NAME = "wraps-email-history";
 const UPGRADE_HINT = "wraps email upgrade";
 
 export type PipelineCheck = {
