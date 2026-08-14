@@ -56,6 +56,30 @@
       "name": "Wraps Workflows",
       "description": "Automated multi-step email and SMS sequences",
       "tags": ["workflows", "automation", "sequences"]
+    },
+    {
+      "id": "wraps-quickstart",
+      "name": "Wraps Quickstart",
+      "description": "Get started with Wraps email infrastructure. Guides through deploying infrastructure, verifying a domain, installing the SDK, and sending the first email. Adapts to project framework and hosting provider.",
+      "tags": ["quickstart", "onboarding", "email", "ses"]
+    },
+    {
+      "id": "aws-ses-best-practices",
+      "name": "AWS SES Best Practices",
+      "description": "Email deliverability, warming, compliance, and operational guidelines for AWS Simple Email Service.",
+      "tags": ["ses", "deliverability", "compliance", "best-practices"]
+    },
+    {
+      "id": "ses-troubleshoot",
+      "name": "SES Deliverability Troubleshooter",
+      "description": "Interactive SES deliverability troubleshooting. Diagnoses bounces, spam placement, send failures, account health, and complaint issues with targeted AWS CLI commands and ordered remediation steps.",
+      "tags": ["ses", "troubleshooting", "deliverability", "diagnostics"]
+    },
+    {
+      "id": "email-content-guide",
+      "name": "Email Content Guide",
+      "description": "Best practices for email content that avoids spam filters. Apply these rules when writing email copy, building templates, or debugging spam placement issues.",
+      "tags": ["email", "content", "spam", "deliverability"]
     }
   ],
   "protocols": ["llms.txt", "claude-code-skills"],

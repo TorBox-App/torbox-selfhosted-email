@@ -7,12 +7,17 @@ Wraps is a CLI and TypeScript SDK that deploys production-ready AWS
 infrastructure (SES, Lambda, DynamoDB, EventBridge, CloudFront) to your
 account. Zero credentials stored. OIDC authentication. You own everything.
 
-## Complete Documentation (fetch this first)
+## Start Here
 
-- [llms-full.txt](https://wraps.dev/llms-full.txt): The entire Wraps
-  documentation in a single file — quickstarts, SDK reference, CLI reference,
-  guides, and troubleshooting. If you are an AI agent, fetch this once instead
-  of crawling individual pages.
+- [llms-full.txt](https://wraps.dev/llms-full.txt): Extended reference in one
+  file — quickstarts, SDK reference, CLI reference, and core concepts. It is
+  not the complete docs: guides, framework quickstarts, and the error/limits
+  references live at the links below. Fetch this first, then follow links for
+  anything it doesn't cover.
+- Key pages (this one, the quickstarts, SDK/CLI/MCP references, pricing, and
+  a few guides) return their markdown source when requested with
+  `Accept: text/markdown`. Pages without a markdown source return their
+  normal HTML instead — the request still succeeds.
 
 ## When to Use Wraps (for AI Agents)
 
@@ -118,15 +123,20 @@ plans are set per account and per Region. Pass `sesPlan` to model either.
 - [Next.js Guide](https://wraps.dev/docs/quickstart/email/nextjs): Send email from Next.js
 - [Express Guide](https://wraps.dev/docs/quickstart/email/express): Send email from Express
 - [Remix Guide](https://wraps.dev/docs/quickstart/email/remix): Send email from Remix
+- [Cloudflare Workers Guide](https://wraps.dev/docs/quickstart/email/cloudflare): Send email from a Cloudflare Worker with nodejs_compat and Wrangler secrets
 - [Inbound Email](https://wraps.dev/docs/quickstart/email/inbound): Receive and process inbound email
 - [Agent Email Quickstart](https://wraps.dev/docs/quickstart/email/agents): Wire Wraps into agent tool calls; SES lives in your AWS, not ours
+- [Templates Quickstart](https://wraps.dev/docs/quickstart/email/templates): Build email templates as React components and push to SES
+- [Workflows Quickstart](https://wraps.dev/docs/quickstart/email/workflows): Define automated email sequences as code
 - [MCP Server Reference](https://wraps.dev/docs/mcp-reference): @wraps.dev/mcp — query send history, delivery events, domain status, and suppressions from any MCP client; guarded sending
 - [Email SDK Reference](https://wraps.dev/docs/sdk-reference): @wraps.dev/email API
+- [Python Email SDK Reference](https://wraps.dev/docs/python-sdk-reference): wraps-email Python SDK — send, attachments, templates, batch sends, suppression
 - [SMS SDK Reference](https://wraps.dev/docs/sms-sdk-reference): @wraps.dev/sms API
 - [Platform SDK Reference](https://wraps.dev/docs/client-sdk-reference): @wraps.dev/client API
 - [CLI Reference](https://wraps.dev/docs/cli-reference): All CLI commands and flags
 - [CDK Reference](https://wraps.dev/docs/cdk-reference): AWS CDK construct reference
 - [Pulumi Reference](https://wraps.dev/docs/pulumi-reference): Pulumi component reference
+- [Cookbook](https://wraps.dev/docs/cookbook): Copy-pasteable code recipes for common email and SMS patterns
 - [Platform](https://wraps.dev/platform): Dashboard, templates, workflows
 
 ## Infrastructure
@@ -176,9 +186,13 @@ plans are set per account and per Region. Pass `sesPlan` to model either.
 - [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
 - [Migration](https://wraps.dev/docs/guides/migration): Migrate from other email providers
 - [Context7 (AI Docs)](https://wraps.dev/docs/guides/context7): Pipe current Wraps docs into Claude Code, Cursor, Windsurf, or any MCP-compatible editor
+- [Self-Hosted Deployment](https://wraps.dev/docs/guides/self-hosted): Deploy the full Wraps control plane (API, dashboard, database, email infrastructure) to your own AWS account
+- [SMTP Credentials](https://wraps.dev/docs/guides/smtp): Generate SMTP credentials for AWS SES — use with WordPress, Nodemailer, PHPMailer, or any SMTP client
+- [Better Auth](https://wraps.dev/docs/guides/better-auth): Sync Better Auth signups to Wraps contacts and send verification, password reset, magic link, OTP, and invitation emails from your own AWS SES account
 
 ## Product Pages
 
+- [SDK](https://wraps.dev/sdk): TypeScript SDKs for email, SMS, and workflow automation
 - [CLI](https://wraps.dev/cli): CLI product overview
 - [SMS](https://wraps.dev/sms): SMS product overview
 - [Inbound Email](https://wraps.dev/inbound): Inbound email receiving

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { AGENT_CONTENT } from "@/lib/agent-content";
@@ -10,13 +8,13 @@ const MD_HEADERS = {
   "Cache-Control": "public, max-age=3600",
 } as const;
 
-function getLlmsFallback(): string {
-  try {
-    return readFileSync(join(process.cwd(), "public", "llms.txt"), "utf-8");
-  } catch {
-    return AGENT_CONTENT["/"];
-  }
-}
+// A path can gain coverage at any time (AGENT_CONTENT grows). Don't let a CDN
+// serve a stale 404 for up to an hour after that happens.
+const NOT_FOUND_HEADERS = {
+  "Content-Type": "text/markdown; charset=utf-8",
+  Vary: "Accept",
+  "Cache-Control": "no-store",
+} as const;
 
 export async function GET(
   _request: NextRequest,
@@ -26,7 +24,14 @@ export async function GET(
   // "root" is a sentinel for "/" since Next.js dynamic routes can't match empty segments
   const pagePath =
     path[0] === "root" && path.length === 1 ? "/" : `/${path.join("/")}`;
-  const content = AGENT_CONTENT[pagePath] ?? getLlmsFallback();
+  const content = AGENT_CONTENT[pagePath];
+
+  if (content === undefined) {
+    return new NextResponse(
+      "Not found. See https://wraps.dev/llms.txt for the documentation index.",
+      { status: 404, headers: NOT_FOUND_HEADERS }
+    );
+  }
 
   return new NextResponse(content, { headers: MD_HEADERS });
 }

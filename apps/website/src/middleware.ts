@@ -1,11 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { AGENT_CONTENT_PATHS } from "@/lib/agent-content-paths";
 import { setAttributionCookie } from "@/lib/attribution";
 
 export async function middleware(request: NextRequest) {
   const accept = request.headers.get("accept") ?? "";
-  const response = accept.includes("text/markdown")
-    ? markdownRewrite(request)
-    : NextResponse.next();
+  const wantsMarkdown = accept.includes("text/markdown");
+  const isCovered = AGENT_CONTENT_PATHS.includes(request.nextUrl.pathname);
+  const response =
+    wantsMarkdown && isCovered ? markdownRewrite(request) : NextResponse.next();
+
+  if (!wantsMarkdown && isCovered) {
+    // Tell agents a markdown representation exists without them having to
+    // blind-guess the Accept header.
+    response.headers.set(
+      "Link",
+      `<${request.nextUrl.pathname}>; rel="alternate"; type="text/markdown"`
+    );
+  }
 
   // Campaign traffic lands on wraps.dev, not app.wraps.dev, so this is the only
   // place first touch can be recorded. The cookie is domain-scoped so the
