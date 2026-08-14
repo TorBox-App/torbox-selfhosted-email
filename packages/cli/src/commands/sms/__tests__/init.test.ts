@@ -144,7 +144,7 @@ describe("sms init — countries/volume flag precedence", () => {
     ).mockImplementation(createOrSelectStackMock);
   });
 
-  it("defaults to [\"US\"] / 100 under --quick without invoking any clack prompt", async () => {
+  it('defaults to ["US"] / 100 under --quick without invoking any clack prompt', async () => {
     const clack = await import("@clack/prompts");
 
     await init({

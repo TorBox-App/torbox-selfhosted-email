@@ -174,10 +174,7 @@ describe("email init — already-deployed exit respects --json", () => {
  * added.
  */
 describe("telemetry first-run notice — gated in --json mode (source guard)", () => {
-  const cliPath = join(
-    dirname(fileURLToPath(import.meta.url)),
-    "../cli.ts"
-  );
+  const cliPath = join(dirname(fileURLToPath(import.meta.url)), "../cli.ts");
   // Collapse whitespace/newlines to single spaces so a future formatter
   // pass (different line wraps or indentation) can't produce a false
   // failure here.
@@ -187,10 +184,7 @@ describe("telemetry first-run notice — gated in --json mode (source guard)", (
     return haystack.split(needle).length - 1;
   }
 
-  const totalCallSites = countOccurrences(
-    cliSource,
-    "shouldShowNotification("
-  );
+  const totalCallSites = countOccurrences(cliSource, "shouldShowNotification(");
   const guardedCallSites = countOccurrences(
     cliSource,
     "!isJsonMode() && telemetry.shouldShowNotification()"
@@ -210,8 +204,6 @@ describe("telemetry first-run notice — gated in --json mode (source guard)", (
   });
 
   it("has no bare, unguarded `if (telemetry.shouldShowNotification())` left", () => {
-    expect(cliSource).not.toContain(
-      "if (telemetry.shouldShowNotification())"
-    );
+    expect(cliSource).not.toContain("if (telemetry.shouldShowNotification())");
   });
 });

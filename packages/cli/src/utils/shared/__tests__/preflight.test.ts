@@ -40,7 +40,9 @@ const mockCheck = vi.mocked(checkWrapsResourcesExist);
 
 const CONFLICTING_SCAN = {
   identities: [],
-  configurationSets: [{ name: "wraps-email-config-set", eventDestinations: [] }],
+  configurationSets: [
+    { name: "wraps-email-config-set", eventDestinations: [] },
+  ],
   snsTopics: [],
   dynamoTables: [],
   lambdaFunctions: [],

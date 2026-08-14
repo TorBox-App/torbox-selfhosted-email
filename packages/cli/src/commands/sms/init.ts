@@ -100,7 +100,10 @@ async function promptPhoneNumberType(): Promise<
  * Prompt for SMS configuration preset
  */
 async function promptSMSPreset(): Promise<SMSConfigPreset> {
-  ensureInteractive("Preset", "--preset <starter|production|enterprise|custom>");
+  ensureInteractive(
+    "Preset",
+    "--preset <starter|production|enterprise|custom>"
+  );
 
   const result = await clack.select({
     message: "Choose configuration preset:",
@@ -362,21 +365,24 @@ export async function init(options: SMSInitOptions): Promise<void> {
   // Optional flourish, not required input — skip silently to its own
   // initialValue rather than throw when there's no one to answer it.
   let aitFiltering = false;
-  if (smsConfig.phoneNumberType !== "simulator") {
-    if (isInteractive() && !isJsonMode() && !options.quick) {
-      const enableAIT = await clack.confirm({
-        message:
-          "Enable AIT (Artificially Inflated Traffic) filtering? (adds per-message cost)",
-        initialValue: false,
-      });
+  if (
+    smsConfig.phoneNumberType !== "simulator" &&
+    isInteractive() &&
+    !isJsonMode() &&
+    !options.quick
+  ) {
+    const enableAIT = await clack.confirm({
+      message:
+        "Enable AIT (Artificially Inflated Traffic) filtering? (adds per-message cost)",
+      initialValue: false,
+    });
 
-      if (clack.isCancel(enableAIT)) {
-        clack.cancel("Operation cancelled.");
-        process.exit(0);
-      }
-
-      aitFiltering = enableAIT;
+    if (clack.isCancel(enableAIT)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
     }
+
+    aitFiltering = enableAIT;
   }
 
   // Set protect configuration

@@ -253,7 +253,10 @@ export type VercelConfig = {
  * Prompt for Vercel configuration
  */
 export async function promptVercelConfig(): Promise<VercelConfig> {
-  ensureInteractive("Vercel configuration", "--provider aws (or interactive run)");
+  ensureInteractive(
+    "Vercel configuration",
+    "--provider aws (or interactive run)"
+  );
 
   const config = await clack.group(
     {
@@ -1403,7 +1406,10 @@ export async function promptDNSRecordSelection(
  * Prompt to continue with manual DNS setup when credentials are missing
  */
 export async function promptContinueManualDNS(): Promise<boolean> {
-  ensureInteractive("Manual DNS continuation confirmation", "run interactively");
+  ensureInteractive(
+    "Manual DNS continuation confirmation",
+    "run interactively"
+  );
 
   const continueManual = await clack.confirm({
     message: "Continue with manual DNS setup?",

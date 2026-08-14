@@ -83,7 +83,9 @@ export async function runPreflightScan(
         return { shouldContinue: true, scan };
       }
       throw errors.resourceConflict(
-        resourceTypes.length > 0 ? resourceTypes.join(", ") : (domain ?? "domain")
+        resourceTypes.length > 0
+          ? resourceTypes.join(", ")
+          : (domain ?? "domain")
       );
     }
 

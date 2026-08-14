@@ -887,9 +887,7 @@ export async function init(options: InitOptions): Promise<void> {
   // Optional flourish, not required input — skip silently rather than throw
   // when there's no one to answer it.
   if (
-    !options.preview &&
-    !options.quick &&
-    !options.yes &&
+    !(options.preview || options.quick || options.yes) &&
     isInteractive() &&
     !isJsonMode()
   ) {
