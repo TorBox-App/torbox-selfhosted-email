@@ -484,10 +484,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       const { SQSClient, GetQueueUrlCommand, DeleteQueueCommand } =
         await import("@aws-sdk/client-sqs");
       const sqsClient = new SQSClient({ region });
-      for (const queueName of [
-        "wraps-email-events",
-        "wraps-email-events-dlq",
-      ]) {
+      for (const queueName of [EVENTS_QUEUE_NAME, EVENTS_DLQ_NAME]) {
         try {
           const { QueueUrl } = await sqsClient.send(
             new GetQueueUrlCommand({ QueueName: queueName })

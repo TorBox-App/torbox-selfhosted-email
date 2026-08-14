@@ -11,6 +11,8 @@
 import {
   DEFAULT_CONFIG_SET_NAME,
   EVENTBRIDGE_RULE_NAME,
+  EVENTS_DLQ_NAME,
+  EVENTS_QUEUE_NAME,
   HISTORY_TABLE_NAME,
 } from "@wraps/core";
 import { isAWSNotFoundError } from "../shared/errors.js";
@@ -19,8 +21,8 @@ import { domainToConfigSetName } from "./config-set-slug.js";
 const EVENT_DESTINATION_NAME = "wraps-email-eventbridge";
 const CONFIG_SET_FALLBACK = DEFAULT_CONFIG_SET_NAME;
 const RULE_NAME = EVENTBRIDGE_RULE_NAME;
-const QUEUE_NAME = "wraps-email-events";
-const DLQ_NAME = "wraps-email-events-dlq";
+const QUEUE_NAME = EVENTS_QUEUE_NAME;
+const DLQ_NAME = EVENTS_DLQ_NAME;
 const LAMBDA_FUNCTION_NAME = "wraps-email-event-processor";
 const WEBHOOK_DESTINATION_NAME = "wraps-webhook-destination";
 const WEBHOOK_CONNECTION_NAME = "wraps-webhook-connection";
