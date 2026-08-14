@@ -63,73 +63,594 @@ try {
   }
 }`;
 
+const jsonErrorEnvelopeCode = `{
+  "success": false,
+  "command": "email.init",
+  "error": {
+    "code": "<one of the CLI error codes below>",
+    "message": "...",
+    "suggestion": "...",
+    "docsUrl": "https://wraps.dev/docs/..."
+  }
+}`;
+
 // ============================================================================
 // MARKDOWN CONTENT FOR AI COPY
 // ============================================================================
 
+type ErrorRow = { code: string; message: string; solution: string };
+type ErrorSection = { id: string; title: string; rows: ErrorRow[] };
+
+// Source of truth: the second argument to every `new WrapsError(...)` call
+// across packages/cli/src, plus the UNKNOWN_ERROR JSON-mode fallback in
+// handleCLIError (errors.ts:364). Re-extract with the CLI source if this
+// page ever drifts — see apps/website/src/__tests__/cli-error-codes.test.ts.
+const CLI_ERROR_SECTIONS: ErrorSection[] = [
+  {
+    id: "credentials-session",
+    title: "Credentials & Session",
+    rows: [
+      {
+        code: "NO_AWS_CREDENTIALS",
+        message: "AWS credentials not found",
+        solution:
+          "Set up AWS SSO (aws configure sso), IAM access keys (aws configure), environment variables, or AWS_PROFILE",
+      },
+      {
+        code: "PROFILE_NOT_FOUND",
+        message: 'AWS profile "<profile>" not found',
+        solution:
+          "List available profiles, or configure a new one: aws configure --profile <profile>",
+      },
+      {
+        code: "CREDENTIALS_FILE_MISSING",
+        message: "AWS credentials file not found",
+        solution:
+          "Set up AWS SSO, IAM access keys, environment variables, or AWS_PROFILE",
+      },
+      {
+        code: "ACCESS_KEY_INVALID",
+        message: "AWS access key is invalid or has been deactivated",
+        solution:
+          "Check the IAM console, run aws configure, or generate new access keys",
+      },
+      {
+        code: "SESSION_TOKEN_EXPIRED",
+        message: "AWS session token has expired",
+        solution:
+          "SSO users: aws sso login. Assumed roles: re-run your assume-role command",
+      },
+      {
+        code: "SSO_SESSION_EXPIRED",
+        message: 'AWS SSO session has expired for profile "<profile>"',
+        solution: "Run aws sso login --profile <profile>",
+      },
+      {
+        code: "NOT_AUTHENTICATED",
+        message: "Not authenticated to Wraps Platform",
+        solution: "Run wraps auth login, or provide --token / WRAPS_API_KEY",
+      },
+      {
+        code: "ORG_NOT_FOUND",
+        message: "Could not determine organization",
+        solution: "Pass --org, or sign in first: wraps auth login",
+      },
+    ],
+  },
+  {
+    id: "iam-permissions",
+    title: "IAM & Permissions",
+    rows: [
+      {
+        code: "IAM_PERMISSION_DENIED",
+        message: "Permission denied: <action> on <resource>",
+        solution:
+          "Your credentials lack the permission. View required permissions: wraps permissions --json",
+      },
+      {
+        code: "SES_PERMISSION_DENIED",
+        message: "SES permission denied: <action>",
+        solution: "wraps permissions --service email --json",
+      },
+      {
+        code: "DYNAMODB_PERMISSION_DENIED",
+        message: "DynamoDB permission denied",
+        solution: "Needs CreateTable, DeleteTable, DescribeTable, UpdateTable",
+      },
+      {
+        code: "LAMBDA_PERMISSION_DENIED",
+        message: "Lambda permission denied",
+        solution: "Needs CreateFunction, UpdateFunctionCode, DeleteFunction",
+      },
+      {
+        code: "EVENTBRIDGE_PERMISSION_DENIED",
+        message: "EventBridge permission denied",
+        solution: "Needs PutRule, PutTargets, DeleteRule",
+      },
+      {
+        code: "SQS_PERMISSION_DENIED",
+        message: "SQS permission denied",
+        solution: "Needs CreateQueue, DeleteQueue, GetQueueAttributes",
+      },
+      {
+        code: "CLOUDWATCH_LOGS_PERMISSION_DENIED",
+        message: "CloudWatch Logs permission denied",
+        solution:
+          "Needs logs:DescribeLogGroups, logs:FilterLogEvents, logs:StartLiveTail",
+      },
+      {
+        code: "ROUTE53_PERMISSION_DENIED",
+        message: "Route53 permission denied",
+        solution:
+          "Needs ChangeResourceRecordSets, ListHostedZones (optional — add DNS records manually instead)",
+      },
+      {
+        code: "IAM_ENTITY_NOT_FOUND",
+        message: "IAM entity not found",
+        solution: "Run wraps platform connect",
+      },
+    ],
+  },
+  {
+    id: "region-aws-limits",
+    title: "Region & AWS Limits",
+    rows: [
+      {
+        code: "INVALID_REGION",
+        message: "Invalid AWS region: <region>",
+        solution:
+          "Use a valid AWS region like us-east-1, eu-west-1, ap-southeast-1",
+      },
+      {
+        code: "REGION_REQUIRED",
+        message: "Region is required and could not be determined",
+        solution: "Pass --region or set AWS_REGION",
+      },
+      {
+        code: "REGION_REQUIRED_FOR_SET",
+        message: "Could not determine which Region to change",
+        solution: "Pass --region <r> with the Region you want to change",
+      },
+      {
+        code: "AWS_THROTTLED",
+        message: "AWS request was throttled",
+        solution:
+          "Wait and retry. Request a quota increase if this happens repeatedly",
+      },
+      {
+        code: "AWS_LIMIT_EXCEEDED",
+        message: "AWS service limit exceeded",
+        solution: "Request a quota increase in Service Quotas",
+      },
+    ],
+  },
+  {
+    id: "stack-deployment",
+    title: "Stack & Deployment",
+    rows: [
+      {
+        code: "NO_STACK",
+        message: "No Wraps infrastructure found in this AWS account",
+        solution: "Run wraps email init",
+      },
+      {
+        code: "STACK_EXISTS",
+        message: 'Stack "<stackName>" already exists',
+        solution:
+          "To update: wraps email upgrade. To remove: wraps destroy --stack <stackName>",
+      },
+      {
+        code: "STACK_LOCKED",
+        message: "The Pulumi stack is locked from a previous run",
+        solution:
+          "Remove ~/.wraps/pulumi/.pulumi/locks (local), or delete the lock object under .pulumi/locks/ in your wraps-state-* bucket (S3)",
+      },
+      {
+        code: "PULUMI_ERROR",
+        message: "Infrastructure deployment failed: <message>",
+        solution: "Check your AWS permissions and try again",
+      },
+      {
+        code: "PULUMI_NOT_INSTALLED",
+        message: "Pulumi CLI is not installed",
+        solution:
+          "Install via brew/curl/choco, or download from pulumi.com/docs/install",
+      },
+      {
+        code: "RESOURCE_CONFLICT",
+        message: "Resource already exists: <resourceName>",
+        solution: "Diagnose and clean up: wraps email doctor --cleanup",
+      },
+      {
+        code: "S3_STATE_BUCKET_CREATION_FAILED",
+        message: "Failed to create S3 state bucket: <bucketName>",
+        solution:
+          "Ensure s3:CreateBucket, s3:PutBucketEncryption, s3:PutBucketVersioning, or export WRAPS_LOCAL_ONLY=1",
+      },
+      {
+        code: "S3_STATE_ACCESS_DENIED",
+        message: "Access denied to S3 state bucket",
+        solution:
+          "Ensure s3:GetObject, s3:PutObject, s3:ListBucket on wraps-state-*, or export WRAPS_LOCAL_ONLY=1",
+      },
+      {
+        code: "STATE_MIGRATION_FAILED",
+        message: "Failed to migrate Pulumi state to S3",
+        solution:
+          "Local state is still intact. export WRAPS_LOCAL_ONLY=1 to skip migration",
+      },
+      {
+        code: "SELFHOST_NO_LOG_GROUPS",
+        message: "No self-hosted log groups found in <region>",
+        solution: "Check wraps selfhost status, or target a different region",
+      },
+      {
+        code: "SELFHOST_NO_LOG_GROUPS_FOR_SOURCE",
+        message: "No <source> log groups in this deployment",
+        solution: "Drop the filter: wraps selfhost logs",
+      },
+      {
+        code: "LAMBDA_FUNCTION_NOT_FOUND",
+        message: "Agent enforcer Lambda not found",
+        solution: "Deploy it: wraps email agent create",
+      },
+      {
+        code: "DYNAMODB_TABLE_NOT_FOUND",
+        message: "Agent policy table not found",
+        solution: "Deploy it: wraps email agent create",
+      },
+    ],
+  },
+  {
+    id: "email-ses",
+    title: "Email / SES",
+    rows: [
+      {
+        code: "SES_MESSAGE_REJECTED",
+        message: "SES rejected the message: <detail>",
+        solution:
+          "Sandbox with unverified recipient, unverified sender identity, or receiving-only domain. Check wraps email status / wraps email doctor",
+      },
+      {
+        code: "SES_MAIL_FROM_NOT_VERIFIED",
+        message: "SES MAIL FROM domain is not verified: <detail>",
+        solution: "Check DNS records: wraps email verify",
+      },
+      {
+        code: "SES_ACCOUNT_SENDING_PAUSED",
+        message: "SES account-level sending is paused",
+        solution: "Check the SES console Reputation Dashboard",
+      },
+      {
+        code: "SES_CONFIG_SET_SENDING_PAUSED",
+        message: "SES configuration set sending is paused",
+        solution:
+          "Resume it in the SES console, or send without that configuration set",
+      },
+      {
+        code: "SES_CONFIG_SET_MISSING",
+        message: "SES configuration set does not exist: <detail>",
+        solution:
+          "Create it in the SES console, switch regions, or remove ConfigurationSetName",
+      },
+      {
+        code: "EVENT_DESTINATION_NOT_FOUND",
+        message: "Event destination not found for <domain>",
+        solution: "Run wraps email upgrade",
+      },
+      {
+        code: "INVALID_EVENT_DESTINATION",
+        message:
+          "Event destination for <domain> is not an EventBridge destination",
+        solution: "Run wraps email upgrade",
+      },
+      {
+        code: "EVENT_TYPES_MISSING_SUPPRESSION_EVENTS",
+        message:
+          "eventTracking.events is missing required event type(s): <missing>",
+        solution:
+          "BOUNCE and COMPLAINT must always be included in eventTracking.events",
+      },
+      {
+        code: "INVALID_SES_PRICING_PLAN",
+        message: "No pricing plan specified",
+        solution: "Pass --set with one of the valid pricing plans",
+      },
+      {
+        code: "SES_PRICING_PLAN_CHANGE_REJECTED",
+        message: "SES rejected the pricing plan change: <detail>",
+        solution: "Check the current plan: wraps email plan",
+      },
+    ],
+  },
+  {
+    id: "inbound-email",
+    title: "Inbound Email",
+    rows: [
+      {
+        code: "INBOUND_REGION_NOT_SUPPORTED",
+        message: "SES email receiving is not supported in <region>",
+        solution: "Deploy in us-east-1, us-west-2, or eu-west-1",
+      },
+      {
+        code: "INBOUND_REQUIRES_OUTBOUND",
+        message: "Inbound email requires outbound email infrastructure",
+        solution: "Run wraps email init, then wraps email inbound init",
+      },
+      {
+        code: "RECEIPT_RULE_SET_CONFLICT",
+        message: "Another receipt rule set is active: <activeRuleSet>",
+        solution:
+          "Wraps will activate wraps-inbound-rules, deactivating the current set",
+      },
+      {
+        code: "INBOUND_TEST_SEND_FAILED",
+        message: "Failed to send inbound test email to <recipient>",
+        solution: "Check wraps email status / wraps email doctor",
+      },
+      {
+        code: "INBOUND_TEST_MAIL_FROM_NOT_VERIFIED",
+        message: "Custom MAIL FROM domain is not verified for <domain>",
+        solution: "Verify DNS records: wraps email verify",
+      },
+      {
+        code: "INBOUND_TEST_MESSAGE_REJECTED",
+        message: "SES rejected the inbound test send: <message>",
+        solution:
+          "Sandbox with unverified recipient, unverified sender domain, or receiving-only domain. Check wraps email status / doctor",
+      },
+      {
+        code: "INBOUND_TEST_SENDING_PAUSED",
+        message: "SES sending is paused for this account",
+        solution: "Check the SES console Reputation Dashboard",
+      },
+      {
+        code: "INBOUND_TEST_PERMISSION_DENIED",
+        message: "IAM permission denied: ses:SendEmail in <region>",
+        solution: "wraps permissions --service email --json",
+      },
+    ],
+  },
+  {
+    id: "reply-threading",
+    title: "Reply Threading",
+    rows: [
+      {
+        code: "REPLY_SECRET_PARAMETER_MISSING",
+        message: "SSM parameter for <domain> was not created",
+        solution: "Run wraps email reply status to diagnose, or retry the init",
+      },
+      {
+        code: "REPLY_REQUIRES_INBOUND",
+        message: "Reply threading requires inbound email infrastructure",
+        solution: "Deploy inbound first: wraps email inbound init",
+      },
+      {
+        code: "REPLY_NO_INBOUND_DOMAINS",
+        message: "No inbound domains configured",
+        solution: "Add one: wraps email inbound add --domain yourapp.com",
+      },
+      {
+        code: "REPLY_INBOUND_DOMAIN_NOT_FOUND",
+        message: "Domain <target> is not configured for inbound email",
+        solution: "Add it to inbound first: wraps email inbound add <target>",
+      },
+      {
+        code: "REPLY_ALREADY_ENABLED",
+        message: "Reply threading is already enabled for <target>",
+        solution:
+          "To rotate the signing secret: wraps email reply rotate --domain <target>",
+      },
+      {
+        code: "REPLY_MISSING_DOMAIN",
+        message: "Specify a domain or use --all",
+        solution: "wraps email reply init --domain yourapp.com, or --all",
+      },
+      {
+        code: "REPLY_ROTATE_MISSING_DOMAIN",
+        message: "--domain is required for rotate",
+        solution: "wraps email reply rotate --domain yourapp.com",
+      },
+      {
+        code: "REPLY_NOT_ENABLED",
+        message: "Reply threading is not enabled",
+        solution:
+          "Enable it first: wraps email reply init --domain yourapp.com",
+      },
+      {
+        code: "REPLY_DOMAIN_NOT_ENABLED",
+        message: "Reply threading is not enabled for <domain>",
+        solution: "Enable it first: wraps email reply init --domain <domain>",
+      },
+      {
+        code: "REPLY_DESTROY_MISSING_DOMAIN",
+        message: "Specify a domain or use --all",
+        solution: "wraps email reply destroy --domain yourapp.com, or --all",
+      },
+      {
+        code: "REPLY_DECODE_MISSING_ADDRESS",
+        message: "Usage: wraps email reply decode <token>@r.mail.yourapp.com",
+        solution: "Provide a signed reply address",
+      },
+      {
+        code: "REPLY_DECODE_MALFORMED_ADDRESS",
+        message: "Address must be in the form <token>@r.mail.example.com",
+        solution: "Pass a full signed reply address",
+      },
+    ],
+  },
+  {
+    id: "sms-errors",
+    title: "SMS",
+    rows: [
+      {
+        code: "SMS_NOT_CONFIGURED",
+        message: "SMS infrastructure not found",
+        solution: "Run wraps sms init",
+      },
+      {
+        code: "SMS_PHONE_NOT_VERIFIED",
+        message: "Phone number registration not complete",
+        solution:
+          "Toll-free numbers require registration (15+ days). Check status in the AWS console",
+      },
+      {
+        code: "SMS_OPTED_OUT",
+        message: "Destination number <phoneNumber> has opted out",
+        solution: "The recipient can opt back in by texting START",
+      },
+      {
+        code: "SMS_SPENDING_LIMIT",
+        message: "AWS SMS spending limit reached",
+        solution: "Request a spending limit increase in the AWS console",
+      },
+      {
+        code: "SMS_INVALID_PHONE_NUMBER",
+        message: "Invalid phone number format: <phoneNumber>",
+        solution: "Use E.164 format, e.g. +14155551234",
+      },
+      {
+        code: "SMS_INVALID_COUNTRIES",
+        message: "Invalid --countries value: <raw>",
+        solution:
+          "Comma-separated ISO 3166-1 alpha-2 codes, e.g. --countries US,CA,GB",
+      },
+      {
+        code: "SMS_INVALID_VOLUME",
+        message: "Invalid --volume value: <raw>",
+        solution: "Positive whole number of messages per month",
+      },
+      {
+        code: "SMS_SIMULATOR_LIMIT",
+        message: "Simulator daily message limit reached (100 messages)",
+        solution: "Upgrade: wraps sms upgrade --phone-type toll-free",
+      },
+    ],
+  },
+  {
+    id: "smtp-errors",
+    title: "SMTP",
+    rows: [
+      {
+        code: "SMTP_CREDENTIALS_NOT_FOUND",
+        message: "SMTP credentials not found",
+        solution: 'wraps email upgrade and select "Enable SMTP credentials"',
+      },
+      {
+        code: "SMTP_REQUIRES_SENDING",
+        message: "SMTP credentials require email sending to be enabled",
+        solution: 'wraps email upgrade and select "Custom configuration"',
+      },
+    ],
+  },
+  {
+    id: "templates-config",
+    title: "Templates & Config",
+    rows: [
+      {
+        code: "WRAPS_CONFIG_NOT_FOUND",
+        message: "wraps/wraps.config.ts not found",
+        solution: "Initialize templates first: wraps email templates init",
+      },
+      {
+        code: "TEMPLATE_COMPILATION_FAILED",
+        message: 'Failed to compile template "<name>": <error>',
+        solution: "Check your template for syntax errors and valid imports",
+      },
+      {
+        code: "TEMPLATE_PUSH_FAILED",
+        message: 'Failed to push template "<name>": <error>',
+        solution: "Check your API key and network connection",
+      },
+      {
+        code: "TEMPLATES_DIR_EXISTS",
+        message: "wraps/ directory already exists",
+        solution:
+          "Use --force to overwrite: wraps email templates init --force",
+      },
+    ],
+  },
+  {
+    id: "cli-usage-automation",
+    title: "CLI Usage & Automation",
+    rows: [
+      {
+        code: "NON_INTERACTIVE_INPUT",
+        message: "<what> is required in non-interactive mode",
+        solution: "Pass the required flag, or run in an interactive terminal",
+      },
+      {
+        code: "MISSING_REQUIRED_FLAG",
+        message: "A required flag is missing in JSON mode",
+        solution: "Provide the flag named in the error message",
+      },
+      {
+        code: "JSON_REQUIRES_FORCE",
+        message:
+          "--force flag is required in JSON mode for destructive operations",
+        solution: "Add --force to the command",
+      },
+      {
+        code: "CONFIRMATION_REQUIRED",
+        message: "Confirmation required to change your SES pricing plan",
+        solution: "Pass --yes to skip the confirmation prompt",
+      },
+      {
+        code: "OPERATION_CANCELLED",
+        message: "Operation cancelled",
+        solution: "Pass --region to skip the interactive prompt",
+      },
+      {
+        code: "INVALID_LOG_SOURCE",
+        message: "Unknown --source value: <value>",
+        solution: "Valid sources: api, web, workers, other, all",
+      },
+      {
+        code: "INVALID_LOG_WINDOW",
+        message: "Invalid --since value: <value>",
+        solution: "Use a positive number followed by s, m, h, or d",
+      },
+      {
+        code: "UNKNOWN_ERROR",
+        message: "An unexpected error occurred",
+        solution:
+          "The thrown value was not a recognized WrapsError. Check the CLI logs for details",
+      },
+    ],
+  },
+];
+
+const sectionMd = (s: ErrorSection) =>
+  [
+    `### ${s.title}`,
+    "",
+    "| Code | Message | Solution |",
+    "|------|---------|----------|",
+    ...s.rows.map((r) => `| ${r.code} | ${r.message} | ${r.solution} |`),
+  ].join("\n");
+
+const CLI_ERRORS_MD = CLI_ERROR_SECTIONS.map(sectionMd).join("\n\n");
+
+const EXIT_CODES_MD = `### Exit Codes
+
+Every command exits \`0\` on success and \`1\` on error, with one exception:
+
+| Command | Exit code | Meaning |
+|---------|-----------|---------|
+| Any command | \`0\` | Success |
+| Any command | \`1\` | Error |
+| \`wraps email check\` | \`0\` | Deliverability grade A or B |
+| \`wraps email check\` | \`1\` | Deliverability grade C or D |
+| \`wraps email check\` | \`2\` | Deliverability grade F |
+| \`wraps email check\` | \`4\` | Check itself failed to run, or grade was unrecognized |
+
+In \`--json\` mode, errors are still written to **stdout** as a JSON envelope (the exit code is what signals failure to scripts):
+
+\`\`\`json
+${jsonErrorEnvelopeCode}
+\`\`\``;
+
 const SECTION_MD = {
-  credentialErrors: `### Credential Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| CREDENTIALS_NOT_FOUND | AWS credentials not found | Run \`wraps aws setup\` or configure AWS CLI |
-| CREDENTIALS_EXPIRED | AWS credentials have expired | Refresh with \`aws sso login\` or update access keys |
-| INVALID_CREDENTIALS | AWS credentials are invalid | Check access key and secret key are correct |`,
-
-  iamErrors: `### IAM & Permission Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| MISSING_PERMISSIONS | Insufficient IAM permissions | Run \`wraps permissions\` to see required permissions |
-| ROLE_NOT_FOUND | IAM role not found | Run \`wraps email init\` to create the role |
-| OIDC_PROVIDER_ERROR | Failed to create OIDC provider | Check if provider already exists in IAM console |`,
-
-  stackErrors: `### Stack & Deployment Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| STACK_NOT_FOUND | Pulumi stack not found | Run \`wraps email init\` to create infrastructure |
-| STACK_CONFLICT | Stack operation in progress | Wait for the current operation to complete |
-| DEPLOYMENT_FAILED | Infrastructure deployment failed | Check AWS CloudFormation console for details |`,
-
-  emailErrors: `### Email Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| DOMAIN_NOT_VERIFIED | Domain not verified in SES | Run \`wraps email domains verify -d yourdomain.com\` |
-| SES_SANDBOX | SES is in sandbox mode | Follow production access guide |
-| SENDING_DISABLED | Email sending not enabled | Run \`wraps email upgrade\` to enable sending |`,
-
-  smsErrors: `### SMS Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| PHONE_NOT_VERIFIED | Phone number not verified | Run \`wraps sms verify-number\` |
-| SMS_SANDBOX | SMS in sandbox mode | Register toll-free number with \`wraps sms register\` |
-| OPT_OUT | Recipient opted out | Remove from opt-out list or use different number |`,
-
-  smtpErrors: `### SMTP Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| SMTP_CREDENTIALS_FAILED | SMTP credentials creation failed | Check IAM permissions for SES |
-| SMTP_CONNECTION_FAILED | Cannot connect to SMTP endpoint | Verify region and port (587 or 465) |`,
-
-  stateErrors: `### State Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| METADATA_NOT_FOUND | Connection metadata not found | Run \`wraps email init\` or \`wraps email restore\` |
-| METADATA_CORRUPT | Connection metadata is corrupt | Delete ~/.wraps/connections/ and re-init |
-| CONFIG_NOT_FOUND | wraps.config.ts not found | Run \`wraps email templates init\` |`,
-
-  templateErrors: `### Template Errors
-
-| Code | Message | Solution |
-|------|---------|----------|
-| TEMPLATE_COMPILE_ERROR | Template compilation failed | Check React component syntax |
-| TEMPLATE_NOT_FOUND | SES template not found | Run \`wraps email templates push\` |`,
-
   sdkEmailErrors: `## SDK Error Classes — Email SDK (@wraps.dev/email)
 
 - **SESError** — AWS SES API error. Properties: \`code\` (string), \`requestId\` (string), \`retryable\` (boolean). Common codes: MessageRejected, Throttling, AccountSuspended, MailFromDomainNotVerified.
@@ -158,21 +679,9 @@ Complete reference for all CLI error codes and SDK error classes, with solutions
 
 ## CLI Error Codes
 
-${SECTION_MD.credentialErrors}
+${CLI_ERRORS_MD}
 
-${SECTION_MD.iamErrors}
-
-${SECTION_MD.stackErrors}
-
-${SECTION_MD.emailErrors}
-
-${SECTION_MD.smsErrors}
-
-${SECTION_MD.smtpErrors}
-
-${SECTION_MD.stateErrors}
-
-${SECTION_MD.templateErrors}
+${EXIT_CODES_MD}
 
 ${SECTION_MD.sdkEmailErrors}
 
@@ -260,244 +769,169 @@ export default function PageContent() {
         <SectionHeading
           className="mb-6"
           id="cli-error-codes"
-          markdown={`## CLI Error Codes\n\n${SECTION_MD.credentialErrors}\n\n${SECTION_MD.iamErrors}\n\n${SECTION_MD.stackErrors}\n\n${SECTION_MD.emailErrors}\n\n${SECTION_MD.smsErrors}\n\n${SECTION_MD.smtpErrors}\n\n${SECTION_MD.stateErrors}\n\n${SECTION_MD.templateErrors}`}
+          markdown={`## CLI Error Codes\n\n${CLI_ERRORS_MD}`}
           title="CLI Error Codes"
         />
 
-        {/* Credential Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="credential-errors">
-            Credential Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "CREDENTIALS_NOT_FOUND",
-                    message: "AWS credentials not found",
-                    solution: "Run wraps aws setup or configure AWS CLI",
-                  },
-                  {
-                    code: "CREDENTIALS_EXPIRED",
-                    message: "AWS credentials have expired",
-                    solution:
-                      "Refresh with aws sso login or update access keys",
-                  },
-                  {
-                    code: "INVALID_CREDENTIALS",
-                    message: "AWS credentials are invalid",
-                    solution: "Check access key and secret key are correct",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        {CLI_ERROR_SECTIONS.map((section) => (
+          <div className="mb-8" key={section.id}>
+            <h3 className="mb-3 font-medium text-lg" id={section.id}>
+              {section.title}
+            </h3>
+            <Card>
+              <CardContent className="p-0">
+                <ErrorTable rows={section.rows} />
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </section>
 
-        {/* IAM & Permission Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="iam-errors">
-            IAM & Permission Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "MISSING_PERMISSIONS",
-                    message: "Insufficient IAM permissions",
-                    solution:
-                      "Run wraps permissions to see required permissions",
-                  },
-                  {
-                    code: "ROLE_NOT_FOUND",
-                    message: "IAM role not found",
-                    solution: "Run wraps email init to create the role",
-                  },
-                  {
-                    code: "OIDC_PROVIDER_ERROR",
-                    message: "Failed to create OIDC provider",
-                    solution: "Check if provider already exists in IAM console",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Stack & Deployment Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="stack-errors">
-            Stack & Deployment Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "STACK_NOT_FOUND",
-                    message: "Pulumi stack not found",
-                    solution: "Run wraps email init to create infrastructure",
-                  },
-                  {
-                    code: "STACK_CONFLICT",
-                    message: "Stack operation in progress",
-                    solution: "Wait for the current operation to complete",
-                  },
-                  {
-                    code: "DEPLOYMENT_FAILED",
-                    message: "Infrastructure deployment failed",
-                    solution: "Check AWS CloudFormation console for details",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Email Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="email-errors">
-            Email Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "DOMAIN_NOT_VERIFIED",
-                    message: "Domain not verified in SES",
-                    solution:
-                      "Run wraps email domains verify -d yourdomain.com",
-                  },
-                  {
-                    code: "SES_SANDBOX",
-                    message: "SES is in sandbox mode",
-                    solution: "Follow production access guide",
-                  },
-                  {
-                    code: "SENDING_DISABLED",
-                    message: "Email sending not enabled",
-                    solution: "Run wraps email upgrade to enable sending",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* SMS Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="sms-errors">
-            SMS Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "PHONE_NOT_VERIFIED",
-                    message: "Phone number not verified",
-                    solution: "Run wraps sms verify-number",
-                  },
-                  {
-                    code: "SMS_SANDBOX",
-                    message: "SMS in sandbox mode",
-                    solution:
-                      "Register toll-free number with wraps sms register",
-                  },
-                  {
-                    code: "OPT_OUT",
-                    message: "Recipient opted out",
-                    solution:
-                      "Remove from opt-out list or use different number",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* SMTP Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="smtp-errors">
-            SMTP Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "SMTP_CREDENTIALS_FAILED",
-                    message: "SMTP credentials creation failed",
-                    solution: "Check IAM permissions for SES",
-                  },
-                  {
-                    code: "SMTP_CONNECTION_FAILED",
-                    message: "Cannot connect to SMTP endpoint",
-                    solution: "Verify region and port (587 or 465)",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* State Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="state-errors">
-            State Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "METADATA_NOT_FOUND",
-                    message: "Connection metadata not found",
-                    solution: "Run wraps email init or wraps email restore",
-                  },
-                  {
-                    code: "METADATA_CORRUPT",
-                    message: "Connection metadata is corrupt",
-                    solution: "Delete ~/.wraps/connections/ and re-init",
-                  },
-                  {
-                    code: "CONFIG_NOT_FOUND",
-                    message: "wraps.config.ts not found",
-                    solution: "Run wraps email templates init",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Template Errors */}
-        <div className="mb-8">
-          <h3 className="mb-3 font-medium text-lg" id="template-errors">
-            Template Errors
-          </h3>
-          <Card>
-            <CardContent className="p-0">
-              <ErrorTable
-                rows={[
-                  {
-                    code: "TEMPLATE_COMPILE_ERROR",
-                    message: "Template compilation failed",
-                    solution: "Check React component syntax",
-                  },
-                  {
-                    code: "TEMPLATE_NOT_FOUND",
-                    message: "SES template not found",
-                    solution: "Run wraps email templates push",
-                  },
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </div>
+      {/* Exit Codes */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-6"
+          id="exit-codes"
+          markdown={EXIT_CODES_MD}
+          title="Exit Codes"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Every command exits{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">0</code> on success
+          and <code className="rounded bg-muted px-1.5 py-0.5">1</code> on
+          error, with one exception.
+        </p>
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium">Command</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Exit code
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">Meaning</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-b">
+                    <td className="px-4 py-2">Any command</td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        0
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">Success</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-2">Any command</td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        1
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">Error</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        wraps email check
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        0
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">Deliverability grade A or B</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        wraps email check
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        1
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">Deliverability grade C or D</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        wraps email check
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        2
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">Deliverability grade F</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        wraps email check
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        4
+                      </code>
+                    </td>
+                    <td className="px-4 py-2">
+                      Check itself failed to run, or grade was unrecognized
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        <p className="mt-4 text-muted-foreground text-sm">
+          In <code className="rounded bg-muted px-1.5 py-0.5">--json</code>{" "}
+          mode, errors are still written to <strong>stdout</strong> as a JSON
+          envelope — the exit code is what signals failure to scripts:
+        </p>
+        <CodeBlock
+          className="mt-3 h-auto"
+          data={[
+            {
+              language: "json",
+              filename: "error-envelope.json",
+              code: jsonErrorEnvelopeCode,
+            },
+          ]}
+          defaultValue="json"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
       </section>
 
       {/* SDK Error Classes */}
