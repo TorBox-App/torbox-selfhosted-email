@@ -28,6 +28,18 @@ export type ServiceIAMRoleConfig = {
 };
 
 /**
+ * Derive the IAM role name for a service (`"email"` -> `"wraps-email-role"`).
+ * Extracted from `createServiceIAMRole` as its own pure function so it's the
+ * same code path the deploy uses but callable without AWS credentials or
+ * constructing any Pulumi resource — see the cli/pulumi parity test in
+ * `infrastructure/resources/__tests__/cli-pulumi-parity.test.ts`, which
+ * asserts `deriveServiceRoleName("email") === EMAIL_ROLE_NAME` (plan 183).
+ */
+export function deriveServiceRoleName(serviceName: string): string {
+  return `wraps-${serviceName}-role`;
+}
+
+/**
  * Create a service IAM role with assume-role policy, existence check, and attached policy.
  *
  * Shared across email, SMS, and CDN stacks to eliminate duplicated boilerplate.
@@ -126,7 +138,7 @@ export async function createServiceIAMRole(
   }
 
   // Check if role already exists
-  const roleName = `wraps-${config.serviceName}-role`;
+  const roleName = deriveServiceRoleName(config.serviceName);
   const exists = await roleExists(roleName);
 
   const tags: Record<string, string> = {

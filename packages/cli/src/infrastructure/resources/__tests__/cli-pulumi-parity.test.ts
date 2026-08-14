@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ALL_EVENT_TYPES } from "@wraps/core";
+import { ALL_EVENT_TYPES, EMAIL_ROLE_NAME } from "@wraps/core";
 import { resolveMatchingEventTypes as pulumiResolveMatchingEventTypes } from "@wraps.dev/pulumi";
 import { describe, expect, it } from "vitest";
+import { deriveServiceRoleName } from "../../shared/iam.js";
 import { resolveMatchingEventTypes as cliResolveMatchingEventTypes } from "../ses.js";
 
 /**
@@ -57,6 +58,21 @@ describe("resolveMatchingEventTypes: cli and pulumi agree on the default-set der
     expect(pulumiResolveMatchingEventTypes(undefined)).toEqual(ALL_EVENT_TYPES);
     expect(cliResolveMatchingEventTypes([])).toEqual(ALL_EVENT_TYPES);
     expect(pulumiResolveMatchingEventTypes([])).toEqual(ALL_EVENT_TYPES);
+  });
+});
+
+describe("wraps-email-role name: cli's template agrees with pulumi's constant", () => {
+  // pulumi/resources/iam.ts imports EMAIL_ROLE_NAME and uses it directly as
+  // the literal role name. The CLI produces the same string by template
+  // (`wraps-${serviceName}-role`, shared across email/sms/cdn in
+  // createServiceIAMRole) rather than importing the constant, because
+  // rewriting that shared templating for one caller is out of scope for a
+  // behavior-preserving extraction. deriveServiceRoleName is the same
+  // one-line derivation createServiceIAMRole calls internally — not a
+  // reimplementation of it — so this proves the deploy path, not just that
+  // the string "email" concatenates the way you'd expect.
+  it("deriveServiceRoleName('email') equals EMAIL_ROLE_NAME", () => {
+    expect(deriveServiceRoleName("email")).toBe(EMAIL_ROLE_NAME);
   });
 });
 

@@ -1,5 +1,9 @@
 import * as aws from "@pulumi/aws";
-import { EVENTS_DLQ_NAME, EVENTS_QUEUE_NAME } from "@wraps/core";
+import {
+  EVENTBRIDGE_RULE_NAME,
+  EVENTS_DLQ_NAME,
+  EVENTS_QUEUE_NAME,
+} from "@wraps/core";
 import { sqsQueueExists } from "../shared/resource-checks.js";
 
 /**
@@ -68,7 +72,7 @@ export async function createSQSResources(
   // eventbridge.ts, so we build its ARN from the well-known rule name instead
   // of depending on the rule resource (which would create an SQS -> EventBridge
   // -> SQS dependency cycle, since SQS resources are provisioned first).
-  const ruleArn = `arn:aws:events:${config.region}:${config.accountId}:rule/wraps-email-events-to-sqs`;
+  const ruleArn = `arn:aws:events:${config.region}:${config.accountId}:rule/${EVENTBRIDGE_RULE_NAME}`;
   new aws.sqs.QueuePolicy("wraps-email-events-dlq-policy", {
     queueUrl: dlq.url,
     policy: dlq.arn.apply((dlqArn) =>
