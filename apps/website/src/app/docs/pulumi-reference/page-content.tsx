@@ -419,6 +419,32 @@ After deploying, use the @wraps.dev/email SDK to send emails:
 \`\`\`typescript
 ${usingSdkCode}
 \`\`\``,
+
+  cliGaps: `## Differences from \`npx @wraps.dev/cli email init\`
+
+This library and the CLI both deploy the same email stack, but they are two independent implementations, not one codebase with two entry points. They are not identical. This section states the differences plainly, not as a case for either one.
+
+### IAM permissions on the deployed role (wraps-email-role)
+
+| Grant | CLI (email init) | This library |
+|---|---|---|
+| Suppression list management (ListSuppressedDestinations, GetSuppressedDestination, PutSuppressedDestination, DeleteSuppressedDestination) | Yes | No |
+| ses:GetSendQuota | No | Yes |
+| cloudwatch:ListMetrics | No | Yes |
+
+Sending, DynamoDB history access, EventBridge, SQS, and Mail Manager archive access are granted identically by both.
+
+### No replay archive, no delivery-failure alarm
+
+The CLI path creates a 30-day EventBridge archive (wraps-email-events-archive) of every raw SES event, so a broken pipeline can be repaired and replayed instead of losing events, plus a CloudWatch alarm on EventBridge delivery failures. This library creates neither. The [BYOC page](/byoc) describes the event pipeline's replay path. That description is accurate for the CLI, not for this library.
+
+### No inbound email
+
+The CLI supports receiving email (wraps email inbound init): an S3 bucket, a receiving Lambda, and an EventBridge rule for inbound mail. This library has no equivalent resources at all.
+
+### What CI checks, and what it does not
+
+Nothing in this monorepo depends on this package, so no build or test run here exercises it against the CLI's actual behavior. A small set of guards keeps the two from drifting on the values that are supposed to be identical: physical resource names, the default SES event-type set, and the EventBridge rule's event pattern. Those guards do not cover IAM statement shape or feature coverage. The differences on this page are not something a test enforces.`,
 };
 
 const FULL_PAGE_MD = `# @wraps.dev/pulumi Reference
@@ -448,6 +474,8 @@ ${SECTION_MD.githubActions}
 ${SECTION_MD.envVars}
 
 ${SECTION_MD.usingSdk}
+
+${SECTION_MD.cliGaps}
 
 ## Resources
 
@@ -1335,6 +1363,141 @@ export default function PulumiReferencePageContent() {
             )}
           </CodeBlockBody>
         </CodeBlock>
+      </section>
+
+      {/* Differences from the CLI */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="cli-differences"
+          markdown={SECTION_MD.cliGaps}
+          title="Differences from the CLI"
+        />
+        <p className="mb-6 text-muted-foreground">
+          This library and{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            npx @wraps.dev/cli email init
+          </code>{" "}
+          both deploy the same email stack, but they are two independent
+          implementations, not one codebase with two entry points. They are not
+          identical. This section states the differences plainly, not as a case
+          for either one.
+        </p>
+
+        <h3 className="mb-3 font-medium text-lg">
+          IAM permissions on the deployed role (
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps-email-role
+          </code>
+          )
+        </h3>
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Grant</th>
+                  <th className="pb-2 text-left">CLI (email init)</th>
+                  <th className="pb-2 text-left">This library</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    Suppression list management (
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      ListSuppressedDestinations
+                    </code>
+                    ,{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      GetSuppressedDestination
+                    </code>
+                    ,{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      PutSuppressedDestination
+                    </code>
+                    ,{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      DeleteSuppressedDestination
+                    </code>
+                    )
+                  </td>
+                  <td className="py-2">Yes</td>
+                  <td className="py-2">No</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      ses:GetSendQuota
+                    </code>
+                  </td>
+                  <td className="py-2">No</td>
+                  <td className="py-2">Yes</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      cloudwatch:ListMetrics
+                    </code>
+                  </td>
+                  <td className="py-2">No</td>
+                  <td className="py-2">Yes</td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+        <p className="mb-6 text-muted-foreground text-sm">
+          Sending, DynamoDB history access, EventBridge, SQS, and Mail Manager
+          archive access are granted identically by both.
+        </p>
+
+        <div className="mb-6 rounded-lg border-orange-500 border-l-4 bg-orange-500/10 p-4">
+          <h3 className="mb-2 font-medium">
+            No replay archive, no delivery-failure alarm
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            The CLI path creates a 30-day EventBridge archive (
+            <code className="rounded bg-muted px-1 py-0.5">
+              wraps-email-events-archive
+            </code>
+            ) of every raw SES event, so a broken pipeline can be repaired and
+            replayed instead of losing events, plus a CloudWatch alarm on
+            EventBridge delivery failures. This library creates neither. The{" "}
+            <Link className="text-orange-500 underline" href="/byoc">
+              BYOC page
+            </Link>{" "}
+            describes the event pipeline&apos;s replay path. That description is
+            accurate for the CLI, not for this library.
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="mb-2 font-medium">No inbound email</h3>
+          <p className="text-muted-foreground text-sm">
+            The CLI supports receiving email (
+            <code className="rounded bg-muted px-1 py-0.5">
+              wraps email inbound init
+            </code>
+            ): an S3 bucket, a receiving Lambda, and an EventBridge rule for
+            inbound mail. This library has no equivalent resources at all.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="mb-2 font-medium">
+            What CI checks, and what it does not
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            Nothing in this monorepo depends on this package, so no build or
+            test run here exercises it against the CLI&apos;s actual behavior. A
+            small set of guards keeps the two from drifting on the values that
+            are supposed to be identical: physical resource names, the default
+            SES event-type set, and the EventBridge rule&apos;s event pattern.
+            Those guards do not cover IAM statement shape or feature coverage.
+            The differences on this page are not something a test enforces.
+          </p>
+        </div>
       </section>
 
       {/* Next Steps */}
