@@ -1214,11 +1214,69 @@ export default function InfrastructureEventsPageContent() {
           full event, IP included, still lands in your own AWS account. User
           agents are personal data in the EU and UK, so drop <code>OPEN</code>{" "}
           and <code>CLICK</code> from your event types if you don&apos;t want
-          engagement tracked at all. See{" "}
+          engagement tracked at all &mdash; SES stops emitting those events
+          entirely, so they never reach your own EventBridge bus or DynamoDB
+          history either. See{" "}
           <Link className="text-primary hover:underline" href="/privacy">
             Section 1.5 of our privacy policy
           </Link>
           .
+        </p>
+        <CodeBlock
+          className="mb-3 h-auto"
+          data={[
+            {
+              language: "ts",
+              filename: "wraps.config.ts",
+              code: `eventTracking: {
+  enabled: true,
+  // Only these event types reach your EventBridge bus and DynamoDB
+  // history. BOUNCE and COMPLAINT are required — dropping either
+  // leaves your pipeline blind to bounces/complaints, so bad
+  // addresses keep getting sent to and your reputation degrades.
+  events: [
+    "SEND",
+    "DELIVERY",
+    "BOUNCE",
+    "COMPLAINT",
+    "REJECT",
+    "RENDERING_FAILURE",
+    "DELIVERY_DELAY",
+    "SUBSCRIPTION",
+    // "OPEN" and "CLICK" omitted — no engagement tracking
+  ],
+},`,
+            },
+          ]}
+          defaultValue="ts"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <p className="mb-3 text-muted-foreground text-sm">
+          <code>BOUNCE</code> and <code>COMPLAINT</code> can&apos;t be dropped
+          &mdash; deploy rejects a config that omits either.
         </p>
         <div className="mb-6 space-y-3">
           <ExpandableSection title="Open &mdash; Recipient opened the email">

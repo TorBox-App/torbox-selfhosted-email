@@ -1,6 +1,74 @@
 import * as aws from "@pulumi/aws";
 import type { SESEventType } from "../../types/index.js";
 import { domainToConfigSetName } from "../../utils/email/config-set-slug.js";
+import { errors } from "../../utils/shared/errors.js";
+
+/**
+ * All SES event types. This is the default `matchingEventTypes` set for the
+ * EventBridge event destination when `eventTracking.events` is not configured
+ * (or configured as an empty array) — must stay byte-identical to what SES
+ * has always received so an unset field never silently reduces what lands in
+ * the customer's own event bus/DynamoDB history.
+ */
+export const ALL_EVENT_TYPES: SESEventType[] = [
+  "SEND",
+  "DELIVERY",
+  "OPEN",
+  "CLICK",
+  "BOUNCE",
+  "COMPLAINT",
+  "REJECT",
+  "RENDERING_FAILURE",
+  "DELIVERY_DELAY",
+  "SUBSCRIPTION",
+];
+
+/**
+ * Event types that gate suppression visibility. BOUNCE and COMPLAINT are
+ * required in `matchingEventTypes` — dropping either means the customer's
+ * pipeline never learns about bounces/complaints (a `Suppressed` webhook
+ * event arrives as a `Bounce` with `bounceSubType === "Suppressed"`, see
+ * apps/api/src/routes/webhooks.ts), so bad addresses keep getting sent to
+ * and domain reputation degrades. SUBSCRIPTION is unrelated — it tracks
+ * recipient preference-center changes, not the suppression list — so it is
+ * deliberately not required here.
+ */
+const REQUIRED_SUPPRESSION_EVENT_TYPES: SESEventType[] = [
+  "BOUNCE",
+  "COMPLAINT",
+];
+
+/**
+ * Resolve the `matchingEventTypes` for the SES EventBridge event destination
+ * from `eventTracking.events`. An empty array means "all", matching
+ * `packages/pulumi`'s `eventTypes.length > 0 ? eventTypes : ALL_EVENT_TYPES`
+ * — not "none", which would silently kill the customer's entire event
+ * pipeline.
+ */
+export function resolveMatchingEventTypes(
+  eventTypes?: SESEventType[]
+): SESEventType[] {
+  return eventTypes && eventTypes.length > 0 ? eventTypes : ALL_EVENT_TYPES;
+}
+
+/**
+ * Reject an explicit event type selection that drops BOUNCE or COMPLAINT.
+ * Does nothing when `eventTypes` is undefined or empty — both mean "all"
+ * and already include the required types.
+ */
+export function validateEventTypes(eventTypes?: SESEventType[]): void {
+  if (!eventTypes || eventTypes.length === 0) {
+    return;
+  }
+
+  const missing = REQUIRED_SUPPRESSION_EVENT_TYPES.filter(
+    (required) => !eventTypes.includes(required)
+  );
+
+  if (missing.length > 0) {
+    throw errors.eventTypesMissingSuppressionEvents(missing);
+  }
+}
 
 /**
  * SES resources configuration
@@ -197,18 +265,8 @@ export async function createSESResources(
   if (config.eventTrackingEnabled) {
     const eventDestName = "wraps-email-eventbridge";
 
-    const matchingEventTypes: string[] = [
-      "SEND",
-      "DELIVERY",
-      "OPEN",
-      "CLICK",
-      "BOUNCE",
-      "COMPLAINT",
-      "REJECT",
-      "RENDERING_FAILURE",
-      "DELIVERY_DELAY",
-      "SUBSCRIPTION",
-    ];
+    validateEventTypes(config.eventTypes);
+    const matchingEventTypes = resolveMatchingEventTypes(config.eventTypes);
 
     new aws.sesv2.ConfigurationSetEventDestination(
       "wraps-email-all-events",

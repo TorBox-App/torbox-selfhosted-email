@@ -936,6 +936,20 @@ export const errors = {
       "https://docs.aws.amazon.com/ses/latest/dg/using-configuration-sets.html"
     ),
 
+  // eventTracking.events filters which SES event types reach the customer's
+  // own EventBridge bus. BOUNCE and COMPLAINT feed the suppression-tracking
+  // path (a Suppressed webhook event arrives as a Bounce with
+  // bounceSubType === "Suppressed") — dropping either leaves the account
+  // blind to bounces/complaints, so bad addresses keep getting sent to and
+  // domain reputation degrades.
+  eventTypesMissingSuppressionEvents: (missing: string[]) =>
+    new WrapsError(
+      `eventTracking.events is missing required event type(s): ${missing.join(", ")}`,
+      "EVENT_TYPES_MISSING_SUPPRESSION_EVENTS",
+      'BOUNCE and COMPLAINT must always be included in eventTracking.events. Without them your pipeline never learns about bounces or complaints, so bad addresses keep getting sent to and your domain reputation degrades.\n\nTo stop OPEN/CLICK tracking without losing suppression visibility, drop only those types:\n  eventTracking: { events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT", "REJECT", "RENDERING_FAILURE", "DELIVERY_DELAY", "SUBSCRIPTION"] }',
+      "https://wraps.dev/docs/infrastructure/events"
+    ),
+
   // Generic AWS error fallbacks — used by awsErrorToWrapsError when no specific
   // mapping exists. These NEVER claim credentials are missing.
   awsThrottled: (action?: string) =>
