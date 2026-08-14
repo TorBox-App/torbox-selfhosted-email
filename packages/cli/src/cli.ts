@@ -107,7 +107,7 @@ import {
   setupTabCompletion,
 } from "./utils/shared/completion.js";
 import { handleCLIError } from "./utils/shared/errors.js";
-import { setJsonMode } from "./utils/shared/json-output.js";
+import { isJsonMode, setJsonMode } from "./utils/shared/json-output.js";
 
 // Check Node.js version (requires 20+)
 const [nodeMajorVersion] = process.versions.node.split(".").map(Number);
@@ -397,7 +397,7 @@ if (!primaryCommand) {
     const telemetry = getTelemetryClient();
 
     // Show first-run telemetry notification
-    if (telemetry.shouldShowNotification()) {
+    if (!isJsonMode() && telemetry.shouldShowNotification()) {
       console.log();
       clack.log.info(pc.bold("Anonymous Telemetry"));
       console.log(
@@ -569,7 +569,7 @@ async function run() {
   const telemetry = getTelemetryClient();
 
   // Show first-run telemetry notification
-  if (telemetry.shouldShowNotification()) {
+  if (!isJsonMode() && telemetry.shouldShowNotification()) {
     console.log();
     clack.log.info(pc.bold("Anonymous Telemetry"));
     console.log(

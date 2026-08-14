@@ -141,6 +141,16 @@ export async function init(options: InitOptions): Promise<void> {
     region
   );
   if (existingConnection) {
+    if (isJsonMode()) {
+      jsonSuccess("email.init", {
+        alreadyDeployed: true,
+        accountId: identity.accountId,
+        region,
+        createdAt: existingConnection.timestamp,
+      });
+      process.exit(0);
+    }
+
     clack.log.warn(
       `Connection already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
