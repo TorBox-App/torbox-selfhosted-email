@@ -431,13 +431,12 @@ The CLI offers four presets that control which AWS resources are created:
 - Everything in Starter
 - EventBridge → SQS → Lambda pipeline
 - DynamoDB table with 90-day TTL
-- Tracks: SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT
+- Tracks all 10 registered SES event types: SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT, REJECT, RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION
 
 ### Enterprise (~$50-100/mo)
 - Everything in Production
 - Dedicated IP address ($24.95/mo from AWS)
-- 1-year DynamoDB TTL
-- All 10 SES event types (adds REJECT, RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION)
+- 1-year DynamoDB TTL (Production's is 90 days; event-type coverage is the same as Production)
 
 ### Custom
 Select individual features. Useful if you want event storage without a dedicated IP, or specific event types only.
@@ -687,8 +686,6 @@ packages/cli/
 │   │       ├── smtp-credentials.ts
 │   │       └── alerting.ts      # CloudWatch alerting
 │   ├── console/                  # Web dashboard (React)
-│   ├── lambda/                   # Lambda function source
-│   │   └── event-processor/     # SQS → DynamoDB processor
 │   ├── utils/                    # Utilities
 │   │   ├── shared/              # Shared utilities
 │   │   │   ├── aws.ts           # AWS SDK helpers
@@ -707,11 +704,16 @@ packages/cli/
 │       ├── shared.ts            # Shared types
 │       ├── email.ts             # Email-specific types
 │       └── sms.ts               # SMS-specific types
-├── lambda/                       # Lambda source (bundled to dist)
 └── dist/                         # Build output
     ├── console/                  # Built dashboard
     └── lambda/                   # Lambda source for deployment
 ```
+
+Lambda function source (`event-processor`, `sms-event-processor`, `inbound-processor`,
+`agent-enforcer`) lives in the sibling `packages/core/lambda/` package, not in this one.
+`scripts/build-lambda.ts` copies the built output into `dist/lambda/` above during
+`pnpm build`; `infrastructure/resources/lambda.ts` reads from there (or from `packages/core/lambda/`
+directly in local dev — see `getLambdaCode()`).
 
 ## AWS Permissions
 

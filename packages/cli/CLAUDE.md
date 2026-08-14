@@ -81,6 +81,39 @@ Inline Pulumi programs via `pulumi.automation.LocalWorkspace`:
 - Tag all resources: `ManagedBy: 'wraps-cli'`
 - Lambda functions bundled on-the-fly with esbuild
 
+## Two IAM Roles: Customer Runtime vs. Wraps Console Access
+
+Two IAM roles are easy to conflate but serve opposite trust directions. This
+absence in the docs is what let an earlier design spec name the wrong role
+for the platform-webhook trust boundary.
+
+| | `wraps-email-role` | `wraps-console-access-role` |
+|---|---|---|
+| Created by | `wraps email init` (also `sms`/`cdn` equivalents: `wraps-sms-role`, `wraps-cdn-role`) | `wraps platform connect` |
+| Source | `createServiceIAMRole()` (`src/infrastructure/shared/iam.ts:129`), called from `resources/iam.ts` via `email-stack.ts` | `commands/platform/connect.ts`, using `CONSOLE_ACCESS_ROLE_NAME` from `@wraps/core` (`packages/core/src/constants.ts:88`) |
+| Trust principal | The customer's own compute: Vercel via OIDC, or an AWS-native instance/execution role | The Wraps Platform account (`905130073023`), gated by an `sts:ExternalId` condition |
+| Who assumes it | The customer's own app/SDK, to call SES/CloudWatch directly | Wraps' backend, cross-account, to power the hosted dashboard |
+| Purpose | Runtime sending + dashboard-adjacent read access from the customer's own infrastructure | Lets `app.wraps.dev` read/manage the customer's Wraps resources without the customer ever sharing credentials |
+
+Self-hosted control planes use a third, parallel role (`wraps-selfhost-console-access-role`,
+trusting the customer's own account instead of Wraps') — see the Selfhost Surface
+table below for that split.
+
+## Wraps Receives the Full SES Event Stream, Not a Filtered One
+
+Once `platform connect` has run, the webhook target it adds delivers **every**
+SES event the customer's configuration set emits — not just bounces/complaints.
+The EventBridge rule (`wraps-email-events-to-sqs`, `resources/eventbridge.ts`)
+matches `{ source: ["aws.ses"] }` with no `detail-type` filter, and the webhook
+target added by `platform connect` sits on that same rule alongside the
+customer's own SQS target — it does not narrow what SES publishes.
+
+What SES publishes is controlled separately, by `matchingEventTypes` on the SES
+configuration set (`resources/ses.ts`, `ALL_EVENT_TYPES` constant — all ten
+types by default, customer-configurable via `eventTracking.events`). So "Wraps
+only handles bounces and complaints" is wrong on both counts: SES emits all ten
+types by default, and none of them are filtered out before reaching Wraps.
+
 ## Selfhost Surface
 
 Customers can run the control plane in their own AWS account. There is exactly one way to deploy it: `pnpm selfhost:deploy` from a fork, driven by `infra/selfhost.config.ts` + `scripts/selfhost/*` (SST). It deploys the full platform — API Lambda, dashboard on CloudFront, DynamoDB rate limit, SQS batch/workflow queues + DLQ consumers, scheduler group, alarms.
