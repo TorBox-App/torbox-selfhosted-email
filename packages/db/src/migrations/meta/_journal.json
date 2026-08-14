@@ -540,6 +540,13 @@
       "when": 1785733253395,
       "tag": "0076_cheerful_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1786719234033,
+      "tag": "0077_colossal_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

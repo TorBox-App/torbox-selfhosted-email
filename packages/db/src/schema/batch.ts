@@ -341,11 +341,11 @@ export const messageSend = pgTable(
 
     // ═══════════════════════════════════════════════════════════════════════
     // ENGAGEMENT METADATA (from SES event callbacks)
+    // User agent only — used to filter bot opens out of open-rate metrics.
+    // SES also reports the recipient's IP; we deliberately don't store it.
     // ═══════════════════════════════════════════════════════════════════════
     openUserAgent: text("open_user_agent"),
-    openIpAddress: text("open_ip_address"),
     clickUserAgent: text("click_user_agent"),
-    clickIpAddress: text("click_ip_address"),
 
     // ═══════════════════════════════════════════════════════════════════════
     // CLAIM TRACKING (idempotency — set on claim-insert and re-claim)

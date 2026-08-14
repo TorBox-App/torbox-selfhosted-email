@@ -6,11 +6,11 @@ import { LandingNavbar } from "@/app/landing/components/navbar";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, and the contact and campaign data we process to run platform features.",
+    "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, recipient engagement data from open and click events, and the contact and campaign data we process to run platform features.",
   openGraph: {
     title: "Privacy Policy | Wraps",
     description:
-      "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, and the contact and campaign data we process to run platform features.",
+      "Learn how Wraps collects, uses, and protects your data, including CLI telemetry, dashboard analytics, recipient engagement data from open and click events, and the contact and campaign data we process to run platform features.",
     type: "website",
     url: "https://wraps.dev/privacy",
   },
@@ -31,7 +31,7 @@ export default function PrivacyPolicy() {
         <article className="prose prose-gray dark:prose-invert max-w-none">
           <h1>Privacy Policy</h1>
           <p className="text-muted-foreground">
-            <strong>Last Updated:</strong> June 16, 2026
+            <strong>Last Updated:</strong> August 14, 2026
           </p>
 
           <p className="lead">
@@ -129,6 +129,10 @@ export default function PrivacyPolicy() {
           <ul>
             <li>Email content or template body text</li>
             <li>Recipient email addresses</li>
+            <li>
+              Recipient user agents from open and click events (see Section 1.5;
+              recipient IP addresses are never stored anywhere)
+            </li>
             <li>AWS credentials or secret keys</li>
             <li>Session recordings or screen captures</li>
             <li>Keystrokes or form field contents (except authentication)</li>
@@ -136,7 +140,7 @@ export default function PrivacyPolicy() {
           <p className="text-muted-foreground text-sm">
             This list describes our analytics tooling only. Contact and campaign
             data you create in the dashboard is processed separately to run
-            platform features &mdash; see Section 1.4.
+            platform features &mdash; see Sections 1.4 and 1.5.
           </p>
 
           <h3>1.3 Infrastructure (Your AWS Account)</h3>
@@ -182,8 +186,9 @@ export default function PrivacyPolicy() {
             <li>Email templates and campaign content (subject and body)</li>
             <li>
               A send ledger: recipient address, the merge variables used to
-              personalize each message, and delivery and engagement status
-              (sent, delivered, opened, clicked, bounced, complained)
+              personalize each message, delivery and engagement status (sent,
+              delivered, opened, clicked, bounced, complained), and the
+              engagement metadata described in Section 1.5
             </li>
           </ul>
           <p>
@@ -196,6 +201,71 @@ export default function PrivacyPolicy() {
               privacy@wraps.dev
             </a>
             .
+          </p>
+
+          <h3>1.5 Recipient Engagement Data (Open and Click Events)</h3>
+          <p>
+            If you enable open or click tracking on your SES configuration set,
+            AWS records an event each time one of your recipients opens a
+            message or clicks a tracked link. AWS populates those events with
+            two fields about the recipient: an <strong>IP address</strong> and a{" "}
+            <strong>user agent</strong> string.
+          </p>
+          <p>
+            <strong>We store the user agent. We discard the IP address.</strong>{" "}
+            These events are emitted onto the EventBridge bus in <em>your</em>{" "}
+            AWS account, and the rule Wraps deploys forwards them to the Wraps
+            API. When we process one, we record the user agent on the matching
+            row of the send ledger described in Section 1.4 and drop the IP
+            address without storing it. There is no column for it in our
+            database. That ledger lives in our managed PostgreSQL database
+            (Neon) in the United States and is scoped to your organization.
+          </p>
+          <p>
+            <strong>What we use the user agent for.</strong> One purpose:
+            identifying automated opens (privacy proxies, security scanners,
+            link checkers) so they can be excluded from your open-rate metrics.
+            Otherwise your open rates would be inflated by machines. We do not
+            use it to geolocate, fingerprint, profile, score, or re-identify
+            your recipients, and we do not combine recipient data across
+            customers.
+          </p>
+          <p>
+            <strong>Controller and lawful basis.</strong> As with the rest of
+            Section 1.4, you are the data controller for your recipients and
+            Wraps is your processor. Under GDPR, ePrivacy, and similar regimes,
+            user agents are personal data, and open and click tracking generally
+            requires a lawful basis and disclosure to your recipients. Deciding
+            whether to enable tracking, establishing that basis, and telling
+            your recipients about it in your own privacy notice are your
+            responsibility, not ours. Note that AWS SES independently logs open
+            and click events, including the recipient IP address, in your own
+            AWS account &mdash; that copy is yours to govern.
+          </p>
+          <p>
+            <strong>How to turn it off.</strong> Open and click tracking is
+            controlled by the event types on your SES configuration set, which
+            lives in your AWS account. Omit <code>OPEN</code> and{" "}
+            <code>CLICK</code> from your event configuration and no engagement
+            events are generated at all, so nothing about your recipients&apos;
+            reading behavior reaches Wraps. Your delivery, bounce, and complaint
+            reporting is unaffected; open and click rates simply stop being
+            reported. See the{" "}
+            <Link
+              className="text-primary hover:underline"
+              href="/docs/infrastructure/events"
+            >
+              EventBridge events documentation
+            </Link>{" "}
+            for the full list of event types and how to change them.
+          </p>
+          <p>
+            <strong>Retention and deletion.</strong> Engagement metadata is
+            retained for the life of the send ledger row: while your account is
+            active, and deleted on request or after account closure (see
+            Sections 4 and 5). A deletion request covering a specific recipient
+            removes their engagement metadata along with their contact record
+            and send history.
           </p>
 
           <h2>2. How We Use Your Information</h2>
@@ -304,6 +374,12 @@ export default function PrivacyPolicy() {
             <li>Sell your data to third parties</li>
             <li>Share your data for advertising purposes</li>
             <li>Use your data for purposes unrelated to Wraps</li>
+            <li>
+              Share your contacts, send ledger, or recipient engagement data
+              (Sections 1.4 and 1.5) with any third party other than the
+              infrastructure providers listed above, or combine it with data
+              from other Wraps customers
+            </li>
           </ul>
 
           <h2>4. Data Retention</h2>
@@ -325,6 +401,12 @@ export default function PrivacyPolicy() {
               <strong>Platform data (contacts, campaigns, send ledger):</strong>{" "}
               Retained while your account is active; deleted on request or after
               account closure
+            </li>
+            <li>
+              <strong>
+                Recipient engagement metadata (open/click user agent):
+              </strong>{" "}
+              Retained with the send ledger row it belongs to, on the same terms
             </li>
             <li>
               <strong>Server logs:</strong> Retained for 7 days
@@ -470,6 +552,18 @@ export DO_NOT_TRACK=1`}
           <p>
             Your data may be processed in the United States or other countries
             where our service providers operate.
+          </p>
+          <p>
+            This includes platform data and recipient engagement data (Sections
+            1.4 and 1.5): if you send to recipients in the EEA, the UK, or
+            Switzerland, their contact records, send history, and open/click
+            metadata are transferred to and stored in the United States. If your
+            use requires a Data Processing Agreement or Standard Contractual
+            Clauses, contact{" "}
+            <a className="text-primary" href="mailto:privacy@wraps.dev">
+              privacy@wraps.dev
+            </a>{" "}
+            and we will work with you on the paperwork.
           </p>
 
           <h2>9. Changes to This Policy</h2>

@@ -67,16 +67,16 @@ type EventBridgeEvent = {
       timestamp: string;
       recipients: string[];
     };
+    // SES also sends `ipAddress` on open/click. We deliberately don't read or
+    // store it — it's recipient personal data we have no feature for.
     open?: {
       timestamp: string;
       userAgent?: string;
-      ipAddress?: string;
     };
     click?: {
       timestamp: string;
       link: string;
       userAgent?: string;
-      ipAddress?: string;
     };
     bounce?: {
       bounceType: string;
@@ -383,8 +383,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             messageId,
             account.organizationId,
             event.detail.open?.timestamp,
-            event.detail.open?.userAgent,
-            event.detail.open?.ipAddress
+            event.detail.open?.userAgent
           );
           break;
 
@@ -395,8 +394,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             account.organizationId,
             event.detail.click?.timestamp,
             event.detail.click?.link,
-            event.detail.click?.userAgent,
-            event.detail.click?.ipAddress
+            event.detail.click?.userAgent
           );
           break;
 
@@ -603,8 +601,7 @@ async function processOpen(
   messageId: string,
   organizationId: string,
   timestamp?: string,
-  userAgent?: string,
-  ipAddress?: string
+  userAgent?: string
 ): Promise<void> {
   const openedAt = timestamp ? new Date(timestamp) : new Date();
 
@@ -621,7 +618,6 @@ async function processOpen(
       status: "opened",
       openedAt,
       openUserAgent: userAgent ?? null,
-      openIpAddress: ipAddress ?? null,
     })
     .where(and(eq(messageSend.id, message.id), isNull(messageSend.openedAt)));
 
@@ -671,8 +667,7 @@ async function processClick(
   organizationId: string,
   timestamp?: string,
   link?: string,
-  userAgent?: string,
-  ipAddress?: string
+  userAgent?: string
 ): Promise<void> {
   const clickedAt = timestamp ? new Date(timestamp) : new Date();
 
@@ -690,7 +685,6 @@ async function processClick(
       clickedAt,
       clickedUrl: link ?? null,
       clickUserAgent: userAgent ?? null,
-      clickIpAddress: ipAddress ?? null,
     })
     .where(and(eq(messageSend.id, message.id), isNull(messageSend.clickedAt)));
 

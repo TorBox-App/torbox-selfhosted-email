@@ -1207,6 +1207,19 @@ export default function InfrastructureEventsPageContent() {
 
         {/* Engagement Events */}
         <h3 className="mb-3 font-semibold text-lg">Engagement Events</h3>
+        <p className="mb-3 text-muted-foreground text-sm">
+          Open and click events carry the recipient&apos;s IP address and user
+          agent. Wraps stores the user agent to filter bot opens out of your
+          metrics and discards the IP address without storing it &mdash; the
+          full event, IP included, still lands in your own AWS account. User
+          agents are personal data in the EU and UK, so drop <code>OPEN</code>{" "}
+          and <code>CLICK</code> from your event types if you don&apos;t want
+          engagement tracked at all. See{" "}
+          <Link className="text-primary hover:underline" href="/privacy">
+            Section 1.5 of our privacy policy
+          </Link>
+          .
+        </p>
         <div className="mb-6 space-y-3">
           <ExpandableSection title="Open &mdash; Recipient opened the email">
             <div className="space-y-3">

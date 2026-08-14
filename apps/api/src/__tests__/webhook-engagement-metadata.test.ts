@@ -143,7 +143,7 @@ describe("webhook engagement metadata", () => {
   });
 
   describe("processOpen", () => {
-    it("stores userAgent and ipAddress from SES open event", async () => {
+    it("stores userAgent but never the recipient IP from SES open event", async () => {
       setupMocks();
       const app = createTestApp();
 
@@ -167,25 +167,21 @@ describe("webhook engagement metadata", () => {
       const updateCalls = mockDbUpdate.mock.calls;
       expect(updateCalls.length).toBeGreaterThan(0);
 
-      // Check that set() was called with openUserAgent and openIpAddress
-      const setDataCalls = updateCalls.map(() => {
-        // Each update call returns an object with .set() which captures data
-        return (mockDbUpdate as any).__lastSetData;
-      });
-
       // The first update should be the messageSend update with engagement metadata
       const firstSetData = (mockDbUpdate as any).__lastSetData;
       expect(firstSetData).toHaveProperty("openUserAgent");
       expect(firstSetData.openUserAgent).toBe(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15"
       );
-      expect(firstSetData).toHaveProperty("openIpAddress");
-      expect(firstSetData.openIpAddress).toBe("203.0.113.42");
+
+      // SES sends the recipient's IP on this event; we must not persist it.
+      expect(firstSetData).not.toHaveProperty("openIpAddress");
+      expect(JSON.stringify(firstSetData)).not.toContain("203.0.113.42");
     });
   });
 
   describe("processClick", () => {
-    it("stores userAgent and ipAddress from SES click event", async () => {
+    it("stores userAgent but never the recipient IP from SES click event", async () => {
       setupMocks();
       const app = createTestApp();
 
@@ -210,8 +206,10 @@ describe("webhook engagement metadata", () => {
       expect(firstSetData.clickUserAgent).toBe(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"
       );
-      expect(firstSetData).toHaveProperty("clickIpAddress");
-      expect(firstSetData.clickIpAddress).toBe("198.51.100.10");
+
+      // SES sends the recipient's IP on this event; we must not persist it.
+      expect(firstSetData).not.toHaveProperty("clickIpAddress");
+      expect(JSON.stringify(firstSetData)).not.toContain("198.51.100.10");
     });
   });
 });
