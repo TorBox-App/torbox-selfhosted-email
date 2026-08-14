@@ -1227,9 +1227,10 @@ export default function InfrastructureEventsPageContent() {
           one for infrastructure. They&apos;re chosen at the CLI: on a new
           deployment, run{" "}
           <code className="rounded bg-muted px-1 py-0.5">wraps email init</code>{" "}
-          and pick the <strong>Custom</strong> configuration path (the Starter
-          and Production presets always track all ten event types and don&apos;t
-          prompt). On an existing deployment, run{" "}
+          and pick the <strong>Custom</strong> configuration path (Starter
+          doesn&apos;t enable event tracking at all; Production and Enterprise
+          both track all ten event types and don&apos;t prompt). On an existing
+          deployment, run{" "}
           <code className="rounded bg-muted px-1 py-0.5">
             wraps email upgrade
           </code>{" "}
