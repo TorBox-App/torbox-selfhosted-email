@@ -59,8 +59,8 @@ const SECTION_MD = {
 | \`WRAPS_LOCAL_ONLY\` | Disable telemetry and API calls | \`false\` |
 | \`WRAPS_API_KEY\` | API key for Wraps Platform | - |
 | \`WRAPS_API_URL\` | Custom API endpoint | \`https://api.wraps.dev\` |
-| \`WRAPS_TELEMETRY_DISABLED\` | Disable anonymous telemetry | \`false\` |
-| \`WRAPS_HOME\` | Custom config directory | \`~/.wraps\` |`,
+| \`WRAPS_APP_URL\` | Custom app/dashboard URL | \`https://app.wraps.dev\` |
+| \`WRAPS_TELEMETRY_DISABLED\` | Disable anonymous telemetry | \`false\` |`,
 
   awsCredentials: `## AWS Credentials
 
@@ -229,14 +229,14 @@ export default function PageContent() {
                   defaultValue: "https://api.wraps.dev",
                 },
                 {
+                  variable: "WRAPS_APP_URL",
+                  description: "Custom app/dashboard URL",
+                  defaultValue: "https://app.wraps.dev",
+                },
+                {
                   variable: "WRAPS_TELEMETRY_DISABLED",
                   description: "Disable anonymous telemetry",
                   defaultValue: "false",
-                },
-                {
-                  variable: "WRAPS_HOME",
-                  description: "Custom config directory",
-                  defaultValue: "~/.wraps",
                 },
               ]}
             />

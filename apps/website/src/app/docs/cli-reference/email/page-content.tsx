@@ -96,13 +96,38 @@ export default function CLIReferenceEmailPageContent() {
                   -p, --provider &lt;provider&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
-                  Hosting provider: vercel, lambda, ecs, or ec2
+                  Hosting provider: vercel, aws, railway, or other
                 </p>
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">--preview</code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Preview infrastructure changes without deploying
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-y, --yes</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip the deploy confirmation
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--quick</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Fast path: sensible defaults, minimal prompts
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Machine-readable output; suppresses interactive UI
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-f, --force</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Proceed past preflight resource conflicts without the
+                  "Continue anyway?" confirm
                 </p>
               </div>
             </div>
@@ -151,7 +176,7 @@ export default function CLIReferenceEmailPageContent() {
               <p className="mb-2 text-muted-foreground text-sm">
                 Non-interactive with all options:
               </p>
-              <CLICommand command="npx @wraps.dev/cli email init --domain yourdomain.com --region us-west-2 --preset production --provider vercel" />
+              <CLICommand command="npx @wraps.dev/cli email init --domain yourdomain.com --region us-west-2 --preset production --provider vercel --yes" />
             </div>
           </CardContent>
         </Card>
@@ -1364,7 +1389,8 @@ export default function CLIReferenceEmailPageContent() {
                   --scenario &lt;type&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
-                  Simulator scenario: bounce, complaint, or success
+                  Simulator scenario: success, bounce, complaint, ooto, or
+                  suppression_list
                 </p>
               </div>
               <div>
@@ -1444,7 +1470,7 @@ export default function CLIReferenceEmailPageContent() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  --dkimSelector &lt;selector&gt;
+                  --dkim-selector &lt;selector&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Check a specific DKIM selector instead of scanning common
@@ -1454,14 +1480,14 @@ export default function CLIReferenceEmailPageContent() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  --skipBlacklists
+                  --skip-blacklists
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Skip all blacklist checks entirely
                 </p>
               </div>
               <div>
-                <code className="rounded bg-muted px-2 py-1">--skipTls</code>
+                <code className="rounded bg-muted px-2 py-1">--skip-tls</code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Skip MX server TLS (STARTTLS) checks
                 </p>
