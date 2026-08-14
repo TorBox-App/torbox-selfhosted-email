@@ -48,6 +48,116 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v3.1.0",
+    date: "August 2026",
+    icon: ShieldCheck,
+    title: "BIMI Checks & Honest Event Tracking",
+    items: [
+      <>
+        <Code>wraps email check</Code> now reports BIMI: record status, logo and
+        VMC validation, a generated <Code>default._bimi.&lt;domain&gt;</Code>{" "}
+        TXT template, and which inboxes require a VMC or CMC versus which show a
+        self-asserted logo. When DMARC is not yet at enforcement it says so
+        instead of printing setup steps that cannot work yet
+      </>,
+      <>
+        Fix: <Code>eventTracking.events</Code> was declared, threaded through
+        the stack, and never read. Every deployment sent the same hardcoded ten
+        event types to SES, so dropping <Code>OPEN</Code> and <Code>CLICK</Code>{" "}
+        to stop engagement tracking reported success and did nothing. The
+        configured list is now what SES gets
+      </>,
+      <>
+        <Code>BOUNCE</Code> and <Code>COMPLAINT</Code> can no longer be dropped
+        from an event destination. A suppression-list event arrives as a bounce,
+        so losing either leaves your pipeline blind to both
+      </>,
+      <>
+        The custom config prompt gained a real event-type multiselect, and the
+        Production preset no longer carries its own stale eight-type list
+      </>,
+      <>
+        Fix: the deployed IAM policy grants{" "}
+        <Code>ses:ListConfigurationSets</Code>, so configuration-set discovery
+        works
+      </>,
+      <>
+        BIMI asset fetching is opt-in, keeping the public tools API off
+        attacker-supplied URLs
+      </>,
+    ],
+  },
+  {
+    version: "Pulumi v0.3.0",
+    date: "August 2026",
+    icon: Blocks,
+    title: "Email Stack Parity Guard",
+    items: [
+      <>
+        The CLI and <Code>@wraps.dev/pulumi</Code> ship two implementations of
+        the same email stack. A parity test now compares them resource by
+        resource, so a fix landing in one and not the other fails CI instead of
+        drifting quietly
+      </>,
+      "Resource names come from shared constants rather than duplicated string literals in each implementation",
+      <>
+        Docs spell out what the library does not provide versus the CLI, and
+        record that Mail Manager ships as a dynamic provider
+      </>,
+    ],
+  },
+  {
+    version: "Platform v0.20.0",
+    date: "August 2026",
+    icon: Sparkles,
+    title: "Preference Center Theming & Multi-Day Broadcasts",
+    items: [
+      "Theme your preference center: an accent-derived color ramp, live inline preview, CSS import, and contrast checking so a brand color cannot quietly ship unreadable text. Subscribers can switch light, dark, or system themselves",
+      "Organization logo uploads are backed by S3, with a dedicated preference-center logo that falls back to the org logo",
+      "Broadcasts larger than a single day's SES quota now send across multiple days instead of being blocked. The confirm dialog shows the estimated number of days and folds in other in-flight broadcasts competing for the same quota",
+      "New per-AWS-account daily quota reserve keeps headroom for transactional sends. Broadcast chunks pause against the reserve and resume as the rolling 24-hour window frees up",
+      <>
+        Fix: broadcasts stalled silently at exactly 800 recipients.
+        Lambda&rsquo;s recursive-loop detection was terminating the chunk chain
+        at its 16-hop default, with no error, no throttle, and no log line. A
+        reaper cron now revives any batch stuck without progress for 30 minutes
+      </>,
+      "A broadcast's audience is frozen at send start, one failing chunk no longer fails the whole audience, and a paused broadcast reads as paused instead of processing",
+      "Recipient IP addresses from open and click events are no longer stored. The columns are dropped and the field is discarded at the webhook",
+      <>
+        Onboarding leads with Connect AWS, and you can send a real test email
+        from the dashboard while still in the SES sandbox. The deploy step
+        offers a copy-paste prompt for your coding agent
+      </>,
+      "The template editor is React Email TSX plus an AI chat panel. The TipTap editor and its serializer are gone",
+      "Fix: SCIM sync verbs, deactivation, and token hashing, plus SSO IdP trusted origins are now configurable instead of hardcoded",
+    ],
+  },
+  {
+    version: "CLI v3.0.0",
+    date: "July 2026",
+    icon: Wrench,
+    title: "One Self-Hosted Path",
+    items: [
+      <>
+        Breaking: the Pulumi self-host variant is removed. Self-hosting is the
+        SST full platform via <Code>pnpm selfhost:deploy</Code>. The Pulumi
+        control plane multiplexed HTTP and SQS in one Lambda, threw after every
+        chunk it processed, and left broadcasts stalled at{" "}
+        <Code>processing</Code> forever
+      </>,
+      <>
+        <Code>wraps selfhost</Code> keeps the commands that act on an existing
+        deployment: <Code>login</Code>, <Code>logout</Code>, <Code>status</Code>
+        , <Code>logs</Code>, <Code>env</Code>, <Code>connect</Code>, and{" "}
+        <Code>update-role</Code>
+      </>,
+      "A pre-deploy check still catches leftovers from a crashed earlier deploy. The account-global scheduler role surviving would otherwise kill the next deploy partway through and lock you out of the deploy path",
+      "Self-hosted installs gained batch queue alarms, a workflow DLQ alarm, an SES account-health cron, an event-feed staleness cron, and a workflow reaper",
+      "Fix: migrations run before the code that needs them in both the API deploy and the CI upgrade, and CI upgrades reconstruct env-file-only keys instead of dropping them",
+    ],
+  },
+  {
     version: "CLI v2.30",
     date: "July 2026",
     icon: Terminal,
