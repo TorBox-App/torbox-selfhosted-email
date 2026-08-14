@@ -84,6 +84,7 @@ export type CliFlags = {
   // Email plan
   set?: string;
   volume?: string;
+  countries?: string;
 
   // License
   tier?: string;
@@ -158,6 +159,7 @@ const STRING_FLAGS = [
   "cursor",
   "set",
   "volume",
+  "countries",
   "since",
   "filter",
   "source",

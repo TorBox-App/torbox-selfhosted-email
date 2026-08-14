@@ -138,6 +138,11 @@ export type SMSInitOptions = {
   yes?: boolean;
   preview?: boolean;
   json?: boolean;
+  quick?: boolean;
+  /** Comma-separated ISO 3166-1 alpha-2 codes, e.g. "US,CA". */
+  countries?: string;
+  /** Estimated messages per month, used for the cost estimate. */
+  volume?: string;
 };
 
 /**

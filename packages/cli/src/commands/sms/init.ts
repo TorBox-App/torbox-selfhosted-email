@@ -24,6 +24,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -40,6 +41,8 @@ import {
 } from "../../utils/shared/output.js";
 import {
   confirmDeploy,
+  ensureInteractive,
+  isInteractive,
   promptProvider,
   promptRegion,
   promptVercelConfig,
@@ -59,6 +62,11 @@ import { getSMSPreset, validateSMSConfig } from "../../utils/sms/presets.js";
 async function promptPhoneNumberType(): Promise<
   "simulator" | "toll-free" | "10dlc"
 > {
+  ensureInteractive(
+    "Phone number type",
+    "--preset starter|production|enterprise (custom requires an interactive terminal)"
+  );
+
   const result = await clack.select({
     message: "Select phone number type:",
     options: [
@@ -92,6 +100,8 @@ async function promptPhoneNumberType(): Promise<
  * Prompt for SMS configuration preset
  */
 async function promptSMSPreset(): Promise<SMSConfigPreset> {
+  ensureInteractive("Preset", "--preset <starter|production|enterprise|custom>");
+
   const result = await clack.select({
     message: "Choose configuration preset:",
     options: [
@@ -190,6 +200,43 @@ async function promptEstimatedSMSVolume(): Promise<number> {
 }
 
 /**
+ * Parse a comma-separated `--countries` value into ISO 3166-1 alpha-2 codes.
+ * Throws SMS_INVALID_COUNTRIES if any entry doesn't match, or if the result
+ * is empty — the underlying prompt is `required: true`, so an empty
+ * allowlist must never reach AWS.
+ */
+export function parseCountries(raw: string): string[] {
+  const codes = raw
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter((code) => code.length > 0);
+
+  if (codes.length === 0) {
+    throw errors.smsInvalidCountries(raw);
+  }
+
+  for (const code of codes) {
+    if (!/^[A-Z]{2}$/.test(code)) {
+      throw errors.smsInvalidCountries(raw);
+    }
+  }
+
+  return codes;
+}
+
+/**
+ * Parse a `--volume` value (estimated messages per month). Throws
+ * SMS_INVALID_VOLUME on anything that isn't a positive whole number.
+ */
+export function parseVolume(raw: string): number {
+  const volume = Number.parseInt(raw, 10);
+  if (Number.isNaN(volume) || volume <= 0) {
+    throw errors.smsInvalidVolume(raw);
+  }
+  return volume;
+}
+
+/**
  * Init command - Deploy new SMS infrastructure
  */
 export async function init(options: SMSInitOptions): Promise<void> {
@@ -247,7 +294,7 @@ export async function init(options: SMSInitOptions): Promise<void> {
   // 5. Configuration selection
   let preset = options.preset;
   if (!preset) {
-    preset = await promptSMSPreset();
+    preset = options.quick ? "starter" : await promptSMSPreset();
   }
 
   let smsConfig: WrapsSMSConfig;
@@ -263,6 +310,10 @@ export async function init(options: SMSInitOptions): Promise<void> {
     };
 
     // Ask about event tracking
+    ensureInteractive(
+      "Event tracking confirmation",
+      "--preset starter|production|enterprise (custom requires an interactive terminal)"
+    );
     const enableEventTracking = await clack.confirm({
       message: "Enable event tracking (EventBridge + DynamoDB)?",
       initialValue: false,
@@ -291,27 +342,41 @@ export async function init(options: SMSInitOptions): Promise<void> {
     }
   }
 
-  // Prompt for allowed countries (fraud protection)
+  // Prompt for allowed countries (fraud protection).
+  // Precedence: explicit --countries flag -> --quick default -> interactive
+  // prompt -> ensureInteractive throw.
   progress.info(
     `\n${pc.bold("Fraud Protection")} - Block SMS to countries where you don't do business`
   );
-  const allowedCountries = await promptAllowedCountries();
+  let allowedCountries: string[];
+  if (options.countries) {
+    allowedCountries = parseCountries(options.countries);
+  } else if (options.quick) {
+    allowedCountries = ["US"];
+  } else {
+    ensureInteractive("Allowed countries", "--countries <US,CA,…>");
+    allowedCountries = await promptAllowedCountries();
+  }
 
-  // Ask about AIT filtering for production use (adds per-message cost)
+  // Ask about AIT filtering for production use (adds per-message cost).
+  // Optional flourish, not required input — skip silently to its own
+  // initialValue rather than throw when there's no one to answer it.
   let aitFiltering = false;
   if (smsConfig.phoneNumberType !== "simulator") {
-    const enableAIT = await clack.confirm({
-      message:
-        "Enable AIT (Artificially Inflated Traffic) filtering? (adds per-message cost)",
-      initialValue: false,
-    });
+    if (isInteractive() && !isJsonMode() && !options.quick) {
+      const enableAIT = await clack.confirm({
+        message:
+          "Enable AIT (Artificially Inflated Traffic) filtering? (adds per-message cost)",
+        initialValue: false,
+      });
 
-    if (clack.isCancel(enableAIT)) {
-      clack.cancel("Operation cancelled.");
-      process.exit(0);
+      if (clack.isCancel(enableAIT)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+
+      aitFiltering = enableAIT;
     }
-
-    aitFiltering = enableAIT;
   }
 
   // Set protect configuration
@@ -321,8 +386,18 @@ export async function init(options: SMSInitOptions): Promise<void> {
     aitFiltering,
   };
 
-  // Get estimated volume for cost calculation
-  const estimatedVolume = await promptEstimatedSMSVolume();
+  // Get estimated volume for cost calculation.
+  // Precedence: explicit --volume flag -> --quick default -> interactive
+  // prompt -> ensureInteractive throw.
+  let estimatedVolume: number;
+  if (options.volume) {
+    estimatedVolume = parseVolume(options.volume);
+  } else if (options.quick) {
+    estimatedVolume = 100;
+  } else {
+    ensureInteractive("Estimated volume", "--volume <messages-per-month>");
+    estimatedVolume = await promptEstimatedSMSVolume();
+  }
 
   // Display cost summary
   progress.info(`\n${pc.bold("Cost Estimate:")}`);
