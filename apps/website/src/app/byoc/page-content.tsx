@@ -3,6 +3,7 @@
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { ByocCtaSection } from "./components/cta-section";
+import { EventControlsPreviewSection } from "./components/event-controls-preview-section";
 import { ByocHeroSection } from "./components/hero-section";
 import { LeavingSection } from "./components/leaving-section";
 import { LivesWhereSection } from "./components/lives-where-section";
@@ -22,6 +23,7 @@ export default function ByocPageContent() {
         <WhyByocSection />
         <NoEnterpriseSection />
         <SyncsSection />
+        <EventControlsPreviewSection />
         <LeavingSection />
         <ByocCtaSection />
       </main>
