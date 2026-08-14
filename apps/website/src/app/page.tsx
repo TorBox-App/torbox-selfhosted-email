@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
+import { ArchitectureByocSection } from "./landing/components/architecture-byoc-section";
 import { CodeSampleSection } from "./landing/components/code-sample-section";
 import { CompareSection } from "./landing/components/compare-section";
 import { CTASection } from "./landing/components/cta-section";
@@ -94,6 +95,7 @@ export default function LandingPage() {
         <main>
           <HeroSection />
           <PrinciplesSection />
+          <ArchitectureByocSection />
           <FeatureBlockSection />
           <CodeSampleSection />
           <CompareSection />

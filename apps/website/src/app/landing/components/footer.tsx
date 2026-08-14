@@ -32,6 +32,7 @@ const footerLinks = {
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
     { name: "Why Wraps", href: "/why-wraps" },
+    { name: "BYOC", href: "/byoc" },
     { name: "Changelog", href: "/changelog" },
   ],
   resources: [

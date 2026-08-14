@@ -82,6 +82,11 @@ const productItems = [
     description: "Wraps Platform for templates & broadcasts",
   },
   {
+    name: "BYOC",
+    href: "/byoc",
+    description: "Bring your own cloud for email sending",
+  },
+  {
     name: "SMS",
     href: "/sms",
     description: "Send texts via AWS End User Messaging",
