@@ -14,7 +14,7 @@ const caption = (
 export function ArchitectureByocSection() {
   return (
     <section className="py-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10 max-w-2xl">
           <SectionKicker>How Wraps deploys</SectionKicker>
           <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight md:text-4xl">

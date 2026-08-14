@@ -8,7 +8,7 @@ export function ByocHeroSection() {
         <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
       </div>
 
-      <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
           <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
             <span className="size-1.5 rounded-full bg-orange-500" />

@@ -25,100 +25,108 @@ const disclosures = [
 export function SyncsSection() {
   return (
     <section className="py-16" id="what-syncs">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <SectionKicker>What syncs to Wraps</SectionKicker>
-        <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
-          The full disclosure, not the marketing version.
-        </h2>
-        <p className="mb-8 text-muted-foreground">
-          Wraps does not meet the strictest definition of BYOC: zero vendor
-          access to your account and data. We hold a cross-account role for
-          dashboard-initiated sends, and your full SES event stream syncs back
-          to us, not just bounces and complaints. Here is exactly what that
-          means.
-        </p>
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl">
+          <SectionKicker>What syncs to Wraps</SectionKicker>
+          <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight sm:text-3xl">
+            The full disclosure, not the marketing version.
+          </h2>
+          <p className="mb-8 text-muted-foreground">
+            Wraps does not meet the strictest definition of BYOC: zero vendor
+            access to your account and data. We hold a cross-account role for
+            dashboard-initiated sends, and your full SES event stream syncs back
+            to us, not just bounces and complaints. Here is exactly what that
+            means.
+          </p>
 
-        <ul className="mb-10 space-y-4 rounded-xl border border-border bg-background/50 p-6">
-          {disclosures.map((text) => (
-            <li className="flex gap-3 text-sm" key={text.slice(0, 40)}>
-              <span
-                aria-hidden="true"
-                className="mt-2 size-1.5 shrink-0 rounded-full bg-orange-500"
-              />
-              <span className="text-foreground">{text}</span>
-            </li>
-          ))}
-        </ul>
+          <ul className="mb-10 space-y-4 rounded-xl border border-border bg-background/50 p-6">
+            {disclosures.map((text) => (
+              <li className="flex gap-3 text-sm" key={text.slice(0, 40)}>
+                <span
+                  aria-hidden="true"
+                  className="mt-2 size-1.5 shrink-0 rounded-full bg-orange-500"
+                />
+                <span className="text-foreground">{text}</span>
+              </li>
+            ))}
+          </ul>
 
-        <h3 className="mb-3 font-heading font-semibold text-lg">
-          The wraps-console-access-role policy
-        </h3>
-        <p className="mb-4 text-muted-foreground text-sm">
-          This is the policy for a default email deployment: sending enabled,
-          event tracking enabled, no inbound, no archiving, no SMS. Enabling
-          inbound, archiving, or SMS adds scoped statements for those services.
-          The generator is open source; the DynamoDB, SQS, EventBridge, and S3
-          statements are scoped to{" "}
-          <code className="rounded bg-muted px-1 py-0.5">wraps-email-*</code> /{" "}
-          <code className="rounded bg-muted px-1 py-0.5">wraps-inbound-*</code>{" "}
-          ARNs. The SES statements use{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
-            Resource: &quot;*&quot;
-          </code>{" "}
-          because the SES API does not support resource-level permissions for
-          these actions, not because we skipped scoping them.
-        </p>
+          <h3 className="mb-3 font-heading font-semibold text-lg">
+            The wraps-console-access-role policy
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            This is the policy for a default email deployment: sending enabled,
+            event tracking enabled, no inbound, no archiving, no SMS. Enabling
+            inbound, archiving, or SMS adds scoped statements for those
+            services. The generator is open source; the DynamoDB, SQS,
+            EventBridge, and S3 statements are scoped to{" "}
+            <code className="rounded bg-muted px-1 py-0.5">wraps-email-*</code>{" "}
+            /{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              wraps-inbound-*
+            </code>{" "}
+            ARNs. The SES statements use{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              Resource: &quot;*&quot;
+            </code>{" "}
+            because the SES API does not support resource-level permissions for
+            these actions, not because we skipped scoping them.
+          </p>
 
-        <div className="mb-4 max-h-[28rem] overflow-y-auto rounded-md border">
-          <CodeBlock
-            className="h-auto border-0"
-            data={[
-              {
-                language: "json",
-                filename: "wraps-console-access-role-policy.json",
-                code: CONSOLE_ACCESS_POLICY_JSON,
-              },
-            ]}
-            defaultValue="json"
-          >
-            <CodeBlockHeader>
-              <CodeBlockFiles>
+          <div className="mb-4 max-h-[28rem] overflow-y-auto rounded-md border">
+            <CodeBlock
+              className="h-auto border-0"
+              data={[
+                {
+                  language: "json",
+                  filename: "wraps-console-access-role-policy.json",
+                  code: CONSOLE_ACCESS_POLICY_JSON,
+                },
+              ]}
+              defaultValue="json"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
                 {(item) => (
-                  <CodeBlockFilename key={item.language} value={item.language}>
-                    {item.filename}
-                  </CodeBlockFilename>
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
                 )}
-              </CodeBlockFiles>
-              <CodeBlockCopyButton />
-            </CodeBlockHeader>
-            <CodeBlockBody>
-              {(item) => (
-                <CodeBlockItem
-                  key={item.language}
-                  lineNumbers={false}
-                  value={item.language}
-                >
-                  <CodeBlockContent language={item.language}>
-                    {item.code}
-                  </CodeBlockContent>
-                </CodeBlockItem>
-              )}
-            </CodeBlockBody>
-          </CodeBlock>
-        </div>
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
 
-        <p className="text-muted-foreground text-sm">
-          Read the generator on{" "}
-          <a
-            className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
-            href="https://github.com/wraps-team/wraps/blob/main/packages/cli/src/commands/platform/update-role.ts"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            GitHub
-          </a>
-          .
-        </p>
+          <p className="text-muted-foreground text-sm">
+            Read the generator on{" "}
+            <a
+              className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
+              href="https://github.com/wraps-team/wraps/blob/main/packages/cli/src/commands/platform/update-role.ts"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              GitHub
+            </a>
+            .
+          </p>
+        </div>
       </div>
     </section>
   );
