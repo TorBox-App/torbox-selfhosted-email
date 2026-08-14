@@ -12,7 +12,7 @@ const proofStats: { n: string; k: string }[] = [
 export function HeroSection() {
   return (
     <section className="relative border-border border-b pt-20 pb-16 md:pt-24 lg:pt-28">
-      {/* Background Pattern — extends past section to blend into principles */}
+      {/* Background Pattern: extends past section to blend into principles */}
       {/*<div className="absolute inset-0 -bottom-80">
         <DotPattern
           className="opacity-100 dark:opacity-65"
@@ -23,12 +23,12 @@ export function HeroSection() {
 
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-          {/* Left column — copy */}
+          {/* Left column: copy */}
           <div className="flex flex-col items-start">
             <SectionKicker>Open-source email infrastructure</SectionKicker>
 
             <h1 className="max-w-[15ch] text-left font-heading font-semibold text-[40px] text-foreground leading-[1.04] tracking-[-0.03em] md:text-[52px] lg:text-[62px]">
-              Email infrastructure, deployed to your own AWS.
+              Email infrastructure that sends through your AWS.
             </h1>
 
             <p className="mt-5 max-w-[46ch] text-left text-[17px] text-muted-foreground leading-[1.55] md:text-[19px]">
@@ -38,8 +38,8 @@ export function HeroSection() {
               <strong className="text-foreground/90">
                 $0.10 per 1,000 emails
               </strong>{" "}
-              on à la carte — AWS defaults new accounts to $0.16, and Wraps
-              tells you which plan applies.
+              on à la carte. AWS defaults new accounts to $0.16, and Wraps tells
+              you which plan applies.
             </p>
 
             <div className="mt-8 mb-10">
@@ -64,7 +64,7 @@ export function HeroSection() {
             </dl>
           </div>
 
-          {/* Right column — terminal */}
+          {/* Right column: terminal */}
           <div className="w-full lg:justify-self-end">
             <HeroTerminal />
           </div>
