@@ -30,7 +30,10 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
 
-          if [[ "$TAG" =~ ^([a-z]+)-v(.+)$ ]]; then
+          # [a-z][a-z-]* not [a-z]+: package names may contain hyphens
+          # (email-check). Greedy match backtracks to the last "-v", so
+          # email-check-v1.1.1 parses as email-check / 1.1.1.
+          if [[ "$TAG" =~ ^([a-z][a-z-]*)-v(.+)$ ]]; then
             PACKAGE="${BASH_REMATCH[1]}"
             VERSION="${BASH_REMATCH[2]}"
           else
@@ -44,6 +47,7 @@ jobs:
             pulumi) NPM_PACKAGE="@wraps.dev/pulumi"; FILTER="@wraps.dev/pulumi" ;;
             core)   NPM_PACKAGE="@wraps/core";       FILTER="@wraps/core" ;;
             mail)   NPM_PACKAGE="mail-audit";        FILTER="mail-audit" ;;
+            email-check) NPM_PACKAGE="@wraps.dev/email-check"; FILTER="@wraps.dev/email-check" ;;
             *)      echo "::error::Unknown package '$PACKAGE'"; exit 1 ;;
           esac
 
