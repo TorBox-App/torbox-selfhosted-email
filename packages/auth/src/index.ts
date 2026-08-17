@@ -501,6 +501,36 @@ export const auth = betterAuth<BetterAuthOptions>({
       },
     },
   },
+  account: {
+    accountLinking: {
+      // SSO sign-in for a user that already exists locally goes through
+      // better-auth's implicit-linking gate, whose default
+      // `requireLocalEmailVerified: true` refuses any local user with
+      // `emailVerified: false`. That is every SCIM-provisioned user
+      // (@better-auth/scim creates them unverified) and every email/password
+      // signup (`requireEmailVerification` is false below), so a
+      // domain-verified IdP's entire directory got "account not linked" on
+      // first SSO login.
+      //
+      // Turning it off does not open linking to arbitrary providers: the gate
+      // still requires the provider be trusted, which for SSO means
+      // `domainVerified` plus the asserted email landing on that verified
+      // domain — the IdP is authoritative for the address being linked, a
+      // stronger claim than our own verification email. Accepted residual
+      // risk: a password account pre-registered on a victim's email before
+      // their first SSO login gets linked onto, with the password still valid.
+      requireLocalEmailVerified: false,
+    },
+  },
+  // Land auth-flow error redirects on the sign-in page, which maps the codes
+  // to human messages. Without this, the SSO callback falls back to
+  // better-auth's `/api/auth/error`, whose sanitizer rejects codes containing
+  // spaces ("account not linked") and rewrites them to an unmappable
+  // `/?error=UNKNOWN`. The SSO callback prefers this URL and forwards its
+  // codes raw.
+  onAPIError: {
+    errorURL: "/auth",
+  },
   session: {
     cookieCache: {
       enabled: true,
