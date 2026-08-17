@@ -100,7 +100,7 @@ const githubOidcTrustPolicyExample = `{
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/wraps:*"
+          "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/YOUR_FORK_REPO:*"
         }
       }
     }
@@ -1142,13 +1142,21 @@ pnpm install`,
               (or similar) with the following trust policy. Replace{" "}
               <code className="rounded bg-muted px-1.5 py-0.5">
                 YOUR_ACCOUNT_ID
-              </code>{" "}
-              and{" "}
+              </code>
+              ,{" "}
               <code className="rounded bg-muted px-1.5 py-0.5">
                 YOUR_GITHUB_ORG
               </code>{" "}
-              with your AWS account ID and the GitHub username or org that owns
-              your fork:
+              and{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                YOUR_FORK_REPO
+              </code>{" "}
+              with your AWS account ID, the GitHub username or org that owns
+              your fork, and your fork's repository name — which is{" "}
+              <span className="font-medium text-foreground">not</span>{" "}
+              necessarily{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">wraps</code> if
+              you renamed the fork:
             </p>
             <CodeBlock
               className="mb-4 h-auto"
@@ -1202,6 +1210,34 @@ pnpm install`,
               at the workflow level, which is required for OIDC token exchange.
               You do not need to add this manually.
             </p>
+            <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-3 text-sm">
+              <p className="font-medium">
+                If the deploy fails with "Could not assume role with OIDC: Not
+                authorized to perform sts:AssumeRoleWithWebIdentity"
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                The role exists but its trust policy does not match the token
+                GitHub sent. The two usual causes: the{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">sub</code>{" "}
+                condition still says{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">/wraps</code>{" "}
+                while your fork is renamed, or it pins a branch like{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  :ref:refs/heads/main
+                </code>
+                . The deploy job runs in the{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  production
+                </code>{" "}
+                environment, so GitHub issues the token with{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  repo:ORG/REPO:environment:production
+                </code>{" "}
+                as the subject — not the branch form. The{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">:*</code>{" "}
+                suffix above matches both.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
