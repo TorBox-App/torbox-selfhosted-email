@@ -237,9 +237,13 @@ export function EmailPreviewCarousel({
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-lg border bg-card">
+          {/* Fully sandboxed: this preview renders real contact data, and the
+              renderer substitutes values verbatim to match SES, so the markup
+              is not trusted. Nothing here reads contentWindow, so the frame
+              has no reason to hold the app's origin. */}
           <iframe
             className="h-[400px] w-full border-0"
-            sandbox="allow-same-origin"
+            sandbox=""
             srcDoc={htmlContent}
             title="Email Preview"
           />

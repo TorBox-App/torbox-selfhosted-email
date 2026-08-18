@@ -153,14 +153,32 @@ describe("mapBatchToCampaignData", () => {
   });
 
   it("restores a scheduled send as date plus time-of-day", () => {
+    // Relative to now so the assertion doesn't start failing once a hardcoded
+    // date falls into the past and hits the send-now fallback below.
+    const scheduledFor = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    scheduledFor.setHours(14, 30, 0, 0);
+
     const result = mapBatchToCampaignData({
       templateId: "tmpl_1",
-      scheduledFor: new Date(2026, 7, 20, 14, 30),
+      scheduledFor,
     } as BatchSendWithMeta);
 
     expect(result.scheduleType).toBe("later");
-    expect(result.scheduledDate).toEqual(new Date(2026, 7, 20, 14, 30));
+    expect(result.scheduledDate).toEqual(scheduledFor);
     expect(result.scheduledTime).toBe("14:30");
+  });
+
+  // The date picker disables past dates, so a restored past schedule is a
+  // dead end: the user cannot re-select the date they are being shown.
+  it("drops a schedule that has already passed back to send-now", () => {
+    const result = mapBatchToCampaignData({
+      templateId: "tmpl_1",
+      scheduledFor: new Date(Date.now() - 60 * 60 * 1000),
+    } as BatchSendWithMeta);
+
+    expect(result.scheduleType).toBe("now");
+    expect(result.scheduledDate).toBeUndefined();
+    expect(result.scheduledTime).toBeUndefined();
   });
 
   it("leaves an unscheduled draft on send-now", () => {

@@ -278,7 +278,9 @@ export function SendTestModal({
   // dotted paths resolve exactly as they will at send time.
   //
   // With no compiled HTML there is nothing to render, so the preview stays
-  // empty and the "fill in the form" alert shows.
+  // empty and the "fill in the form" alert shows. The tab switch happens
+  // either way — the button is always enabled, and a click that changed
+  // nothing on screen read as broken.
   const generatePreview = useCallback(() => {
     const values = form.state.values;
 
@@ -293,8 +295,8 @@ export function SendTestModal({
         }
       }
       setPreviewHtml(renderForPreview(compiledHtml, data));
-      setActiveTab("preview");
     }
+    setActiveTab("preview");
   }, [form, compiledHtml, variableFields, variableDefaults]);
 
   return (

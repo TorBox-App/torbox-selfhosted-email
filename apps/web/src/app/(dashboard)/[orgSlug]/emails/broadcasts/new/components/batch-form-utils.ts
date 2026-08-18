@@ -86,7 +86,11 @@ export function mapBatchToCampaignData(
   if (batch.topicId) result.topicId = batch.topicId;
   if (batch.segmentId) result.segmentId = batch.segmentId;
 
-  if (batch.scheduledFor) {
+  // A schedule that has already passed drops back to "send now". The date
+  // picker disables past dates, so restoring one leaves the user looking at a
+  // date they cannot re-select while the review step promises a send time that
+  // is already gone.
+  if (batch.scheduledFor && batch.scheduledFor.getTime() > Date.now()) {
     result.scheduleType = "later";
     result.scheduledDate = batch.scheduledFor;
     result.scheduledTime = format(batch.scheduledFor, "HH:mm");
