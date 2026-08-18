@@ -1,4 +1,4 @@
-import { defineConfig } from "@wraps.dev/email";
+import { defineConfig } from "@wraps.dev/client";
 
 export default defineConfig({
   org: "wraps",

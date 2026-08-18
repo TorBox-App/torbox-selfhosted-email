@@ -1,4 +1,4 @@
-import { defineBrand } from "@wraps.dev/email";
+import { defineBrand } from "@wraps.dev/client";
 
 export default defineBrand({
   primaryColor: "#5046e5",
