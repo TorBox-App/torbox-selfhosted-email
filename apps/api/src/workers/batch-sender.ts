@@ -1765,12 +1765,11 @@ async function processJob(
             batch.variableMappings ?? undefined,
             recipient
           );
+          // Neither is escaped, matching what SES does on the template path
+          // above — same template + same contact must not render differently
+          // depending on which branch a broadcast happened to take.
           const html = renderForSend(htmlTemplate, finalData);
-          // noEscape: subjects are plain-text headers — "O'Brien" must not
-          // become "O&#x27;Brien"
-          const subject = renderForSend(subjectTemplate, finalData, {
-            noEscape: true,
-          });
+          const subject = renderForSend(subjectTemplate, finalData);
 
           const result = await sendEmail({
             client: sesClient,
@@ -2155,9 +2154,7 @@ function renderSubjectForRecord(
     return subject;
   }
   try {
-    return renderTemplateStrict(transformVariablesForSes(subject), data, {
-      noEscape: true,
-    });
+    return renderTemplateStrict(transformVariablesForSes(subject), data);
   } catch {
     return subject;
   }
@@ -2169,13 +2166,9 @@ function renderSubjectForRecord(
  * per-recipient send is recorded as failed instead of delivering raw
  * {{...}} template syntax to a real inbox.
  */
-function renderForSend(
-  template: string,
-  data: Record<string, string>,
-  options: { noEscape?: boolean } = {}
-): string {
+function renderForSend(template: string, data: Record<string, string>): string {
   try {
-    return renderTemplateStrict(template, data, options);
+    return renderTemplateStrict(template, data);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(

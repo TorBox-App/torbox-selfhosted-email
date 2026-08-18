@@ -46,6 +46,20 @@ type TemplatePreviewCardProps = {
   onEdit: () => void;
 };
 
+const HEAD_TAG = /<head[^>]*>/i;
+const INERT_LINK_BASE = '<base target="_blank">';
+
+// The preview iframe is interactive so it can be scrolled, which means links
+// inside it are clickable too. Retargeting them to a new context makes them
+// inert — the sandbox denies popups — so a stray click can't navigate the
+// preview away to an external site. Injecting after <head> rather than before
+// the doctype keeps the preview in standards mode.
+function withInertLinks(html: string): string {
+  return HEAD_TAG.test(html)
+    ? html.replace(HEAD_TAG, (match) => `${match}${INERT_LINK_BASE}`)
+    : `${INERT_LINK_BASE}${html}`;
+}
+
 function TemplatePreviewCard({ template, onEdit }: TemplatePreviewCardProps) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -78,9 +92,9 @@ function TemplatePreviewCard({ template, onEdit }: TemplatePreviewCardProps) {
       {template.compiledHtml && (
         <div className="overflow-hidden rounded border bg-background">
           <iframe
-            className="pointer-events-none h-[200px] w-full origin-top-left"
+            className="h-[320px] w-full origin-top-left"
             sandbox=""
-            srcDoc={template.compiledHtml}
+            srcDoc={withInertLinks(template.compiledHtml)}
             title="Template preview"
           />
         </div>

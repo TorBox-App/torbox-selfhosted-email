@@ -84,4 +84,27 @@ describe("subscription substituteVariables — render failure observability", ()
     expect(result).toBe("Hi !");
     expect(infoSpy).not.toHaveBeenCalled();
   });
+
+  // A custom confirmation template using the documented {{var|fallback}}
+  // authoring syntax used to be a Handlebars parse error here, so the catch
+  // in sendTopicConfirmationEmail silently shipped the DEFAULT confirmation
+  // instead of the org's own — with no signal that it had happened.
+  it("renders {{var|fallback}} authoring syntax without bailing", () => {
+    expect(substituteVariables("Hi {{firstName|there}}!", {})).toBe(
+      "Hi there!"
+    );
+    expect(
+      substituteVariables("Hi {{firstName|there}}!", { firstName: "Jane" })
+    ).toBe("Hi Jane!");
+    expect(infoSpy).not.toHaveBeenCalled();
+  });
+
+  it("resolves the mailer's dotted variable dict", () => {
+    const result = substituteVariables(
+      "{{topic.name}} from {{organization.name}}",
+      { "topic.name": "Product updates", "organization.name": "ACME Inc" }
+    );
+
+    expect(result).toBe("Product updates from ACME Inc");
+  });
 });

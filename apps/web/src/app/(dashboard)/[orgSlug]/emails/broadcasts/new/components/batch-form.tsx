@@ -94,7 +94,11 @@ import type {
   SampleContact,
 } from "@/lib/batch";
 import { cn } from "@/lib/utils";
-import type { CampaignData, ScheduleType } from "./batch-form-utils";
+import {
+  type CampaignData,
+  type ScheduleType,
+  stripSelfReferencingPlaceholder,
+} from "./batch-form-utils";
 import { EmailPreviewCarousel } from "./email-preview-carousel";
 import { VariableMapper } from "./variable-mapper";
 
@@ -180,7 +184,23 @@ function mapCampaignDataToActionInput(
       topicId: data.audienceType === "topic" ? data.topicId : undefined,
       segmentId: data.audienceType === "segment" ? data.segmentId : undefined,
     },
+    scheduledFor: buildScheduledFor(data),
   };
+}
+
+/**
+ * Combine the separate date and time-of-day fields into the single instant the
+ * send is scheduled for. Null when the user picked "send now" or has not chosen
+ * a date yet — on a draft update that clears any schedule already stored.
+ */
+function buildScheduledFor(data: CampaignData): Date | null {
+  if (data.scheduleType !== "later" || !data.scheduledDate) {
+    return null;
+  }
+  const [hours, minutes] = data.scheduledTime.split(":").map(Number);
+  const scheduledFor = new Date(data.scheduledDate);
+  scheduledFor.setHours(hours, minutes, 0, 0);
+  return scheduledFor;
 }
 
 type Step = "setup" | "content" | "audience" | "review";
@@ -490,17 +510,7 @@ export function BatchForm({
     startTransition(async () => {
       try {
         // Calculate scheduledFor if scheduling
-        let scheduledFor: Date | undefined;
-        if (
-          campaignData.scheduleType === "later" &&
-          campaignData.scheduledDate
-        ) {
-          const [hours, minutes] = campaignData.scheduledTime
-            .split(":")
-            .map(Number);
-          scheduledFor = new Date(campaignData.scheduledDate);
-          scheduledFor.setHours(hours, minutes, 0, 0);
-        }
+        const scheduledFor = buildScheduledFor(campaignData) ?? undefined;
 
         const payload = {
           name: campaignData.name || undefined,
@@ -1016,11 +1026,19 @@ function ContentStep({
                           templateId,
                           variableMappings: [],
                         };
-                        if (tmpl?.subject) {
-                          updates.subject = tmpl.subject;
+                        const subject = stripSelfReferencingPlaceholder(
+                          "subject",
+                          tmpl?.subject
+                        );
+                        if (subject) {
+                          updates.subject = subject;
                         }
-                        if (tmpl?.previewText) {
-                          updates.previewText = tmpl.previewText;
+                        const previewText = stripSelfReferencingPlaceholder(
+                          "previewText",
+                          tmpl?.previewText
+                        );
+                        if (previewText) {
+                          updates.previewText = previewText;
                         }
                         onChange(updates);
                       }}
@@ -1147,6 +1165,10 @@ function ContentStep({
       {/* Variable Mapping - shown when a template is selected */}
       {data.contentType === "template" && data.templateId && (
         <VariableMapper
+          formManagedValues={{
+            subject: data.subject,
+            previewText: data.previewText,
+          }}
           mappings={data.variableMappings}
           onChange={(mappings) => onChange({ variableMappings: mappings })}
           organizationId={organizationId}

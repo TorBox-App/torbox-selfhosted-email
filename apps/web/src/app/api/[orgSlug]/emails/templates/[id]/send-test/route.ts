@@ -10,7 +10,11 @@ import {
   template,
 } from "@wraps/db";
 import { resolveConfigurationSetName, sendEmail } from "@wraps/email-send";
-import { renderTemplateStrict } from "@wraps/template-render";
+import {
+  buildSesRenderData,
+  renderTemplateStrict,
+  transformVariablesForSes,
+} from "@wraps/template-render";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -148,13 +152,23 @@ export async function POST(request: Request, context: RouteContext) {
       // evaluate at broadcast send time. Strict: a malformed template fails
       // the test send with a clear error instead of shipping raw {{...}} —
       // the whole point of a test send is to catch that before a broadcast.
-      // The subject renders too (noEscape: it's a plain-text header), so
-      // {{firstName}} typed into the subject field behaves like production.
-      const html = renderTemplateStrict(compiledHtml, data);
+      // Neither body nor subject is entity-escaped, matching SES — a test
+      // send that escaped would misrepresent the broadcast it is testing.
+      // transformVariablesForSes first for the same reason the batch sender
+      // does it: stored templates hold authoring syntax ({{var|fallback}},
+      // dotted paths) that Handlebars cannot parse on its own.
+      const merged = buildSesRenderData(data);
+      const html = renderTemplateStrict(
+        transformVariablesForSes(compiledHtml),
+        merged
+      );
       return {
         html,
         text: toPlainText(html),
-        subject: renderTemplateStrict(subject, data, { noEscape: true }),
+        subject: renderTemplateStrict(
+          transformVariablesForSes(subject),
+          merged
+        ),
       };
     }
 

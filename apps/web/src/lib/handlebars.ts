@@ -13,6 +13,11 @@ import {
   nestKeys as canonicalNestKeys,
   compileTemplate,
 } from "@wraps/template-render";
+// Subpath import: dependency-free regex, safe to ship to the browser.
+import {
+  buildSesRenderData,
+  transformVariablesForSes,
+} from "@wraps/template-render/mustache-case";
 
 /**
  * Bare-word Handlebars tokens that the variable extractor regex matches
@@ -106,7 +111,9 @@ function getCompiledTemplate(html: string): CompiledTemplate {
   if (cached) {
     return cached;
   }
-  const tmpl = compileTemplate(html);
+  // Transform inside the cache so it runs once per template, not once per
+  // render — this cache exists for the preview hot path.
+  const tmpl = compileTemplate(transformVariablesForSes(html));
   if (compileCache.size >= COMPILE_CACHE_MAX) {
     compileCache.clear();
   }
@@ -114,6 +121,20 @@ function getCompiledTemplate(html: string): CompiledTemplate {
   return tmpl;
 }
 
+/**
+ * Render a compiled template the way a send would.
+ *
+ * `transformVariablesForSes` first (inside the compile cache), exactly like the
+ * batch sender and the workflow step handlers: stored `compiledHtml` holds the
+ * authoring syntax (`{{firstName|there}}`, `{{contact.firstName}}`), and
+ * Handlebars cannot parse it — `|` is block-params syntax, so a fallback
+ * variable is a compile error, not a substitution. Untransformed, a preview
+ * silently fell back to raw `{{...}}` and a test send failed with a Handlebars
+ * parse error while the real broadcast rendered fine.
+ *
+ * `buildSesRenderData` widens the data to the key shape the transformed
+ * template expects, whichever shape the caller passed.
+ */
 export function renderForPreview(
   html: string,
   data: Record<string, unknown>
@@ -121,5 +142,5 @@ export function renderForPreview(
   if (!html) {
     return html;
   }
-  return getCompiledTemplate(html)(data);
+  return getCompiledTemplate(html)(buildSesRenderData(data));
 }

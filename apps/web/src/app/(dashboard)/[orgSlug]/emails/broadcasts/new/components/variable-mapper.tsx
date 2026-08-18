@@ -29,8 +29,9 @@ import {
   SelectValue,
 } from "@wraps/ui/components/ui/select";
 import { Skeleton } from "@wraps/ui/components/ui/skeleton";
+import { Textarea } from "@wraps/ui/components/ui/textarea";
 import { AlertCircle, Check, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { extractTemplateVariables } from "@/actions/batch";
 import { Input } from "@/components/ui/input";
 import type { ExtractedVariable, VariableMapping } from "@/lib/batch";
@@ -41,6 +42,11 @@ type VariableMapperProps = {
   templateId: string;
   mappings: VariableMapping[];
   onChange: (mappings: VariableMapping[]) => void;
+  /**
+   * Values the broadcast form already collects elsewhere, keyed by the template
+   * variable they fill. Asking for these again in the mapper is a duplicate.
+   */
+  formManagedValues: Record<string, string>;
 };
 
 // Contact fields available for mapping
@@ -52,11 +58,33 @@ const CONTACT_FIELDS = [
   { value: "jobTitle", label: "Job Title" },
 ];
 
+// Template variables the wizard fills from its own fields instead of prompting
+// for a second time in the mapper.
+const FORM_MANAGED_LABELS: Record<string, string> = {
+  subject: "Subject line",
+  previewText: "Preview text",
+};
+
+// Variables that usually hold a paragraph rather than a word, so they get a
+// textarea (an <input> silently drops the newlines pasted into it).
+const LONG_FORM_NAME_PATTERN =
+  /content|body|message|paragraph|description|markdown|html/i;
+
+// Deliberately no length heuristic: this is recomputed on every render, so a
+// "value is long now" rule would swap <Input> for <Textarea> mid-keystroke and
+// unmount the focused element. Newlines can only arrive from loaded draft data
+// — browsers strip them from text pasted into an <input> — so that check is
+// stable while the user types.
+function isLongFormVariable(name: string, value: string): boolean {
+  return LONG_FORM_NAME_PATTERN.test(name) || value.includes("\n");
+}
+
 export function VariableMapper({
   organizationId,
   templateId,
   mappings,
   onChange,
+  formManagedValues,
 }: VariableMapperProps) {
   const [variables, setVariables] = useState<ExtractedVariable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,9 +115,48 @@ export function VariableMapper({
     fetchVariables();
   }, [organizationId, templateId]);
 
+  // Variables the wizard already has an answer for (subject, preview text)
+  const formManagedVariables = useMemo(
+    () => variables.filter((v) => v.name in FORM_MANAGED_LABELS),
+    [variables]
+  );
+
   // Get custom variables that need mapping
-  const customVariables = variables.filter((v) => !v.isKnown);
-  const knownVariables = variables.filter((v) => v.isKnown);
+  const customVariables = variables.filter(
+    (v) => !(v.isKnown || v.name in FORM_MANAGED_LABELS)
+  );
+  const knownVariables = variables.filter(
+    (v) => v.isKnown && !(v.name in FORM_MANAGED_LABELS)
+  );
+
+  // Keep the form-managed variables bound to the fields above rather than
+  // asking the user to type the same subject twice.
+  useEffect(() => {
+    if (formManagedVariables.length === 0) {
+      return;
+    }
+    const rest = mappings.filter(
+      (m) => !(m.variableName in FORM_MANAGED_LABELS)
+    );
+    const managed: VariableMapping[] = formManagedVariables.map((v) => ({
+      variableName: v.name,
+      source: { type: "static", value: formManagedValues[v.name] ?? "" },
+    }));
+    const alreadyInSync =
+      mappings.length === rest.length + managed.length &&
+      managed.every((m) => {
+        const current = mappings.find(
+          (existing) => existing.variableName === m.variableName
+        );
+        return (
+          current?.source.type === "static" &&
+          current.source.value === (m.source as { value: string }).value
+        );
+      });
+    if (!alreadyInSync) {
+      onChange([...rest, ...managed]);
+    }
+  }, [formManagedVariables, formManagedValues, mappings, onChange]);
 
   // Check if all custom variables are mapped
   const unmappedCount = customVariables.filter((v) => {
@@ -179,6 +246,37 @@ export function VariableMapper({
 
         <CollapsibleContent>
           <CardContent className="space-y-4">
+            {/* Filled from the wizard's own fields — not asked for twice */}
+            {formManagedVariables.length > 0 && (
+              <div>
+                <p className="mb-2 font-medium text-muted-foreground text-sm">
+                  From this broadcast ({formManagedVariables.length})
+                </p>
+                <div className="space-y-1">
+                  {formManagedVariables.map((v) => (
+                    <div
+                      className="flex items-center gap-2 text-sm"
+                      key={v.name}
+                    >
+                      <Check className="h-4 w-4 shrink-0 text-green-600" />
+                      <span className="font-mono text-xs">{v.name}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="truncate">
+                        {formManagedValues[v.name] || (
+                          <span className="text-muted-foreground">
+                            {FORM_MANAGED_LABELS[v.name]} (empty)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-muted-foreground text-xs">
+                  Edit these in the Subject &amp; Preview card above.
+                </p>
+              </div>
+            )}
+
             {/* Known variables (auto-mapped) */}
             {knownVariables.length > 0 && (
               <div>
@@ -246,6 +344,8 @@ function VariableMapperRow({
     (sourceType === "static" && !staticValue.trim()) ||
     (sourceType === "contact" && !contactField);
 
+  const isLongForm = isLongFormVariable(variable.name, staticValue);
+
   return (
     <div
       className={cn(
@@ -283,16 +383,27 @@ function VariableMapperRow({
             >
               Static value
             </Label>
-            {sourceType === "static" && (
-              <Input
-                className="h-8"
-                onChange={(e) =>
-                  onUpdate({ type: "static", value: e.target.value })
-                }
-                placeholder="Enter value..."
-                value={staticValue}
-              />
-            )}
+            {sourceType === "static" &&
+              (isLongForm ? (
+                <Textarea
+                  className="min-h-24 text-sm"
+                  onChange={(e) =>
+                    onUpdate({ type: "static", value: e.target.value })
+                  }
+                  placeholder="Enter value..."
+                  rows={5}
+                  value={staticValue}
+                />
+              ) : (
+                <Input
+                  className="h-8"
+                  onChange={(e) =>
+                    onUpdate({ type: "static", value: e.target.value })
+                  }
+                  placeholder="Enter value..."
+                  value={staticValue}
+                />
+              ))}
           </div>
         </div>
 

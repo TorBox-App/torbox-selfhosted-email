@@ -470,8 +470,7 @@ export async function handleSendEmail(
       // replacementData understand.
       const html = substituteVariables(
         transformVariablesForSes(tmpl.compiledHtml),
-        replacementData,
-        { escapeHtml: true }
+        replacementData
       );
 
       const rawSubject = substituteVariables(
@@ -501,8 +500,7 @@ export async function handleSendEmail(
       // Fallback: Apply variable substitution locally and send raw HTML
       const html = substituteVariables(
         transformVariablesForSes(tmpl.compiledHtml),
-        replacementData,
-        { escapeHtml: true }
+        replacementData
       );
 
       // Build subject with variable substitution

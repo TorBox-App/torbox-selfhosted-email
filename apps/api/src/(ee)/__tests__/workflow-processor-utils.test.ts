@@ -399,19 +399,16 @@ describe("substituteVariables", () => {
   });
 
   describe("HTML escaping", () => {
-    it("escapes HTML in variable values when escapeHtml is set (HTML bodies)", () => {
-      const result = substituteVariables(
-        "Hello {{name}}!",
-        { name: "<script>alert('xss')</script>" },
-        { escapeHtml: true }
-      );
-      expect(result).not.toContain("<script>");
-      expect(result).toContain("&lt;script&gt;");
+    it("does not escape HTML bodies — SES substitutes verbatim", () => {
+      const result = substituteVariables("Hello {{name}}!", {
+        name: "<b>Jane</b>",
+      });
+      expect(result).toBe("Hello <b>Jane</b>!");
     });
 
-    it("does NOT escape by default — subjects and SMS bodies are plain text", () => {
+    it("does not escape plain text either — subjects and SMS bodies", () => {
       // "Smith & Co" in a subject line must arrive as "Smith & Co",
-      // not "Smith &amp; Co". HTML callers opt in via escapeHtml: true.
+      // not "Smith &amp; Co".
       const result = substituteVariables("Welcome to {{company}}", {
         company: "Smith & Co",
       });

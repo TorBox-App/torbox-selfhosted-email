@@ -37,11 +37,11 @@ export type WorkflowBranch =
  * test-send endpoint, and the subscription confirmation mailer. The
  * package handles `{{var}}`, `{{#if}}/{{else}}/{{/if}}`, and dot paths.
  *
- * Pass `escapeHtml: true` when the output is an HTML body — variable
- * values get entity-escaped so contact data can't inject markup. Leave it
- * off for non-HTML output (subjects, SMS bodies): those are plain text,
- * where escaping turns `Smith & Co` into `Smith &amp; Co` on a phone
- * screen or in a subject line.
+ * Nothing is entity-escaped, for HTML bodies included. SES renders the
+ * template-backed branch of a workflow send server-side and substitutes
+ * verbatim, so escaping here would make the raw-HTML fallback branches
+ * render differently from the SES branch for the same template and the
+ * same contact. See `@wraps/template-render` for the full rationale.
  *
  * Uses the strict renderer: a compile or runtime failure THROWS instead of
  * returning the raw template, which fails the workflow step and blocks the
@@ -53,13 +53,10 @@ export type WorkflowBranch =
  */
 export function substituteVariables(
   text: string,
-  data: Record<string, string>,
-  options: { escapeHtml?: boolean } = {}
+  data: Record<string, string>
 ): string {
   try {
-    return renderTemplateStrict(text, data, {
-      noEscape: !options.escapeHtml,
-    });
+    return renderTemplateStrict(text, data);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     log.error("Workflow: template render failed, send blocked", {

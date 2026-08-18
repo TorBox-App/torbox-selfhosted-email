@@ -17,7 +17,12 @@ import {
   template,
   topicSettings,
 } from "@wraps/db";
-import { nestKeys, renderTemplateStrict } from "@wraps/template-render";
+import {
+  buildSesRenderData,
+  nestKeys,
+  renderTemplateStrict,
+  transformVariablesForSes,
+} from "@wraps/template-render";
 import { WrapsEmail } from "@wraps.dev/email";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
@@ -34,29 +39,33 @@ const structuredLog = (msg: string, data?: Record<string, unknown>) =>
  * including `{{#if}}/{{else}}/{{/if}}` block helpers, which the previous
  * regex-only implementation here would have shipped raw to inboxes.
  *
- * The flat dotted-key dict (`{"topic.name": "...", "contact.email": "..."}`)
- * is nested via `nestKeys` so Handlebars can resolve `{{topic.name}}` as
- * a path lookup on `data.topic.name`.
+ * `transformVariablesForSes` first, like every other render path: a custom
+ * confirmation template using the documented `{{var|fallback}}` authoring
+ * syntax is a Handlebars parse error untransformed, and the caller's catch
+ * would silently ship the default confirmation instead of the org's own.
+ * `buildSesRenderData(nestKeys(...))` then widens the flat dotted-key dict
+ * (`{"topic.name": "..."}`) to every key shape the template may reference.
  *
  * Strict: a compile or runtime failure THROWS instead of returning the raw
  * template — the caller falls back to the default confirmation email, so a
  * malformed custom template never ships raw `{{...}}` to a subscriber and
  * never blocks the double-opt-in confirmation either.
  *
- * Pass `escapeHtml: true` for HTML bodies; subjects and plain-text parts
- * must stay unescaped (`Smith & Co`, not `Smith &amp; Co`).
+ * Nothing is entity-escaped, HTML bodies included — SES substitutes
+ * verbatim on the template path, and this renderer has to match it. See
+ * `@wraps/template-render` for the full rationale.
  *
  * @internal Exported for testing — not part of the public package surface.
  */
 export function substituteVariables(
   content: string,
-  variables: Record<string, string | undefined>,
-  options: { escapeHtml?: boolean } = {}
+  variables: Record<string, string | undefined>
 ): string {
   try {
-    return renderTemplateStrict(content, nestKeys(variables), {
-      noEscape: !options.escapeHtml,
-    });
+    return renderTemplateStrict(
+      transformVariablesForSes(content),
+      buildSesRenderData(nestKeys(variables))
+    );
   } catch (error) {
     structuredLog("subscription template render failed", {
       contentPreview: content.slice(0, 200),
@@ -269,9 +278,7 @@ export async function sendTopicConfirmationEmail(
 
       try {
         subject = substituteVariables(customTemplate.subject, variables);
-        html = substituteVariables(customTemplate.compiledHtml, variables, {
-          escapeHtml: true,
-        });
+        html = substituteVariables(customTemplate.compiledHtml, variables);
         text = customTemplate.compiledText
           ? substituteVariables(customTemplate.compiledText, variables)
           : htmlToPlainText(html);

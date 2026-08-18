@@ -130,16 +130,18 @@ describe("substituteVariables with Handlebars conditionals", () => {
   });
 
   describe("HTML escaping", () => {
-    it("escapes HTML in variable values when escapeHtml is set (HTML bodies)", () => {
+    // The template-backed branch of a workflow send is rendered by SES,
+    // which substitutes verbatim. These raw-HTML fallback branches must
+    // match it, or the same template renders differently depending on
+    // whether the step happened to carry a subject override.
+    it("does not escape HTML bodies, matching the SES-rendered branch", () => {
       const template = "Hello {{firstName}}!";
-      const data = { firstName: "<script>alert('xss')</script>" };
-      const result = substituteVariables(template, data, { escapeHtml: true });
+      const data = { firstName: "<b>Jane</b>" };
 
-      expect(result).not.toContain("<script>");
-      expect(result).toContain("&lt;script&gt;");
+      expect(substituteVariables(template, data)).toBe("Hello <b>Jane</b>!");
     });
 
-    it("leaves plain text unescaped by default (subjects, SMS bodies)", () => {
+    it("leaves plain text unescaped (subjects, SMS bodies)", () => {
       const result = substituteVariables("Hi {{company}}", {
         company: "O'Brien & Sons",
       });

@@ -64,6 +64,29 @@ describe("renderForPreview", () => {
     expect(html).toBe("Hello Jane!");
   });
 
+  // Authoring syntax: `|` is Handlebars block-params, so an untransformed
+  // {{var|fallback}} is a compile error, not a substitution. The preview must
+  // run transformVariablesForSes first, exactly like the send paths do.
+  it("resolves {{var|fallback}} authoring syntax", () => {
+    expect(
+      renderForPreview("Hi {{greetingName|there}}!", { greetingName: "" })
+    ).toBe("Hi there!");
+    expect(
+      renderForPreview("Hi {{greetingName|there}}!", { greetingName: "Jane" })
+    ).toBe("Hi Jane!");
+  });
+
+  // Callers pass three different data shapes; the transform rewrites
+  // {{contact.firstName}} to {{contactFirstName}}, so all three have to
+  // resolve or the variable silently renders empty.
+  it.each([
+    ["nested objects", { contact: { firstName: "Jane" } }],
+    ["flat dotted keys", { "contact.firstName": "Jane" }],
+    ["already-flat SES keys", { contactFirstName: "Jane" }],
+  ])("resolves dotted paths from %s", (_shape, data) => {
+    expect(renderForPreview("{{contact.firstName}}", data)).toBe("Jane");
+  });
+
   it("renders the truthy branch of an {{#if}} conditional", () => {
     const html = renderForPreview(
       "{{#if firstName}}Hey {{firstName}}, the{{else}}The{{/if}} setup just got easier.",
@@ -88,12 +111,16 @@ describe("renderForPreview", () => {
     expect(html).toBe("The setup just got easier.");
   });
 
-  it("escapes HTML in substituted values to prevent XSS in preview", () => {
-    const html = renderForPreview("{{firstName}}", {
-      firstName: "<script>alert(1)</script>",
-    });
-    expect(html).not.toContain("<script>");
-    expect(html).toContain("&lt;script&gt;");
+  // The preview must show what SES will actually deliver, and SES substitutes
+  // TemplateData verbatim. Escaping here made the preview disagree with the
+  // send. Containment moved to the render target instead: every consumer of
+  // renderForPreview puts the result in a sandboxed iframe, never in the
+  // dashboard DOM.
+  it("substitutes values verbatim, matching SES rather than escaping", () => {
+    expect(renderForPreview("{{body}}", { body: "a<br>b" })).toBe("a<br>b");
+    expect(renderForPreview("{{name}}", { name: "O'Brien & Sons" })).toBe(
+      "O'Brien & Sons"
+    );
   });
 
   it("returns the raw html on Handlebars compile failure", () => {

@@ -94,6 +94,14 @@ export type BatchSendWithMeta = {
   replyTo: string | null;
   templateId: string | null;
   templateName?: string;
+  // Draft configuration — only populated by single-batch loads (getBatchSend),
+  // which is what the draft editor reloads from. The list view omits them to
+  // keep row payloads small.
+  htmlContent?: string | null;
+  variableMappings?: VariableMapping[] | null;
+  audienceType?: AudienceType | null;
+  topicId?: string | null;
+  segmentId?: string | null;
   // Progress
   totalRecipients: number;
   processedRecipients: number;
@@ -193,9 +201,11 @@ export type CreateBatchInput = {
 // awsAccountId is optional on drafts (users may save before picking an account),
 // but is required at promote time.
 export type CreateDraftBatchInput = Partial<
-  Omit<CreateBatchInput, "awsAccountId">
+  Omit<CreateBatchInput, "awsAccountId" | "scheduledFor">
 > & {
   awsAccountId?: string;
+  /** `null` clears a schedule already stored on the draft. */
+  scheduledFor?: Date | null;
 };
 
 export type UpdateDraftBatchInput = CreateDraftBatchInput;

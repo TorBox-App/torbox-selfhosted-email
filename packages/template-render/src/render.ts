@@ -24,12 +24,33 @@
 
 import Handlebars from "handlebars";
 
+/**
+ * Nothing this package renders is ever HTML-escaped, because SES is the
+ * reference implementation and SES does not escape.
+ *
+ * A template-backed broadcast is rendered server-side by SES from a stored
+ * SES template, and SES substitutes `TemplateData` verbatim — verified with
+ * `aws ses test-render-template`, where `<b>x</b> & <i>y</i>` came back out
+ * of the HtmlPart byte-for-byte. Every renderer here therefore has to match
+ * that, or the same template plus the same contact produces different output
+ * depending on which path happened to run: the dashboard preview showed
+ * `&lt;b&gt;` while the delivered email showed bold text, and a broadcast
+ * switched from a template to Custom HTML silently started escaping.
+ *
+ * The consequence is that variable values are injected into the email body
+ * as markup. That is already true of every SES-rendered send, so this makes
+ * the behavior uniform rather than introducing it. Callers that render into
+ * a *browser* DOM rather than an email must isolate the result (sandboxed
+ * iframe) instead of relying on this layer to escape for them.
+ */
+const NO_ESCAPE = { noEscape: true } as const;
+
 export type CompiledTemplate = (data: Record<string, unknown>) => string;
 
 export function compileTemplate(html: string): CompiledTemplate {
   let compiled: HandlebarsTemplateDelegate;
   try {
-    compiled = Handlebars.compile(html, { noEscape: false });
+    compiled = Handlebars.compile(html, NO_ESCAPE);
   } catch {
     return () => html;
   }
@@ -56,19 +77,15 @@ export function renderTemplate(
  * `{{#if}}` blocks to a real inbox. Preview panes keep using the
  * swallowing variants above.
  *
- * `noEscape: true` disables Handlebars HTML-entity escaping of variable
- * values. Use it for any output that is NOT HTML — email subjects, SMS
- * bodies, plain-text parts — where `O'Brien` must stay `O'Brien`, not
- * become `O&#x27;Brien`. HTML bodies must keep the default escaping.
+ * Values are never HTML-escaped — see `NO_ESCAPE` above for why. There is
+ * deliberately no opt-in escaping flag: an escaping caller would diverge
+ * from SES, which is the bug this package exists to prevent.
  */
 export function renderTemplateStrict(
   html: string,
-  data: Record<string, unknown>,
-  options: { noEscape?: boolean } = {}
+  data: Record<string, unknown>
 ): string {
-  return Handlebars.compile(html, { noEscape: options.noEscape ?? false })(
-    data
-  );
+  return Handlebars.compile(html, NO_ESCAPE)(data);
 }
 
 /**

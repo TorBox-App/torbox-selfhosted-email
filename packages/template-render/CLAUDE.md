@@ -9,9 +9,13 @@ Canonical Handlebars template rendering for Wraps. One place for substitution lo
 - `renderTemplate(html, data)` — swallows compile and runtime errors, returns raw template on failure. Safe for preview panes where a broken template must not crash the UI.
 - `renderTemplateStrict(html, data)` — errors propagate. **Required for all send paths.** A silently-failing render would deliver raw `{{#if}}` blocks to real inboxes.
 
-### 2. `noEscape: true` for Non-HTML Outputs
+### 2. Nothing Is Ever HTML-Escaped — SES Is the Reference
 
-`renderTemplateStrict` accepts `{ noEscape: true }` for subjects, SMS bodies, and plain-text parts. Without it, Handlebars HTML-entity-encodes variable values (`O'Brien` → `O&#x27;Brien`). HTML bodies must keep the default (escaping on).
+Renderers here never entity-encode variable values, and there is no flag to turn escaping on. SES renders template-backed sends server-side and substitutes `TemplateData` verbatim (verified against the live `ses test-render-template` API). Any renderer that escaped would make the dashboard preview, the test send, and the raw-HTML send path disagree with the SES-rendered broadcast for the same template and contact.
+
+Two consequences:
+- Markup in a variable value renders as markup. That is how a broadcast author gets a real line break from `<br>` in a `{{content}}` value.
+- This layer sanitizes nothing. Anything rendering into a **browser** DOM rather than an email must isolate the output in a sandboxed iframe — never `dangerouslySetInnerHTML`.
 
 ### 3. Use `nestKeys()` for Dot-Notation Variables
 

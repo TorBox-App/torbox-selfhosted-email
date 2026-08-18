@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { toSesVariableName } from "@wraps/template-render/mustache-case";
 import { Alert, AlertDescription } from "@wraps/ui/components/ui/alert";
 import {
   Dialog,
@@ -10,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@wraps/ui/components/ui/dialog";
-import { ScrollArea } from "@wraps/ui/components/ui/scroll-area";
 import { Separator } from "@wraps/ui/components/ui/separator";
 import {
   Tabs,
@@ -18,7 +18,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@wraps/ui/components/ui/tabs";
-import { escape as escapeHTML } from "he";
 import { AlertCircle, Loader2, Mail, Send, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -113,6 +112,20 @@ export function SendTestModal({
     return extractVariables(templateContent);
   }, [templateContent, templateVariables]);
 
+  // TanStack Form reads a dotted `name` as a deep path: a field named
+  // "contact.firstName" writes to values.contact.firstName, while the rest of
+  // this component reads the flat key values["contact.firstName"] — which
+  // never leaves its default. Typing into a dotted variable therefore reached
+  // neither the preview nor the send. Key the form by the SES-flattened name
+  // (contactFirstName), which is single-level by construction and is also the
+  // name the transformed template references. The authoring name stays on the
+  // label so the user still sees {{contact.firstName}}.
+  const variableFields = useMemo(
+    () =>
+      variables.map((name) => ({ name, fieldName: toSesVariableName(name) })),
+    [variables]
+  );
+
   // Map of variable name → default value for seeding form inputs.
   // Priority: explicit testData > variable fallback > empty string.
   // Non-primitive testData values (objects/arrays from jsonb) are
@@ -142,20 +155,28 @@ export function SendTestModal({
     return defaults;
   }, [templateVariables, templateTestData]);
 
+  // Seed by the authoring name first, then the flattened one: a template's
+  // curated testData export may key either form.
+  const defaultFor = useCallback(
+    (f: { name: string; fieldName: string }) =>
+      variableDefaults[f.name] ?? variableDefaults[f.fieldName] ?? "",
+    [variableDefaults]
+  );
+
   // Build dynamic schema based on variables
   const formSchema = useMemo(() => {
-    const variableFields: Record<string, z.ZodDefault<z.ZodString>> = {};
-    for (const v of variables) {
-      variableFields[v] = z.string().default("");
+    const shape: Record<string, z.ZodDefault<z.ZodString>> = {};
+    for (const f of variableFields) {
+      shape[f.fieldName] = z.string().default("");
     }
 
     return z.object({
       from: z.string().email("Please enter a valid sender email address"),
       to: z.string().email("Please enter a valid email address"),
       subject: z.string().min(1, "Subject is required"),
-      ...variableFields,
+      ...shape,
     });
-  }, [variables]);
+  }, [variableFields]);
 
   type FormValues = z.infer<typeof formSchema>;
 
@@ -165,7 +186,7 @@ export function SendTestModal({
       to: "",
       subject: "",
       ...Object.fromEntries(
-        variables.map((v) => [v, variableDefaults[v] ?? ""])
+        variableFields.map((f) => [f.fieldName, defaultFor(f)])
       ),
     } as FormValues,
     validators: {
@@ -175,11 +196,13 @@ export function SendTestModal({
       setIsSending(true);
 
       try {
-        // Build testData object from variables
+        // Keyed by fieldName (the SES-flattened name) — that is where the
+        // form actually stored the value, and it is the name the transformed
+        // template references on the server.
         const testData: Record<string, string> = {};
-        for (const variable of variables) {
-          testData[variable] = String(
-            value[variable as keyof FormValues] ?? ""
+        for (const f of variableFields) {
+          testData[f.fieldName] = String(
+            value[f.fieldName as keyof FormValues] ?? ""
           );
         }
 
@@ -235,13 +258,13 @@ export function SendTestModal({
         to: "",
         subject: "",
         ...Object.fromEntries(
-          variables.map((v) => [v, variableDefaults[v] ?? ""])
+          variableFields.map((f) => [f.fieldName, defaultFor(f)])
         ),
       } as FormValues);
       setPreviewHtml(null);
       setActiveTab("form");
     }
-  }, [isOpen, form, variables, variableDefaults, defaultFrom]);
+  }, [isOpen, form, variableFields, defaultFor, defaultFrom]);
 
   // Fill recipient with user's email
   const handleSendToSelf = useCallback(() => {
@@ -250,56 +273,37 @@ export function SendTestModal({
     }
   }, [form, userEmail]);
 
-  // Generate preview HTML with variables replaced.
+  // Generate preview HTML with variables replaced, through the canonical
+  // `renderForPreview` so `{{#if}}` blocks, `{{var|fallback}}` syntax and
+  // dotted paths resolve exactly as they will at send time.
   //
-  // Two paths:
-  //   1. compiledHtml provided: use the canonical `renderForPreview`
-  //      Handlebars renderer so `{{#if}}` blocks and nested-key
-  //      substitution work the same way they will at send time.
-  //   2. No compiledHtml (template never compiled): use the legacy regex
-  //      substitution, which avoids pulling Handlebars across content that
-  //      wasn't authored for it.
+  // With no compiled HTML there is nothing to render, so the preview stays
+  // empty and the "fill in the form" alert shows.
   const generatePreview = useCallback(() => {
     const values = form.state.values;
 
-    // Code template path: take the Handlebars renderer when we have any
-    // compiled HTML to render. The explicit length check (rather than just
-    // `if (compiledHtml)`) makes the intent clear — empty-string compiled
-    // HTML legitimately falls through to the legacy path so the user sees
-    // the "fill in the form" alert instead of a blank preview.
     if (compiledHtml != null && compiledHtml.length > 0) {
-      // Build substitution data from form values, falling back to the
-      // template's curated testData / fallbacks for any field the user
-      // didn't override. `renderForPreview` handles HTML escaping itself.
+      // Form values on top of the template's curated testData / fallbacks
+      // for any field the user didn't override.
       const data: Record<string, string> = { ...variableDefaults };
-      for (const variable of variables) {
-        const value = values[variable as keyof FormValues];
+      for (const f of variableFields) {
+        const value = values[f.fieldName as keyof FormValues];
         if (value !== undefined && value !== "") {
-          data[variable] = String(value);
+          data[f.fieldName] = String(value);
         }
       }
       setPreviewHtml(renderForPreview(compiledHtml, data));
       setActiveTab("preview");
-      return;
     }
-
-    let html = templateContent;
-    for (const variable of variables) {
-      const value = values[variable as keyof FormValues] ?? `{{${variable}}}`;
-      // Escape user-provided variable values
-      html = html.replace(
-        new RegExp(`\\{\\{${variable}\\}\\}`, "g"),
-        escapeHTML(String(value))
-      );
-    }
-
-    setPreviewHtml(html);
-    setActiveTab("preview");
-  }, [form, templateContent, variables, compiledHtml, variableDefaults]);
+  }, [form, compiledHtml, variableFields, variableDefaults]);
 
   return (
     <Dialog onOpenChange={(open) => !open && onClose()} open={isOpen}>
-      <DialogContent className="max-w-2xl">
+      {/* Capped at the viewport with the panels scrolling inside: a template
+          with many variables renders a form taller than the screen, and the
+          base DialogContent is a centered fixed box with no overflow — the
+          bottom of the form (and the Send button) becomes unreachable. */}
+      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -312,15 +316,19 @@ export function SendTestModal({
         </DialogHeader>
 
         <Tabs
+          className="flex min-h-0 flex-1 flex-col"
           onValueChange={(v) => setActiveTab(v as "form" | "preview")}
           value={activeTab}
         >
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full shrink-0 grid-cols-2">
             <TabsTrigger value="form">Details</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
 
-          <TabsContent className="mt-4" value="form">
+          <TabsContent
+            className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+            value="form"
+          >
             <form
               className="space-y-4"
               onSubmit={(e) => {
@@ -436,10 +444,10 @@ export function SendTestModal({
                       Fill in values for the variables used in your template.
                     </p>
                     <div className="space-y-3">
-                      {variables.map((variable) => (
+                      {variableFields.map((f) => (
                         <form.Field
-                          key={variable}
-                          name={variable as keyof FormValues}
+                          key={f.name}
+                          name={f.fieldName as keyof FormValues}
                         >
                           {(field) => {
                             const isInvalid =
@@ -456,7 +464,7 @@ export function SendTestModal({
                                   className="font-mono text-xs"
                                   htmlFor={field.name}
                                 >
-                                  {`{{${variable}}}`}
+                                  {`{{${f.name}}}`}
                                 </FieldLabel>
                                 <FieldContent>
                                   <Input
@@ -467,7 +475,7 @@ export function SendTestModal({
                                     onChange={(e) =>
                                       field.handleChange(e.target.value)
                                     }
-                                    placeholder={`Value for ${variable}`}
+                                    placeholder={`Value for ${f.name}`}
                                     value={String(field.state.value ?? "")}
                                   />
                                   {isInvalid && <FieldError errors={errors} />}
@@ -507,15 +515,21 @@ export function SendTestModal({
             </form>
           </TabsContent>
 
-          <TabsContent className="mt-4" value="preview">
+          <TabsContent
+            className="mt-4 min-h-0 flex-1 overflow-y-auto"
+            value="preview"
+          >
             {previewHtml ? (
-              <ScrollArea className="h-[400px] rounded-md border">
-                <div
-                  className="p-4"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
-                />
-              </ScrollArea>
+              // Isolated in a sandboxed iframe rather than injected into the
+              // dashboard DOM: the renderer substitutes variable values
+              // verbatim to match SES, so this markup is not trusted. The
+              // iframe also stops email CSS from leaking into the app.
+              <iframe
+                className="h-[400px] w-full rounded-md border bg-background"
+                sandbox=""
+                srcDoc={previewHtml}
+                title="Test email preview"
+              />
             ) : (
               <Alert>
                 <AlertCircle className="h-4 w-4" />

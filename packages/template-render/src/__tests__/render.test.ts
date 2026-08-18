@@ -9,8 +9,10 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  buildSesRenderData,
   extractCanonicalVars,
   normalizePlainTextForSes,
+  transformVariablesForSes,
 } from "../mustache-case";
 import {
   compileTemplate,
@@ -176,15 +178,56 @@ describe("renderTemplateStrict", () => {
     expect(renderTemplate(malformed, {})).toBe(malformed);
   });
 
-  it("escapes HTML entities by default, not with noEscape", () => {
+  // SES is the reference implementation and SES substitutes TemplateData
+  // verbatim — confirmed against the live API with `test-render-template`,
+  // where `<b>x</b> & <i>y</i>` came back out of the HtmlPart unchanged.
+  // Escaping here would make the dashboard preview, the test send, and the
+  // raw-HTML send path disagree with the SES-rendered broadcast.
+  it("never entity-escapes, matching SES substitution", () => {
     const tpl = "Hi {{name}}";
-    const data = { name: "O'Brien & Sons" };
-    // Default: safe for HTML bodies.
-    expect(renderTemplateStrict(tpl, data)).toBe("Hi O&#x27;Brien &amp; Sons");
-    // noEscape: required for subjects, SMS, and plain-text parts.
-    expect(renderTemplateStrict(tpl, data, { noEscape: true })).toBe(
+    expect(renderTemplateStrict(tpl, { name: "O'Brien & Sons" })).toBe(
       "Hi O'Brien & Sons"
     );
+    expect(renderTemplate(tpl, { name: "O'Brien & Sons" })).toBe(
+      "Hi O'Brien & Sons"
+    );
+  });
+
+  it("passes markup in a variable value through as markup", () => {
+    // This is what lets a broadcast author put <br> in a {{content}} value
+    // and get a real line break. It also means values are never sanitized
+    // by this layer — browser-facing callers must isolate the output.
+    const tpl = "<p>{{body}}</p>";
+    const data = { body: "line one<br>line two" };
+    expect(renderTemplateStrict(tpl, data)).toBe("<p>line one<br>line two</p>");
+    expect(compileTemplate(tpl)(data)).toBe("<p>line one<br>line two</p>");
+  });
+});
+
+describe("buildSesRenderData", () => {
+  // transformVariablesForSes rewrites {{contact.firstName}} to
+  // {{contactFirstName}}. Callers hand us three different data shapes, and
+  // all of them have to end up carrying that key or the variable renders
+  // empty in a preview while the SES send resolves it fine.
+  it.each([
+    ["nested objects", { contact: { firstName: "Jane" } }],
+    ["flat dotted keys", { "contact.firstName": "Jane" }],
+    ["already-flat SES keys", { contactFirstName: "Jane" }],
+  ])("supplies the transformed key name from %s", (_shape, data) => {
+    const tpl = transformVariablesForSes("{{contact.firstName}}");
+    expect(renderTemplateStrict(tpl, buildSesRenderData(data))).toBe("Jane");
+  });
+
+  it("lets an explicit key win over a derived one", () => {
+    const data = { contact: { firstName: "Derived" }, contactFirstName: "Set" };
+    expect(buildSesRenderData(data).contactFirstName).toBe("Set");
+  });
+
+  it("keeps the caller's original keys intact", () => {
+    const data = { contact: { firstName: "Jane" }, plain: "value" };
+    const built = buildSesRenderData(data);
+    expect(built.contact).toEqual({ firstName: "Jane" });
+    expect(built.plain).toBe("value");
   });
 });
 
