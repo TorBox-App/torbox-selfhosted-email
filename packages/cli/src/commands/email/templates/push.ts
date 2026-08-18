@@ -9,6 +9,7 @@ import {
   discoverTemplates,
   findCliNodeModules,
   loadWrapsConfig,
+  transformVariablesForSes,
 } from "../../../utils/email/template-compiler.js";
 import { renderTemplateWithProxy } from "../../../utils/email/template-render.js";
 import {
@@ -421,30 +422,6 @@ function mergeVariables(
   }
 
   return merged;
-}
-
-function transformVariablesForSes(content: string): string {
-  return content.replace(
-    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
-    (_match, varName, fallback) => {
-      // Flatten dot notation: contact.email → contactEmail
-      const sesName = varName.includes(".")
-        ? varName
-            .split(".")
-            .map((part: string, i: number) =>
-              i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
-            )
-            .join("")
-        : varName;
-
-      if (fallback !== undefined) {
-        const trimmed = fallback.trim();
-        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmed}{{/if}}`;
-      }
-
-      return `{{${sesName}}}`;
-    }
-  );
 }
 
 // ── SES Push ──

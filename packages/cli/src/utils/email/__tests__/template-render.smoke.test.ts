@@ -16,6 +16,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { transformVariablesForSes } from "../template-compiler";
 import { renderTemplateWithProxy } from "../template-render";
 
 const TEMPLATES_DIR = resolve(
@@ -173,10 +174,15 @@ describe("wraps/templates/*.tsx render contract", () => {
       ];
 
       for (const [partName, content] of parts) {
+        // Assert on what SES actually receives. Push transforms authoring
+        // syntax before publishing, so compiling the raw stored string would
+        // reject `{{var|fallback}}` (a Handlebars parse error, since `|` is
+        // block-params) for a template that sends perfectly well.
+        const sesContent = transformVariablesForSes(content);
         for (const data of [EMPTY_DATA, testData]) {
           // Strict compile: a template SES or our renderer can't parse is a
           // failure here, not at send time.
-          const out = Handlebars.compile(content)(data);
+          const out = Handlebars.compile(sesContent)(data);
           expect(
             out.includes("{{"),
             `${slug} ${partName}: rendered output contains literal {{ with data=${JSON.stringify(

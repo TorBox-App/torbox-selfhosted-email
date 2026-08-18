@@ -185,3 +185,38 @@ export async function compileForPreview(
 
   return { slug, html, subject, emailType, previewText };
 }
+
+/**
+ * Convert authoring syntax into what SES actually receives.
+ *
+ *   {{contact.email}}      → {{contactEmail}}
+ *   {{firstName|there}}    → {{#if firstName}}{{firstName}}{{else}}there{{/if}}
+ *
+ * Applied at push time, so a stored template legitimately holds the authoring
+ * form and only the published SES artifact is transformed. Anything that
+ * asserts on "what SES will parse" has to run this first, or it is checking a
+ * string SES never sees.
+ */
+export function transformVariablesForSes(content: string): string {
+  return content.replace(
+    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
+    (_match, varName, fallback) => {
+      // Flatten dot notation: contact.email → contactEmail
+      const sesName = varName.includes(".")
+        ? varName
+            .split(".")
+            .map((part: string, i: number) =>
+              i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+            )
+            .join("")
+        : varName;
+
+      if (fallback !== undefined) {
+        const trimmed = fallback.trim();
+        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmed}{{/if}}`;
+      }
+
+      return `{{${sesName}}}`;
+    }
+  );
+}
