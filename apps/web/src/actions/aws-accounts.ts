@@ -44,6 +44,17 @@ import { getOrganizationPlan, isSelfHosted } from "@/lib/plan-limits";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 import { orgAction } from "./shared/org-action";
 
+/**
+ * AWS SDK v3 does not reliably populate `name`: some errors arrive as
+ * `name: "Error"` with the real exception type only in `message`. Match on both.
+ */
+function isAwsErrorNamed(error: unknown, ...names: string[]): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return names.some((n) => error.name === n || error.message.includes(n));
+}
+
 // Create server validator
 const serverValidate = createServerValidate({
   ...connectAWSAccountFormOpts,
@@ -451,13 +462,16 @@ export const scanAWSAccountFeatures: (
         );
         // If the command succeeds, the table exists
         eventHistoryEnabled = true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // ResourceNotFoundException means table doesn't exist
         // AccessDeniedException means user hasn't granted permissions
         // Either way, assume event history is disabled
         if (
-          error.name !== "ResourceNotFoundException" &&
-          error.name !== "AccessDeniedException"
+          !isAwsErrorNamed(
+            error,
+            "ResourceNotFoundException",
+            "AccessDeniedException"
+          )
         ) {
           ctx.log.warn({ err: error }, "Error scanning for DynamoDB table");
         }
@@ -543,8 +557,8 @@ export const scanAWSAccountFeatures: (
               customTrackingDomain = trackingDomain;
               customTrackingHttpsPolicy = trackingHttpsPolicy;
             }
-          } catch (detailError: any) {
-            if (detailError.name !== "AccessDeniedException") {
+          } catch (detailError: unknown) {
+            if (!isAwsErrorNamed(detailError, "AccessDeniedException")) {
               ctx.log.warn(
                 { err: detailError, configSetName: setName },
                 "Error fetching config set details"
@@ -553,13 +567,13 @@ export const scanAWSAccountFeatures: (
           }
         }
         trackedEvents = Array.from(allEventTypes).sort();
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Never silent: this was suppressed for AccessDeniedException, which is
         // precisely the case that matters. Every role template granted
         // GetConfigurationSet without ListConfigurationSets, so the call was
         // denied for every customer and the dashboard just showed event tracking
         // as disabled. A denial here now means the account is on a stale role.
-        if (error.name === "AccessDeniedException") {
+        if (isAwsErrorNamed(error, "AccessDeniedException")) {
           ctx.log.warn(
             { err: error },
             "Denied listing config sets during scan — role is missing ses:ListConfigurationSets, run `wraps platform update-role`"
@@ -591,8 +605,8 @@ export const scanAWSAccountFeatures: (
         sesProductionAccessRequest = review
           ? { status: review.Status ?? null, caseId: review.CaseId ?? null }
           : null;
-      } catch (error: any) {
-        if (error.name !== "AccessDeniedException") {
+      } catch (error: unknown) {
+        if (!isAwsErrorNamed(error, "AccessDeniedException")) {
           ctx.log.warn({ err: error }, "Error checking SES sandbox status");
         }
       }
@@ -625,10 +639,10 @@ export const scanAWSAccountFeatures: (
           })) ?? [];
 
         smsEnabled = smsPhoneNumbers.length > 0;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // AccessDeniedException means user hasn't granted SMS permissions
         // That's fine - assume SMS is not enabled
-        if (error.name !== "AccessDeniedException") {
+        if (!isAwsErrorNamed(error, "AccessDeniedException")) {
           ctx.log.warn({ err: error }, "Error scanning for SMS infrastructure");
         }
       }
@@ -649,12 +663,15 @@ export const scanAWSAccountFeatures: (
         );
         // If the command succeeds, the table exists
         smsEventHistoryEnabled = true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // ResourceNotFoundException means table doesn't exist
         // AccessDeniedException means user hasn't granted DynamoDB permissions
         if (
-          error.name !== "ResourceNotFoundException" &&
-          error.name !== "AccessDeniedException"
+          !isAwsErrorNamed(
+            error,
+            "ResourceNotFoundException",
+            "AccessDeniedException"
+          )
         ) {
           ctx.log.warn({ err: error }, "Error scanning for SMS history table");
         }
@@ -674,10 +691,10 @@ export const scanAWSAccountFeatures: (
         );
 
         dedicatedIpCount = dedicatedIpsResponse.DedicatedIps?.length ?? 0;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // AccessDeniedException means user hasn't granted permissions
         // That's fine - assume no dedicated IPs
-        if (error.name !== "AccessDeniedException") {
+        if (!isAwsErrorNamed(error, "AccessDeniedException")) {
           ctx.log.warn({ err: error }, "Error scanning for dedicated IPs");
         }
       }
@@ -726,8 +743,8 @@ export const scanAWSAccountFeatures: (
             // Skip identities we can't access
           }
         }
-      } catch (error: any) {
-        if (error.name !== "AccessDeniedException") {
+      } catch (error: unknown) {
+        if (!isAwsErrorNamed(error, "AccessDeniedException")) {
           ctx.log.warn({ err: error }, "Error scanning identities");
         }
       }
@@ -756,14 +773,16 @@ export const scanAWSAccountFeatures: (
           { bucket: inboundBucketName },
           "Found inbound email bucket"
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         // NotFound or AccessDenied means bucket doesn't exist or no permissions
         // Either way, assume inbound is not enabled
+        const httpStatus = (
+          error as { $metadata?: { httpStatusCode?: number } }
+        ).$metadata?.httpStatusCode;
         if (
-          error.name !== "NotFound" &&
-          error.name !== "AccessDenied" &&
-          error.$metadata?.httpStatusCode !== 404 &&
-          error.$metadata?.httpStatusCode !== 403
+          !isAwsErrorNamed(error, "NotFound", "AccessDenied") &&
+          httpStatus !== 404 &&
+          httpStatus !== 403
         ) {
           ctx.log.warn({ err: error }, "Error scanning for inbound bucket");
         }

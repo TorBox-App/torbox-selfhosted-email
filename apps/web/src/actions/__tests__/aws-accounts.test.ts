@@ -2300,6 +2300,101 @@ describe("scanAWSAccountFeatures — SES production access review", () => {
   });
 });
 
+describe("scanAWSAccountFeatures — AWS SDK v3 error name flattening", () => {
+  beforeAll(async () => {
+    await db
+      .insert(awsAccount)
+      .values(scanTestAccount)
+      .onConflictDoUpdate({
+        target: awsAccount.id,
+        set: { updatedAt: new Date() },
+      });
+  });
+
+  afterAll(async () => {
+    await db.delete(awsAccount).where(eq(awsAccount.id, scanTestAccount.id));
+  });
+
+  beforeEach(() => {
+    setupQuietScanDefaults();
+    mockLogWarn.mockClear();
+  });
+
+  // AWS SDK v3 sometimes flattens the exception type into `name: "Error"`,
+  // leaving the real type only in `message`. The SES sandbox check
+  // (`GetAccountCommand`) suppresses its warn only when
+  // `error.name === "AccessDeniedException"` — these cases reproduce the
+  // flattened shape against that one catch block to prove a bare name test
+  // is not enough.
+  function mockGetAccountRejection(error: unknown): void {
+    mockSend.mockImplementation(
+      (command: { _type: string; ConfigurationSetName?: string }) => {
+        switch (command._type) {
+          case "GetAccountCommand":
+            return Promise.reject(error);
+          case "GetDedicatedIpsCommand":
+            return Promise.resolve({ DedicatedIps: [] });
+          case "ListEmailIdentitiesCommand":
+            return Promise.resolve({ EmailIdentities: [] });
+          case "GetConfigurationSetEventDestinationsCommand":
+            return Promise.resolve({ EventDestinations: [] });
+          case "ListConfigurationSetsCommand":
+            return Promise.resolve({ ConfigurationSets: [] });
+          default:
+            return Promise.reject(
+              new Error(`Unexpected SES command: ${command._type}`)
+            );
+        }
+      }
+    );
+  }
+
+  function sandboxWarnings() {
+    return mockLogWarn.mock.calls.filter((call) =>
+      String(call[1]).includes("SES sandbox")
+    );
+  }
+
+  it('suppresses the warn when v3 flattens the name to "Error" but the message names AccessDeniedException', async () => {
+    mockGetAccountRejection(
+      Object.assign(
+        new Error(
+          "AccessDeniedException: User is not authorized to perform: ses:GetAccount"
+        ),
+        { name: "Error" }
+      )
+    );
+
+    await scanAWSAccountFeatures(scanTestAccount.id, testOrganization.id);
+
+    expect(sandboxWarnings()).toHaveLength(0);
+  });
+
+  it("still suppresses the warn when name is AccessDeniedException directly", async () => {
+    mockGetAccountRejection(
+      Object.assign(new Error("AccessDeniedException"), {
+        name: "AccessDeniedException",
+      })
+    );
+
+    await scanAWSAccountFeatures(scanTestAccount.id, testOrganization.id);
+
+    expect(sandboxWarnings()).toHaveLength(0);
+  });
+
+  it("still warns for an unrelated error with no AWS type name in it", async () => {
+    mockGetAccountRejection(
+      Object.assign(new Error("Rate exceeded"), {
+        name: "ThrottlingException",
+      })
+    );
+
+    await scanAWSAccountFeatures(scanTestAccount.id, testOrganization.id);
+
+    expect(sandboxWarnings()).toHaveLength(1);
+  });
+});
+
 // ─── connectAWSAccountAction — setupMethod persistence ─────────────────────
 
 // connectAWSAccountSchema requires organizationId to be a UUID, unlike the
