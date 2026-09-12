@@ -318,6 +318,25 @@ describe("deleteWorkflowSchedule", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("should handle a ResourceNotFoundException whose name was flattened to Error", async () => {
+    process.env.SCHEDULER_ROLE_ARN = "arn:aws:iam::role/scheduler";
+    process.env.NODE_ENV = "development";
+
+    // AWS SDK v3 sometimes returns name: "Error" with the real type only in message
+    const notFoundError = new Error(
+      "ResourceNotFoundException: Schedule not found"
+    );
+    mockSend.mockRejectedValueOnce(notFoundError);
+
+    const { deleteWorkflowSchedule } = await import(
+      "../services/workflow-scheduler"
+    );
+
+    await expect(
+      deleteWorkflowSchedule("wf-nonexistent")
+    ).resolves.toBeUndefined();
+  });
+
   it("should re-throw other errors", async () => {
     process.env.SCHEDULER_ROLE_ARN = "arn:aws:iam::role/scheduler";
     process.env.NODE_ENV = "development";

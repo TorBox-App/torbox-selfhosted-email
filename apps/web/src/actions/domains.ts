@@ -581,7 +581,11 @@ export const addSendingDomain = orgAction(
       revalidatePath(`/${ctx.access.orgSlug}/emails/domains`, "page");
       return { success: true, domain, alreadyExisted: false };
     } catch (error) {
-      if (error instanceof Error && error.name === "AlreadyExistsException") {
+      if (
+        error instanceof Error &&
+        (error.name === "AlreadyExistsException" ||
+          error.message.includes("AlreadyExistsException"))
+      ) {
         revalidatePath(`/${ctx.access.orgSlug}/emails/domains`, "page");
         return { success: true, domain, alreadyExisted: true };
       }

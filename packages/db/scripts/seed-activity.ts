@@ -448,7 +448,8 @@ async function writeDynamoBatch(
     } catch (error) {
       if (
         error instanceof Error &&
-        error.name === "ResourceNotFoundException"
+        (error.name === "ResourceNotFoundException" ||
+          error.message.includes("ResourceNotFoundException"))
       ) {
         console.error(
           `\n  Table "${tableName}" not found. Has infrastructure been deployed?`

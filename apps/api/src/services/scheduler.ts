@@ -122,7 +122,11 @@ export async function deleteBroadcastSchedule(batchId: string): Promise<void> {
     );
   } catch (error: unknown) {
     // Ignore if schedule doesn't exist (already executed or deleted)
-    if (error instanceof Error && error.name === "ResourceNotFoundException") {
+    if (
+      error instanceof Error &&
+      (error.name === "ResourceNotFoundException" ||
+        error.message.includes("ResourceNotFoundException"))
+    ) {
       return;
     }
     throw error;

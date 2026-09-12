@@ -109,9 +109,13 @@ export async function findWrapsArchive(
     const getResponse = await client.send(getCommand);
 
     return getResponse.ArchiveArn || null;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If user hasn't granted archive permissions, assume archiving is disabled
-    if (error.name === "AccessDeniedException") {
+    if (
+      error instanceof Error &&
+      (error.name === "AccessDeniedException" ||
+        error.message.includes("AccessDeniedException"))
+    ) {
       return null;
     }
 
@@ -258,7 +262,8 @@ export async function getArchivedEmail(
       // If search is still in progress, continue polling
       if (
         error instanceof Error &&
-        error.name === "ConflictException" &&
+        (error.name === "ConflictException" ||
+          error.message.includes("ConflictException")) &&
         error.message.includes("still in progress")
       ) {
         logger.debug(

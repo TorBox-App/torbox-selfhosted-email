@@ -141,7 +141,11 @@ export async function deleteWorkflowSchedule(
     );
     log.info("Scheduler: deleted schedule", { scheduleName, workflowId });
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === "ResourceNotFoundException") {
+    if (
+      error instanceof Error &&
+      (error.name === "ResourceNotFoundException" ||
+        error.message.includes("ResourceNotFoundException"))
+    ) {
       // Schedule already fired and auto-deleted, or never existed
       return;
     }
@@ -218,7 +222,11 @@ export async function updateWorkflowSchedule(params: {
       })
     );
   } catch (error) {
-    if (error instanceof Error && error.name === "ResourceNotFoundException") {
+    if (
+      error instanceof Error &&
+      (error.name === "ResourceNotFoundException" ||
+        error.message.includes("ResourceNotFoundException"))
+    ) {
       // Schedule fired and self-deleted (ActionAfterCompletion=DELETE) before the
       // update arrived. Fall back to creating the next schedule from scratch.
       log.warn("Scheduler: schedule not found for update, recreating", {
@@ -305,7 +313,8 @@ export async function reconcileScheduleChains(): Promise<{
     } catch (error: unknown) {
       if (
         error instanceof Error &&
-        error.name === "ResourceNotFoundException"
+        (error.name === "ResourceNotFoundException" ||
+          error.message.includes("ResourceNotFoundException"))
       ) {
         try {
           await createNextWorkflowSchedule({

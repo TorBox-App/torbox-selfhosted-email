@@ -147,7 +147,10 @@ export async function listInboundEmails(params: {
   } catch (error) {
     if (
       error instanceof Error &&
-      (error.name === "NoSuchBucket" || error.name === "NoSuchKey")
+      (error.name === "NoSuchBucket" ||
+        error.message.includes("NoSuchBucket") ||
+        error.name === "NoSuchKey" ||
+        error.message.includes("NoSuchKey"))
     ) {
       return { emails: [] };
     }

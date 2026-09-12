@@ -311,7 +311,11 @@ export async function deleteScheduledStep(scheduleName: string): Promise<void> {
       })
     );
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === "ResourceNotFoundException") {
+    if (
+      error instanceof Error &&
+      (error.name === "ResourceNotFoundException" ||
+        error.message.includes("ResourceNotFoundException"))
+    ) {
       return;
     }
     throw error;

@@ -292,7 +292,11 @@ export const verifyOwnEmailIdentity = orgAction(
         email: ctx.access.userEmail,
       };
     } catch (error) {
-      if (error instanceof Error && error.name === "AlreadyExistsException") {
+      if (
+        error instanceof Error &&
+        (error.name === "AlreadyExistsException" ||
+          error.message.includes("AlreadyExistsException"))
+      ) {
         // AWS re-sends the verification mail when this is called again.
         return {
           success: true,
