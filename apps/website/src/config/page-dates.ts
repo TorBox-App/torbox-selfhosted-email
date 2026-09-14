@@ -134,7 +134,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/for/marketing": "2026-09-03T12:34:36-06:00",
   "/for/operators": "2026-09-04T17:01:55-06:00",
   "/inbound": "2026-08-28T11:13:54-06:00",
-  "/mcp": "2026-08-28T11:13:54-06:00",
+  "/mcp": "2026-09-14T09:55:34-06:00",
   "/migrate": "2026-09-08T23:00:06-06:00",
   "/migrate/amazon-pinpoint": "2026-08-28T11:13:44-06:00",
   "/migrate/mailgun": "2026-09-08T23:00:06-06:00",
