@@ -730,14 +730,15 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
   },
   {
     route: "/why-wraps",
-    primaryQuery: "why choose wraps over email saas",
+    primaryQuery: "is wraps production ready for company email",
     secondaryQueries: [
-      "own your email infrastructure vs saas",
-      "aws pricing modern developer experience email",
+      "wraps soc 2 compliance",
+      "wraps security review questions",
+      "what happens to my infrastructure if wraps shuts down",
     ],
     audience: "evaluating-wraps",
     rationale:
-      'This is the page named in its own title as the direct answer to a buyer\'s "why this vendor" question, pairing AWS-direct pricing with modern DX — the two axes every /compare/*-vs-wraps page also argues on individually.',
+      "Rewritten 2026-09-14 for the approver rather than the engineer: a risk register in AWS's own enforcement numbers, the exit story, and the security-review questions answered including the ones we fail. Nothing else on the site answers \"should we let this vendor into our AWS account\", and the old framing (AWS pricing plus modern DX) duplicated every /compare/*-vs-wraps page.",
   },
   {
     route: "/for/marketing",

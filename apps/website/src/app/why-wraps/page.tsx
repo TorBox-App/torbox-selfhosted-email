@@ -1,18 +1,3 @@
-import { Button } from "@wraps/ui/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@wraps/ui/components/ui/card";
-import {
-  ArrowRight,
-  Calculator,
-  Check,
-  Code,
-  Lock,
-  Server,
-} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter } from "@/app/landing/components/footer";
@@ -21,285 +6,330 @@ import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { CopyLinkButton } from "./components/copy-link-button";
 import { FaqSection } from "./components/faq-section";
 
+/*
+ * The forwardable page. Its reader is not the engineer who found Wraps — it is
+ * the person that engineer has to convince, who will never run `email init` and
+ * whose job is to find the reason not to.
+ *
+ * So it argues on risk, cost and exit, in that order, and it states our limits
+ * before the reviewer finds them. The landing page carries the insight and
+ * /approaches carries the market rubric; neither belongs here again.
+ */
+
 export const metadata: Metadata = {
-  title: "Why Wraps - Amazon SES Pricing with Modern Developer Experience",
+  title: "Why Wraps — the evaluation guide you can forward",
   description:
-    "Own your infrastructure, pay AWS prices, keep the great DX. No vendor lock-in, full data control.",
+    "What Wraps reduces, what it costs all in, what happens to your infrastructure if we disappear, and the questions a security review will ask — including the ones we fail.",
   openGraph: {
     title: "Why Wraps | Wraps",
     description:
-      "Own your infrastructure, pay AWS prices, keep the great DX. No vendor lock-in, full data control.",
+      "What Wraps reduces, what it costs all in, what happens if we disappear, and the questions a security review will ask — including the ones we fail.",
   },
   twitter: {
     title: "Why Wraps | Wraps",
     description:
-      "Own your infrastructure, pay AWS prices, keep the great DX. No vendor lock-in, full data control.",
+      "What Wraps reduces, what it costs all in, what happens if we disappear, and the questions a security review will ask — including the ones we fail.",
   },
   alternates: {
     canonical: "https://wraps.dev/why-wraps",
   },
 };
 
-const costComparison = [
+/*
+ * The risk register. Every row names AWS's own enforcement number, what Wraps
+ * does about it, and what Wraps cannot do — the last column is the reason the
+ * table is worth forwarding. A row without a real limit would be marketing.
+ */
+const riskRegister = [
   {
-    volume: "1K/mo",
-    saas: "$0-30",
-    wrapsPlatform: "$0",
-    awsCost: "~$0.10 (à la carte)",
+    risk: "Bounce rate climbs",
+    awsLine: "AWS opens a manual review at 5% and pauses sending at 10%",
+    wraps:
+      "Bounces are suppressed on the way in from the first send. The rate is drawn against both lines on the dashboard and swept hourly.",
+    limit: "Reverse a pause AWS has already applied.",
   },
   {
-    volume: "10K/mo",
-    saas: "$15-100",
-    wrapsPlatform: "$0",
-    awsCost: "~$1",
+    risk: "Complaint rate climbs",
+    awsLine: "Review at 0.1%, sending paused at 0.5%",
+    wraps:
+      "Complaints feed the same suppression path, and the rate carries the same two lines and the same hourly sweep.",
+    limit: "Stop recipients marking mail as spam.",
   },
   {
-    volume: "50K/mo",
-    saas: "$20-150",
-    wrapsPlatform: "$0",
-    awsCost: "~$5",
+    risk: "The account cannot send at all",
+    awsLine: "New accounts reach verified recipients only, until AWS approves",
+    wraps:
+      "Sandbox is detected at the end of a deploy and explained, with the request linked, rather than discovered from a failed send.",
+    limit: "Approve the request. Only AWS can, from your account.",
   },
   {
-    volume: "100K/mo",
-    saas: "$35-200",
-    wrapsPlatform: "$0",
-    awsCost: "~$10",
+    risk: "The daily quota runs out mid-campaign",
+    awsLine: "AWS sets a rolling 24-hour send quota per account",
+    wraps: "Usage is shown against the quota with a warning line at 80%.",
+    limit: "Raise the quota.",
   },
   {
-    volume: "500K/mo",
-    saas: "$350-720",
-    wrapsPlatform: "$0",
-    awsCost: "~$50",
+    risk: "Domain authentication drifts and mail lands in spam",
+    awsLine: "No AWS alert — you find out from a customer",
+    wraps:
+      "An on-demand audit covers DKIM, SPF, DMARC, MX and TLS, BIMI, and public blacklists.",
+    limit: "Guarantee inbox placement. Nobody can.",
   },
 ];
 
-const securityPoints = [
-  "Zero stored credentials — temporary access via OIDC and IAM roles, no API keys to rotate",
-  "Infrastructure runs in your AWS account, not ours",
-  "Your sending infrastructure and raw event history live in your AWS account — dashboard features like broadcasts and hosted templates are processed and stored by the Wraps platform",
-  "Open source — audit the code yourself",
-  "Inherits your existing AWS compliance (SOC2, HIPAA, etc.)",
+const planRows = [
+  {
+    plan: "Free",
+    price: "$0",
+    forWho: "One AWS account, 30 days of history. Most first deploys.",
+  },
+  {
+    plan: "Pro",
+    price: "$29/mo",
+    forWho: "One AWS account, 90 days of history, email support.",
+  },
+  {
+    plan: "Business",
+    price: "$199/mo",
+    forWho:
+      "Unlimited AWS accounts, 365 days of history, SSO and SCIM, audit log with CSV export, priority SLA.",
+  },
 ];
 
-const lockInPoints = [
-  "All infrastructure is deployed to your AWS account",
-  "If you stop using Wraps, everything keeps running",
-  "Standard AWS services underneath (SES, DynamoDB, Lambda)",
-  "Export data anytime - it's in your DynamoDB",
-  "CLI is open source under AGPLv3; the SDKs are MIT — neither affects your application code",
+const exitPoints = [
+  {
+    title: "The infrastructure is already yours",
+    body: "SES identities, Lambdas, EventBridge rules and DynamoDB tables are created in your AWS account, namespaced wraps-email-*, and none of them call us to keep working. Stop paying and mail keeps sending.",
+  },
+  {
+    title: "Our access is a role you delete",
+    body: "Wraps assumes an IAM role with an external ID. No access keys exist on our side, so revoking access is a change you make in your own account without involving us.",
+  },
+  {
+    title: "The code outlives the company",
+    body: "The platform is AGPL-3.0, with an enterprise kernel under a separate licence, and the SDKs are MIT. If Wraps disappears, the thing you deployed is still a fork you can run.",
+  },
+  {
+    title: "What you would lose, stated plainly",
+    body: "The dashboard, and the contacts, templates, broadcasts and workflows that live in our database rather than yours. Export them before you go. Sending data and delivery events are already in your account and stay there.",
+  },
+];
+
+const badFit = [
+  "You have no AWS account and no appetite for one. Use a hosted API — for a small team with no AWS commitment that is the better answer, not a consolation prize.",
+  "Your review requires SOC 2, HIPAA or a BAA today. We have none of them.",
+  "You expect to be refused SES production access. Wraps cannot change that outcome, and a sandboxed account sends to nobody.",
+  "Your stack is not TypeScript or Python. Those are the SDKs that exist.",
+  "A non-engineer needs to own email day to day. A marketing platform will fit their hands better than ours will.",
+  "You are shopping purely on price below about 100,000 emails a month. The gap at that volume is small enough that it should not be the deciding factor.",
 ];
 
 export default function WhyWrapsPage() {
   return (
     <div className="min-h-screen bg-background">
       <LandingNavbar />
-
       <main className="container mx-auto px-4 pt-24 pb-12">
         <div className="mx-auto max-w-4xl">
-          {/* Page Header */}
-          <div className="mb-12">
+          <div className="mb-14">
             <SectionKicker>Wraps · Evaluation guide</SectionKicker>
             <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight">
               Why Wraps
             </h1>
             <p className="max-w-2xl text-lg text-muted-foreground">
-              Everything you need to evaluate Wraps for your team. Share this
-              page with your manager or teammates.
+              Written to be forwarded. If you are the person being asked to
+              approve this, the sections below are the risk it reduces, what it
+              costs in total, what happens to your infrastructure if we
+              disappear, and the questions your review will raise — including
+              the ones where our answer is no.
             </p>
             <CopyLinkButton />
           </div>
 
-          {/* Cost Comparison */}
+          {/* 01 — risk */}
           <section className="mb-16">
-            <div className="mb-6 flex items-center gap-3">
-              <Calculator className="size-6 text-muted-foreground" />
+            <div className="mb-3 flex items-baseline gap-3">
+              <span className="font-mono text-brand text-xs">01</span>
               <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Cost Comparison
+                What you are actually buying down
               </h2>
             </div>
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-4 text-left font-medium">
-                          Send Volume
-                        </th>
-                        <th className="p-4 text-left font-medium">
-                          Email SaaS
-                        </th>
-                        <th className="p-4 text-left font-medium text-primary">
-                          Wraps Platform
-                        </th>
-                        <th className="p-4 text-left font-medium text-muted-foreground">
-                          + AWS Cost
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {costComparison.map((row) => (
-                        <tr key={row.volume}>
-                          <td className="p-4 text-muted-foreground">
-                            {row.volume}
-                          </td>
-                          <td className="p-4">{row.saas}</td>
-                          <td className="p-4 font-medium text-primary">
-                            {row.wrapsPlatform}
-                          </td>
-                          <td className="p-4 text-muted-foreground">
-                            {row.awsCost}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <p className="mb-7 max-w-2xl text-muted-foreground">
+              Not a cheaper send. The failure mode that costs a company real
+              money is Amazon switching the account off, and every number in the
+              second column is AWS's, not ours.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-left">
+                <thead>
+                  <tr>
+                    {[
+                      "Risk",
+                      "AWS's line",
+                      "What Wraps does",
+                      "What it cannot do",
+                    ].map((h) => (
+                      <th
+                        className="border-border border-b px-3 py-3 font-mono font-medium text-muted-foreground text-xs uppercase tracking-[0.08em]"
+                        key={h}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {riskRegister.map((row) => (
+                    <tr key={row.risk}>
+                      <td className="border-border border-b px-3 py-4 align-top font-medium text-foreground text-sm">
+                        {row.risk}
+                      </td>
+                      <td className="border-border border-b px-3 py-4 align-top text-muted-foreground text-sm">
+                        {row.awsLine}
+                      </td>
+                      <td className="border-border border-b px-3 py-4 align-top text-foreground/90 text-sm">
+                        {row.wraps}
+                      </td>
+                      <td className="border-border border-b px-3 py-4 align-top text-muted-foreground text-sm">
+                        {row.limit}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* 02 — cost */}
+          <section className="mb-16">
+            <div className="mb-3 flex items-baseline gap-3">
+              <span className="font-mono text-brand text-xs">02</span>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                What it costs, all in
+              </h2>
+            </div>
+            <p className="mb-7 max-w-2xl text-muted-foreground">
+              Two lines on two invoices. A flat platform fee from us, and AWS
+              billing you directly for the sending at{" "}
+              <strong className="text-foreground">
+                $0.10 per 1,000 emails
+              </strong>{" "}
+              on à la carte, or $0.16 on the Essentials plan new AWS accounts
+              default to. There is no per-seat, per-contact or per-send meter on
+              any tier.
+            </p>
+
+            <dl className="space-y-4">
+              {planRows.map((row) => (
+                <div
+                  className="grid gap-1 border-border border-t pt-4 sm:grid-cols-[8rem_1fr]"
+                  key={row.plan}
+                >
+                  <dt className="font-semibold text-foreground text-sm">
+                    {row.plan}
+                    <span className="ml-2 font-mono font-normal text-muted-foreground">
+                      {row.price}
+                    </span>
+                  </dt>
+                  <dd className="text-muted-foreground text-sm leading-[1.6]">
+                    {row.forWho}
+                  </dd>
                 </div>
-              </CardContent>
-            </Card>
-            <p className="mt-4 text-muted-foreground text-sm">
-              Email SaaS examples: Mailchimp, Resend, SendGrid, Postmark,
-              Customer.io. Wraps Platform is a flat fee for tooling (dashboard,
-              workflows, templates, analytics) and does not scale with send
-              volume — Free covers any volume. You pay AWS directly for sending
-              at $0.10/1K emails on à la carte (AWS defaults new accounts to
-              $0.16/1K). Paid tiers (Pro $29, Business $199) buy more AWS
-              accounts, longer dashboard history, and governance features, not
-              more volume.{" "}
-              <a className="text-primary underline" href="/platform#pricing">
-                See what each tier includes
-              </a>
+              ))}
+            </dl>
+
+            <p className="mt-7 max-w-2xl text-muted-foreground text-sm leading-[1.65]">
+              Worth saying to whoever is reviewing the budget: price is not the
+              reason to do this. Below roughly 100,000 emails a month the
+              difference against a hosted API is small, and if the case rests on
+              the arithmetic alone it is a weak case. The argument is the first
+              table.
             </p>
           </section>
 
-          {/* Security & Compliance */}
+          {/* 03 — exit */}
           <section className="mb-16">
-            <div className="mb-6 flex items-center gap-3">
-              <Lock className="size-6 text-muted-foreground" />
+            <div className="mb-3 flex items-baseline gap-3">
+              <span className="font-mono text-brand text-xs">03</span>
               <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Security & Compliance
+                What happens if Wraps goes away
               </h2>
             </div>
-            <Card>
-              <CardContent className="pt-6">
-                <ul className="space-y-3">
-                  {securityPoints.map((point) => (
-                    <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </section>
+            <p className="mb-7 max-w-2xl text-muted-foreground">
+              The question a careful reviewer asks about any vendor in the send
+              path. Here it has a mechanical answer rather than a reassuring
+              one.
+            </p>
 
-          {/* No Vendor Lock-in */}
-          <section className="mb-16">
-            <div className="mb-6 flex items-center gap-3">
-              <Server className="size-6 text-muted-foreground" />
-              <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                No Vendor Lock-in
-              </h2>
-            </div>
-            <Card>
-              <CardContent className="pt-6">
-                <ul className="space-y-3">
-                  {lockInPoints.map((point) => (
-                    <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Developer Experience */}
-          <section className="mb-16">
-            <div className="mb-6 flex items-center gap-3">
-              <Code className="size-6 text-muted-foreground" />
-              <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Developer Experience
-              </h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">TypeScript SDK</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Full type safety, intuitive API, great autocomplete.{" "}
-                    <code className="rounded bg-muted px-1">email.send()</code>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {exitPoints.map((point) => (
+                <div className="border-border border-t pt-4" key={point.title}>
+                  <h3 className="mb-2 font-semibold text-foreground text-sm">
+                    {point.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-[1.6]">
+                    {point.body}
                   </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">One-Command Setup</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    <code className="rounded bg-muted px-1">
-                      npx @wraps.dev/cli email init
-                    </code>{" "}
-                    deploys everything.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Local Dashboard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Free local console for development. Upgrade to the hosted
-                    platform for workflows, templates, and analytics.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Event Tracking</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Sends, deliveries, opens, clicks, bounces - all tracked in
-                    DynamoDB.
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
+              ))}
             </div>
           </section>
 
-          {/* FAQ for Decision Makers */}
+          {/* 04 — the meeting questions */}
           <FaqSection />
 
-          {/* CTA */}
+          {/* 05 — bad fit */}
+          <section className="mb-16">
+            <div className="mb-3 flex items-baseline gap-3">
+              <span className="font-mono text-brand text-xs">05</span>
+              <h2 className="font-heading font-semibold text-2xl tracking-tight">
+                When the answer is no
+              </h2>
+            </div>
+            <p className="mb-7 max-w-2xl text-muted-foreground">
+              If one of these describes your team, a decision against Wraps is
+              the correct one, and we would rather you reach it from this page
+              than three weeks into a trial.
+            </p>
+            <ul className="space-y-4">
+              {badFit.map((item) => (
+                <li
+                  className="border-border border-t pt-4 text-muted-foreground text-sm leading-[1.65]"
+                  key={item}
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-7 max-w-2xl text-muted-foreground text-sm">
+              Still deciding which category you belong in?{" "}
+              <Link
+                className="text-foreground underline underline-offset-4"
+                href="/approaches"
+              >
+                The four approaches
+              </Link>{" "}
+              lays out every option, including the ones that are not us.
+            </p>
+          </section>
+
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Ready to try it?
+              Try it against a real AWS account
             </h2>
-            <p className="mb-6 text-muted-foreground">
-              Deploy in 2 minutes. No credit card required.
+            <p className="mx-auto mb-6 max-w-xl text-muted-foreground">
+              One command, about two minutes, non-destructive. Nothing existing
+              in the account is modified, so a trial deploy is reversible.
             </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg">
-                <Link href="/docs/quickstart">
-                  Get Started
-                  <ArrowRight className="ml-2 size-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/tools/ses-calculator">Calculate Your Costs</Link>
-              </Button>
-            </div>
+            <Link
+              className="inline-flex items-center rounded-md bg-foreground px-5 py-2.5 font-medium text-background text-sm transition-opacity hover:opacity-90"
+              href="/docs/quickstart/email"
+            >
+              Read the quickstart
+            </Link>
           </section>
         </div>
       </main>
-
       <LandingFooter />
     </div>
   );
