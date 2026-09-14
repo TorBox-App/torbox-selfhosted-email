@@ -43,14 +43,14 @@ export const metadata: Metadata = {
 const riskRegister = [
   {
     risk: "Bounce rate climbs",
-    awsLine: "AWS opens a manual review at 5% and pauses sending at 10%",
+    awsLine: "AWS can open a manual review above 5% and pause sending at 10%",
     wraps:
       "Bounces are suppressed on the way in from the first send. The rate is drawn against both lines on the dashboard and swept hourly.",
     limit: "Reverse a pause AWS has already applied.",
   },
   {
     risk: "Complaint rate climbs",
-    awsLine: "Review at 0.1%, sending paused at 0.5%",
+    awsLine: "Review above 0.1%, sending can be paused at 0.5%",
     wraps:
       "Complaints feed the same suppression path, and the rate carries the same two lines and the same hourly sweep.",
     limit: "Stop recipients marking mail as spam.",
@@ -111,7 +111,7 @@ const exitPoints = [
   },
   {
     title: "What you would lose, stated plainly",
-    body: "The dashboard, and the contacts, templates, broadcasts and workflows that live in our database rather than yours. Export them before you go. Sending data and delivery events are already in your account and stay there.",
+    body: "The dashboard, and everything that lives in our database rather than yours: contacts, templates, broadcasts, workflows, and the per-message send records that drive the dashboard list and analytics. Export them before you go. The SES infrastructure and the event history in your own DynamoDB stay where they are.",
   },
 ];
 

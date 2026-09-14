@@ -148,16 +148,17 @@ export function AccountSurvivalSection() {
               Your bounce rate, against the line AWS pauses you at.
             </h2>
             <p className="mt-5 max-w-[48ch] text-base text-muted-foreground leading-[1.6]">
-              Amazon starts a manual review of your account at a 5% bounce rate
-              and stops your mail at 10%. For complaints the lines are 0.1% and
-              0.5%. Nothing in the AWS console draws your rate against them, so
-              the first news most teams get is the email telling them sending is
-              disabled.
+              Amazon can place an account under review once its bounce rate
+              passes 5%, and can pause sending at 10%. For complaints the lines
+              are 0.1% and 0.5%. Nothing in the AWS console draws your rate
+              against them, so the first news most teams get is the email
+              telling them sending is disabled.
             </p>
             <p className="mt-4 max-w-[48ch] text-base text-muted-foreground leading-[1.6]">
               Wraps reads those metrics every hour, marks the account healthy,
-              at risk, or in danger, and tells you when it changes. An email API
-              does not do this — it is not their account to lose.
+              at risk, or in danger, and notifies your owners and admins when it
+              crosses a line. An email API does not do this — it is not their
+              account to lose.
             </p>
             <p className="mt-6 text-[13.5px] text-muted-foreground leading-[1.6]">
               Bounces and complaints are suppressed on the way in, so the rates

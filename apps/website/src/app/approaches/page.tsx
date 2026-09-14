@@ -116,16 +116,17 @@ export default function ApproachesPage() {
                 rebuilt a Resend-compatible API on top of your own SES, and
                 given it away. That is a real thing to know about before you pay
                 anyone, us included. It also settles an argument: if the API
-                were the hard part, it would not have been rebuilt eight times
-                by people doing it for free on weekends.
+                were the hard part, it would not keep being rebuilt by people
+                giving it away for nothing.
               </p>
               <p>
-                The hard part is the account underneath. Amazon starts a manual
-                review at a 5% bounce rate and stops your mail at 10%; for
-                complaints the lines are 0.1% and 0.5%. Getting production
-                access in the first place is an approval that can be refused.
-                None of that is visible from a send API, because in three of
-                these four approaches it is not your account to lose.
+                The hard part is the account underneath. Amazon can put an
+                account under review once its bounce rate passes 5% and can
+                pause sending at 10%; for complaints the lines are 0.1% and
+                0.5%. Getting production access in the first place is an
+                approval that can be refused. None of that is visible from a
+                send API, because in three of these four approaches it is not
+                your account to lose.
               </p>
               <p>
                 That is the layer Wraps builds. If you already operate SES well,

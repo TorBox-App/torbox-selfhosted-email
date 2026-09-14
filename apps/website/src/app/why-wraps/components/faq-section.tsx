@@ -31,7 +31,7 @@ const faqItems = [
     id: "data",
     question: "Where does our data actually live?",
     answer:
-      "Split, and the split matters for a security review. Sending runs through SES in your AWS account, and delivery events land in your DynamoDB, under your retention. Contacts, templates, broadcasts and workflow state live in the Wraps database (Neon, Postgres) — not yours. Anyone who tells you every byte stays in your account is describing a different product.",
+      "Split, and the split is wider than the marketing shorthand suggests, so here it is exactly. In your AWS account: SES does the sending, and the per-event delivery history lands in a DynamoDB table whose retention you set in your own deploy config, up to permanent. In the Wraps database (Neon, Postgres): contacts, templates, broadcasts, workflow state — and a row per message carrying the recipient address, subject, sender, any template variables, and the delivery and open timestamps, because that is what the dashboard list and the analytics read. If recipient addresses and subject lines in a vendor database are a problem for your review, that is the fact to take into the room. Anyone who tells you every byte stays in your account is describing a different product.",
   },
   {
     id: "access",
@@ -61,7 +61,7 @@ const faqItems = [
     id: "migration",
     question: "How disruptive is the migration?",
     answer:
-      "Deploy alongside whatever you run now — the install is namespaced and does not modify existing SES resources, so it can coexist with an account that is already sending. Move traffic gradually, keep the old provider up until you are satisfied, then decommission. Your sending domain does not change. Budget a day of engineering time, not a quarter.",
+      "Deploy alongside whatever you run now — the install is namespaced and does not modify existing SES resources, so it can coexist with an account that is already sending. Move traffic gradually, keep the old provider up until you are satisfied, then decommission. Your sending domain does not change. The deploy itself takes minutes; the cutover takes as long as your sending code takes to repoint, and we would rather not put a number on that for you.",
   },
 ];
 

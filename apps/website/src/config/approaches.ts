@@ -73,9 +73,9 @@ export const APPROACHES: readonly Approach[] = [
     id: "oss-wrapper",
     label: "Self-host an open-source wrapper",
     title: "Self-host an open-source wrapper on your own SES",
-    examples: "OpenSend, useSend, MillionSend, FreeResend, Plunk",
-    pro: "Free, or close to it — you pay AWS for sending and nothing for the platform. Most expose a Resend-compatible API, so migrating off Resend is a base-URL change. Dashboard, domain verification, webhooks and broadcasts are all there, and the source is open, so the ownership argument is theirs as much as ours. Several are good.",
-    con: "They ship the platform layer and stop there. Checked in September 2026, none of them helps with production access, governs bounces and complaints past emitting a webhook, runs blacklist checks, or watches your account against the rates AWS enforces. Most ask for long-lived AWS access keys in a container you now run. You end up operating the platform as well as SES.",
+    examples: "OpenSend, useSend, MillionSend, and a growing list of others",
+    pro: "Free, or close to it — you pay AWS for sending and nothing for the platform. Several expose a Resend-compatible API, so migrating off Resend can be a base-URL change. Dashboard, domain verification, webhooks and broadcasts are all there, and the source is open, so the ownership argument is theirs as much as ours. Several are good.",
+    con: "They ship the platform layer and stop there. We read the docs for OpenSend, useSend and MillionSend in September 2026: none of the three helps with production access, governs bounces and complaints past emitting a webhook, runs blacklist checks, or watches your account against the rates AWS enforces. Each takes AWS credentials into a container you run, rather than a role you can revoke. You end up operating the platform as well as SES.",
     pickThisIf:
       "You already have production access, you already handle bounces, and what you want is a dashboard and a Resend-shaped API over the SES you are running well. Do this and pay nobody.",
   },

@@ -381,20 +381,23 @@ export default function ResendVsWrapsPage() {
               Price is not why people pick Resend over SES.
             </h2>
             <p className="mb-6 max-w-2xl text-muted-foreground">
-              In September 2026 a team running a public provider bake-off costed
-              Amazon SES at about $0.30 a month against Resend at $20, called
-              SES &ldquo;cheapest by far,&rdquo; and chose Resend. Their stated
-              reason, in full:
+              In September 2026 a team moving about 3,000 lifecycle emails a
+              month off shared SMTP wrote their options up in public. They
+              costed Amazon SES at roughly $0.30 a month against Resend at $20,
+              called SES &ldquo;cheapest by far&rdquo; — and recommended Resend
+              anyway. Their SES row, in full:
             </p>
             <blockquote className="mb-6 max-w-2xl border-foreground border-l-2 pl-5 text-foreground text-lg italic">
-              &ldquo;Requires production-access request (sandboxed by default)
+              &ldquo;cheapest by far; AWS profiles already configured on the dev
+              machine. Requires production-access request (sandboxed by default)
               and you must handle bounces/complaints yourself.&rdquo;
             </blockquote>
             <p className="mb-6 max-w-2xl text-muted-foreground">
-              A 66&times; price gap lost to those two clauses. If they describe
-              you, the rest of this page matters more than the numbers in it —
-              so here is what Wraps actually does about each one, and what it
-              does not.
+              A 66&times; price difference, AWS credentials already sitting on
+              the dev machine, and the two clauses after that semicolon were
+              still enough to make a hosted API the recommendation. That is the
+              trade this page is about. Here is what Wraps does about each of
+              those clauses — and what it does not.
             </p>
             <dl className="max-w-2xl space-y-5">
               <div className="border-border border-t pt-4">
