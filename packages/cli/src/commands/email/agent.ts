@@ -536,7 +536,7 @@ export async function agentCreate(
     await saveConnectionMetadata(metadata);
   });
 
-  await progress.execute("Syncing agent policy", async () => {
+  const sync = await progress.execute("Syncing agent policy", async () => {
     const resp = await api.post(`/v1/agents/${created.id}/policy-sync`, {
       credentialUserArn: creds.userArn,
       enforcerFunctionArn,
@@ -545,7 +545,16 @@ export async function agentCreate(
     if (!resp.ok) {
       throw new Error(await parseError(resp));
     }
+    // A 200 can still carry syncStatus:"failed" — the agent row exists but the
+    // enforcer never got its CONFIG item, so the agent cannot send. Surface it
+    // below rather than throwing: the credential must still reach the operator.
+    return (await resp.json()) as {
+      syncStatus?: "synced" | "skipped" | "failed";
+      warning?: string;
+    };
   });
+
+  const syncFailed = sync.syncStatus === "failed";
 
   // 14. Output — credential shown ONCE.
   if (isJsonMode()) {
@@ -563,6 +572,12 @@ export async function agentCreate(
       accessKeyId: creds.accessKeyId,
       secretAccessKey: creds.secretAccessKey,
       userArn: creds.userArn,
+      // The command DID create the agent and mint a real credential even when
+      // the sync failed — jsonSuccess (not jsonError) is deliberate here so
+      // the credential doesn't have to be smuggled through an error payload a
+      // scripted caller isn't looking at. syncStatus is the field to branch on.
+      syncStatus: sync.syncStatus ?? "unknown",
+      warning: sync.warning ?? null,
     });
     return;
   }
@@ -570,7 +585,11 @@ export async function agentCreate(
   progress.stop();
 
   console.log();
-  clack.log.success(pc.bold(`Agent "${name}" is ready.`));
+  if (syncFailed) {
+    clack.log.warn(pc.bold(`Agent "${name}" was created but CANNOT send yet.`));
+  } else {
+    clack.log.success(pc.bold(`Agent "${name}" is ready.`));
+  }
   console.log();
   console.log(`  ${pc.dim("Address:")}     ${pc.cyan(emailAddress)}`);
   console.log(`  ${pc.dim("Agent ID:")}    ${pc.cyan(created.id)}`);
@@ -588,14 +607,26 @@ export async function agentCreate(
   clack.note(mcpEnv, "MCP env — save now, the secret is shown only once");
 
   console.log();
-  console.log(pc.bold("Next steps:"));
-  console.log(
-    `  1. Add the env above to your agent's ${pc.cyan("@wraps.dev/mcp")} config`
-  );
-  console.log(
-    `  2. Review pending sends: ${pc.cyan("wraps email agent list")}`
-  );
-  console.log();
+
+  if (syncFailed) {
+    console.log(pc.bold("This agent cannot send until the sync succeeds:"));
+    if (sync.warning) {
+      console.log(`  ${pc.yellow(sync.warning)}`);
+    }
+    console.log(
+      `  Still failing after that? Reach us: ${pc.cyan("wraps support")}`
+    );
+    console.log();
+  } else {
+    console.log(pc.bold("Next steps:"));
+    console.log(
+      `  1. Add the env above to your agent's ${pc.cyan("@wraps.dev/mcp")} config`
+    );
+    console.log(
+      `  2. Review pending sends: ${pc.cyan("wraps email agent list")}`
+    );
+    console.log();
+  }
 }
 
 /**

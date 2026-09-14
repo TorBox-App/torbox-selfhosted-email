@@ -593,23 +593,41 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
       }
 
       // Now that the agent knows its account, push the initial CONFIG item.
+      // A silent 200 here is how a create can hand back a credential for an
+      // agent the enforcer will never recognise ("unknown agent" on every
+      // send), so the outcome is SURFACED, never swallowed — same contract as
+      // the kill route above.
+      let syncStatus: "synced" | "skipped" | "failed" = "skipped";
+      let warning: string | undefined;
       if (updated.awsAccountId) {
         try {
           await syncAgentPolicy(updated);
+          syncStatus = "synced";
         } catch (error) {
+          syncStatus = "failed";
+          warning =
+            "Agent registered, but pushing its config to the enforcer failed — the agent cannot send until this succeeds. The console access role is most likely missing dynamodb:PutItem on wraps-email-agent-policy; redeploy the email stack with `wraps email config` to apply the grant, then retry.";
           log.error("Initial policy sync failed", error, {
             agentId: updated.id,
           });
         }
       }
 
-      return serializeAgent(updated);
+      return { agent: serializeAgent(updated), syncStatus, warning };
     },
     {
       params: t.Object({ id: t.String({ maxLength: 255 }) }),
       body: policySyncSchema,
       response: {
-        200: agentResponseSchema,
+        200: t.Object({
+          agent: agentResponseSchema,
+          syncStatus: t.Union([
+            t.Literal("synced"),
+            t.Literal("skipped"),
+            t.Literal("failed"),
+          ]),
+          warning: t.Optional(t.String()),
+        }),
         400: errorResponse,
         403: errorResponse,
         404: errorResponse,

@@ -218,7 +218,10 @@ describe("email agent commands", () => {
     });
     agentsPostResp = res(201, createdAgentRecord());
     agentsListResp = res(200, { agents: [] });
-    policySyncResp = res(200, { ok: true });
+    policySyncResp = res(200, {
+      agent: createdAgentRecord(),
+      syncStatus: "synced",
+    });
     killResp = res(200, { ok: true });
 
     fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -499,6 +502,104 @@ describe("email agent commands", () => {
       expect(env.success).toBe(true);
       expect(env.data.accessKeyId).toBe(ACCESS_KEY);
       expect(env.data.userArn).toBe(USER_ARN);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Behavior 3.5: policy-sync outcome (plan 313) — a 200 that carries
+  // syncStatus:"failed" must not be read as success, but the credential was
+  // already minted in AWS and MUST still reach the operator.
+  // ---------------------------------------------------------------------------
+  describe("policy-sync outcome", () => {
+    it("syncStatus=synced → reports the agent ready", async () => {
+      policySyncResp = res(200, {
+        agent: createdAgentRecord(),
+        syncStatus: "synced",
+      });
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      const successText = vi
+        .mocked(clack.log)
+        .success.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(successText).toContain("is ready");
+      expect(vi.mocked(clack.log).warn).not.toHaveBeenCalled();
+    });
+
+    it("syncStatus=failed (still a 200) → does NOT report the agent ready, and the failure reaches the operator", async () => {
+      policySyncResp = res(200, {
+        agent: createdAgentRecord(),
+        syncStatus: "failed",
+        warning: "pushing its config to the enforcer failed",
+      });
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      // The step itself did not throw — resp.ok was true — so this must not
+      // look like the normal "ready" success path.
+      const successText = vi
+        .mocked(clack.log)
+        .success.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(successText).not.toContain("is ready");
+
+      const warnText = vi
+        .mocked(clack.log)
+        .warn.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(warnText).toContain("CANNOT send");
+
+      const consoleText = consoleLogSpy.mock.calls
+        .flat()
+        .map(String)
+        .join("\n");
+      expect(consoleText).toContain(
+        "pushing its config to the enforcer failed"
+      );
+    });
+
+    it("syncStatus=failed → the access key is STILL emitted (a real, unretrievable AWS credential must reach the operator)", async () => {
+      policySyncResp = res(200, {
+        agent: createdAgentRecord(),
+        syncStatus: "failed",
+        warning: "pushing its config to the enforcer failed",
+      });
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      const noteText = vi
+        .mocked(clack.note)
+        .mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(noteText).toContain(ACCESS_KEY);
+      expect(noteText).toContain(SECRET_KEY);
+    });
+
+    it("JSON mode, syncStatus=failed → the emitted envelope carries syncStatus and warning, and still carries the credential", async () => {
+      setJsonMode(true);
+      policySyncResp = res(200, {
+        agent: createdAgentRecord(),
+        syncStatus: "failed",
+        warning: "pushing its config to the enforcer failed",
+      });
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      const env = jsonEnvelopes().find(
+        (e) => e.command === "email.agent.create"
+      );
+      expect(env.success).toBe(true);
+      expect(env.data.syncStatus).toBe("failed");
+      expect(env.data.warning).toBe(
+        "pushing its config to the enforcer failed"
+      );
+      expect(env.data.accessKeyId).toBe(ACCESS_KEY);
+      expect(env.data.secretAccessKey).toBe(SECRET_KEY);
     });
   });
 

@@ -14,12 +14,32 @@
 import { agent, db, member, user } from "@wraps/db";
 import { eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   cleanupBaseOrg,
   seedBaseOrg,
 } from "../(ee)/__tests__/fixtures/real-db";
 import { agentsRoutes } from "../routes/agents";
+
+// syncAgentPolicy crosses into the customer's AWS account (STS assume-role +
+// DynamoDB PutItem); the create/kill/policy-sync tests below need to force
+// both its resolve and reject branches deterministically, so it is mocked at
+// the module boundary. executeApprovedSend is untouched — other route tests
+// import it through this same module.
+const syncAgentPolicyMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../services/agent-enforcer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../services/agent-enforcer")>()),
+  syncAgentPolicy: syncAgentPolicyMock,
+}));
 
 const PREFIX = `agents-db-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -71,6 +91,8 @@ beforeEach(async () => {
   await db
     .delete(agent)
     .where(inArray(agent.organizationId, [ids.org, ids.otherOrg]));
+  syncAgentPolicyMock.mockReset();
+  syncAgentPolicyMock.mockResolvedValue(undefined);
 });
 
 afterAll(async () => {
@@ -384,11 +406,14 @@ describe("POST /v1/agents/:id/policy-sync ARN validation (SEC-6)", () => {
         }),
       })
     );
-    // Validation passes; the initial policy sync is best-effort (STS not mocked
-    // here, so it fails silently) — the route still returns 200 with the agent.
+    // Validation passes; syncAgentPolicy is mocked to resolve by default (see
+    // the module mock above), so the route reports syncStatus:"synced". The
+    // outcome branches themselves are covered by the sync-outcome describe
+    // block below — this test only proves the ARN validation itself.
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.enforcerFunctionArn).toContain(accountNumber);
+    expect(body.agent.enforcerFunctionArn).toContain(accountNumber);
+    expect(body.syncStatus).toBe("synced");
 
     // The stored awsAccountId must be the INTERNAL awsAccount.id, not the
     // 12-digit number — getCredentials() looks up by internal id, so storing
@@ -429,5 +454,140 @@ describe("POST /v1/agents/:id/policy-sync ARN validation (SEC-6)", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("not connected");
+  });
+});
+
+describe("POST /v1/agents/:id/policy-sync sync-outcome surface", () => {
+  it("returns syncStatus=synced and no warning when syncAgentPolicy resolves", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "sync-outcome-synced",
+        emailAddress: `sync-outcome-synced@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: {
+          maxPerHour: 5,
+          maxPerDay: 20,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        },
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockResolvedValueOnce(undefined);
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: accountNumber,
+          enforcerFunctionArn: `arn:aws:lambda:us-east-1:${accountNumber}:function:wraps-agent-enforcer`,
+          credentialUserArn: `arn:aws:iam::${accountNumber}:user/wraps-agent-synced`,
+        }),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("synced");
+    expect(body.warning).toBeUndefined();
+    expect(body.agent.id).toBe(a.id);
+    expect(syncAgentPolicyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 200 with syncStatus=failed and a non-empty warning when syncAgentPolicy rejects", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "sync-outcome-failed",
+        emailAddress: `sync-outcome-failed@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: {
+          maxPerHour: 5,
+          maxPerDay: 20,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        },
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockRejectedValueOnce(new Error("AccessDenied"));
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: accountNumber,
+          enforcerFunctionArn: `arn:aws:lambda:us-east-1:${accountNumber}:function:wraps-agent-enforcer`,
+          credentialUserArn: `arn:aws:iam::${accountNumber}:user/wraps-agent-failed`,
+        }),
+      })
+    );
+
+    // The agent row itself was already written by updateAgentForOrg before the
+    // sync attempt — the write is real, so the status stays 200. What changes
+    // is that the caller can now see the sync did not happen.
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(typeof body.warning).toBe("string");
+    expect(body.warning.length).toBeGreaterThan(0);
+    expect(body.agent.id).toBe(a.id);
+
+    // Regression guard: `wraps platform update-role` grants the console role
+    // only DynamoDB read actions (DescribeTable/Query/Scan/GetItem/
+    // BatchGetItem) on wraps-email-* — see update-role.ts:464-472. It cannot
+    // grant the PutItem this sync needs, so naming it here would send an
+    // operator down a dead end. The real repair is `wraps email config`,
+    // which redeploys the email stack and re-runs attachConsoleRoleInvoke
+    // (plan 312), applying the PutItem grant.
+    expect(body.warning).not.toContain("platform update-role");
+    expect(body.warning).toContain("wraps email config");
+  });
+
+  it("returns syncStatus=skipped and never calls syncAgentPolicy for an agent with no awsAccountId", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "sync-outcome-skipped",
+        emailAddress: `sync-outcome-skipped@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: {
+          maxPerHour: 5,
+          maxPerDay: 20,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        },
+      })
+      .returning();
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // No awsAccountId in the body — updateAgentForOrg receives
+        // awsAccountId: undefined, so updated.awsAccountId stays unset and the
+        // sync branch is never entered.
+        body: JSON.stringify({
+          credentialUserArn: `arn:aws:iam::${accountNumber}:user/wraps-agent-skipped`,
+        }),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("skipped");
+    expect(body.warning).toBeUndefined();
+    expect(syncAgentPolicyMock).not.toHaveBeenCalled();
   });
 });
