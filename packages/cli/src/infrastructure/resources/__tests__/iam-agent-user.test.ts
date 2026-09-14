@@ -62,19 +62,34 @@ import { attachConsoleRoleInvoke } from "../iam-agent-user.js";
 
 const PLATFORM_ROLE = "wraps-console-access-role";
 const SELFHOST_ROLE = "wraps-selfhost-console-access-role";
+const ENFORCER_ARN =
+  "arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer";
+const POLICY_TABLE_ARN =
+  "arn:aws:dynamodb:us-east-1:123456789012:table/wraps-email-agent-policy";
 
 const enforcerArn = {
   apply: <U>(fn: (arn: string) => U): U =>
     fn("arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer"),
 };
 
+const policyTableArn = {
+  apply: <U>(fn: (arn: string) => U): U =>
+    fn(
+      "arn:aws:dynamodb:us-east-1:123456789012:table/wraps-email-agent-policy"
+    ),
+};
+
 function callAttach() {
   return attachConsoleRoleInvoke({
-    // The real signature takes a `pulumi.Output<string>`; the test double only
-    // needs `.apply`.
+    // The real signature takes `pulumi.Output<string>`; the doubles only need
+    // `.apply`. Nested applies unwrap to the JSON string directly here, which
+    // is exactly what the production code produces once Pulumi flattens.
     enforcerArn: enforcerArn as unknown as Parameters<
       typeof attachConsoleRoleInvoke
     >[0]["enforcerArn"],
+    policyTableArn: policyTableArn as unknown as Parameters<
+      typeof attachConsoleRoleInvoke
+    >[0]["policyTableArn"],
   });
 }
 
@@ -115,13 +130,66 @@ describe("attachConsoleRoleInvoke", () => {
         {
           Effect: "Allow",
           Action: "lambda:InvokeFunction",
-          Resource:
-            "arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer",
+          Resource: ENFORCER_ARN,
+        },
+        {
+          Effect: "Allow",
+          Action: "dynamodb:PutItem",
+          Resource: POLICY_TABLE_ARN,
         },
       ],
     });
 
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("grants the DynamoDB PutItem write the enforcer sync needs, scoped to the table ARN", async () => {
+    mockRoles([PLATFORM_ROLE]);
+
+    await callAttach();
+
+    const policy = JSON.parse(
+      pulumiState.createdRolePolicies[0]?.args.policy ?? "{}"
+    ) as PolicyDocument;
+
+    expect(policy.Statement).toHaveLength(2);
+
+    const invokeStatement = policy.Statement.find(
+      (statement) => statement.Action === "lambda:InvokeFunction"
+    );
+    expect(invokeStatement).toMatchObject({
+      Effect: "Allow",
+      Action: "lambda:InvokeFunction",
+      Resource: ENFORCER_ARN,
+    });
+
+    const putItemStatement = policy.Statement.find(
+      (statement) => statement.Action === "dynamodb:PutItem"
+    );
+    expect(putItemStatement).toMatchObject({
+      Effect: "Allow",
+      Action: "dynamodb:PutItem",
+      Resource: POLICY_TABLE_ARN,
+    });
+
+    // Least-privilege: the grant must be scoped to the concrete table ARN,
+    // never a wildcard.
+    expect(putItemStatement?.Resource).not.toBe("*");
+    expect(String(putItemStatement?.Resource)).not.toMatch(/\/\*$/);
+  });
+
+  it("pins the Pulumi logical names unchanged — they are state keys", async () => {
+    mockRoles([PLATFORM_ROLE, SELFHOST_ROLE]);
+
+    await callAttach();
+
+    const logicalNames = pulumiState.createdRolePolicies.map(
+      (entry) => entry.logicalName
+    );
+    expect(logicalNames).toEqual([
+      "wraps-agent-invoke",
+      "wraps-agent-invoke-selfhost",
+    ]);
   });
 
   it("grants the self-hosted role when only it exists", async () => {
@@ -153,6 +221,20 @@ describe("attachConsoleRoleInvoke", () => {
       { logicalName: "wraps-agent-invoke-selfhost", role: SELFHOST_ROLE },
     ]);
     expect(warnSpy).not.toHaveBeenCalled();
+
+    // Both targets must get the DynamoDB PutItem write, not just the first.
+    for (const entry of pulumiState.createdRolePolicies) {
+      const policy = JSON.parse(entry.args.policy) as PolicyDocument;
+      expect(policy.Statement).toHaveLength(2);
+      const putItemStatement = policy.Statement.find(
+        (statement) => statement.Action === "dynamodb:PutItem"
+      );
+      expect(putItemStatement).toMatchObject({
+        Effect: "Allow",
+        Action: "dynamodb:PutItem",
+        Resource: POLICY_TABLE_ARN,
+      });
+    }
   });
 
   it("warns once, naming both roles, when neither exists", async () => {

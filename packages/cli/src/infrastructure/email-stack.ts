@@ -420,6 +420,7 @@ export async function deployEmailStack(
     );
     await attachConsoleRoleInvoke({
       enforcerArn: enforcer.lambdaFunction.arn,
+      policyTableArn: policyTable.arn,
     });
 
     // Per-agent alias + scoped IAM users + access keys. Each agent gets its own

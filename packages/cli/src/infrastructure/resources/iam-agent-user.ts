@@ -140,6 +140,7 @@ export async function createAgentUser(
  */
 export async function attachConsoleRoleInvoke(config: {
   enforcerArn: pulumi.Output<string>;
+  policyTableArn: pulumi.Output<string>;
 }): Promise<void> {
   const targets = [
     {
@@ -167,17 +168,31 @@ export async function attachConsoleRoleInvoke(config: {
 
     new aws.iam.RolePolicy(target.logicalName, {
       role: target.roleName,
-      policy: config.enforcerArn.apply((arn) =>
-        JSON.stringify({
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Action: "lambda:InvokeFunction",
-              Resource: arn,
-            },
-          ],
-        })
+      policy: config.policyTableArn.apply((tableArn) =>
+        config.enforcerArn.apply((enforcerArn) =>
+          JSON.stringify({
+            Version: "2012-10-17",
+            Statement: [
+              {
+                Effect: "Allow",
+                Action: "lambda:InvokeFunction",
+                Resource: enforcerArn,
+              },
+              {
+                // syncAgentPolicy() assumes this role and writes the
+                // CONFIG#<agentId> item the enforcer reads to identify an
+                // agent. Without it every send returns "unknown agent" — the
+                // agent is created but permanently unusable.
+                // PutItem is the ONLY DynamoDB action the API performs against
+                // the customer account; policy edits and kills are full-item
+                // Puts through the same path.
+                Effect: "Allow",
+                Action: "dynamodb:PutItem",
+                Resource: tableArn,
+              },
+            ],
+          })
+        )
       ),
     });
     granted += 1;
