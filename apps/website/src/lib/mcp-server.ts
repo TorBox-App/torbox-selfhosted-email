@@ -125,6 +125,29 @@ export const TOOLS = [
       required: ["query"],
       additionalProperties: false,
     },
+    outputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "The query as searched." },
+        matches: {
+          type: "array",
+          description:
+            "Empty when nothing matched; that is a result, not an error.",
+          items: {
+            type: "object",
+            properties: {
+              heading: { type: "string" },
+              excerpt: {
+                type: "string",
+                description: "Truncated section body.",
+              },
+            },
+            required: ["heading", "excerpt"],
+          },
+        },
+      },
+      required: ["query", "matches"],
+    },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
   {
@@ -144,6 +167,15 @@ export const TOOLS = [
       required: ["path"],
       additionalProperties: false,
     },
+    outputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Site path that was read." },
+        url: { type: "string", description: "Canonical URL of the page." },
+        markdown: { type: "string", description: "Full markdown source." },
+      },
+      required: ["path", "url", "markdown"],
+    },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
   {
@@ -155,6 +187,13 @@ export const TOOLS = [
       type: "object",
       properties: {},
       additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        source: { type: "string", description: "URL the index was read from." },
+      },
+      required: ["source"],
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -207,6 +246,39 @@ export const TOOLS = [
       },
       required: ["emails"],
       additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        currency: { type: "string", description: "Always USD." },
+        period: { type: "string", description: "Always month." },
+        input: {
+          type: "object",
+          description: "The estimate inputs, after defaults were applied.",
+        },
+        wraps: {
+          type: "object",
+          description:
+            "Flat Wraps platform fee for the plan. Does not vary with volume.",
+        },
+        aws: {
+          type: "object",
+          description: "AWS-side cost, itemized.",
+          properties: {
+            sesPlan: {
+              type: "string",
+              description: "SES pricing plan the estimate assumes.",
+            },
+            total: { type: "number" },
+          },
+        },
+        total: { type: "number", description: "Wraps fee plus the AWS bill." },
+        shareUrl: {
+          type: "string",
+          description: "Link reproducing this estimate on wraps.dev.",
+        },
+      },
+      required: ["currency", "period", "total"],
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
