@@ -29,6 +29,29 @@ const cliCommand = `aws sesv2 put-account-details \\
   --additional-contact-email-addresses you@yourapp.com \\
   --contact-language EN`;
 
+const statusCommand = `aws sesv2 get-account \\
+  --query '{Production: ProductionAccessEnabled, Review: Details.ReviewDetails}'`;
+
+const caseReplyTemplate = `We send a weekly newsletter to customers of <product> (<website URL>).
+
+How recipients opt in: every address on the list signed up through the form
+at <signup URL> and confirmed by clicking a link in a confirmation email.
+We do not buy, rent, or scrape lists.
+
+Volume: about <N> emails per week to <N> subscribers, growing at roughly
+<N> new signups a month.
+
+Bounces and complaints: the SES configuration set publishes bounce and
+complaint events to EventBridge. Hard bounces and complaints are removed
+from the list automatically and added to the account-level suppression
+list.
+
+Unsubscribe: every email carries a one-click unsubscribe link in the body
+and List-Unsubscribe headers. Requests are honored immediately.
+
+Sending domain: <domain> is verified in SES with DKIM, SPF, and DMARC in
+place.`;
+
 export default function ProductionAccessPageContent() {
   return (
     <DocsLayout>
@@ -310,6 +333,203 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
         </ul>
+      </section>
+
+      {/* If Your Request Is Denied */}
+      <section className="mb-12">
+        <h2 className="mb-4 font-bold text-2xl">If Your Request Is Denied</h2>
+        <p className="mb-4 text-muted-foreground">
+          A denial is not final. AWS delivers the decision through a Support
+          Center case tied to your request, and that case is where you reply
+          with more detail. You can also submit a fresh request from the SES
+          console once the review has closed.
+        </p>
+        <h3 className="mb-2 font-medium text-lg">Check the review status</h3>
+        <p className="mb-4 text-muted-foreground">
+          The SES account details carry the latest review status and the support
+          case ID:
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "bash",
+              filename: "terminal.sh",
+              code: statusCommand,
+            },
+          ]}
+          defaultValue="bash"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Status</th>
+                  <th className="pb-2 text-left">Meaning</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-foreground">PENDING</td>
+                  <td className="py-2">AWS is still reviewing the request.</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-foreground">GRANTED</td>
+                  <td className="py-2">
+                    Production access is on. The sandbox banner disappears.
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-foreground">DENIED</td>
+                  <td className="py-2">
+                    AWS declined. Open the case ID in Support Center and read
+                    the reason they gave.
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-foreground">FAILED</td>
+                  <td className="py-2">
+                    An internal error on the AWS side and the request never
+                    reached review. Submit it again.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+        <h3 className="mb-2 font-medium text-lg">Why requests get denied</h3>
+        <p className="mb-4 text-muted-foreground">
+          The request form only asks for an email type, a website, and contact
+          addresses, so AWS has to infer your sending practices from very
+          little. Denied requests usually share one of these gaps:
+        </p>
+        <ul className="mb-6 space-y-3">
+          <li className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <span className="text-muted-foreground">
+              <strong className="text-foreground">No verified domain</strong> —
+              A request from an account that has only verified a single email
+              address gives AWS nothing to check
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <span className="text-muted-foreground">
+              <strong className="text-foreground">
+                The website does not explain the mail
+              </strong>{" "}
+              — A parked domain, a landing page with no signup form, or a URL
+              that does not match the sending domain
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <span className="text-muted-foreground">
+              <strong className="text-foreground">No opt-in story</strong> —
+              Nothing in the request says how recipients ended up on the list
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <span className="text-muted-foreground">
+              <strong className="text-foreground">
+                No bounce or complaint handling
+              </strong>{" "}
+              — The acknowledgement box says you have a process. AWS wants to
+              know what it is
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <span className="text-muted-foreground">
+              <strong className="text-foreground">Brand-new AWS account</strong>{" "}
+              — Reviewers have less history to go on, so expect more questions
+              before approval
+            </span>
+          </li>
+        </ul>
+        <h3 className="mb-2 font-medium text-lg">What to put in the reply</h3>
+        <p className="mb-4 text-muted-foreground">
+          Answer the questions the form never asked. Reply on the support case
+          with a short, specific description like this one, then adjust it to
+          match what you actually send:
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "text",
+              filename: "case-reply.txt",
+              code: caseReplyTemplate,
+            },
+          ]}
+          defaultValue="text"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">
+            Fix the gap before you reply, not after
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            If the domain is not verified, verify it first. If the site has no
+            signup form or privacy page, add one. A reply that describes a
+            process AWS cannot see on your site or in your account does not help
+            your case. Wraps sets up the bounce and complaint pipeline and the
+            suppression list during{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps email init
+            </code>
+            , so you can describe it accurately.
+          </p>
+        </div>
       </section>
 
       {/* Next Steps */}

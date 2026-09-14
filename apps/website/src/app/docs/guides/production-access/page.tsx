@@ -56,10 +56,14 @@ export default function ProductionAccessPage() {
       <article aria-hidden="true" className="sr-only">
         <h2>Production Access Guide</h2>
         <p>How to get AWS SES production access approval.</p>
-        <h2>Prerequisites</h2>
-        <h2>Request Process</h2>
-        <h2>Common Rejection Reasons</h2>
-        <h2>Best Practices</h2>
+        <h2>What is the SES Sandbox?</h2>
+        <h2>Before You Request</h2>
+        <h2>Option 1: AWS Console</h2>
+        <h2>Option 2: AWS CLI</h2>
+        <h2>What to Expect</h2>
+        <h2>Tips for Faster Approval</h2>
+        <h2>If Your Request Is Denied</h2>
+        <h2>Next Steps</h2>
       </article>
       <ProductionAccessPageContent />
     </>
