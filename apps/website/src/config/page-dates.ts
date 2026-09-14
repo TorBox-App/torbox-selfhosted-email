@@ -88,7 +88,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/docs/guides/idempotency": "2026-09-03T11:47:01-06:00",
   "/docs/guides/migration": "2026-07-30T10:11:08-06:00",
   "/docs/guides/orchestration": "2026-04-14T13:00:57-06:00",
-  "/docs/guides/production-access": "2026-04-14T13:00:57-06:00",
+  "/docs/guides/production-access": "2026-09-14T11:45:41-06:00",
   "/docs/guides/reply-threading": "2026-04-17T10:15:54-06:00",
   "/docs/guides/reputation": "2026-09-03T13:19:49-06:00",
   "/docs/guides/self-hosted": "2026-08-17T14:27:27-06:00",
