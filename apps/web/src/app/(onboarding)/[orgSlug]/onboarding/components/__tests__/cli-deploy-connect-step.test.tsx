@@ -718,6 +718,34 @@ describe("CliDeployConnectStep — three-path layout", () => {
   });
 
   /**
+   * The CloudFormation stack ships no SES TrackingOptions at all, so open and
+   * click links on this path fall back to AWS's shared awstrack.me domain
+   * rather than a branded hostname — CloudFront needs a us-east-1 ACM
+   * certificate a single-region stack can't create. The pre-launch panel is
+   * the only place a browser-path user sees that before they commit to it.
+   */
+  it("names the branded-tracking-domain gap on the CloudFormation path", () => {
+    renderWithQueryClient(
+      <CliDeployConnectStep {...defaultProps} selfHosted={false} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /use the browser/i }));
+
+    expect(renderedMarkup()).toContain("awstrack.me");
+    expect(renderedMarkup()).toContain("wraps email domains config");
+  });
+
+  it("never raises the branded-tracking-domain gap on the CLI path", () => {
+    renderWithQueryClient(
+      <CliDeployConnectStep {...defaultProps} selfHosted={false} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /use the cli/i }));
+
+    expect(renderedMarkup()).not.toContain("awstrack.me");
+  });
+
+  /**
    * The CLI panel's opening line is the only guidance a user gets at the moment
    * they discover they have no AWS credentials on this machine. Self-hosted
    * renders no Browser card, so pointing there sends them looking for a card

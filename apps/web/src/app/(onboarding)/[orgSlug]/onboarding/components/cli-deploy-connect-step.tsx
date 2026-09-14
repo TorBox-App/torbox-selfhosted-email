@@ -915,6 +915,23 @@ export function CliDeployConnectStep({
                 path reports conflicts before it deploys.
               </p>
 
+              <p className="text-muted-foreground text-sm">
+                Open and click links on this path use AWS's shared{" "}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  r.&lt;region&gt;.awstrack.me
+                </code>{" "}
+                domain, not your own — this stack can't create the us-east-1
+                certificate a branded tracking domain needs. Use the CLI (
+                <code className="rounded bg-muted px-1 py-0.5">
+                  wraps email domains config --tracking-domain
+                </code>
+                ) or{" "}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  @wraps.dev/pulumi
+                </code>{" "}
+                if you want one.
+              </p>
+
               <div className="space-y-2">
                 <Label htmlFor="cfn-sending-domain">
                   Sending domain
