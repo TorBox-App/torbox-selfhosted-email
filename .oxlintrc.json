@@ -12,7 +12,8 @@
     "**/*.test.tsx",
     "**/__tests__/**",
     "**/opengraph-image.tsx",
-    "**/twitter-image.tsx"
+    "**/twitter-image.tsx",
+    "apps/web/src/app/global-error.tsx"
   ],
   "settings": {
     "shadcn": {
@@ -24,12 +25,21 @@
     "shadcn/no-restyle": [
       "warn",
       {
-        "allow": ["layout"],
+        "allow": ["layout", "gap-*"],
         "contracts": [
+          {
+            "pattern": "(Content|Header|Footer)$",
+            "allow": ["layout", "gap-*", "spacing"]
+          },
+          {
+            "pattern": "(Title|Description)$",
+            "allow": ["layout", "gap-*", "typography"]
+          },
           {
             "pattern": "^Card$",
             "allow": [
               "layout",
+              "gap-*",
               "spacing",
               "bg-*",
               "border-*",
@@ -38,39 +48,54 @@
             ]
           },
           {
-            "pattern": "^CardTitle$",
-            "allow": ["layout", "typography", "gap-*"]
-          },
-          { "pattern": "^CardDescription$", "allow": ["layout", "typography"] },
-          {
-            "pattern": "^(CardHeader|CardFooter)$",
-            "allow": ["layout", "spacing"]
-          },
-          {
             "pattern": "^CardContent$",
             "allow": [
               "layout",
+              "gap-*",
               "spacing",
               "typography",
               "text-muted-foreground"
             ]
           },
-          { "pattern": "^Label$", "allow": ["layout", "typography"] },
+          {
+            "pattern": "^(Label|FieldLabel)$",
+            "allow": ["layout", "gap-*", "typography", "color"]
+          },
           {
             "pattern": "^(TableCell|TableHead|TableRow)$",
-            "allow": ["layout", "typography", "color"]
+            "allow": ["layout", "gap-*", "typography", "color"]
           },
           {
-            "pattern": "^Input$",
-            "allow": ["layout", "spacing", "typography"]
+            "pattern": "^(Input|Textarea|InputGroupInput)$",
+            "allow": ["layout", "gap-*", "spacing", "typography"]
           },
-          { "pattern": "^(Button|Badge)$", "allow": ["layout", "gap-*"] }
+          { "pattern": "^Avatar$", "allow": ["layout", "rounded-*"] },
+          {
+            "pattern": "^AvatarFallback$",
+            "allow": ["layout", "rounded-*", "typography", "color"]
+          },
+          {
+            "pattern": "^Empty$",
+            "allow": ["layout", "gap-*", "border", "border-*"]
+          },
+          { "pattern": "^AnimatedSpan$", "allow": ["layout", "color"] },
+          {
+            "pattern": "^Badge$",
+            "allow": ["layout", "gap-*", "font-mono", "rounded-full"]
+          },
+          { "pattern": "^Button$", "allow": ["layout", "gap-*"] }
         ]
       }
     ],
     "shadcn/no-raw-colors": "warn",
-    "shadcn/no-arbitrary-values": ["warn", { "allow": ["layout"] }],
-    "shadcn/no-inline-styles": "warn",
+    "shadcn/no-arbitrary-values": [
+      "warn",
+      { "allow": ["layout", "text-[0.85em]"] }
+    ],
+    "shadcn/no-inline-styles": [
+      "warn",
+      { "allow": ["transform", "animationDelay", "transitionDelay"] }
+    ],
     "shadcn/require-static-classes": "warn"
   },
   "overrides": [
@@ -85,6 +110,12 @@
         "shadcn/no-restyle": "off",
         "shadcn/no-arbitrary-values": "off",
         "shadcn/require-static-classes": "off"
+      }
+    },
+    {
+      "files": ["apps/website/src/components/ui/svgs/**"],
+      "rules": {
+        "shadcn/no-raw-colors": "off"
       }
     }
   ]

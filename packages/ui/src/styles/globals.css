@@ -46,6 +46,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
 }
 
 :root {
@@ -91,6 +93,8 @@
   --warning-foreground: oklch(0.205 0 0);
   --info: oklch(0.62 0.15 250);
   --info-foreground: oklch(0.985 0 0);
+  --brand: oklch(0.705 0.213 47.604);
+  --brand-foreground: oklch(0.985 0 0);
 }
 
 .dark {
@@ -132,6 +136,8 @@
   --warning-foreground: oklch(0.205 0 0);
   --info: oklch(0.68 0.15 250);
   --info-foreground: oklch(0.985 0 0);
+  --brand: oklch(0.75 0.183 55.934);
+  --brand-foreground: oklch(0.985 0 0);
 }
 
 @layer base {
