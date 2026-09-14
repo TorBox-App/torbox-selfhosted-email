@@ -326,11 +326,14 @@ API keys are created in the Wraps dashboard under Settings > API Keys.`,
 | Contacts | Create, update, delete, and list contacts | Yes |
 | Batch | Batch email sending for broadcasts | Yes |
 | Email Metrics | Aggregate email metrics (sent, delivered, opens, clicks, bounces) | Yes |
+| Email Logs | Paginated email delivery logs, with lookup by message ID | Yes |
 | Events | Custom event ingestion for triggering workflows | Yes |
 | Workflows | API-triggered workflow execution | Yes |
 | Connections | AWS account connection management | Yes |
 | Domains | Sending identity (domain) verification state, read live from SES | Yes |
+| Templates | Email/SMS template CRUD, publish to SES, and CLI sync | Yes |
 | Segments | Audience segment CRUD and condition preview (Pro plan required) | Yes |
+| Agents | Leashed agent (addressable sender) management: create, kill switch, and approval queue | Yes |
 | Webhooks | Receive SES delivery events | Secret-based |
 | Unsubscribe | RFC 8058 one-click unsubscribe | Token-based |
 | Tools | Free email deliverability tools | No |`,
@@ -657,6 +660,12 @@ const endpointGroups = [
     methods: ["GET"],
   },
   {
+    name: "Email Logs",
+    description: "Paginated email delivery logs, with lookup by message ID",
+    auth: true,
+    methods: ["GET"],
+  },
+  {
     name: "Events",
     description: "Custom event ingestion for triggering workflows",
     auth: true,
@@ -693,6 +702,13 @@ const endpointGroups = [
       "Audience segment CRUD and condition preview (Pro plan required)",
     auth: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
+  },
+  {
+    name: "Agents",
+    description:
+      "Leashed agent (addressable sender) management: create, kill switch, and approval queue",
+    auth: true,
+    methods: ["GET", "POST"],
   },
   {
     name: "Webhooks",
