@@ -1,0 +1,91 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["@shadcn/lint"],
+  "categories": {
+    "correctness": "off"
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "**/opengraph-image.tsx",
+    "**/twitter-image.tsx"
+  ],
+  "settings": {
+    "shadcn": {
+      "ui": ["@wraps/ui/components/ui", "@/components/ui"],
+      "note": "Design tokens and rules: see the design-context skill."
+    }
+  },
+  "rules": {
+    "shadcn/no-restyle": [
+      "warn",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          {
+            "pattern": "^Card$",
+            "allow": [
+              "layout",
+              "spacing",
+              "bg-*",
+              "border-*",
+              "shadow-*",
+              "transition-*"
+            ]
+          },
+          {
+            "pattern": "^CardTitle$",
+            "allow": ["layout", "typography", "gap-*"]
+          },
+          { "pattern": "^CardDescription$", "allow": ["layout", "typography"] },
+          {
+            "pattern": "^(CardHeader|CardFooter)$",
+            "allow": ["layout", "spacing"]
+          },
+          {
+            "pattern": "^CardContent$",
+            "allow": [
+              "layout",
+              "spacing",
+              "typography",
+              "text-muted-foreground"
+            ]
+          },
+          { "pattern": "^Label$", "allow": ["layout", "typography"] },
+          {
+            "pattern": "^(TableCell|TableHead|TableRow)$",
+            "allow": ["layout", "typography", "color"]
+          },
+          {
+            "pattern": "^Input$",
+            "allow": ["layout", "spacing", "typography"]
+          },
+          { "pattern": "^(Button|Badge)$", "allow": ["layout", "gap-*"] }
+        ]
+      }
+    ],
+    "shadcn/no-raw-colors": "warn",
+    "shadcn/no-arbitrary-values": ["warn", { "allow": ["layout"] }],
+    "shadcn/no-inline-styles": "warn",
+    "shadcn/require-static-classes": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "packages/ui/src/components/ui/**",
+        "apps/web/src/components/ui/**",
+        "apps/website/src/components/ui/**",
+        "packages/console/src/components/ui/**"
+      ],
+      "rules": {
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    }
+  ]
+}

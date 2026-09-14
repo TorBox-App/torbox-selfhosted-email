@@ -95,6 +95,7 @@ See package-level CLAUDE.md files for specific enforcement patterns.
   - `apps/web`: Pino logger at `src/lib/logger.ts`
   - `apps/api`: Custom JSON logger at `src/lib/logger.ts`
 - Design system: no arbitrary hex colors in `apps/web/` — use semantic theme tokens (`bg-background`, `text-foreground`)
+- Design-system lint: `pnpm lint:design` (oxlint + `@shadcn/lint`, config in `.oxlintrc.json`) — warn-only for now; run it after touching `className` in `apps/web`, `apps/website`, `packages/ui`, or `packages/console`
 
 ## Environment Setup
 
