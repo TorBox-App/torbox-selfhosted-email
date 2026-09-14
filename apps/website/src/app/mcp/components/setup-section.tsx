@@ -126,6 +126,30 @@ export function McpSetupSection() {
               </Link>
               .
             </p>
+            <p className="mt-3 text-muted-foreground text-sm">
+              Both servers are published to the official MCP Registry as{" "}
+              <code className="text-foreground">dev.wraps/email</code> and{" "}
+              <code className="text-foreground">dev.wraps/docs</code>, and are
+              listed on Smithery:{" "}
+              <a
+                className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
+                href="https://smithery.ai/servers/wraps/email"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                wraps/email
+              </a>{" "}
+              and{" "}
+              <a
+                className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
+                href="https://smithery.ai/servers/wraps/docs"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                wraps/docs
+              </a>
+              .
+            </p>
           </div>
         </div>
       </div>
