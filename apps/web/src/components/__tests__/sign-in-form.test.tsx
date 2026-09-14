@@ -31,10 +31,6 @@ const {
   mockToastPromise: vi.fn(),
 }));
 
-vi.mock("@better-auth/scim/client", () => ({
-  scimClient: () => ({}),
-}));
-
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
     useSession: mockUseSession,

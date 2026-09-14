@@ -122,9 +122,9 @@ vi.mock("@wraps/auth", () => ({
         domainVerificationToken: "audit-v2-sso-domain-token",
       })),
       verifyDomain: vi.fn(async () => {}),
-      generateSCIMToken: vi.fn(async () => ({
-        scimToken: "audit-v2-sso-scim-token",
-      })),
+      // generateScimToken no longer calls into better-auth's API at all — it
+      // mints and hashes the token itself and writes scim_provider directly,
+      // so there is nothing to mock here for that action.
     },
   },
 }));

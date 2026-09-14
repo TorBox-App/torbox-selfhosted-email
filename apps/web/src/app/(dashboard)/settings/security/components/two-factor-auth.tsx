@@ -100,9 +100,15 @@ export function TwoFactorAuth() {
         return;
       }
 
+      // better-auth 1.7's twoFactor.enable response is a discriminated union
+      // keyed on `method` ("otp" has no backupCodes; "totp" does). Wraps
+      // configures twoFactor with no OTP options, so this always hits the
+      // totp branch in practice — narrow rather than cast to keep that
+      // guaranteed by the type system, not by assumption.
       setSetupData({
         totpURI: uriResult.data?.totpURI || "",
-        backupCodes: result.data?.backupCodes || [],
+        backupCodes:
+          result.data?.method === "totp" ? result.data.backupCodes : [],
       });
       setIsEnabling(true);
     } catch (error) {

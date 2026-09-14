@@ -1,5 +1,5 @@
 import { passkey } from "@better-auth/passkey";
-import { scim } from "@better-auth/scim";
+import { type SCIMCanonicalUser, scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
 import { and, auditLog, db, eq, member } from "@wraps/db";
@@ -11,6 +11,7 @@ import { wraps as wrapsContactSync } from "@wraps.dev/better-auth";
 import { createPlatformClient } from "@wraps.dev/client";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import {
   admin,
@@ -28,6 +29,7 @@ import { PostHog } from "posthog-node";
 import Stripe from "stripe";
 import { ac, roles } from "./access";
 import { sendLoginAlertSms } from "./login-alert-sms";
+import { findScimProviderByToken } from "./scim-token";
 import { onStripeEvent } from "./stripe-webhooks";
 
 // --- Attribution tracking ---
@@ -317,7 +319,8 @@ export async function writeLoginAuditLogs(
  * claim — and then deactivate or delete — an account belonging to someone
  * outside that org, purely by pushing their email address.
  *
- * Exported for testing; wired in as `scim({ linkExistingUsers })` below.
+ * Exported for testing; called from `resolveScimUser` below, which is what
+ * the plugin's `identity.resolveUser` hook is actually wired to.
  */
 export async function shouldLinkScimUser({
   user,
@@ -360,6 +363,98 @@ export async function shouldLinkScimUser({
   return providers.some(
     (p) => p.domainVerified && p.domain.toLowerCase() === domain
   );
+}
+
+/**
+ * better-auth 1.7's `identity.resolveUser` hook: given an incoming SCIM
+ * resource, decide whether to create a new user or link an existing one.
+ * Unlike the 1.6 shouldLinkUser-style hook this replaces, the plugin hands
+ * us no candidate user — it used to do the email lookup itself, so this
+ * function does it now.
+ *
+ * `shouldLinkScimUser`'s policy is unchanged and still the security core of
+ * this feature; this function only adapts its result to the new
+ * create/link/throw contract.
+ */
+export async function resolveScimUser(input: {
+  provisioningDomainId: string;
+  resource: SCIMCanonicalUser;
+}): Promise<
+  { action: "create" } | { action: "link"; userId: string; profile: "manage" }
+> {
+  const organizationId = input.provisioningDomainId;
+  const email = input.resource.primaryEmail?.toLowerCase();
+  if (!email) {
+    return { action: "create" };
+  }
+
+  const existing = await db.query.user.findFirst({
+    where: eq(schema.user.email, email),
+  });
+  if (!existing) {
+    return { action: "create" };
+  }
+
+  const mayLink = await shouldLinkScimUser({
+    user: { id: existing.id },
+    email,
+    provider: { organizationId },
+  });
+
+  if (mayLink) {
+    return { action: "link", userId: existing.id, profile: "manage" };
+  }
+
+  // Policy refuses. We cannot return `create` — the email is taken and the
+  // insert would collide on `user.email`. 409 is what 1.6 produced here.
+  //
+  // The body must be SCIM-shaped or the IdP cannot parse it. 1.6.23 threw
+  // `SCIMAPIError("CONFLICT", { detail, scimType: "uniqueness" })`; 1.7's
+  // equivalent helper (`createSCIMError`) is NOT exported from the package,
+  // so construct the same body by hand rather than passing `{ message }`.
+  //
+  // This must be a thrown APIError, never a bare Error: the plugin's
+  // `runSCIMApplicationCallback` re-throws APIError untouched but converts
+  // anything else into an opaque 500, which an IdP will retry.
+  throw new APIError("CONFLICT", {
+    schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
+    status: "409",
+    scimType: "uniqueness",
+    detail: "A user with this email exists outside this organization",
+  });
+}
+
+/**
+ * better-auth 1.7's application-owned SCIM bearer verifier: resolves the
+ * incoming token to its `scim_provider` row and reports the provisioning
+ * connection back to the plugin.
+ *
+ * `provisioningDomainId` MUST be the organization id — it is the tenancy
+ * boundary the plugin scopes every provisioned row by, and `resolveScimUser`
+ * reads it back as the org to authorize against. Using anything else
+ * silently breaks multi-tenant isolation.
+ *
+ * Exported for testing; wired in as `scim({ authentication: { verifyBearerToken } })`
+ * below.
+ */
+export async function verifyScimBearerToken({ token }: { token: string }) {
+  const row = await findScimProviderByToken(token);
+  if (!row) {
+    return null;
+  }
+  return {
+    connection: {
+      id: `scim-${row.organizationId}`,
+      provisioningDomainId: row.organizationId,
+    },
+    credentialId: row.id,
+    scopes: [
+      "scim.users.read",
+      "scim.users.write",
+      "scim.groups.read",
+      "scim.groups.write",
+    ] as const,
+  };
 }
 
 // Only initialize Stripe client if the secret key is available
@@ -510,6 +605,15 @@ export const auth = betterAuth<BetterAuthOptions>({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { ...schema, ...ssoSchema, ...scimSchema },
+    // better-auth 1.7's SCIM plugin requires native interactive
+    // transactions from the adapter (its own construction throws
+    // "requires a database adapter with native transaction support"
+    // without this) — this option defaults to false in the drizzle
+    // adapter regardless of what the underlying driver supports. This repo
+    // is Drizzle over node-postgres against real Postgres (Neon), which
+    // supports standard multi-statement transactions natively; the named
+    // exclusion in better-auth's upgrade guide is Cloudflare D1, not this.
+    transaction: true,
   }),
   user: {
     changeEmail: {
@@ -704,27 +808,11 @@ export const auth = betterAuth<BetterAuthOptions>({
       },
     }),
     scim({
-      // Without this, SCIM `Create` 409s on every email that already has a
-      // Wraps user — which is most of an org's team on the day they turn SCIM
-      // on. `true` is not an option in a multi-tenant app: it would let any
-      // org's SCIM token claim, and then deactivate, an account belonging to
-      // someone outside that org purely by pushing their email address.
-      linkExistingUsers: { shouldLinkUser: shouldLinkScimUser },
-      // A SCIM token is a bearer credential that can enumerate an org's
-      // directory and deactivate its people, and the plugin's default is to
-      // keep it in `scim_provider.scim_token` in the clear. Hash it: the token
-      // is 24 characters of CSPRNG output, so a plain SHA-256 (what the plugin
-      // does for "hashed") is the right primitive — there is nothing to brute
-      // force and no password-style stretching to justify.
-      //
-      // "encrypted" was the alternative and is worse here: it is reversible by
-      // anyone holding BETTER_AUTH_SECRET, and nothing in Wraps ever needs to
-      // read a SCIM token back. The UI already treats them as show-once.
-      //
-      // One-way, so this invalidates any token minted while the default was in
-      // force — a token stored in plain text can never match a hash of itself.
-      // Rotating in Settings → SSO & SCIM issues a working one.
-      storeSCIMToken: "hashed",
+      // Empty: the application verifier below resolves the connection for
+      // every request, which the plugin explicitly supports.
+      connections: [],
+      authentication: { verifyBearerToken: verifyScimBearerToken },
+      identity: { resolveUser: resolveScimUser },
     }),
     bearer(),
     deviceAuthorization({

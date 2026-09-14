@@ -2,53 +2,51 @@
  * SCIM bearer tokens must not sit in the database in the clear.
  *
  * `scim_provider.scim_token` authenticates a credential that can enumerate an
- * org's directory and deactivate its people. @better-auth/scim defaults to
- * storing it verbatim, so this is an opt-in we have to keep opted into.
+ * org's directory and deactivate its people. better-auth 1.7 deleted the
+ * plugin's own opt-in token-hashing option along with its token-generation
+ * endpoint, so Wraps now owns minting and hashing directly — this file
+ * exercises that module's real behavior instead of a config literal.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { hashScimToken, mintScimToken } from "../scim-token";
 
-vi.mock("@wraps/email", () => ({
-  getWrapsClient: vi.fn(),
-}));
-
-import { auth } from "../index";
-
-/**
- * The values @better-auth/scim's `storeSCIMToken` actually branches on. Its
- * final `return scimToken` is a silent fallthrough: an unrecognised string —
- * a typo like "hash", or a mode renamed in a future release — stores the token
- * in plain text with no error anywhere. Pinning the accepted set turns that
- * into a test failure instead of a quiet downgrade.
- */
-const ONE_WAY_MODES = ["hashed", "encrypted"];
-
-function scimPluginOptions(): { storeSCIMToken?: unknown } {
-  const plugins = auth.options.plugins as { id: string; options?: unknown }[];
-  const plugin = plugins.find((p) => p.id === "scim");
-  if (!plugin) {
-    throw new Error("Expected the scim plugin to be registered");
-  }
-  return (plugin.options ?? {}) as { storeSCIMToken?: unknown };
-}
-
-describe("SCIM token storage", () => {
-  it("does not store SCIM tokens in plain text", () => {
-    const { storeSCIMToken } = scimPluginOptions();
-
-    expect(
-      storeSCIMToken,
-      "scim({ storeSCIMToken }) is unset or unrecognised, so @better-auth/scim " +
-        "falls through to storing the bearer token verbatim in " +
-        "scim_provider.scim_token."
-    ).toBeDefined();
-    expect(ONE_WAY_MODES).toContain(storeSCIMToken);
+describe("mintScimToken", () => {
+  it("returns a 32-character token", () => {
+    expect(mintScimToken()).toHaveLength(32);
   });
 
-  it("uses hashing rather than reversible encryption", () => {
-    // "encrypted" is reversible by anyone holding BETTER_AUTH_SECRET, and
-    // nothing in Wraps ever reads a SCIM token back — the UI issues it once and
-    // offers rotation. Hashing is the weaker capability, so prefer it.
-    expect(scimPluginOptions().storeSCIMToken).toBe("hashed");
+  it("returns a different token on each call", () => {
+    expect(mintScimToken()).not.toBe(mintScimToken());
+  });
+});
+
+describe("hashScimToken", () => {
+  it("never returns the plaintext token", async () => {
+    const token = mintScimToken();
+    const hashed = await hashScimToken(token);
+    expect(hashed).not.toBe(token);
+  });
+
+  it("hashes the same token to the same digest", async () => {
+    const token = mintScimToken();
+    const [first, second] = await Promise.all([
+      hashScimToken(token),
+      hashScimToken(token),
+    ]);
+    expect(first).toBe(second);
+  });
+
+  it("hashes different tokens to different digests", async () => {
+    const [first, second] = await Promise.all([
+      hashScimToken(mintScimToken()),
+      hashScimToken(mintScimToken()),
+    ]);
+    expect(first).not.toBe(second);
+  });
+
+  it("is base64url — no '=', '+', or '/'", async () => {
+    const hashed = await hashScimToken(mintScimToken());
+    expect(hashed).not.toMatch(/[=+/]/);
   });
 });

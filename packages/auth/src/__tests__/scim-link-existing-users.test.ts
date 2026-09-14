@@ -1,16 +1,23 @@
 /**
- * SCIM `linkExistingUsers` policy tests.
+ * SCIM `resolveUser` identity-resolution tests.
  *
- * The plugin refuses every email match unless a policy opts in, which 409s
- * SCIM Create for most of an org's team on day one. The policy has to allow
- * that without letting one org's SCIM token claim another org's users, so the
- * cross-tenant refusals below are the point of this file — not edge cases.
+ * better-auth 1.7 hands `resolveUser` an incoming SCIM resource and no
+ * candidate user — the plugin used to do the email lookup itself. This file
+ * targets `resolveScimUser`, which does that lookup and then defers to
+ * `shouldLinkScimUser`'s unchanged policy for the create/link/refuse
+ * decision. The cross-tenant refusals below are the point of this file, not
+ * edge cases: letting one org's SCIM token claim another org's users is
+ * exactly what `shouldLinkScimUser` exists to prevent.
+ *
+ * A refusal here must surface as a thrown `APIError` (status CONFLICT / 409),
+ * never a bare `{action:"create"}` — the email is already taken, so an
+ * insert would collide on `user.email`.
  */
 
 import { db, member, organization, ssoProvider, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { shouldLinkScimUser } from "../index";
+import { resolveScimUser } from "../index";
 
 const PREFIX = "scim-link-test";
 
@@ -52,6 +59,11 @@ const memberUser = makeUser("member", `${PREFIX}-member@example.com`);
 const domainUser = makeUser("domain", `employee@${PREFIX}-verified.com`);
 // Not a member, address at an unrelated domain — an outsider.
 const outsiderUser = makeUser("outsider", `${PREFIX}-outsider@elsewhere.com`);
+// Not a member, address at otherOrg's domain — but that domain isn't verified.
+const unverifiedDomainUser = makeUser(
+  "unverified-domain",
+  `someone@${PREFIX}-unverified.com`
+);
 
 const verifiedProvider = {
   id: `${PREFIX}-sso-verified`,
@@ -84,6 +96,30 @@ const membership = {
   createdAt: new Date(),
 };
 
+/**
+ * A minimal but fully-typed SCIM User resource, as `resolveUser` receives
+ * it. `resolveScimUser` only reads `primaryEmail`; the rest is populated
+ * because `SCIMCanonicalUser` requires them.
+ */
+function scimResource(email: string) {
+  return {
+    schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"] as const,
+    userName: email,
+    primaryEmail: email,
+    displayName: email,
+    name: { formatted: email },
+    emails: [{ value: email, primary: true }],
+    active: true,
+  };
+}
+
+async function expectConflict(promise: Promise<unknown>) {
+  await expect(promise).rejects.toMatchObject({
+    status: "CONFLICT",
+    body: { scimType: "uniqueness" },
+  });
+}
+
 beforeAll(async () => {
   for (const org of [orgWithSso, otherOrg]) {
     await db
@@ -91,7 +127,12 @@ beforeAll(async () => {
       .values(org)
       .onConflictDoUpdate({ target: organization.id, set: { name: org.name } });
   }
-  for (const u of [memberUser, domainUser, outsiderUser]) {
+  for (const u of [
+    memberUser,
+    domainUser,
+    outsiderUser,
+    unverifiedDomainUser,
+  ]) {
     await db
       .insert(user)
       .values(u)
@@ -117,7 +158,12 @@ afterAll(async () => {
   for (const p of [verifiedProvider, unverifiedProvider]) {
     await db.delete(ssoProvider).where(eq(ssoProvider.id, p.id));
   }
-  for (const u of [memberUser, domainUser, outsiderUser]) {
+  for (const u of [
+    memberUser,
+    domainUser,
+    outsiderUser,
+    unverifiedDomainUser,
+  ]) {
     await db.delete(user).where(eq(user.id, u.id));
   }
   for (const org of [orgWithSso, otherOrg]) {
@@ -125,75 +171,92 @@ afterAll(async () => {
   }
 });
 
-describe("shouldLinkScimUser", () => {
+describe("resolveScimUser", () => {
   it("links a user who is already a member of the token's org", async () => {
     await expect(
-      shouldLinkScimUser({
-        user: memberUser,
-        email: memberUser.email,
-        provider: { organizationId: orgWithSso.id },
+      resolveScimUser({
+        provisioningDomainId: orgWithSso.id,
+        resource: scimResource(memberUser.email),
       })
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      action: "link",
+      userId: memberUser.id,
+      profile: "manage",
+    });
   });
 
   it("links a non-member at a domain the org has verified", async () => {
     await expect(
-      shouldLinkScimUser({
-        user: domainUser,
-        email: domainUser.email,
-        provider: { organizationId: orgWithSso.id },
+      resolveScimUser({
+        provisioningDomainId: orgWithSso.id,
+        resource: scimResource(domainUser.email),
       })
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      action: "link",
+      userId: domainUser.id,
+      profile: "manage",
+    });
   });
 
   it("matches the verified domain case-insensitively", async () => {
     await expect(
-      shouldLinkScimUser({
-        user: domainUser,
-        email: `EMPLOYEE@${PREFIX}-VERIFIED.COM`,
-        provider: { organizationId: orgWithSso.id },
+      resolveScimUser({
+        provisioningDomainId: orgWithSso.id,
+        resource: scimResource(`EMPLOYEE@${PREFIX}-VERIFIED.COM`),
       })
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      action: "link",
+      userId: domainUser.id,
+      profile: "manage",
+    });
   });
 
   it("refuses an outsider's account at an unrelated domain", async () => {
-    await expect(
-      shouldLinkScimUser({
-        user: outsiderUser,
-        email: outsiderUser.email,
-        provider: { organizationId: orgWithSso.id },
+    await expectConflict(
+      resolveScimUser({
+        provisioningDomainId: orgWithSso.id,
+        resource: scimResource(outsiderUser.email),
       })
-    ).resolves.toBe(false);
+    );
   });
 
   it("refuses a user another org has verified the domain for", async () => {
     // otherOrg pushing an address at orgWithSso's domain must not link.
-    await expect(
-      shouldLinkScimUser({
-        user: domainUser,
-        email: domainUser.email,
-        provider: { organizationId: otherOrg.id },
+    await expectConflict(
+      resolveScimUser({
+        provisioningDomainId: otherOrg.id,
+        resource: scimResource(domainUser.email),
       })
-    ).resolves.toBe(false);
+    );
   });
 
   it("refuses when the org's domain is not verified yet", async () => {
-    await expect(
-      shouldLinkScimUser({
-        user: outsiderUser,
-        email: `someone@${PREFIX}-unverified.com`,
-        provider: { organizationId: otherOrg.id },
+    await expectConflict(
+      resolveScimUser({
+        provisioningDomainId: otherOrg.id,
+        resource: scimResource(unverifiedDomainUser.email),
       })
-    ).resolves.toBe(false);
+    );
   });
 
   it("refuses for a personal token with no organization", async () => {
-    await expect(
-      shouldLinkScimUser({
-        user: memberUser,
-        email: memberUser.email,
-        provider: {},
+    // No verifier in this plugin config ever resolves an empty
+    // provisioningDomainId, but resolveScimUser's guard must still hold if
+    // one ever did — a personal token has no tenant to authorize against.
+    await expectConflict(
+      resolveScimUser({
+        provisioningDomainId: "",
+        resource: scimResource(memberUser.email),
       })
-    ).resolves.toBe(false);
+    );
+  });
+
+  it("creates a new user when no existing account matches the email", async () => {
+    await expect(
+      resolveScimUser({
+        provisioningDomainId: orgWithSso.id,
+        resource: scimResource(`${PREFIX}-brand-new@example.com`),
+      })
+    ).resolves.toEqual({ action: "create" });
   });
 });

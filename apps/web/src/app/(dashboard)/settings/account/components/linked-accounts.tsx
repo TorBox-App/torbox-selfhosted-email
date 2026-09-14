@@ -82,8 +82,17 @@ export function LinkedAccounts() {
 
     setIsUnlinkingGoogle(true);
     try {
+      // better-auth 1.7 unlinks one specific account row by its Better Auth
+      // row id, not every account for a provider by providerId — the body
+      // field is named `accountId` but is matched against the row's `id`,
+      // not its own `accountId` (the provider's own id, e.g. Google's `sub`).
+      const googleAccount = accounts.find((a) => a.providerId === "google");
+      if (!googleAccount) {
+        toast.error("No linked Google account found");
+        return;
+      }
       const result = await authClient.unlinkAccount({
-        providerId: "google",
+        accountId: googleAccount.id,
       });
 
       if (result.error) {
@@ -129,8 +138,17 @@ export function LinkedAccounts() {
 
     setIsUnlinkingGitHub(true);
     try {
+      // better-auth 1.7 unlinks one specific account row by its Better Auth
+      // row id, not every account for a provider by providerId — the body
+      // field is named `accountId` but is matched against the row's `id`,
+      // not its own `accountId` (the provider's own id, e.g. GitHub's user id).
+      const githubAccount = accounts.find((a) => a.providerId === "github");
+      if (!githubAccount) {
+        toast.error("No linked GitHub account found");
+        return;
+      }
       const result = await authClient.unlinkAccount({
-        providerId: "github",
+        accountId: githubAccount.id,
       });
 
       if (result.error) {

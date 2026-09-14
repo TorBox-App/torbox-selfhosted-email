@@ -2,6 +2,7 @@
 
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { auth } from "@wraps/auth";
+import { hashScimToken, mintScimToken } from "@wraps/auth/scim-token";
 import {
   and,
   auditLog,
@@ -45,10 +46,6 @@ type SsoScimApi = {
     body: { providerId: string };
     headers: Headers;
   }): Promise<void>;
-  generateSCIMToken(opts: {
-    body: { providerId: string; organizationId: string };
-    headers: Headers;
-  }): Promise<{ scimToken: string }>;
 };
 
 const ssoApi = auth.api as unknown as SsoScimApi;
@@ -448,31 +445,47 @@ export const generateScimToken = orgAction(
     if (!(await requireProviderOwnership(orgId, providerId)))
       return { success: false, error: "Provider not found" };
 
-    const hdrs = await import("next/headers").then((m) => m.headers());
-    const generated = await callAuthApi(() =>
-      ssoApi.generateSCIMToken({
-        body: { providerId: scimProviderIdFor(orgId), organizationId: orgId },
-        headers: hdrs,
-      })
-    );
-    if (!generated.ok) return { success: false, error: generated.error };
-    const result = generated.value;
-
-    // Tokens minted before better-auth 1.6 used the SSO provider id. The plugin
-    // only revokes the row matching the id it is generating for, so a legacy row
-    // would survive rotation and keep its token valid — drop it ourselves. After
-    // the new token exists, so a failed rotation leaves the old one working.
-    await db
-      .delete(scimProvider)
-      .where(
-        and(
-          eq(scimProvider.organizationId, orgId),
-          eq(scimProvider.providerId, providerId)
-        )
-      );
+    // The plaintext token is returned to the caller once (show-once UX
+    // already assumes this) — only its hash is persisted.
+    const token = mintScimToken();
+    const hashedToken = await hashScimToken(token);
+    const currentProviderId = scimProviderIdFor(orgId);
 
     await ctx.audited(
-      async (_tx) => {},
+      async (tx) => {
+        // Tokens minted before better-auth 1.6 used the SSO provider id. The
+        // plugin used to only revoke the row matching the id it was
+        // generating for, so a legacy row would survive rotation and keep
+        // its token valid — drop it ourselves. Self-hosted deployments have
+        // their own databases and their own legacy rows, so this still
+        // matters even though the one SaaS row in this format is gone.
+        await tx
+          .delete(scimProvider)
+          .where(
+            and(
+              eq(scimProvider.organizationId, orgId),
+              eq(scimProvider.providerId, providerId)
+            )
+          );
+
+        // Rotation: replace any existing current-format row for this org —
+        // we now own this write end to end, so it is on us to make
+        // regenerating a token replace the old one rather than accumulate.
+        await tx
+          .delete(scimProvider)
+          .where(
+            and(
+              eq(scimProvider.organizationId, orgId),
+              eq(scimProvider.providerId, currentProviderId)
+            )
+          );
+
+        await tx.insert(scimProvider).values({
+          providerId: currentProviderId,
+          organizationId: orgId,
+          scimToken: hashedToken,
+        });
+      },
       () => ({
         action: "sso.scim_token_generated" as const,
         resource: "sso_provider",
@@ -482,6 +495,6 @@ export const generateScimToken = orgAction(
     );
 
     revalidatePath(`/${ctx.access.orgSlug}/settings/sso`);
-    return { success: true, token: result.scimToken };
+    return { success: true, token };
   }
 );
