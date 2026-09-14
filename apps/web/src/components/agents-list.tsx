@@ -140,7 +140,7 @@ export function AgentsList({
               </CardDescription>
             </div>
             <Button asChild variant="outline">
-              <Link href={`/${orgSlug}/emails/agents/approvals`}>
+              <Link href={`/${orgSlug}/automations/agents/approvals`}>
                 Approval queue
               </Link>
             </Button>

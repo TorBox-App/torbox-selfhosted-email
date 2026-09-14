@@ -20,8 +20,9 @@ import {
   findAgentForOrg,
   insertApprovalRequest,
   notifyOrg,
+  organization,
 } from "@wraps/db";
-import { isNotNull } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { log } from "../lib/logger";
@@ -94,14 +95,21 @@ export const agentsWebhookRoutes = new Elysia({ prefix: "/v1/agents" }).post(
     if (body.event === "blocked") {
       // Nothing to approve — record an operator notification for the audit trail.
       try {
-        await notifyOrg({
-          organizationId,
-          type: "agent.send_blocked",
-          title: `Agent ${agentRow.name} blocked a send`,
-          body: body.reason ?? "A send was blocked by policy.",
-          href: "/emails/agents/approvals",
-          data: { agentId: agentRow.id },
-        });
+        const [org] = await db
+          .select({ slug: organization.slug })
+          .from(organization)
+          .where(eq(organization.id, organizationId))
+          .limit(1);
+        if (org?.slug) {
+          await notifyOrg({
+            organizationId,
+            type: "agent.send_blocked",
+            title: `Agent ${agentRow.name} blocked a send`,
+            body: body.reason ?? "A send was blocked by policy.",
+            href: `/${org.slug}/automations/agents/approvals`,
+            data: { agentId: agentRow.id },
+          });
+        }
       } catch (error) {
         log.error("Agent webhook: blocked notify failed", error, {
           agentId: agentRow.id,
@@ -125,14 +133,21 @@ export const agentsWebhookRoutes = new Elysia({ prefix: "/v1/agents" }).post(
     }
 
     try {
-      await notifyOrg({
-        organizationId,
-        type: "agent.send_pending",
-        title: `Agent ${agentRow.name} needs approval`,
-        body: body.reason ?? "A send is awaiting your approval.",
-        href: "/emails/agents/approvals",
-        data: { agentId: agentRow.id, approvalId: approval.id },
-      });
+      const [org] = await db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1);
+      if (org?.slug) {
+        await notifyOrg({
+          organizationId,
+          type: "agent.send_pending",
+          title: `Agent ${agentRow.name} needs approval`,
+          body: body.reason ?? "A send is awaiting your approval.",
+          href: `/${org.slug}/automations/agents/approvals`,
+          data: { agentId: agentRow.id, approvalId: approval.id },
+        });
+      }
     } catch (error) {
       log.error("Agent webhook: pending notify failed", error, {
         agentId: agentRow.id,

@@ -205,6 +205,8 @@ describe("POST /v1/agents/webhook", () => {
       .where(eq(notification.organizationId, ORG_A));
     expect(notes.length).toBeGreaterThan(0);
     expect(notes.some((n) => n.type === "agent.send_pending")).toBe(true);
+    const pendingNote = notes.find((n) => n.type === "agent.send_pending");
+    expect(pendingNote?.href).toBe(`/${P}-a/automations/agents/approvals`);
 
     // Nothing leaked into ORG_B.
     const orgBRows = await db
@@ -248,6 +250,8 @@ describe("POST /v1/agents/webhook", () => {
       .from(notification)
       .where(eq(notification.organizationId, ORG_A));
     expect(notes.some((n) => n.type === "agent.send_blocked")).toBe(true);
+    const blockedNote = notes.find((n) => n.type === "agent.send_blocked");
+    expect(blockedNote?.href).toBe(`/${P}-a/automations/agents/approvals`);
     // Never the pending type for a blocked send.
     expect(notes.some((n) => n.type === "agent.send_pending")).toBe(false);
   });

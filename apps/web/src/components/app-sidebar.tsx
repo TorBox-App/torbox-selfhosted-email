@@ -91,13 +91,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       : null;
 
-  // Automations navigation - requires Scale+ plan
+  // Automations navigation - Workflows requires the workflows plan feature;
+  // Agents is visible on every plan.
   const automationsNavGroup =
-    orgSlug && !isBillingOnly && planFeatures?.workflows
+    orgSlug && !isBillingOnly
       ? {
           title: "Automations",
           icon: Workflow,
-          items: [{ title: "Workflows", url: `/${orgSlug}/automations` }],
+          items: [
+            ...(planFeatures?.workflows
+              ? [{ title: "Workflows", url: `/${orgSlug}/automations` }]
+              : []),
+            { title: "Agents", url: `/${orgSlug}/automations/agents` },
+          ],
         }
       : null;
 

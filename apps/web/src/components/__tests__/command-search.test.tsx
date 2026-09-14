@@ -128,3 +128,20 @@ describe("CommandSearch ask mode", () => {
     expect(posthog.capture).toHaveBeenCalledWith("cmd_k_asked");
   });
 });
+
+describe("CommandSearch Agents navigation", () => {
+  it("shows Agents and Agent approvals with nothing typed", () => {
+    render(<CommandSearch onOpenChange={vi.fn()} open />);
+    expect(screen.getByText("Agents")).toBeInTheDocument();
+    expect(screen.getByText("Agent approvals")).toBeInTheDocument();
+  });
+
+  it("filters to Agents on its keywords and excludes non-matching items", async () => {
+    const user = userEvent.setup();
+    render(<CommandSearch onOpenChange={vi.fn()} open />);
+    const input = screen.getByPlaceholderText("Search everything...");
+    await user.type(input, "kill switch");
+    expect(screen.getByText("Agents")).toBeInTheDocument();
+    expect(screen.queryByText("Templates")).not.toBeInTheDocument();
+  });
+});

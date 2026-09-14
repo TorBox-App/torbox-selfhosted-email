@@ -226,7 +226,7 @@ export async function killAgent(
       })
     );
 
-    revalidatePath(`/${access.orgSlug}/emails/agents`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/agents`, "page");
 
     const actor = access.userName || access.userEmail;
     const notifyBody =
@@ -242,7 +242,7 @@ export async function killAgent(
         type: "agent.killed",
         title: `Agent "${existing.name}" killed`,
         body: notifyBody,
-        href: `/${access.orgSlug}/emails/agents`,
+        href: `/${access.orgSlug}/automations/agents`,
         data: { agentId },
       });
     } catch (notifyError) {
@@ -393,7 +393,7 @@ export async function approveSend(
       })
     );
 
-    revalidatePath(`/${access.orgSlug}/emails/agents/approvals`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/agents/approvals`, "page");
 
     if (approval.status === "FAILED") {
       // Approved, but the enforcer failed to deliver — surface the reason.
@@ -413,7 +413,7 @@ export async function approveSend(
         type: "agent.send_approved",
         title: "Agent send approved",
         body: `${access.userName || access.userEmail} approved a pending agent send to ${existing.payload.to}.`,
-        href: `/${access.orgSlug}/emails/agents/approvals`,
+        href: `/${access.orgSlug}/automations/agents/approvals`,
         data: { approvalId },
       });
     } catch (notifyError) {
@@ -487,7 +487,7 @@ export async function rejectSend(
       })
     );
 
-    revalidatePath(`/${access.orgSlug}/emails/agents/approvals`, "page");
+    revalidatePath(`/${access.orgSlug}/automations/agents/approvals`, "page");
 
     try {
       await notifyOrg({
@@ -497,7 +497,7 @@ export async function rejectSend(
         type: "agent.send_rejected",
         title: "Agent send rejected",
         body: `${access.userName || access.userEmail} rejected a pending agent send to ${existing.payload.to}.`,
-        href: `/${access.orgSlug}/emails/agents/approvals`,
+        href: `/${access.orgSlug}/automations/agents/approvals`,
         data: { approvalId },
       });
     } catch (notifyError) {

@@ -11,7 +11,7 @@
  * never touch AWS, but the enforcer service is imported by the route module.
  */
 
-import { agent, db, member, user } from "@wraps/db";
+import { agent, db, member, notification, user } from "@wraps/db";
 import { eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import {
@@ -306,6 +306,13 @@ describe("POST /v1/agents/:id/kill sync-failure surface (SEC-5)", () => {
     const body = await res.json();
     expect(body.syncStatus).toBe("skipped");
     expect(body.agent.status).toBe("KILLED");
+
+    const notes = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.organizationId, ids.org));
+    const killedNote = notes.find((n) => n.type === "agent.killed");
+    expect(killedNote?.href).toBe(`/${PREFIX}-org/automations/agents`);
   });
 });
 

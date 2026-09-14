@@ -34,6 +34,7 @@ import {
   markApprovalSent,
   member,
   notifyOrg,
+  organization,
   updateAgentForOrg,
 } from "@wraps/db";
 import { t } from "elysia";
@@ -499,17 +500,24 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
       }
 
       try {
-        await notifyOrg({
-          organizationId: auth.organizationId,
-          type: "agent.killed",
-          title: `Agent ${killed.name} killed`,
-          body:
-            syncStatus === "failed"
-              ? "Kill applied, but enforcer sync failed — retry the kill."
-              : "This agent can no longer send email.",
-          href: "/emails/agents",
-          data: { agentId: killed.id, syncStatus },
-        });
+        const [org] = await db
+          .select({ slug: organization.slug })
+          .from(organization)
+          .where(eq(organization.id, auth.organizationId))
+          .limit(1);
+        if (org?.slug) {
+          await notifyOrg({
+            organizationId: auth.organizationId,
+            type: "agent.killed",
+            title: `Agent ${killed.name} killed`,
+            body:
+              syncStatus === "failed"
+                ? "Kill applied, but enforcer sync failed — retry the kill."
+                : "This agent can no longer send email.",
+            href: `/${org.slug}/automations/agents`,
+            data: { agentId: killed.id, syncStatus },
+          });
+        }
       } catch (error) {
         log.error("Kill notify failed", error, { agentId: killed.id });
       }

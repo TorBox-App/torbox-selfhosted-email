@@ -9,6 +9,7 @@ import {
 import { Command as CommandPrimitive } from "cmdk";
 import {
   BarChart3,
+  Bot,
   Building2,
   Cloud,
   CreditCard,
@@ -26,6 +27,7 @@ import {
   SendHorizontal,
   Settings,
   Shield,
+  ShieldCheck,
   Sparkles,
   Tag,
   UserPlus,
@@ -277,6 +279,20 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
           icon: BarChart3,
           shortcut: "G A",
           keywords: ["metrics", "stats", "dashboard", "reports"],
+        },
+        {
+          title: "Agents",
+          url: `/${orgSlug}/automations/agents`,
+          group: "Navigation",
+          icon: Bot,
+          keywords: ["ai", "agent", "mailbox", "leash", "kill switch"],
+        },
+        {
+          title: "Agent approvals",
+          url: `/${orgSlug}/automations/agents/approvals`,
+          group: "Navigation",
+          icon: ShieldCheck,
+          keywords: ["approval", "queue", "pending", "review", "agent"],
         }
       );
     }
