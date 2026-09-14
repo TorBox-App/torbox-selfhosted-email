@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
+import { AccountSurvivalSection } from "./landing/components/account-survival-section";
+import { ApproachesTeaserSection } from "./landing/components/approaches-teaser-section";
 import { ArchitectureByocSection } from "./landing/components/architecture-byoc-section";
 import { CodeSampleSection } from "./landing/components/code-sample-section";
 import { CompareSection } from "./landing/components/compare-section";
@@ -141,13 +143,22 @@ export default function LandingPage() {
 
         {/* Main Content */}
         <main>
+          {/*
+            Narrative order follows the sales pitch storyboard in
+            ~/Obsidian/ops/sops/positioning.md: insight, then the alternatives
+            rubric, then the one thing the other approaches do not do, and only
+            then the product tour. Price sits below the product on purpose —
+            it is the third value theme, not the argument.
+          */}
           <HeroSection />
-          <PrinciplesSection />
+          <ApproachesTeaserSection />
+          <AccountSurvivalSection />
           <ArchitectureByocSection />
+          <PrinciplesSection />
           <FeatureBlockSection />
           <CodeSampleSection />
-          <CompareSection />
           <ProductShowcaseSection />
+          <CompareSection />
           <PricingSection />
           <FaqSection />
           <CTASection />

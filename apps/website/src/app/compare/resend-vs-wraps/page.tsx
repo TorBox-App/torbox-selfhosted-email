@@ -369,6 +369,66 @@ export default function ResendVsWrapsPage() {
             </p>
           </section>
 
+          {/*
+            Dunford's insight step, and it goes above the pricing table on
+            purpose: the buyer this page is written for has already decided SES
+            is cheaper and picked Resend anyway. Leading with price argues with
+            a reader who agrees with us. See ops/sops/positioning.md.
+          */}
+          <section className="mb-16">
+            <SectionKicker>The real objection</SectionKicker>
+            <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
+              Price is not why people pick Resend over SES.
+            </h2>
+            <p className="mb-6 max-w-2xl text-muted-foreground">
+              In September 2026 a team running a public provider bake-off costed
+              Amazon SES at about $0.30 a month against Resend at $20, called
+              SES &ldquo;cheapest by far,&rdquo; and chose Resend. Their stated
+              reason, in full:
+            </p>
+            <blockquote className="mb-6 max-w-2xl border-foreground border-l-2 pl-5 text-foreground text-lg italic">
+              &ldquo;Requires production-access request (sandboxed by default)
+              and you must handle bounces/complaints yourself.&rdquo;
+            </blockquote>
+            <p className="mb-6 max-w-2xl text-muted-foreground">
+              A 66&times; price gap lost to those two clauses. If they describe
+              you, the rest of this page matters more than the numbers in it —
+              so here is what Wraps actually does about each one, and what it
+              does not.
+            </p>
+            <dl className="max-w-2xl space-y-5">
+              <div className="border-border border-t pt-4">
+                <dt className="mb-1.5 font-semibold text-foreground">
+                  &ldquo;Sandboxed by default&rdquo;
+                </dt>
+                <dd className="text-[15px] text-muted-foreground leading-[1.6]">
+                  Wraps cannot grant production access and neither can anyone
+                  else selling you software — it is an AWS decision made from
+                  your own account, and some requests are refused. What the CLI
+                  does is detect sandbox at the end of a deploy, explain what it
+                  means, and point you at the request, so it is not something
+                  you discover from a failed send. If you are likely to be
+                  refused, Resend is the better answer and we would rather say
+                  so here.
+                </dd>
+              </div>
+              <div className="border-border border-t pt-4">
+                <dt className="mb-1.5 font-semibold text-foreground">
+                  &ldquo;You must handle bounces/complaints yourself&rdquo;
+                </dt>
+                <dd className="text-[15px] text-muted-foreground leading-[1.6]">
+                  This one Wraps removes. Bounce and complaint processing,
+                  suppression, and the event pipeline are deployed with
+                  everything else on the first run. The dashboard then draws
+                  both rates against the lines Amazon enforces — review at 5%
+                  bounce and 0.1% complaint, sending paused at 10% and 0.5% —
+                  and sweeps the account hourly so a drift shows up before the
+                  suspension email does.
+                </dd>
+              </div>
+            </dl>
+          </section>
+
           {/* TL;DR Comparison Table */}
           <section className="mb-16">
             <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">

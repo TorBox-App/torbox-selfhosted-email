@@ -384,6 +384,7 @@ Failures SES throws no exception for. Every percentage is quoted from AWS docume
 - [Agents](https://wraps.dev/agents): Email infrastructure your agent owns
 - [MCP Server](https://wraps.dev/mcp): MCP server for AWS SES email — read tools plus guarded sending
 - [Why Wraps](https://wraps.dev/why-wraps): Value proposition and differentiators
+- [The Four Approaches](https://wraps.dev/approaches): The four ways to send application email — run SES yourself, rent a sending API, rent a marketing platform, or self-host an open-source wrapper — with what each is good at and who should pick it
 - [BYOC](https://wraps.dev/byoc): SES, EventBridge, and DynamoDB deployed into your own AWS with one CLI command
 - [For Marketing](https://wraps.dev/for/marketing): Broadcasts, segments, topics, and a hosted preference center, priced flat by plan rather than by contacts stored
 - [For Operators](https://wraps.dev/for/operators): Preflight a broadcast, hold consent as a record, and trace a single message end to end

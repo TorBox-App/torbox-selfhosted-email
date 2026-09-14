@@ -26,6 +26,21 @@ export type SearchIntentEntry = {
 };
 
 export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
+  // --- Rubric ---
+  {
+    route: "/approaches",
+    primaryQuery: "best way to send application email aws ses vs api",
+    secondaryQueries: [
+      "should i use ses or resend",
+      "open source resend alternative self host ses",
+      "usesend vs opensend vs ses",
+      "run ses yourself or use a sending api",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Nobody else writes the rubric — every page in this space is one vendor arguing for itself, and the open-source SES wrappers that appeared in 2026 are absent from all of them. A page that names all four approaches and sends the reader elsewhere when that is the right answer is the kind of page an LLM cites.",
+  },
+
   // --- Blog ---
   {
     route: "/blog/agent-mailboxes",

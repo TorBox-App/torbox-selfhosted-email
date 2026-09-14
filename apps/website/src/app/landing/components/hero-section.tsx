@@ -2,9 +2,12 @@ import { HeroAnimatedCTA } from "./hero-cta";
 import { HeroTerminal } from "./hero-terminal";
 import { SectionKicker } from "./section-kicker";
 
+// The rate used to sit in this row. It moved to the pricing section on
+// purpose: price is the third value theme, and against the free open-source
+// SES wrappers it is an argument we lose. See ops/sops/positioning.md.
 const proofStats: { n: string; k: string }[] = [
   { n: "~2 min", k: "typical first deploy" },
-  { n: "$0.10", k: "per 1k emails on à la carte, at AWS cost" },
+  { n: "5% / 0.1%", k: "the AWS bounce and complaint lines we watch" },
   { n: "0", k: "credentials we store" },
 ];
 
@@ -26,22 +29,23 @@ export function HeroSection() {
           {/* Left column: copy */}
           <div className="flex flex-col items-start">
             <SectionKicker>
-              Open-source email infrastructure for Amazon SES
+              The open-source operations layer for Amazon SES
             </SectionKicker>
 
-            <h1 className="max-w-[19ch] text-left font-heading font-semibold text-[40px] text-foreground leading-[1.04] tracking-[-0.03em] md:text-[52px] lg:text-[62px]">
-              Everything Amazon SES needs, in one command.
+            <h1 className="max-w-[21ch] text-left font-heading font-semibold text-[40px] text-foreground leading-[1.04] tracking-[-0.03em] md:text-[52px] lg:text-[62px]">
+              Run Amazon SES without becoming its operator.
             </h1>
 
-            <p className="mt-5 max-w-[46ch] text-left text-[17px] text-muted-foreground leading-[1.55] md:text-[19px]">
-              Wraps provisions SES, DynamoDB, and Lambda into your AWS account
-              with one command. Send from your app or your agent, and pay AWS
-              directly at{" "}
+            <p className="mt-5 max-w-[48ch] text-left text-[17px] text-muted-foreground leading-[1.55] md:text-[19px]">
+              SES is the cheapest way to send email, and most teams still do not
+              use it — production access is an approval you can be refused, and
+              bounce handling becomes your job on day one. Wraps deploys the
+              whole SES surface into your AWS account in one command. Send from
+              your app or your agent, and we watch the account against the rates{" "}
               <strong className="text-foreground/90">
-                $0.10 per 1,000 emails
-              </strong>{" "}
-              on à la carte. AWS defaults new accounts to $0.16, and Wraps tells
-              you which plan applies.
+                AWS suspends people for
+              </strong>
+              .
             </p>
 
             <div className="mt-8 mb-10">

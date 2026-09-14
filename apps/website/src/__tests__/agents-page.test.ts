@@ -10,9 +10,16 @@ describe("Chunk 1 — Homepage", () => {
   it("hero subcopy names the agent buyer while preserving ownership framing", () => {
     const source = read("src/app/landing/components/hero-section.tsx");
     expect(source).toContain("your agent");
-    expect(source).toContain("$0.10 per 1,000 emails");
-    expect(source).toContain("$0.16");
     expect(source).toMatch(/your AWS\s+account/);
+    // The SES rate used to be asserted here too. It moved to the pricing
+    // section on 2026-09-14: price is the third value theme and the one that
+    // loses outright to the free open-source SES wrappers, so the hero leads
+    // on the operations layer instead. See ops/sops/positioning.md.
+    //
+    // This is not a loosening of the pricing guardrail — the property that
+    // matters, "no unqualified $0.10 claim on a tier-1 marketing surface", is
+    // enforced for this file and 26 others by ses-pricing-copy.test.ts.
+    expect(source).not.toContain("$0.10");
   });
 
   it("principles-section exports 5 entries including a 'Built for Agents Too' card with the Bot icon", () => {
