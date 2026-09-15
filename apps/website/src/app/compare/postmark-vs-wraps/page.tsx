@@ -6,12 +6,13 @@ import {
   CardTitle,
 } from "@wraps/ui/components/ui/card";
 import {
+  Activity,
   ArrowRight,
   Check,
   Cloud,
   DollarSign,
-  MessageSquareQuote,
   Server,
+  Terminal,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -72,6 +73,16 @@ const breadcrumbSchema = {
 
 const tldrRows = [
   {
+    dimension: "Setup",
+    postmark: "Sign up, verify a domain, send",
+    wraps: "One command into your own AWS account",
+  },
+  {
+    dimension: "Day-to-day operations",
+    postmark: "Postmark runs the sending platform",
+    wraps: "Control plane watches the account, suppression, domain health",
+  },
+  {
     dimension: "Infrastructure",
     postmark: "Postmark-owned cloud",
     wraps: "Your AWS account",
@@ -79,7 +90,7 @@ const tldrRows = [
   {
     dimension: "Pricing model",
     postmark: "$1.20-$1.80 per 1K emails",
-    wraps: "$0.10 per 1K à la carte (AWS SES) + platform fee",
+    wraps: "$0.10 per 1K à la carte AWS SES ($0.16 Essentials) + flat fee",
   },
   {
     dimension: "Contact management",
@@ -92,9 +103,9 @@ const tldrRows = [
     wraps: "Visual workflow builder, broadcasts, segments",
   },
   {
-    dimension: "Data retention",
+    dimension: "Delivery history",
     postmark: "45 days (365 max, paid add-on)",
-    wraps: "Raw events in your DynamoDB, yours forever",
+    wraps: "Events in your DynamoDB, retention you set",
   },
   {
     dimension: "Vendor lock-in",
@@ -234,9 +245,19 @@ const featureRows: {
       { name: "Open/click tracking", postmark: "yes", wraps: "yes" },
       { name: "Bounce handling", postmark: "yes", wraps: "yes" },
       {
-        name: "Data retention",
+        name: "Delivery event retention",
         postmark: "45 days (365 max, paid)",
-        wraps: "Your DynamoDB forever; dashboard history 7d-1yr by plan",
+        wraps: "Your DynamoDB, retention you set; dashboard 30d-365d by plan",
+      },
+      {
+        name: "Bounce & complaint rate monitoring",
+        postmark: "Postmark's responsibility",
+        wraps: "Hourly sweep against AWS's lines, owners and admins notified",
+      },
+      {
+        name: "Deliverability & blacklist audit",
+        postmark: "Postmark's responsibility",
+        wraps: "wraps email check, on demand",
       },
     ],
   },
@@ -259,6 +280,11 @@ const featureRows: {
         wraps: "Request via SES (free)",
       },
       {
+        name: "Alarms in your own account",
+        postmark: "N/A (Postmark monitors its own platform)",
+        wraps: "CloudWatch, Production/Enterprise presets (not Starter)",
+      },
+      {
         name: "What happens if you cancel",
         postmark: "Lose everything",
         wraps: "SES infra keeps running",
@@ -272,7 +298,7 @@ const featureRows: {
       {
         name: "Official SDKs",
         postmark: "Node, Ruby, PHP, .NET, Java",
-        wraps: "TypeScript",
+        wraps: "TypeScript, Python",
       },
       {
         name: "CLI tooling",
@@ -295,7 +321,7 @@ const articleSchema = {
   description:
     "Detailed comparison of Postmark and Wraps for transactional and application email. Pricing at real volumes, feature differences, architecture tradeoffs, and migration guide.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-07-30T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -359,21 +385,25 @@ export default function PostmarkVsWrapsPage() {
             <div className="mb-4 flex items-center gap-2">
               <SectionKicker className="mb-0">Comparison</SectionKicker>
               <span className="font-mono text-2xs text-muted-foreground uppercase tracking-widest">
-                Last updated: March 2026
+                Last updated: September 2026
               </span>
             </div>
             <h1 className="mb-4 font-heading font-semibold text-4xl tracking-tight sm:text-5xl">
               Postmark vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              Postmark is a focused transactional email service with excellent
-              deliverability. Wraps deploys email infrastructure to your AWS
-              account with a full communication platform on top.
+              Postmark has spent more than a decade on one job: getting
+              transactional email into the inbox. That reputation is real, and
+              it is what the premium buys. If inbox placement is the thing
+              keeping you up, they have earned the money.
             </p>
             <p className="max-w-2xl text-lg">
-              Both platforms send email reliably. The difference is where the
-              infrastructure lives, what you pay for it, and what you can do
-              beyond transactional sends.
+              Wraps takes the other route. One command sets up the whole Amazon
+              SES surface in your own AWS account, and the Wraps control plane
+              runs it day to day &mdash; bounce and complaint rates watched
+              against AWS&apos;s own lines, suppression you can browse,
+              deliverability audits, a log of every message. Everything Amazon
+              SES needs, including operations.
             </p>
           </section>
 
@@ -410,58 +440,106 @@ export default function PostmarkVsWrapsPage() {
             </Card>
           </section>
 
-          {/* Sound Familiar? */}
+          {/* What Wraps does for you */}
           <section className="mb-16">
-            <div className="mb-6 flex items-center gap-3">
-              <MessageSquareQuote className="size-6 text-primary" />
-              <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Sound Familiar?
-              </h2>
-            </div>
+            <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
+              Everything Amazon SES needs, including operations
+            </h2>
+            <p className="mb-6 text-muted-foreground">
+              Most people pick a hosted API because they do not want to deal
+              with SES. That is a fair reason. Wraps exists to make dealing with
+              it easy: we set the whole thing up, and then we run it with you.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Terminal className="size-5 text-primary" />
+                    <CardTitle>One command sets it up</CardTitle>
+                  </div>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;What used to be $10/month is now closer to
-                    $120/month, even for existing customers, with no
-                    grandfathering or warnings &mdash; just an instant jump in
-                    cost.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    WPAstra, reporting on user complaints
-                  </p>
+                  <ul className="space-y-2 text-sm">
+                    <li>
+                      <code className="font-mono text-xs">
+                        wraps email init
+                      </code>{" "}
+                      deploys SES, EventBridge, SQS, Lambda, and DynamoDB into
+                      your AWS account.
+                    </li>
+                    <li>
+                      Non-destructive. Every resource is namespaced{" "}
+                      <code className="font-mono text-xs">wraps-email-*</code>{" "}
+                      and coexists with SES you already run.
+                    </li>
+                    <li>
+                      Account-level suppression is wired on at deploy,
+                      defaulting to bounces and complaints.
+                    </li>
+                    <li>
+                      Sandbox status is detected at the end of init, explained,
+                      and the console request is linked.
+                    </li>
+                    <li>
+                      On the Production and Enterprise deploy presets,
+                      CloudWatch alarms go in too: bounce warns at 2% and turns
+                      critical at 4%, complaint at 0.05% and 0.08%, and the
+                      dead-letter queue alarms on any failed message. They
+                      notify by email or webhook &mdash; Slack, Discord,
+                      PagerDuty. The Starter preset deploys without them.
+                    </li>
+                    <li>
+                      Access is an assumed role with an external ID and one-hour
+                      sessions. No AWS keys are stored anywhere.
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Activity className="size-5 text-primary" />
+                    <CardTitle>The control plane runs it</CardTitle>
+                  </div>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;Postmark shut down our entire account after a single
-                    B2B broadcast. Transactional emails were blocked as well,
-                    instantly breaking our SaaS for paying customers. No
-                    warning.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Trustpilot review
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="sm:col-span-2">
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;Sneaky business practices, poor customer service,
-                    price gouging, lack of helpfulness when resolving issues,
-                    and deceitfulness.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Trustpilot review, July 2025
-                  </p>
+                  <ul className="space-y-2 text-sm">
+                    <li>
+                      Bounce and complaint rates are swept hourly and drawn
+                      against the lines AWS can act on. Owners and admins get
+                      notified.
+                    </li>
+                    <li>
+                      An account card shows both rates, the 24-hour quota with
+                      an 80% warning line, and sandbox or enforcement status.
+                    </li>
+                    <li>
+                      The SES suppression list is browsable, and you can clear
+                      an address from it.
+                    </li>
+                    <li>
+                      <code className="font-mono text-xs">
+                        wraps email check
+                      </code>{" "}
+                      audits DKIM, SPF, DMARC, MX, MX-TLS, BIMI, RDAP, and
+                      public blacklists on demand.
+                    </li>
+                    <li>
+                      A row per message: recipient, subject, template variables,
+                      delivery and open timestamps.
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
             <p className="mt-4 text-muted-foreground text-sm">
-              These are real user reviews from Trustpilot, Capterra, and
-              industry coverage. When your email provider owns the
-              infrastructure, they control the price and the kill switch.
+              AWS can place an account under review above a 5% bounce rate and
+              can pause sending at 10%; for complaints the lines are 0.1% and
+              0.5%. Both the hourly sweep and the deployed alarms sit below
+              those numbers on purpose. Postmark&apos;s answer is that you never
+              look at any of this, and for a lot of teams that is the right
+              answer. Ours is that you can see the same numbers on your own
+              infrastructure, and hear about a problem while it is still small.
             </p>
           </section>
 
@@ -472,10 +550,11 @@ export default function PostmarkVsWrapsPage() {
             </h2>
             <p className="mb-6 text-muted-foreground">
               Postmark is a fully managed SaaS. Your emails send from
-              Postmark&apos;s shared IP pools, your data lives on
-              Postmark&apos;s servers, and your sending reputation is tied to
-              their infrastructure. This is convenient &mdash; until it
-              isn&apos;t.
+              Postmark&apos;s shared IP pools, your data lives on their servers,
+              and the reputation those IPs carry is pooled across every customer
+              on them. That pooled reputation is the product, and it is well
+              kept. Wraps inverts the arrangement: the sending infrastructure
+              sits in your AWS account and the reputation is yours alone.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -489,11 +568,11 @@ export default function PostmarkVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li>Emails send from Postmark&apos;s shared IPs</li>
-                    <li>Data stored on Postmark&apos;s AWS infrastructure</li>
-                    <li>45-day default retention, then deleted</li>
-                    <li>No data portability between accounts</li>
-                    <li>Cancel = lose everything, re-warm IPs elsewhere</li>
-                    <li>Account suspensions affect all streams</li>
+                    <li>Data stored on Postmark&apos;s infrastructure</li>
+                    <li>45-day default retention, longer as a paid add-on</li>
+                    <li>Reputation is pooled across the shared IPs</li>
+                    <li>Postmark carries the deliverability work for you</li>
+                    <li>Leaving means warming a sender somewhere else</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -511,25 +590,34 @@ export default function PostmarkVsWrapsPage() {
                       AWS SES
                     </li>
                     <li>
-                      Email events stored in{" "}
+                      Delivery events land in{" "}
                       <span className="font-medium">your</span> DynamoDB
                     </li>
                     <li>
-                      Raw events kept forever &mdash; it&apos;s your database
+                      Retention is set in your own deploy config, up to
+                      permanent
                     </li>
                     <li>Export anytime &mdash; it&apos;s your AWS account</li>
-                    <li>Cancel Wraps = SES infrastructure keeps running</li>
-                    <li>You control your own sending reputation</li>
+                    <li>
+                      Cancel Wraps and the SES infrastructure keeps running
+                    </li>
+                    <li>
+                      Your sending reputation is yours, and Wraps watches it
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
             </div>
 
             <p className="mt-6 text-muted-foreground text-sm">
-              Wraps is the control plane. AWS SES is the data plane. You own the
-              infrastructure, the data, and the sending reputation. Wraps
-              provides the developer tools, dashboard, workflows, and analytics
-              on top.
+              Wraps is the control plane. AWS SES is the data plane. Be precise
+              about where the split falls: SES sending and the per-message
+              delivery history sit in your account. Contacts, templates,
+              broadcasts and workflow state sit in Wraps&apos; Postgres, along
+              with a row per message carrying the recipient address, subject,
+              sender, template variables, and delivery and open timestamps. If
+              your security review needs recipient addresses never to leave your
+              own account, that is the limit to weigh.
             </p>
           </section>
 
@@ -542,12 +630,15 @@ export default function PostmarkVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
+              Price is not the argument on its own. If Postmark&apos;s inbox
+              placement is what is carrying your product, it is worth the money,
+              and the table below does not change that. It is here because the
+              gap gets large enough at volume that you should know the number.
               Postmark&apos;s 2026 plans (Basic $15, Pro $16.50, Platform $18)
-              all include just 10K emails &mdash; everything above that is
-              overage at $1.20&ndash;$1.80 per 1,000 emails depending on plan.
-              AWS SES charges $0.10 per 1,000 à la carte (AWS defaults new
-              accounts to $0.16). Here&apos;s what that means at real send
-              volumes.
+              each include 10K emails; everything above that is overage at
+              $1.20&ndash;$1.80 per 1,000 depending on plan. AWS SES charges
+              $0.10 per 1,000 à la carte, $0.16 on the Essentials plan new
+              accounts default to.
             </p>
 
             <Card className="overflow-hidden py-0">
@@ -609,7 +700,7 @@ export default function PostmarkVsWrapsPage() {
 
             <div className="mt-6 rounded-lg border bg-muted/30 p-4">
               <p className="font-medium text-sm">
-                Hidden costs to watch for with Postmark
+                Priced separately at Postmark
               </p>
               <ul className="mt-2 space-y-1 text-muted-foreground text-sm">
                 <li>
@@ -680,15 +771,16 @@ export default function PostmarkVsWrapsPage() {
               <CardContent>
                 <p className="mb-4 text-muted-foreground">
                   Postmark is genuinely excellent at transactional email
-                  delivery. Choose Postmark if:
+                  delivery, and inbox placement is the hardest part of this
+                  business to buy. Choose Postmark if:
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "You need zero-config setup with no AWS account or cloud knowledge required",
+                    "You have no AWS account and no appetite for one. A hosted API is a different approach, and it is the right one for you.",
                     "You only send transactional email (password resets, receipts, notifications) and don't need marketing, automations, or contact management",
-                    "You value pre-warmed shared IPs with 14+ years of established deliverability reputation",
+                    "You want someone else's warmed shared IPs and the years of reputation behind them, rather than a sender of your own",
                     "You want server-side Handlebars templates managed by your email provider",
-                    "You need official SDKs in Ruby, PHP, .NET, Java, or Go (Wraps currently offers TypeScript only)",
+                    "You need an official SDK in Ruby, PHP, .NET or Java. Wraps ships TypeScript and Python.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
@@ -708,18 +800,20 @@ export default function PostmarkVsWrapsPage() {
             <Card className="border-primary/30">
               <CardContent>
                 <p className="mb-4 text-muted-foreground">
-                  Wraps is the better fit when you want more than a sending API.
-                  Choose Wraps if:
+                  Wraps is the better fit when SES is the right answer on paper
+                  and the operations are what stopped you. Choose Wraps if:
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "You want to own your email infrastructure in your AWS account, not rent it from a vendor",
+                    "You have an AWS account and want SES set up properly without spending a week on it. One command, non-destructive, alongside whatever SES you already run.",
+                    "You want the account watched. Bounce and complaint rates swept hourly against AWS's own lines, owners and admins notified, suppression you can browse and clear.",
+                    "You want the alarms to be yours. On the Production and Enterprise deploy presets, CloudWatch alarms land in your account below AWS's own thresholds and page you by email or webhook. The Starter preset deploys without them.",
+                    "You want domain health on demand. One command audits DKIM, SPF, DMARC, MX-TLS, BIMI and the public blacklists.",
                     "You need a full communication platform: automations, broadcasts, segments, and contact management alongside transactional sends",
-                    "You're cost-sensitive at scale \u2014 AWS SES pricing ($0.10/1K \u00e0 la carte) is 12-18x cheaper than Postmark's per-email rate",
-                    "You want to own your event history -- raw events live in your DynamoDB forever, with no paid add-on to keep them (Wraps dashboard history runs 7 days to 1 year by plan)",
+                    "You want the sending infrastructure and the delivery history to live in your account, with retention you set rather than a retention add-on you buy",
+                    "You're cost-sensitive at volume. AWS SES is $0.10 per 1,000 \u00e0 la carte, $0.16 on Essentials, against Postmark's $1.20-$1.80 overage rate.",
                     "You want SMS alongside email via AWS End User Messaging, from the same platform",
-                    "You care about vendor lock-in: cancel Wraps and your SES infrastructure keeps running with no DNS changes or IP warmup required",
-                    "You're in a regulated industry where data residency matters \u2014 your sending infrastructure and email events stay in your AWS account, which can be HIPAA-eligible",
+                    "You care about vendor lock-in: cancel Wraps and your SES infrastructure keeps running with no DNS changes or sender warmup required",
                     "You're a TypeScript team that wants React Email templates with type-safe SDK integration",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
@@ -749,11 +843,14 @@ export default function PostmarkVsWrapsPage() {
                   1. Deploy infrastructure (~10 min)
                 </h3>
                 <code className="block rounded-md bg-background p-3 font-mono text-sm">
-                  npx @wraps.dev/cli email setup
+                  npx @wraps.dev/cli email init
                 </code>
                 <p className="mt-2 text-muted-foreground text-xs">
                   Deploys SES, EventBridge, SQS, Lambda, and DynamoDB to your
-                  AWS account.
+                  AWS account, namespaced and non-destructive. Account-level
+                  suppression comes on with it. If the account is still in the
+                  SES sandbox, init says so and links the production-access
+                  request.
                 </p>
               </div>
 
@@ -785,7 +882,11 @@ export default function PostmarkVsWrapsPage() {
                 <p className="text-muted-foreground text-sm">
                   Add DKIM/SPF records for your domain (same as any provider
                   switch). Export your Postmark suppression list via their API
-                  and import to SES to avoid re-sending to bad addresses.
+                  and import to SES so you do not re-send to bad addresses. Then
+                  run{" "}
+                  <code className="font-mono text-xs">wraps email check</code>{" "}
+                  to confirm DKIM, SPF, DMARC, MX-TLS and the blacklists all
+                  read clean before you cut traffic over.
                 </p>
               </div>
             </div>
@@ -809,11 +910,11 @@ export default function PostmarkVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Own your email infrastructure
+              Everything Amazon SES needs, including operations
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Deploy to your AWS in 2 minutes. Free tier includes unlimited
-              sends and a 30-day dashboard history.
+              One command sets it up in your own AWS account. The free plan has
+              no send meter and keeps 30 days of dashboard history.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -831,8 +932,8 @@ export default function PostmarkVsWrapsPage() {
           {/* Accuracy Note */}
           <div className="mt-8 text-center text-muted-foreground text-xs">
             <p>
-              Last updated: March 2026. Postmark pricing and features sourced
-              from postmarkapp.com, Capterra, G2, and Trustpilot.
+              Last updated: September 2026. Postmark pricing and features
+              sourced from postmarkapp.com.
             </p>
             <p className="mt-1">
               See something inaccurate?{" "}

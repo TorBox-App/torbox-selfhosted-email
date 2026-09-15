@@ -56,23 +56,23 @@ const comparisons = [
   {
     competitor: "Resend",
     href: "/compare/resend-vs-wraps",
-    tagline: "Same DX, different economics",
+    tagline: "Their AWS account, or yours",
     description:
       "Resend sends from their AWS account. Wraps deploys to yours. Compare data retention (Resend purges after 30 days; with Wraps the raw events land in your own DynamoDB and stay there), overage pricing ($0.90/1K vs $0.10/1K à la carte), and what happens when you cancel.",
   },
   {
     competitor: "Amazon SES",
     href: "/compare/amazon-ses-vs-wraps",
-    tagline: "Same infrastructure, better DX",
+    tagline: "Same SES, set up and run for you",
     description:
-      "Wraps is SES underneath — same pricing, same deliverability. The difference is setup time (2 minutes vs days), a TypeScript SDK, templates, workflows, and a dashboard you don't have to build.",
+      "Wraps is SES underneath — same pricing, same deliverability, your account. The difference is that it is standing in two minutes instead of days, and that the daily job has somewhere to live: bounce and complaint rates against the lines AWS reviews and pauses at, suppression, deliverability audits, every message searchable.",
   },
   {
     competitor: "SendGrid",
     href: "/compare/sendgrid-vs-wraps",
-    tagline: "Escape the legacy tax",
+    tagline: "Rent the sending, or own it",
     description:
-      "SendGrid's 1.2/5 Trustpilot rating tells the story. Compare account suspension risk, hidden costs at scale, and why thousands of developers are moving off Twilio's email platform.",
+      "SendGrid has the scale and the support desk, and sends from their infrastructure on shared IPs you do not control. Compare what changes when the account, the reputation and the sending data are yours — and what you take on when they are.",
   },
   {
     competitor: "Customer.io",
@@ -91,16 +91,16 @@ const comparisons = [
   {
     competitor: "Klaviyo",
     href: "/compare/klaviyo-vs-wraps",
-    tagline: "Up to 5.6x cheaper at scale",
+    tagline: "Built for developers, not storefronts",
     description:
-      "Klaviyo is built for e-commerce marketing with Shopify deep integration. If you're a developer-led team sending transactional and lifecycle email, compare what you're actually paying for.",
+      "Klaviyo is excellent at ecommerce lifecycle marketing and a non-engineer can run it. If you are a developer-led team sending transactional and lifecycle email, compare the feature surface you actually use against what contact-based billing charges you for.",
   },
   {
     competitor: "Mailgun",
     href: "/compare/mailgun-vs-wraps",
-    tagline: "Your infra, AWS pricing, no suspensions",
+    tagline: "Your account, your reputation",
     description:
-      "Mailgun's Flex tier is gone and account suspensions are a recurring complaint. Compare pricing at real volumes, deliverability controls, and what owning the sending infrastructure changes.",
+      "Mailgun brings a long track record, EU regions and mature deliverability tooling. Compare pricing at real volumes against sending from an account you own, and what changes when the reputation being built is yours.",
   },
   {
     competitor: "Hand-rolled bounce handling",
@@ -162,6 +162,20 @@ export default function ComparePage() {
                 the ranked alternatives lists
               </Link>{" "}
               cover every real option, ours placed where it honestly belongs.
+            </p>
+            <p className="mt-4 max-w-2xl text-muted-foreground">
+              And if the question is which <em>kind</em> of thing to use rather
+              than which vendor — run SES yourself, rent a sending API, rent a
+              marketing platform, or put an open-source wrapper over your own
+              SES —{" "}
+              <Link
+                className="text-primary underline underline-offset-4"
+                href="/approaches"
+              >
+                the four approaches
+              </Link>{" "}
+              is the rubric. Wraps is one of the wrappers, and that page
+              compares it against the others.
             </p>
           </div>
 
@@ -230,36 +244,38 @@ export default function ComparePage() {
             <div className="grid gap-4 sm:grid-cols-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Your infrastructure</CardTitle>
+                  <CardTitle>We set it up</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    Wraps deploys SES, DynamoDB, and Lambda to your AWS account.
-                    You own everything.
+                    One command deploys SES, DynamoDB, Lambda, EventBridge and
+                    scoped IAM roles into your AWS account. Namespaced, so
+                    nothing you already run gets touched.
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>AWS pricing</CardTitle>
+                  <CardTitle>The control plane runs it</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    $0.10 per 1,000 emails à la carte (AWS defaults new accounts
-                    to $0.16 — Wraps tells you which plan applies). No
-                    per-contact fees, no overage surcharges.
+                    Bounce and complaint rates drawn against the lines AWS
+                    reviews and pauses at, swept hourly. Suppression,
+                    deliverability and blacklist audits, every message
+                    searchable.
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>No lock-in</CardTitle>
+                  <CardTitle>It stays yours</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    Stop paying Wraps anytime. Your infrastructure keeps
-                    running. Email events stay in your DynamoDB. Contacts
-                    exportable anytime.
+                    Stop paying and the infrastructure keeps running — it is in
+                    your account, and AWS bills you directly for the sending.
+                    Contacts and templates export on the way out.
                   </p>
                 </CardContent>
               </Card>
@@ -288,7 +304,7 @@ export default function ComparePage() {
           </section>
 
           <p className="mt-8 text-center text-muted-foreground text-xs">
-            Last updated: July 2026. See something inaccurate?{" "}
+            Last updated: September 2026. See something inaccurate?{" "}
             <a className="underline" href="mailto:support@wraps.dev">
               Let us know
             </a>

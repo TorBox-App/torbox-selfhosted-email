@@ -73,7 +73,7 @@ const articleSchema = {
   description:
     "An honest line-by-line comparison between hand-rolled SES bounce handling and Wraps, including the full 85-line SNS signature verification implementation.",
   datePublished: "2026-08-04T00:00:00.000Z",
-  dateModified: "2026-08-04T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -248,10 +248,13 @@ import { type NextRequest, NextResponse } from "next/server";
 const SECRET = process.env.WRAPS_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
-  const signature = request.headers.get("x-wraps-signature");
+  const sent = Buffer.from(request.headers.get("x-wraps-signature") ?? "");
+  const expected = Buffer.from(SECRET);
+  // timingSafeEqual throws when the buffers differ in length — check first,
+  // or a short header is a 500 instead of a 401.
   if (
-    !signature ||
-    !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(SECRET))
+    sent.length !== expected.length ||
+    !crypto.timingSafeEqual(sent, expected)
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -354,14 +357,22 @@ const featureComparison: {
         diy: "no",
         diyNote: "SNS retries, then drops silently",
         wraps: "yes",
-        wrapsNote: "SQS + DLQ; depth alarm on Production/Enterprise",
+        wrapsNote: "SQS + DLQ in your AWS account",
       },
       {
-        name: "Reputation alarms below AWS thresholds",
+        name: "Bounce and complaint rates watched",
         diy: "no",
-        diyNote: "Build CloudWatch alarms yourself",
+        diyNote: "Nothing reads the events back",
+        wraps: "yes",
+        wrapsNote: "Hourly sweep; owners and admins notified",
+      },
+      {
+        name: "CloudWatch alarms below AWS's thresholds",
+        diy: "no",
+        diyNote: "Build and tune them yourself",
         wraps: "partial",
-        wrapsNote: "Production/Enterprise presets only — off on Starter",
+        wrapsNote:
+          "On for the Production and Enterprise presets; off for Starter",
       },
       {
         name: "Queryable event history",
@@ -371,11 +382,18 @@ const featureComparison: {
         wrapsNote: "DynamoDB in your account + events API",
       },
       {
-        name: "Suppression list visibility",
+        name: "Suppression list you can act on",
         diy: "no",
         diyNote: "Raw SESv2 API calls",
         wraps: "yes",
-        wrapsNote: "SDK, dashboard, and MCP tool",
+        wrapsNote: "Browse and clear from the dashboard",
+      },
+      {
+        name: "Deliverability and blacklist audit",
+        diy: "no",
+        diyNote: "Assemble the DNS and blacklist checks yourself",
+        wraps: "yes",
+        wrapsNote: "wraps email check, on demand",
       },
       {
         name: "Open/click tracking over HTTPS",
@@ -399,7 +417,7 @@ const stillYourJob = [
   "Deciding your soft-bounce threshold and writing the counter behind it",
   "Keeping your own unsubscribe list in sync with the SES suppression list",
   "Making your handler idempotent — events can arrive more than once",
-  "Requesting SES production access and getting through the review",
+  "Requesting SES production access. Wraps detects the sandbox, explains it, and links the request; the approval is AWS's call",
 ];
 
 const chooseHandRollReasons = [
@@ -411,10 +429,11 @@ const chooseHandRollReasons = [
 ];
 
 const chooseWrapsReasons = [
-  "You want the surrounding infrastructure — queue, DLQ, alarms, history — without assembling it",
-  "You want to be warned at a 2% bounce rate rather than find out at 5%",
+  "You want the surrounding infrastructure — queue, dead-letter queue, event history — deployed rather than assembled",
+  "You want the two rates AWS judges you on read against its own lines every hour, with your owners and admins told",
+  "You want CloudWatch alarms at 2% and 4% bounce sitting in your own account — the Production and Enterprise presets deploy them, Starter does not",
   "You want per-message event history you can query without designing a schema for it",
-  "You would rather your team's next 40 hours go to product than to email plumbing",
+  "You would rather your team's next stretch of work go to product than to email plumbing",
   "You still want to own everything: it all deploys into your AWS account and can be torn down",
 ];
 
@@ -454,8 +473,14 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                 handler
               </strong>{" "}
               — and a competent developer, or a competent coding agent, writes
-              them correctly. The full code is on this page. Read it before you
-              read our pitch.
+              them correctly. The full code is on this page.
+            </p>
+            <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+              Writing it is an afternoon. Running it is every week after that:
+              the topic and the subscription, the queue behind the handler, the
+              two rates AWS judges the account on, the suppression list, the
+              history you go looking through when a customer says the mail never
+              arrived. That second part is what Wraps is for.
             </p>
           </section>
 
@@ -507,7 +532,7 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
             </Card>
             <p className="mt-4 text-muted-foreground text-sm">
               For comparison, the Wraps version of the same handler is{" "}
-              <strong className="text-foreground">36 lines</strong>, because the
+              <strong className="text-foreground">39 lines</strong>, because the
               signature is a shared secret rather than an asymmetric one. That
               is a real reduction, and it is also the least interesting thing on
               this page.
@@ -564,9 +589,8 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                   >
                     aws-js-sns-message-validator
                   </a>{" "}
-                  is the safer default if you go this route. We are pointing you
-                  at our competitor's better tool because the alternative is
-                  pretending this code is worse than it is.
+                  is the safer default if you go this route. It is AWS's own
+                  library, and at that one job it is better than the code above.
                 </p>
               </CardContent>
             </Card>
@@ -618,10 +642,9 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                     SNS retries an HTTPS endpoint on its own schedule and then
                     stops. There is no queue in front of your handler and no
                     dead-letter queue behind it, so a deploy window or a
-                    database blip means bounces that silently never happened.
-                    You find out weeks later when your bounce rate is 6% and
-                    your contact list is full of dead addresses you were told
-                    about and dropped.
+                    database blip drops events with no record that they arrived.
+                    Nothing reconciles afterwards, so an address you were told
+                    about stays on your list.
                   </p>
                 </CardContent>
               </Card>
@@ -629,19 +652,32 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
-                    Nothing here tells you your reputation is sliding
+                    Somebody still has to watch the account
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    AWS recommends a bounce rate under 5% and may pause sending
-                    above 10%; for complaints it's 0.1% and 0.5%. The handler
-                    records events but watches nothing. By the time you notice
-                    in the SES console, the number is an account-wide average
-                    that takes real volume to pull back down. Wraps deploys
-                    alarms at 2%/4% bounce and 0.05%/0.08% complaint — but on
-                    the Production and Enterprise presets only, so this gap is
-                    one you can also have with Wraps if you deploy Starter.
+                    The handler records events. It never reads them back. AWS
+                    can place an account under review above a 5% bounce rate and
+                    can pause sending at 10%; for complaints the lines are 0.1%
+                    and 0.5%. Both are account-wide averages that take real
+                    volume to pull back down, so someone has to open the SES
+                    console and look. On Wraps that is the control plane's job.
+                    A sweep runs every hour, reads both rates against AWS's own
+                    review and pause lines, and notifies the organization's
+                    owners and admins when an account crosses one — once a day
+                    per account, not once an hour.
+                  </p>
+                  <p className="mt-2 text-muted-foreground text-sm">
+                    The same deploy can also put CloudWatch alarms in your own
+                    account, set below AWS's lines on purpose so there is lead
+                    time: bounce warning at 2% and critical at 4%, complaint
+                    warning at 0.05% and critical at 0.08%, and one on any
+                    dead-lettered message. Those are on by default for the
+                    Production and Enterprise presets and off for Starter, so a
+                    starter deploy is not alarmed. They are also the half you
+                    keep — alarms are resources in your account, not a dashboard
+                    you log into.
                   </p>
                 </CardContent>
               </Card>
@@ -700,13 +736,14 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
               Wraps delivers events through EventBridge to your endpoint with a
               shared secret header, so there is no envelope to unwrap, no
               certificate to fetch, and no subscription handshake. The queue,
-              dead-letter queue, alarms, and event history sit behind it — all
-              deployed into your AWS account by one command.
+              the dead-letter queue, and the event history sit behind it, all
+              deployed into your AWS account by one command, and the control
+              plane watches the account from there.
             </p>
             <div className="mb-6">
               <CodeComparison
                 after={{
-                  label: "With Wraps — 36 lines",
+                  label: "With Wraps — 39 lines",
                   filename: "app/api/webhooks/email/route.ts",
                   language: "typescript",
                   code: wrapsRouteCode,
@@ -732,8 +769,7 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                   destination using a secret both sides hold. Both are sound
                   over HTTPS, and the shared secret is what makes the handler
                   short — but if asymmetric verification is a hard requirement
-                  in your threat model, that's a real reason to prefer the SNS
-                  path, and we'd rather you know it now.
+                  in your threat model, the SNS path is the one to take.
                 </p>
               </CardContent>
             </Card>
@@ -855,7 +891,7 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
               When to Hand-Roll It
             </h2>
             <p className="mb-4 text-muted-foreground">
-              There is a real case for it, and it isn't a consolation prize.
+              There is a real case for it.
             </p>
             <Card>
               <CardContent>
@@ -935,8 +971,9 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
               The code is the easy part
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Deploy the queue, the dead-letter queue, the alarms, and the event
-              history in one command — into your own AWS account.
+              Deploy the queue, the dead-letter queue, and the event history in
+              one command, into your own AWS account, and let the control plane
+              run it from there.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -958,8 +995,8 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
           {/* =========================================== */}
           <div className="space-y-3 text-muted-foreground text-xs">
             <p>
-              <strong className="text-foreground">Last updated:</strong> August
-              2026. Line counts measured with{" "}
+              <strong className="text-foreground">Last updated:</strong>{" "}
+              September 2026. Line counts measured with{" "}
               <code className="rounded bg-muted px-1">wc -l</code> on the code
               shown above. SES bounce types, subtypes, reputation thresholds,
               and mailbox simulator behavior verified against the{" "}

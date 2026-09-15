@@ -716,12 +716,12 @@ const POSTMARK_PAGE: AlternativesPage = {
     {
       vendor: "wraps",
       verdict:
-        "The answer when the problem is that Postmark is fine but you now need broadcasts, segments, and lifecycle workflows too, and you do not want two vendors and two bills. Sending runs through SES in your own AWS account at AWS prices, delivery events land in your own DynamoDB, and the platform layer on top is a flat fee with unlimited contacts. Workflows are TypeScript pushed from the CLI, so a journey change reviews like code. At 100K a month that is about $10 of SES plus $19 to $79 of platform. You need an AWS account and SES production access to get there, and you would be trading Postmark's support culture for a much smaller company's.",
+        "The answer when the problem is that Postmark is fine but you now need broadcasts, segments, and lifecycle workflows too, and you do not want two vendors and two bills. Sending runs through SES in your own AWS account at AWS prices, delivery events land in your own DynamoDB, and the platform layer on top is a flat fee with unlimited contacts. Workflows are TypeScript pushed from the CLI, so a journey change reviews like code. At 100K a month that is about $10 of SES plus a flat platform fee of $0, $29 or $199, depending on how much history and governance you need. You need an AWS account and SES production access to get there, and you would be trading Postmark's support culture for a much smaller company's.",
     },
     {
       vendor: "mailgun",
       verdict:
-        "Cheaper than Postmark at volume, at $75 to $90 for 100K, with inbound routing and email validation included in the same bill. You are giving up Postmark's deliverability posture and its support culture, which is most of what you were paying for, and you are picking up a vendor with recurring suspension complaints. A reasonable move only if routing and validation are things you actually need.",
+        "Cheaper than Postmark at volume, at $75 to $90 for 100K, with inbound routing and email validation included in the same bill. You are giving up Postmark's deliverability posture and its support culture, which is most of what you were paying for, and the routing and validation you are picking up only pay for themselves if you actually use them. A reasonable move only if you do.",
     },
     {
       vendor: "mailersend",

@@ -11,9 +11,8 @@ import {
   Check,
   CircleDollarSign,
   GitFork,
-  MessageSquareQuote,
   Server,
-  ShieldAlert,
+  Terminal,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -29,19 +28,20 @@ import { SectionKicker } from "@/app/landing/components/section-kicker";
 import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
-  title: "SendGrid vs Wraps - Own Your Email Infrastructure",
+  title:
+    "SendGrid vs Wraps - Everything Amazon SES Needs, Including Operations",
   description:
-    "Compare SendGrid and Wraps side by side. Same developer experience, your AWS account, AWS pricing, no vendor lock-in. See pricing, features, and migration path.",
+    "Compare SendGrid and Wraps side by side. SendGrid rents you a sending API. Wraps sets up the whole Amazon SES surface in your own AWS account in one command, then runs it day to day. Pricing, features, and migration path.",
   openGraph: {
     title: "SendGrid vs Wraps | Wraps",
     description:
-      "Compare SendGrid and Wraps side by side. Same developer experience, your AWS account, AWS pricing, no vendor lock-in.",
+      "SendGrid rents you a sending API. Wraps sets up Amazon SES in your own AWS account in one command, then runs it day to day.",
     url: "https://wraps.dev/compare/sendgrid-vs-wraps",
   },
   twitter: {
     title: "SendGrid vs Wraps | Wraps",
     description:
-      "Compare SendGrid and Wraps side by side. Same developer experience, your AWS account, AWS pricing, no vendor lock-in.",
+      "SendGrid rents you a sending API. Wraps sets up Amazon SES in your own AWS account in one command, then runs it day to day.",
   },
   alternates: {
     canonical: "https://wraps.dev/compare/sendgrid-vs-wraps",
@@ -75,9 +75,19 @@ const breadcrumbJsonLd = {
 
 const tldrComparison = [
   {
-    dimension: "Infrastructure",
-    sendgrid: "SendGrid's servers",
-    wraps: "Your AWS account",
+    dimension: "Setup",
+    sendgrid: "API key, then domain authentication",
+    wraps: "One command, non-destructive, in your AWS account",
+  },
+  {
+    dimension: "Day-to-day operations",
+    sendgrid: "SendGrid's console and support desk",
+    wraps: "Control plane: hourly account-health sweep, suppression, audits",
+  },
+  {
+    dimension: "Where email sends from",
+    sendgrid: "SendGrid's infrastructure",
+    wraps: "SES in your AWS account",
   },
   {
     dimension: "Pricing (100K emails/mo)",
@@ -90,19 +100,9 @@ const tldrComparison = [
     wraps: "$29 + $50 AWS = $79/mo",
   },
   {
-    dimension: "Account suspension risk",
-    sendgrid: "High (1.2/5 Trustpilot)",
-    wraps: "None (your AWS account)",
-  },
-  {
-    dimension: "Data ownership",
-    sendgrid: "SendGrid stores everything",
-    wraps: "Stays in your AWS",
-  },
-  {
-    dimension: "Vendor lock-in",
-    sendgrid: "IP reputation lost on exit",
-    wraps: "Infrastructure stays if you leave",
+    dimension: "If you leave",
+    sendgrid: "IP reputation stays with SendGrid",
+    wraps: "The SES stack keeps running in your account",
   },
 ];
 
@@ -204,14 +204,19 @@ const featureComparison = [
         wraps: true,
       },
       {
-        name: "Email activity history",
-        sendgrid: "3-30 days (plan dependent)",
+        name: "Delivery history",
+        sendgrid: "Held on SendGrid's servers, retention by plan",
         wraps:
-          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
+          "Per-event history in your DynamoDB, retention set in your own deploy config, up to permanent",
+      },
+      {
+        name: "Dashboard history",
+        sendgrid: "Retention by plan",
+        wraps: "30 days Free, 90 days Pro, 365 days Business",
       },
       {
         name: "Webhook event delivery",
-        sendgrid: "1-5 URLs (plan dependent)",
+        sendgrid: "Event webhook to your endpoint",
         wraps: "EventBridge (unlimited targets)",
       },
     ],
@@ -220,24 +225,65 @@ const featureComparison = [
     category: "Developer Experience",
     features: [
       {
-        name: "TypeScript SDK quality",
-        sendgrid: "Ships types, known issues",
+        name: "TypeScript SDK",
+        sendgrid: "Official, ships types",
         wraps: "Strict TypeScript, full type safety",
       },
       {
         name: "Multi-language SDKs",
-        sendgrid: "7 languages",
-        wraps: "TypeScript only",
+        sendgrid: "Seven official languages",
+        wraps: "TypeScript and Python",
       },
       {
-        name: "CLI tooling",
-        sendgrid: "Abandoned bash scripts",
-        wraps: "Full CLI with interactive setup",
+        name: "First-party CLI",
+        sendgrid: false,
+        wraps: "wraps, with interactive setup",
       },
       {
-        name: "Time to first email",
-        sendgrid: "10-30 min (up to 48hr for domain auth)",
-        wraps: "~2 min (wraps email setup)",
+        name: "MCP server for agents",
+        sendgrid: false,
+        wraps: true,
+      },
+      {
+        name: "Setup",
+        sendgrid: "API key, then domain authentication and DNS propagation",
+        wraps: "wraps email init, then DNS propagation",
+      },
+    ],
+  },
+  {
+    category: "Operations",
+    features: [
+      {
+        name: "Bounce and complaint rates watched",
+        sendgrid: "SendGrid manages its own sending reputation",
+        wraps: "Swept hourly against AWS's review and pause lines",
+      },
+      {
+        name: "Alerts to your team",
+        sendgrid: "Account notices from SendGrid",
+        wraps: "Owners and admins notified, once per account per day",
+      },
+      {
+        name: "Alarms in your own AWS account",
+        sendgrid: false,
+        wraps:
+          "CloudWatch, below AWS's thresholds (Production and Enterprise presets; off on the Starter preset)",
+      },
+      {
+        name: "Suppression list",
+        sendgrid: true,
+        wraps: "SES account-level, browse and clear in the dashboard",
+      },
+      {
+        name: "Deliverability and blacklist audit",
+        sendgrid: "Deliverability tooling on higher plans",
+        wraps: "wraps email check, on demand",
+      },
+      {
+        name: "Per-message log",
+        sendgrid: "Activity feed, retention by plan",
+        wraps: "Recipient, subject, variables, delivery and open timestamps",
       },
     ],
   },
@@ -245,23 +291,28 @@ const featureComparison = [
     category: "Platform & Ownership",
     features: [
       {
-        name: "Infrastructure ownership",
+        name: "Sending infrastructure ownership",
         sendgrid: false,
         wraps: true,
       },
       {
         name: "Data portability",
         sendgrid: "CSV export only",
-        wraps: "Your AWS account (full access)",
+        wraps: "SES stack in your AWS; contacts and templates exportable",
       },
       {
         name: "Unlimited contacts",
-        sendgrid: "Separate Marketing Campaigns plan ($25-60/mo for 10K)",
-        wraps: "All tiers",
+        sendgrid: "Priced as a separate Marketing Campaigns plan",
+        wraps: "Every plan",
+      },
+      {
+        name: "Open source",
+        sendgrid: false,
+        wraps: "AGPL-3.0, self-hostable",
       },
       {
         name: "What happens when you leave",
-        sendgrid: "Data deleted, IPs reclaimed",
+        sendgrid: "IP reputation stays with SendGrid",
         wraps: "Infrastructure keeps running",
       },
     ],
@@ -281,8 +332,8 @@ const featureComparison = [
       },
       {
         name: "Automation workflows",
-        sendgrid: "Advanced plan only",
-        wraps: "Visual builder + CLI (all tiers)",
+        sendgrid: "Marketing Campaigns plan",
+        wraps: "Visual builder + TypeScript (every plan)",
       },
       {
         name: "Audience segmentation",
@@ -298,9 +349,9 @@ const articleSchema = {
   "@type": "Article",
   headline: "SendGrid vs Wraps",
   description:
-    "Compare SendGrid and Wraps side by side. Same developer experience, your AWS account, AWS pricing, no vendor lock-in. See pricing, features, and migration path.",
+    "Compare SendGrid and Wraps side by side. SendGrid rents you a sending API. Wraps sets up the whole Amazon SES surface in your own AWS account in one command, then runs it day to day.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-07-30T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -363,19 +414,20 @@ export default function SendGridVsWrapsPage() {
               SendGrid vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              SendGrid sends email from their infrastructure. Wraps deploys
-              email infrastructure to your AWS account. Same developer
-              experience, fundamentally different architecture.
+              SendGrid rents you a sending API. Wraps sets up Amazon SES in your
+              own AWS account and then runs it for you.
             </p>
-            <p className="max-w-2xl text-muted-foreground">
-              SendGrid was built for a world where email infrastructure was
-              hard. Wraps was built for a world where it shouldn't be. Your AWS
-              account. Your pricing. Your data. No surprise bans.
+            <p className="mb-4 max-w-2xl text-muted-foreground">
+              Most teams choose SendGrid because they do not want to deal with
+              SES. That is a fair reason, and it is the one Wraps removes. One
+              command deploys the whole SES surface into your account, without
+              touching anything already there.
             </p>
             <p className="max-w-2xl font-medium text-foreground text-lg">
-              Both platforms send reliably today. The real difference is vendor
-              lock-in: leave SendGrid and your IP reputation goes with it, while
-              Wraps' infrastructure keeps running in your own AWS account.
+              Then the control plane runs it: bounce and complaint rates swept
+              hourly against AWS's own review and pause lines, suppression you
+              can browse and clear, deliverability and blacklist audits on
+              demand, and a row in the log for every message you send.
             </p>
           </section>
 
@@ -412,68 +464,103 @@ export default function SendGridVsWrapsPage() {
             </Card>
           </section>
 
-          {/* 3. "Sound Familiar?" */}
+          {/* 3. Everything SES needs, including operations */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <MessageSquareQuote className="size-6 text-primary" />
+              <Terminal className="size-6 text-primary" />
               <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Sound Familiar?
+                Everything SES Needs, Including Operations
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
-              Real quotes from SendGrid users across Trustpilot, Sitejabber, and
-              developer forums.
+              You already know SES is cheaper. The reason you are paying
+              SendGrid is that SES arrives as a set of AWS primitives with
+              nothing to run them. Wraps is the setup and the running.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle>One command sets it up</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-destructive/50 pl-4 text-sm italic text-muted-foreground">
-                    "Try and cancel, 3 months I have been trying. They are
-                    corrupt."
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Trustpilot review, March 2026
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li>
+                      <code className="rounded bg-muted px-1">
+                        wraps email init
+                      </code>{" "}
+                      deploys the SES surface into your AWS account: domain
+                      identity, DKIM records, and the EventBridge, SQS, Lambda,
+                      and DynamoDB pipeline that captures every delivery event.
+                    </li>
+                    <li>
+                      SES account-level suppression is switched on at deploy,
+                      defaulting to bounces and complaints.
+                    </li>
+                    <li>
+                      init offers deployment presets. On Production and
+                      Enterprise it also creates CloudWatch alarms in your
+                      account, set below AWS's own lines so you get lead time
+                      rather than a surprise: bounce warns at 2% and goes
+                      critical at 4%, complaint warns at 0.05% and goes critical
+                      at 0.08%, and any failed message in the dead-letter queue
+                      raises one. They reach you by notification email, a
+                      webhook, or both (Slack, Discord, PagerDuty). The Starter
+                      preset deploys without alarms.
+                    </li>
+                    <li>
+                      Nothing existing is modified. Every resource is namespaced{" "}
+                      <code className="rounded bg-muted px-1">
+                        wraps-email-
+                      </code>{" "}
+                      and it runs alongside SES you already have.
+                    </li>
+                    <li>
+                      If the account is still in the SES sandbox, init says so
+                      at the end, explains what it means, and links the console
+                      request. Wraps cannot approve production access. Nobody
+                      selling software can.
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle>The control plane runs it</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-destructive/50 pl-4 text-sm italic text-muted-foreground">
-                    "5 days with an account suspension... NOT ONE
-                    COMMUNICATION."
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Trustpilot review, March 2026
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-destructive/50 pl-4 text-sm italic text-muted-foreground">
-                    "I just signed up for Twilio SendGrid, and got instantly
-                    permabanned."
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    dev.to post (front page of Hacker News), October 2024
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-destructive/50 pl-4 text-sm italic text-muted-foreground">
-                    "90% of outgoing mails ending in spam."
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Microsoft Q&A, reporting shared IP reputation issues
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li>
+                      Every hour Wraps reads your bounce and complaint rates and
+                      draws them against AWS's own lines. AWS can place an
+                      account under review above a 5% bounce rate and can pause
+                      sending at 10%; for complaints those lines are 0.1% and
+                      0.5%. Owners and admins get told, deduped to once per
+                      account per day.
+                    </li>
+                    <li>
+                      The dashboard shows the same two rates, your 24-hour quota
+                      with an 80% warning line, and whether the account is in
+                      the sandbox or under review.
+                    </li>
+                    <li>
+                      Suppression is browsable and clearable, so you can see why
+                      an address stopped receiving and let it back in.
+                    </li>
+                    <li>
+                      <code className="rounded bg-muted px-1">
+                        wraps email check
+                      </code>{" "}
+                      audits DKIM, SPF, DMARC, MX, MX-TLS, BIMI, RDAP, and
+                      public blacklists on demand.{" "}
+                      <code className="rounded bg-muted px-1">
+                        wraps email doctor
+                      </code>{" "}
+                      reports what is wrong with a named fix.
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
-            <p className="mt-4 text-muted-foreground text-sm">
-              SendGrid holds a 1.2/5 rating on Trustpilot across ~550 reviews.
-              The most common complaints: account suspensions without warning,
-              unreachable support, and shared IP deliverability problems.
-            </p>
           </section>
 
           {/* 4. The Architectural Difference */}
@@ -485,8 +572,8 @@ export default function SendGridVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
-              This isn't a feature gap. It's a fundamentally different model for
-              who owns your email infrastructure.
+              This is not a feature gap. Both send email well. It is a different
+              answer to who runs the infrastructure and where the data sits.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
@@ -496,22 +583,29 @@ export default function SendGridVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li>
-                      Email sends from SendGrid's infrastructure (hybrid on-prem
-                      + AWS)
+                      Email sends from SendGrid's own infrastructure, at a scale
+                      very few senders operate
                     </li>
                     <li>
                       All data (templates, contacts, analytics) stored on their
                       servers
                     </li>
                     <li>
-                      Shared IP pools on Essentials plan -- other customers'
-                      behavior affects your deliverability
+                      Shared IP pools on the Essentials plan, which means your
+                      deliverability moves with other customers on the pool
                     </li>
                     <li>
-                      Dedicated IPs require Pro plan ($89.95/mo) plus 30-60 day
-                      warmup
+                      Dedicated IPs start at the Pro plan ($89.95/mo) and need
+                      warming before you send volume through them
                     </li>
-                    <li>When you cancel: data deleted, IPs reclaimed</li>
+                    <li>
+                      A deliverability team and a support desk stand behind all
+                      of it, which is a real part of what you are buying
+                    </li>
+                    <li>
+                      When you cancel, the IP reputation you built stays with
+                      SendGrid
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
@@ -522,47 +616,37 @@ export default function SendGridVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li>
-                      Email sends from SES in your AWS account -- you own the
-                      infrastructure
+                      Email sends from SES in your AWS account. The domain
+                      identity and the sender reputation are yours.
                     </li>
                     <li>
-                      Email events stay in your DynamoDB, Lambda, and
-                      EventBridge. Contacts exportable anytime.
+                      Per-event delivery history lands in your DynamoDB, with
+                      the retention you set in your own deploy config, up to
+                      permanent.
                     </li>
                     <li>
-                      SES reputation is domain-based -- no IP warmup needed,
-                      with dedicated IPs available when needed
+                      Contacts, templates, broadcasts, and a row per message
+                      live in Wraps' Postgres. That row carries the recipient
+                      address, subject, sender, template variables, and delivery
+                      and open timestamps.
                     </li>
                     <li>
-                      When you stop paying Wraps: everything keeps running in
-                      your AWS
+                      Wraps reaches your account by assuming a role with an
+                      external ID, in one-hour sessions. No AWS access keys are
+                      stored anywhere.
+                    </li>
+                    <li>
+                      SES reputation is domain-based, so there is no IP warmup,
+                      and dedicated IPs are available when you want them.
+                    </li>
+                    <li>
+                      When you stop paying Wraps, the SES stack keeps running in
+                      your AWS.
                     </li>
                   </ul>
                 </CardContent>
               </Card>
             </div>
-
-            <Card className="mt-6 border-destructive/30 bg-destructive/5">
-              <CardContent>
-                <div className="flex items-start gap-3">
-                  <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-                  <div>
-                    <h3 className="mb-1 font-medium">
-                      SendGrid's security track record
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      428 documented outages over ~6 years (averaging 6.1 per
-                      month). An alleged data breach in April 2025 exposed
-                      848,000 customer records. SendGrid credentials are
-                      actively sold on dark web forums for $15. In January 2026,
-                      attackers leveraged SendGrid's infrastructure for a
-                      sophisticated phishing campaign. With Wraps, your
-                      infrastructure is isolated in your own AWS account.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </section>
 
           {/* 5. Pricing at Real Volumes */}
@@ -632,31 +716,36 @@ export default function SendGridVsWrapsPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               <Card>
                 <CardContent>
-                  <h3 className="mb-1 font-medium text-sm">Hidden cost #1</h3>
+                  <h3 className="mb-1 font-medium text-sm">
+                    Two plans, not one
+                  </h3>
                   <p className="text-muted-foreground text-sm">
-                    SendGrid bills Email API and Marketing Campaigns separately.
-                    Need both? 100K transactional + 20K contacts = $89.95 + $100
-                    = $189.95/mo minimum.
+                    SendGrid sells Marketing Campaigns as its own plan rather
+                    than an add-on to the Email API. If you send both
+                    transactional and marketing, you buy both.
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent>
-                  <h3 className="mb-1 font-medium text-sm">Hidden cost #2</h3>
+                  <h3 className="mb-1 font-medium text-sm">
+                    Priced by contacts
+                  </h3>
                   <p className="text-muted-foreground text-sm">
-                    Marketing Campaigns is priced by contacts: 10K contacts runs
-                    $25/mo (Basic) or $60/mo (Advanced), on top of your Email
-                    API plan. Wraps includes unlimited contacts on all tiers.
+                    Marketing Campaigns is priced on how many contacts you
+                    store, on top of the Email API plan. Wraps is flat:
+                    unlimited contacts, domains, templates, and team members on
+                    every plan.
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent>
-                  <h3 className="mb-1 font-medium text-sm">Hidden cost #3</h3>
+                  <h3 className="mb-1 font-medium text-sm">No send meter</h3>
                   <p className="text-muted-foreground text-sm">
-                    Email activity history maxes at 30 days even on Pro. With
-                    Wraps the raw events land in your own DynamoDB and stay
-                    there. SendGrid offers no equivalent at any price.
+                    The Wraps fee does not move with volume. You pay AWS for
+                    sending and Wraps a flat monthly fee. What changes by plan
+                    is history retention, AWS account count, SSO, and support.
                   </p>
                 </CardContent>
               </Card>
@@ -744,16 +833,17 @@ export default function SendGridVsWrapsPage() {
             <Card>
               <CardContent>
                 <p className="mb-4 text-muted-foreground">
-                  SendGrid has real advantages that we want to acknowledge
-                  honestly.
+                  SendGrid has been sending email at very large scale for over a
+                  decade. There are good reasons to pick it.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "You need a visual drag-and-drop email editor and built-in A/B testing -- Wraps uses AI-powered editing and code-first templates.",
-                    "You need SDKs in Python, Ruby, Go, Java, C#, or PHP -- Wraps supports TypeScript only.",
-                    "You want zero infrastructure management. SendGrid is API-key-in, email-out. Wraps requires an AWS account and a 2-minute deployment.",
-                    "You're buying within a Twilio enterprise contract with bundled pricing.",
-                    "Non-developer team members need to build and send emails without code.",
+                    "You have no AWS account and no appetite for one. Wraps deploys into your AWS; a hosted API does not ask you for that. Use one.",
+                    "You want deliverability to be somebody else's job. SendGrid has a deliverability team, a support desk, and a sending reputation built over more than a decade.",
+                    "You need a visual drag-and-drop editor or built-in A/B testing. Wraps has neither: templates are React Email TSX with an AI chat panel.",
+                    "You need SDKs in Ruby, Go, Java, C#, or PHP. Wraps ships TypeScript and Python.",
+                    "You are buying inside a Twilio enterprise contract with bundled pricing.",
+                    "Non-developers on your team need to build and send email without touching code.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
                       <Check className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
@@ -774,12 +864,12 @@ export default function SendGridVsWrapsPage() {
               <CardContent>
                 <ul className="space-y-3">
                   {[
-                    "You care about cost at scale. At 500K emails/month, Wraps runs $79/mo against SendGrid's ~$499 -- $420/mo, or $5,040/year.",
-                    "You want to own your email infrastructure and data. If you leave Wraps, your SES, DynamoDB, and Lambda stay in your account.",
-                    "You need reliability you control. SES reputation is domain-based, and dedicated IPs are available when you need them.",
-                    "You're already on AWS and don't want to add another vendor dependency.",
-                    "You want to own your event history. Raw events live in your DynamoDB -- yours forever. Wraps dashboard history runs 7 days to 1 year by plan; SendGrid maxes at 30 days even on Pro.",
-                    "You value transparency. You can see exactly what infrastructure runs, audit the open-source code, and pay AWS directly.",
+                    "You want SES but not the setup. One command deploys the whole surface into your AWS account, without touching SES resources you already run.",
+                    "You want someone watching the account. Bounce and complaint rates are checked hourly against AWS's own review and pause lines, and your owners and admins hear about it before it matters. On the Production and Enterprise presets, CloudWatch alarms sit in your own account too, at thresholds below AWS's.",
+                    "You want the deliverability checks on hand. wraps email check runs DKIM, SPF, DMARC, MX, MX-TLS, BIMI, RDAP, and public blacklists on demand.",
+                    "You are already on AWS and do not want another vendor in the sending path.",
+                    "You care about cost at scale. At 500K emails a month Wraps runs $79 all in, the $29 plan plus about $50 of SES sending, against SendGrid's ~$499.",
+                    "You want to keep the sending. SES, DynamoDB, Lambda, and EventBridge stay in your account if you stop paying us.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
                       <Check className="mt-0.5 size-5 shrink-0 text-success" />
@@ -803,7 +893,8 @@ export default function SendGridVsWrapsPage() {
               Replace{" "}
               <code className="rounded bg-muted px-1">@sendgrid/mail</code> with{" "}
               <code className="rounded bg-muted px-1">@wraps.dev/email</code>.
-              The SDK swap is straightforward.
+              The call shape is close enough that most send sites change on one
+              line.
             </p>
 
             <CodeComparison
@@ -828,34 +919,39 @@ export default function SendGridVsWrapsPage() {
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
-                    <strong>No IP warmup needed.</strong> SES reputation is
-                    domain-based. If you already have SES sending history, you
-                    keep your reputation.
+                    No IP warmup. SES reputation is domain-based, so if you
+                    already have SES sending history you keep it.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
-                    <strong>No DNS vendor dependency.</strong> Domain
-                    verification is done in SES (your account). No third-party
-                    DNS records to maintain.
+                    Domain verification happens in SES, in your own account.
+                    There are no third-party DNS records to maintain.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
-                    <strong>Suppression list import.</strong> Export your
-                    SendGrid suppression CSV and import it into Wraps.
+                    Suppression is handled from day one. SES account-level
+                    suppression is switched on at deploy, defaulting to bounces
+                    and complaints, and you can browse and clear the list in the
+                    dashboard. Moving your existing SendGrid suppression list
+                    across is still on you.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
-                    <strong>Deploy in ~2 minutes.</strong> Run{" "}
+                    One command deploys the stack. Run{" "}
                     <code className="rounded bg-muted px-1">
-                      wraps email setup
+                      wraps email init
+                    </code>
+                    , then{" "}
+                    <code className="rounded bg-muted px-1">
+                      wraps email check
                     </code>{" "}
-                    to deploy the full stack to your AWS account.
+                    to confirm DKIM, SPF, and DMARC before you cut traffic over.
                   </span>
                 </li>
               </ul>
@@ -870,11 +966,13 @@ export default function SendGridVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Ready to own your email infrastructure?
+              Set up SES in one command
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Deploy to your AWS in 2 minutes. Free tier includes unlimited
-              sends and a 30-day dashboard history.
+              <code className="rounded bg-muted px-1">wraps email init</code>{" "}
+              deploys the whole SES surface to your AWS account, and the control
+              plane takes it from there. The Free plan has no send meter and 30
+              days of dashboard history.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -891,7 +989,7 @@ export default function SendGridVsWrapsPage() {
 
           {/* Footer note */}
           <div className="mt-12 space-y-2 text-center text-muted-foreground text-xs">
-            <p>Last updated: March 2026</p>
+            <p>Last updated: September 2026</p>
             <p>
               We update this page regularly. If anything here is inaccurate,{" "}
               <a
@@ -908,15 +1006,6 @@ export default function SendGridVsWrapsPage() {
                 target="_blank"
               >
                 sendgrid.com
-              </a>{" "}
-              and{" "}
-              <a
-                className="text-primary underline"
-                href="https://www.trustpilot.com/review/sendgrid.com"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Trustpilot
               </a>
               .
             </p>

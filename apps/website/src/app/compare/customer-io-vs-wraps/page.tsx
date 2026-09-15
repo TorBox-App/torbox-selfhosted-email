@@ -28,17 +28,17 @@ import { JsonLd } from "@/components/json-ld";
 export const metadata: Metadata = {
   title: "Customer.io vs Wraps - Contact-Based Pricing vs Unlimited Contacts",
   description:
-    "Compare Customer.io and Wraps for email infrastructure. Customer.io charges per contact with high-watermark billing. Wraps deploys to your AWS with unlimited contacts on every tier.",
+    "Compare Customer.io and Wraps. Customer.io charges per contact and hosts everything. Wraps sets up the whole SES surface in your AWS account in one command, then runs it day to day from one control plane, with unlimited contacts on every tier.",
   openGraph: {
     title: "Customer.io vs Wraps | Wraps",
     description:
-      "Contact-based pricing vs unlimited contacts. Managed SaaS vs your AWS account. Compare the real cost at every scale.",
+      "Contact-based pricing vs unlimited contacts. Rented infrastructure vs SES in your own AWS account, set up in one command and operated from one control plane.",
     url: "https://wraps.dev/compare/customer-io-vs-wraps",
   },
   twitter: {
     title: "Customer.io vs Wraps | Wraps",
     description:
-      "Contact-based pricing vs unlimited contacts. Managed SaaS vs your AWS account. Compare the real cost at every scale.",
+      "Contact-based pricing vs unlimited contacts. Rented infrastructure vs SES in your own AWS account, set up in one command and operated from one control plane.",
   },
   alternates: {
     canonical: "https://wraps.dev/compare/customer-io-vs-wraps",
@@ -72,6 +72,19 @@ const breadcrumbJsonLd = {
 
 const tldrRows = [
   {
+    dimension: "Setup",
+    customerio: "Sign up, connect a domain, build in their UI.",
+    wraps:
+      "One command deploys the whole SES surface into your AWS account, non-destructively.",
+  },
+  {
+    dimension: "Running it day to day",
+    customerio:
+      "They operate the sending platform. You operate campaigns inside it.",
+    wraps:
+      "One control plane: bounce and complaint rates swept hourly, suppression, deliverability audits, a per-message event log.",
+  },
+  {
     dimension: "Pricing model",
     customerio: "Per contact (profile). High-watermark billing.",
     wraps: "Flat monthly fee by tier. Unlimited contacts on every tier.",
@@ -84,21 +97,22 @@ const tldrRows = [
   {
     dimension: "Infrastructure",
     customerio: "Managed SaaS (GCP). They host everything.",
-    wraps: "Your AWS account. You own everything.",
+    wraps: "SES, DynamoDB, Lambda, and EventBridge in your AWS account.",
   },
   {
-    dimension: "Data ownership",
+    dimension: "Where the data sits",
     customerio: "Customer.io hosts your data. Bulk export requires Premium.",
-    wraps: "Email events in your DynamoDB. Contacts exportable anytime.",
+    wraps:
+      "Delivery events in your DynamoDB, retention you set. Contacts, templates, and workflow state in Wraps, exportable anytime.",
   },
   {
-    dimension: "Vendor lock-in",
-    customerio: "High. Workflows, templates, and data are proprietary.",
-    wraps: "Zero. Standard AWS SES underneath. Keep your infra if you leave.",
+    dimension: "If you leave",
+    customerio: "Workflows, templates, and data are proprietary.",
+    wraps: "Standard AWS SES underneath. The sending infrastructure stays.",
   },
   {
     dimension: "Dedicated IPs",
-    customerio: "Premium only ($1,000/mo min). Requires 50K emails/week.",
+    customerio: "Premium only ($1,000/mo min).",
     wraps: "Your SES account (shared default, dedicated available)",
   },
 ];
@@ -139,18 +153,10 @@ const pricingRows = [
   {
     contacts: "100,000",
     emails: "1,000,000",
-    customerio: "$1,000+",
-    customerioNote: "Premium tier minimum (annual contract)",
+    customerio: "$955",
+    customerioNote: "$100 + 95K overage at $0.009/profile",
     wraps: "$299",
     wrapsNote: "$199 Business + $100 SES",
-  },
-  {
-    contacts: "500,000",
-    emails: "5,000,000",
-    customerio: "$4,000-5,000+",
-    customerioNote: "Enterprise (custom, estimated)",
-    wraps: "$699",
-    wrapsNote: "$199 Business + $500 SES",
   },
 ];
 
@@ -252,13 +258,65 @@ const featureRows: {
         wraps: "no",
       },
       {
-        name: "Behavioral segmentation",
-        customerio: "yes",
-        wraps: "Basic (tags/attributes)",
+        name: "Segmentation",
+        customerio: "Behavioral segmentation with a built-in CDP",
+        wraps:
+          "Nested AND/OR filters on attributes, topics, and events (triggered, not triggered, within N days)",
       },
       {
         name: "Event-driven workflows",
         customerio: "yes",
+        wraps: "yes",
+      },
+      {
+        name: "Broadcasts and scheduled campaigns",
+        customerio: "yes",
+        wraps: "yes",
+      },
+      {
+        name: "Topics and hosted preference centre",
+        customerio: "yes",
+        wraps: "yes",
+      },
+    ],
+  },
+  {
+    category: "Operations",
+    features: [
+      {
+        name: "Who owns the sending reputation",
+        customerio: "Customer.io, on their IP pools",
+        wraps: "You, on your own SES account",
+      },
+      {
+        name: "Bounce and complaint rates against AWS's review and pause lines",
+        customerio: "Not applicable",
+        wraps: "Swept hourly, owners and admins notified",
+      },
+      {
+        name: "CloudWatch alarms in your own AWS account",
+        customerio: "Not applicable",
+        wraps:
+          "Production and Enterprise presets, off for Starter. Bounce warns at 2%, complaint at 0.05%, well under AWS's lines. Email or webhook.",
+      },
+      {
+        name: "Suppression list you can browse and clear",
+        customerio: "Theirs, inside their platform",
+        wraps: "Your SES account-level list, wired on at deploy",
+      },
+      {
+        name: "DKIM, SPF, DMARC, and blacklist audits",
+        customerio: "They manage deliverability for you",
+        wraps: "On demand via the CLI",
+      },
+      {
+        name: "Per-message event log",
+        customerio: "yes",
+        wraps: "yes",
+      },
+      {
+        name: "Inbound email",
+        customerio: "Not documented",
         wraps: "yes",
       },
     ],
@@ -280,11 +338,6 @@ const featureRows: {
         name: "Sending infra in your cloud account",
         customerio: "no",
         wraps: "yes",
-      },
-      {
-        name: "HIPAA compliance",
-        customerio: "Premium+ only ($1K/mo min)",
-        wraps: "Sending infra via your AWS BAA",
       },
       {
         name: "Self-hosted / BYOC",
@@ -317,9 +370,19 @@ const featureRows: {
         wraps: "yes",
       },
       {
-        name: "API rate limits",
-        customerio: "100 req/s (Track), 10 req/s (App)",
-        wraps: "AWS SES limits (200/sec default, can increase)",
+        name: "Send rate ceiling",
+        customerio: "Their platform's published API rate limits",
+        wraps: "Your own SES quota, raised by asking AWS",
+      },
+      {
+        name: "Python SDK",
+        customerio: "yes",
+        wraps: "yes",
+      },
+      {
+        name: "MCP server for coding agents",
+        customerio: "Not documented",
+        wraps: "yes",
       },
     ],
   },
@@ -330,9 +393,9 @@ const articleSchema = {
   "@type": "Article",
   headline: "Customer.io vs Wraps",
   description:
-    "Compare Customer.io and Wraps for email infrastructure. Customer.io charges per contact with high-watermark billing. Wraps deploys to your AWS with unlimited contacts on every tier.",
+    "Compare Customer.io and Wraps. Customer.io charges per contact and hosts everything. Wraps sets up the whole SES surface in your AWS account in one command, then runs it day to day from one control plane, with unlimited contacts on every tier.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-07-30T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -369,11 +432,6 @@ const userQuotes = [
       "The pricing model doesn't make sense for growing companies... you pay for all the contacts in your account, regardless of if they're active or not.",
     source: "Encharge pricing analysis",
   },
-  {
-    quote:
-      "The interface feels like it was designed by engineers for engineers, with no consideration for marketers. Simple tasks like segmenting users or editing workflows are buried under layers of clicks.",
-    source: "G2 reviewer",
-  },
 ];
 
 export default function CustomerIoVsWrapsPage() {
@@ -396,15 +454,72 @@ export default function CustomerIoVsWrapsPage() {
               Customer.io vs Wraps
             </h1>
             <p className="mb-3 max-w-2xl text-lg text-muted-foreground">
-              Customer.io is a marketing automation platform that charges per
-              contact and hosts everything on their infrastructure. Wraps
-              deploys email infrastructure directly to your AWS account with
-              unlimited contacts on every tier.
+              Customer.io is a marketing automation platform. You rent it, you
+              pay per contact, and they host everything. Wraps puts the same
+              surface on Amazon SES in your own AWS account: one command sets it
+              all up, then one control plane runs it day to day.
             </p>
             <p className="max-w-2xl text-muted-foreground">
-              Both platforms send email. The difference is where the
-              infrastructure lives, who owns the data, and how you pay for it.
+              Both send lifecycle email from workflows, broadcasts, segments,
+              and templates. The difference is who operates the sending
+              infrastructure, and what it costs when your list grows.
             </p>
+          </section>
+
+          {/* The two beats */}
+          <section className="mb-16">
+            <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
+              Everything Amazon SES needs, including operations
+            </h2>
+            <p className="mb-6 max-w-2xl text-muted-foreground">
+              Most teams rent a platform like Customer.io because they do not
+              want to deal with SES. That is the part we made easy.
+            </p>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>We set everything up</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    One command deploys the whole SES surface into your AWS
+                    account: domain identities and DKIM, EventBridge, SQS with a
+                    dead letter queue, Lambda, DynamoDB, and the IAM roles that
+                    tie them together. Every resource is namespaced{" "}
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                      wraps-email-
+                    </code>
+                    , so it coexists with SES you already run and changes
+                    nothing you already have.
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Wraps reaches your account by assuming a role with an
+                    external ID, in one-hour sessions. No AWS access keys are
+                    stored anywhere.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>The control plane runs it</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    Amazon can place an account under review once its bounce
+                    rate passes 5% and pause sending at 10%, and 0.1% and 0.5%
+                    for complaints. The AWS console will not draw your rates
+                    against those lines. Wraps does, swept hourly, with owners
+                    and admins notified when one is crossed.
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Same surface for the rest of the daily job: suppression you
+                    can browse and clear, DKIM, SPF, DMARC, and blacklist audits
+                    from the CLI, and a per-message event log. Bounces and
+                    complaints are suppressed on the way in, wired on at deploy.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </section>
 
           {/* TL;DR Comparison Table */}
@@ -446,7 +561,8 @@ export default function CustomerIoVsWrapsPage() {
               Sound Familiar?
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Real feedback from Customer.io users on G2, Trustpilot, and
+              The objection that comes up most is the pricing model, not the
+              product. Feedback from Customer.io users on Trustpilot and
               independent reviews.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -513,29 +629,39 @@ export default function CustomerIoVsWrapsPage() {
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
                     Wraps deploys SES, DynamoDB, Lambda, and EventBridge
-                    directly to your AWS account. You own the infrastructure,
-                    the data, and the sending reputation. Wraps is the control
-                    plane; your AWS is the data plane.
+                    directly to your AWS account. You own the sending
+                    infrastructure and the sending reputation. Wraps is the
+                    control plane; your AWS is the data plane.
                   </p>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
-                        Email events and sending infra stay in your AWS account.
-                        Contacts exportable anytime.
+                        Sending and per-event delivery history stay in your AWS
+                        account, at a retention you set in your own deploy
+                        config
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
-                        If you stop using Wraps, everything keeps running
+                        Contacts, templates, broadcasts, workflow state, and a
+                        row per message live in Wraps&apos; Postgres, exportable
+                        anytime
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
-                        Inherits your AWS compliance posture (SOC 2, HIPAA,
-                        FedRAMP)
+                        If you stop using Wraps, the infrastructure keeps
+                        running
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      <span>
+                        Open source, AGPL-3.0, and self-hostable if you want the
+                        control plane too
                       </span>
                     </li>
                   </ul>
@@ -689,12 +815,13 @@ export default function CustomerIoVsWrapsPage() {
               <CardContent>
                 <ul className="space-y-3">
                   {[
-                    "Your team is marketing-led and needs a visual campaign builder without developer involvement",
-                    "You need multi-channel orchestration (email, SMS, push, in-app) in a single workflow canvas",
-                    "Advanced behavioral segmentation and a built-in CDP are core requirements",
+                    "A non-engineer owns email day to day. Customer.io is easier to operate without a developer, and that is worth paying for.",
+                    "You have no AWS account and no appetite for one. Wraps deploys into your AWS; if that is not on the table, this is a different approach.",
+                    "You need multi-channel orchestration across email, SMS, push, and in-app on a single workflow canvas",
+                    "A built-in CDP and its behavioral segmentation are core requirements",
                     "You want 100+ native integrations with tools like Salesforce, HubSpot, Segment, and ad networks",
                     "A/B testing on campaigns and workflows is critical to your marketing strategy",
-                    "You need a dedicated CSM, 90-day onboarding program, and enterprise support SLAs",
+                    "You need a dedicated CSM, a structured onboarding program, and enterprise support SLAs",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
                       <Check className="mt-0.5 size-5 shrink-0 text-success" />
@@ -704,6 +831,10 @@ export default function CustomerIoVsWrapsPage() {
                 </ul>
               </CardContent>
             </Card>
+            <p className="mt-4 text-muted-foreground text-sm">
+              Wraps has no A/B testing. If split-testing subject lines and
+              workflow branches is how your team works, that gap is real.
+            </p>
           </section>
 
           {/* When to Choose Wraps */}
@@ -712,20 +843,21 @@ export default function CustomerIoVsWrapsPage() {
               When to Choose Wraps
             </h2>
             <p className="mb-4 text-muted-foreground">
-              Wraps is email infrastructure with a built-in workflow builder,
-              contacts, segments, and broadcasts. It is the better choice when:
+              Wraps runs the full lifecycle surface on SES in your own AWS
+              account: workflows, broadcasts, segments, templates, topics, and a
+              hosted preference centre. It is the better choice when:
             </p>
             <Card>
               <CardContent>
                 <ul className="space-y-3">
                   {[
-                    "You want to own your sending infrastructure and data in your own AWS account",
-                    "Contact-based pricing is punishing your growth -- you have large lists with many inactive contacts",
-                    "You need HIPAA compliance without paying $1,000/mo for a Premium plan -- your AWS BAA covers it",
-                    "Your team is developer-led and prefers code-first templates (React Email) over drag-and-drop editors",
-                    "You need dedicated sending IPs on day one, not gated behind a premium tier",
-                    "You want workflows you can version-control -- Wraps has a visual flow builder with 10 node types plus a TypeScript CLI that lets you define, validate, and push workflows from code",
-                    "Vendor lock-in is a concern -- you want infrastructure that keeps running if you leave the platform",
+                    "You want SES but not the setup. One command deploys the identities, event pipeline, and IAM roles into your AWS account without touching anything already there.",
+                    "You want someone watching the account. Bounce and complaint rates are drawn against the lines AWS reviews and pauses at and swept hourly, with suppression, deliverability audits, and a per-message event log on the same surface.",
+                    "Contact-based pricing is punishing your growth. Large lists with many inactive contacts cost the same as small ones here.",
+                    "Your team is developer-led and prefers code-first templates in React Email over drag-and-drop editors",
+                    "You want workflows you can version-control. There is a visual flow builder, and a TypeScript CLI that defines, validates, and pushes the same workflows from code.",
+                    "You need dedicated sending IPs without moving to a premium tier to get them",
+                    "You want the sending infrastructure to keep running if you leave the platform",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
                       <Check className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -753,13 +885,13 @@ export default function CustomerIoVsWrapsPage() {
                   step: "1",
                   title: "Export your contacts",
                   description:
-                    "Export profiles from Customer.io via CSV or API. Import into your own data store (DynamoDB, Postgres, etc.).",
+                    "Export profiles from Customer.io via CSV or API, then import them into Wraps. Contacts are unlimited on every tier, so list size does not change the bill.",
                 },
                 {
                   step: "2",
                   title: "Set up Wraps",
                   description:
-                    "Run `npx @wraps.dev/cli email init` to deploy SES, DynamoDB, and event tracking to your AWS account. DNS verification uses CNAME records -- no conflict with Customer.io's subdomain records.",
+                    "Run `npx @wraps.dev/cli email init`. It deploys SES, DynamoDB, and the event pipeline to your AWS account, namespaced so nothing existing is touched. DNS verification uses CNAME records, so there is no conflict with Customer.io's subdomain records. If the account is still in the SES sandbox, init says so and links the production access request.",
                 },
                 {
                   step: "3",
@@ -792,12 +924,12 @@ export default function CustomerIoVsWrapsPage() {
               ))}
             </div>
             <p className="mt-6 text-muted-foreground text-sm">
-              <strong>What you keep:</strong> Domain reputation (travels with
-              your domain, not the provider), contact data, and event history
-              you export. <strong>What you lose:</strong> Customer.io&apos;s
-              behavioral segmentation engine, multi-channel orchestration (push,
-              in-app, SMS via their platform), and built-in CDP. Wraps has its
-              own visual workflow builder and segments.
+              What you keep: domain reputation, which travels with your domain
+              rather than the provider, plus the contact data and event history
+              you export. What you lose: Customer.io&apos;s built-in CDP, push
+              and in-app channels, A/B testing, and their 100+ native
+              integrations. Workflows, broadcasts, segments, templates, and
+              topics all have a home in Wraps.
             </p>
           </section>
 
@@ -809,11 +941,11 @@ export default function CustomerIoVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Own your email infrastructure
+              Everything Amazon SES needs, including operations
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Deploy to your AWS in 2 minutes. Unlimited contacts, AWS pricing,
-              zero lock-in.
+              One command sets up your AWS account. One control plane runs it.
+              Unlimited contacts on every tier, AWS pricing underneath.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -831,8 +963,8 @@ export default function CustomerIoVsWrapsPage() {
           {/* Footer note */}
           <div className="mt-12 space-y-2 text-center text-muted-foreground text-xs">
             <p>
-              Last updated: March 2026. Customer.io pricing and features sourced
-              from{" "}
+              Last updated: September 2026. Customer.io pricing and features
+              sourced from{" "}
               <a
                 className="underline"
                 href="https://customer.io/pricing"

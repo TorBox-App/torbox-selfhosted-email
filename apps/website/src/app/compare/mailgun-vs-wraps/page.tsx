@@ -20,17 +20,17 @@ import { SectionKicker } from "@/app/landing/components/section-kicker";
 export const metadata: Metadata = {
   title: "Mailgun vs Wraps - Compare Email Infrastructure Approaches",
   description:
-    "Mailgun sends from their servers. Wraps deploys to yours. Compare pricing, infrastructure ownership, HIPAA compliance, and developer experience side by side.",
+    "Mailgun sends from their servers. Wraps sets up Amazon SES in your AWS account and runs it day to day. Compare setup, operations, pricing, and developer experience side by side.",
   openGraph: {
     title: "Mailgun vs Wraps | Wraps",
     description:
-      "Mailgun sends from their servers. Wraps deploys to yours. Compare pricing, infrastructure ownership, HIPAA compliance, and developer experience.",
+      "Mailgun sends from their servers. Wraps sets up Amazon SES in your AWS account and runs it day to day. Compare setup, operations, pricing, and developer experience.",
     url: "https://wraps.dev/compare/mailgun-vs-wraps",
   },
   twitter: {
     title: "Mailgun vs Wraps | Wraps",
     description:
-      "Mailgun sends from their servers. Wraps deploys to yours. Compare pricing, infrastructure ownership, HIPAA compliance, and developer experience.",
+      "Mailgun sends from their servers. Wraps sets up Amazon SES in your AWS account and runs it day to day. Compare setup, operations, pricing, and developer experience.",
   },
   alternates: {
     canonical: "https://wraps.dev/compare/mailgun-vs-wraps",
@@ -69,19 +69,24 @@ const tldrComparison = [
     wraps: "Your AWS account",
   },
   {
+    dimension: "Setup",
+    mailgun: "Sign up, verify a domain, take an API key",
+    wraps: "One command deploys the whole SES surface",
+  },
+  {
+    dimension: "Day to day",
+    mailgun: "Mailgun runs its own platform",
+    wraps: "Hourly account health sweep, suppression, deliverability audits",
+  },
+  {
     dimension: "Sending cost",
-    mailgun: "$15/mo (10K) to $90/mo (100K), overage $1.10-1.80/1K",
-    wraps: "$0.10/1K à la carte (AWS SES direct)",
+    mailgun: "$15/mo (10K) to $90/mo (100K)",
+    wraps: "Paid to AWS: $0.10/1K à la carte, $0.16/1K on Essentials",
   },
   {
-    dimension: "Data retention",
+    dimension: "Delivery history",
     mailgun: "30 days (Foundation), 60 days (Scale)",
-    wraps: "Raw events in your DynamoDB, yours forever",
-  },
-  {
-    dimension: "HIPAA",
-    mailgun: "Enterprise only (with BAA)",
-    wraps: "Any plan via your AWS BAA",
+    wraps: "Per-event history in your DynamoDB, retention you set",
   },
   {
     dimension: "If you cancel",
@@ -114,7 +119,7 @@ const pricingComparison = [
     wrapsPlatform: "$29",
     awsSes: "$5",
     wrapsTotal: "$34",
-    savings: "3%",
+    savings: "",
   },
   {
     volume: "100K/mo",
@@ -146,12 +151,52 @@ const featureComparison = [
       { name: "SMTP relay", mailgun: true, wraps: true },
       { name: "Batch sending", mailgun: true, wraps: true },
       { name: "Scheduled sending", mailgun: true, wraps: true },
-      { name: "Idempotency keys", mailgun: false, wraps: true },
       { name: "Attachments", mailgun: true, wraps: true },
       {
         name: "Inbound email parsing",
         mailgun: "Mature, route-based",
         wraps: "EventBridge routing",
+      },
+    ],
+  },
+  {
+    category: "Operations",
+    features: [
+      {
+        name: "Setup",
+        mailgun: "Verify a domain in the console",
+        wraps: "One command into your AWS account",
+      },
+      {
+        name: "Account health monitoring",
+        mailgun: "Mailgun watches its own platform",
+        wraps: "Hourly sweep of bounce and complaint rates, owners notified",
+      },
+      {
+        name: "Suppression list",
+        mailgun: true,
+        wraps: "On at deploy, browse and clear",
+      },
+      {
+        name: "Early-warning alarms",
+        mailgun: "Webhook events from their platform",
+        wraps:
+          "CloudWatch alarms in your account at 2% bounces / 0.05% complaints (Production and Enterprise presets)",
+      },
+      {
+        name: "Deliverability tooling",
+        mailgun: "Email validation and deliverability suite",
+        wraps: "DKIM, SPF, DMARC, MX, BIMI, blacklists, on demand",
+      },
+      {
+        name: "Per-message event log",
+        mailgun: "Log search, retention by plan",
+        wraps: "Event log per message, history in your DynamoDB",
+      },
+      {
+        name: "Production access",
+        mailgun: "Granted by Mailgun at signup",
+        wraps: "AWS decides; the CLI detects the sandbox and links the request",
       },
     ],
   },
@@ -166,7 +211,7 @@ const featureComparison = [
         name: "Data retention",
         mailgun: "30-60 days (plan-dependent)",
         wraps:
-          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
+          "Per-event history in your DynamoDB, retention set in your deploy config; dashboard history 30 days to 1 year by plan",
       },
       {
         name: "Data export",
@@ -213,10 +258,15 @@ const featureComparison = [
       {
         name: "Multi-language SDKs",
         mailgun: "6 languages",
-        wraps: "TypeScript",
+        wraps: "TypeScript and Python",
       },
       {
         name: "CLI tooling",
+        mailgun: false,
+        wraps: true,
+      },
+      {
+        name: "MCP server for coding agents",
         mailgun: false,
         wraps: true,
       },
@@ -236,11 +286,6 @@ const featureComparison = [
         wraps: true,
       },
       {
-        name: "Time to first email",
-        mailgun: "~10 minutes",
-        wraps: "~2 minutes",
-      },
-      {
         name: "Requires AWS account",
         mailgun: false,
         wraps: true,
@@ -248,9 +293,13 @@ const featureComparison = [
     ],
   },
   {
-    category: "Platform & Compliance",
+    category: "Platform",
     features: [
-      { name: "Dashboard", mailgun: "Functional but dated", wraps: "Modern" },
+      {
+        name: "Dashboard",
+        mailgun: "Console with log search",
+        wraps: "Dashboard with account health",
+      },
       { name: "Webhooks", mailgun: true, wraps: "Unlimited" },
       {
         name: "Contact management",
@@ -258,14 +307,9 @@ const featureComparison = [
         wraps: "Full contacts with unlimited storage",
       },
       {
-        name: "SOC 2",
-        mailgun: true,
-        wraps: "Sending infra inherits your AWS",
-      },
-      {
-        name: "HIPAA",
-        mailgun: "Enterprise only (BAA required)",
-        wraps: "Any plan via your AWS BAA",
+        name: "Open source",
+        mailgun: false,
+        wraps: "AGPL-3.0, self-hostable",
       },
       {
         name: "Cancel impact",
@@ -277,21 +321,22 @@ const featureComparison = [
 ];
 
 const chooseMailgunReasons = [
-  "You need SDKs in Python, Ruby, .NET, PHP, or Java today",
-  "You rely on Mailgun's mature inbound routing and webhook-based parsing pipeline",
-  "You're heavily integrated with third-party tools that have existing Mailgun connectors",
-  "You want EU data residency without managing AWS infrastructure yourself",
-  "You're sending under 50K emails/month and prefer a simple hosted API",
+  "You have no AWS account and no appetite for one. A hosted API is a different approach, and Mailgun is a good one",
+  "You need SDKs in Ruby, .NET, PHP, or Java today",
+  "Your app leans on Mailgun's route matching and inbound parsing pipeline",
+  "You use email validation and log search and want them on one bill",
+  "You want EU data residency without touching AWS yourself",
+  "You're tied into third-party tools that ship a Mailgun connector",
 ];
 
 const chooseWrapsReasons = [
-  "You already have an AWS account (or your company does)",
-  "You need HIPAA compliance without paying for an Enterprise contract",
-  "You're sending 100K+ emails/month and want 48%+ cost savings",
-  "You need data residency beyond US/EU -- any AWS SES region",
-  "You don't want a third party able to suspend your account at the worst possible moment",
-  "You want a modern template editor and workflow builder, not just a raw API",
-  "You want infrastructure that keeps running even if the vendor disappears",
+  "You want SES and not the setup. One command deploys the whole surface into your own AWS account, non-destructively",
+  "You want someone watching the account. Bounce and complaint rates are swept hourly against AWS's own lines, and owners and admins hear about it first",
+  "You already have an AWS account, or your company does",
+  "You want delivery history you keep, in your own DynamoDB, for as long as your deploy config says",
+  "You're sending 100K+ emails a month and the difference shows up on the bill",
+  "You want templates, broadcasts, segments, and workflows, not only a send endpoint",
+  "You want the infrastructure to keep running whether or not you keep paying us",
 ];
 
 const mailgunCode = `import FormData from "form-data";
@@ -341,24 +386,26 @@ export default function MailgunVsWrapsPage() {
               Mailgun vs Wraps
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              <strong className="text-foreground">Mailgun</strong> is a
-              developer-focused email API that&apos;s been around since 2010.
-              API-first, battle-tested, with SDKs in six languages and a mature
-              inbound parsing pipeline. Everything runs on their infrastructure.
+              <strong className="text-foreground">Mailgun</strong> has been
+              sending email since 2010. API-first, SDKs in six languages, route
+              matching and inbound parsing that is still among the best in the
+              category, email validation, deliverability tooling, and a US or EU
+              region you pick at signup. You hand it a message and its servers
+              do the rest.
             </p>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              <strong className="text-foreground">Wraps</strong> deploys email
-              infrastructure directly to your AWS account. Same API-first
-              approach, but you own the infrastructure and pay AWS directly.
+              <strong className="text-foreground">Wraps</strong> sets up Amazon
+              SES in your own AWS account. One command deploys the whole surface
+              — domain identity, DKIM, event capture, suppression, delivery
+              history — alongside whatever SES you already run. Then the control
+              plane runs it: your bounce and complaint rates swept hourly
+              against AWS&apos;s own lines, a suppression list you can browse
+              and clear, deliverability and blacklist audits, an event log per
+              message.
             </p>
             <p className="max-w-2xl font-medium text-foreground text-lg">
-              Both platforms deliver email reliably. The difference is who owns
-              the infrastructure -- and who can take it away. That ownership
-              also decides HIPAA: Mailgun includes a BAA on Enterprise plans,
-              while your sending through Wraps runs inside your own AWS account,
-              covered by your own AWS BAA on any plan. The dashboard, contacts,
-              and templates are a different story -- those run on Wraps&apos;
-              own infrastructure, outside that AWS BAA.
+              Most teams reach for a sending API because they don&apos;t want to
+              deal with SES. That is the part Wraps does for you.
             </p>
           </section>
 
@@ -395,89 +442,127 @@ export default function MailgunVsWrapsPage() {
             </Card>
           </section>
 
-          {/* Sound Familiar? */}
+          {/* Everything SES needs, including operations */}
           <section className="mb-16">
             <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
-              Sound familiar?
+              Everything Amazon SES needs, including operations
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Real quotes from Mailgun users on Trustpilot, G2, and developer
-              forums.
+              A sending API is a product you rent. SES is a primitive you own,
+              and owning it is normally two jobs: standing it up, and running it
+              afterwards. Wraps does both.
             </p>
-            <div className="space-y-4">
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <Card>
+                <CardHeader>
+                  <CardTitle>We set it up</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;Our account was suspended without warning. Emails we
-                    were sending for password resets and account verification
-                    just stopped. Support took days to respond.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- G2 review, 2025
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      wraps email init
+                    </code>{" "}
+                    deploys the SES surface into your AWS account: domain
+                    identity and DKIM records, EventBridge event capture, an SQS
+                    queue with a dead letter queue, a Lambda processor, and a
+                    DynamoDB table for delivery history.
                   </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Non-destructive. Everything is namespaced{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        wraps-email-*
+                      </code>{" "}
+                      and coexists with SES you already run
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Account-level suppression switched on at deploy,
+                      defaulting to bounces and complaints
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      CloudWatch alarms deployed into your account on the
+                      Production and Enterprise presets, set below AWS&apos;s
+                      own lines and paged to an email address or a webhook.
+                      Starter preset deploys get none.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Sandbox detected at the end of the run, explained, with
+                      the production access request linked
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Access is an assumed role with an external ID and one-hour
+                      sessions. No AWS keys stored anywhere
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle>The control plane runs it</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;The dashboard is showing its age. Managing domains
-                    and reviewing logs feels like it hasn&apos;t changed in 10
-                    years. For a developer-focused tool the UX is surprisingly
-                    rough.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Trustpilot review, 2025
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    An hourly sweep reads your bounce and complaint rates
+                    against the lines AWS publishes, classifies the account, and
+                    notifies owners and admins. AWS can place an account under
+                    review above 5% bounces or 0.1% complaints, and can pause
+                    sending at 10% and 0.5%. You hear it from us first.
                   </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;Pricing is confusing. The Flex plan sounds free but
-                    the moment you go above 100 emails/day you&apos;re paying
-                    $0.80/1K -- way more than AWS SES. I realized I was paying
-                    8x what I should have been.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Hacker News, 2024
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;We needed HIPAA compliance for our healthcare app.
-                    Mailgun said we&apos;d need the Enterprise plan and a BAA.
-                    Waiting on that contract negotiation delayed our launch by
-                    weeks.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Aggregated G2 reviews
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Dashboard card draws both rates against those lines, next
+                      to your 24-hour quota
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Suppression is a list you browse and clear, not an opaque
+                      vendor policy
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        wraps email check
+                      </code>{" "}
+                      audits DKIM, SPF, DMARC, MX, MX-TLS, BIMI, RDAP, and
+                      public blacklists
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        wraps email doctor
+                      </code>{" "}
+                      names the remediation instead of describing the symptom
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
-            <p className="mt-4 text-muted-foreground text-sm">
-              With Wraps, your infrastructure runs in your AWS account. No third
-              party can suspend your sending, HIPAA compliance is available on
-              any plan via your own AWS BAA, and your raw events live in your
-              own DynamoDB &mdash; yours forever, whether or not you keep paying
-              Wraps.
+
+            <p className="mt-6 text-muted-foreground text-sm">
+              One limit, flat: Wraps cannot get you SES production access. The
+              CLI finds the sandbox and links the request. AWS decides, on
+              AWS&apos;s timeline. Mailgun hands you a sending account at
+              signup, and for some teams that alone settles it.
             </p>
           </section>
 
           {/* The Architectural Difference */}
           <section className="mb-16">
             <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
-              The architectural difference
+              What runs where
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Mailgun is a hosted email relay -- your messages route through
-              their infrastructure. Wraps deploys email infrastructure into your
-              own AWS account.
+              Mailgun is a hosted relay: your messages route through their
+              infrastructure. Wraps splits into a data plane in your AWS account
+              and a control plane hosted by us.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -487,23 +572,25 @@ export default function MailgunVsWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
-                    Managed email API founded in 2010. Your emails route through
-                    Mailgun&apos;s shared or dedicated IP pools. Data is stored
-                    on their servers with 30-60 day retention depending on plan.
-                    HIPAA requires an Enterprise contract and BAA negotiation.
+                    Managed email API founded in 2010. Your messages go out
+                    through Mailgun&apos;s shared or dedicated IP pools, with
+                    routing, validation, and log search in the same console. One
+                    vendor, one bill, nothing to deploy.
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
-                      Account suspension risk with limited recourse
+                      Sending reputation lives in Mailgun&apos;s pools, not
+                      yours
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
-                      Data residency limited to US or EU regions
+                      Data residency is US or EU
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
-                      HIPAA only available on Enterprise plan
+                      Delivery history ends when the plan&apos;s retention
+                      window does
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
@@ -519,28 +606,30 @@ export default function MailgunVsWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
-                    Deploy to your AWS account. SES, EventBridge, SQS, Lambda,
-                    and DynamoDB run in your account, in your chosen region.
-                    Email content and delivery logs stay in your account.
-                    Contacts are stored on the Wraps platform and exportable
-                    anytime.
+                    SES, EventBridge, SQS, Lambda, and DynamoDB run in your AWS
+                    account, in the region you pick. That is the data plane:
+                    sending, and a per-event delivery history you keep. The
+                    control plane is hosted by us and holds the dashboard,
+                    templates, contacts, broadcasts, and workflow state, plus a
+                    row per message carrying recipient, subject, sender,
+                    template variables, and delivery timestamps.
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      One command deploys the whole surface, non-destructively
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Account health swept hourly, owners and admins notified
+                    </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Data residency in any AWS SES region
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      HIPAA on any plan via your existing AWS BAA
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Infrastructure persists if you stop using Wraps
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Modern template editor and workflow builder included
+                      Infrastructure keeps running if you stop using Wraps
                     </li>
                   </ul>
                 </CardContent>
@@ -554,12 +643,11 @@ export default function MailgunVsWrapsPage() {
               Pricing at real volumes
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Mailgun retired its Flex pay-as-you-go plan in December 2025 (new
-              signups get a 100-emails/day free plan, hard capped). Paid plans
-              start at $15/mo for 10K emails; Foundation is $35/mo for 50K then
-              $1.30/1K overage. Wraps charges a platform fee separately -- you
-              pay AWS directly at $0.10/1K emails on à la carte (AWS defaults
-              new accounts to $0.16/1K).
+              Mailgun&apos;s paid plans run Basic at $15 for 10K, Foundation at
+              $35 for 50K and $75 for 100K, and Scale from $90 at 100K to $400
+              at 500K. Wraps charges a flat platform fee and you pay AWS for
+              sending: $0.10 per 1,000 à la carte, or $0.16 per 1,000 on the
+              Essentials plan new AWS accounts default to.
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
@@ -605,21 +693,19 @@ export default function MailgunVsWrapsPage() {
             <div className="mt-4 space-y-2 text-muted-foreground text-sm">
               <p>
                 Wraps platform tiers: Free ($0/mo), Pro ($29/mo), Business
-                ($199/mo) — priced on AWS accounts, dashboard history, and
-                governance features, not send volume. All tiers include
-                unlimited sends, contacts, domains, and templates.
+                ($199/mo). They are priced on AWS accounts, dashboard history,
+                and governance features, not send volume. Every tier includes
+                unlimited sends, contacts, domains, templates, and team members.
               </p>
               <p>
-                Mailgun gotchas: legacy Flex users saw their rate double to
-                $2/1K in December 2025 -- 20x AWS SES pricing. Overage runs
-                $1.10-1.80/1K depending on plan. Dedicated IPs are included only
-                from the $75/mo Foundation 100K plan up; extras cost $59/IP/mo.
-                HIPAA BAA only available on Enterprise (custom pricing).
+                Two things to check on the Mailgun side: Flex closed to new
+                signups in December 2025 and the legacy rate doubled to $2 per
+                1,000, and a dedicated IP is included only from the $75/mo plans
+                up, with extras at $59/IP/mo.
               </p>
               <p>
-                At 100K/mo, Wraps runs $29/mo all-in against Mailgun&apos;s
-                $75-90 -- and includes unlimited contacts and workflow
-                automation vs Mailgun&apos;s API-only approach.
+                At 50K the two are level, which is worth saying plainly. The gap
+                opens above that: at 100K, $39/mo against $75 to $90.
               </p>
             </div>
           </section>
@@ -674,8 +760,8 @@ export default function MailgunVsWrapsPage() {
               When to choose Mailgun
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Mailgun is a battle-tested platform. Here&apos;s when it makes
-              more sense.
+              Fifteen years of sending is a real asset. Here&apos;s when it wins
+              outright.
             </p>
             <Card>
               <CardContent>
@@ -697,8 +783,8 @@ export default function MailgunVsWrapsPage() {
               When to choose Wraps
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Wraps is built for teams that want modern DX with infrastructure
-              ownership.
+              Wraps is built for teams who want SES underneath them and
+              don&apos;t want to run it alone.
             </p>
             <Card className="border-primary/30">
               <CardContent>
@@ -722,7 +808,7 @@ export default function MailgunVsWrapsPage() {
             <p className="mb-6 text-muted-foreground">
               Mailgun uses its own SDK with a domain-centric API. Wraps uses a
               similar send signature with native React Email support. The
-              migration is an SDK swap, DNS update, and one CLI command to
+              migration is an SDK swap, a DNS update, and one CLI command to
               deploy infrastructure.
             </p>
 
@@ -754,35 +840,42 @@ export default function MailgunVsWrapsPage() {
                 <li>
                   Deploy infrastructure:{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
-                    wraps email setup
-                  </code>{" "}
-                  (~2 minutes)
+                    wraps email init
+                  </code>
                 </li>
                 <li>
                   Swap{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     mailgun.js
                   </code>{" "}
-                  import for{" "}
+                  for{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     @wraps.dev/email
                   </code>
                 </li>
                 <li>
-                  Update DNS records -- your existing SPF/DKIM records will need
-                  to point to your new SES identity
+                  Update DNS so your SPF and DKIM records point at your new SES
+                  identity
                 </li>
                 <li>
-                  Migrate any inbound routing rules to Wraps EventBridge
-                  webhooks
+                  Move inbound routing over with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    wraps email inbound init
+                  </code>
                 </li>
-                <li>Done -- same DX, your infrastructure, AWS pricing</li>
+                <li>
+                  Run{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    wraps email check
+                  </code>{" "}
+                  against the domain before you cut traffic over
+                </li>
               </ol>
               <p className="text-muted-foreground text-sm">
                 HTML email templates work unchanged. If you use React Email,
-                Wraps supports it natively -- no adapter needed. Your domain
-                reputation transfers with your DNS records; only IP reputation
-                stays with Mailgun if you were on their shared pool.
+                Wraps supports it natively, with no adapter. Your domain
+                reputation travels with your DNS records; IP reputation stays
+                with Mailgun if you were on their shared pool.
               </p>
             </div>
           </section>
@@ -795,11 +888,11 @@ export default function MailgunVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Deploy to your AWS in 2 minutes
+              Set up SES in one command
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Free to start. No credit card required. Your infrastructure, your
-              data, AWS pricing.
+              Free to start. No credit card required. Your AWS account, your
+              infrastructure, AWS pricing.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -817,7 +910,7 @@ export default function MailgunVsWrapsPage() {
           {/* Last Updated + Accuracy Note */}
           <div className="mt-12 border-t pt-6 text-center text-muted-foreground text-xs">
             <p>
-              Last updated: May 2026. We update this page as pricing and
+              Last updated: September 2026. We update this page as pricing and
               features change.
             </p>
             <p className="mt-1">

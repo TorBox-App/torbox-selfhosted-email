@@ -263,13 +263,6 @@ export const COMPETITORS: Competitor[] = [
   },
 ];
 
-export const WRAPS_COMPETITIVE = {
-  freeMessages: "5K",
-  entryPrice: "$19/mo",
-  overageRate: "$0.15-0.50/1K",
-  infrastructure: "Your AWS",
-};
-
 // =============================================================================
 // HOMEPAGE COMPARE TABLE
 // =============================================================================

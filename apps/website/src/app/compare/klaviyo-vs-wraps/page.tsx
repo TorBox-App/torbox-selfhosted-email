@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@wraps/ui/components/ui/card";
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   Check,
@@ -13,7 +14,6 @@ import {
   Code,
   DollarSign,
   ExternalLink,
-  MessageSquareQuote,
   Minus,
   Server,
   ShoppingCart,
@@ -32,19 +32,19 @@ import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
   title:
-    "Klaviyo vs Wraps - E-commerce Marketing Platform vs Developer-First Email Infrastructure",
+    "Klaviyo vs Wraps - E-commerce Marketing Platform vs SES You Own and Operate",
   description:
-    "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure. See pricing at real volumes, architecture differences, and which is right for your team.",
+    "Compare Klaviyo and Wraps: a profile-based marketing platform you rent against Amazon SES set up and operated in your own AWS account. Pricing at real volumes, what each one is built for, and who should pick which.",
   openGraph: {
     title: "Klaviyo vs Wraps | Wraps",
     description:
-      "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure at AWS pricing.",
+      "Klaviyo is an e-commerce marketing platform. Wraps is everything Amazon SES needs, including operations, in your own AWS account.",
     url: "https://wraps.dev/compare/klaviyo-vs-wraps",
   },
   twitter: {
     title: "Klaviyo vs Wraps | Wraps",
     description:
-      "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure at AWS pricing.",
+      "Klaviyo is an e-commerce marketing platform. Wraps is everything Amazon SES needs, including operations, in your own AWS account.",
   },
   alternates: {
     canonical: "https://wraps.dev/compare/klaviyo-vs-wraps",
@@ -80,32 +80,37 @@ const tldrComparison = [
   {
     dimension: "Built for",
     klaviyo: "E-commerce marketers (Shopify-first)",
-    wraps: "SaaS developers (API-first)",
+    wraps: "Teams sending from their own Amazon SES",
+  },
+  {
+    dimension: "Setup",
+    klaviyo: "Connect a store or a list, nothing to deploy",
+    wraps: "One command deploys the SES surface to your AWS",
+  },
+  {
+    dimension: "Who runs the sending",
+    klaviyo: "Klaviyo, on their own infrastructure",
+    wraps: "You, with the Wraps control plane watching it",
   },
   {
     dimension: "Pricing model",
     klaviyo: "Per active profile (contacts)",
-    wraps: "Platform tier + AWS SES sends",
+    wraps: "Flat platform fee, AWS bills the sends",
   },
   {
     dimension: "Contact cost",
     klaviyo: "~$0.014-$0.030 per profile/month",
-    wraps: "$0 (unlimited on all tiers)",
+    wraps: "$0 (unlimited on every plan)",
   },
   {
-    dimension: "Infrastructure",
-    klaviyo: "Klaviyo's multi-tenant (SendGrid)",
-    wraps: "Your AWS account (SES)",
-  },
-  {
-    dimension: "Data on cancellation",
-    klaviyo: "All data permanently deleted",
-    wraps: "Everything stays in your AWS",
+    dimension: "Sending infrastructure",
+    klaviyo: "Klaviyo's multi-tenant platform",
+    wraps: "SES in your AWS account",
   },
   {
     dimension: "Template approach",
     klaviyo: "GUI drag-and-drop first",
-    wraps: "AI designer + code (React Email, TypeScript)",
+    wraps: "React Email TSX and AI generation",
   },
 ];
 
@@ -162,8 +167,15 @@ const featureComparison = [
     category: "Sending",
     features: [
       {
+        name: "Setting it up",
+        klaviyo: "Nothing to deploy, the platform is theirs",
+        wraps: "One command, non-destructive, namespaced wraps-email-*",
+        klaviyoStatus: "yes",
+        wrapsStatus: "yes",
+      },
+      {
         name: "Transactional email",
-        klaviyo: "Via flows only (requires approval)",
+        klaviyo: "Built around flows and campaigns",
         wraps: "First-class API",
         klaviyoStatus: "partial",
         wrapsStatus: "yes",
@@ -177,22 +189,62 @@ const featureComparison = [
       },
       {
         name: "Send via API",
-        klaviyo: "Not supported (event-triggered only)",
-        wraps: "SDK and REST API",
-        klaviyoStatus: "no",
+        klaviyo: "Triggered by events, not a direct send endpoint",
+        wraps: "TypeScript and Python SDKs, REST API, MCP server",
+        klaviyoStatus: "partial",
         wrapsStatus: "yes",
       },
       {
         name: "Dedicated sending IPs",
-        klaviyo: "By qualification only (CSM required)",
+        klaviyo: "Available on qualifying plans",
         wraps: "Your own SES, your reputation",
         klaviyoStatus: "partial",
         wrapsStatus: "yes",
       },
       {
         name: "SMS",
-        klaviyo: "Bundled, credit-based (don't roll over)",
+        klaviyo: "Bundled with the plan, credit-based",
         wraps: "AWS End User Messaging",
+        klaviyoStatus: "yes",
+        wrapsStatus: "yes",
+      },
+    ],
+  },
+  {
+    category: "Operations",
+    features: [
+      {
+        name: "Bounce and complaint monitoring",
+        klaviyo: "Deliverability dashboards, their team owns the sending",
+        wraps: "Hourly sweep against AWS's review and pause lines",
+        klaviyoStatus: "yes",
+        wrapsStatus: "yes",
+      },
+      {
+        name: "Alerts when rates move",
+        klaviyo: "Platform notifications",
+        wraps: "Owners and admins notified, once per account per day",
+        klaviyoStatus: "yes",
+        wrapsStatus: "yes",
+      },
+      {
+        name: "Suppression list you can browse and clear",
+        klaviyo: "Suppression management in the UI",
+        wraps: "SES account suppression, wired on at deploy",
+        klaviyoStatus: "yes",
+        wrapsStatus: "yes",
+      },
+      {
+        name: "DKIM, SPF, DMARC and blacklist audits",
+        klaviyo: "Guided domain setup",
+        wraps: "wraps email check, on demand",
+        klaviyoStatus: "partial",
+        wrapsStatus: "yes",
+      },
+      {
+        name: "Per-message event log",
+        klaviyo: "Profile activity timeline",
+        wraps: "Every send, open and delivery, queryable",
         klaviyoStatus: "yes",
         wrapsStatus: "yes",
       },
@@ -203,16 +255,16 @@ const featureComparison = [
     features: [
       {
         name: "TypeScript SDK",
-        klaviyo: "Auto-generated OpenAPI wrapper",
-        wraps: "Hand-crafted, type-safe",
+        klaviyo: "Generated from their OpenAPI spec",
+        wraps: "Hand-written, type-safe",
         klaviyoStatus: "partial",
         wrapsStatus: "yes",
       },
       {
         name: "CLI",
-        klaviyo: "Content management only",
-        wraps: "Infrastructure deployment + management",
-        klaviyoStatus: "partial",
+        klaviyo: "No infrastructure CLI",
+        wraps: "Deploys and manages the SES surface",
+        klaviyoStatus: "no",
         wrapsStatus: "yes",
       },
       {
@@ -232,7 +284,7 @@ const featureComparison = [
       {
         name: "Infrastructure as code",
         klaviyo: "No",
-        wraps: "Pulumi stacks via CLI",
+        wraps: "Pulumi and AWS CDK, or the CLI",
         klaviyoStatus: "no",
         wrapsStatus: "yes",
       },
@@ -249,9 +301,9 @@ const featureComparison = [
         wrapsStatus: "yes",
       },
       {
-        name: "Data ownership",
-        klaviyo: "Klaviyo's servers",
-        wraps: "Your AWS account",
+        name: "Where sending and delivery history live",
+        klaviyo: "Klaviyo's platform",
+        wraps: "SES and your DynamoDB, retention set in your deploy config",
         klaviyoStatus: "no",
         wrapsStatus: "yes",
       },
@@ -263,16 +315,16 @@ const featureComparison = [
         wrapsStatus: "yes",
       },
       {
-        name: "Client-side JS required",
-        klaviyo: "Yes (known PageSpeed impact)",
-        wraps: "No (server-side only)",
-        klaviyoStatus: "no",
-        wrapsStatus: "yes",
+        name: "Onsite tracking script",
+        klaviyo: "Yes, powers forms and browse abandonment",
+        wraps: "None, server-side only",
+        klaviyoStatus: "yes",
+        wrapsStatus: "no",
       },
       {
-        name: "Data survives cancellation",
-        klaviyo: "No (permanently deleted)",
-        wraps: "Yes (it's in your AWS)",
+        name: "Sending keeps working if you cancel",
+        klaviyo: "No, the platform is the subscription",
+        wraps: "Yes, SES and the pipeline are already yours",
         klaviyoStatus: "no",
         wrapsStatus: "yes",
       },
@@ -283,15 +335,15 @@ const featureComparison = [
     features: [
       {
         name: "Visual flow builder",
-        klaviyo: "Mature, omnichannel, 350+ integrations",
-        wraps: "React Flow canvas, 10 node types, workflows-as-code",
+        klaviyo: "Mature, omnichannel, deep integration catalogue",
+        wraps: "Visual canvas plus a TypeScript DSL",
         klaviyoStatus: "yes",
         wrapsStatus: "yes",
       },
       {
         name: "A/B testing in flows",
         klaviyo: "Built-in split testing",
-        wraps: "Not yet",
+        wraps: "No",
         klaviyoStatus: "yes",
         wrapsStatus: "no",
       },
@@ -303,10 +355,10 @@ const featureComparison = [
         wrapsStatus: "yes",
       },
       {
-        name: "AI workflow generation",
-        klaviyo: "No",
-        wraps: "Describe in natural language, get a flow",
-        klaviyoStatus: "no",
+        name: "Subscription topics and preference centre",
+        klaviyo: "Hosted preference page",
+        wraps: "Topics plus a hosted preference centre",
+        klaviyoStatus: "yes",
         wrapsStatus: "yes",
       },
       {
@@ -325,21 +377,21 @@ const featureComparison = [
       },
       {
         name: "Shopify integration",
-        klaviyo: "Best-in-class (Shopify investor)",
+        klaviyo: "Native and first-party deep",
         wraps: "No",
         klaviyoStatus: "yes",
         wrapsStatus: "no",
       },
       {
         name: "Template editing",
-        klaviyo: "Drag-and-drop editor",
-        wraps: "AI designer + code editor",
+        klaviyo: "Drag-and-drop editor, no code needed",
+        wraps: "React Email TSX, with AI generation",
         klaviyoStatus: "yes",
         wrapsStatus: "yes",
       },
       {
-        name: "350+ pre-built integrations",
-        klaviyo: "Yes",
+        name: "Pre-built marketing integrations",
+        klaviyo: "Large catalogue, e-commerce first",
         wraps: "No",
         klaviyoStatus: "yes",
         wrapsStatus: "no",
@@ -353,9 +405,9 @@ const articleSchema = {
   "@type": "Article",
   headline: "Klaviyo vs Wraps",
   description:
-    "Compare Klaviyo and Wraps: profile-based marketing platform vs BYOC email infrastructure. See pricing at real volumes, architecture differences, and which is right for your team.",
+    "Compare Klaviyo and Wraps: a profile-based marketing platform you rent against Amazon SES set up and operated in your own AWS account. Pricing at real volumes, what each one is built for, and who should pick which.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-07-30T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -378,8 +430,8 @@ const articleSchema = {
 
 const migrationTimeline = [
   { phase: "Audit existing Klaviyo setup", duration: "1-2 days" },
-  { phase: "Set up Wraps infrastructure", duration: "1-3 days" },
-  { phase: "DNS propagation", duration: "24-48 hours" },
+  { phase: "Deploy Wraps into your AWS account", duration: "One command" },
+  { phase: "DNS records and domain verification", duration: "24-48 hours" },
   { phase: "IP/domain warmup", duration: "2-4 weeks" },
   { phase: "Rebuild automations (if applicable)", duration: "1-2 weeks" },
   { phase: "Parallel sending validation", duration: "1-2 weeks" },
@@ -407,18 +459,25 @@ export default function KlaviyoVsWrapsPage() {
             </h1>
             <p className="mb-3 text-lg text-muted-foreground">
               <strong className="text-foreground">Klaviyo</strong> is an
-              e-commerce marketing automation platform with deep Shopify
-              integration, predictive analytics, and a visual flow builder.{" "}
-              <strong className="text-foreground">Wraps</strong> deploys email
-              infrastructure to your AWS account with a TypeScript SDK, CLI, and
-              AWS-direct pricing.
+              e-commerce marketing automation platform. Deep Shopify
+              integration, predictive analytics, a visual flow builder, and a
+              marketer can run the whole program without an engineer. It is very
+              good at that.
+            </p>
+            <p className="mb-3 text-lg text-muted-foreground">
+              <strong className="text-foreground">Wraps</strong> is everything
+              Amazon SES needs, including operations. One command sets up the
+              whole SES surface in your own AWS account, without touching
+              anything already there. The Wraps control plane then runs it day
+              to day: bounce and complaint rates swept hourly against
+              AWS&rsquo;s own lines, suppression you can browse and clear,
+              deliverability and blacklist audits, and a log of every message.
             </p>
             <p className="text-lg text-muted-foreground">
-              These are different products with overlapping capabilities.
-              Klaviyo is a marketing platform built for e-commerce. Wraps is
-              developer-first email infrastructure with a visual workflow
-              builder, broadcasts, segments, and contacts -- deployed to your
-              AWS account at transparent pricing.
+              These are different products for different buyers. Klaviyo sells a
+              marketing program you rent. Wraps sells the setup and the
+              operations for sending that stays in your account, with templates,
+              broadcasts, segments, topics and workflows on top of it.
             </p>
           </section>
 
@@ -455,64 +514,103 @@ export default function KlaviyoVsWrapsPage() {
             </Card>
           </section>
 
-          {/* Sound Familiar? */}
+          {/* What Wraps does */}
           <section className="mb-16">
             <div className="mb-6 flex items-center gap-3">
-              <MessageSquareQuote className="size-6 text-primary" />
+              <Activity className="size-6 text-primary" />
               <h2 className="font-heading font-semibold text-2xl tracking-tight">
-                Sound Familiar?
+                Everything Amazon SES needs, including operations
               </h2>
             </div>
+            <p className="mb-6 text-muted-foreground text-sm">
+              Most teams pick a hosted platform because they do not want to deal
+              with SES. That is the part Wraps does for you. The sending stays
+              in your account; the work of standing it up and keeping it healthy
+              does not stay on your desk.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">
+                    We set everything up
+                  </CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;Anyone else getting screwed by Klaviyo&rsquo;s
-                    pricing? I&rsquo;m being charged for 50K+ profiles when only
-                    15K actively engage. Bill keeps climbing while email revenue
-                    stays flat.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Shopify Community thread
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      One command deploys the whole SES surface into your own
+                      AWS account
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Domain identity, DKIM, event capture, delivery history,
+                      suppression
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Non-destructive. Everything namespaced wraps-email-*, so
+                      it sits beside SES you already run
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      CloudWatch alarms in your account, set below AWS&rsquo;s
+                      own lines so you get lead time: bounce warns at 2%,
+                      complaints at 0.05%, with email or a webhook to Slack,
+                      Discord or PagerDuty. On by default in the Production and
+                      Enterprise deploy presets, off in the Starter preset
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Sandbox status detected at the end of setup, explained,
+                      and the console request linked
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">
+                    The control plane runs it day to day
+                  </CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;The price curve is steep -- going from 500 to 25,000
-                    contacts takes you from $20/month to roughly $400/month, a
-                    20x increase.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Spoks Klaviyo Review
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;The worst customer support that doesn&rsquo;t match
-                    the very high price they charge.&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Trustpilot review (Klaviyo: 2.1/5 TrustScore, 52% 1-star)
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 text-muted-foreground italic">
-                    &ldquo;PageSpeed score dropped from 88 to 48 after
-                    installing Klaviyo. GTMetrix score dropped from B (88%) to D
-                    (56%).&rdquo;
-                  </blockquote>
-                  <p className="mt-3 text-muted-foreground/70 text-xs">
-                    Klaviyo Community thread
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Bounce and complaint rates swept hourly and drawn against
+                      AWS&rsquo;s own review and pause lines
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Owners and admins notified when an account moves toward
+                      those lines
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Suppression you can browse and clear, on by default for
+                      bounces and complaints
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      DKIM, SPF, DMARC, MX and public blacklist audits from
+                      wraps email check
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />A
+                      log of every message, plus doctor and status with named
+                      fixes
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
+            <p className="mt-4 text-muted-foreground text-sm">
+              AWS can place an account under review above a 5% bounce rate and
+              can pause sending at 10%; for complaints the lines are 0.1% and
+              0.5%. The dashboard draws your rates against those numbers so you
+              are reading the same gauge AWS is.
+            </p>
           </section>
 
           {/* The Architectural Difference */}
@@ -527,33 +625,33 @@ export default function KlaviyoVsWrapsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
-                    Klaviyo: Multi-Tenant SaaS
+                    Klaviyo: a hosted marketing platform
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
                       <Minus className="mt-0.5 size-4 shrink-0" />
-                      Your emails send through Klaviyo&rsquo;s shared SendGrid
-                      infrastructure
+                      Your email sends through Klaviyo&rsquo;s infrastructure,
+                      not an account you hold
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-0.5 size-4 shrink-0" />
-                      Shared IPs by default -- your reputation depends on other
-                      senders
+                      Shared IPs by default, dedicated on qualifying plans
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-0.5 size-4 shrink-0" />
-                      All data stored on Klaviyo&rsquo;s AWS, not yours
+                      Profiles, events and templates live on their platform
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                      Close your account = all data permanently deleted
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      In exchange, Klaviyo owns deliverability. Nothing to
+                      deploy and nobody to page
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-0.5 size-4 shrink-0" />
-                      August 2022 data breach exposed 38 accounts via
-                      centralized infrastructure
+                      Leaving means a migration, because the sending was never
+                      yours
                     </li>
                   </ul>
                 </CardContent>
@@ -577,16 +675,22 @@ export default function KlaviyoVsWrapsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Email events live in your DynamoDB. Contacts exportable
-                      anytime.
+                      Per-message delivery history in your DynamoDB, retention
+                      set in your own deploy config
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Stop using Wraps = everything keeps running
+                      Contacts, templates, broadcasts and workflow state live in
+                      the Wraps control plane, and export on demand
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Zero stored credentials -- OIDC temporary access only
+                      Stop paying Wraps and the sending keeps running
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      No AWS keys stored anywhere. Wraps assumes a role in your
+                      account with an external ID, an hour at a time
                     </li>
                   </ul>
                 </CardContent>
@@ -603,11 +707,13 @@ export default function KlaviyoVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-4 text-muted-foreground text-sm">
-              Klaviyo prices by <strong>active profiles</strong> (contacts you
-              store, whether you email them or not). Wraps charges a flat
-              platform fee + AWS SES at $0.10/1,000 emails on à la carte (AWS
-              defaults new accounts to $0.16/1,000). Wraps has{" "}
-              <strong>unlimited contacts</strong> on all tiers.
+              Klaviyo prices by <strong>active profiles</strong>: contacts you
+              store, whether you email them or not. That price buys the whole
+              marketing program, so read it as a program cost rather than a
+              sending cost. Wraps charges a flat platform fee, and AWS bills you
+              directly for the sends at $0.10 per 1,000 emails à la carte, or
+              $0.16 on the Essentials plan AWS defaults new accounts to.
+              Contacts are unlimited on every Wraps plan.
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
@@ -655,7 +761,8 @@ export default function KlaviyoVsWrapsPage() {
               <p>
                 Wraps total = platform fee + AWS SES ($0.10/1K emails à la
                 carte, or $0.16/1K on AWS&apos;s default plan), paid directly to
-                AWS.{" "}
+                AWS. The savings column uses the à la carte rate, so on the
+                default plan the gap is narrower.{" "}
                 <a
                   className="text-primary underline"
                   href="/tools/ses-calculator"
@@ -664,67 +771,52 @@ export default function KlaviyoVsWrapsPage() {
                 </a>
               </p>
               <p>
-                <strong>The gap widens with contact growth:</strong> Growing
-                your list from 5K to 100K profiles costs $0 extra with Wraps.
-                With Klaviyo, that growth alone takes you from $100/mo to
-                $1,380/mo -- even if you send the exact same volume.
+                The two bills move on different axes. Growing a list from 5,000
+                to 100,000 profiles costs nothing extra on Wraps, because
+                contacts are unlimited and you pay AWS per send. On Klaviyo the
+                same growth moves the plan from $100/mo to $1,380/mo at the same
+                send volume.
               </p>
             </div>
           </section>
 
-          {/* Klaviyo Hidden Costs */}
+          {/* What moves the Klaviyo bill */}
           <section className="mb-16">
             <h3 className="mb-4 font-semibold text-lg">
-              Klaviyo&rsquo;s Hidden Costs
+              What moves the Klaviyo bill
             </h3>
             <Card>
               <CardContent>
-                <ul className="space-y-3 text-sm">
+                <ul className="space-y-3 text-muted-foreground text-sm">
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                    <Minus className="mt-0.5 size-4 shrink-0" />
                     <span>
-                      <strong>Profile-based billing:</strong> You pay for
-                      contacts you never email. Feb 2025 billing change shifted
-                      from &ldquo;emailed contacts&rdquo; to &ldquo;all active
-                      profiles&rdquo; -- the third price increase in 4 years.
+                      Since February 2025 Klaviyo bills all active profiles, not
+                      only the ones you email. Signups you never send to still
+                      count.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                    <Minus className="mt-0.5 size-4 shrink-0" />
                     <span>
-                      <strong>Auto-upgrade:</strong> Exceeding profile limits
-                      triggers automatic tier bumps at the next billing cycle.
+                      Passing a profile limit auto-upgrades the plan. It does
+                      not auto-downgrade when the list shrinks again.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                    <Minus className="mt-0.5 size-4 shrink-0" />
                     <span>
-                      <strong>Klaviyo One surcharge:</strong> Mandatory 20% fee
-                      once you spend over $10K/month.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                    <span>
-                      <strong>90-day suppression lock:</strong> Suppress a
-                      profile and you can&rsquo;t unsuppress for 3 months.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                    <span>
-                      <strong>SMS credits don&rsquo;t roll over:</strong>{" "}
-                      Use-it-or-lose-it each month.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                    <span>
-                      <strong>CDP add-on:</strong> Advanced data platform starts
-                      at $500+/month.
+                      Send volume is capped at ten times your profile count, and
+                      sends halt past it.
                     </span>
                   </li>
                 </ul>
+                <p className="mt-4 text-muted-foreground text-sm">
+                  None of this is hidden. It is how a platform priced on the
+                  audience it stores has to work. It is worth modelling before
+                  you sign, because a list that grows faster than the sending
+                  does moves the bill on its own.
+                </p>
               </CardContent>
             </Card>
           </section>
@@ -803,27 +895,28 @@ export default function KlaviyoVsWrapsPage() {
             <Card>
               <CardContent>
                 <p className="mb-4 text-muted-foreground text-sm">
-                  Klaviyo has genuine strengths that Wraps does not match. If
-                  these describe your situation, Klaviyo is likely the right
-                  tool.
+                  Klaviyo does several things Wraps does not do at all. If these
+                  describe you, Klaviyo is the right tool and this page should
+                  end here.
                 </p>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
-                      <strong>You run a Shopify store</strong> and need deep,
-                      native e-commerce integration -- abandoned cart flows,
-                      product recommendations, revenue attribution. Shopify
-                      invested $100M in Klaviyo for a reason.
+                      <strong>You run a Shopify store</strong> and need native
+                      e-commerce depth -- abandoned cart flows, product
+                      recommendations, revenue attributed per campaign. This is
+                      what Klaviyo was built for and it is excellent at it.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
-                      <strong>Your team is marketing-led,</strong> not
-                      engineering-led. Klaviyo&rsquo;s visual flow builder,
-                      drag-and-drop templates, and AI features are built for
-                      marketers who don&rsquo;t write code.
+                      <strong>A non-engineer needs to run the program.</strong>{" "}
+                      Klaviyo&rsquo;s visual flow builder, drag-and-drop
+                      templates and AI content tools mean a marketer can build,
+                      send and measure without opening a terminal. Wraps assumes
+                      someone on the team is comfortable with AWS.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -840,20 +933,25 @@ export default function KlaviyoVsWrapsPage() {
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
-                      <strong>You want 350+ pre-built integrations</strong> with
-                      e-commerce platforms, payment processors, and marketing
-                      tools out of the box.
+                      <strong>You want the integration catalogue</strong> --
+                      e-commerce platforms, payment processors and marketing
+                      tools connected out of the box, with nothing to wire up.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You need omnichannel marketing automation</strong>{" "}
-                      -- email, SMS, push, and WhatsApp in a single visual
-                      canvas with conditional logic and A/B testing.
+                      -- email, SMS, push and WhatsApp in one visual canvas,
+                      with split testing. Wraps has no A/B testing.
                     </span>
                   </li>
                 </ul>
+                <p className="mt-4 text-muted-foreground text-sm">
+                  And the plain one: if nobody on your team wants an AWS
+                  account, do not get one for this. A hosted platform is a
+                  different approach and it is the right one for you.
+                </p>
               </CardContent>
             </Card>
           </section>
@@ -872,31 +970,44 @@ export default function KlaviyoVsWrapsPage() {
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
-                      <strong>You&rsquo;re a SaaS company</strong> that needs
-                      transactional email (password resets, invoices,
-                      notifications) with a real API -- not a marketing platform
-                      that bolts transactional onto flows.
+                      <strong>
+                        You want to send from SES and not do the setup.
+                      </strong>{" "}
+                      One command puts the whole surface in your account: domain
+                      identity, DKIM, event capture, delivery history,
+                      suppression. It sits beside whatever SES you already run.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                    <span>
+                      <strong>You want somebody watching it.</strong> Bounce and
+                      complaint rates read hourly against AWS&rsquo;s own lines,
+                      owners and admins notified when they move, suppression you
+                      can browse and clear, deliverability and blacklist audits,
+                      and a log of every message.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
-                        You&rsquo;re paying $700+/month at Klaviyo
+                        You need transactional email with a real API.
                       </strong>{" "}
-                      and your engineering team wants AWS-level economics. The
-                      same 500K emails/month costs $79/mo with Wraps (9.1x
-                      cheaper).
+                      Password resets, invoices and notifications, sitting
+                      alongside the broadcasts and lifecycle workflows rather
+                      than bolted onto a flow builder.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
-                        You want to own your sending infrastructure
+                        You want to own your sending infrastructure.
                       </strong>{" "}
-                      -- SES in your AWS account with domain-based reputation
-                      you control. Dedicated IPs available when you need them.
+                      SES in your AWS account, domain reputation you build,
+                      dedicated IPs when you need them, and AWS pricing on every
+                      send.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -905,9 +1016,9 @@ export default function KlaviyoVsWrapsPage() {
                       <strong>
                         Your contact list is large but send volume is moderate.
                       </strong>{" "}
-                      With Klaviyo, 100K profiles costs $1,380/mo whether you
-                      email them or not. With Wraps, contacts are unlimited and
-                      free -- you pay only for sends.
+                      Contacts are unlimited on every Wraps plan and you pay AWS
+                      per send. On Klaviyo, 100,000 profiles is $1,380/mo
+                      whether you email them or not.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -916,28 +1027,16 @@ export default function KlaviyoVsWrapsPage() {
                       <strong>
                         You want workflows you can version-control.
                       </strong>{" "}
-                      Wraps has a visual flow builder with 10 node types plus a
-                      TypeScript DSL you can push from CLI, store in Git, and
-                      deploy alongside your app code.
+                      A visual flow builder plus a TypeScript DSL you push from
+                      the CLI, keep in Git, and deploy alongside your app code.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
-                      <strong>You care about site performance.</strong>{" "}
-                      Klaviyo&rsquo;s JS has been documented to drop PageSpeed
-                      scores by 40+ points. Wraps is server-side only -- no
-                      client-side script required.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                    <span>
-                      <strong>Data sovereignty matters to you.</strong> Your
-                      sending infrastructure and email events stay in your AWS
-                      account. Contacts are exportable anytime. Cancel Wraps and
-                      your SES keeps running. Cancel Klaviyo and everything is
-                      permanently deleted.
+                      <strong>You want no client-side script.</strong> Wraps is
+                      server-side only. Nothing to add to your pages, and
+                      nothing of yours to keep loading.
                     </span>
                   </li>
                 </ul>
@@ -954,9 +1053,9 @@ export default function KlaviyoVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-4 text-muted-foreground text-sm">
-              Migrating from Klaviyo is a 4-8 week process. The good news: once
-              you move to Wraps, this is the last migration. You own the
-              infrastructure permanently.
+              Plan 4-8 weeks. The deploy itself is one command; the calendar is
+              warmup, DNS and rebuilding what does not export. Run both in
+              parallel while the new domain warms.
             </p>
             <Card className="mb-6 overflow-hidden py-0">
               <div className="overflow-x-auto">
@@ -1045,13 +1144,12 @@ export default function KlaviyoVsWrapsPage() {
             <div className="mt-6 rounded-lg border bg-muted/30 p-6">
               <p className="text-muted-foreground text-sm">
                 <strong className="text-foreground">
-                  The key difference after migration:
+                  What is different on the other side:
                 </strong>{" "}
-                Wraps deploys SES to your own AWS account with your own sending
-                domain. You build reputation on infrastructure you own
-                permanently. If you ever stop paying Wraps, your SES, DynamoDB
-                tables, and Lambda functions keep running. No more migration
-                risk.
+                the sending is in your account, under your domain, and the
+                reputation you build is yours. If you ever stop paying Wraps,
+                the SES identities, DynamoDB tables and Lambda functions keep
+                running.
               </p>
             </div>
           </section>
@@ -1061,10 +1159,10 @@ export default function KlaviyoVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Ready to own your email infrastructure?
+              Everything Amazon SES needs, including operations
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Deploy to your AWS in 2 minutes. No credit card required.
+              One command into your own AWS account. No credit card required.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -1082,7 +1180,7 @@ export default function KlaviyoVsWrapsPage() {
           {/* Last Updated + Accuracy Note */}
           <div className="mt-12 border-t pt-8 text-center text-muted-foreground text-xs">
             <p className="mb-2">
-              Last updated: March 2026. Klaviyo pricing and features sourced
+              Last updated: September 2026. Klaviyo pricing and features sourced
               from{" "}
               <a
                 className="text-primary underline"
@@ -1103,7 +1201,7 @@ export default function KlaviyoVsWrapsPage() {
                 developers.klaviyo.com
                 <ExternalLink className="ml-0.5 inline size-3" />
               </a>
-              , and public reviews.
+              , and public documentation.
             </p>
             <p>
               See something inaccurate?{" "}

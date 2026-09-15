@@ -21,17 +21,17 @@ import { JsonLd } from "@/components/json-ld";
 export const metadata: Metadata = {
   title: "Resend vs Wraps - Compare Email Infrastructure Approaches",
   description:
-    "Resend sends from their AWS. Wraps deploys to yours. Compare pricing, data retention, infrastructure ownership, and developer experience side by side.",
+    "Resend runs Amazon SES for you. Wraps sets SES up in your own AWS account and runs it day to day. Compare setup, operations, pricing, data retention, and infrastructure ownership side by side.",
   openGraph: {
     title: "Resend vs Wraps | Wraps",
     description:
-      "Resend sends from their AWS. Wraps deploys to yours. Compare pricing, data retention, infrastructure ownership, and developer experience.",
+      "Resend runs Amazon SES for you. Wraps sets SES up in your own AWS account and runs it day to day. Compare setup, operations, pricing, data retention, and ownership.",
     url: "https://wraps.dev/compare/resend-vs-wraps",
   },
   twitter: {
     title: "Resend vs Wraps | Wraps",
     description:
-      "Resend sends from their AWS. Wraps deploys to yours. Compare pricing, data retention, infrastructure ownership, and developer experience.",
+      "Resend runs Amazon SES for you. Wraps sets SES up in your own AWS account and runs it day to day. Compare setup, operations, pricing, data retention, and ownership.",
   },
   alternates: {
     canonical: "https://wraps.dev/compare/resend-vs-wraps",
@@ -65,6 +65,16 @@ const breadcrumbJsonLd = {
 
 const tldrComparison = [
   {
+    dimension: "Setup",
+    resend: "An API key",
+    wraps: "One command into your AWS account",
+  },
+  {
+    dimension: "Day-to-day operations",
+    resend: "Resend runs SES on their account",
+    wraps: "Wraps control plane runs SES on yours",
+  },
+  {
     dimension: "Infrastructure",
     resend: "Resend's AWS account",
     wraps: "Your AWS account",
@@ -77,7 +87,7 @@ const tldrComparison = [
   {
     dimension: "Data retention",
     resend: "30 days (non-Enterprise)",
-    wraps: "Raw events in your DynamoDB, yours forever",
+    wraps: "Events in your DynamoDB, retention you set",
   },
   {
     dimension: "If you cancel",
@@ -152,6 +162,46 @@ const featureComparison = [
     ],
   },
   {
+    category: "Operations",
+    features: [
+      {
+        name: "Initial setup",
+        resend: "API key",
+        wraps: "One command into your AWS account",
+      },
+      {
+        name: "Whose SES account and reputation",
+        resend: "Resend's",
+        wraps: "Yours",
+      },
+      {
+        name: "Bounce and complaint rates vs AWS limits",
+        resend: "Resend's to manage",
+        wraps: "Swept hourly, owners and admins notified",
+      },
+      {
+        name: "Alarms in your own AWS account",
+        resend: "Their account, not yours",
+        wraps: "CloudWatch alarms on Production and Enterprise presets",
+      },
+      {
+        name: "Suppression list",
+        resend: "Managed by Resend",
+        wraps: "Browse and clear in the dashboard",
+      },
+      {
+        name: "DKIM, SPF, DMARC and blacklist audit",
+        resend: "Resend's to manage",
+        wraps: "wraps email check, on demand",
+      },
+      {
+        name: "Per-message event log",
+        resend: true,
+        wraps: true,
+      },
+    ],
+  },
+  {
     category: "Tracking & Analytics",
     features: [
       { name: "Open tracking", resend: true, wraps: true },
@@ -162,7 +212,7 @@ const featureComparison = [
         name: "Data retention",
         resend: "30 days (non-Enterprise)",
         wraps:
-          "Raw events in your DynamoDB forever; dashboard history 7 days to 1 year by plan",
+          "Events in your DynamoDB at the retention you set; dashboard history 30 days to 1 year by plan",
       },
       {
         name: "Data export",
@@ -209,7 +259,7 @@ const featureComparison = [
       {
         name: "Multi-language SDKs",
         resend: "9 languages",
-        wraps: "TypeScript",
+        wraps: "TypeScript, Python",
       },
       {
         name: "CLI tooling",
@@ -251,9 +301,9 @@ const featureComparison = [
       {
         name: "SOC 2",
         resend: true,
-        wraps: "Sending infra inherits your AWS",
+        wraps: "Not certified",
       },
-      { name: "HIPAA", resend: false, wraps: "Sending infra via your AWS BAA" },
+      { name: "HIPAA", resend: false, wraps: "Not offered" },
       {
         name: "Cancel impact",
         resend: "Data deleted",
@@ -264,11 +314,11 @@ const featureComparison = [
 ];
 
 const chooseResendReasons = [
-  "You want the fastest possible time-to-first-email and don't have an AWS account",
-  "You need SDKs in Python, Ruby, Go, PHP, Java, Rust, or .NET today",
+  "You don't have an AWS account and don't want one",
+  "You need SDKs in Ruby, Go, PHP, Java, Rust, or .NET today",
   "You want managed dedicated IP warming and monitoring without thinking about it",
   "You want a built-in visual broadcast editor with audience management",
-  "You're sending under 50K emails/month and value zero-config simplicity over infrastructure ownership",
+  "You would rather another team own the sending account and the reputation on it",
 ];
 
 const articleSchema = {
@@ -276,9 +326,9 @@ const articleSchema = {
   "@type": "Article",
   headline: "Resend vs Wraps",
   description:
-    "Resend sends from their AWS. Wraps deploys to yours. Compare pricing, data retention, infrastructure ownership, and developer experience side by side.",
+    "Resend runs Amazon SES for you. Wraps sets SES up in your own AWS account and runs it day to day. Compare setup, operations, pricing, data retention, and infrastructure ownership side by side.",
   datePublished: "2026-03-01T00:00:00.000Z",
-  dateModified: "2026-07-30T00:00:00.000Z",
+  dateModified: "2026-09-15T00:00:00.000Z",
   author: {
     "@type": "Organization",
     name: "Wraps",
@@ -300,12 +350,13 @@ const articleSchema = {
 };
 
 const chooseWrapsReasons = [
-  "You already have an AWS account (or your company does)",
-  "You want to own your raw event history -- it lands in your DynamoDB and stays there, instead of being purged after 30 days",
-  "You're sending 500K+ emails/month and want 77%+ cost savings",
-  "You need data residency in a specific region for compliance (GDPR, HIPAA)",
-  "You don't want a third party able to suspend your transactional email at the worst possible moment",
-  "You want infrastructure that keeps running even if the vendor disappears",
+  "You already have an AWS account (or your company does) and would rather send from it",
+  "You want SES set up in one command: DKIM, event pipeline, suppression, bounce and complaint handling, non-destructively",
+  "You want bounce and complaint rates watched against AWS's own review and pause lines, with owners and admins notified",
+  "You want suppression you can browse and clear, deliverability and blacklist audits on demand, and an event log per message",
+  "You want the per-event delivery history in your own DynamoDB, at the retention you set, instead of a 30-day cap",
+  "You need sending and delivery data to stay in a particular AWS region",
+  "You want the sending infrastructure to keep running whether or not you keep paying us",
 ];
 
 const resendCode = `import { Resend } from "resend";
@@ -352,20 +403,20 @@ export default function ResendVsWrapsPage() {
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
               <strong className="text-foreground">Resend</strong> is a managed
-              email API built on top of AWS SES. Beautiful DX, fast onboarding,
-              everything runs on their infrastructure.
+              email API built on top of Amazon SES. The developer experience is
+              genuinely excellent and you are sending within minutes. It runs in
+              Resend&apos;s AWS account, on Resend&apos;s sending reputation.
             </p>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              <strong className="text-foreground">Wraps</strong> deploys email
-              infrastructure directly to your AWS account. Same modern DX, but
-              you own the infrastructure and pay AWS directly.
+              <strong className="text-foreground">Wraps</strong> sets the same
+              SES up inside your AWS account in one command, without touching
+              anything already there, and then runs it day to day from the Wraps
+              control plane.
             </p>
             <p className="max-w-2xl font-medium text-foreground text-lg">
-              Both platforms use AWS SES to send email. The difference is whose
-              account it runs in, who pays the bill -- and data retention:
-              Resend caps events at 30 days on non-Enterprise plans, while your
-              raw sending events sit in your own DynamoDB for as long as you
-              want them.
+              Everything Amazon SES needs, including operations. Most teams
+              reach for a hosted API because they do not want to deal with SES.
+              Dealing with SES is the part Wraps does.
             </p>
           </section>
 
@@ -464,61 +515,116 @@ export default function ResendVsWrapsPage() {
             </Card>
           </section>
 
-          {/* Sound Familiar? */}
+          {/* Setup, then operations */}
           <section className="mb-16">
             <h2 className="mb-2 font-heading font-semibold text-2xl tracking-tight">
-              Sound familiar?
+              Set it up once, then have it run
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Real quotes from Resend users on Trustpilot, G2, Hacker News, and
-              developer blogs.
+              Two things sit between an AWS account and production email on SES.
+              Wraps does both.
             </p>
-            <div className="space-y-4">
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <Card>
+                <CardHeader>
+                  <CardTitle>Setup</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;They suspended account when we were getting a lot of
-                    new customers/traffic. We lost tons of them because of the
-                    Resend.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Trustpilot review, Feb 2026
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      wraps email init
+                    </code>{" "}
+                    deploys the whole email surface into the region you pick:
+                    SES with DKIM, an EventBridge rule, SQS with a dead letter
+                    queue, a Lambda event processor, a DynamoDB table for
+                    delivery history, and scoped IAM roles.
                   </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Everything namespaced{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        wraps-email-*
+                      </code>
+                      , so it sits alongside SES you already run
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Account-level suppression switched on at deploy, bounces
+                      and complaints by default
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Sandbox status read back at the end of the run, with the
+                      production-access request linked
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle>Operations</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;Account suspended with no response from support in
-                    over 24 hours&rdquo; causing critical service failures for
-                    signup and password reset flows.
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Trustpilot review, Mar 2025
+                  <p className="mb-4 text-muted-foreground text-sm">
+                    The Wraps control plane runs it from there, against the
+                    account you own.
                   </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
-                  <blockquote className="border-l-2 border-muted-foreground/30 pl-4 italic text-muted-foreground">
-                    &ldquo;They could just be wrapping a 5-line API call to
-                    Amazon SES and charge 4x for it. The disappointing thing
-                    about all of this is that they&apos;re not being transparent
-                    at all about what they&apos;re doing.&rdquo;
-                  </blockquote>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    -- Matteo Contrini, developer blog
-                  </p>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Bounce and complaint rates drawn against AWS&apos;s own
+                      review and pause lines, swept hourly, owners and admins
+                      notified
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Your 24-hour send quota on the same card, with a warning
+                      line at 80%
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      CloudWatch alarms deployed into your account, set below
+                      AWS&apos;s lines: bounce warns at 2% and goes critical at
+                      4% against AWS&apos;s 5% review line, complaints at 0.05%
+                      and 0.08% against 0.1%, plus any dead-letter message.
+                      Email or webhook to Slack, Discord or PagerDuty. On the
+                      Production and Enterprise presets; a Starter deploy has
+                      them off
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      Suppression you can browse and clear, and an event log per
+                      message
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      <span>
+                        <code className="rounded bg-muted px-1 py-0.5">
+                          wraps email check
+                        </code>{" "}
+                        audits DKIM, SPF, DMARC, MX, BIMI and public blacklists
+                        on demand;{" "}
+                        <code className="rounded bg-muted px-1 py-0.5">
+                          doctor
+                        </code>{" "}
+                        names the fix
+                      </span>
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
+
             <p className="mt-4 text-muted-foreground text-sm">
-              With Wraps, your infrastructure runs in your AWS account. No third
-              party can suspend your sending, and your raw events live in your
-              own DynamoDB &mdash; yours forever, whether or not you keep paying
-              Wraps.
+              Resend does this work too, and does it well. They do it on their
+              own account, on a sending reputation shared across their senders
+              unless you buy a dedicated IP. On Wraps it happens on yours, on an
+              account only you send from. The alarms are CloudWatch resources in
+              your account, so they go on watching your reputation whether or
+              not you keep paying us.
             </p>
           </section>
 
@@ -539,10 +645,9 @@ export default function ResendVsWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
-                    Managed SaaS. Your emails route through Resend&apos;s
-                    infrastructure. Data stored in their PostgreSQL (via
-                    Supabase), analytics in their Tinybird, logs in their
-                    Snowflake. All 21 subprocessors are US-based.
+                    Managed SaaS. Your email routes through Resend&apos;s
+                    infrastructure, and the sending account, the domain
+                    identities and the event history live with them.
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
@@ -552,8 +657,7 @@ export default function ResendVsWrapsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
-                      All traffic proxied through Cloudflare (single point of
-                      failure in Nov 2025 outage)
+                      Events capped at 30 days on non-Enterprise plans
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
@@ -561,8 +665,7 @@ export default function ResendVsWrapsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <Minus className="mt-1 size-3 shrink-0" />
-                      No HIPAA compliance (&ldquo;has not started
-                      pursuing&rdquo;)
+                      The sending reputation you build is theirs, not yours
                     </li>
                   </ul>
                 </CardContent>
@@ -574,20 +677,23 @@ export default function ResendVsWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
-                    Deploy to your AWS account. SES, EventBridge, SQS, Lambda,
-                    and DynamoDB run in your account, in your chosen region.
-                    Email content and delivery logs stay in your account.
-                    Contacts are stored on the Wraps platform and exportable
-                    anytime.
+                    Two planes. SES, EventBridge, SQS, Lambda and DynamoDB run
+                    in your account, in your chosen region, and the per-event
+                    delivery history lands in that DynamoDB table at whatever
+                    retention your deploy config sets. Contacts, templates,
+                    broadcasts and workflow state live in the Wraps control
+                    plane, along with a row per message carrying recipient,
+                    subject, sender, template variables and delivery timestamps.
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Data residency in your chosen AWS region
+                      Sending and delivery data stay in the AWS region you pick
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Your uptime is AWS SES uptime (99.9%+ SLA)
+                      The account, the domain identities and the reputation are
+                      yours
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
@@ -595,7 +701,8 @@ export default function ResendVsWrapsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      Inherits your AWS compliance posture (SOC 2, HIPAA, etc.)
+                      Wraps reaches it by assuming an IAM role with an external
+                      ID, in one-hour sessions. No AWS keys are stored
                     </li>
                   </ul>
                 </CardContent>
@@ -603,11 +710,11 @@ export default function ResendVsWrapsPage() {
             </div>
 
             <p className="mt-4 text-muted-foreground text-sm">
-              In January 2024, Resend suffered a security incident where a
-              database API key was exposed in client-side code, exposing
-              customer email metadata, domain info, and contacts. With Wraps,
-              your sending infrastructure and email events are isolated in your
-              own AWS account.
+              One precision, because security review always asks. Wraps does
+              hold message-level metadata in its own Postgres: recipient,
+              subject, sender, template variables, delivery timestamps. The
+              sending itself, and the full event history behind it, stays in
+              your account.
             </p>
           </section>
 
@@ -671,17 +778,19 @@ export default function ResendVsWrapsPage() {
                 unlimited sends, contacts, domains, and templates.
               </p>
               <p>
-                Resend gotchas: exceeding your tier auto-bills overage at
+                Worth knowing on Resend: exceeding your tier auto-bills at
                 $0.65-0.90/1K. Getting Scale features at 100K costs $90/mo (the
                 $35 Pro tier skips SSO and caps domains at 10). CC/BCC count as
                 separate emails. Marketing contacts billed separately ($40/mo
                 for 5K contacts).
               </p>
               <p>
-                At 50K/mo, pricing is comparable -- but with Wraps the raw
-                events land in your own DynamoDB and stay there, vs
-                Resend&apos;s 30-day cap. (Wraps dashboard history is 7 days to
-                1 year depending on plan; the underlying events are always
+                At 50K/mo the two are priced about the same, so price is not the
+                reason to move. What changes is who sets the account up, who
+                watches it, and where the events live: with Wraps they land in
+                your own DynamoDB at the retention you choose, against
+                Resend&apos;s 30-day cap. (Wraps dashboard history runs 30 days
+                to 1 year depending on plan; the underlying events are always
                 yours.)
               </p>
             </div>
@@ -759,8 +868,8 @@ export default function ResendVsWrapsPage() {
               When to choose Wraps
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Wraps is built for teams that want modern DX with infrastructure
-              ownership.
+              Wraps is for teams that want Amazon SES without running Amazon SES
+              by hand.
             </p>
             <Card className="border-primary/30">
               <CardContent>
@@ -814,7 +923,7 @@ export default function ResendVsWrapsPage() {
                 <li>
                   Deploy infrastructure:{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
-                    wraps email setup
+                    wraps email init
                   </code>{" "}
                   (~2 minutes)
                 </li>
@@ -830,7 +939,10 @@ export default function ResendVsWrapsPage() {
                   Update DNS records (SPF may already be identical since both
                   use SES)
                 </li>
-                <li>Done -- same DX, your infrastructure, AWS pricing</li>
+                <li>
+                  Done. Same DX, your account, and the control plane watching it
+                  from there
+                </li>
               </ol>
               <p className="text-muted-foreground text-sm">
                 React Email templates are open source and work with any
@@ -849,11 +961,11 @@ export default function ResendVsWrapsPage() {
           {/* CTA */}
           <section className="rounded-lg border bg-muted/30 p-8 text-center">
             <h2 className="mb-2 font-heading font-semibold text-xl tracking-tight">
-              Deploy to your AWS in 2 minutes
+              One command sets up SES in your AWS account
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Free to start. No credit card required. Your infrastructure, your
-              data, AWS pricing.
+              Free to start, no credit card. The control plane watches the
+              account from there.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
@@ -871,7 +983,7 @@ export default function ResendVsWrapsPage() {
           {/* Last Updated + Accuracy Note */}
           <div className="mt-12 border-t pt-6 text-center text-muted-foreground text-xs">
             <p>
-              Last updated: March 2026. We update this page as pricing and
+              Last updated: September 2026. We update this page as pricing and
               features change.
             </p>
             <p className="mt-1">
