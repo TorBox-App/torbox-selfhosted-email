@@ -630,10 +630,9 @@ export default function PostmarkVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
-              Price is not the argument on its own. If Postmark&apos;s inbox
-              placement is what is carrying your product, it is worth the money,
-              and the table below does not change that. It is here because the
-              gap gets large enough at volume that you should know the number.
+              If Postmark&apos;s inbox placement is what carries your product,
+              it is worth paying for, and nothing below changes that. Know the
+              number anyway, because the gap gets wide at volume.
               Postmark&apos;s 2026 plans (Basic $15, Pro $16.50, Platform $18)
               each include 10K emails; everything above that is overage at
               $1.20&ndash;$1.80 per 1,000 depending on plan. AWS SES charges

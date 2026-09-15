@@ -868,7 +868,7 @@ export default function SendGridVsWrapsPage() {
                     "You want someone watching the account. Bounce and complaint rates are checked hourly against AWS's own review and pause lines, and your owners and admins hear about it before it matters. On the Production and Enterprise presets, CloudWatch alarms sit in your own account too, at thresholds below AWS's.",
                     "You want the deliverability checks on hand. wraps email check runs DKIM, SPF, DMARC, MX, MX-TLS, BIMI, RDAP, and public blacklists on demand.",
                     "You are already on AWS and do not want another vendor in the sending path.",
-                    "You care about cost at scale. At 500K emails a month Wraps runs $79 all in, the $29 plan plus about $50 of SES sending, against SendGrid's ~$499.",
+                    "You care about cost at scale. At 500K emails a month Wraps runs $79 all in — the $29 plan plus about $50 of SES sending — against SendGrid's ~$499. That is $420 a month you keep, and the gap widens as you send more.",
                     "You want to keep the sending. SES, DynamoDB, Lambda, and EventBridge stay in your account if you stop paying us.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>

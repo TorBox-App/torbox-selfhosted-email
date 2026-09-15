@@ -695,7 +695,7 @@ export default function CustomerIoVsWrapsPage() {
                       <th className="p-4 text-left font-medium text-primary">
                         Wraps
                       </th>
-                      <th className="p-4 text-left font-medium">Savings</th>
+                      <th className="p-4 text-left font-medium">You keep</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -730,9 +730,12 @@ export default function CustomerIoVsWrapsPage() {
                             </div>
                           </td>
                           <td className="p-4">
-                            <span className="font-mono text-2xs text-brand uppercase tracking-widest">
+                            <div className="font-medium text-brand">
+                              ${(cioLow - wrapsNum).toLocaleString("en-US")}/mo
+                            </div>
+                            <div className="font-mono text-2xs text-muted-foreground uppercase tracking-widest">
                               {savingsPercent}% less
-                            </span>
+                            </div>
                           </td>
                         </tr>
                       );
