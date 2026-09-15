@@ -288,8 +288,8 @@ export default function WhyWrapsPage() {
             </div>
             <p className="mb-7 max-w-2xl text-muted-foreground">
               If one of these describes your team, a decision against Wraps is
-              the correct one, and we would rather you reach it from this page
-              than three weeks into a trial.
+              the correct one, and this page is a faster way to reach it than a
+              trial.
             </p>
             <ul className="space-y-4">
               {badFit.map((item) => (
