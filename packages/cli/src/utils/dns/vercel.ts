@@ -10,6 +10,28 @@ import type {
 
 const VERCEL_API_BASE = "https://api.vercel.com";
 
+/**
+ * Normalise a DNS record value for comparison: strip one leading and one
+ * trailing double quote (TXT values are often quote-wrapped), then trim.
+ */
+function normalizeRecordValue(value: string): string {
+  return value.replace(/^"/, "").replace(/"$/, "").trim();
+}
+
+/**
+ * Compare a record's value against a target value. MX content is the host
+ * only (priority is a separate field and is never compared here) and is
+ * matched case-insensitively; TXT is matched case-sensitively.
+ */
+function valuesMatch(type: string, actual: string, expected: string): boolean {
+  const normalizedActual = normalizeRecordValue(actual);
+  const normalizedExpected = normalizeRecordValue(expected);
+  if (type === "MX") {
+    return normalizedActual.toLowerCase() === normalizedExpected.toLowerCase();
+  }
+  return normalizedActual === normalizedExpected;
+}
+
 type VercelRecord = {
   id: string;
   slug: string;
@@ -143,6 +165,56 @@ export class VercelDNSClient implements DNSProviderClient {
     if (existing) {
       await this.deleteRecord(existing.id);
     }
+  }
+
+  /**
+   * Delete records matching name + type + exact value. Value matching is the
+   * point: a name can carry several TXT or MX records, and deleting "the first
+   * one" can remove a record Wraps did not create.
+   */
+  async deleteRecordsByValue(
+    name: string,
+    type: string,
+    value: string
+  ): Promise<{ deleted: number; error?: string }> {
+    let result: VercelRecordsResponse & VercelErrorResponse;
+    try {
+      result = await this.request<VercelRecordsResponse>(
+        `/v4/domains/${this.domain}/records`
+      );
+    } catch (error) {
+      return {
+        deleted: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+
+    if (result.error || !result.records) {
+      return {
+        deleted: 0,
+        error: result.error?.message || "Failed to list DNS records",
+      };
+    }
+
+    // Vercel stores relative names, so we need to match accordingly
+    const relativeName =
+      name === this.domain ? "@" : name.replace(`.${this.domain}`, "");
+
+    const matches = result.records.filter(
+      (r) =>
+        (r.name === relativeName || r.name === name) &&
+        r.type === type &&
+        valuesMatch(type, r.value, value)
+    );
+
+    let deleted = 0;
+    for (const record of matches) {
+      if (await this.deleteRecord(record.id)) {
+        deleted++;
+      }
+    }
+
+    return { deleted };
   }
 
   /**

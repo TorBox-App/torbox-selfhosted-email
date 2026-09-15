@@ -36,6 +36,11 @@ export {
   hasCloudflareToken,
   hasVercelToken,
 } from "./credentials.js";
+// Inbound DNS cleanup (delete-side of buildInboundDNSRecords)
+export {
+  deleteInboundDNSRecordsForProvider,
+  type InboundDNSCleanupResult,
+} from "./inbound-dns-cleanup.js";
 // Types
 export type {
   DNSConfig,

@@ -73,6 +73,12 @@ vi.mock("../../../utils/dns/index.js", () => ({
   createInboundDNSRecordsForProvider: vi
     .fn()
     .mockResolvedValue({ success: true, recordsCreated: 0 }),
+  deleteInboundDNSRecordsForProvider: vi.fn().mockResolvedValue({
+    deleted: [],
+    skipped: [],
+    supported: true,
+    errors: [],
+  }),
   buildInboundDNSRecords: vi.fn().mockReturnValue([]),
   formatManualDNSInstructions: vi.fn().mockReturnValue(""),
   getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
@@ -307,6 +313,10 @@ describe("inboundRemove", () => {
     vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
   });
 
+  // Sets a non-"manual" dnsProvider, mirroring cloneMetadataWithDnsProvider
+  // above: DNS cleanup only runs (and only calls
+  // deleteInboundDNSRecordsForProvider) when the account has a DNS provider
+  // on file — otherwise it's treated as manual and skipped.
   function twoDomainMetadata(): typeof baseMetadata {
     return cloneMetadata((m) => {
       m.services.email.config.inboundDomains = [
@@ -323,6 +333,7 @@ describe("inboundRemove", () => {
           addedAt: "2024-01-02T00:00:00.000Z",
         },
       ];
+      (m.services.email as { dnsProvider?: string }).dnsProvider = "cloudflare";
     });
   }
 
@@ -354,24 +365,129 @@ describe("inboundRemove", () => {
     ).toEqual(["in.example.com"]);
   });
 
-  // NOTE: characterization only — `inbound remove` deletes no DNS records today,
-  // it only prints "Remember to remove the MX and SPF DNS records". Plan 310
-  // makes removal delete them. Update this test when it lands.
-  it("deletes no DNS records", async () => {
+  it("deletes the DNS records inbound add created, via the resolved credentials", async () => {
     const { loadConnectionMetadata } = await import(
       "../../../utils/shared/metadata.js"
     );
-    const { createInboundDNSRecordsForProvider } = await import(
-      "../../../utils/dns/index.js"
-    );
+    const { getDNSCredentials, deleteInboundDNSRecordsForProvider } =
+      await import("../../../utils/dns/index.js");
 
     vi.mocked(loadConnectionMetadata).mockResolvedValue(twoDomainMetadata());
 
     await inboundRemove({ domain: "support.example.com", yes: true });
 
+    const resolvedCredentials =
+      await vi.mocked(getDNSCredentials).mock.results[0]?.value;
+
+    expect(vi.mocked(deleteInboundDNSRecordsForProvider)).toHaveBeenCalledWith(
+      resolvedCredentials.credentials,
+      "support.example.com",
+      "us-east-1",
+      "example.com"
+    );
+  });
+
+  it("still saves metadata without the removed domain when DNS cleanup rejects", async () => {
+    const { loadConnectionMetadata, saveConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    const { deleteInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(twoDomainMetadata());
+    vi.mocked(deleteInboundDNSRecordsForProvider).mockRejectedValueOnce(
+      new Error("boom")
+    );
+
+    await inboundRemove({ domain: "support.example.com", yes: true });
+
+    expect(vi.mocked(saveConnectionMetadata)).toHaveBeenCalled();
+    const saved = vi.mocked(saveConnectionMetadata).mock.calls.at(-1)?.[0] as
+      | typeof baseMetadata
+      | undefined;
     expect(
-      vi.mocked(createInboundDNSRecordsForProvider)
+      saved?.services.email?.config.inboundDomains?.map(
+        (d) => d.receivingDomain
+      )
+    ).toEqual(["in.example.com"]);
+  });
+
+  it("never calls DNS cleanup and keeps the manual reminder when no dnsProvider is on file", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    const { deleteInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+
+    // Same two-domain shape as twoDomainMetadata(), but without the
+    // dnsProvider override — this is what an account with no DNS provider
+    // on file looks like.
+    const metadata = cloneMetadata((m) => {
+      m.services.email.config.inboundDomains = [
+        {
+          subdomain: "in",
+          receivingDomain: "in.example.com",
+          parentDomain: "example.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          subdomain: "support",
+          receivingDomain: "support.example.com",
+          parentDomain: "example.com",
+          addedAt: "2024-01-02T00:00:00.000Z",
+        },
+      ];
+    });
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(metadata);
+
+    await inboundRemove({ domain: "support.example.com", yes: true });
+
+    expect(
+      vi.mocked(deleteInboundDNSRecordsForProvider)
     ).not.toHaveBeenCalled();
+
+    const printedReminder = vi
+      .mocked(console.log)
+      .mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("Remember to remove the MX and SPF DNS records")
+      );
+    expect(printedReminder).toBe(true);
+  });
+
+  it("includes dnsDeleted in the --json payload", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    const { deleteInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(twoDomainMetadata());
+    vi.mocked(deleteInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      deleted: ["MX support.example.com"],
+      skipped: [],
+      supported: true,
+      errors: [],
+    });
+
+    setJsonMode(true);
+    await inboundRemove({ domain: "support.example.com", yes: true });
+    setJsonMode(false);
+
+    const jsonCall = vi
+      .mocked(console.log)
+      .mock.calls.map((call) => call[0])
+      .find(
+        (arg) => typeof arg === "string" && arg.includes("email.inbound.remove")
+      );
+
+    expect(jsonCall).toBeDefined();
+    const parsed = JSON.parse(jsonCall as string);
+    expect(parsed.data.dnsDeleted).toEqual(["MX support.example.com"]);
   });
 
   it("refuses to remove the last remaining domain", async () => {
@@ -389,5 +505,10 @@ describe("inboundRemove", () => {
 
     expect(vi.mocked(removeDomainFromReceiptRule)).not.toHaveBeenCalled();
     expect(vi.mocked(saveConnectionMetadata)).not.toHaveBeenCalled();
+
+    const clack = await import("@clack/prompts");
+    expect(vi.mocked(clack.log.error)).toHaveBeenCalledWith(
+      expect.stringContaining("Cannot remove the last inbound domain")
+    );
   });
 });

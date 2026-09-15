@@ -10,6 +10,28 @@ import type {
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
 
+/**
+ * Normalise a DNS record value for comparison: strip one leading and one
+ * trailing double quote (TXT values are often quote-wrapped), then trim.
+ */
+function normalizeRecordValue(value: string): string {
+  return value.replace(/^"/, "").replace(/"$/, "").trim();
+}
+
+/**
+ * Compare a record's value against a target value. MX content is the host
+ * only (priority is a separate field and is never compared here) and is
+ * matched case-insensitively; TXT is matched case-sensitively.
+ */
+function valuesMatch(type: string, actual: string, expected: string): boolean {
+  const normalizedActual = normalizeRecordValue(actual);
+  const normalizedExpected = normalizeRecordValue(expected);
+  if (type === "MX") {
+    return normalizedActual.toLowerCase() === normalizedExpected.toLowerCase();
+  }
+  return normalizedActual === normalizedExpected;
+}
+
 type CloudflareRecord = {
   id: string;
   name: string;
@@ -120,6 +142,51 @@ export class CloudflareDNSClient implements DNSProviderClient {
     if (existing) {
       await this.deleteRecord(existing.id);
     }
+  }
+
+  /**
+   * Delete records matching name + type + exact value. Value matching is the
+   * point: a name can carry several TXT or MX records, and deleting "the first
+   * one" can remove a record Wraps did not create.
+   */
+  async deleteRecordsByValue(
+    name: string,
+    type: string,
+    value: string
+  ): Promise<{ deleted: number; error?: string }> {
+    let result: CloudflareResponse<CloudflareRecord[]>;
+    try {
+      result = await this.request<CloudflareRecord[]>(
+        `/dns_records?name=${encodeURIComponent(name)}&type=${type}`
+      );
+    } catch (error) {
+      return {
+        deleted: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+
+    if (!result.success) {
+      return {
+        deleted: 0,
+        error:
+          result.errors?.map((e) => e.message).join("; ") ||
+          "Failed to list DNS records",
+      };
+    }
+
+    const matches = result.result.filter((record) =>
+      valuesMatch(type, record.content, value)
+    );
+
+    let deleted = 0;
+    for (const record of matches) {
+      if (await this.deleteRecord(record.id)) {
+        deleted++;
+      }
+    }
+
+    return { deleted };
   }
 
   /**

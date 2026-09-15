@@ -12,6 +12,7 @@ import type {
   EmailInboundStatusOptions,
   EmailInboundTestOptions,
   EmailInboundVerifyOptions,
+  InboundDomain,
 } from "../../types/index.js";
 import { SES_RECEIVING_REGIONS } from "../../types/index.js";
 import {
@@ -38,6 +39,7 @@ import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   addInboundDomainToMetadata,
   buildEmailStackConfig,
+  type ConnectionMetadata,
   getAllTrackedDomains,
   loadConnectionMetadata,
   removeInboundDomainFromMetadata,
@@ -60,6 +62,116 @@ import {
   DEFAULT_PULUMI_TIMEOUT_MS,
   withTimeout,
 } from "../../utils/shared/timeout.js";
+
+/** Outcome of trying to delete the DNS records `inbound add` created for one domain. */
+type InboundDNSCleanupOutcome = {
+  deleted: string[];
+  skipped: Array<{ record: string; reason: string }>;
+  supported: boolean;
+  errors: string[];
+};
+
+const UNSUPPORTED_DNS_CLEANUP: InboundDNSCleanupOutcome = {
+  deleted: [],
+  skipped: [],
+  supported: false,
+  errors: [],
+};
+
+/**
+ * Delete the DNS records `inbound add` created for one receiving domain,
+ * resolving the provider/credentials from metadata. Never throws — a DNS
+ * failure here must not abort `remove`/`destroy`, because the SES-side
+ * change (receipt rule update, or the stack redeploy) has already happened
+ * and aborting would strand the user worse than a warning does.
+ *
+ * Absent or "manual" `dnsProvider` is treated as unsupported without
+ * prompting or probing providers — teardown is not the moment to ask
+ * someone to connect a DNS provider.
+ */
+async function cleanUpInboundDNS(params: {
+  metadata: ConnectionMetadata;
+  domainToRemove: string;
+  inboundDomains: InboundDomain[];
+  parentDomainFallback: string;
+  region: string;
+}): Promise<InboundDNSCleanupOutcome> {
+  const {
+    metadata,
+    domainToRemove,
+    inboundDomains,
+    parentDomainFallback,
+    region,
+  } = params;
+
+  const dnsProvider = metadata.services.email?.dnsProvider;
+  if (!dnsProvider || dnsProvider === "manual") {
+    return UNSUPPORTED_DNS_CLEANUP;
+  }
+
+  const removedEntry = inboundDomains.find(
+    (d) => d.receivingDomain === domainToRemove
+  );
+  const parentDomain = removedEntry?.parentDomain || parentDomainFallback;
+  if (!parentDomain) {
+    return UNSUPPORTED_DNS_CLEANUP;
+  }
+
+  try {
+    const { getDNSCredentials, deleteInboundDNSRecordsForProvider } =
+      await import("../../utils/dns/index.js");
+    const credentialResult = await getDNSCredentials(
+      dnsProvider,
+      parentDomain,
+      region
+    );
+
+    if (!(credentialResult.valid && credentialResult.credentials)) {
+      clack.log.warn(
+        `Could not validate ${dnsProvider} credentials to delete DNS records for ${domainToRemove}: ${credentialResult.error || "unknown error"}`
+      );
+      return UNSUPPORTED_DNS_CLEANUP;
+    }
+
+    return await deleteInboundDNSRecordsForProvider(
+      credentialResult.credentials,
+      domainToRemove,
+      region,
+      parentDomain
+    );
+  } catch (error) {
+    clack.log.warn(
+      `Failed to delete DNS records for ${domainToRemove}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return UNSUPPORTED_DNS_CLEANUP;
+  }
+}
+
+/**
+ * Print the result of `cleanUpInboundDNS` — deleted/skipped/errored records,
+ * and the legacy manual-cleanup reminder only when cleanup was unsupported
+ * (no DNS provider on file, invalid credentials, or a thrown error).
+ */
+function reportInboundDNSCleanup(
+  result: InboundDNSCleanupOutcome,
+  domain: string
+): void {
+  for (const label of result.deleted) {
+    clack.log.success(`Deleted DNS record: ${label}`);
+  }
+  for (const skip of result.skipped) {
+    clack.log.warn(`Left DNS record in place: ${skip.record} (${skip.reason})`);
+  }
+  for (const err of result.errors) {
+    clack.log.warn(`DNS cleanup error: ${err}`);
+  }
+  if (!result.supported) {
+    console.log(
+      `  ${pc.dim("Remember to remove the MX and SPF DNS records for")} ${pc.cyan(domain)}`
+    );
+    console.log();
+  }
+}
 
 /**
  * Inbound Init command - Deploy inbound email infrastructure
@@ -499,12 +611,32 @@ export async function inboundDestroy(
   const emailService = metadata.services.email;
   // biome-ignore lint/style/noNonNullAssertion: validated by enabled check above
   const inboundConfig = emailService.config.inbound!;
+  // Captured before step 5 clears `inboundDomains` on the config copy used to
+  // redeploy the stack — this is the list DNS cleanup iterates below.
+  const allInboundDomains = emailService.config.inboundDomains ?? [];
 
   // 4. Confirm (skip with --force or --preview)
   if (!(options.force || options.preview)) {
     clack.log.warn(
       `This will remove inbound email for ${pc.cyan(inboundConfig.receivingDomain || "")}`
     );
+
+    if (allInboundDomains.length > 0) {
+      const { buildInboundDNSRecords: buildRecordsForDisplay } = await import(
+        "../../utils/dns/index.js"
+      );
+      clack.log.info(pc.bold("DNS records that will be deleted:"));
+      for (const domain of allInboundDomains) {
+        const records = buildRecordsForDisplay(domain.receivingDomain, region);
+        for (const record of records) {
+          const value = record.priority
+            ? `${record.priority} ${record.value}`
+            : record.value;
+          clack.log.info(pc.dim(`  ${record.type} ${record.name} → ${value}`));
+        }
+      }
+    }
+
     const confirmed = await clack.confirm({
       message: "Are you sure you want to destroy inbound email infrastructure?",
       initialValue: false,
@@ -599,7 +731,25 @@ export async function inboundDestroy(
     );
   });
 
-  // 8. Save metadata
+  // 9b. Delete the DNS records `inbound add` created, for every configured
+  // domain, before metadata is saved — a DNS failure here must not leave
+  // metadata claiming inbound is gone while DNS still points at SES.
+  const dnsCleanupByDomain: Array<{
+    domain: string;
+    result: InboundDNSCleanupOutcome;
+  }> = [];
+  for (const domain of allInboundDomains) {
+    const result = await cleanUpInboundDNS({
+      metadata,
+      domainToRemove: domain.receivingDomain,
+      inboundDomains: allInboundDomains,
+      parentDomainFallback: emailService.config.domain || "",
+      region,
+    });
+    dnsCleanupByDomain.push({ domain: domain.receivingDomain, result });
+  }
+
+  // 10. Save metadata
   await progress.execute("Saving configuration", async () => {
     metadata.services.email = {
       ...emailService,
@@ -614,6 +764,9 @@ export async function inboundDestroy(
     jsonSuccess("email.inbound.destroy", {
       destroyed: true,
       receivingDomain: inboundConfig.receivingDomain || "",
+      dnsDeleted: dnsCleanupByDomain.flatMap((d) => d.result.deleted),
+      dnsSkipped: dnsCleanupByDomain.flatMap((d) => d.result.skipped),
+      dnsSupported: dnsCleanupByDomain.some((d) => d.result.supported),
     });
     return;
   }
@@ -621,10 +774,9 @@ export async function inboundDestroy(
   console.log();
   clack.log.success(pc.bold("Inbound email infrastructure removed."));
   console.log();
-  console.log(
-    `  ${pc.dim("Remember to remove the MX and SPF DNS records for")} ${pc.cyan(inboundConfig.receivingDomain || "")}`
-  );
-  console.log();
+  for (const { domain, result } of dnsCleanupByDomain) {
+    reportInboundDNSCleanup(result, domain);
+  }
 }
 
 /**
@@ -1566,6 +1718,20 @@ export async function inboundRemove(
 
   // 7. Confirm
   if (!options.yes) {
+    const { buildInboundDNSRecords: buildRecordsForDisplay } = await import(
+      "../../utils/dns/index.js"
+    );
+    const candidateRecords = buildRecordsForDisplay(domainToRemove, region);
+    if (candidateRecords.length > 0) {
+      clack.log.info(pc.bold("DNS records that will be deleted:"));
+      for (const record of candidateRecords) {
+        const value = record.priority
+          ? `${record.priority} ${record.value}`
+          : record.value;
+        clack.log.info(pc.dim(`  ${record.type} ${record.name} → ${value}`));
+      }
+    }
+
     const confirmed = await clack.confirm({
       message: `Remove inbound domain ${pc.cyan(domainToRemove)}?`,
       initialValue: false,
@@ -1582,6 +1748,17 @@ export async function inboundRemove(
     await removeDomainFromReceiptRule(region, domainToRemove);
   });
 
+  // 8b. Delete the DNS records `inbound add` created for this domain, before
+  // metadata is saved — a DNS failure here must not leave metadata claiming
+  // the domain is gone while DNS still points at SES.
+  const dnsCleanup = await cleanUpInboundDNS({
+    metadata,
+    domainToRemove,
+    inboundDomains,
+    parentDomainFallback: emailConfig.domain || "",
+    region,
+  });
+
   // 9. Remove from metadata
   await progress.execute("Saving configuration", async () => {
     removeInboundDomainFromMetadata(metadata, domainToRemove);
@@ -1595,6 +1772,9 @@ export async function inboundRemove(
         (d) => d.receivingDomain
       ),
       region,
+      dnsDeleted: dnsCleanup.deleted,
+      dnsSkipped: dnsCleanup.skipped,
+      dnsSupported: dnsCleanup.supported,
     });
     return;
   }
@@ -1604,8 +1784,5 @@ export async function inboundRemove(
     `${pc.bold("Removed inbound domain:")} ${pc.cyan(domainToRemove)}`
   );
   console.log();
-  console.log(
-    `  ${pc.dim("Remember to remove the MX and SPF DNS records for")} ${pc.cyan(domainToRemove)}`
-  );
-  console.log();
+  reportInboundDNSCleanup(dnsCleanup, domainToRemove);
 }

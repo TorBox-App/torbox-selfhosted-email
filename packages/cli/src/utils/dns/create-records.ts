@@ -373,7 +373,7 @@ export async function createDNSRecordsForProvider(
 }
 
 /** Existing Route53 record set data relevant to the inbound write. */
-type ExistingRoute53RecordSet = {
+export type ExistingRoute53RecordSet = {
   ttl?: number;
   values: string[];
 };
@@ -382,7 +382,7 @@ type ExistingRoute53RecordSet = {
  * Strip a single trailing dot and lowercase, so `example.com` and
  * `Example.com.` (as Route53 returns it) compare equal.
  */
-function normalizeRoute53Name(name: string): string {
+export function normalizeRoute53Name(name: string): string {
   return name.replace(/\.$/, "").toLowerCase();
 }
 
@@ -395,7 +395,7 @@ function normalizeRoute53Name(name: string): string {
  * the inbound write must know what is already there (e.g. a customer's
  * existing Google Workspace MX records) before composing its own UPSERT.
  */
-async function listExistingRoute53InboundRecords(
+export async function listExistingRoute53InboundRecords(
   client: Route53Client,
   hostedZoneId: string,
   name: string
