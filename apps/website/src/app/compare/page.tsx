@@ -148,9 +148,8 @@ export default function ComparePage() {
               </h1>
             </div>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground">
-              Honest, data-backed comparisons with real pricing at real volumes.
-              We show where competitors win too — because you deserve the full
-              picture, not a sales pitch.
+              Real pricing at real volumes, and the rows where the other
+              platform wins are in here too. Read the ones that describe you.
             </p>
             <p className="max-w-2xl text-muted-foreground">
               These are head-to-heads: Wraps against one platform at a time. If

@@ -706,8 +706,7 @@ link: </docs>; rel="service-doc", </.well-known/api-catalog>; rel="api-catalog"`
 
             <p className="mb-4 text-foreground/80 text-lg leading-relaxed">
               Two of the three names promise more than the implementations
-              deliver, and we would rather say so here than have you find out by
-              calling them.{" "}
+              deliver.{" "}
               <code className="rounded bg-muted px-1.5 py-0.5">
                 search_docs
               </code>{" "}

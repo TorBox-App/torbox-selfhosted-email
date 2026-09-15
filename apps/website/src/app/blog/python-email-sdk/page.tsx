@@ -931,10 +931,9 @@ except SESError as err:
             </p>
 
             <p className="mb-4 text-foreground/80 text-lg leading-relaxed">
-              There are 17 tests and they all pass. That is a modest suite for a
-              first release and we're not going to dress it up as more than it
-              is. What they do have going for them is where they cut: every one
-              of them intercepts httpx at the transport boundary with{" "}
+              There are 17 tests and they all pass. A small suite, and what
+              matters is where they cut: every one of them intercepts httpx at
+              the transport boundary with{" "}
               <code className="rounded bg-muted px-1.5 py-0.5">respx</code> and
               asserts on the actual signed HTTP request &mdash; the URL, the
               headers, the JSON body &mdash; rather than on a mock of our own

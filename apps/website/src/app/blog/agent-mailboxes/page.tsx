@@ -277,8 +277,7 @@ export default function Page() {
                 architecture we picked. We picked it anyway, because "your
                 infrastructure, your leash" is the entire product and a proxy
                 would have quietly made Wraps a dependency in your send path.
-                But the tradeoff is real and we're not going to pretend
-                otherwise.
+                The tradeoff is real, and it is the one we chose.
               </p>
             </Card>
           </section>

@@ -630,14 +630,13 @@ export default function PostmarkVsWrapsPage() {
               </h2>
             </div>
             <p className="mb-6 text-muted-foreground">
-              If Postmark&apos;s inbox placement is what carries your product,
-              it is worth paying for, and nothing below changes that. Know the
-              number anyway, because the gap gets wide at volume.
-              Postmark&apos;s 2026 plans (Basic $15, Pro $16.50, Platform $18)
-              each include 10K emails; everything above that is overage at
-              $1.20&ndash;$1.80 per 1,000 depending on plan. AWS SES charges
-              $0.10 per 1,000 à la carte, $0.16 on the Essentials plan new
-              accounts default to.
+              Postmark&apos;s inbox placement is what the premium buys, and for
+              some products that is the right trade. Here is what the trade
+              costs, because the gap gets wide at volume. Postmark&apos;s 2026
+              plans (Basic $15, Pro $16.50, Platform $18) each include 10K
+              emails; everything above that is overage at $1.20&ndash;$1.80 per
+              1,000 depending on plan. AWS SES charges $0.10 per 1,000 à la
+              carte, $0.16 on the Essentials plan new accounts default to.
             </p>
 
             <Card className="overflow-hidden py-0">

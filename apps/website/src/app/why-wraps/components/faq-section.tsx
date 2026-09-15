@@ -72,8 +72,7 @@ export function FaqSection() {
         Questions your team will ask
       </h2>
       <p className="mb-6 max-w-2xl text-muted-foreground">
-        Answered the way we would answer them in the meeting, which means some
-        of these argue against us.
+        The answers we would give in the room, in the words we would use.
       </p>
       <Accordion collapsible type="single">
         {faqItems.map((item) => (

@@ -239,11 +239,11 @@ export default function WhyWrapsPage() {
             </dl>
 
             <p className="mt-7 max-w-2xl text-muted-foreground text-sm leading-relaxed">
-              Worth saying to whoever is reviewing the budget: price is not the
-              reason to do this. Below roughly 100,000 emails a month the
-              difference against a hosted API is small, and if the case rests on
-              the arithmetic alone it is a weak case. The argument is the first
-              table.
+              Where the money actually moves: against a contact-priced marketing
+              platform the gap is large immediately and widens with the list.
+              Against a hosted sending API it is small under roughly 100,000
+              emails a month and grows from there. Either way the platform fee
+              stays flat while theirs scales, which is the part that compounds.
             </p>
           </section>
 

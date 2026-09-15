@@ -708,12 +708,12 @@ export default function KlaviyoVsWrapsPage() {
             </div>
             <p className="mb-4 text-muted-foreground text-sm">
               Klaviyo prices by <strong>active profiles</strong>: contacts you
-              store, whether you email them or not. That price buys the whole
-              marketing program, so read it as a program cost rather than a
-              sending cost. Wraps charges a flat platform fee, and AWS bills you
-              directly for the sends at $0.10 per 1,000 emails à la carte, or
-              $0.16 on the Essentials plan AWS defaults new accounts to.
-              Contacts are unlimited on every Wraps plan.
+              store, whether you email them or not, and that bill buys their
+              whole marketing program. Wraps charges a flat platform fee with
+              unlimited contacts on every plan, and AWS bills you directly for
+              the sends at $0.10 per 1,000 emails à la carte, or $0.16 on the
+              Essentials plan AWS defaults new accounts to. The gap below is
+              what pricing by stored contacts costs you as the list grows.
             </p>
             <Card className="overflow-hidden py-0">
               <div className="overflow-x-auto">
