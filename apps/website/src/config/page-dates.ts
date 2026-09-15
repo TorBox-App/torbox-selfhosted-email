@@ -170,6 +170,6 @@ export const PAGE_DATES: Record<string, string> = {
   "/terms": "2026-08-28T11:14:02-06:00",
   "/tools": "2026-09-15T08:41:41-06:00",
   "/tools/ses-calculator": "2026-09-15T08:41:41-06:00",
-  "/tools/spf-builder": "2026-09-15T08:41:41-06:00",
+  "/tools/spf-builder": "2026-09-15T16:51:23-06:00",
   "/why-wraps": "2026-09-15T10:17:43-06:00",
 };
