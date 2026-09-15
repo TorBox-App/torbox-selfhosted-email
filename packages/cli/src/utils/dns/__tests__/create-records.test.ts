@@ -1,8 +1,16 @@
+import {
+  type Change,
+  ChangeResourceRecordSetsCommand,
+  ListResourceRecordSetsCommand,
+  Route53Client,
+} from "@aws-sdk/client-route-53";
+import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route53Utils from "../../route53.js";
 import {
   buildEmailDNSRecords,
   createDNSRecordsForProvider,
+  createInboundDNSRecordsForProvider,
   type DNSRecordInfo,
   formatDNSRecordsForDisplay,
   formatManualDNSInstructions,
@@ -354,6 +362,296 @@ describe("createDNSRecordsForProvider", () => {
     expect(route53Call[4].has("tracking")).toBe(true);
     expect(route53Call[5]).toBe("track.example.com");
     expect(route53Call[6]).toBe("mail.example.com");
+  });
+});
+
+describe("createInboundDNSRecordsForProvider - route53 (non-destructive write)", () => {
+  const route53Mock = mockClient(Route53Client);
+  const hostedZoneId = "Z123456789";
+  const receivingDomain = "support.example.com";
+  const sesMxValue = "10 inbound-smtp.us-east-1.amazonaws.com";
+  const sesSpfValue = '"v=spf1 include:amazonses.com ~all"';
+
+  beforeEach(() => {
+    route53Mock.reset();
+  });
+
+  async function runInboundWrite() {
+    return createInboundDNSRecordsForProvider(
+      { provider: "route53", hostedZoneId },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+  }
+
+  function findChange(changes: Change[] | undefined, type: "MX" | "TXT") {
+    return changes?.find((c) => c.ResourceRecordSet?.Type === type);
+  }
+
+  it("creates a single UPSERT with only the SES MX value when the zone has no existing MX", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+    expect(result.recordsCreated).toBe(2);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    const mxChange = findChange(changes, "MX");
+
+    expect(mxChange?.Action).toBe("UPSERT");
+    expect(mxChange?.ResourceRecordSet?.TTL).toBe(1800);
+    expect(mxChange?.ResourceRecordSet?.ResourceRecords).toEqual([
+      { Value: sesMxValue },
+    ]);
+  });
+
+  // REGRESSION TEST for plan 309: the old implementation used Route53 UPSERT
+  // with a single-element ResourceRecords array, which REPLACES the entire
+  // record set rather than appending. On a domain whose mail already runs
+  // through Google Workspace, that deleted all five Google MX records and
+  // left only the SES one — every inbound message after that silently
+  // routed to an S3 bucket the customer never reads. This test must fail if
+  // that blind-UPSERT behaviour is reintroduced.
+  it("preserves all five existing Google MX records when adding the SES inbound MX", async () => {
+    const googleMxValues = [
+      "1 aspmx.l.google.com",
+      "5 alt1.aspmx.l.google.com",
+      "5 alt2.aspmx.l.google.com",
+      "10 alt3.aspmx.l.google.com",
+      "10 alt4.aspmx.l.google.com",
+    ];
+
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: `${receivingDomain}.`,
+          Type: "MX",
+          TTL: 3600,
+          ResourceRecords: googleMxValues.map((Value) => ({ Value })),
+        },
+      ],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    const mxChange = findChange(changes, "MX");
+
+    expect(mxChange?.Action).toBe("UPSERT");
+    // The whole point: six values, not one. Preserve the existing TTL too —
+    // rewriting it to 1800 would be its own small destructive surprise.
+    expect(mxChange?.ResourceRecordSet?.TTL).toBe(3600);
+    const values = mxChange?.ResourceRecordSet?.ResourceRecords?.map(
+      (r) => r.Value
+    );
+    expect(values).toHaveLength(6);
+    for (const googleValue of googleMxValues) {
+      expect(values).toContain(googleValue);
+    }
+    expect(values).toContain(sesMxValue);
+  });
+
+  it("emits no MX change when the SES MX value is already present (idempotent re-run)", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: `${receivingDomain}.`,
+          Type: "MX",
+          TTL: 1800,
+          ResourceRecords: [{ Value: sesMxValue }],
+        },
+      ],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+    // Only the TXT (SPF) record is new here; the MX is already correct.
+    expect(result.recordsCreated).toBe(1);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    expect(findChange(changes, "MX")).toBeUndefined();
+    expect(findChange(changes, "TXT")).toBeDefined();
+  });
+
+  it("emits no TXT change when an SPF (v=spf1) TXT record already exists", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: `${receivingDomain}.`,
+          Type: "TXT",
+          TTL: 900,
+          ResourceRecords: [{ Value: '"v=spf1 -all"' }],
+        },
+      ],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+    // Only the MX record is new here; the TXT/SPF is deliberately left alone.
+    expect(result.recordsCreated).toBe(1);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    expect(findChange(changes, "TXT")).toBeUndefined();
+    expect(findChange(changes, "MX")).toBeDefined();
+
+    // A second v=spf1 record is an RFC 7208 PermError, so the skip must be
+    // surfaced, not silently dropped.
+    expect(result.errors?.some((e) => e.includes("SPF"))).toBe(true);
+  });
+
+  it("adds the SPF TXT alongside a non-SPF TXT without clobbering it", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: `${receivingDomain}.`,
+          Type: "TXT",
+          TTL: 300,
+          ResourceRecords: [{ Value: '"google-site-verification=abc123"' }],
+        },
+      ],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    const txtChange = findChange(changes, "TXT");
+
+    expect(txtChange?.ResourceRecordSet?.TTL).toBe(300);
+    const values = txtChange?.ResourceRecordSet?.ResourceRecords?.map(
+      (r) => r.Value
+    );
+    expect(values).toContain('"google-site-verification=abc123"');
+    expect(values).toContain(sesSpfValue);
+    expect(values).toHaveLength(2);
+  });
+
+  it("follows Route53 pagination to find the target record on a later page", async () => {
+    route53Mock
+      .on(ListResourceRecordSetsCommand)
+      .resolvesOnce({
+        ResourceRecordSets: [
+          {
+            Name: `${receivingDomain}.`,
+            Type: "MX",
+            TTL: 3600,
+            ResourceRecords: [{ Value: "1 aspmx.l.google.com" }],
+          },
+        ],
+        IsTruncated: true,
+        NextRecordName: `${receivingDomain}.`,
+        NextRecordType: "TXT",
+      })
+      .resolvesOnce({
+        ResourceRecordSets: [],
+        IsTruncated: false,
+      });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+    expect(
+      route53Mock.commandCalls(ListResourceRecordSetsCommand)
+    ).toHaveLength(2);
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+    const mxChange = findChange(changes, "MX");
+
+    // The MX data came back on page 1 — if pagination weren't followed
+    // correctly this would still pass, but a broken continuation (wrong
+    // StartRecordName/StartRecordType) would either loop, skip page 2, or
+    // silently drop the page-1 data. Assert both effects to catch that.
+    const values = mxChange?.ResourceRecordSet?.ResourceRecords?.map(
+      (r) => r.Value
+    );
+    expect(values).toContain("1 aspmx.l.google.com");
+    expect(values).toContain(sesMxValue);
+    expect(findChange(changes, "TXT")).toBeDefined();
+  });
+
+  it("returns a permission-naming failure when ListResourceRecordSets is denied, without calling ChangeResourceRecordSets", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).rejects(
+      Object.assign(new Error("User is not authorized"), {
+        name: "AccessDeniedException",
+        $metadata: { httpStatusCode: 403 },
+      })
+    );
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(false);
+    expect(
+      result.errors?.some((e) => e.includes("route53:ListResourceRecordSets"))
+    ).toBe(true);
+    expect(
+      route53Mock.commandCalls(ChangeResourceRecordSetsCommand)
+    ).toHaveLength(0);
+  });
+
+  it("surfaces Route53's own InvalidChangeBatch message on a Change failure", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [],
+      IsTruncated: false,
+    });
+    route53Mock.on(ChangeResourceRecordSetsCommand).rejects(
+      Object.assign(new Error("Record already exists at this name"), {
+        name: "InvalidChangeBatch",
+        $metadata: { httpStatusCode: 400 },
+      })
+    );
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual(["Record already exists at this name"]);
+  });
+
+  it("makes no API call and returns recordsCreated: 0 when nothing needs to change", async () => {
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: `${receivingDomain}.`,
+          Type: "MX",
+          TTL: 1800,
+          ResourceRecords: [{ Value: sesMxValue }],
+        },
+        {
+          Name: `${receivingDomain}.`,
+          Type: "TXT",
+          TTL: 1800,
+          ResourceRecords: [{ Value: '"v=spf1 include:amazonses.com ~all"' }],
+        },
+      ],
+      IsTruncated: false,
+    });
+
+    const result = await runInboundWrite();
+
+    expect(result.success).toBe(true);
+    expect(result.recordsCreated).toBe(0);
+    expect(
+      route53Mock.commandCalls(ChangeResourceRecordSetsCommand)
+    ).toHaveLength(0);
   });
 });
 

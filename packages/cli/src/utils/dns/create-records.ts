@@ -3,7 +3,10 @@
  */
 
 import {
+  type Change,
   ChangeResourceRecordSetsCommand,
+  ListResourceRecordSetsCommand,
+  type ListResourceRecordSetsCommandOutput,
   Route53Client,
 } from "@aws-sdk/client-route-53";
 import pc from "picocolors";
@@ -11,6 +14,7 @@ import {
   createSelectedDNSRecords,
   type ProposedDNSRecord,
 } from "../route53.js";
+import { isAWSError } from "../shared/errors.js";
 import { CloudflareDNSClient } from "./cloudflare.js";
 import type { DNSCredentials } from "./credentials.js";
 import type { DNSCreationResult, EmailDNSRecordData } from "./types.js";
@@ -368,6 +372,247 @@ export async function createDNSRecordsForProvider(
   }
 }
 
+/** Existing Route53 record set data relevant to the inbound write. */
+type ExistingRoute53RecordSet = {
+  ttl?: number;
+  values: string[];
+};
+
+/**
+ * Strip a single trailing dot and lowercase, so `example.com` and
+ * `Example.com.` (as Route53 returns it) compare equal.
+ */
+function normalizeRoute53Name(name: string): string {
+  return name.replace(/\.$/, "").toLowerCase();
+}
+
+/**
+ * Read the existing MX and TXT record sets at `name` in a Route53 hosted
+ * zone, following pagination until the target name's records are found or
+ * the zone is exhausted.
+ *
+ * Route53 `UPSERT` replaces an entire record set — it does not append — so
+ * the inbound write must know what is already there (e.g. a customer's
+ * existing Google Workspace MX records) before composing its own UPSERT.
+ */
+async function listExistingRoute53InboundRecords(
+  client: Route53Client,
+  hostedZoneId: string,
+  name: string
+): Promise<Map<"MX" | "TXT", ExistingRoute53RecordSet>> {
+  const targetName = normalizeRoute53Name(name);
+  const found = new Map<"MX" | "TXT", ExistingRoute53RecordSet>();
+
+  let startRecordName: string | undefined = name;
+  let startRecordType: "MX" | "TXT" | undefined;
+  const MAX_PAGES = 50;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const response: ListResourceRecordSetsCommandOutput = await client.send(
+      new ListResourceRecordSetsCommand({
+        HostedZoneId: hostedZoneId,
+        StartRecordName: startRecordName,
+        StartRecordType: startRecordType,
+      })
+    );
+
+    const rrsets = response.ResourceRecordSets ?? [];
+    let movedPastTarget = false;
+
+    for (const rrset of rrsets) {
+      if (!(rrset.Name && rrset.Type)) {
+        continue;
+      }
+      if (normalizeRoute53Name(rrset.Name) !== targetName) {
+        movedPastTarget = true;
+        break;
+      }
+      if (rrset.Type === "MX" || rrset.Type === "TXT") {
+        found.set(rrset.Type, {
+          ttl: rrset.TTL,
+          values: (rrset.ResourceRecords ?? [])
+            .map((r) => r.Value)
+            .filter((v): v is string => Boolean(v)),
+        });
+      }
+    }
+
+    if (movedPastTarget || !response.IsTruncated) {
+      break;
+    }
+
+    startRecordName = response.NextRecordName;
+    startRecordType = response.NextRecordType as "MX" | "TXT" | undefined;
+    if (!startRecordName) {
+      break;
+    }
+  }
+
+  return found;
+}
+
+/**
+ * Build the Route53 Change for the inbound MX record, merging with any
+ * existing MX values rather than replacing them.
+ * Returns null when no change is needed (the SES value is already present).
+ */
+function buildRoute53InboundMXChange(
+  record: DNSRecordInfo,
+  existing: ExistingRoute53RecordSet | undefined
+): Change | null {
+  const sesValue = `${record.priority} ${record.value}`;
+
+  if (!existing) {
+    return {
+      Action: "UPSERT",
+      ResourceRecordSet: {
+        Name: record.name,
+        Type: "MX",
+        TTL: 1800,
+        ResourceRecords: [{ Value: sesValue }],
+      },
+    };
+  }
+
+  if (existing.values.includes(sesValue)) {
+    return null;
+  }
+
+  const union = Array.from(new Set([...existing.values, sesValue]));
+  return {
+    Action: "UPSERT",
+    ResourceRecordSet: {
+      Name: record.name,
+      Type: "MX",
+      TTL: existing.ttl ?? 1800,
+      ResourceRecords: union.map((value) => ({ Value: value })),
+    },
+  };
+}
+
+/**
+ * Build the Route53 Change for the inbound SPF TXT record.
+ *
+ * Never appends a second `v=spf1` value — two SPF records on one name is a
+ * PermError under RFC 7208 §4.5, so an existing SPF record is left alone and
+ * reported back via `skippedReason` rather than merged or replaced.
+ * A non-SPF TXT (e.g. a `google-site-verification=` value) is preserved by
+ * unioning it with the new SPF value.
+ */
+function buildRoute53InboundTXTChange(
+  record: DNSRecordInfo,
+  existing: ExistingRoute53RecordSet | undefined
+): { change: Change | null; skippedReason?: string } {
+  const hasExistingSpf = (existing?.values ?? []).some((value) =>
+    value.replace(/^"|"$/g, "").startsWith("v=spf1")
+  );
+
+  if (hasExistingSpf) {
+    return {
+      change: null,
+      skippedReason: `Skipped SPF record for ${record.name}: an SPF (v=spf1) TXT record already exists there, and two v=spf1 records on one name is invalid (RFC 7208). Add "include:amazonses.com" to the existing record yourself.`,
+    };
+  }
+
+  const sesValue = `"${record.value}"`;
+
+  if (!existing) {
+    return {
+      change: {
+        Action: "UPSERT",
+        ResourceRecordSet: {
+          Name: record.name,
+          Type: "TXT",
+          TTL: 1800,
+          ResourceRecords: [{ Value: sesValue }],
+        },
+      },
+    };
+  }
+
+  if (existing.values.includes(sesValue)) {
+    return { change: null };
+  }
+
+  const union = Array.from(new Set([...existing.values, sesValue]));
+  return {
+    change: {
+      Action: "UPSERT",
+      ResourceRecordSet: {
+        Name: record.name,
+        Type: "TXT",
+        TTL: existing.ttl ?? 1800,
+        ResourceRecords: union.map((value) => ({ Value: value })),
+      },
+    },
+  };
+}
+
+/**
+ * Translate a Route53 failure into a DNSCreationResult with a specific,
+ * actionable message. A matching `error.name` is trustworthy; per the AWS
+ * SDK v3 caveat, a non-matching name proves nothing, so unrecognised errors
+ * fall through to a generic (but clearly labelled) message rather than being
+ * misclassified.
+ */
+function classifyRoute53Error(
+  error: unknown,
+  operation: "ListResourceRecordSets" | "ChangeResourceRecordSets",
+  hostedZoneId: string
+): DNSCreationResult {
+  if (!isAWSError(error)) {
+    return {
+      success: false,
+      recordsCreated: 0,
+      errors: [error instanceof Error ? error.message : "Unknown error"],
+    };
+  }
+
+  if (error.name === "NoSuchHostedZone") {
+    return {
+      success: false,
+      recordsCreated: 0,
+      errors: [`Route53 hosted zone ${hostedZoneId} was not found.`],
+    };
+  }
+
+  if (error.name === "AccessDenied" || error.name === "AccessDeniedException") {
+    const permission =
+      operation === "ListResourceRecordSets"
+        ? "route53:ListResourceRecordSets"
+        : "route53:ChangeResourceRecordSets";
+    return {
+      success: false,
+      recordsCreated: 0,
+      errors: [
+        `Missing IAM permission ${permission} on hosted zone ${hostedZoneId}.`,
+      ],
+    };
+  }
+
+  if (error.name === "InvalidChangeBatch") {
+    return {
+      success: false,
+      recordsCreated: 0,
+      errors: [error.message],
+    };
+  }
+
+  if (error.name === "PriorRequestNotComplete" || error.name === "Throttling") {
+    return {
+      success: false,
+      recordsCreated: 0,
+      errors: [`Route53 is busy (${error.name}) — retry in a moment.`],
+    };
+  }
+
+  return {
+    success: false,
+    recordsCreated: 0,
+    errors: [`Unclassified Route53 ${operation} failure: ${error.message}`],
+  };
+}
+
 /**
  * Create inbound DNS records (MX + SPF) using the appropriate provider
  * @param parentDomain - The root domain (e.g., "wraps.dev") needed for Vercel DNS zone
@@ -382,40 +627,75 @@ export async function createInboundDNSRecordsForProvider(
 
   switch (credentials.provider) {
     case "route53": {
+      const client = new Route53Client({ region });
+
+      let existing: Map<"MX" | "TXT", ExistingRoute53RecordSet>;
       try {
-        const client = new Route53Client({ region });
+        existing = await listExistingRoute53InboundRecords(
+          client,
+          credentials.hostedZoneId,
+          receivingDomain
+        );
+      } catch (error) {
+        return classifyRoute53Error(
+          error,
+          "ListResourceRecordSets",
+          credentials.hostedZoneId
+        );
+      }
+
+      const changes: Change[] = [];
+      const skipped: string[] = [];
+
+      for (const record of records) {
+        if (record.type === "MX") {
+          const change = buildRoute53InboundMXChange(
+            record,
+            existing.get("MX")
+          );
+          if (change) {
+            changes.push(change);
+          }
+        } else if (record.type === "TXT") {
+          const { change, skippedReason } = buildRoute53InboundTXTChange(
+            record,
+            existing.get("TXT")
+          );
+          if (change) {
+            changes.push(change);
+          }
+          if (skippedReason) {
+            skipped.push(skippedReason);
+          }
+        }
+      }
+
+      if (changes.length === 0) {
+        return {
+          success: true,
+          recordsCreated: 0,
+          ...(skipped.length > 0 ? { errors: skipped } : {}),
+        };
+      }
+
+      try {
         await client.send(
           new ChangeResourceRecordSetsCommand({
             HostedZoneId: credentials.hostedZoneId,
-            ChangeBatch: {
-              Changes: records.map((r) => ({
-                Action: "UPSERT" as const,
-                ResourceRecordSet: {
-                  Name: r.name,
-                  Type: r.type,
-                  TTL: 1800,
-                  ResourceRecords: [
-                    {
-                      Value:
-                        r.type === "MX"
-                          ? `${r.priority} ${r.value}`
-                          : r.type === "TXT"
-                            ? `"${r.value}"`
-                            : r.value,
-                    },
-                  ],
-                },
-              })),
-            },
+            ChangeBatch: { Changes: changes },
           })
         );
-        return { success: true, recordsCreated: records.length };
-      } catch (error) {
         return {
-          success: false,
-          recordsCreated: 0,
-          errors: [error instanceof Error ? error.message : "Unknown error"],
+          success: true,
+          recordsCreated: changes.length,
+          ...(skipped.length > 0 ? { errors: skipped } : {}),
         };
+      } catch (error) {
+        return classifyRoute53Error(
+          error,
+          "ChangeResourceRecordSets",
+          credentials.hostedZoneId
+        );
       }
     }
 
