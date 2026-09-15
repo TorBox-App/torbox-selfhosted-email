@@ -89,6 +89,15 @@ const QUEUE_URL = process.env.BATCH_QUEUE_URL;
 export const QUOTA_STUCK_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
 /** Minimum gap between stuck escalations for the same broadcast. */
 export const QUOTA_STUCK_ALERT_INTERVAL_MS = 72 * 60 * 60 * 1000; // 72h
+/**
+ * A persisted `in_danger` verdict older than this is treated as unknown, not
+ * as dangerous. The account-health sweep runs hourly (infra/cron.ts:225); three
+ * missed sweeps means the sweep itself is broken, and a broken monitor must
+ * not hold every broadcast hostage forever. Fail open, log it, keep sending —
+ * the same contract plan 206's preflight uses ("a check that could not run
+ * must never block").
+ */
+export const REPUTATION_VERDICT_STALE_MS = 3 * 60 * 60 * 1000; // 3h
 // Staleness threshold: 3× the Lambda timeout (infra/queues.ts:95 = 5 min).
 // A live execution's claim can never be older than 15 minutes; anything older
 // means the Lambda crashed before completing, so reclaim is safe.
@@ -871,6 +880,108 @@ async function notifyBroadcastDailyQuotaPaused(
 }
 
 /**
+ * Write a broadcast-paused inbox notification for a dangerous SES health
+ * verdict, deduplicated per batch per 24h. Mirrors
+ * notifyBroadcastDailyQuotaPaused's shape exactly — never lets a
+ * notification failure break the send loop.
+ */
+async function notifyBroadcastReputationPaused(
+  batchId: string,
+  organizationId: string,
+  reasons: string[]
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const already = await hasRecentNotification({
+      organizationId,
+      type: "broadcast.reputation_paused",
+      since,
+      dataEquals: { key: "batchId", value: batchId },
+    });
+    if (already) {
+      return;
+    }
+
+    const [[batch], [org]] = await Promise.all([
+      db
+        .select({ name: batchSend.name, subject: batchSend.subject })
+        .from(batchSend)
+        .where(
+          and(
+            eq(batchSend.id, batchId),
+            eq(batchSend.organizationId, organizationId)
+          )
+        )
+        .limit(1),
+      db
+        .select({ slug: organization.slug })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
+    if (!(batch && org?.slug)) {
+      return;
+    }
+
+    const label = batch.name || batch.subject || "Broadcast";
+    const title = `Broadcast "${label}" paused — your SES account is in danger`;
+    // Review-tier reasons (bounce_review, complaint_review, quota_high,
+    // enforcement_probation) are noise next to a pause-line breach — filter
+    // them from the body. data.reasons and the structured log above keep
+    // full fidelity for debugging.
+    const bodyParts = reasons
+      .filter(
+        (reason) =>
+          !reason.endsWith("_review") &&
+          reason !== "quota_high" &&
+          reason !== "enforcement_probation"
+      )
+      .map((reason) => {
+        if (reason === "sending_disabled") {
+          return "AWS has disabled sending on this account.";
+        }
+        if (reason === "enforcement_shutdown") {
+          return "AWS enforcement status is SHUTDOWN.";
+        }
+        if (reason.startsWith("enforcement_")) {
+          return `AWS enforcement status is ${reason.slice("enforcement_".length).toUpperCase()}.`;
+        }
+        if (reason === "bounce_pause") {
+          return "Bounce rate is at or above AWS's 10% pause line.";
+        }
+        if (reason === "complaint_pause") {
+          return "Complaint rate is at or above AWS's 0.5% pause line.";
+        }
+        return reason;
+      });
+    const body = `${bodyParts.join(" ")} Sending resumes automatically once the hourly health check clears. Open the AWS account in Wraps for the numbers.`;
+
+    await notifyOrg({
+      organizationId,
+      roles: ["owner", "admin", "marketing"],
+      type: "broadcast.reputation_paused",
+      title,
+      body,
+      href: `/${org.slug}/emails/broadcasts/${batchId}`,
+      data: { batchId, reasons },
+    });
+  } catch (error) {
+    captureException(error, {
+      tags: {
+        worker: "batch-sender",
+        stage: "reputation-paused-notification",
+      },
+      extra: { batchId, organizationId },
+    });
+    log.error(
+      "Failed to write broadcast-reputation-paused notification",
+      error,
+      { batchId, organizationId }
+    );
+  }
+}
+
+/**
  * Write a terminal/transitional status onto a batch, LOSING to a concurrent
  * cancel.
  *
@@ -1108,6 +1219,9 @@ async function processJob(
     .select({
       features: awsAccount.features,
       dailyQuotaReserve: awsAccount.dailyQuotaReserve,
+      healthStatus: awsAccount.healthStatus,
+      healthCheckedAt: awsAccount.healthCheckedAt,
+      healthDetail: awsAccount.healthDetail,
     })
     .from(awsAccount)
     .where(
@@ -1117,6 +1231,49 @@ async function processJob(
       )
     )
     .limit(1);
+
+  // Reputation gate: the hourly account-health sweep persists AWS's own
+  // verdict on aws_account (plan 205). A fresh `in_danger` — sending disabled,
+  // enforcement SHUTDOWN, or bounce/complaint past AWS's PAUSE line — means
+  // every further chunk either hard-fails or digs the hole deeper. Pause the
+  // chain exactly the way the two quota gates below do; the next cycle
+  // re-reads the verdict and resumes when it is anything else.
+  //
+  // Positive, fresh evidence only. NULL (never swept), `healthy`, `at_risk`
+  // (AWS's REVIEW line, already notified by the sweep) and a stale verdict all
+  // fall through. This runs before any messageSend claim, so returning here
+  // strands nothing and needs no releaseUnusedClaims.
+  if (channel === "email" && accountRow?.healthStatus === "in_danger") {
+    const checkedAt = accountRow.healthCheckedAt;
+    const verdictAgeMs = checkedAt ? Date.now() - checkedAt.getTime() : null;
+    if (verdictAgeMs !== null && verdictAgeMs <= REPUTATION_VERDICT_STALE_MS) {
+      const reasons = accountRow.healthDetail?.reasons ?? [];
+      log.warn("broadcast.reputation_paused", {
+        batchId,
+        chunkIndex,
+        organizationId,
+        awsAccountId,
+        reasons,
+        healthCheckedAt: checkedAt?.toISOString(),
+      });
+      await notifyBroadcastReputationPaused(batchId, organizationId, reasons);
+      // pausedAt, not lastChunkAt — see the quota_reserve gate below for why.
+      // biome-ignore lint/plugin: batchId is verified org-scoped by the "Scoped by (id, organizationId)" fetch in processJob above.
+      await db
+        .update(batchSend)
+        .set({ pausedReason: "reputation", pausedAt: new Date() })
+        .where(eq(batchSend.id, batchId));
+      await enqueueNextChunk(job, { delaySeconds: 900 });
+      return;
+    }
+    log.warn("broadcast.reputation_verdict_stale", {
+      batchId,
+      organizationId,
+      awsAccountId,
+      healthCheckedAt: checkedAt?.toISOString() ?? null,
+      verdictAgeMs,
+    });
+  }
 
   // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({
@@ -1883,11 +2040,12 @@ async function processJob(
       lastChunkAt: new Date(),
       lastChunkIndex: chunkIndex,
       lastCursor: nextCursor,
-      // This chunk got through, so whatever paused us is resolved. Both pause
-      // branches (quota reserve, daily quota) return before reaching here, so
-      // this only runs on real progress. pausedAt clears with it — a stale
-      // pausedAt left on a running batch would make broadcast-reaper treat a
-      // healthy chain as a dead pause loop and enqueue a duplicate.
+      // This chunk got through, so whatever paused us is resolved. All three
+      // pause branches (reputation, quota reserve, daily quota) return before
+      // reaching here, so this only runs on real progress. pausedAt clears
+      // with it — a stale pausedAt left on a running batch would make
+      // broadcast-reaper treat a healthy chain as a dead pause loop and
+      // enqueue a duplicate.
       pausedReason: null,
       pausedAt: null,
     })

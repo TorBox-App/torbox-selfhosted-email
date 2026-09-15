@@ -127,6 +127,26 @@ describe("isStaleDraft", () => {
   });
 });
 
+describe("getPausedPresentation", () => {
+  it("names the reputation pause and uses the destructive token", () => {
+    const paused = getPausedPresentation("processing", "reputation");
+    expect(paused?.label).toContain("in danger");
+    expect(paused?.color).toBe("bg-destructive/15 text-destructive");
+    expect(paused?.explanation).toMatch(/resumes automatically/i);
+  });
+  it("returns null for a reputation reason on a non-processing batch", () => {
+    expect(getPausedPresentation("completed", "reputation")).toBeNull();
+  });
+  it("still renders the two quota reasons", () => {
+    expect(getPausedPresentation("processing", "daily_quota")?.label).toContain(
+      "daily quota"
+    );
+    expect(
+      getPausedPresentation("processing", "quota_reserve")?.label
+    ).toContain("quota reserve");
+  });
+});
+
 describe("status badge palette", () => {
   it("uses only semantic theme tokens — no raw Tailwind palette", () => {
     const rawPalette =
@@ -136,6 +156,9 @@ describe("status badge palette", () => {
     }
     expect(
       getPausedPresentation("processing", "daily_quota")?.color
+    ).not.toMatch(rawPalette);
+    expect(
+      getPausedPresentation("processing", "reputation")?.color
     ).not.toMatch(rawPalette);
     expect(getZeroSendPresentation("completed", 0)?.color).not.toMatch(
       rawPalette

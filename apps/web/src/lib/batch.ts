@@ -69,6 +69,14 @@ export function getPausedPresentation(
         "Sending is held back so transactional email keeps its reserved quota. It resumes automatically as quota frees up.",
     };
   }
+  if (pausedReason === "reputation") {
+    return {
+      label: "Paused — SES account in danger",
+      color: "bg-destructive/15 text-destructive",
+      explanation:
+        "The hourly health check found this AWS account at or past an AWS enforcement line (sending disabled, or bounce/complaint rate at the pause threshold). Wraps paused this broadcast to protect the account. It resumes automatically once the check clears.",
+    };
+  }
   return {
     label: "Paused",
     color,
@@ -234,7 +242,8 @@ export type BatchSendWithMeta = {
   // Error
   errorMessage: string | null;
   /** Non-null while the worker is re-enqueueing without sending. Set by the
-   *  batch-sender; `'quota_reserve'` = held back to protect transactional mail,
+   *  batch-sender; `'reputation'` = the account's SES health verdict is
+   *  in_danger, `'quota_reserve'` = held back to protect transactional mail,
    *  `'daily_quota'` = the account's SES 24h quota is spent. Cleared on the
    *  first chunk that actually sends. */
   pausedReason: string | null;

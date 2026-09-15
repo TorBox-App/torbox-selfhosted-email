@@ -175,7 +175,9 @@ export const batchSend = pgTable(
     errorDetails: json("error_details").$type<Record<string, unknown>>(),
 
     // Why the worker is currently re-enqueueing this batch without sending.
-    // NULL = not paused. Values: 'quota_reserve' | 'daily_quota'.
+    // NULL = not paused. Values: 'reputation' | 'quota_reserve' | 'daily_quota'.
+    // 'reputation' = the account's persisted SES health verdict is
+    // `in_danger` (plan 323).
     // Deliberately not a status enum value — 163 excluded a `paused` status to
     // avoid an enum migration and downstream UI states.
     pausedReason: text("paused_reason"),
