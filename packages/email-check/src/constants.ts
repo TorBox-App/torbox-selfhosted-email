@@ -375,7 +375,7 @@ export const IP_BLACKLISTS: BlacklistConfig[] = [
   { name: "Anonmails", zone: "spam.dnsbl.anonmails.de", priority: "low" },
 
   // Reputation lists
-  { name: "Composite BL", zone: "cbl.anti-spam.org.cn", priority: "low" },
+  // cbl.anti-spam.org.cn removed: dead zone, wildcards every query to 208.98.x.x
 ];
 
 // =============================================================================

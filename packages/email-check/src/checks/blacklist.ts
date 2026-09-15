@@ -31,10 +31,20 @@ const TEST_RETURN_CODES = new Set([
 ]);
 
 /**
- * Check if a return code is a test/error response
+ * A DNSBL signals a listing with an A record in 127.0.0.0/8. A routable answer
+ * means the zone is dead or wildcarded, not that the target is listed.
+ */
+export function isValidListingResponse(returnCode: string): boolean {
+  return returnCode.startsWith("127.");
+}
+
+/**
+ * Check if a return code is a test/error response, or not a listing at all
  */
 function isTestResponse(returnCode: string): boolean {
-  return TEST_RETURN_CODES.has(returnCode);
+  return (
+    !isValidListingResponse(returnCode) || TEST_RETURN_CODES.has(returnCode)
+  );
 }
 
 export type BlacklistCheckOptions = {
