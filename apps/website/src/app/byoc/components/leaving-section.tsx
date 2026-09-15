@@ -19,7 +19,8 @@ export function LeavingSection() {
             sending. None of that requires an active Wraps subscription.
           </p>
           <p className="mb-4 text-muted-foreground">
-            Contacts, templates, and workflows live on the Wraps platform.
+            Contacts, templates, workflows and the per-message send records that
+            drive the dashboard live on the Wraps platform, not in your account.
             Export them before you go.
           </p>
           <p className="text-muted-foreground">

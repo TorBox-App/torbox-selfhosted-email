@@ -23,25 +23,56 @@ export const faqItems: FaqItem[] = [
     value: "item-1",
     question: "How is this different from using AWS SES directly?",
     answer:
-      "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, and a dashboard out of the box. The TypeScript SDK is just `email.send()` - no boilerplate.",
+      "Two things. Setup: Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual work, and the TypeScript SDK is just `email.send()`. Then the part that lasts longer — running it. The dashboard is a control plane for the daily job: bounce and complaint rates drawn against the lines AWS reviews and pauses at, swept hourly; suppression you can browse and clear; deliverability and blacklist audits; every message searchable. SES gives you none of that on its own.",
     richAnswer: (
       <>
-        Wraps deploys all the infrastructure AWS SES needs (IAM roles,
-        EventBridge, DynamoDB, Lambda, SQS) in{" "}
+        Two things. Setup: Wraps deploys all the infrastructure AWS SES needs
+        (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in{" "}
         <a className={faqLink} href="/docs/quickstart/email">
           one command
         </a>{" "}
-        instead of 2+ hours of manual setup. You get event tracking, analytics,
-        and a{" "}
-        <a className={faqLink} href="/platform">
-          dashboard
-        </a>{" "}
-        out of the box. The{" "}
+        instead of 2+ hours of manual work, and the{" "}
         <a className={faqLink} href="/docs/sdk-reference">
           TypeScript SDK
         </a>{" "}
-        is just <code className={faqCode}>email.send()</code> &mdash; no
-        boilerplate.
+        is just <code className={faqCode}>email.send()</code>. Then the part
+        that lasts longer &mdash; running it. The{" "}
+        <a className={faqLink} href="/platform">
+          dashboard
+        </a>{" "}
+        is a control plane for the daily job: bounce and complaint rates drawn
+        against the lines AWS reviews and pauses at, swept hourly; suppression
+        you can browse and clear; deliverability and blacklist audits; every
+        message searchable. SES gives you none of that on its own.
+      </>
+    ),
+  },
+  {
+    value: "item-1b",
+    question: "How is this different from the free open-source SES wrappers?",
+    answer:
+      "Wraps is one of them — it is AGPL-3.0 and you can self-host the whole stack, so open source is table stakes in this category rather than the difference. The difference is what happens past the send API. OpenSend, useSend and MillionSend give you an API and a dashboard over your own SES; checked in September 2026, none of them watches your account against the rates AWS suspends over, governs bounces past emitting a webhook, or runs blacklist and authentication audits. They also want AWS credentials in a container you run, where Wraps assumes an IAM role you can revoke. Our CLI and SDKs are free and open source too, so if the deploy is all you want, take that.",
+    richAnswer: (
+      <>
+        Wraps is one of them &mdash; it is{" "}
+        <a
+          className={faqLink}
+          href="https://github.com/wraps-team/wraps/blob/main/LICENSE"
+        >
+          AGPL-3.0
+        </a>{" "}
+        and you can self-host the whole stack, so open source is table stakes in
+        this category rather than the difference. The difference is what happens
+        past the send API. OpenSend, useSend and MillionSend give you an API and
+        a dashboard over your own SES; checked in September 2026, none of them
+        watches your account against the rates AWS suspends over, governs
+        bounces past emitting a webhook, or runs blacklist and authentication
+        audits. They also want AWS credentials in a container you run, where
+        Wraps assumes an IAM role you can revoke. The full rubric is on{" "}
+        <a className={faqLink} href="/approaches">
+          the approaches page
+        </a>
+        .
       </>
     ),
   },

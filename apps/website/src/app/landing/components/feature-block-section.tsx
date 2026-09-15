@@ -33,7 +33,7 @@ const checks: Check[] = [
     icon: ShieldCheck,
     title: "Reputation protection",
     description:
-      "Bounces and complaints are tracked automatically; suppression prevents re-sends.",
+      "Bounce and complaint rates drawn against the lines AWS reviews and pauses at, swept hourly. Suppression is wired on from the first send.",
   },
   {
     icon: Lock,

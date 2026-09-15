@@ -7,13 +7,15 @@ export function CTASection() {
     <section className="py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionKicker>Get started</SectionKicker>
-        <p className="mb-6 max-w-[18ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
-          Your infrastructure. Your data.{" "}
-          <span className="text-brand">Your AWS bill.</span>
+        <p className="mb-6 max-w-[20ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
+          One command to set it up.{" "}
+          <span className="text-brand">One place to run it.</span>
         </p>
 
         <p className="mb-8 max-w-[52ch] text-muted-foreground">
-          Deploy in one command. Cancel anytime.
+          About two minutes, and nothing you already have in the account gets
+          touched. Cancel whenever — the infrastructure is yours and keeps
+          sending.
         </p>
 
         <CTAButtons />
