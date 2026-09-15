@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildConsolePolicyDocument } from "../platform/update-role.js";
 
@@ -112,10 +111,14 @@ describe("wraps-console-access-role policy: every read-only ses: action is a mar
     // MARKER_ACTIONS mirrors RUNGS by hand. The check above catches the policy
     // gaining an action the ladder lacks; this catches an entry added here with
     // no matching rung, which would pass silently and leave the ladder short.
+    // Anchored to this file rather than process.cwd(), so the guard resolves
+    // the same whether vitest is launched from packages/cli or from the repo
+    // root. Its sibling console-access-policy-parity.test.ts crosses the
+    // monorepo the same way, as a file-relative specifier.
     const apiSource = readFileSync(
-      path.resolve(
-        process.cwd(),
-        "../../apps/api/src/lib/console-policy-version.ts"
+      new URL(
+        "../../../../../apps/api/src/lib/console-policy-version.ts",
+        import.meta.url
       ),
       "utf8"
     );
