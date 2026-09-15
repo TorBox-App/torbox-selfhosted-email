@@ -636,6 +636,19 @@ export async function inboundDestroy(
       `This will remove inbound email for ${pc.cyan(inboundConfig.receivingDomain || "")}`
     );
 
+    // Reply-threading routes through the same receipt rule set this command
+    // tears down (deleteReceiptRule/deleteReceiptRuleSet below), so
+    // destroying inbound silently breaks signed reply addresses for every
+    // domain reply-threading is configured on. Warn — but this command
+    // never deletes r.mail records itself; that belongs to `email reply
+    // destroy` alone, per this plan's ownership rule.
+    const replyThreading = emailService.config.replyThreading;
+    if (replyThreading?.enabled && replyThreading.domains.length > 0) {
+      clack.log.warn(
+        `Reply threading will stop working for ${replyThreading.domains.map((d) => pc.cyan(d.domain)).join(", ")} once inbound infrastructure is removed. Run ${pc.cyan("wraps email reply destroy")} to clean those up.`
+      );
+    }
+
     if (allInboundDomains.length > 0) {
       const { buildInboundDNSRecords: buildRecordsForDisplay } = await import(
         "../../utils/dns/index.js"

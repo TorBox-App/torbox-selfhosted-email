@@ -58,6 +58,8 @@ vi.mock("../../../utils/email/receipt-rules.js", async (importOriginal) => {
     addDomainToReceiptRule: vi.fn().mockResolvedValue(undefined),
     removeDomainFromReceiptRule: vi.fn().mockResolvedValue(undefined),
     getReceiptRuleDomains: vi.fn().mockResolvedValue([]),
+    deleteReceiptRule: vi.fn().mockResolvedValue(undefined),
+    deleteReceiptRuleSet: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -164,7 +166,34 @@ vi.mock("../../../utils/dns/index.js", async () => {
   };
 });
 
-import { inboundAdd, inboundRemove } from "../inbound.js";
+// Mock Pulumi so inboundDestroy's stack redeploy never touches a real
+// workspace. Only inboundDestroy (of the functions under test in this file)
+// reaches this path — inboundAdd/inboundRemove never redeploy the stack.
+vi.mock("@pulumi/pulumi", () => ({
+  automation: {
+    LocalWorkspace: {
+      createOrSelectStack: vi.fn().mockResolvedValue({
+        setConfig: vi.fn().mockResolvedValue(undefined),
+        up: vi.fn().mockResolvedValue({ outputs: {} }),
+      }),
+    },
+  },
+}));
+
+vi.mock("../../../utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(undefined),
+  previewWithResourceChanges: vi.fn(),
+  withLockRetry: vi
+    .fn()
+    .mockImplementation(async (fn: () => Promise<unknown>) => fn()),
+}));
+
+vi.mock("../../../utils/shared/fs.js", () => ({
+  ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
+  getPulumiWorkDir: vi.fn().mockReturnValue("/tmp/wraps-test/pulumi"),
+}));
+
+import { inboundAdd, inboundDestroy, inboundRemove } from "../inbound.js";
 
 const baseMetadata = {
   version: "1.0.0",
@@ -542,6 +571,101 @@ describe("buildInboundDNSRecords", () => {
       value: "v=spf1 include:amazonses.com ~all",
       category: "inbound_spf",
     });
+  });
+});
+
+describe("inboundDestroy", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    setJsonMode(false);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
+
+    const { confirm } = await import("@clack/prompts");
+    // Interactive path (no --force), proceeding — reaches the full teardown
+    // deterministically without relying on process.exit fallthrough behavior.
+    vi.mocked(confirm).mockResolvedValue(true);
+  });
+
+  // The ownership rule this plan encodes: r.mail.<domain> belongs to
+  // reply-threading and is deleted only by `email reply destroy`, never as
+  // a side effect of removing inbound receiving domains. dnsProvider is set
+  // so the inbound DNS cleanup path actually runs (and therefore actually
+  // calls deleteInboundDNSRecordsForProvider) — otherwise the "no r.mail
+  // argument" assertion below would be trivially true for the wrong reason.
+  it("warns about reply-threading and deletes no r.mail record, even while deleting the inbound domain's own DNS", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    const meta = cloneMetadata((m) => {
+      (m.services.email as { dnsProvider?: string }).dnsProvider = "cloudflare";
+      // biome-ignore lint/suspicious/noExplicitAny: test setup
+      (m.services.email.config as any).replyThreading = {
+        enabled: true,
+        domains: [
+          {
+            domain: "example.com",
+            parameterArn:
+              "arn:aws:ssm:us-east-1:123456789012:parameter/wraps/email/reply-secret/example.com",
+            parameterName: "/wraps/email/reply-secret/example.com",
+            currentKid: 1,
+            createdAt: "2024-01-01T00:00:00.000Z",
+          },
+        ],
+      };
+    });
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(meta);
+
+    const { deleteInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+    vi.mocked(deleteInboundDNSRecordsForProvider).mockResolvedValue({
+      deleted: ["MX in.example.com"],
+      skipped: [],
+      supported: true,
+      errors: [],
+    });
+
+    await inboundDestroy({});
+
+    // Positive assertion first: the warning must actually fire, so this
+    // test cannot pass via an early return that skips everything.
+    const { log } = await import("@clack/prompts");
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      expect.stringContaining("Reply threading will stop working")
+    );
+
+    // DNS cleanup for the inbound receiving domain did run...
+    expect(vi.mocked(deleteInboundDNSRecordsForProvider)).toHaveBeenCalled();
+
+    // ...but never with an r.mail name, on any call, for any argument.
+    for (const call of vi.mocked(deleteInboundDNSRecordsForProvider).mock
+      .calls) {
+      for (const arg of call) {
+        expect(typeof arg === "string" && arg.startsWith("r.mail.")).toBe(
+          false
+        );
+      }
+    }
+  });
+
+  it("does not warn when reply-threading is not configured", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(cloneMetadata());
+
+    await inboundDestroy({});
+
+    const { log } = await import("@clack/prompts");
+    const warnedAboutReplyThreading = vi
+      .mocked(log.warn)
+      .mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("Reply threading will stop working")
+      );
+    expect(warnedAboutReplyThreading).toBe(false);
   });
 });
 

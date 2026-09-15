@@ -178,6 +178,12 @@ vi.mock("../../utils/dns/index.js", async () => {
       supported: true,
       errors: [],
     }),
+    deleteInboundDNSRecordsForProvider: vi.fn().mockResolvedValue({
+      deleted: [],
+      skipped: [],
+      supported: true,
+      errors: [],
+    }),
     buildInboundDNSRecords: vi.fn().mockReturnValue([]),
     formatManualDNSInstructions: vi.fn().mockReturnValue(""),
     getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
@@ -633,5 +639,186 @@ describe("replyDestroy", () => {
 
     expect(vi.mocked(saveConnectionMetadata)).toHaveBeenCalled();
     expect(order).toEqual(["deploy", "save"]);
+  });
+
+  describe("r.mail DNS cleanup", () => {
+    function metaWithReplyThreading(
+      domains: string[],
+      overrides?: (m: typeof baseMetadata) => void
+    ): typeof baseMetadata {
+      return cloneMetadata((m) => {
+        // biome-ignore lint/suspicious/noExplicitAny: test setup
+        (m.services.email as any).dnsProvider = "cloudflare";
+        // biome-ignore lint/suspicious/noExplicitAny: test setup
+        (m.services.email.config as any).replyThreading = {
+          enabled: true,
+          domains: domains.map((domain) => ({
+            domain,
+            parameterArn: `arn:aws:ssm:us-east-1:123456789012:parameter/wraps/email/reply-secret/${domain}`,
+            parameterName: `/wraps/email/reply-secret/${domain}`,
+            currentKid: 1,
+            createdAt: "2024-01-02T00:00:00.000Z",
+          })),
+        };
+        overrides?.(m);
+      });
+    }
+
+    it("deletes r.mail.<domain> via the resolved DNS provider, with the sending domain as parent", async () => {
+      const { loadConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      const { getDNSCredentials, deleteInboundDNSRecordsForProvider } =
+        await import("../../utils/dns/index.js");
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(
+        metaWithReplyThreading(["support.foo.com"])
+      );
+      deployHooks.deploy = vi.fn().mockResolvedValue(undefined);
+
+      await replyDestroy({ domain: "support.foo.com", force: true });
+
+      expect(vi.mocked(getDNSCredentials)).toHaveBeenCalledWith(
+        "cloudflare",
+        "support.foo.com",
+        "us-east-1"
+      );
+      expect(
+        vi.mocked(deleteInboundDNSRecordsForProvider)
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        "r.mail.support.foo.com",
+        "us-east-1",
+        "support.foo.com"
+      );
+    });
+
+    it("deletes r.mail records for every domain when --all removes multiple", async () => {
+      const { loadConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      const { deleteInboundDNSRecordsForProvider } = await import(
+        "../../utils/dns/index.js"
+      );
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(
+        metaWithReplyThreading(["support.foo.com", "sales.foo.com"])
+      );
+      deployHooks.deploy = vi.fn().mockResolvedValue(undefined);
+
+      await replyDestroy({ all: true, force: true });
+
+      expect(
+        vi.mocked(deleteInboundDNSRecordsForProvider)
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        "r.mail.support.foo.com",
+        "us-east-1",
+        "support.foo.com"
+      );
+      expect(
+        vi.mocked(deleteInboundDNSRecordsForProvider)
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        "r.mail.sales.foo.com",
+        "us-east-1",
+        "sales.foo.com"
+      );
+      expect(
+        vi.mocked(deleteInboundDNSRecordsForProvider)
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it("still saves metadata and does not throw when DNS cleanup rejects", async () => {
+      const { loadConnectionMetadata, saveConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      const { deleteInboundDNSRecordsForProvider } = await import(
+        "../../utils/dns/index.js"
+      );
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(
+        metaWithReplyThreading(["support.foo.com"])
+      );
+      deployHooks.deploy = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(deleteInboundDNSRecordsForProvider).mockRejectedValueOnce(
+        new Error("boom")
+      );
+
+      await expect(
+        replyDestroy({ domain: "support.foo.com", force: true })
+      ).resolves.toBeUndefined();
+
+      expect(vi.mocked(saveConnectionMetadata)).toHaveBeenCalled();
+    });
+
+    it("never calls deleteInboundDNSRecordsForProvider and still prints the manual reminder when no dnsProvider is on file", async () => {
+      const { loadConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      const { deleteInboundDNSRecordsForProvider } = await import(
+        "../../utils/dns/index.js"
+      );
+      const meta = cloneMetadata((m) => {
+        // No dnsProvider set — biome-ignore lint/suspicious/noExplicitAny: test setup
+        (m.services.email.config as any).replyThreading = {
+          enabled: true,
+          domains: [
+            {
+              domain: "support.foo.com",
+              parameterArn:
+                "arn:aws:ssm:us-east-1:123456789012:parameter/wraps/email/reply-secret/support.foo.com",
+              parameterName: "/wraps/email/reply-secret/support.foo.com",
+              currentKid: 1,
+              createdAt: "2024-01-02T00:00:00.000Z",
+            },
+          ],
+        };
+      });
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(meta);
+      deployHooks.deploy = vi.fn().mockResolvedValue(undefined);
+
+      await replyDestroy({ domain: "support.foo.com", force: true });
+
+      expect(
+        vi.mocked(deleteInboundDNSRecordsForProvider)
+      ).not.toHaveBeenCalled();
+
+      const { log } = await import("@clack/prompts");
+      expect(vi.mocked(log.info)).toHaveBeenCalledWith(
+        expect.stringContaining("Remove MX/SPF DNS records")
+      );
+    });
+
+    it("includes dnsDeleted in the --json payload", async () => {
+      const { loadConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      const { deleteInboundDNSRecordsForProvider } = await import(
+        "../../utils/dns/index.js"
+      );
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(
+        metaWithReplyThreading(["support.foo.com"])
+      );
+      deployHooks.deploy = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(deleteInboundDNSRecordsForProvider).mockResolvedValueOnce({
+        deleted: ["MX r.mail.support.foo.com"],
+        skipped: [],
+        supported: true,
+        errors: [],
+      });
+
+      setJsonMode(true);
+      await replyDestroy({ domain: "support.foo.com", force: true });
+      setJsonMode(false);
+
+      const jsonCall = consoleLogSpy.mock.calls
+        .map((call) => call[0])
+        .find(
+          (arg) =>
+            typeof arg === "string" && arg.includes("email.reply.destroy")
+        );
+
+      expect(jsonCall).toBeDefined();
+      const parsed = JSON.parse(jsonCall as string);
+      expect(parsed.data.dnsDeleted).toEqual(["MX r.mail.support.foo.com"]);
+    });
   });
 });

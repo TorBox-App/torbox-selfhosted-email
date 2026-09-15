@@ -19,6 +19,7 @@ import type {
   EmailReplyStatusOptions,
 } from "../../types/index.js";
 import { SES_RECEIVING_REGIONS } from "../../types/index.js";
+import type { InboundDNSCleanupResult } from "../../utils/dns/index.js";
 import {
   addDomainToReceiptRule,
   getReceiptRuleDomains,
@@ -981,12 +982,33 @@ function stripDomainFromReplyThreadingMetadata(params: {
   };
 }
 
+const UNSUPPORTED_REPLY_DNS_CLEANUP: InboundDNSCleanupResult = {
+  deleted: [],
+  skipped: [],
+  supported: false,
+  errors: [],
+};
+
+/**
+ * Delete the `r.mail.<domain>` MX/SPF records reply-threading created for
+ * `domain`, resolving the provider/credentials from metadata. Never throws —
+ * a DNS failure here must not abort `replyDestroy`, because the receipt-rule
+ * change (or the stack redeploy before it) has already happened and aborting
+ * would strand the user worse than a warning does.
+ *
+ * Absent or "manual" `dnsProvider` is treated as unsupported without
+ * prompting or probing providers — teardown is not the moment to ask
+ * someone to connect a DNS provider. `r.mail.<domain>` hangs off the sending
+ * domain itself, so `domain` doubles as both the receiving name (prefixed)
+ * and the parent domain passed to `deleteInboundDNSRecordsForProvider`.
+ */
 async function cleanupDomainInfra(params: {
   domain: string;
   region: string;
   progress: DeploymentProgress;
-}): Promise<void> {
-  const { domain, region, progress } = params;
+  metadata: NonNullable<Awaited<ReturnType<typeof loadConnectionMetadata>>>;
+}): Promise<InboundDNSCleanupResult> {
+  const { domain, region, progress, metadata } = params;
   await progress.execute(
     `Removing r.mail.${domain} from receipt rule`,
     async () => {
@@ -994,10 +1016,67 @@ async function cleanupDomainInfra(params: {
     }
   );
 
-  // Best-effort DNS guidance — mirrors inboundDestroy behavior.
-  clack.log.info(
-    `Remove MX/SPF DNS records for ${pc.cyan(`r.mail.${domain}`)} from your DNS provider.`
-  );
+  const dnsProvider = metadata.services.email?.dnsProvider;
+  if (!dnsProvider || dnsProvider === "manual") {
+    return UNSUPPORTED_REPLY_DNS_CLEANUP;
+  }
+
+  try {
+    const { getDNSCredentials, deleteInboundDNSRecordsForProvider } =
+      await import("../../utils/dns/index.js");
+    const credentialResult = await getDNSCredentials(
+      dnsProvider,
+      domain,
+      region
+    );
+
+    if (!(credentialResult.valid && credentialResult.credentials)) {
+      clack.log.warn(
+        `Could not validate ${dnsProvider} credentials to delete DNS records for r.mail.${domain}: ${credentialResult.error || "unknown error"}`
+      );
+      return UNSUPPORTED_REPLY_DNS_CLEANUP;
+    }
+
+    return await deleteInboundDNSRecordsForProvider(
+      credentialResult.credentials,
+      `r.mail.${domain}`,
+      region,
+      domain
+    );
+  } catch (error) {
+    clack.log.warn(
+      `Failed to delete DNS records for r.mail.${domain}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return UNSUPPORTED_REPLY_DNS_CLEANUP;
+  }
+}
+
+/**
+ * Print the result of `cleanupDomainInfra` — deleted/skipped/errored
+ * records, and the legacy manual-cleanup reminder only when cleanup was
+ * unsupported (no DNS provider on file, invalid credentials, or a thrown
+ * error). Mirrors `reportInboundDNSCleanup` (`inbound.ts`) — not exported
+ * there, and three similar lines beat a cross-module abstraction for a
+ * ~18-line block used by two command files.
+ */
+function reportReplyDNSCleanup(
+  result: InboundDNSCleanupResult,
+  domain: string
+): void {
+  for (const label of result.deleted) {
+    clack.log.success(`Deleted DNS record: ${label}`);
+  }
+  for (const skip of result.skipped) {
+    clack.log.warn(`Left DNS record in place: ${skip.record} (${skip.reason})`);
+  }
+  for (const err of result.errors) {
+    clack.log.warn(`DNS cleanup error: ${err}`);
+  }
+  if (!result.supported) {
+    clack.log.info(
+      `Remove MX/SPF DNS records for ${pc.cyan(`r.mail.${domain}`)} from your DNS provider.`
+    );
+  }
 }
 
 export async function replyDestroy(
@@ -1131,10 +1210,23 @@ export async function replyDestroy(
     );
   }
 
-  // Pulumi succeeded: now commit the AWS SES receipt-rule removals and
-  // persist the stripped metadata to disk.
+  // Pulumi succeeded: now commit the AWS SES receipt-rule removals, delete
+  // the r.mail DNS records reply-threading created, and persist the
+  // stripped metadata to disk. DNS cleanup runs before the metadata write —
+  // a DNS failure must not leave metadata claiming the domain is gone while
+  // DNS still points at SES.
+  const dnsCleanupByDomain: Array<{
+    domain: string;
+    result: InboundDNSCleanupResult;
+  }> = [];
   for (const domain of targets) {
-    await cleanupDomainInfra({ domain, region, progress });
+    const result = await cleanupDomainInfra({
+      domain,
+      region,
+      progress,
+      metadata,
+    });
+    dnsCleanupByDomain.push({ domain, result });
   }
 
   await saveConnectionMetadata(metadata);
@@ -1143,6 +1235,9 @@ export async function replyDestroy(
     jsonSuccess("email.reply.destroy", {
       removed: targets,
       region,
+      dnsDeleted: dnsCleanupByDomain.flatMap((d) => d.result.deleted),
+      dnsSkipped: dnsCleanupByDomain.flatMap((d) => d.result.skipped),
+      dnsSupported: dnsCleanupByDomain.some((d) => d.result.supported),
     });
     return;
   }
@@ -1152,6 +1247,9 @@ export async function replyDestroy(
   clack.log.success(`Removed reply threading for ${targets.join(", ")}.`);
   // biome-ignore lint/suspicious/noConsole: summary output
   console.log();
+  for (const { domain, result } of dnsCleanupByDomain) {
+    reportReplyDNSCleanup(result, domain);
+  }
 }
 
 // ---------------------------------------------------------------------------
