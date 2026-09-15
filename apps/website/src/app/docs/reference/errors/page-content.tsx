@@ -422,6 +422,12 @@ const CLI_ERROR_SECTIONS: ErrorSection[] = [
           "Wraps will activate wraps-inbound-rules, deactivating the current set",
       },
       {
+        code: "INBOUND_MX_CONFLICT",
+        message: "<domain> already has mail routed to it",
+        solution:
+          "Pick a subdomain with no existing MX record, e.g. wraps email inbound add --subdomain support. Or run interactively (without --yes) to confirm and proceed anyway.",
+      },
+      {
         code: "INBOUND_TEST_SEND_FAILED",
         message: "Failed to send inbound test email to <recipient>",
         solution: "Check wraps email status / wraps email doctor",
