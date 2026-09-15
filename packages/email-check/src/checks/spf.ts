@@ -232,7 +232,7 @@ async function parseAndValidateSpf(
     result.valid = false;
   } else if (allMechanism === "?all") {
     result.warnings.push(
-      "SPF uses ?all (neutral) - consider using -all or ~all"
+      "SPF uses ?all (neutral) - consider using ~all or -all"
     );
   } else if (!allMechanism) {
     result.warnings.push(

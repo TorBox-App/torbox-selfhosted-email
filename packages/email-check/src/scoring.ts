@@ -65,7 +65,7 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
   const bonuses: Bonus[] = [];
 
   // Collect all issues (for the detail view)
-  collectSpfIssues(checks.spf, deductions);
+  collectSpfIssues(checks.spf, checks.dmarc, deductions);
   collectDkimIssues(checks, deductions, bonuses);
   collectDmarcIssues(checks.dmarc, deductions, bonuses);
   collectInfraIssues(checks, deductions, bonuses);
@@ -219,7 +219,66 @@ function determineGrade(checks: AllCheckResults): "A" | "B" | "C" | "D" | "F" {
 // Issue Collection (populates deductions/bonuses for the detail view)
 // =============================================================================
 
-function collectSpfIssues(spf: SpfResult, deductions: Deduction[]): void {
+/**
+ * DMARC is "enforcing" when receivers will actually act on it: a published,
+ * valid record with p=quarantine or p=reject, and not in DMARCbis testing mode
+ * (t=y), which tells receivers not to enforce.
+ */
+function dmarcEnforces(dmarc: DmarcResult): boolean {
+  return (
+    dmarc.exists &&
+    dmarc.valid &&
+    !dmarc.testing &&
+    (dmarc.policy === "quarantine" || dmarc.policy === "reject")
+  );
+}
+
+const AUTHORIZING_MECHANISM =
+  /^(?:a|mx|ptr)(?:[:/]|$)|^(?:ip4|ip6|include|exists):/i;
+
+/**
+ * Whether the record authorizes any sender at all. A parked domain publishes
+ * "v=spf1 -all" — nothing but the terminator — and for those -all is exactly
+ * right, so the hardfail guidance below must not fire on them.
+ */
+function authorizesSenders(spf: SpfResult): boolean {
+  return (spf.record ?? "")
+    .trim()
+    .split(/\s+/)
+    .slice(1) // drop the v=spf1 version tag
+    .some((term) => {
+      if (/^redirect=/i.test(term)) {
+        return true;
+      }
+      return AUTHORIZING_MECHANISM.test(term.replace(/^[+\-~?]/, ""));
+    });
+}
+
+/**
+ * A hardfail terminator on a sending domain with nothing enforcing behind it.
+ *
+ * ~all is the recommendation for a sending domain (M3AAWG Email Authentication
+ * BCP); DMARC is what does the enforcing. -all only earns its keep once DMARC
+ * enforces — on its own it gets the message rejected pre-DATA, before DKIM can
+ * authenticate a forwarded copy and before the message can appear in an
+ * aggregate report. RFC 9989 section 7.1.
+ */
+export function hardfailWithoutEnforcingDmarc(
+  spf: SpfResult,
+  dmarc: DmarcResult
+): boolean {
+  return (
+    spf.allMechanism === "-all" &&
+    authorizesSenders(spf) &&
+    !dmarcEnforces(dmarc)
+  );
+}
+
+function collectSpfIssues(
+  spf: SpfResult,
+  dmarc: DmarcResult,
+  deductions: Deduction[]
+): void {
   if (!spf.exists) {
     deductions.push({ check: "spf", points: 5, reason: "No SPF record" });
     return;
@@ -260,11 +319,12 @@ function collectSpfIssues(spf: SpfResult, deductions: Deduction[]): void {
       points: 3,
       reason: "SPF ?all is too permissive",
     });
-  } else if (spf.allMechanism === "~all") {
+  } else if (hardfailWithoutEnforcingDmarc(spf, dmarc)) {
     deductions.push({
       check: "spf",
       points: 2,
-      reason: "SPF ~all (softfail) instead of -all (hardfail)",
+      reason:
+        "SPF -all (hardfail) without an enforcing DMARC policy — forwarded mail is rejected before DKIM is checked",
     });
   }
   if (spf.lookupCount > 10) {

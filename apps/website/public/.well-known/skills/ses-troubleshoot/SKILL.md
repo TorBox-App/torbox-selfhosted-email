@@ -184,7 +184,7 @@ npx @wraps.dev/cli email check <domain> --json
 
 Interpret the JSON response - key things to look for:
 
-**SPF** (`.spf`): Must include `amazonses.com`. Check `.spf.allMechanism` — should be `-` (hard fail). `~` (soft fail) is acceptable but weaker.
+**SPF** (`.spf`): Must include `amazonses.com`. Check `.spf.allMechanism` — `~` (soft fail) is the recommendation for a sending domain; DMARC does the enforcing. `-` (hard fail) is valid but rejects forwarded mail before DKIM is checked, so only prefer it when DMARC is already at `quarantine`/`reject` — or on a parked domain that never sends.
 
 **DKIM** (`.dkim`): At least one valid selector with 2048-bit RSA key. The CLI automatically checks the correct SES token-based selectors (e.g., `bsksdtrd66emmvw6frf33yopnumfs33r._domainkey`), NOT the generic `selector1/2/3` names.
 

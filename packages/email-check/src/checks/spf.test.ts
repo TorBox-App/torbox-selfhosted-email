@@ -47,7 +47,7 @@ describe("checkSpf", () => {
     expect(result.allMechanism).toBe("?all");
     expect(result.valid).toBe(true);
     expect(result.warnings).toContain(
-      "SPF uses ?all (neutral) - consider using -all or ~all"
+      "SPF uses ?all (neutral) - consider using ~all or -all"
     );
   });
 });

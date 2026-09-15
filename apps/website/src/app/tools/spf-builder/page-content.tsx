@@ -259,14 +259,16 @@ const QUALIFIERS: Record<
   string,
   { label: string; description: string; recommended?: boolean }
 > = {
-  "-all": {
-    label: "Hard Fail (-all)",
-    description: "Reject unauthorized mail — recommended for production",
-    recommended: true,
-  },
   "~all": {
     label: "Soft Fail (~all)",
-    description: "Accept but mark suspicious — good for initial testing",
+    description:
+      "Mark unauthorized mail and let DMARC enforce — recommended for sending domains",
+    recommended: true,
+  },
+  "-all": {
+    label: "Hard Fail (-all)",
+    description:
+      "Reject unauthorized mail at SMTP — best for parked domains that never send",
   },
   "?all": {
     label: "Neutral (?all)",
@@ -287,7 +289,7 @@ export default function SPFBuilderWidget() {
   const [newIP, setNewIP] = useState("");
   const [newInclude, setNewInclude] = useState("");
   const [newIncludeLoading, setNewIncludeLoading] = useState(false);
-  const [qualifier, setQualifier] = useState("-all");
+  const [qualifier, setQualifier] = useState("~all");
   const [copied, setCopied] = useState(false);
 
   // SPF lookup state — domain synced to URL
@@ -352,12 +354,7 @@ export default function SPFBuilderWidget() {
       // Additional warnings based on parsed record
       if (record.includes("?all")) {
         warnings.push(
-          'Uses "?all" (neutral) which provides no protection — switch to "-all"'
-        );
-      }
-      if (record.includes("~all") && !record.includes("+all")) {
-        warnings.push(
-          'Uses "~all" (soft fail) — consider upgrading to "-all" (hard fail) for stronger protection'
+          'Uses "?all" (neutral) which provides no protection — switch to "~all"'
         );
       }
       if (record.length > 255) {
@@ -1075,11 +1072,9 @@ export default function SPFBuilderWidget() {
               ))}
               <span
                 className={
-                  qualifier === "-all"
+                  qualifier === "-all" || qualifier === "~all"
                     ? "text-success"
-                    : qualifier === "~all"
-                      ? "text-warning"
-                      : "text-muted-foreground"
+                    : "text-muted-foreground"
                 }
               >
                 {" "}

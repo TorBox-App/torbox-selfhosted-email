@@ -292,7 +292,7 @@ describe("calculateScore", () => {
     );
   });
 
-  it("stacks SPF softfail, lookup overflow, and ptr deductions", () => {
+  it("stacks SPF lookup overflow and ptr deductions, and never penalizes ~all", () => {
     const checks = createBaseChecks();
 
     checks.spf.allMechanism = "~all";
@@ -301,17 +301,16 @@ describe("calculateScore", () => {
 
     const result = calculateScore(checks);
 
-    // Grade A (SPF present + DKIM present + DMARC enforcing). Band: 90-100.
-    // Deductions: ~all (2) + lookups (3) + ptr (1) = 6. Score: 100 - 6 = 94.
+    // ~all is the recommended terminator for a sending domain, so it costs
+    // nothing. Grade A (SPF present + DKIM present + DMARC enforcing).
+    // Deductions: lookups (3) + ptr (1) = 4. Score: 100 - 4 = 96.
     expect(result.grade).toBe("A");
-    expect(result.finalScore).toBe(94);
+    expect(result.finalScore).toBe(96);
+    expect(result.deductions.some((d) => d.reason.includes("~all"))).toBe(
+      false
+    );
     expect(result.deductions).toEqual(
       expect.arrayContaining([
-        {
-          check: "spf",
-          points: 2,
-          reason: "SPF ~all (softfail) instead of -all (hardfail)",
-        },
         {
           check: "spf",
           points: 3,
@@ -463,6 +462,79 @@ describe("DMARCbis scoring", () => {
         (bonus) => bonus.check === "dmarc" && bonus.reason.includes("np=reject")
       )
     ).toBe(true);
+  });
+
+  /** A domain that actually authorizes a sender, terminated with -all. */
+  function createSendingChecks(): AllCheckResults {
+    const checks = createBaseChecks();
+    const record = "v=spf1 include:amazonses.com -all";
+    checks.spf.record = record;
+    checks.spf.records = [record];
+    checks.spf.includes = ["amazonses.com"];
+    checks.spf.lookupCount = 1;
+    return checks;
+  }
+
+  const hardfailDeduction = (result: ReturnType<typeof calculateScore>) =>
+    result.deductions.some(
+      (d) => d.check === "spf" && d.reason.includes("-all (hardfail)")
+    );
+
+  it("penalizes -all when DMARC is absent or not enforcing", () => {
+    for (const mutate of [
+      (c: AllCheckResults) => {
+        c.dmarc.exists = false;
+      },
+      (c: AllCheckResults) => {
+        c.dmarc.valid = false;
+      },
+      (c: AllCheckResults) => {
+        c.dmarc.policy = "none";
+      },
+      (c: AllCheckResults) => {
+        // DMARCbis t=y — receivers are told not to enforce
+        c.dmarc.testing = true;
+      },
+    ]) {
+      const checks = createSendingChecks();
+      mutate(checks);
+
+      expect(hardfailDeduction(calculateScore(checks))).toBe(true);
+    }
+  });
+
+  it("does not penalize -all once DMARC is enforcing", () => {
+    for (const policy of ["quarantine", "reject"] as const) {
+      const checks = createSendingChecks();
+      checks.dmarc.policy = policy;
+
+      const result = calculateScore(checks);
+
+      expect(hardfailDeduction(result)).toBe(false);
+      expect(result.deductions.some((d) => d.check === "spf")).toBe(false);
+    }
+  });
+
+  it("never penalizes -all on a parked domain that authorizes no senders", () => {
+    const checks = createBaseChecks();
+    checks.dmarc.exists = false;
+
+    const result = calculateScore(checks);
+
+    // "v=spf1 -all" is the recommended record for a non-sending domain, so the
+    // hardfail guidance must not fire even with no DMARC behind it.
+    expect(checks.spf.record).toBe("v=spf1 -all");
+    expect(hardfailDeduction(result)).toBe(false);
+  });
+
+  it("does not penalize ~all on a sending domain with no DMARC", () => {
+    const checks = createSendingChecks();
+    checks.spf.allMechanism = "~all";
+    checks.dmarc.exists = false;
+
+    const result = calculateScore(checks);
+
+    expect(result.deductions.some((d) => d.check === "spf")).toBe(false);
   });
 
   it("penalizes DMARC testing mode (t=y) while a policy is set", () => {

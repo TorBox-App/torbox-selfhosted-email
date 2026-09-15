@@ -9,6 +9,7 @@ import {
   type EmailCheckResult,
   formatSpfLookupTree,
   getExitCode,
+  hardfailWithoutEnforcingDmarc,
   runEmailCheck,
 } from "@wraps.dev/email-check";
 import pc from "picocolors";
@@ -160,7 +161,7 @@ function displayResults(result: EmailCheckResult, options: CheckOptions): void {
   console.log();
 
   // SPF
-  displaySpfResult(spf, options.verbose);
+  displaySpfResult(spf, dmarc, options.verbose);
 
   // DKIM
   displayDkimResult(dkim, options.verbose);
@@ -390,6 +391,7 @@ function displayScoreBox(
  */
 function displaySpfResult(
   spf: EmailCheckResult["spf"],
+  dmarc: EmailCheckResult["dmarc"],
   verbose?: boolean
 ): void {
   const status =
@@ -427,9 +429,9 @@ function displaySpfResult(
     }
 
     // Show warnings
-    if (spf.allMechanism === "~all") {
+    if (hardfailWithoutEnforcingDmarc(spf, dmarc)) {
       console.log(
-        `                     ${pc.dim("Softfail (~all) — consider using -all for strict enforcement")}`
+        `                     ${pc.yellow("Hardfail (-all) with no enforcing DMARC — forwarded mail is rejected before DKIM is checked")}`
       );
     }
   }

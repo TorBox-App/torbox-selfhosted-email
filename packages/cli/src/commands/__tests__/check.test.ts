@@ -118,7 +118,12 @@ function createMockResult(
 }
 
 // Mock @wraps.dev/email-check
-vi.mock("@wraps.dev/email-check", () => ({
+// Spread the real module so pure helpers (hardfailWithoutEnforcingDmarc, and
+// anything added later) keep their real behavior — a bare factory mock silently
+// turns every un-listed export into undefined, which surfaces as an unrelated
+// exit-code 4 rather than as a missing-export error.
+vi.mock("@wraps.dev/email-check", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@wraps.dev/email-check")>()),
   runEmailCheck: vi.fn(),
   formatSpfLookupTree: vi.fn().mockReturnValue("SPF tree"),
   getExitCode: vi.fn((grade: string) => {
@@ -146,6 +151,14 @@ function createDetailedMockResult(scenario: string) {
         spf: {
           ...baseResult.spf,
           allMechanism: "~all",
+        },
+      };
+    case "spf-hardfail-no-dmarc":
+      return {
+        ...baseResult,
+        dmarc: {
+          ...baseResult.dmarc,
+          policy: "none",
         },
       };
     case "spf-missing":
@@ -877,7 +890,9 @@ describe("Email Check Command", () => {
   });
 
   describe("display output", () => {
-    it("should display SPF with softfail warning", async () => {
+    const loggedOutput = () => mockConsoleLog.mock.calls.flat().join("\n");
+
+    it("does not warn about ~all, the recommended terminator", async () => {
       const { runEmailCheck } = await import("@wraps.dev/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(
         createDetailedMockResult("spf-softfail") as never
@@ -885,8 +900,32 @@ describe("Email Check Command", () => {
 
       await check({ domain: "test.com" });
 
-      // Check that console.log was called (display functions executed)
       expect(mockConsoleLog).toHaveBeenCalled();
+      expect(loggedOutput()).not.toContain("Hardfail");
+    });
+
+    it("warns when -all has no enforcing DMARC behind it", async () => {
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
+      vi.mocked(runEmailCheck).mockResolvedValue(
+        createDetailedMockResult("spf-hardfail-no-dmarc") as never
+      );
+
+      await check({ domain: "test.com" });
+
+      expect(loggedOutput()).toContain(
+        "Hardfail (-all) with no enforcing DMARC"
+      );
+    });
+
+    it("stays quiet about -all when DMARC is enforcing", async () => {
+      const { runEmailCheck } = await import("@wraps.dev/email-check");
+      vi.mocked(runEmailCheck).mockResolvedValue(
+        createDetailedMockResult("default") as never
+      );
+
+      await check({ domain: "test.com" });
+
+      expect(loggedOutput()).not.toContain("Hardfail");
     });
 
     it("should display missing SPF", async () => {

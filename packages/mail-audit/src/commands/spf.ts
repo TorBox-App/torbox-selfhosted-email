@@ -133,10 +133,10 @@ export async function runSpfCheck(
     if (result.allMechanism) {
       const allLabel =
         result.allMechanism === "-all"
-          ? pc.green("Strict (-all) — unauthorized servers rejected")
+          ? pc.green("Hardfail (-all) — unauthorized senders rejected at SMTP")
           : result.allMechanism === "~all"
-            ? pc.yellow(
-                "Softfail (~all) — unauthorized servers tagged but accepted"
+            ? pc.green(
+                "Softfail (~all) — unauthorized senders marked; DMARC decides"
               )
             : result.allMechanism === "+all"
               ? pc.red("OPEN (+all) — anyone can send as your domain!")

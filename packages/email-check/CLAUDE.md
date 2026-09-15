@@ -81,7 +81,7 @@ src/
 
 ### Within-Band Scoring
 
-Score starts at the band max and is adjusted by deductions (1-5 pts each) and bonuses (1-2 pts each, capped at +10 total). Common deductions: SPF ~all (-2), weak DKIM key (-2), no DMARC reporting (-2), MX issues (-2), new domain (-1 to -3). Common bonuses: MTA-STS (+2), BIMI (+1-2), DNSSEC (+1), clean blacklists (+1), MX redundancy (+1).
+Score starts at the band max and is adjusted by deductions (1-5 pts each) and bonuses (1-2 pts each, capped at +10 total). Common deductions: SPF -all with no enforcing DMARC (-2), weak DKIM key (-2), no DMARC reporting (-2), MX issues (-2), new domain (-1 to -3). Common bonuses: MTA-STS (+2), BIMI (+1-2), DNSSEC (+1), clean blacklists (+1), MX redundancy (+1).
 
 ## Provider Detection
 

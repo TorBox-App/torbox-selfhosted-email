@@ -38,6 +38,7 @@ export {
   calculateScore,
   getGradeColor,
   getGradeDescription,
+  hardfailWithoutEnforcingDmarc,
 } from "./scoring.js";
 // Re-export types
 export * from "./types.js";
