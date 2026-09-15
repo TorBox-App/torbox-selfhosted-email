@@ -46,20 +46,14 @@ export function buildColumns(
         const { reason } = row.original;
         if (reason === "COMPLAINT") {
           return (
-            <Badge
-              className="border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
-              variant="outline"
-            >
+            <Badge variant="destructive">
               <AlertTriangle className="mr-1 h-3 w-3" />
               Complaint
             </Badge>
           );
         }
         return (
-          <Badge
-            className="border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-            variant="outline"
-          >
+          <Badge variant="warning">
             <MailWarning className="mr-1 h-3 w-3" />
             Bounce
           </Badge>

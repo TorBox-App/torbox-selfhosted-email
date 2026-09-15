@@ -186,9 +186,11 @@ export function ConnectAWSAccountForm({
     return (
       <div className="mx-auto max-w-2xl space-y-8">
         <Card>
-          <CardContent className="animate-pulse">
-            <div className="mb-4 h-6 w-64 rounded bg-muted" />
-            <div className="h-20 rounded bg-muted/50" />
+          <CardContent>
+            <div className="animate-pulse">
+              <div className="mb-4 h-6 w-64 rounded bg-muted" />
+              <div className="h-20 rounded bg-muted/50" />
+            </div>
           </CardContent>
         </Card>
       </div>

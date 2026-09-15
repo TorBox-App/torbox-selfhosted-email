@@ -16,11 +16,14 @@ import {
   FileCheck,
   XCircle,
 } from "lucide-react";
+import type { ComponentProps } from "react";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 function getRegistrationStatusInfo(status: string): {
   icon: React.ReactNode;
-  color: string;
+  variant: BadgeVariant;
   label: string;
   description: string;
 } {
@@ -28,21 +31,21 @@ function getRegistrationStatusInfo(status: string): {
     case "CREATED":
       return {
         icon: <Clock className="h-4 w-4" />,
-        color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+        variant: "secondary",
         label: "Created",
         description: "Registration created, not yet submitted",
       };
     case "SUBMITTED":
       return {
         icon: <Clock className="h-4 w-4" />,
-        color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+        variant: "info",
         label: "Submitted",
         description: "Registration submitted, awaiting review",
       };
     case "REVIEWING":
       return {
         icon: <Clock className="h-4 w-4" />,
-        color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+        variant: "warning",
         label: "Reviewing",
         description: "Currently under carrier review (15 business days)",
       };
@@ -50,14 +53,14 @@ function getRegistrationStatusInfo(status: string): {
     case "VERIFIED":
       return {
         icon: <CheckCircle className="h-4 w-4" />,
-        color: "bg-green-500/10 text-green-500 border-green-500/20",
+        variant: "success",
         label: "Verified",
         description: "Registration approved, ready to send",
       };
     case "REQUIRES_UPDATES":
       return {
         icon: <AlertCircle className="h-4 w-4" />,
-        color: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+        variant: "warning",
         label: "Needs Updates",
         description: "Additional information required",
       };
@@ -65,7 +68,7 @@ function getRegistrationStatusInfo(status: string): {
     case "CLOSED":
       return {
         icon: <XCircle className="h-4 w-4" />,
-        color: "bg-red-500/10 text-red-500 border-red-500/20",
+        variant: "destructive",
         label: status === "DENIED" ? "Denied" : "Closed",
         description:
           status === "DENIED"
@@ -75,7 +78,7 @@ function getRegistrationStatusInfo(status: string): {
     default:
       return {
         icon: <Clock className="h-4 w-4" />,
-        color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+        variant: "secondary",
         label: status,
         description: "Unknown status",
       };
@@ -84,29 +87,16 @@ function getRegistrationStatusInfo(status: string): {
 
 function getRegistrationTypeBadge(type: string): {
   label: string;
-  color: string;
 } {
   switch (type.toUpperCase()) {
     case "TOLL_FREE":
-      return {
-        label: "Toll-Free",
-        color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      };
+      return { label: "Toll-Free" };
     case "TEN_DLC_BRAND":
-      return {
-        label: "10DLC Brand",
-        color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-      };
+      return { label: "10DLC Brand" };
     case "TEN_DLC_CAMPAIGN":
-      return {
-        label: "10DLC Campaign",
-        color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-      };
+      return { label: "10DLC Campaign" };
     default:
-      return {
-        label: type,
-        color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-      };
+      return { label: type };
   }
 }
 
@@ -218,10 +208,8 @@ export function SMSRegistrations({ orgSlug }: { orgSlug: string }) {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Badge className={typeInfo.color} variant="outline">
-                        {typeInfo.label}
-                      </Badge>
-                      <Badge className={statusInfo.color} variant="outline">
+                      <Badge variant="secondary">{typeInfo.label}</Badge>
+                      <Badge variant={statusInfo.variant}>
                         {statusInfo.icon}
                         <span className="ml-1">{statusInfo.label}</span>
                       </Badge>

@@ -199,11 +199,7 @@ function AccountFlags({
 
   if (detail.productionAccessEnabled === false) {
     flags.push(
-      <Badge
-        className="text-warning border-warning/50"
-        key="sandbox"
-        variant="outline"
-      >
+      <Badge key="sandbox" variant="warning">
         SES sandbox
       </Badge>
     );
@@ -308,8 +304,8 @@ export function SesSurvivalStrip({ orgSlug }: { orgSlug: string }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Account survival</CardTitle>
-        <CardAction className="self-center text-muted-foreground text-xs">
-          {checkedLine}
+        <CardAction className="self-center">
+          <span className="text-muted-foreground text-xs">{checkedLine}</span>
         </CardAction>
       </CardHeader>
       <CardContent>

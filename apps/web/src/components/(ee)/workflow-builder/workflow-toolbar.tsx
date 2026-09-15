@@ -325,14 +325,7 @@ export function WorkflowToolbar({
             >
               {workflowState?.status ?? workflow.status}
             </Badge>
-            {isDirty && (
-              <Badge
-                className="border-yellow-300 text-yellow-600"
-                variant="outline"
-              >
-                Unsaved
-              </Badge>
-            )}
+            {isDirty && <Badge variant="warning">Unsaved</Badge>}
           </div>
           {(workflowState?.description || workflow.description) && (
             <p className="text-muted-foreground text-sm">

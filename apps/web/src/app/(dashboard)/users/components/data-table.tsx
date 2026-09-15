@@ -49,11 +49,13 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { UserFormDialog } from "./user-form-dialog";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 type User = {
   id: number;
@@ -111,35 +113,33 @@ export function DataTable({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): BadgeVariant => {
     switch (status) {
       case "Active":
-        return "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20";
+        return "success";
       case "Pending":
-        return "text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20";
+        return "warning";
       case "Error":
-        return "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20";
-      case "Inactive":
-        return "text-muted-foreground bg-muted";
+        return "destructive";
       default:
-        return "text-muted-foreground bg-muted";
+        return "secondary";
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleVariant = (role: string): BadgeVariant => {
     switch (role) {
       case "Admin":
-        return "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20";
+        return "destructive";
       case "Editor":
-        return "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20";
+        return "info";
       case "Author":
-        return "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20";
+        return "warning";
       case "Maintainer":
-        return "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20";
+        return "success";
       case "Subscriber":
-        return "text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20";
+        return "brand";
       default:
-        return "text-muted-foreground bg-muted";
+        return "secondary";
     }
   };
 
@@ -203,11 +203,7 @@ export function DataTable({
       header: "Role",
       cell: ({ row }) => {
         const role = row.getValue("role") as string;
-        return (
-          <Badge className={getRoleColor(role)} variant="secondary">
-            {role}
-          </Badge>
-        );
+        return <Badge variant={getRoleVariant(role)}>{role}</Badge>;
       },
       filterFn: exactFilter,
     },
@@ -233,11 +229,7 @@ export function DataTable({
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
-        return (
-          <Badge className={getStatusColor(status)} variant="secondary">
-            {status}
-          </Badge>
-        );
+        return <Badge variant={getStatusVariant(status)}>{status}</Badge>;
       },
       filterFn: exactFilter,
     },
@@ -445,7 +437,6 @@ export function DataTable({
                 .map((column) => (
                   <DropdownMenuCheckboxItem
                     checked={column.getIsVisible()}
-                    className="capitalize"
                     key={column.id}
                     onCheckedChange={(value) =>
                       column.toggleVisibility(!!value)

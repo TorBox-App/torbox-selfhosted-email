@@ -76,9 +76,9 @@ export function QuotaReserve({ account }: QuotaReserveProps) {
         {success && (
           <Alert>
             <CheckCircle2 className="h-4 w-4 text-success" />
-            <AlertDescription className="text-success">
+            <div className="col-start-2 grid justify-items-start gap-1 text-sm text-success [&_p]:leading-relaxed">
               {success}
-            </AlertDescription>
+            </div>
           </Alert>
         )}
 

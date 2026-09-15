@@ -134,7 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     >
       {/* First sidebar - Product icons */}
       <Sidebar
-        className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
+        className="w-[calc(var(--sidebar-width-icon)+1px)]!"
         collapsible="none"
       >
         <SidebarHeader>
@@ -142,7 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className="md:h-8 md:p-0"
+                className="md:h-8"
                 onClick={() => {
                   setActiveProduct(data.navMain[0]);
                   setOpen(false);
@@ -179,7 +179,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   .map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
-                        className="px-2.5 md:px-2"
                         isActive={activeProduct?.title === item.title}
                         onClick={() => {
                           setActiveProduct(item);
@@ -215,7 +214,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           !activeProduct.isDashboard &&
           activeProduct.subItems ? (
             <>
-              <SidebarHeader className="gap-3.5 border-b p-4">
+              <SidebarHeader className="gap-3.5 p-4">
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2 font-medium text-base text-foreground">
                     <activeProduct.icon className="size-4" />
@@ -225,7 +224,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarInput placeholder="Search..." />
               </SidebarHeader>
               <SidebarContent>
-                <SidebarGroup className="px-0">
+                <SidebarGroup>
                   <SidebarGroupContent>
                     {activeProduct.subItems.map((subItem) => {
                       // Check for exact match or if we're on a detail page under this section

@@ -166,7 +166,7 @@ export function TopicsTable({
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="h-8 w-8 p-0" variant="ghost">
+                <Button size="icon-sm" variant="ghost">
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -194,11 +194,11 @@ export function TopicsTable({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive"
                       onClick={() => {
                         setSelectedTopic(topic);
                         setDeleteDialogOpen(true);
                       }}
+                      variant="destructive"
                     >
                       Delete topic
                     </DropdownMenuItem>
@@ -370,7 +370,7 @@ export function TopicsTable({
                   // from re-triggering the row's own action.
                   <TableRow
                     aria-label={`View subscribers for ${row.original.name}`}
-                    className="cursor-pointer outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-ring"
                     data-state={row.getIsSelected() && "selected"}
                     key={row.id}
                     onClick={openSubscribers}

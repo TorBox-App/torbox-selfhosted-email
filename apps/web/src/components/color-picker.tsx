@@ -61,7 +61,8 @@ export function ColorPicker({
       <div className="flex items-start gap-2">
         <div className="relative">
           <Button
-            className="h-8 w-8 cursor-pointer overflow-hidden p-0"
+            className="cursor-pointer overflow-hidden"
+            size="icon-sm"
             style={{ backgroundColor: displayColor }}
             type="button"
             variant="outline"

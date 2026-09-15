@@ -16,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { Fragment } from "react";
+import { type ComponentProps, Fragment } from "react";
 import {
   Item,
   ItemContent,
@@ -26,7 +26,6 @@ import {
   ItemSeparator,
   ItemTitle,
 } from "@/components/ui/item";
-import { cn } from "@/lib/utils";
 import { useRecentActivity } from "../hooks/use-analytics";
 
 const getActivityIcon = (type: string) => {
@@ -58,56 +57,20 @@ const getActivityIcon = (type: string) => {
   return <Clock className="h-4 w-4 text-muted-foreground" />;
 };
 
-const getActivityBadgeConfig = (type: string) => {
-  const configs: Record<
-    string,
-    {
-      variant: "default" | "secondary" | "destructive" | "outline";
-      className: string;
-    }
-  > = {
-    Send: {
-      variant: "default",
-      className: "bg-muted text-muted-foreground border-muted-foreground/20",
-    },
-    Delivery: {
-      variant: "default",
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-    },
-    Open: {
-      variant: "default",
-      className:
-        "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-    },
-    Click: {
-      variant: "default",
-      className:
-        "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
-    },
-    Bounce: {
-      variant: "default",
-      className:
-        "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-    },
-    Complaint: {
-      variant: "default",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    },
-    Reject: {
-      variant: "default",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    },
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const getActivityBadgeConfig = (type: string): { variant: BadgeVariant } => {
+  const configs: Record<string, { variant: BadgeVariant }> = {
+    Send: { variant: "secondary" },
+    Delivery: { variant: "success" },
+    Open: { variant: "info" },
+    Click: { variant: "brand" },
+    Bounce: { variant: "warning" },
+    Complaint: { variant: "destructive" },
+    Reject: { variant: "destructive" },
   };
 
-  return (
-    configs[type] || {
-      variant: "secondary" as const,
-      className: "bg-muted text-muted-foreground border-muted-foreground/20",
-    }
-  );
+  return configs[type] || { variant: "secondary" };
 };
 
 const formatRelativeTime = (timestamp: number) => {
@@ -204,10 +167,7 @@ export function RecentActivity({ orgSlug }: { orgSlug: string }) {
                       </ItemDescription>
                     </ItemContent>
                     <Badge
-                      className={cn(
-                        "ml-auto",
-                        getActivityBadgeConfig(activity.eventType).className
-                      )}
+                      className="ml-auto"
                       variant={
                         getActivityBadgeConfig(activity.eventType).variant
                       }

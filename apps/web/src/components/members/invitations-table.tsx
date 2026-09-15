@@ -87,9 +87,7 @@ export function InvitationsTable({
               </TableCell>
               <TableCell>
                 {expired ? (
-                  <Badge className="text-xs" variant="destructive">
-                    Expired
-                  </Badge>
+                  <Badge variant="destructive">Expired</Badge>
                 ) : (
                   <span className="text-muted-foreground text-sm">
                     {formatDistanceToNow(new Date(invitation.expiresAt), {

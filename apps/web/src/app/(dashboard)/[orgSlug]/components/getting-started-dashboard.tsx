@@ -155,24 +155,9 @@ function ChecklistItemBadges({
 }) {
   return (
     <>
-      {isNext && (
-        <Badge className="text-xs" variant="default">
-          Next step
-        </Badge>
-      )}
-      {isOptional && (
-        <Badge className="text-xs" variant="secondary">
-          Optional
-        </Badge>
-      )}
-      {isComplete && (
-        <Badge
-          className="text-xs text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
-          variant="outline"
-        >
-          Complete
-        </Badge>
-      )}
+      {isNext && <Badge variant="default">Next step</Badge>}
+      {isOptional && <Badge variant="secondary">Optional</Badge>}
+      {isComplete && <Badge variant="success">Complete</Badge>}
     </>
   );
 }
@@ -498,7 +483,7 @@ function WebhookSecretForm({
   if (isConnected) {
     return (
       <div className="flex items-center gap-2">
-        <Badge className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950">
+        <Badge variant="success">
           <CheckCircle2Icon className="mr-1 h-3 w-3" />
           Connected
         </Badge>
@@ -597,12 +582,7 @@ function DomainVerification({
           <div className="flex items-center gap-2" key={domain}>
             <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
             <span className="font-mono text-sm">{domain}</span>
-            <Badge
-              className="text-xs text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
-              variant="outline"
-            >
-              Verified
-            </Badge>
+            <Badge variant="success">Verified</Badge>
           </div>
         ))}
       </div>
@@ -1551,12 +1531,7 @@ export function GettingStartedDashboard({
                     <span className="text-sm">AWS Account</span>
                   </div>
                   {hasAwsAccount ? (
-                    <Badge
-                      className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
-                      variant="outline"
-                    >
-                      Connected
-                    </Badge>
+                    <Badge variant="success">Connected</Badge>
                   ) : (
                     <Badge variant="secondary">Not connected</Badge>
                   )}
@@ -1568,12 +1543,7 @@ export function GettingStartedDashboard({
                     <span className="text-sm">Platform Events</span>
                   </div>
                   {hasPlatformConnection ? (
-                    <Badge
-                      className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
-                      variant="outline"
-                    >
-                      Streaming
-                    </Badge>
+                    <Badge variant="success">Streaming</Badge>
                   ) : (
                     <Badge variant="secondary">Not configured</Badge>
                   )}

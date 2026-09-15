@@ -75,9 +75,8 @@ export default function OnboardingPage() {
           <CreateOrganizationForm onSuccess={handleSuccess} />
         </CardContent>
 
-        <CardFooter className="flex flex-col items-center gap-3 border-t pt-6">
+        <CardFooter className="flex flex-col items-center gap-3 pt-6">
           <Button
-            className="text-muted-foreground"
             onClick={async () => {
               await authClient.signOut();
               router.push("/");

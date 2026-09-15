@@ -18,13 +18,30 @@ import { formatDistanceToNow } from "date-fns";
 import { ArrowLeft, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { type ComponentProps, useCallback, useMemo } from "react";
 import type { ExecutionWithContact } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
-import {
-  EXECUTION_STATUS_COLORS,
-  EXECUTION_STATUS_LABELS,
-} from "@/lib/(ee)/workflows";
+import { EXECUTION_STATUS_LABELS } from "@/lib/(ee)/workflows";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors EXECUTION_STATUS_COLORS' semantics as Badge variants. */
+function getExecutionStatusBadgeVariant(status: string): BadgeVariant {
+  switch (status) {
+    case "active":
+      return "info";
+    case "paused":
+      return "warning";
+    case "waiting":
+      return "brand";
+    case "completed":
+      return "success";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
 
 const STATUS_TABS = [
   { label: "All", value: undefined },
@@ -124,10 +141,7 @@ export function ExecutionsTable({
         cell: ({ row }: { row: { original: ExecutionWithContact } }) => {
           const status = row.original.status;
           return (
-            <Badge
-              className={EXECUTION_STATUS_COLORS[status]}
-              variant="secondary"
-            >
+            <Badge variant={getExecutionStatusBadgeVariant(status)}>
               {EXECUTION_STATUS_LABELS[status]}
             </Badge>
           );

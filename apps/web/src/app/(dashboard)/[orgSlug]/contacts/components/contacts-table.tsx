@@ -9,6 +9,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   Dialog,
@@ -893,7 +894,7 @@ export function ContactsTable({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Filter Group: Status | Topic */}
-          <div className="flex w-full sm:w-auto">
+          <ButtonGroup className="w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 captureContactsFilterChanged({
@@ -908,13 +909,7 @@ export function ContactsTable({
               }}
               value={statusFilter || "all"}
             >
-              <SelectTrigger
-                className={
-                  topics.length > 0
-                    ? "min-w-0 flex-1 sm:flex-initial sm:w-[160px] rounded-r-none border-r-0 focus:z-10"
-                    : "min-w-0 flex-1 sm:flex-initial sm:w-[160px] focus:z-10"
-                }
-              >
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[160px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -941,7 +936,7 @@ export function ContactsTable({
                 }}
                 value={topicFilter || "all"}
               >
-                <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[160px] rounded-l-none focus:z-10">
+                <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[160px]">
                   <SelectValue placeholder="All Topics" />
                 </SelectTrigger>
                 <SelectContent>
@@ -954,7 +949,7 @@ export function ContactsTable({
                 </SelectContent>
               </Select>
             )}
-          </div>
+          </ButtonGroup>
 
           {/*
             Bulk actions - shown when contacts are selected.
@@ -993,8 +988,8 @@ export function ContactsTable({
                   </>
                 )}
                 <DropdownMenuItem
-                  className="text-destructive"
                   onClick={() => setBulkDeleteDialogOpen(true)}
+                  variant="destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete contacts
@@ -1004,12 +999,11 @@ export function ContactsTable({
           )}
 
           {/* Action Group: Import | Export | Add Contact */}
-          <div className="flex w-full sm:w-auto">
+          <ButtonGroup className="w-full sm:w-auto">
             {canEdit && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="rounded-r-none border-r-0 focus:z-10"
                     onClick={() => {
                       captureContactsImportStarted();
                       setImportDialogOpen(true);
@@ -1029,11 +1023,6 @@ export function ContactsTable({
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      className={
-                        canEdit
-                          ? "rounded-none border-r-0 focus:z-10"
-                          : "rounded-r-none border-r-0 focus:z-10"
-                      }
                       disabled={isExporting}
                       size="touch"
                       variant="outline"
@@ -1129,16 +1118,12 @@ export function ContactsTable({
               </DropdownMenuContent>
             </DropdownMenu>
             {canEdit && (
-              <Button
-                className="rounded-l-none focus:z-10"
-                onClick={() => setCreateDialogOpen(true)}
-                size="touch"
-              >
+              <Button onClick={() => setCreateDialogOpen(true)} size="touch">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Contact
               </Button>
             )}
-          </div>
+          </ButtonGroup>
         </div>
       </div>
 

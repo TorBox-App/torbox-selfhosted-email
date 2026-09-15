@@ -64,7 +64,7 @@ export function EventDetailSheet({
               Event Name
             </label>
             <div className="mt-1">
-              <Badge className="font-mono text-sm" variant="secondary">
+              <Badge className="font-mono" variant="secondary">
                 {event.eventName}
               </Badge>
             </div>
@@ -91,7 +91,7 @@ export function EventDetailSheet({
               <Link
                 href={`/${orgSlug}/contacts?search=${encodeURIComponent(event.contactEmail || "")}`}
               >
-                <Button className="h-6 px-2" size="sm" variant="ghost">
+                <Button className="h-6" size="sm" variant="ghost">
                   <ExternalLink className="h-3 w-3" />
                 </Button>
               </Link>
@@ -112,7 +112,7 @@ export function EventDetailSheet({
               </label>
               {event.eventData && Object.keys(event.eventData).length > 0 && (
                 <Button
-                  className="h-6 px-2"
+                  className="h-6"
                   onClick={handleCopyEventData}
                   size="sm"
                   variant="ghost"

@@ -18,16 +18,34 @@ import {
   Phone,
 } from "lucide-react";
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   type ContactWithMeta,
-  EMAIL_STATUS_COLORS,
   EMAIL_STATUS_LABELS,
+  type EmailStatus,
   engagementRate,
-  SMS_STATUS_COLORS,
   SMS_STATUS_LABELS,
+  type SmsStatus,
 } from "@/lib/contacts";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const EMAIL_STATUS_BADGE_VARIANT: Record<EmailStatus, BadgeVariant> = {
+  active: "success",
+  unsubscribed: "secondary",
+  bounced: "destructive",
+  complained: "destructive",
+  suppressed: "warning",
+};
+
+const SMS_STATUS_BADGE_VARIANT: Record<SmsStatus, BadgeVariant> = {
+  pending_consent: "warning",
+  opted_in: "success",
+  opted_out: "secondary",
+  invalid: "destructive",
+};
 
 type ColumnActions = {
   onEdit: (contact: ContactWithMeta) => void;
@@ -147,24 +165,22 @@ export function createColumns(
                  * a keyboard user's focus on something completely invisible
                  * (WCAG 2.4.7, AA), so focus reveals it too.
                  */}
-                <CopyButton
-                  aria-label={`Copy ${email}`}
-                  className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-                  content={email}
-                  onClick={(e) => e.stopPropagation()}
-                  size="sm"
-                  variant="ghost"
-                />
+                <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                  <CopyButton
+                    aria-label={`Copy ${email}`}
+                    content={email}
+                    onClick={(e) => e.stopPropagation()}
+                    size="sm"
+                    variant="ghost"
+                  />
+                </span>
                 {/*
                  * audit L2: these badges were `text-[10px]`, below the type
                  * scale's smallest step and the only arbitrary values in a
                  * directory that is otherwise entirely token-driven.
                  */}
                 {emailStatus && (
-                  <Badge
-                    className={`${EMAIL_STATUS_COLORS[emailStatus]} px-1.5 py-0 text-xs`}
-                    variant="secondary"
-                  >
+                  <Badge variant={EMAIL_STATUS_BADGE_VARIANT[emailStatus]}>
                     {EMAIL_STATUS_LABELS[emailStatus]}
                   </Badge>
                 )}
@@ -175,10 +191,7 @@ export function createColumns(
                 <Phone className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground text-sm">{phone}</span>
                 {smsStatus && (
-                  <Badge
-                    className={`${SMS_STATUS_COLORS[smsStatus]} px-1.5 py-0 text-xs`}
-                    variant="secondary"
-                  >
+                  <Badge variant={SMS_STATUS_BADGE_VARIANT[smsStatus]}>
                     {SMS_STATUS_LABELS[smsStatus]}
                   </Badge>
                 )}
@@ -293,7 +306,7 @@ export function createColumns(
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button className="h-8 w-8 p-0" variant="ghost">
+              <Button size="icon-sm" variant="ghost">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -317,11 +330,11 @@ export function createColumns(
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
                   actions.onDelete(contact);
                 }}
+                variant="destructive"
               >
                 Delete contact
               </DropdownMenuItem>

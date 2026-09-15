@@ -39,12 +39,7 @@ export function InfrastructureStatusCard({
             <span className="text-sm">AWS Account</span>
           </div>
           {hasAwsAccount ? (
-            <Badge
-              className="text-green-600 border-green-200 bg-green-50"
-              variant="outline"
-            >
-              Connected
-            </Badge>
+            <Badge variant="success">Connected</Badge>
           ) : (
             <Badge variant="secondary">Not connected</Badge>
           )}
@@ -56,12 +51,7 @@ export function InfrastructureStatusCard({
             <span className="text-sm">Platform Events</span>
           </div>
           {hasPlatformConnection ? (
-            <Badge
-              className="text-green-600 border-green-200 bg-green-50"
-              variant="outline"
-            >
-              Streaming
-            </Badge>
+            <Badge variant="success">Streaming</Badge>
           ) : (
             <Badge variant="secondary">Not configured</Badge>
           )}

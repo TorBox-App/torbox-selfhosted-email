@@ -346,7 +346,7 @@ export default function NotificationSettings() {
             <CardDescription>
               We need permission from your browser to show notifications.{" "}
               <Button
-                className="h-auto p-0 text-primary"
+                className="h-auto"
                 onClick={() => Notification.requestPermission()}
                 variant="link"
               >

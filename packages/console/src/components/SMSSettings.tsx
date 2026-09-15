@@ -78,14 +78,7 @@ function StatusBadge({ status }: { status: string }) {
   const isActive = status === "ACTIVE" || status === "SUCCESS";
 
   return (
-    <Badge
-      className={
-        isActive
-          ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-          : "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-      }
-      variant="outline"
-    >
+    <Badge variant={isActive ? "success" : "warning"}>
       {isActive ? (
         <CheckCircle2 className="mr-1 h-3 w-3" />
       ) : (
@@ -275,10 +268,7 @@ function ProtectConfigSection({
               Protect configuration active
             </p>
           </div>
-          <Badge
-            className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-            variant="outline"
-          >
+          <Badge variant="success">
             <CheckCircle2 className="mr-1 h-3 w-3" />
             Enabled
           </Badge>

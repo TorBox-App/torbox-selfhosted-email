@@ -239,7 +239,7 @@ function FilterGroupComponent({
       {/* Remove group button */}
       {canRemove && (
         <Button
-          className="absolute top-2 right-2 h-6 w-6 p-0"
+          className="absolute top-2 right-2 h-6 w-6"
           onClick={onRemove}
           size="sm"
           variant="ghost"
@@ -750,7 +750,7 @@ function FilterRow({
       {/* Remove button */}
       {canRemove && (
         <Button
-          className="h-9 w-9 shrink-0 p-0"
+          className="h-9 w-9 shrink-0"
           onClick={onRemove}
           size="sm"
           variant="ghost"

@@ -202,10 +202,7 @@ export function InboundEmailList() {
                   </TableCell>
                   <TableCell>
                     {email.hasAttachments && (
-                      <Badge
-                        className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"
-                        variant="outline"
-                      >
+                      <Badge variant="secondary">
                         <Paperclip className="mr-1 h-3 w-3" />
                         {email.attachmentCount}
                       </Badge>

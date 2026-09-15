@@ -62,6 +62,8 @@ type CdnSettings = {
   retention?: string;
 };
 
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
+
 /**
  * Status badge component
  */
@@ -71,36 +73,19 @@ function StatusBadge({
   status: "SUCCESS" | "PENDING" | "FAILED" | "DISABLED";
 }) {
   const config = {
-    SUCCESS: {
-      icon: CheckCircle2,
-      label: "Active",
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-    },
-    PENDING: {
-      icon: Clock,
-      label: "Pending",
-      className:
-        "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-    },
-    FAILED: {
-      icon: XCircle,
-      label: "Failed",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    },
-    DISABLED: {
-      icon: AlertCircle,
-      label: "Disabled",
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
-    },
-  };
+    SUCCESS: { icon: CheckCircle2, label: "Active", variant: "success" },
+    PENDING: { icon: Clock, label: "Pending", variant: "warning" },
+    FAILED: { icon: XCircle, label: "Failed", variant: "destructive" },
+    DISABLED: { icon: AlertCircle, label: "Disabled", variant: "secondary" },
+  } satisfies Record<
+    string,
+    { icon: typeof CheckCircle2; label: string; variant: BadgeVariant }
+  >;
 
-  const { icon: Icon, label, className } = config[status];
+  const { icon: Icon, label, variant } = config[status];
 
   return (
-    <Badge className={className} variant="outline">
+    <Badge variant={variant}>
       <Icon className="mr-1 h-3 w-3" />
       {label}
     </Badge>

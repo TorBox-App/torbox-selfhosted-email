@@ -11,7 +11,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider
-      className={config.collapsible === "none" ? "sidebar-none-mode" : ""}
+      data-sidebar-none-mode={config.collapsible === "none" ? "" : undefined}
       style={
         {
           "--sidebar-width": "16rem",

@@ -7,6 +7,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import {
   Dialog,
   DialogContent,
@@ -547,15 +548,15 @@ export function EmailsTable({
           <PopoverTrigger asChild>
             <Button
               aria-label="What this list covers"
-              className="-my-2 text-muted-foreground"
+              className="-my-2"
               size="icon-sm"
               variant="ghost"
             >
               <Info className="size-3.5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-80 text-sm">
-            {EMAIL_COVERAGE_EXPLAINER}
+          <PopoverContent align="start" className="w-80">
+            <p className="text-sm">{EMAIL_COVERAGE_EXPLAINER}</p>
           </PopoverContent>
         </Popover>
       </div>
@@ -602,7 +603,7 @@ export function EmailsTable({
             writing the same parameter. One page-level filter, one place to set
             it; the search placeholder still names the window it is searching.
           */}
-          <div className="flex w-full sm:w-auto">
+          <ButtonGroup className="w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 captureEmailsFilterChanged({
@@ -616,7 +617,7 @@ export function EmailsTable({
             >
               <SelectTrigger
                 aria-label="Status filter"
-                className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-r-none border-r-0 focus:z-10"
+                className="min-w-0 flex-1 sm:flex-initial sm:w-[140px]"
               >
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -645,7 +646,7 @@ export function EmailsTable({
             >
               <SelectTrigger
                 aria-label="Sort by sent date"
-                className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-none border-r-0 focus:z-10"
+                className="min-w-0 flex-1 sm:flex-initial sm:w-[140px]"
               >
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
@@ -657,7 +658,6 @@ export function EmailsTable({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="rounded-l-none focus:z-10"
                   disabled={isExporting}
                   onClick={handleExportClick}
                   size="icon"
@@ -673,7 +673,7 @@ export function EmailsTable({
               </TooltipTrigger>
               <TooltipContent>Export as CSV</TooltipContent>
             </Tooltip>
-          </div>
+          </ButtonGroup>
         </div>
       </div>
 
@@ -750,7 +750,7 @@ export function EmailsTable({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell className="p-0" colSpan={tableColumns.length}>
+                <TableCell colSpan={tableColumns.length}>
                   <EmailsListState
                     days={days}
                     isRetrying={isFetching}

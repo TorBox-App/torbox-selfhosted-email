@@ -162,10 +162,7 @@ export function createColumns({
         const Icon = config.icon;
 
         return (
-          <Badge
-            className={cn(config.tone.surface, config.tone.text)}
-            variant="outline"
-          >
+          <Badge variant={config.variant}>
             <Icon className="mr-1 h-3 w-3" />
             {config.label}
           </Badge>

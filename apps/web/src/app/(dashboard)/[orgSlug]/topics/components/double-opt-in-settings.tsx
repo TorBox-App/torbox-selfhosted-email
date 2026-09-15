@@ -259,7 +259,6 @@ export function DoubleOptInSettings({
             </div>
 
             <RadioGroup
-              className="space-y-2"
               onValueChange={(value) =>
                 setTemplateMode(value as "default" | "custom")
               }

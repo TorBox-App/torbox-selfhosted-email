@@ -81,7 +81,6 @@ export function ComplaintChart({ orgSlug }: { orgSlug: string }) {
           <ButtonGroup className="@[767px]/card:flex hidden">
             <Button
               aria-pressed={timeRange === "90d"}
-              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
               onClick={() => setTimeRange("90d")}
               size="sm"
               variant="outline"
@@ -90,7 +89,6 @@ export function ComplaintChart({ orgSlug }: { orgSlug: string }) {
             </Button>
             <Button
               aria-pressed={timeRange === "30d"}
-              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
               onClick={() => setTimeRange("30d")}
               size="sm"
               variant="outline"
@@ -99,7 +97,6 @@ export function ComplaintChart({ orgSlug }: { orgSlug: string }) {
             </Button>
             <Button
               aria-pressed={timeRange === "7d"}
-              className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
               onClick={() => setTimeRange("7d")}
               size="sm"
               variant="outline"
@@ -110,21 +107,15 @@ export function ComplaintChart({ orgSlug }: { orgSlug: string }) {
           <Select onValueChange={setTimeRange} value={timeRange}>
             <SelectTrigger
               aria-label="Select time range"
-              className="flex @[767px]/card:hidden w-32 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+              className="flex @[767px]/card:hidden w-32 **:data-[slot=select-value]:block"
               size="sm"
             >
               <SelectValue placeholder="30 days" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem className="rounded-lg" value="90d">
-                90 days
-              </SelectItem>
-              <SelectItem className="rounded-lg" value="30d">
-                30 days
-              </SelectItem>
-              <SelectItem className="rounded-lg" value="7d">
-                7 days
-              </SelectItem>
+            <SelectContent>
+              <SelectItem value="90d">90 days</SelectItem>
+              <SelectItem value="30d">30 days</SelectItem>
+              <SelectItem value="7d">7 days</SelectItem>
             </SelectContent>
           </Select>
         </CardAction>

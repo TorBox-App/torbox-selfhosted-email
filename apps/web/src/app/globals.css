@@ -320,7 +320,7 @@
 }
 
 /* Fix for sidebar "none" mode height issue */
-.sidebar-none-mode [data-slot="sidebar"] {
+[data-sidebar-none-mode] [data-slot="sidebar"] {
   height: 100vh !important;
   min-height: 100vh !important;
 }

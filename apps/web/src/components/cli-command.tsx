@@ -30,19 +30,21 @@ export function CliCommand({ command, className }: CliCommandProps) {
         <code className="text-muted-foreground">$ </code>
         <code>{command}</code>
       </div>
-      <Button
-        aria-label="Copy to clipboard"
-        className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-        onClick={handleCopy}
-        size="icon"
-        variant="ghost"
-      >
-        {copied ? (
-          <CheckIcon className="h-3.5 w-3.5 text-green-600" />
-        ) : (
-          <CopyIcon className="h-3.5 w-3.5" />
-        )}
-      </Button>
+      <span className="opacity-0 transition-opacity group-hover:opacity-100">
+        <Button
+          aria-label="Copy to clipboard"
+          className="h-7 w-7 shrink-0"
+          onClick={handleCopy}
+          size="icon"
+          variant="ghost"
+        >
+          {copied ? (
+            <CheckIcon className="h-3.5 w-3.5 text-green-600" />
+          ) : (
+            <CopyIcon className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      </span>
     </div>
   );
 }

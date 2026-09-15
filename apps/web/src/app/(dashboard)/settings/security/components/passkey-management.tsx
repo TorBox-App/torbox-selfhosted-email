@@ -213,13 +213,13 @@ export function PasskeyManagement() {
                     </Button>
                     <Button
                       aria-label="Delete passkey"
-                      className="cursor-pointer text-destructive hover:text-destructive"
+                      className="cursor-pointer"
                       onClick={() => {
                         setSelectedPasskey(passkey);
                         setIsDeletingPasskey(true);
                       }}
                       size="sm"
-                      variant="ghost"
+                      variant="ghost-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -121,7 +121,7 @@ export function createColumns(
       cell: ({ row }) => {
         const eventName = row.getValue("eventName") as string;
         return (
-          <Badge className="font-mono text-xs" variant="secondary">
+          <Badge className="font-mono" variant="secondary">
             {eventName}
           </Badge>
         );
@@ -188,7 +188,7 @@ export function createColumns(
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button className="h-8 w-8 p-0" variant="ghost">
+              <Button size="icon-sm" variant="ghost">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>

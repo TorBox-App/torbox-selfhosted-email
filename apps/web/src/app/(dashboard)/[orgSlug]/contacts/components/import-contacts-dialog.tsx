@@ -201,12 +201,12 @@ function ImportOutcome({
 
       <div className="flex flex-wrap gap-2">
         {result.created > 0 && (
-          <Badge className="bg-success/15 text-success">
+          <Badge variant="success">
             {result.created.toLocaleString()} created
           </Badge>
         )}
         {result.updated > 0 && (
-          <Badge className="bg-info/15 text-info">
+          <Badge variant="info">
             {result.updated.toLocaleString()} updated
           </Badge>
         )}
@@ -739,12 +739,7 @@ export function ImportContactsDialog({
                 <span className="text-sm">{uploadError}</span>
               </div>
             )}
-            <Button
-              className="text-xs"
-              onClick={handleDownloadTemplate}
-              size="sm"
-              variant="ghost"
-            >
+            <Button onClick={handleDownloadTemplate} size="sm" variant="ghost">
               <Download className="mr-1.5 h-3.5 w-3.5" />
               Download template
             </Button>
@@ -784,7 +779,7 @@ export function ImportContactsDialog({
                           */}
                           <SelectTrigger
                             aria-label={`Map CSV column ${header}`}
-                            className="h-8 text-xs"
+                            className="h-8"
                           >
                             <SelectValue />
                           </SelectTrigger>

@@ -35,7 +35,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { type SaveStatus, SaveStatusIndicator } from "./save-status-indicator";
@@ -70,19 +70,13 @@ type CodeTemplateToolbarProps = {
   onDelete: () => void;
 };
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  DRAFT: {
-    label: "Draft",
-    className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  },
-  PUBLISHED: {
-    label: "Published",
-    className: "bg-green-500/10 text-green-600 border-green-500/20",
-  },
-  ARCHIVED: {
-    label: "Archived",
-    className: "bg-gray-500/10 text-gray-600 border-gray-500/20",
-  },
+const statusConfig: Record<
+  string,
+  { label: string; variant: ComponentProps<typeof Badge>["variant"] }
+> = {
+  DRAFT: { label: "Draft", variant: "warning" },
+  PUBLISHED: { label: "Published", variant: "success" },
+  ARCHIVED: { label: "Archived", variant: "secondary" },
 };
 
 export function CodeTemplateToolbar({
@@ -125,7 +119,7 @@ export function CodeTemplateToolbar({
           {/* Back to templates */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button asChild className="h-8 w-8 p-0" size="sm" variant="ghost">
+              <Button asChild size="icon-sm" variant="ghost">
                 <Link href={`/${orgSlug}/emails/templates`}>
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
@@ -168,7 +162,7 @@ export function CodeTemplateToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="h-7 w-7 shrink-0 p-0"
+                  className="h-7 w-7 shrink-0"
                   onClick={() => setShowSubjectDialog(true)}
                   size="sm"
                   variant="ghost"
@@ -184,13 +178,10 @@ export function CodeTemplateToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge
-                className={cn(
-                  "shrink-0 gap-1.5",
-                  template.lastEditedFrom === "dashboard"
-                    ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                    : "bg-violet-500/10 text-violet-600 border-violet-500/20"
-                )}
-                variant="outline"
+                className="shrink-0 gap-1.5"
+                variant={
+                  template.lastEditedFrom === "dashboard" ? "info" : "secondary"
+                }
               >
                 {template.lastEditedFrom === "dashboard" ? (
                   <>
@@ -224,8 +215,8 @@ export function CodeTemplateToolbar({
 
           {/* Status Badge */}
           <Badge
-            className={cn("shrink-0", statusConfig[status]?.className)}
-            variant="outline"
+            className="shrink-0"
+            variant={statusConfig[status]?.variant ?? "outline"}
           >
             {statusConfig[status]?.label ?? status}
           </Badge>
@@ -239,14 +230,11 @@ export function CodeTemplateToolbar({
             value={view}
           >
             <TabsList className="h-8">
-              <TabsTrigger
-                className="h-7 gap-1.5 px-2.5 text-xs"
-                value="design"
-              >
+              <TabsTrigger className="h-7 gap-1.5" value="design">
                 <Sparkles className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Design</span>
               </TabsTrigger>
-              <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="code">
+              <TabsTrigger className="h-7 gap-1.5" value="code">
                 <Code2 className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Code</span>
               </TabsTrigger>
@@ -260,12 +248,9 @@ export function CodeTemplateToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                className={cn(
-                  "h-8 w-8 p-0",
-                  showVersionHistory && "bg-accent text-accent-foreground"
-                )}
+                aria-pressed={showVersionHistory}
                 onClick={onToggleVersionHistory}
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
               >
                 <History className="h-4 w-4" />
@@ -279,7 +264,7 @@ export function CodeTemplateToolbar({
           {/* More Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-8 w-8 p-0" size="sm" variant="ghost">
+              <Button size="icon-sm" variant="ghost">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -293,10 +278,7 @@ export function CodeTemplateToolbar({
                 Duplicate Template
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={onDelete}
-              >
+              <DropdownMenuItem onClick={onDelete} variant="destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Template
               </DropdownMenuItem>
@@ -311,7 +293,7 @@ export function CodeTemplateToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="h-8 gap-1.5 px-2"
+                  className="h-8 gap-1.5"
                   onClick={onSendTest}
                   size="sm"
                   variant="outline"
@@ -327,7 +309,7 @@ export function CodeTemplateToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="h-8 gap-1.5 px-2"
+                  className="h-8 gap-1.5"
                   disabled={isPublishing || !subject}
                   onClick={onPublish}
                   size="sm"
@@ -360,10 +342,9 @@ export function CodeTemplateToolbar({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="h-8 w-8 p-0"
                     disabled={isPublishing}
                     onClick={onUnpublish}
-                    size="sm"
+                    size="icon-sm"
                     variant="ghost"
                   >
                     {isPublishing ? (

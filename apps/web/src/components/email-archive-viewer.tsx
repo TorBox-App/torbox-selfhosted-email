@@ -209,7 +209,7 @@ export function EmailArchiveViewer({
             <div>
               <CardTitle className="flex items-center gap-2">
                 Email Archive
-                <Badge className="gap-1 font-normal" variant="outline">
+                <Badge className="gap-1" variant="outline">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
                   Archived
                 </Badge>

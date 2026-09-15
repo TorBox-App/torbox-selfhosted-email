@@ -50,7 +50,7 @@ export function NavUser() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton className="pointer-events-none" size="lg">
-            <Skeleton className="size-8 rounded-full" />
+            <Skeleton className="size-8" />
             <div className="grid flex-1 gap-1 text-left">
               <Skeleton className="h-3.5 w-24" />
               <Skeleton className="h-3 w-32" />
@@ -81,10 +81,10 @@ export function NavUser() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              className="group-data-[collapsible=icon]:overflow-visible! cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="group-data-[collapsible=icon]:overflow-visible! cursor-pointer"
               size="lg"
             >
-              <Avatar className="size-8 ring-1 ring-sidebar-ring">
+              <Avatar className="size-8">
                 <AvatarFallback>
                   {user.name
                     .split(" ")
@@ -104,13 +104,13 @@ export function NavUser() {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <DropdownMenuLabel>
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="size-8 ring-1 ring-sidebar-ring">
+                <Avatar className="size-8">
                   <AvatarFallback>
                     {user.name
                       .split(" ")
@@ -145,7 +145,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer gap-2 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground">
+                <DropdownMenuSubTrigger className="cursor-pointer gap-2 [&_svg:not([class*='size-'])]:size-4">
                   {theme === "dark" ? (
                     <Moon />
                   ) : theme === "light" ? (

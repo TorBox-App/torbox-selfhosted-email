@@ -151,10 +151,7 @@ export default function BrandKitsPage() {
                     <CardTitle className="flex items-center gap-2 text-base">
                       {kit.name}
                       {kit.isDefault && (
-                        <Badge
-                          className="gap-1 bg-primary/10 text-primary"
-                          variant="secondary"
-                        >
+                        <Badge className="gap-1" variant="secondary">
                           <Star className="h-3 w-3" />
                           Default
                         </Badge>
@@ -164,53 +161,55 @@ export default function BrandKitsPage() {
                       {kit.companyName || "No company name"}
                     </CardDescription>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        aria-label="More actions"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                        onClick={(e) => e.stopPropagation()}
-                        size="icon"
-                        variant="ghost"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(
-                            `/${orgSlug}/emails/brand-kits/${kit.id}`
-                          );
-                        }}
-                      >
-                        Edit
-                      </DropdownMenuItem>
-                      {!kit.isDefault && (
+                  <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          aria-label="More actions"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                          size="icon"
+                          variant="ghost"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSetDefault(kit);
+                            router.push(
+                              `/${orgSlug}/emails/brand-kits/${kit.id}`
+                            );
                           }}
                         >
-                          <Check className="mr-2 h-4 w-4" />
-                          Set as Default
+                          Edit
                         </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(kit);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        {!kit.isDefault && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetDefault(kit);
+                            }}
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Set as Default
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(kit);
+                          }}
+                          variant="destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

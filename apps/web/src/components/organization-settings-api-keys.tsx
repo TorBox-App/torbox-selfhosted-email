@@ -716,8 +716,8 @@ export function OrganizationSettingsApiKeys({
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            className="text-destructive"
                             onClick={() => handleDeleteApiKey(key.id)}
+                            variant="destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete

@@ -273,7 +273,7 @@ export function TwoFactorAuth() {
                     authenticator app.
                   </p>
                   <Button
-                    className="h-auto cursor-pointer p-0 text-sm"
+                    className="h-auto cursor-pointer"
                     onClick={() => setShowBackupCodes(true)}
                     variant="link"
                   >
@@ -339,7 +339,7 @@ export function TwoFactorAuth() {
                         ""}
                     </code>
                     <Button
-                      className="shrink-0 cursor-pointer rounded-none border-0 border-l"
+                      className="shrink-0 cursor-pointer"
                       onClick={() => {
                         const secret =
                           setupData.totpURI

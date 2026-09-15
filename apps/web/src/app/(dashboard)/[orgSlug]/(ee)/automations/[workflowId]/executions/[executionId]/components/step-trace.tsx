@@ -21,9 +21,28 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import type { ComponentProps } from "react";
 import type { StepEngagement } from "@/actions/(ee)/workflows";
-import { STEP_STATUS_COLORS, STEP_STATUS_LABELS } from "@/lib/(ee)/workflows";
+import { STEP_STATUS_LABELS } from "@/lib/(ee)/workflows";
 import { cn } from "@/lib/utils";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors STEP_STATUS_COLORS' semantics as Badge variants. */
+function getStepStatusBadgeVariant(
+  status: WorkflowStepExecutionRecord["status"]
+): BadgeVariant {
+  switch (status) {
+    case "executing":
+      return "info";
+    case "completed":
+      return "success";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
 
 const STEP_TYPE_ICONS: Record<string, typeof Zap> = {
   trigger: Zap,
@@ -126,7 +145,7 @@ function EngagementDots({ engagement }: { engagement: StepEngagement }) {
                 )}
               />
             </TooltipTrigger>
-            <TooltipContent className="text-xs" side="top">
+            <TooltipContent side="top">
               <span className="font-medium">{config.label}</span>
               {timestamp && (
                 <span className="ml-1 text-muted-foreground">
@@ -203,10 +222,7 @@ export function StepTrace({
             <div className={`pb-6 ${isLast ? "pb-0" : ""}`}>
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm">{stepName}</span>
-                <Badge
-                  className={STEP_STATUS_COLORS[step.status]}
-                  variant="secondary"
-                >
+                <Badge variant={getStepStatusBadgeVariant(step.status)}>
                   <StatusIcon
                     className={`mr-1 h-3 w-3 ${
                       step.status === "executing" ? "animate-spin" : ""

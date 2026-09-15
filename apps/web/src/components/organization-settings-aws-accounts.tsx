@@ -234,7 +234,7 @@ export function OrganizationSettingsAwsAccounts({
               <CardTitle className="flex items-center gap-2">
                 AWS Accounts
                 {accountLimit !== -1 && (
-                  <Badge className="font-normal" variant="outline">
+                  <Badge variant="outline">
                     {accounts.length} / {accountLimit}
                   </Badge>
                 )}
@@ -303,18 +303,12 @@ export function OrganizationSettingsAwsAccounts({
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold">{account.name}</h4>
                         {account.isVerified ? (
-                          <Badge
-                            className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                            variant="secondary"
-                          >
+                          <Badge variant="success">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
                             Verified
                           </Badge>
                         ) : (
-                          <Badge
-                            className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                            variant="secondary"
-                          >
+                          <Badge variant="warning">
                             <XCircle className="mr-1 h-3 w-3" />
                             Pending
                           </Badge>
@@ -342,9 +336,8 @@ export function OrganizationSettingsAwsAccounts({
                     )}
                     {canEdit && (
                       <Button
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => handleDeleteClick(account)}
-                        variant="outline"
+                        variant="ghost-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

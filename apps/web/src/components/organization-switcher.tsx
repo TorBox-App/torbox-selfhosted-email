@@ -48,11 +48,8 @@ export function OrganizationSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            className="pointer-events-none h-auto py-2"
-            size="lg"
-          >
-            <Skeleton className="size-8 rounded-lg" />
+          <SidebarMenuButton className="pointer-events-none" size="lg">
+            <Skeleton className="size-8" />
             <div className="grid flex-1 gap-1 text-left">
               <Skeleton className="h-3.5 w-24" />
               <Skeleton className="h-3 w-16" />
@@ -88,11 +85,7 @@ export function OrganizationSwitcher() {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarMenuButton
-                className="h-auto py-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                size="lg"
-                tooltip={activeOrganization.name}
-              >
+              <SidebarMenuButton size="lg" tooltip={activeOrganization.name}>
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
                     alt={activeOrganization.name}
@@ -109,7 +102,7 @@ export function OrganizationSwitcher() {
                   <div className="flex items-center gap-1 text-xs">
                     {userRole && (
                       <Badge
-                        className="h-4 px-1 text-[10px]"
+                        className="h-4"
                         variant={getRoleBadgeVariant(userRole)}
                       >
                         {userRole}
@@ -122,7 +115,7 @@ export function OrganizationSwitcher() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-[280px] rounded-lg p-3"
+              className="w-[280px] p-3"
               side={isMobile ? "bottom" : "right"}
               sideOffset={4}
             >
@@ -181,12 +174,10 @@ export function OrganizationSwitcher() {
               <DropdownMenuSeparator />
 
               {/* Workspaces List */}
-              <DropdownMenuLabel className="px-0 py-2 text-muted-foreground text-xs">
-                Workspaces
-              </DropdownMenuLabel>
+              <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
               {organizations.map((org) => (
                 <DropdownMenuItem
-                  className="gap-2 rounded-md p-2"
+                  className="gap-2"
                   key={org.id}
                   onClick={() => {
                     if (org.slug) {
@@ -209,7 +200,7 @@ export function OrganizationSwitcher() {
 
               {/* Create Workspace Button */}
               <DropdownMenuItem
-                className="mt-1 gap-2 rounded-md p-2"
+                className="mt-1 gap-2"
                 onSelect={() => setShowCreateDialog(true)}
               >
                 <div className="flex h-6 w-6 items-center justify-center rounded-md">

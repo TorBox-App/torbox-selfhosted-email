@@ -54,38 +54,16 @@ export function AWSAccountList({
                 </div>
               </div>
 
-              {account.isVerified && (
-                <Badge className="bg-green-50 text-green-700" variant="outline">
-                  Verified
-                </Badge>
-              )}
+              {account.isVerified && <Badge variant="success">Verified</Badge>}
             </div>
 
             {/* Permissions */}
             <div className="mt-4">
               <p className="mb-2 text-muted-foreground text-sm">Your access:</p>
               <div className="flex gap-2">
-                {permissions.canView && (
-                  <Badge className="bg-blue-50 text-blue-700" variant="outline">
-                    View
-                  </Badge>
-                )}
-                {permissions.canSend && (
-                  <Badge
-                    className="bg-green-50 text-green-700"
-                    variant="outline"
-                  >
-                    Send
-                  </Badge>
-                )}
-                {permissions.canManage && (
-                  <Badge
-                    className="bg-purple-50 text-purple-700"
-                    variant="outline"
-                  >
-                    Manage
-                  </Badge>
-                )}
+                {permissions.canView && <Badge variant="info">View</Badge>}
+                {permissions.canSend && <Badge variant="success">Send</Badge>}
+                {permissions.canManage && <Badge variant="brand">Manage</Badge>}
                 {!(
                   permissions.canView ||
                   permissions.canSend ||

@@ -294,9 +294,8 @@ export function CodeTemplateCodeView({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                className="h-8 w-8 p-0"
                 onClick={handleCopy}
-                size="sm"
+                size="icon-sm"
                 variant={copied ? "secondary" : "ghost"}
               >
                 {copied ? (
@@ -313,12 +312,7 @@ export function CodeTemplateCodeView({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                className="h-8 w-8 p-0"
-                onClick={handleDownload}
-                size="sm"
-                variant="ghost"
-              >
+              <Button onClick={handleDownload} size="icon-sm" variant="ghost">
                 <Download className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>

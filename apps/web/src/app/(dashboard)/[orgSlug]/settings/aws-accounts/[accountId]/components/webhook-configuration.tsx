@@ -129,10 +129,10 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
         {/* Success/Error Messages */}
         {success && (
           <Alert>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-600">
+            <CheckCircle2 className="h-4 w-4 text-success" />
+            <div className="col-start-2 grid justify-items-start gap-1 text-sm text-success [&_p]:leading-relaxed">
               {success}
-            </AlertDescription>
+            </div>
           </Alert>
         )}
 
@@ -152,10 +152,9 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
               events.
             </p>
             <Button
-              className="text-destructive hover:bg-destructive/10"
               disabled={isLoading}
               onClick={handleDisconnect}
-              variant="outline"
+              variant="ghost-destructive"
             >
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -187,11 +186,7 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
             {/* Advanced: Manual Webhook Input */}
             <Collapsible onOpenChange={setAdvancedOpen} open={advancedOpen}>
               <CollapsibleTrigger asChild>
-                <Button
-                  className="gap-1 text-muted-foreground"
-                  size="sm"
-                  variant="ghost"
-                >
+                <Button className="gap-1" size="sm" variant="ghost">
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
                   />

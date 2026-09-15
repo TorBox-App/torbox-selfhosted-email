@@ -51,12 +51,14 @@ export function SesHealthPill({
         ? "SES at risk"
         : "SES unchecked";
 
-  const badgeClassName =
-    data.status === "at_risk"
-      ? "text-warning border-warning/50"
-      : data.status === "unknown"
-        ? "text-muted-foreground"
-        : undefined;
+  const badgeVariant =
+    data.status === "in_danger"
+      ? "destructive"
+      : data.status === "at_risk"
+        ? "warning"
+        : data.status === "unknown"
+          ? "secondary"
+          : "outline";
 
   const problemAccounts = data.accounts.filter((a) => a.status !== "healthy");
   const checkedLine =
@@ -68,12 +70,7 @@ export function SesHealthPill({
     <Tooltip>
       <TooltipTrigger asChild>
         <Link href={`/${orgSlug}/emails/analytics`}>
-          <Badge
-            className={badgeClassName}
-            variant={data.status === "in_danger" ? "destructive" : "outline"}
-          >
-            {label}
-          </Badge>
+          <Badge variant={badgeVariant}>{label}</Badge>
         </Link>
       </TooltipTrigger>
       <TooltipContent>

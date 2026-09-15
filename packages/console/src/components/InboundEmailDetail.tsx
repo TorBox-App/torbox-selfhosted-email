@@ -3,7 +3,6 @@ import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@wraps/ui/components/ui/card";
@@ -91,14 +90,7 @@ function VerdictBadge({
   }
   const pass = verdict === "PASS";
   return (
-    <Badge
-      className={
-        pass
-          ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
-          : "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
-      }
-      variant="outline"
-    >
+    <Badge variant={pass ? "success" : "destructive"}>
       {pass ? (
         <ShieldCheck className="mr-1 h-3 w-3" />
       ) : (
@@ -314,9 +306,9 @@ export function InboundEmailDetail() {
         <CardHeader>
           <CardTitle>Message Body</CardTitle>
           {email.htmlTruncated && (
-            <CardDescription className="text-amber-600">
+            <p className="text-sm text-warning">
               HTML content was truncated due to size limits
-            </CardDescription>
+            </p>
           )}
         </CardHeader>
         <CardContent>
@@ -360,10 +352,7 @@ export function InboundEmailDetail() {
                       <div className="text-muted-foreground text-xs">
                         {att.contentType} &middot; {formatFileSize(att.size)}
                         {att.contentDisposition === "inline" && (
-                          <Badge
-                            className="ml-2 bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20"
-                            variant="outline"
-                          >
+                          <Badge className="ml-2" variant="info">
                             inline
                           </Badge>
                         )}

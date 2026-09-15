@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  type ComponentProps,
   useCallback,
   useEffect,
   useMemo,
@@ -77,11 +78,24 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   getStepCount,
   getTriggerDescription,
-  WORKFLOW_STATUS_COLORS,
   WORKFLOW_STATUS_LABELS,
 } from "@/lib/(ee)/workflows";
 import { cn } from "@/lib/utils";
 import { CreateWorkflowDialog } from "./create-workflow-dialog";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors WORKFLOW_STATUS_COLORS' semantics as Badge variants. */
+function getWorkflowStatusBadgeVariant(status: string): BadgeVariant {
+  switch (status) {
+    case "enabled":
+      return "success";
+    case "paused":
+      return "warning";
+    default:
+      return "secondary";
+  }
+}
 
 type WorkflowsTableProps = {
   workflows: WorkflowWithMeta[];
@@ -257,10 +271,7 @@ export function WorkflowsTable({
           const wf = row.original;
           const status = wf.status;
           return (
-            <Badge
-              className={WORKFLOW_STATUS_COLORS[status]}
-              variant="secondary"
-            >
+            <Badge variant={getWorkflowStatusBadgeVariant(status)}>
               {status === "enabled" && <CheckCircle className="mr-1 h-3 w-3" />}
               {status === "paused" && <Pause className="mr-1 h-3 w-3" />}
               {WORKFLOW_STATUS_LABELS[status]}
@@ -349,8 +360,8 @@ export function WorkflowsTable({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  className="h-8 w-8 p-0"
                   onClick={(e) => e.stopPropagation()}
+                  size="icon-sm"
                   variant="ghost"
                 >
                   <span className="sr-only">Open menu</span>
@@ -414,13 +425,13 @@ export function WorkflowsTable({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive"
                       disabled={isPending}
                       onClick={(e) => {
                         e.stopPropagation();
                         setWorkflowToDelete(wf);
                         setDeleteDialogOpen(true);
                       }}
+                      variant="destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete

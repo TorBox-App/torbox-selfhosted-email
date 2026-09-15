@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@wraps/ui/components/ui/alert-dialog";
 import { Badge } from "@wraps/ui/components/ui/badge";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import { Checkbox } from "@wraps/ui/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -73,6 +74,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  type ComponentProps,
   useCallback,
   useEffect,
   useMemo,
@@ -91,7 +93,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import {
-  BATCH_STATUS_COLORS,
   BATCH_STATUS_LABELS,
   BATCH_STATUSES,
   type BatchSendWithMeta,
@@ -104,6 +105,24 @@ import {
 } from "@/lib/batch";
 import { broadcastCSVColumns } from "@/lib/csv-columns";
 import { exportTableToCSV } from "@/lib/csv-export";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors BATCH_STATUS_COLORS' semantics as Badge variants. */
+function getBatchStatusBadgeVariant(status: BatchStatus): BadgeVariant {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "failed":
+      return "destructive";
+    case "scheduled":
+    case "queued":
+    case "processing":
+      return "info";
+    default:
+      return "secondary";
+  }
+}
 
 type BatchTableProps = {
   batches: BatchSendWithMeta[];
@@ -375,12 +394,9 @@ export function BatchTable({
           return (
             <div className="space-y-1">
               <Badge
-                className={
-                  presentation
-                    ? presentation.color
-                    : BATCH_STATUS_COLORS[status]
+                variant={
+                  presentation ? "warning" : getBatchStatusBadgeVariant(status)
                 }
-                variant="secondary"
               >
                 {/* A paused broadcast is not working — the spinner said it was. */}
                 {status === "processing" && !paused && (
@@ -401,10 +417,7 @@ export function BatchTable({
               {stall && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge
-                      className="bg-warning/15 text-warning"
-                      variant="secondary"
-                    >
+                    <Badge variant="warning">
                       <AlertTriangle className="mr-1 h-3 w-3" />
                       {stall.label}
                     </Badge>
@@ -576,7 +589,7 @@ export function BatchTable({
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="h-8 w-8 p-0" variant="ghost">
+                <Button size="icon-sm" variant="ghost">
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -618,7 +631,6 @@ export function BatchTable({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive"
                       disabled={isPending}
                       onClick={() =>
                         setPendingDestructive({
@@ -627,6 +639,7 @@ export function BatchTable({
                           name: batch.name || "Untitled",
                         })
                       }
+                      variant="destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete draft
@@ -637,7 +650,6 @@ export function BatchTable({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive"
                       disabled={isPending}
                       onClick={() =>
                         setPendingDestructive({
@@ -646,6 +658,7 @@ export function BatchTable({
                           name: batch.name || "Untitled",
                         })
                       }
+                      variant="destructive"
                     >
                       Cancel send
                     </DropdownMenuItem>
@@ -723,15 +736,10 @@ export function BatchTable({
           )}
         </div>
         {/* Button Group: Export | New Broadcast */}
-        <div className="flex w-full sm:w-auto">
+        <ButtonGroup className="w-full sm:w-auto">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                className={
-                  canManage
-                    ? "rounded-r-none border-r-0 focus:z-10"
-                    : "focus:z-10"
-                }
                 disabled={isExporting}
                 onClick={async () => {
                   setIsExporting(true);
@@ -791,18 +799,14 @@ export function BatchTable({
             <TooltipContent>Export as CSV</TooltipContent>
           </Tooltip>
           {canManage && (
-            <Button
-              asChild
-              className="rounded-l-none focus:z-10"
-              size="default"
-            >
+            <Button asChild size="default">
               <Link href={`/${orgSlug}/emails/broadcasts/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Broadcast
               </Link>
             </Button>
           )}
-        </div>
+        </ButtonGroup>
       </div>
 
       {/* Table */}
@@ -834,7 +838,7 @@ export function BatchTable({
                 return (
                   <TableRow
                     aria-label={`Open ${row.original.name || "Untitled"}`}
-                    className="cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-ring"
                     key={row.id}
                     onClick={() => router.push(href)}
                     onKeyDown={(event) => {

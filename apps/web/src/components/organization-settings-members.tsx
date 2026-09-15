@@ -49,7 +49,13 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import {
+  type ComponentProps,
+  useEffect,
+  useOptimistic,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import {
   cancelInvitation,
@@ -87,42 +93,50 @@ const roleDescriptions: Record<string, string> = {
   billing: "Billing management and read-only org settings. No content access.",
 };
 
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
 const roleConfig = {
   owner: {
     icon: Crown,
     color: "text-yellow-600 dark:text-yellow-400",
     bgColor: "bg-yellow-100 dark:bg-yellow-900",
     label: "Owner",
+    variant: "warning" as BadgeVariant,
   },
   admin: {
     icon: Shield,
     color: "text-blue-600 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-900",
     label: "Admin",
+    variant: "info" as BadgeVariant,
   },
   member: {
     icon: Users,
     color: "text-gray-600 dark:text-gray-400",
     bgColor: "bg-gray-100 dark:bg-gray-900",
     label: "Member",
+    variant: "secondary" as BadgeVariant,
   },
   marketing: {
     icon: Megaphone,
     color: "text-orange-600 dark:text-orange-400",
     bgColor: "bg-orange-100 dark:bg-orange-900",
     label: "Marketing",
+    variant: "brand" as BadgeVariant,
   },
   "read-only": {
     icon: Eye,
     color: "text-gray-500 dark:text-gray-400",
     bgColor: "bg-gray-100 dark:bg-gray-900",
     label: "Read Only",
+    variant: "secondary" as BadgeVariant,
   },
   billing: {
     icon: CreditCard,
     color: "text-green-600 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-900",
     label: "Billing",
+    variant: "success" as BadgeVariant,
   },
 };
 
@@ -449,16 +463,9 @@ export function OrganizationSettingsMembers({
                             <h4 className="font-semibold">
                               {member.user.name}
                             </h4>
-                            <Badge
-                              className={roleInfo.bgColor}
-                              variant="secondary"
-                            >
-                              <RoleIcon
-                                className={`mr-1 h-3 w-3 ${roleInfo.color}`}
-                              />
-                              <span className={roleInfo.color}>
-                                {roleInfo.label}
-                              </span>
+                            <Badge variant={roleInfo.variant}>
+                              <RoleIcon className="mr-1 h-3 w-3" />
+                              {roleInfo.label}
                             </Badge>
                           </div>
                           <p className="text-muted-foreground text-sm">
@@ -497,8 +504,8 @@ export function OrganizationSettingsMembers({
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              className="text-destructive"
                               onClick={() => handleRemoveMember(member.id)}
+                              variant="destructive"
                             >
                               Remove Member
                             </DropdownMenuItem>

@@ -190,11 +190,7 @@ export function OrganizationSettingsBilling({
             <div>
               <CardTitle className="flex items-center gap-2">
                 Current Plan
-                {isAnnual && (
-                  <Badge className="bg-green-600 text-primary-foreground">
-                    Annual
-                  </Badge>
-                )}
+                {isAnnual && <Badge variant="success">Annual</Badge>}
                 {isTrialing && <Badge variant="secondary">Trial</Badge>}
                 {isCancelled && <Badge variant="destructive">Cancelling</Badge>}
               </CardTitle>
@@ -392,10 +388,9 @@ export function OrganizationSettingsBilling({
       {activeSubscription && !isCancelled && (
         <div className="border-t pt-6">
           <Button
-            className="text-muted-foreground hover:text-destructive"
             disabled={!canManageBilling}
             onClick={() => setShowCancelDialog(true)}
-            variant="ghost"
+            variant="ghost-destructive"
           >
             Cancel Subscription
           </Button>

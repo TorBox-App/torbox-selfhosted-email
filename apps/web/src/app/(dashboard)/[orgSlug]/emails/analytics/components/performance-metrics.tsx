@@ -14,12 +14,14 @@ import {
 } from "@/lib/analytics-scope";
 import { useAnalyticsOverview } from "../hooks/use-analytics";
 
+type MetricTone = "default" | "success" | "warning" | "destructive";
+
 type MetricRowProps = {
   label: string;
   value: number;
   total: number;
   percentage: number;
-  color?: string;
+  tone?: MetricTone;
 };
 
 function MetricRow({
@@ -27,7 +29,7 @@ function MetricRow({
   value,
   total,
   percentage,
-  color = "bg-primary",
+  tone = "default",
 }: MetricRowProps) {
   return (
     <div className="space-y-2">
@@ -42,7 +44,19 @@ function MetricRow({
           </span>
         </div>
       </div>
-      <Progress className="h-2" indicatorClassName={color} value={percentage} />
+      <Progress
+        className="h-2"
+        indicatorClassName={
+          tone === "success"
+            ? "bg-success"
+            : tone === "warning"
+              ? "bg-warning"
+              : tone === "destructive"
+                ? "bg-destructive"
+                : "bg-primary"
+        }
+        value={percentage}
+      />
     </div>
   );
 }
@@ -97,27 +111,27 @@ export function PerformanceMetrics({ orgSlug }: { orgSlug: string }) {
   // NOT used: when SES has published reputation they are account-lifetime rates
   // and pairing one with a window count reads as arithmetic that does not add
   // up. They get their own row below, labelled.
-  const metrics = [
+  const metrics: MetricRowProps[] = [
     {
       label: "Delivered",
       value: data.totalDelivered,
       total: effectiveSent,
       percentage: data.deliveryRate,
-      color: "bg-green-500",
+      tone: "success",
     },
     {
       label: "Bounced",
       value: data.totalBounced,
       total: effectiveSent,
       percentage: windowRate(data.totalBounced),
-      color: "bg-yellow-500",
+      tone: "warning",
     },
     {
       label: "Complaints",
       value: data.totalComplaints,
       total: effectiveSent,
       percentage: windowRate(data.totalComplaints),
-      color: "bg-red-500",
+      tone: "destructive",
     },
   ];
 

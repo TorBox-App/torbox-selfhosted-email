@@ -381,7 +381,7 @@ export function SendTestModal({
                         <FieldLabel htmlFor={field.name}>To</FieldLabel>
                         {userEmail && (
                           <Button
-                            className="h-auto p-0 text-xs"
+                            className="h-auto"
                             onClick={handleSendToSelf}
                             type="button"
                             variant="link"

@@ -112,14 +112,16 @@ export function ImportCssDialog({
             Found {lightCount} light tokens, {darkCount} dark tokens
           </p>
           {shownWarnings.length > 0 && (
-            <ScrollArea className="h-32 rounded-md border p-2">
-              <ul className="space-y-1 text-muted-foreground text-xs">
-                {shownWarnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-                {extraWarnings > 0 && <li>+{extraWarnings} more</li>}
-              </ul>
-            </ScrollArea>
+            <div className="rounded-md border p-2">
+              <ScrollArea className="h-32">
+                <ul className="space-y-1 text-muted-foreground text-xs">
+                  {shownWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                  {extraWarnings > 0 && <li>+{extraWarnings} more</li>}
+                </ul>
+              </ScrollArea>
+            </div>
           )}
         </div>
 

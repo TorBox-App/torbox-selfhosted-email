@@ -39,7 +39,7 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
                 aria-current={isActive ? "step" : undefined}
                 aria-labelledby={labelId}
               >
-                <StepperIndicator className="size-11 text-sm shrink-0" />
+                <StepperIndicator className="size-11 shrink-0" />
                 <span className="sr-only">
                   Step {stepNumber} of {totalSteps}, {step}
                   {isCompleted && ", completed"}

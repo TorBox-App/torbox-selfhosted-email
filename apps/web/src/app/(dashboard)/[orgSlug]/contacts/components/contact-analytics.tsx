@@ -139,7 +139,7 @@ function AllTimeScope() {
       <PopoverTrigger asChild>
         <Button
           aria-label="What these figures cover"
-          className="-my-2 text-muted-foreground"
+          className="-my-2"
           size="icon-sm"
           variant="ghost"
         >
@@ -148,12 +148,12 @@ function AllTimeScope() {
       </PopoverTrigger>
       {/* Opens upward, into the header's whitespace: anchored below, the panel
           covered the figures it exists to explain. */}
-      <PopoverContent align="start" className="w-72 text-sm" side="top">
-        <p>
+      <PopoverContent align="start" className="w-72" side="top">
+        <p className="text-sm">
           Contact totals, list health and engagement are all-time figures for
           every contact in this organization.
         </p>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-muted-foreground text-sm">
           They do not change when you switch the time range — only the chart and
           the new-contact count above are scoped to the selected window.
         </p>
@@ -314,7 +314,6 @@ function HealthStat({
   return (
     <Button
       asChild
-      className="px-2 font-normal"
       size="touch"
       // `outline`, not `secondary`: the filled secondary surface measures 1.09:1
       // against the card, so on an ordinary screen the applied filter was
@@ -706,7 +705,6 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
         {TIME_RANGES.map((r) => (
           <Button
             aria-pressed={rangeValue === r.value}
-            className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
             key={r.value}
             onClick={() => setChosenRange(r.value)}
             size="touch"
@@ -727,14 +725,14 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
         >
           <SelectTrigger
             aria-label="Select time range"
-            className="w-32 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+            className="w-32 **:data-[slot=select-value]:block"
             size="touch"
           >
             <SelectValue placeholder="30 days" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl">
+          <SelectContent>
             {TIME_RANGES.map((r) => (
-              <SelectItem className="rounded-lg" key={r.value} value={r.value}>
+              <SelectItem key={r.value} value={r.value}>
                 {r.label}
               </SelectItem>
             ))}

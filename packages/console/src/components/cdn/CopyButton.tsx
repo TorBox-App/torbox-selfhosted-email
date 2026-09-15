@@ -46,11 +46,7 @@ export function CopyButton({
 
   return (
     <Button
-      className={cn(
-        "transition-all",
-        state === "copied" && "text-green-500",
-        className
-      )}
+      className={className}
       disabled={state === "copying"}
       onClick={handleCopy}
       size={size}

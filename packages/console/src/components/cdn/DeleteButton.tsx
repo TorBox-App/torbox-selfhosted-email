@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 type DeleteButtonProps = {
   onDelete: () => void | Promise<void>;
   className?: string;
-  variant?: "default" | "outline" | "ghost" | "destructive";
   size?: "default" | "sm" | "icon";
   label?: string;
 };
@@ -14,7 +13,6 @@ type DeleteButtonProps = {
 export function DeleteButton({
   onDelete,
   className,
-  variant = "outline",
   size = "icon",
   label,
 }: DeleteButtonProps) {
@@ -37,14 +35,11 @@ export function DeleteButton({
 
   return (
     <Button
-      className={cn(
-        "text-destructive transition-all hover:text-destructive",
-        className
-      )}
+      className={className}
       disabled={isDeleting}
       onClick={handleDelete}
       size={size}
-      variant={variant}
+      variant="ghost-destructive"
     >
       {isDeleting ? (
         <Loader2

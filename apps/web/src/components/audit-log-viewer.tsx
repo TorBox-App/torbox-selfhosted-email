@@ -27,7 +27,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ChevronRight, Download, ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { toast } from "sonner";
 import { type AuditLogAction, listAuditLogs } from "@/actions/audit-log";
 import { exportAuditLogs } from "@/actions/export";
@@ -142,23 +142,24 @@ const ACTION_LABELS: Record<AuditLogAction, string> = {
 // filter list can never drift out of sync with the action union again (COR-12).
 const ALL_ACTIONS = Object.keys(ACTION_LABELS) as AuditLogAction[];
 
-function getActionBadgeClass(action: string): string {
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+function getActionBadgeVariant(action: string): BadgeVariant {
   if (
     action.startsWith("resource.deleted") ||
     action.startsWith("auth.login_failed")
   ) {
-    return "border-transparent bg-destructive/10 text-destructive dark:bg-destructive/20";
+    return "destructive";
   }
   if (action.startsWith("resource.deployed")) {
-    return "border-transparent bg-primary/10 text-primary dark:bg-primary/20";
+    return "info";
   }
-  return "border-transparent bg-secondary text-secondary-foreground";
+  return "secondary";
 }
 
 function ActionBadge({ action }: { action: string }) {
   const label = ACTION_LABELS[action as AuditLogAction] ?? action;
-  const className = getActionBadgeClass(action);
-  return <Badge className={className}>{label}</Badge>;
+  return <Badge variant={getActionBadgeVariant(action)}>{label}</Badge>;
 }
 
 function TimestampCell({ date }: { date: Date | string }) {
@@ -205,7 +206,7 @@ function TableSkeleton() {
                 <Skeleton className="h-4 w-40" />
               </TableCell>
               <TableCell>
-                <Skeleton className="h-5 w-32 rounded-md" />
+                <Skeleton className="h-5 w-32" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-24" />
@@ -428,7 +429,11 @@ export function AuditLogViewer({
       ) : rows.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="rounded-lg border">
+        <div
+          className={
+            isFetching ? "rounded-lg border opacity-60" : "rounded-lg border"
+          }
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -441,10 +446,7 @@ export function AuditLogViewer({
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
-                  className={isFetching ? "opacity-60" : undefined}
-                  key={row.id}
-                >
+                <TableRow key={row.id}>
                   <TableCell className="whitespace-nowrap">
                     <TimestampCell date={row.createdAt} />
                   </TableCell>

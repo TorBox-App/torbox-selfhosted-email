@@ -121,7 +121,7 @@ export function SubjectEditDialog({
               onValueChange={(v) => setLocalEmailType(v as EmailType)}
               value={localEmailType}
             >
-              <Label
+              <label
                 className="flex cursor-pointer flex-col gap-1 rounded-lg border p-3 [&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/5"
                 htmlFor="marketing"
               >
@@ -132,8 +132,8 @@ export function SubjectEditDialog({
                 <span className="text-muted-foreground text-xs">
                   Newsletters, promotions, updates
                 </span>
-              </Label>
-              <Label
+              </label>
+              <label
                 className="flex cursor-pointer flex-col gap-1 rounded-lg border p-3 [&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/5"
                 htmlFor="transactional"
               >
@@ -144,7 +144,7 @@ export function SubjectEditDialog({
                 <span className="text-muted-foreground text-xs">
                   Password resets, receipts, alerts
                 </span>
-              </Label>
+              </label>
             </RadioGroup>
           </div>
         </div>

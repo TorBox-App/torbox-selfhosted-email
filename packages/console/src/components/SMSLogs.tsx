@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@wraps/ui/components/ui/tooltip";
 import { MessageSquare, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type SMSLog = {
@@ -51,53 +51,38 @@ type SMSLog = {
 };
 
 type StatusConfig = {
-  variant: "default" | "secondary" | "destructive" | "outline";
+  variant: ComponentProps<typeof Badge>["variant"];
   description: string;
-  className?: string;
 };
 
 const STATUS_CONFIG: Record<string, StatusConfig> = {
   delivered: {
-    variant: "default",
+    variant: "success",
     description: "Message was delivered to recipient's device",
-    className:
-      "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 border-green-500/20",
   },
   sent: {
-    variant: "secondary",
+    variant: "info",
     description: "Message was sent but delivery not yet confirmed",
-    className:
-      "bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20",
   },
   queued: {
     variant: "secondary",
     description: "Message is queued for delivery",
-    className:
-      "bg-gray-500/10 text-gray-700 dark:text-gray-400 hover:bg-gray-500/20 border-gray-500/20",
   },
   failed: {
     variant: "destructive",
     description: "Message failed to deliver",
-    className:
-      "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 border-red-500/20",
   },
   blocked: {
     variant: "destructive",
     description: "Message was blocked by carrier or filter",
-    className:
-      "bg-orange-500/10 text-orange-700 dark:text-orange-400 hover:bg-orange-500/20 border-orange-500/20",
   },
   invalid: {
     variant: "destructive",
     description: "Invalid phone number or message format",
-    className:
-      "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 border-red-500/20",
   },
   opted_out: {
-    variant: "default",
+    variant: "warning",
     description: "Recipient has opted out of receiving messages",
-    className:
-      "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20 border-yellow-500/20",
   },
 };
 
@@ -340,7 +325,6 @@ export function SMSLogs() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Badge
-                            className={STATUS_CONFIG[log.status]?.className}
                             variant={
                               STATUS_CONFIG[log.status]?.variant ?? "default"
                             }

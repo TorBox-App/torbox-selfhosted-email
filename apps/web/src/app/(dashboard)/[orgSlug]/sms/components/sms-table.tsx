@@ -12,6 +12,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
@@ -139,14 +140,14 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Button Group: Time Range | Status | Export */}
-          <div className="flex w-full sm:w-auto">
+          <ButtonGroup className="w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 router.push(`/${orgSlug}/sms?days=${value}`);
               }}
               value={String(days)}
             >
-              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[150px] rounded-r-none border-r-0 focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[150px]">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
               <SelectContent>
@@ -171,7 +172,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                   : "all"
               }
             >
-              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-none border-r-0 focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[140px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +188,6 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="rounded-none border-r-0 focus:z-10"
                   disabled={isExporting}
                   onClick={() => {
                     setIsExporting(true);
@@ -230,7 +230,6 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
               <TooltipTrigger asChild>
                 <Button
                   aria-label="Refresh"
-                  className="rounded-l-none focus:z-10"
                   disabled={isPending}
                   onClick={() =>
                     startTransition(() => {
@@ -247,7 +246,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
               </TooltipTrigger>
               <TooltipContent>Refresh</TooltipContent>
             </Tooltip>
-          </div>
+          </ButtonGroup>
         </div>
       </div>
 

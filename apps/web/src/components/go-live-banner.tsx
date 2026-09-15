@@ -157,9 +157,8 @@ export function GoLiveBanner({ orgSlug }: GoLiveBannerProps) {
         )}
         <Button
           aria-label="Dismiss banner"
-          className="h-8 w-8 p-0"
           onClick={dismiss}
-          size="sm"
+          size="icon-sm"
           variant="ghost"
         >
           <X className="h-4 w-4" />

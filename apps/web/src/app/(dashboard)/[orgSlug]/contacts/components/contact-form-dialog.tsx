@@ -566,7 +566,7 @@ export function ContactFormDialog({
                 <div className="flex items-center justify-between">
                   <Label>Custom properties</Label>
                   <Button
-                    className="h-7 text-xs"
+                    className="h-7"
                     onClick={addProperty}
                     size="sm"
                     type="button"
@@ -598,7 +598,7 @@ export function ContactFormDialog({
                         />
                         <Button
                           aria-label="Remove property"
-                          className="h-8 w-8 shrink-0 p-0"
+                          className="h-8 w-8 shrink-0"
                           onClick={() => removeProperty(index)}
                           type="button"
                           variant="ghost"

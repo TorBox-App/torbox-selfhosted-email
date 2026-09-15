@@ -425,10 +425,9 @@ export function OrganizationSettingsSso({
                   )}
                   {canEdit && (
                     <Button
-                      className="text-destructive"
                       disabled={isPending}
                       onClick={handleDelete}
-                      variant="ghost"
+                      variant="ghost-destructive"
                     >
                       Remove Provider
                     </Button>

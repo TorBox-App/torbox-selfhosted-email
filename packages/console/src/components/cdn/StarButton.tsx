@@ -39,7 +39,7 @@ export function StarButton({
 
   return (
     <Button
-      className={cn("transition-all", className)}
+      className={className}
       disabled={isToggling}
       onClick={handleToggle}
       size={size}

@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from "@wraps/ui/components/ui/tooltip";
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { InboundEmailList } from "@/components/InboundEmailList";
 
@@ -58,59 +58,42 @@ type EmailLog = {
 };
 
 type StatusConfig = {
-  variant: "default" | "secondary" | "destructive" | "outline";
+  variant: ComponentProps<typeof Badge>["variant"];
   description: string;
-  className?: string;
 };
 
 const STATUS_CONFIG: Record<string, StatusConfig> = {
   clicked: {
-    variant: "default",
+    variant: "brand",
     description: "Recipient clicked a link in the email",
-    className:
-      "bg-purple-500/10 text-purple-700 dark:text-purple-400 hover:bg-purple-500/20 border-purple-500/20",
   },
   opened: {
-    variant: "default",
+    variant: "info",
     description: "Recipient opened the email",
-    className:
-      "bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20",
   },
   delivered: {
-    variant: "default",
+    variant: "success",
     description: "Email was successfully delivered to recipient's mailbox",
-    className:
-      "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 border-green-500/20",
   },
   sent: {
     variant: "secondary",
     description: "Email was sent but delivery not yet confirmed",
-    className:
-      "bg-gray-500/10 text-gray-700 dark:text-gray-400 hover:bg-gray-500/20 border-gray-500/20",
   },
   bounced: {
-    variant: "default",
+    variant: "warning",
     description: "Email bounced - recipient's mailbox may not exist or be full",
-    className:
-      "bg-orange-500/10 text-orange-700 dark:text-orange-400 hover:bg-orange-500/20 border-orange-500/20",
   },
   suppressed: {
-    variant: "default",
+    variant: "warning",
     description: "Email blocked - recipient is on the suppression list",
-    className:
-      "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/20",
   },
   complained: {
-    variant: "default",
+    variant: "destructive",
     description: "Recipient marked this email as spam",
-    className:
-      "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 border-red-500/20",
   },
   failed: {
-    variant: "default",
+    variant: "destructive",
     description: "Email failed to send due to an error",
-    className:
-      "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 border-red-500/20",
   },
 };
 
@@ -375,7 +358,6 @@ export function EmailLogs() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge
-                                className={STATUS_CONFIG[log.status]?.className}
                                 variant={
                                   STATUS_CONFIG[log.status]?.variant ??
                                   "default"

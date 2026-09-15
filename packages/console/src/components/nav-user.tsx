@@ -107,10 +107,7 @@ export function NavUser({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
-              size="lg"
-            >
+            <SidebarMenuButton className="md:h-8" size="lg">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage alt={accountName} src={user.avatar} />
                 <AvatarFallback className="rounded-lg bg-orange-500 text-white">
@@ -126,11 +123,11 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <DropdownMenuLabel>
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage alt={accountName} src={user.avatar} />

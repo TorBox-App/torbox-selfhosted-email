@@ -53,7 +53,7 @@ export function DiagnosticPanel({
     <div className="mt-3 rounded-lg border bg-muted/30 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="font-medium text-sm">{headline}</div>
-        <Badge className="text-xs" variant={SEVERITY_VARIANT[severity]}>
+        <Badge variant={SEVERITY_VARIANT[severity]}>
           {SEVERITY_LABEL[severity]}
         </Badge>
       </div>
@@ -89,7 +89,7 @@ export function DiagnosticPanel({
                       {recipient.translation.title}
                     </span>
                     {recipient.translation.provider && (
-                      <Badge className="text-xs" variant="secondary">
+                      <Badge variant="secondary">
                         {recipient.translation.provider}
                       </Badge>
                     )}

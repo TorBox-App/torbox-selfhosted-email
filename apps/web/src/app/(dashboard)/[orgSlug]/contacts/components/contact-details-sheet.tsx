@@ -31,7 +31,13 @@ import {
 } from "@wraps/ui/components/ui/sheet";
 import { Loader2, Lock, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { getContact } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
@@ -40,12 +46,10 @@ import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   type ContactStatus,
   type ContactWithMeta,
-  EMAIL_STATUS_COLORS,
   EMAIL_STATUS_LABELS,
   EMAIL_STATUSES,
   type EmailStatus,
   engagementRate,
-  SMS_STATUS_COLORS,
   SMS_STATUS_LABELS,
   SMS_STATUSES,
   type SmsStatus,
@@ -56,6 +60,23 @@ import {
 } from "@/lib/forms/contact-details";
 import type { TopicWithMeta } from "@/lib/topics";
 import { ContactTimeline } from "./contact-timeline";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const EMAIL_STATUS_BADGE_VARIANT: Record<EmailStatus, BadgeVariant> = {
+  active: "success",
+  unsubscribed: "secondary",
+  bounced: "destructive",
+  complained: "destructive",
+  suppressed: "warning",
+};
+
+const SMS_STATUS_BADGE_VARIANT: Record<SmsStatus, BadgeVariant> = {
+  pending_consent: "warning",
+  opted_in: "success",
+  opted_out: "secondary",
+  invalid: "destructive",
+};
 
 type PropertyEntry = {
   id: string;
@@ -373,7 +394,7 @@ export function ContactDetailsSheet({
             className="flex flex-col overflow-hidden p-0 sm:max-w-lg"
             hideCloseButton
           >
-            <SheetHeader className="border-b px-6 py-4">
+            <SheetHeader className="px-6 py-4">
               <div className="flex items-center justify-between gap-2">
                 {/* (audit L5) The record has no identity yet, so say that
                     rather than claim a contact is on screen. */}
@@ -473,7 +494,7 @@ export function ContactDetailsSheet({
           className="flex flex-col overflow-hidden p-0 sm:max-w-lg"
           hideCloseButton
         >
-          <SheetHeader className="border-b px-6 py-4">
+          <SheetHeader className="px-6 py-4">
             <div className="flex items-center justify-between gap-2">
               <SheetTitle className="min-w-0 truncate font-semibold text-lg">
                 <span className="sr-only">Contact details: </span>
@@ -726,17 +747,19 @@ export function ContactDetailsSheet({
                       <span className="font-medium">{contact.email}</span>
                       {/* (audit H3) The button is an icon with no text, so
                         without this it reached AT as an unnamed control. */}
-                      <CopyButton
-                        aria-label={`Copy ${contact.email}`}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        content={contact.email}
-                        size="sm"
-                        variant="ghost"
-                      />
+                      <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                        <CopyButton
+                          aria-label={`Copy ${contact.email}`}
+                          content={contact.email}
+                          size="sm"
+                          variant="ghost"
+                        />
+                      </span>
                       {contact.emailStatus && (
                         <Badge
-                          className={EMAIL_STATUS_COLORS[contact.emailStatus]}
-                          variant="secondary"
+                          variant={
+                            EMAIL_STATUS_BADGE_VARIANT[contact.emailStatus]
+                          }
                         >
                           {EMAIL_STATUS_LABELS[contact.emailStatus]}
                         </Badge>
@@ -750,8 +773,7 @@ export function ContactDetailsSheet({
                       </span>
                       {contact.smsStatus && (
                         <Badge
-                          className={SMS_STATUS_COLORS[contact.smsStatus]}
-                          variant="secondary"
+                          variant={SMS_STATUS_BADGE_VARIANT[contact.smsStatus]}
                         >
                           {SMS_STATUS_LABELS[contact.smsStatus]}
                         </Badge>
@@ -893,7 +915,6 @@ export function ContactDetailsSheet({
                     <h3 className="font-medium text-sm">Custom Properties</h3>
                     {isEditing && (
                       <Button
-                        className="text-xs"
                         onClick={addProperty}
                         type="button"
                         variant="outline"

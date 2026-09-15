@@ -18,20 +18,15 @@ export function LibraryBulkActions({
     <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3">
       <div className="flex items-center gap-3">
         <span className="font-medium text-sm">{selectedCount} selected</span>
-        <Button
-          className="gap-2 bg-transparent"
-          onClick={onStar}
-          size="sm"
-          variant="outline"
-        >
+        <Button className="gap-2" onClick={onStar} size="sm" variant="outline">
           <Star className="h-4 w-4" />
           Star
         </Button>
         <Button
-          className="gap-2 bg-transparent text-destructive hover:text-destructive"
+          className="gap-2"
           onClick={onDelete}
           size="sm"
-          variant="outline"
+          variant="destructive"
         >
           <Trash2 className="h-4 w-4" />
           Delete

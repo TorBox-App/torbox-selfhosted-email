@@ -12,7 +12,6 @@ import { Progress } from "@wraps/ui/components/ui/progress";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export type UsageData = {
   current: number;
@@ -36,13 +35,6 @@ type UsageCardProps = {
    * already the subject of that whole page.
    */
   action?: React.ReactNode;
-};
-
-const progressColors = {
-  normal: "[&>[data-slot=progress-indicator]]:bg-primary",
-  warning: "[&>[data-slot=progress-indicator]]:bg-amber-500",
-  critical: "[&>[data-slot=progress-indicator]]:bg-red-500",
-  exceeded: "[&>[data-slot=progress-indicator]]:bg-red-600",
 };
 
 export function UsageCard({
@@ -100,7 +92,15 @@ export function UsageCard({
               </span>
             </p>
             <Progress
-              className={cn("h-2", progressColors[usage.threshold])}
+              className="h-2"
+              indicatorClassName={
+                usage.threshold === "warning"
+                  ? "bg-warning"
+                  : usage.threshold === "critical" ||
+                      usage.threshold === "exceeded"
+                    ? "bg-destructive"
+                    : "bg-primary"
+              }
               value={displayPercent}
             />
             <div className="flex items-center justify-between text-sm">

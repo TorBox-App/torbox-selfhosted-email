@@ -43,7 +43,7 @@ type SendingDomainsViewProps = {
 export function VerificationBadge({ domain }: { domain: SendingDomain }) {
   if (domain.verifiedForSending) {
     return (
-      <Badge className="gap-1 border-green-600/30 bg-green-600/10 text-green-600 dark:text-green-400">
+      <Badge className="gap-1" variant="success">
         <CheckCircle2Icon className="h-3 w-3" />
         Verified
       </Badge>
@@ -240,7 +240,7 @@ export function SendingDomainsView({
                   // bubbling out of a control nested in the row.
                   <TableRow
                     aria-label={`View details for ${domain.identity}`}
-                    className="cursor-pointer outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-ring"
                     key={domain.identity}
                     onClick={openDetails}
                     onKeyDown={(e) => {

@@ -94,10 +94,7 @@ export const columns: ColumnDef<InboundEmailListItem>[] = [
         return <span className="text-muted-foreground text-sm">-</span>;
       }
       return (
-        <Badge
-          className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"
-          variant="outline"
-        >
+        <Badge variant="secondary">
           <Paperclip className="mr-1 h-3 w-3" />
           {row.original.attachmentCount}
         </Badge>
@@ -118,20 +115,14 @@ export const columns: ColumnDef<InboundEmailListItem>[] = [
       }
       if (verdict === "PASS") {
         return (
-          <Badge
-            className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
-            variant="outline"
-          >
+          <Badge variant="success">
             <ShieldCheck className="mr-1 h-3 w-3" />
             Pass
           </Badge>
         );
       }
       return (
-        <Badge
-          className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
-          variant="outline"
-        >
+        <Badge variant="destructive">
           <ShieldAlert className="mr-1 h-3 w-3" />
           Fail
         </Badge>

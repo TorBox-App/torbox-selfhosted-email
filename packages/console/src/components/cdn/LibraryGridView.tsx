@@ -103,14 +103,15 @@ export function LibraryGridView({
             </div>
 
             {/* Star Button - Top Right */}
-            <StarButton
-              className="absolute top-2 right-2 rounded-full bg-background/80 hover:bg-background/90"
-              onToggle={() => onToggleStar(file.key, !file.starred)}
-              starred={file.starred}
-            />
+            <div className="absolute top-2 right-2 rounded-full bg-background/80 hover:bg-background/90">
+              <StarButton
+                onToggle={() => onToggleStar(file.key, !file.starred)}
+                starred={file.starred}
+              />
+            </div>
 
             {/* Card Content Below Image */}
-            <Card className="gap-2 rounded-t-none border-none py-3 shadow-none">
+            <Card className="gap-2 border-none py-3 shadow-none">
               <CardHeader className="gap-1 px-3 py-0">
                 <div className="flex items-center gap-2">
                   <div onClick={(e) => e.stopPropagation()}>
@@ -123,32 +124,32 @@ export function LibraryGridView({
                     {filename}
                   </CardTitle>
                 </div>
-                <CardDescription className="flex items-center gap-2 pl-6">
-                  <Badge className="rounded-sm text-[10px]" variant="outline">
-                    {ext.toUpperCase()}
-                  </Badge>
+                <CardDescription className="flex items-center gap-2">
+                  <Badge variant="outline">{ext.toUpperCase()}</Badge>
                   <span className="text-xs">{formatSize(file.size)}</span>
                 </CardDescription>
               </CardHeader>
 
-              <CardFooter className="justify-end gap-1 px-3 py-0 opacity-0 transition-opacity group-hover:opacity-100">
-                <CopyButton
-                  className="h-7 px-2"
-                  label="Copy"
-                  size="sm"
-                  value={file.url}
-                  variant="ghost"
-                />
-                <Button
-                  className="h-7 px-2"
-                  onClick={(e) => handleOpenExternal(e, file.url)}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <ExternalLink className="mr-1 h-3 w-3" />
-                  Open
-                </Button>
-              </CardFooter>
+              <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                <CardFooter className="justify-end gap-1 px-3 py-0">
+                  <CopyButton
+                    className="h-7"
+                    label="Copy"
+                    size="sm"
+                    value={file.url}
+                    variant="ghost"
+                  />
+                  <Button
+                    className="h-7"
+                    onClick={(e) => handleOpenExternal(e, file.url)}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    Open
+                  </Button>
+                </CardFooter>
+              </div>
             </Card>
           </div>
         );

@@ -12,6 +12,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { ButtonGroup } from "@wraps/ui/components/ui/button-group";
 import { Label } from "@wraps/ui/components/ui/label";
 import {
   Select,
@@ -221,7 +222,7 @@ export function EventsTable({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Button Group: Event Name | Date Range | Export */}
-          <div className="flex w-full sm:w-auto">
+          <ButtonGroup className="w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 updateSearchParams({
@@ -231,7 +232,7 @@ export function EventsTable({
               }}
               value={eventNameFilter || "all"}
             >
-              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[180px] rounded-r-none border-r-0 focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[180px]">
                 <SelectValue placeholder="All events" />
               </SelectTrigger>
               <SelectContent>
@@ -248,12 +249,10 @@ export function EventsTable({
               dateTo={dateToParam ? new Date(dateToParam) : undefined}
               onDateRangeChange={handleDateRangeChange}
               preset={datePreset as DateRangePreset | undefined}
-              triggerClassName="rounded-none border-r-0 focus:z-10"
             />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="rounded-l-none focus:z-10"
                   disabled={isExporting}
                   onClick={async () => {
                     setIsExporting(true);
@@ -308,7 +307,7 @@ export function EventsTable({
               </TooltipTrigger>
               <TooltipContent>Export as CSV</TooltipContent>
             </Tooltip>
-          </div>
+          </ButtonGroup>
         </div>
       </div>
 

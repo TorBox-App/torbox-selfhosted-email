@@ -132,7 +132,7 @@ export function ImageDetailModal({
               variant="default"
             />
             <Button
-              className="flex-1 gap-2 bg-transparent"
+              className="flex-1 gap-2"
               onClick={() => window.open(file.url, "_blank")}
               variant="outline"
             >
@@ -140,7 +140,7 @@ export function ImageDetailModal({
               Open in New Tab
             </Button>
             <Button
-              className="flex-1 gap-2 bg-transparent"
+              className="flex-1 gap-2"
               onClick={handleDownload}
               variant="outline"
             >

@@ -72,7 +72,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  type ComponentProps,
+  useCallback,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import {
   bulkDeleteTemplates,
@@ -105,20 +111,22 @@ type TemplateWithUsage = Template & {
   automationNames: string[];
 };
 
-const statusColors: Record<string, string> = {
-  DRAFT: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  PUBLISHED: "bg-green-500/10 text-green-600 border-green-500/20",
-  ARCHIVED: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const statusColors: Record<string, BadgeVariant> = {
+  DRAFT: "warning",
+  PUBLISHED: "success",
+  ARCHIVED: "secondary",
 };
 
 const emailTypeConfig = {
   marketing: {
     label: "Marketing",
-    className: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    variant: "brand" as BadgeVariant,
   },
   transactional: {
     label: "Transactional",
-    className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    variant: "info" as BadgeVariant,
   },
 };
 
@@ -559,7 +567,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                   Filters
                   {activeFilterCount > 0 && (
                     <Badge
-                      className="ml-1 h-5 w-5 rounded-full p-0 text-xs"
+                      className="ml-1 h-5 w-5 rounded-full"
                       variant="secondary"
                     >
                       {activeFilterCount}
@@ -644,7 +652,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
             {/* Clear filters */}
             {hasActiveFilters && (
               <Button
-                className="h-9 gap-1 text-muted-foreground"
+                className="h-9 gap-1"
                 onClick={clearFilters}
                 variant="ghost"
               >
@@ -675,8 +683,8 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="text-destructive"
                     onClick={() => setBulkDeleteDialogOpen(true)}
+                    variant="destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete templates
@@ -1103,20 +1111,12 @@ function TemplateRow({
 
       {/* Type */}
       <TableCell>
-        <Badge
-          className={cn("text-xs", typeConfig.className)}
-          variant="outline"
-        >
-          {typeConfig.label}
-        </Badge>
+        <Badge variant={typeConfig.variant}>{typeConfig.label}</Badge>
       </TableCell>
 
       {/* Status */}
       <TableCell>
-        <Badge
-          className={cn("text-xs", statusColors[template.status])}
-          variant="outline"
-        >
+        <Badge variant={statusColors[template.status]}>
           {template.status.toLowerCase()}
         </Badge>
       </TableCell>
@@ -1181,59 +1181,56 @@ function TemplateRow({
 
       {/* Actions */}
       <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              aria-label="More actions"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100"
-              size="icon"
-              variant="ghost"
-            >
-              {isPublishing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="opacity-0 transition-opacity group-hover:opacity-100">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button aria-label="More actions" size="icon" variant="ghost">
+                {isPublishing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/${orgSlug}/emails/templates/${template.id}`}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDuplicate}>
+                <Copy className="mr-2 h-4 w-4" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {hasSubject ? (
+                <DropdownMenuItem disabled={isPublishing} onClick={onPublish}>
+                  <Cloud className="mr-2 h-4 w-4" />
+                  {isPublished ? "Update on SES" : "Publish to SES"}
+                </DropdownMenuItem>
               ) : (
-                <MoreHorizontal className="h-4 w-4" />
+                <DropdownMenuItem disabled>
+                  <Cloud className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Add subject to publish
+                  </span>
+                </DropdownMenuItem>
               )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/${orgSlug}/emails/templates/${template.id}`}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onDuplicate}>
-              <Copy className="mr-2 h-4 w-4" />
-              Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {hasSubject ? (
-              <DropdownMenuItem disabled={isPublishing} onClick={onPublish}>
-                <Cloud className="mr-2 h-4 w-4" />
-                {isPublished ? "Update on SES" : "Publish to SES"}
+              {isPublished && (
+                <DropdownMenuItem disabled={isPublishing} onClick={onUnpublish}>
+                  <CloudOff className="mr-2 h-4 w-4" />
+                  Unpublish from SES
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onDelete} variant="destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem disabled>
-                <Cloud className="mr-2 h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  Add subject to publish
-                </span>
-              </DropdownMenuItem>
-            )}
-            {isPublished && (
-              <DropdownMenuItem disabled={isPublishing} onClick={onUnpublish}>
-                <CloudOff className="mr-2 h-4 w-4" />
-                Unpublish from SES
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={onDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </TableCell>
     </TableRow>
   );

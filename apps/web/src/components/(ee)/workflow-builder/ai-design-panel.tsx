@@ -236,9 +236,8 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              className="h-8 w-8 p-0"
               onClick={() => setIsCollapsed(false)}
-              size="sm"
+              size="icon-sm"
               variant="ghost"
             >
               <ChevronRight className="h-4 w-4" />
@@ -271,9 +270,8 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
         <div className="flex items-center gap-1">
           {isLoading && (
             <Button
-              className="h-8 w-8 p-0"
               onClick={stop}
-              size="sm"
+              size="icon-sm"
               title="Stop generating"
               variant="ghost"
             >
@@ -281,9 +279,8 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
             </Button>
           )}
           <Button
-            className="h-8 w-8 p-0"
             onClick={() => setIsCollapsed(true)}
-            size="sm"
+            size="icon-sm"
             variant="ghost"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -314,7 +311,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
               <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
                 You've used all {aiUsage.limit} AI messages this month.
               </p>
-              <Button asChild className="h-8 text-xs" size="sm">
+              <Button asChild className="h-8" size="sm">
                 <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
             </div>
@@ -339,7 +336,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                 <div className="flex flex-col gap-1.5">
                   {QUICK_PROMPTS.map((qp) => (
                     <Button
-                      className="h-auto justify-start px-2.5 py-1.5 text-left text-xs"
+                      className="h-auto justify-start text-left"
                       key={qp.label}
                       onClick={() => handleSendMessage(qp.prompt)}
                       size="sm"
@@ -377,7 +374,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
           </p>
           <div className="flex gap-1.5">
             <Button
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1"
               onClick={handleApplyWorkflow}
               size="sm"
             >
@@ -385,7 +382,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
               Apply
             </Button>
             <Button
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1"
               onClick={handleDiscardWorkflow}
               size="sm"
               variant="outline"
@@ -414,7 +411,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
             value={input}
           />
           <Button
-            className="absolute right-1.5 bottom-1.5 h-7 w-7 p-0"
+            className="absolute right-1.5 bottom-1.5 h-7 w-7"
             disabled={!input.trim() || isLoading}
             size="sm"
             type="submit"

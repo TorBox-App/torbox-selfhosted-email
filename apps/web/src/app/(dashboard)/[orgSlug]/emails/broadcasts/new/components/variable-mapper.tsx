@@ -350,7 +350,6 @@ function VariableMapperRow({
       </div>
 
       <RadioGroup
-        className="space-y-2"
         onValueChange={(value: "static" | "contact") => {
           if (value === "static") {
             onUpdate({ type: "static", value: staticValue });

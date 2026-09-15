@@ -226,7 +226,7 @@ function ReputationScope({ reputation }: { reputation: ReputationLabel }) {
       <PopoverTrigger asChild>
         <Button
           aria-label={`What "${reputation.title}" measures`}
-          className="-my-2 text-muted-foreground"
+          className="-my-2"
           size="icon-sm"
           variant="ghost"
         >
@@ -238,10 +238,12 @@ function ReputationScope({ reputation }: { reputation: ReputationLabel }) {
         the panel covered the two rates it exists to explain - the trigger sits
         in the middle of the rail, with the numbers under and after it.
       */}
-      <PopoverContent align="start" className="w-72 text-sm" side="top">
-        <p>{reputation.detail}</p>
+      <PopoverContent align="start" className="w-72" side="top">
+        <p className="text-sm">{reputation.detail}</p>
         {reputation.note ? (
-          <p className="mt-2 text-muted-foreground">{reputation.note}</p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            {reputation.note}
+          </p>
         ) : null}
       </PopoverContent>
     </Popover>
@@ -554,7 +556,6 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
             {TIME_RANGES.map((r) => (
               <Button
                 aria-pressed={days === r.days}
-                className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
                 key={r.days}
                 onClick={() => selectDays(String(r.days))}
                 size="touch"
@@ -572,18 +573,14 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
             <Select onValueChange={selectDays} value={String(days)}>
               <SelectTrigger
                 aria-label="Select time range"
-                className="w-32 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+                className="w-32 **:data-[slot=select-value]:block"
                 size="touch"
               >
                 <SelectValue placeholder="Last 7 days" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent>
                 {TIME_RANGES.map((r) => (
-                  <SelectItem
-                    className="rounded-lg"
-                    key={r.days}
-                    value={String(r.days)}
-                  >
+                  <SelectItem key={r.days} value={String(r.days)}>
                     {r.long}
                   </SelectItem>
                 ))}

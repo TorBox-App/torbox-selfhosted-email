@@ -16,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { Fragment } from "react";
+import { type ComponentProps, Fragment } from "react";
 import {
   Item,
   ItemContent,
@@ -26,7 +26,6 @@ import {
   ItemSeparator,
   ItemTitle,
 } from "@/components/ui/item";
-import { cn } from "@/lib/utils";
 import { useSMSRecentActivity } from "../hooks/use-sms-analytics";
 
 const getActivityIcon = (status: string) => {
@@ -60,78 +59,26 @@ const getActivityIcon = (status: string) => {
   return <Clock className="h-4 w-4 text-muted-foreground" />;
 };
 
-const getActivityBadgeConfig = (status: string) => {
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const getActivityBadgeConfig = (
+  status: string
+): { variant: BadgeVariant; label: string } => {
   const statusLower = status.toLowerCase();
 
-  const configs: Record<
-    string,
-    {
-      variant: "default" | "secondary" | "destructive" | "outline";
-      className: string;
-      label: string;
-    }
-  > = {
-    delivered: {
-      variant: "default",
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-      label: "Delivered",
-    },
-    delivery: {
-      variant: "default",
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-      label: "Delivered",
-    },
-    sent: {
-      variant: "default",
-      className:
-        "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-      label: "Sent",
-    },
-    queued: {
-      variant: "default",
-      className: "bg-muted text-muted-foreground border-muted-foreground/20",
-      label: "Queued",
-    },
-    pending: {
-      variant: "default",
-      className: "bg-muted text-muted-foreground border-muted-foreground/20",
-      label: "Pending",
-    },
-    failed: {
-      variant: "default",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-      label: "Failed",
-    },
-    failure: {
-      variant: "default",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-      label: "Failed",
-    },
-    blocked: {
-      variant: "default",
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-      label: "Blocked",
-    },
-    invalid: {
-      variant: "default",
-      className:
-        "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-      label: "Invalid",
-    },
+  const configs: Record<string, { variant: BadgeVariant; label: string }> = {
+    delivered: { variant: "success", label: "Delivered" },
+    delivery: { variant: "success", label: "Delivered" },
+    sent: { variant: "info", label: "Sent" },
+    queued: { variant: "secondary", label: "Queued" },
+    pending: { variant: "secondary", label: "Pending" },
+    failed: { variant: "destructive", label: "Failed" },
+    failure: { variant: "destructive", label: "Failed" },
+    blocked: { variant: "destructive", label: "Blocked" },
+    invalid: { variant: "warning", label: "Invalid" },
   };
 
-  return (
-    configs[statusLower] || {
-      variant: "secondary" as const,
-      className: "bg-muted text-muted-foreground border-muted-foreground/20",
-      label: status,
-    }
-  );
+  return configs[statusLower] || { variant: "secondary", label: status };
 };
 
 const formatTimestamp = (timestamp: number) => {
@@ -238,10 +185,7 @@ export function SMSRecentActivity({ orgSlug }: { orgSlug: string }) {
                         )}
                       </ItemDescription>
                     </ItemContent>
-                    <Badge
-                      className={cn("ml-auto", badgeConfig.className)}
-                      variant={badgeConfig.variant}
-                    >
+                    <Badge className="ml-auto" variant={badgeConfig.variant}>
                       {badgeConfig.label}
                     </Badge>
                   </Link>

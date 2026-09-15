@@ -207,9 +207,9 @@ export function MembersTable({
                       {(userRole === "owner" ||
                         (userRole === "admin" && member.role !== "owner")) && (
                         <DropdownMenuItem
-                          className="text-destructive"
                           disabled={removingMemberId === member.id}
                           onClick={() => setMemberToRemove(member)}
+                          variant="destructive"
                         >
                           <Trash2 className="mr-2 size-4" />
                           Remove Member

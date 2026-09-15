@@ -17,7 +17,7 @@ export function SidebarNotification() {
     <Card className="mb-3 border-neutral-200 bg-neutral-50 py-0 dark:border-neutral-700 dark:bg-neutral-800">
       <CardContent className="relative p-4">
         <Button
-          className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+          className="absolute top-2 right-2 h-6 w-6"
           onClick={() => setIsVisible(false)}
           size="sm"
           variant="ghost"

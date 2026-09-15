@@ -16,6 +16,7 @@
  *   defined for one theme and forgotten for the other.
  */
 
+import type { Badge } from "@wraps/ui/components/ui/badge";
 import {
   Ban,
   CheckCircle2,
@@ -26,7 +27,10 @@ import {
   MousePointerClick,
   XCircle,
 } from "lucide-react";
+import type { ComponentProps } from "react";
 import type { EmailStatus } from "../types";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 const UNDERSCORES = /_/g;
 const WHITESPACE = /\s+/g;
@@ -42,6 +46,8 @@ export type EmailStatusConfig = {
   icon: LucideIcon;
   label: string;
   tone: EmailStatusTone;
+  /** For <Badge>, which owns its own color and can't take `tone` directly. */
+  variant: BadgeVariant;
 };
 
 /** A status we do not recognise is neutral, not invisible and not a crash. */
@@ -57,6 +63,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
     // Neutral by semantics as well as by colour: accepted by SES, no outcome
     // reported yet.
     tone: { surface: "bg-muted border-border", text: "text-muted-foreground" },
+    variant: "secondary",
   },
   delivered: {
     icon: CheckCircle2,
@@ -65,6 +72,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-green-500/10 border-green-500/20",
       text: "text-green-700 dark:text-green-400",
     },
+    variant: "success",
   },
   opened: {
     icon: Mail,
@@ -73,6 +81,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-blue-500/10 border-blue-500/20",
       text: "text-blue-700 dark:text-blue-400",
     },
+    variant: "info",
   },
   clicked: {
     icon: MousePointerClick,
@@ -81,6 +90,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-purple-500/10 border-purple-500/20",
       text: "text-purple-700 dark:text-purple-400",
     },
+    variant: "brand",
   },
   bounced: {
     icon: XCircle,
@@ -89,6 +99,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-orange-500/10 border-orange-500/20",
       text: "text-orange-700 dark:text-orange-400",
     },
+    variant: "destructive",
   },
   suppressed: {
     icon: Ban,
@@ -97,6 +108,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-amber-500/10 border-amber-500/20",
       text: "text-amber-700 dark:text-amber-400",
     },
+    variant: "warning",
   },
   complained: {
     icon: XCircle,
@@ -105,6 +117,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-red-500/10 border-red-500/20",
       text: "text-red-700 dark:text-red-400",
     },
+    variant: "destructive",
   },
   failed: {
     icon: XCircle,
@@ -113,6 +126,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-red-500/10 border-red-500/20",
       text: "text-red-700 dark:text-red-400",
     },
+    variant: "destructive",
   },
   rejected: {
     icon: XCircle,
@@ -121,6 +135,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-red-500/10 border-red-500/20",
       text: "text-red-700 dark:text-red-400",
     },
+    variant: "destructive",
   },
   rendering_failure: {
     icon: XCircle,
@@ -129,6 +144,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-red-500/10 border-red-500/20",
       text: "text-red-700 dark:text-red-400",
     },
+    variant: "destructive",
   },
   delivery_delay: {
     icon: Clock,
@@ -137,6 +153,7 @@ const STATUS_CONFIG: Record<EmailStatus, EmailStatusConfig> = {
       surface: "bg-yellow-500/10 border-yellow-500/20",
       text: "text-yellow-700 dark:text-yellow-400",
     },
+    variant: "warning",
   },
 };
 
@@ -195,5 +212,6 @@ export function getEmailStatusConfig(status: string): EmailStatusConfig {
     icon: CircleDashed,
     label: humanizeEmailStatus(status),
     tone: UNKNOWN_TONE,
+    variant: "outline",
   };
 }

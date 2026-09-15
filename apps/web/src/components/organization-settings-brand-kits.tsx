@@ -574,8 +574,8 @@ export function OrganizationSettingsBrandKits({
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
-                          className="text-destructive"
                           onClick={() => handleDelete(kit)}
+                          variant="destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
@@ -662,13 +662,13 @@ export function OrganizationSettingsBrandKits({
                       </div>
 
                       <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <FileText className="-translate-y-1/2 absolute top-1/2 left-3 z-10 h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1">
                           <Select
                             onValueChange={setSelectedTemplateId}
                             value={selectedTemplateId}
                           >
-                            <SelectTrigger className="pl-9">
+                            <SelectTrigger className="w-full">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
                               <SelectValue placeholder="Select a template" />
                             </SelectTrigger>
                             <SelectContent>

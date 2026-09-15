@@ -85,7 +85,6 @@ export function OverviewDashboard({
             {availableOptions.map((opt) => (
               <Button
                 aria-pressed={timeRange === opt.value}
-                className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
                 key={opt.value}
                 onClick={() => setTimeRange(opt.value)}
                 size="touch"
@@ -107,13 +106,9 @@ export function OverviewDashboard({
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent>
               {availableOptions.map((opt) => (
-                <SelectItem
-                  className="rounded-lg"
-                  key={opt.value}
-                  value={opt.value}
-                >
+                <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
               ))}

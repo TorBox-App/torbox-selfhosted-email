@@ -378,7 +378,7 @@ export function ImageOptimizeDialog({
                         </div>
                       )}
                       {entry.isAnimatedGif && (
-                        <Badge className="absolute right-0.5 bottom-0.5 h-4 px-1 text-[10px]">
+                        <Badge className="absolute right-0.5 bottom-0.5 h-4">
                           GIF
                         </Badge>
                       )}
@@ -468,10 +468,7 @@ export function ImageOptimizeDialog({
                   )}
               </div>
               {optimizeEnabled && allOptimized && totalSavings > 0 && (
-                <Badge
-                  className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                  variant="secondary"
-                >
+                <Badge variant="success">
                   <Sparkles className="mr-1 h-3 w-3" />
                   Save {totalSavings}%
                 </Badge>
@@ -512,7 +509,7 @@ export function ImageOptimizeDialog({
             <Collapsible onOpenChange={setShowOptions} open={showOptions}>
               <CollapsibleTrigger asChild>
                 <Button
-                  className="w-full justify-start text-muted-foreground"
+                  className="w-full justify-start"
                   size="sm"
                   variant="ghost"
                 >

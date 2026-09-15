@@ -129,9 +129,9 @@ export function ActiveSessions() {
             </div>
             {otherSessions.length > 0 && (
               <Button
-                className="cursor-pointer text-destructive hover:text-destructive"
+                className="cursor-pointer"
                 onClick={() => setIsRevokingAll(true)}
-                variant="outline"
+                variant="destructive"
               >
                 Revoke All Other Sessions
               </Button>
@@ -187,11 +187,11 @@ export function ActiveSessions() {
                       </div>
                     </div>
                     <Button
-                      className="cursor-pointer text-destructive hover:text-destructive"
+                      className="cursor-pointer"
                       disabled={isTerminating === sess.id}
                       onClick={() => handleRevokeSession(sess)}
                       size="sm"
-                      variant="ghost"
+                      variant="ghost-destructive"
                     >
                       {isTerminating === sess.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

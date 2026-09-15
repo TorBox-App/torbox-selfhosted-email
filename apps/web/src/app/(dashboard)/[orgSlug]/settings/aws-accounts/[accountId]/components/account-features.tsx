@@ -241,7 +241,7 @@ export function AccountFeatures({
         <Collapsible onOpenChange={setEmailOpen} open={emailOpen}>
           <CollapsibleTrigger asChild>
             <Button
-              className="flex w-full items-center justify-between p-2 hover:bg-muted/50"
+              className="flex w-full items-center justify-between"
               variant="ghost"
             >
               <div className="flex items-center gap-2">
@@ -294,7 +294,7 @@ export function AccountFeatures({
                           {identity.identity}
                         </span>
                       </div>
-                      <Badge className="text-xs" variant="outline">
+                      <Badge variant="outline">
                         {identity.type === "DOMAIN" ? "Domain" : "Email"}
                       </Badge>
                     </div>
@@ -364,11 +364,7 @@ export function AccountFeatures({
             {trackedEvents.length > 0 && (
               <div className="ml-11 flex flex-wrap gap-1 pb-2">
                 {trackedEvents.map((event) => (
-                  <Badge
-                    className="text-xs font-normal"
-                    key={event}
-                    variant="outline"
-                  >
+                  <Badge key={event} variant="outline">
                     {event}
                   </Badge>
                 ))}
@@ -435,7 +431,7 @@ export function AccountFeatures({
         <Collapsible onOpenChange={setSmsOpen} open={smsOpen}>
           <CollapsibleTrigger asChild>
             <Button
-              className="flex w-full items-center justify-between p-2 hover:bg-muted/50"
+              className="flex w-full items-center justify-between"
               variant="ghost"
             >
               <div className="flex items-center gap-2">
@@ -473,23 +469,16 @@ export function AccountFeatures({
                         <span className="font-mono text-sm">
                           {pn.phoneNumber}
                         </span>
-                        <Badge className="text-xs" variant="outline">
-                          {pn.type}
-                        </Badge>
+                        <Badge variant="outline">{pn.type}</Badge>
                       </div>
                       <div className="flex items-center gap-1">
                         {pn.capabilities.includes("SMS") && (
-                          <Badge className="text-xs" variant="secondary">
-                            SMS
-                          </Badge>
+                          <Badge variant="secondary">SMS</Badge>
                         )}
                         {pn.capabilities.includes("VOICE") && (
-                          <Badge className="text-xs" variant="secondary">
-                            Voice
-                          </Badge>
+                          <Badge variant="secondary">Voice</Badge>
                         )}
                         <Badge
-                          className="text-xs"
                           variant={
                             pn.status === "ACTIVE" ? "default" : "outline"
                           }

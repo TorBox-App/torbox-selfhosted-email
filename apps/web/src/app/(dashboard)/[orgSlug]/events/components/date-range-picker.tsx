@@ -23,13 +23,11 @@ import {
   type DateRangePreset,
   getDateRangeFromPreset,
 } from "@/lib/events";
-import { cn } from "@/lib/utils";
 
 type DateRangePickerProps = {
   dateFrom?: Date;
   dateTo?: Date;
   preset?: DateRangePreset;
-  triggerClassName?: string;
   onDateRangeChange: (
     dateFrom: Date | undefined,
     dateTo: Date | undefined,
@@ -41,7 +39,6 @@ export function DateRangePicker({
   dateFrom,
   dateTo,
   preset,
-  triggerClassName,
   onDateRangeChange,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -113,12 +110,7 @@ export function DateRangePicker({
         onValueChange={handlePresetChange}
         value={selectedPreset || "all"}
       >
-        <SelectTrigger
-          className={cn(
-            "min-w-0 flex-1 sm:flex-initial sm:w-[160px]",
-            triggerClassName
-          )}
-        >
+        <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[160px]">
           <SelectValue placeholder="All time">{getDisplayValue()}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -135,10 +127,7 @@ export function DateRangePicker({
         <Popover onOpenChange={setIsOpen} open={isOpen}>
           <PopoverTrigger asChild>
             <Button
-              className={cn(
-                "justify-start text-left font-normal",
-                !dateRange && "text-muted-foreground"
-              )}
+              className="justify-start text-left"
               id="date"
               variant="outline"
             >

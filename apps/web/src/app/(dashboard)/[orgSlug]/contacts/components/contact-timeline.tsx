@@ -237,7 +237,7 @@ function StatusDots({
                   )}
                 />
               </TooltipTrigger>
-              <TooltipContent className="text-xs" side="top">
+              <TooltipContent side="top">
                 <span className="font-medium">{config.label}</span>
                 {timestamp && (
                   <span className="ml-1 text-muted-foreground">
@@ -596,7 +596,7 @@ export function ContactTimeline({
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div className="flex items-start gap-3" key={i}>
-              <Skeleton className="h-7 w-7 rounded-full" />
+              <Skeleton className="h-7 w-7" />
               <div className="flex-1 space-y-1">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-3 w-32" />

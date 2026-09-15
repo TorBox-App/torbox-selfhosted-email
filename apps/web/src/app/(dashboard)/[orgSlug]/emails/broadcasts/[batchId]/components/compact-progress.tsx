@@ -5,14 +5,36 @@ import { Progress } from "@wraps/ui/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle, Clock, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useTransition } from "react";
+import {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useTransition,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
-  BATCH_STATUS_COLORS,
   BATCH_STATUS_LABELS,
   getPausedPresentation,
   getZeroSendPresentation,
 } from "@/lib/batch";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors BATCH_STATUS_COLORS' semantics as Badge variants. */
+function getBatchStatusBadgeVariant(status: string): BadgeVariant {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "failed":
+      return "destructive";
+    case "scheduled":
+    case "queued":
+    case "processing":
+      return "info";
+    default:
+      return "secondary";
+  }
+}
 
 type CompactProgressProps = {
   status: string;
@@ -103,16 +125,11 @@ export function CompactProgress({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Badge
-            className={
-              paused
-                ? paused.color
-                : zeroSend
-                  ? zeroSend.color
-                  : BATCH_STATUS_COLORS[
-                      status as keyof typeof BATCH_STATUS_COLORS
-                    ]
+            variant={
+              paused || zeroSend
+                ? "warning"
+                : getBatchStatusBadgeVariant(status)
             }
-            variant="secondary"
           >
             {!(paused || zeroSend) && statusIcon}
             {paused

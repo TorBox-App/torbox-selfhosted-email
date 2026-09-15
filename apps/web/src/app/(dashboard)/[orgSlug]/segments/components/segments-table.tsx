@@ -379,7 +379,7 @@ export function SegmentsTable({
                   // the row's own action.
                   <TableRow
                     aria-label={`View details for ${row.original.name}`}
-                    className="cursor-pointer outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-ring"
                     data-state={row.getIsSelected() && "selected"}
                     key={row.id}
                     onClick={openDetails}

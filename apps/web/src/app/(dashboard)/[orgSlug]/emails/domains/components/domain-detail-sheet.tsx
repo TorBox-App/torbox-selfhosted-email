@@ -332,7 +332,7 @@ function ConfigurationSetPanel({
                 <div className="mt-2 flex flex-wrap gap-1">
                   {destination.matchingEventTypes.map((eventType) => (
                     <Badge
-                      className="font-mono text-xs"
+                      className="font-mono"
                       key={eventType}
                       variant="outline"
                     >

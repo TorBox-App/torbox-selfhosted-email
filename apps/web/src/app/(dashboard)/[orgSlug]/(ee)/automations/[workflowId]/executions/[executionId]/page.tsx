@@ -10,14 +10,35 @@ import {
 import { ArrowLeft, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import type { ComponentProps } from "react";
 import { getWorkflowExecution } from "@/actions/(ee)/workflows";
 import { Button } from "@/components/ui/button";
 import {
   classifyWorkflowError,
-  EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
 } from "@/lib/(ee)/workflows";
 import { getOrganizationWithMembership } from "@/lib/organization";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/** Mirrors EXECUTION_STATUS_COLORS' semantics as Badge variants. */
+function getExecutionStatusBadgeVariant(status: string): BadgeVariant {
+  switch (status) {
+    case "active":
+      return "info";
+    case "paused":
+      return "warning";
+    case "waiting":
+      return "brand";
+    case "completed":
+      return "success";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
 import { CancelButton } from "./components/cancel-button";
 import { RetryButton } from "./components/retry-button";
 import { StepTrace } from "./components/step-trace";
@@ -124,10 +145,7 @@ export default async function ExecutionDetailPage({
             <h1 className="font-bold text-2xl tracking-tight">
               {execution.workflow?.name ?? "Workflow"} — Execution
             </h1>
-            <Badge
-              className={EXECUTION_STATUS_COLORS[execution.status]}
-              variant="secondary"
-            >
+            <Badge variant={getExecutionStatusBadgeVariant(execution.status)}>
               {EXECUTION_STATUS_LABELS[execution.status]}
             </Badge>
           </div>
@@ -167,9 +185,9 @@ export default async function ExecutionDetailPage({
       {execution.error && (
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive text-lg">
-              <XCircle className="h-5 w-5" />
-              Error Details
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <XCircle className="h-5 w-5 text-destructive" />
+              <span className="text-destructive">Error Details</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">

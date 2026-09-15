@@ -422,7 +422,6 @@ export function CodeTemplateAIPanel({
         <div className="flex items-center gap-0.5">
           {messages.length > 0 && !isLoading && (
             <Button
-              className="h-8 w-8 p-0"
               onClick={async () => {
                 // Snapshot current state for rollback
                 const prevMessages = [...messages];
@@ -463,7 +462,7 @@ export function CodeTemplateAIPanel({
                   toast.error("Failed to clear conversation");
                 }
               }}
-              size="sm"
+              size="icon-sm"
               title="New chat"
               variant="ghost"
             >
@@ -472,9 +471,8 @@ export function CodeTemplateAIPanel({
           )}
           {isLoading && (
             <Button
-              className="h-8 w-8 p-0"
               onClick={stop}
-              size="sm"
+              size="icon-sm"
               title="Stop generating"
               variant="ghost"
             >
@@ -508,7 +506,7 @@ export function CodeTemplateAIPanel({
                 You've used all {aiUsage.limit} AI messages this month. Upgrade
                 your plan for more AI assistance.
               </p>
-              <Button asChild className="h-8 text-xs" size="sm">
+              <Button asChild className="h-8" size="sm">
                 <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
             </div>
@@ -531,7 +529,7 @@ export function CodeTemplateAIPanel({
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_PROMPTS.map((qp) => (
                     <Button
-                      className="h-7 px-2.5 text-xs"
+                      className="h-7"
                       key={qp.label}
                       onClick={() => handleSendMessage(qp.prompt)}
                       size="sm"
@@ -553,7 +551,7 @@ export function CodeTemplateAIPanel({
                     {favorites.map((fav) => (
                       <div className="group relative" key={fav.id}>
                         <Button
-                          className="h-7 pr-6 text-xs"
+                          className="h-7"
                           onClick={() => handleSendMessage(fav.prompt)}
                           size="sm"
                           variant="secondary"
@@ -611,7 +609,7 @@ export function CodeTemplateAIPanel({
           </p>
           <div className="flex gap-1.5">
             <Button
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1"
               disabled={isCompiling}
               onClick={handleApply}
               size="sm"
@@ -624,7 +622,7 @@ export function CodeTemplateAIPanel({
               Apply
             </Button>
             <Button
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1"
               disabled={isCompiling}
               onClick={handleReject}
               size="sm"
@@ -648,7 +646,7 @@ export function CodeTemplateAIPanel({
         >
           <div>
             <Textarea
-              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-foreground/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] placeholder:text-muted-foreground focus-visible:ring-0"
+              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-foreground/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] focus-visible:ring-0"
               disabled={isLoading || aiUsage?.remaining === 0}
               onBlur={() => setIsFocused(false)}
               onChange={(e) => {
@@ -699,16 +697,15 @@ export function CodeTemplateAIPanel({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="top">
-                <DropdownMenuItem
-                  className={cn(selectedBrandKitId === "none" && "bg-accent")}
-                  onClick={() => setSelectedBrandKitId("none")}
-                >
+                <DropdownMenuItem onClick={() => setSelectedBrandKitId("none")}>
                   <Palette className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   None
+                  {selectedBrandKitId === "none" && (
+                    <Check className="ml-auto h-3.5 w-3.5" />
+                  )}
                 </DropdownMenuItem>
                 {brandKits?.map((kit) => (
                   <DropdownMenuItem
-                    className={cn(selectedBrandKitId === kit.id && "bg-accent")}
                     key={kit.id}
                     onClick={() => setSelectedBrandKitId(kit.id)}
                   >
@@ -719,6 +716,9 @@ export function CodeTemplateAIPanel({
                       }}
                     />
                     <span className="truncate">{kit.name}</span>
+                    {selectedBrandKitId === kit.id && (
+                      <Check className="ml-auto h-3.5 w-3.5" />
+                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -766,12 +766,7 @@ export function CodeTemplateAIPanel({
             )}
             <Button
               aria-label="Send message"
-              className={cn(
-                "h-7 w-7 transition-colors",
-                input.trim() && !isLoading
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : ""
-              )}
+              className="h-7 w-7"
               disabled={!input.trim() || isLoading || aiUsage?.remaining === 0}
               size="icon"
               type="submit"

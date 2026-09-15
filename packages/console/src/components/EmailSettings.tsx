@@ -61,6 +61,8 @@ import { getEmailSettings } from "@/lib/aws-client";
 import type { DNSVerificationStatus } from "@/lib/dns-verification";
 import { verifyDmarc, verifyTrackingDomain } from "@/lib/dns-verification";
 
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
+
 /**
  * Status badge component for verification states
  */
@@ -75,47 +77,24 @@ function StatusBadge({
     | "TEMPORARY_FAILURE";
 }) {
   const config = {
-    SUCCESS: {
-      icon: CheckCircle2,
-      label: "Verified",
-      variant: "default" as const,
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-    },
-    PENDING: {
-      icon: Clock,
-      label: "Pending",
-      variant: "secondary" as const,
-      className:
-        "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-    },
-    FAILED: {
-      icon: XCircle,
-      label: "Failed",
-      variant: "destructive" as const,
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    },
+    SUCCESS: { icon: CheckCircle2, label: "Verified", variant: "success" },
+    PENDING: { icon: Clock, label: "Pending", variant: "warning" },
+    FAILED: { icon: XCircle, label: "Failed", variant: "destructive" },
     TEMPORARY_FAILURE: {
       icon: AlertCircle,
       label: "Temporary Failure",
-      variant: "secondary" as const,
-      className:
-        "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+      variant: "warning",
     },
-    NOT_STARTED: {
-      icon: Clock,
-      label: "Not Started",
-      variant: "outline" as const,
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
-    },
-  };
+    NOT_STARTED: { icon: Clock, label: "Not Started", variant: "secondary" },
+  } satisfies Record<
+    string,
+    { icon: typeof CheckCircle2; label: string; variant: BadgeVariant }
+  >;
 
-  const { icon: Icon, label, className } = config[status];
+  const { icon: Icon, label, variant } = config[status];
 
   return (
-    <Badge className={className} variant="outline">
+    <Badge variant={variant}>
       <Icon className="mr-1 h-3 w-3" />
       {label}
     </Badge>
@@ -227,7 +206,7 @@ function DkimSection({ identity }: { identity?: EmailIdentityDetails }) {
         <Collapsible onOpenChange={setIsOpen} open={isOpen}>
           <CollapsibleTrigger asChild>
             <Button
-              className="h-auto w-full justify-between p-0"
+              className="h-auto w-full justify-between"
               size="sm"
               variant="ghost"
             >
@@ -291,7 +270,7 @@ function MailFromSection({ identity }: { identity?: EmailIdentityDetails }) {
           <Collapsible onOpenChange={setIsOpen} open={isOpen}>
             <CollapsibleTrigger asChild>
               <Button
-                className="h-auto w-full justify-between p-0"
+                className="h-auto w-full justify-between"
                 size="sm"
                 variant="ghost"
               >
@@ -405,19 +384,15 @@ function DmarcSection({ identity }: { identity?: EmailIdentityDetails }) {
         </div>
         <div className="flex items-center gap-2">
           {verificationStatus?.verified && (
-            <Badge
-              className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-              variant="outline"
-            >
+            <Badge variant="success">
               <CheckCircle2 className="mr-1 h-3 w-3" />
               Verified by Wraps
             </Badge>
           )}
           <Button
-            className="h-8 w-8 p-0"
             disabled={isVerifying}
             onClick={handleVerify}
-            size="sm"
+            size="icon-sm"
             variant="ghost"
           >
             <RefreshCw
@@ -430,7 +405,7 @@ function DmarcSection({ identity }: { identity?: EmailIdentityDetails }) {
       <Collapsible onOpenChange={setIsOpen} open={isOpen}>
         <CollapsibleTrigger asChild>
           <Button
-            className="h-auto w-full justify-between p-0"
+            className="h-auto w-full justify-between"
             size="sm"
             variant="ghost"
           >
@@ -617,10 +592,7 @@ function TrackingDomainSection({
               </div>
               <div className="flex items-center gap-2">
                 {verificationStatus?.verified && (
-                  <Badge
-                    className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-                    variant="outline"
-                  >
+                  <Badge variant="success">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Verified by Wraps
                   </Badge>
@@ -631,10 +603,9 @@ function TrackingDomainSection({
                     : "HTTPS Optional"}
                 </Badge>
                 <Button
-                  className="h-8 w-8 p-0"
                   disabled={isVerifying}
                   onClick={handleVerify}
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
                 >
                   <RefreshCw
@@ -642,9 +613,8 @@ function TrackingDomainSection({
                   />
                 </Button>
                 <Button
-                  className="h-8 w-8 p-0"
                   onClick={handleEditClick}
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
                 >
                   <Edit2 className="h-4 w-4" />
@@ -655,7 +625,7 @@ function TrackingDomainSection({
             <Collapsible onOpenChange={setIsOpen} open={isOpen}>
               <CollapsibleTrigger asChild>
                 <Button
-                  className="h-auto w-full justify-between p-0"
+                  className="h-auto w-full justify-between"
                   size="sm"
                   variant="ghost"
                 >

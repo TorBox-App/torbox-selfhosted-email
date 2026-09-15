@@ -1558,7 +1558,7 @@ function RecipientPreviewCard({
                 </p>
                 {hasMoreThanPreview && (
                   <Button
-                    className="h-auto p-0 text-xs"
+                    className="h-auto"
                     onClick={() => setShowAllRecipients(true)}
                     type="button"
                     variant="link"
@@ -2523,10 +2523,7 @@ function SchedulingCard({
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
-                            className={cn(
-                              "w-[180px] justify-start text-left font-normal",
-                              !data.scheduledDate && "text-muted-foreground"
-                            )}
+                            className="w-[180px] justify-start text-left"
                             variant="outline"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />

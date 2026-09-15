@@ -301,9 +301,9 @@ export default async function BatchDetailPage({
       {batch.errorMessage && (
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive text-lg">
-              <XCircle className="h-5 w-5" />
-              Error Details
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <XCircle className="h-5 w-5 text-destructive" />
+              <span className="text-destructive">Error Details</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

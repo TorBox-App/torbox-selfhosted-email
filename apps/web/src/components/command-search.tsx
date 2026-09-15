@@ -438,7 +438,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="max-w-[640px] overflow-hidden border border-border p-0 shadow-2xl"
+        className="max-w-[640px] overflow-hidden p-0"
         onEscapeKeyDown={(event) => {
           if (askQuestion !== null) {
             event.preventDefault();

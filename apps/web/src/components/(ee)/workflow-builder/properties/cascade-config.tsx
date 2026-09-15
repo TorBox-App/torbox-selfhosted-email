@@ -171,10 +171,10 @@ export function CascadeConfig({
                   {channels.length > 1 && (
                     <Button
                       aria-label="Remove channel"
-                      className="h-6 w-6 text-destructive"
+                      className="h-6 w-6"
                       onClick={() => removeChannel(index)}
                       size="icon"
-                      variant="ghost"
+                      variant="ghost-destructive"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

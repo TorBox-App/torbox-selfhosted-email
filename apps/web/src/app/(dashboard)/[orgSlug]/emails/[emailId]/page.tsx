@@ -14,7 +14,6 @@ import { queryEmailEvents, queryEventsByMessageIds } from "@/lib/aws/dynamodb";
 import { isOpenEventBot } from "@/lib/email-bot-detection";
 import { logger } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import { cn } from "@/lib/utils";
 import { getEmailStatusConfig } from "../lib/status-config";
 import { formatFullTimestamp } from "../lib/timestamps";
 import type { Email, EmailStatus } from "../types";
@@ -475,14 +474,7 @@ export default async function EmailDetailPage({
                     </div>
                   </div>
                 </div>
-                <Badge
-                  className={cn(
-                    "font-medium",
-                    statusConfig.tone.surface,
-                    statusConfig.tone.text
-                  )}
-                  variant="outline"
-                >
+                <Badge variant={statusConfig.variant}>
                   <StatusIcon className="mr-1 h-3 w-3" />
                   {statusConfig.label}
                 </Badge>

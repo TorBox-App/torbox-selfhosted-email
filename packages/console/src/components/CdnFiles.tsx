@@ -15,6 +15,7 @@ import {
 } from "@wraps/ui/components/ui/alert-dialog";
 import { Badge } from "@wraps/ui/components/ui/badge";
 import { Button } from "@wraps/ui/components/ui/button";
+import { ButtonGroupSeparator } from "@wraps/ui/components/ui/button-group";
 import {
   Card,
   CardContent,
@@ -798,21 +799,15 @@ export function CdnFiles() {
               <div className="flex items-center gap-1.5 border-r px-2.5 py-1.5 font-medium text-sm">
                 {selectedFiles.length} selected
               </div>
-              <StarButton
-                className="rounded-none border-0"
-                label="Star"
-                onToggle={handleBulkStar}
-                size="sm"
-              />
+              <StarButton label="Star" onToggle={handleBulkStar} size="sm" />
+              <ButtonGroupSeparator />
               <DeleteButton
-                className="rounded-none border-0 border-l"
                 label="Delete"
                 onDelete={handleBulkDelete}
                 size="sm"
-                variant="ghost"
               />
+              <ButtonGroupSeparator />
               <Button
-                className="rounded-l-none border-0 border-l"
                 onClick={() => setSelectedFiles([])}
                 size="sm"
                 variant="ghost"
@@ -837,7 +832,6 @@ export function CdnFiles() {
           {/* Filters */}
           <div className="flex items-center rounded-lg border">
             <Button
-              className="rounded-r-none border-0"
               onClick={() =>
                 setFilters({ ...filters, starred: !filters.starred })
               }
@@ -852,18 +846,11 @@ export function CdnFiles() {
             {availableFormats.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    className="rounded-l-none border-0 border-l"
-                    size="sm"
-                    variant="ghost"
-                  >
+                  <Button size="sm" variant="ghost">
                     <Filter className="mr-1.5 h-4 w-4" />
                     Formats
                     {filters.formats.length > 0 && (
-                      <Badge
-                        className="ml-1.5 px-1.5 py-0 text-xs"
-                        variant="secondary"
-                      >
+                      <Badge className="ml-1.5" variant="secondary">
                         {filters.formats.length}
                       </Badge>
                     )}
@@ -895,25 +882,17 @@ export function CdnFiles() {
 
           {/* View Toggle */}
           <ToggleGroup
-            className="rounded-lg border"
             onValueChange={(value) =>
               value && handleViewModeChange(value as ViewMode)
             }
             type="single"
             value={viewMode}
+            variant="outline"
           >
-            <ToggleGroupItem
-              aria-label="Grid view"
-              className="rounded-r-none border-0"
-              value="grid"
-            >
+            <ToggleGroupItem aria-label="Grid view" value="grid">
               <Grid3X3 className="h-4 w-4" />
             </ToggleGroupItem>
-            <ToggleGroupItem
-              aria-label="Table view"
-              className="rounded-l-none border-0 border-l"
-              value="table"
-            >
+            <ToggleGroupItem aria-label="Table view" value="table">
               <List className="h-4 w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
@@ -983,11 +962,11 @@ export function CdnFiles() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
               onClick={() => {
                 handleDeleteFiles(deleteConfirm.keys);
                 setDeleteConfirm({ keys: [], isOpen: false });
               }}
+              variant="destructive"
             >
               Delete
             </AlertDialogAction>

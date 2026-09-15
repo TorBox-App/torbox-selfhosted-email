@@ -76,21 +76,21 @@ export function CodeTemplatePreview({ html }: CodeTemplatePreviewProps) {
         >
           <ToggleGroupItem
             aria-label="Desktop"
-            className="h-8 w-8 p-0"
+            className="h-8 w-8"
             value="desktop"
           >
             <Monitor className="h-3.5 w-3.5" />
           </ToggleGroupItem>
           <ToggleGroupItem
             aria-label="Tablet"
-            className="h-8 w-8 p-0"
+            className="h-8 w-8"
             value="tablet"
           >
             <Tablet className="h-3.5 w-3.5" />
           </ToggleGroupItem>
           <ToggleGroupItem
             aria-label="Mobile"
-            className="h-8 w-8 p-0"
+            className="h-8 w-8"
             value="mobile"
           >
             <Smartphone className="h-3.5 w-3.5" />

@@ -43,15 +43,11 @@ export function LibraryFilters({
       {availableFormats.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              className="gap-2 bg-transparent"
-              size="sm"
-              variant="outline"
-            >
+            <Button className="gap-2" size="sm" variant="outline">
               <Filter className="h-4 w-4" />
               Formats
               {activeFilterCount > 0 && (
-                <Badge className="ml-1 px-1.5 py-0 text-xs" variant="secondary">
+                <Badge className="ml-1" variant="secondary">
                   {activeFilterCount}
                 </Badge>
               )}

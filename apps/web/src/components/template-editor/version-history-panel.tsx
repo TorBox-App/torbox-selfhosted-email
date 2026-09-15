@@ -312,11 +312,7 @@ function VersionItem({
               <span className="font-medium text-sm">
                 Version {version.version}
               </span>
-              {isCurrent && (
-                <Badge className="text-xs" variant="secondary">
-                  Latest
-                </Badge>
-              )}
+              {isCurrent && <Badge variant="secondary">Latest</Badge>}
             </div>
             <div className="flex items-center gap-1 text-muted-foreground text-xs">
               <Clock className="h-3 w-3" />

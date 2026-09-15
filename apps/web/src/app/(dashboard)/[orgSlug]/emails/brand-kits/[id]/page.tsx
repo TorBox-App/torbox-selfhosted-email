@@ -385,13 +385,13 @@ export default function BrandKitEditPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <FileText className="absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <div className="flex-1">
                         <Select
                           onValueChange={setSelectedTemplateId}
                           value={selectedTemplateId}
                         >
-                          <SelectTrigger className="pl-9">
+                          <SelectTrigger className="w-full">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
                             <SelectValue placeholder="Select a template" />
                           </SelectTrigger>
                           <SelectContent>

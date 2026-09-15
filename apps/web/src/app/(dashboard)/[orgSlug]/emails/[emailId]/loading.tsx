@@ -27,7 +27,7 @@ function TimelineRowSkeleton({ isLast }: { isLast: boolean }) {
     <div className="flex gap-4">
       {/* Status dot + connector, matching EventItem's indicator column */}
       <div className="flex flex-col items-center">
-        <Skeleton className="size-10 shrink-0 rounded-full" />
+        <Skeleton className="size-10 shrink-0" />
         {!isLast && <Skeleton className="my-1 w-0.5 flex-1" />}
       </div>
       <div className="flex flex-1 items-start justify-between gap-2 pb-4">
@@ -65,7 +65,7 @@ export default function EmailDetailLoading() {
                   </div>
                 </div>
                 {/* Status badge */}
-                <Skeleton className="h-6 w-24 shrink-0 rounded-md" />
+                <Skeleton className="h-6 w-24 shrink-0" />
               </div>
 
               {/* To / From */}

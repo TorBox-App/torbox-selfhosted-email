@@ -129,12 +129,10 @@ export function EmailFields({ to, from, organizationId }: EmailFieldsProps) {
       <div className="flex flex-col gap-1.5">
         <InputGroup>
           <InputGroupAddon>
-            <InputGroupText className="text-xs uppercase tracking-wide">
-              To:
-            </InputGroupText>
+            <InputGroupText>To:</InputGroupText>
           </InputGroupAddon>
           <InputGroupInput
-            className="font-mono text-sm opacity-100!"
+            className="font-mono text-sm"
             disabled
             id="to-email"
             placeholder="(no recipients)"
@@ -143,9 +141,7 @@ export function EmailFields({ to, from, organizationId }: EmailFieldsProps) {
           />
           {hasMultipleRecipients && (
             <InputGroupAddon align="inline-end">
-              <Badge className="text-xs" variant="secondary">
-                +{to.length - 1}
-              </Badge>
+              <Badge variant="secondary">+{to.length - 1}</Badge>
             </InputGroupAddon>
           )}
           <InputGroupAddon align="inline-end">
@@ -208,12 +204,10 @@ export function EmailFields({ to, from, organizationId }: EmailFieldsProps) {
       <div className="flex flex-col gap-1.5">
         <InputGroup>
           <InputGroupAddon>
-            <InputGroupText className="text-xs uppercase tracking-wide">
-              From:
-            </InputGroupText>
+            <InputGroupText>From:</InputGroupText>
           </InputGroupAddon>
           <InputGroupInput
-            className="font-mono text-foreground text-sm opacity-100!"
+            className="font-mono text-sm"
             disabled
             id="from-email"
             readOnly

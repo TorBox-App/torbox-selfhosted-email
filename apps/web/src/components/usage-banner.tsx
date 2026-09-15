@@ -78,9 +78,8 @@ export function UsageBanner({ usage, upgradeHref }: UsageBannerProps) {
         {usage.threshold === "warning" && (
           <Button
             aria-label="Dismiss warning"
-            className="h-8 w-8 p-0"
             onClick={() => setDismissed(true)}
-            size="sm"
+            size="icon-sm"
             variant="ghost"
           >
             <X className="h-4 w-4" />

@@ -82,7 +82,7 @@ export function ConditionFieldCombobox({
         <Button
           aria-controls={listboxId}
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className="w-full justify-between"
           role="combobox"
           variant="outline"
         >

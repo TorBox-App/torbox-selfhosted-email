@@ -248,7 +248,7 @@ export function SendEmailConfig({
           </p>
         )}
         {hasUnverifiedDomain && (
-          <Alert className="py-2" variant="destructive">
+          <Alert variant="destructive">
             <AlertCircle className="h-3.5 w-3.5" />
             <AlertDescription className="text-xs">
               Domain "{fromDomain}" is not verified. Emails may fail to send.

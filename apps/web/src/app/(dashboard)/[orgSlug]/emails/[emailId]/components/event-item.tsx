@@ -97,13 +97,13 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
                   {event.type.replace("_", " ")}
                 </div>
                 {isAutomated && (
-                  <Badge className="text-xs" variant="secondary">
+                  <Badge variant="secondary">
                     <Bot className="mr-1 h-3 w-3" />
                     Automated
                   </Badge>
                 )}
                 {hasMetadata && event.metadata && (
-                  <Badge className="text-xs" variant="outline">
+                  <Badge variant="outline">
                     {Object.keys(event.metadata).length} detail
                     {Object.keys(event.metadata).length > 1 ? "s" : ""}
                   </Badge>
@@ -139,7 +139,7 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
                 <div className="mb-2 flex items-center justify-between">
                   <div className="font-medium text-sm">Event Details</div>
                   <Button
-                    className="h-7 text-xs"
+                    className="h-7"
                     onClick={() => {
                       navigator.clipboard.writeText(
                         JSON.stringify(event.metadata, null, 2)

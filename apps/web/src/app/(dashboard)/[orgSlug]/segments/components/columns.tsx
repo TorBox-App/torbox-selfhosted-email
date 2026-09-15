@@ -94,8 +94,8 @@ export function createColumns(
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                className="h-8 w-8 p-0"
                 onClick={(e) => e.stopPropagation()}
+                size="icon-sm"
                 variant="ghost"
               >
                 <span className="sr-only">Open menu</span>
@@ -123,11 +123,11 @@ export function createColumns(
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
                   actions.onDelete(segment);
                 }}
+                variant="destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete

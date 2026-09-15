@@ -26,18 +26,18 @@ export function NavHelp() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+            <SidebarMenuButton className="cursor-pointer">
               <CircleHelp className="size-4" />
               <span>Need Help?</span>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="min-w-56 rounded-lg"
+            className="min-w-56"
             side={isMobile ? "top" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+            <DropdownMenuLabel>
               We usually respond in &lt;30 mins
             </DropdownMenuLabel>
             <DropdownMenuGroup>

@@ -9,7 +9,6 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const performanceMetrics = [
   {
@@ -46,18 +45,11 @@ export function StatCards() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {performanceMetrics.map((metric) => (
-        <Card className="border" key={metric.title}>
+        <Card key={metric.title}>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <metric.icon className="size-6 text-muted-foreground" />
-              <Badge
-                className={cn(
-                  metric.growth >= 0
-                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/20 dark:text-green-400"
-                    : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-400"
-                )}
-                variant="outline"
-              >
+              <Badge variant={metric.growth >= 0 ? "success" : "destructive"}>
                 {metric.growth >= 0 ? (
                   <>
                     <TrendingUp className="me-1 size-3" />
