@@ -451,6 +451,40 @@ describe("replyInit", () => {
     expect(consoleLogSpy).toBeDefined();
     expect(consoleErrorSpy).toBeDefined();
   });
+
+  it("does not print the manual-DNS block for a successful no-op write (success:true, recordsCreated:0)", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    // Give the domain a non-manual dnsProvider on file so the write path
+    // (rather than the manual short-circuit) actually runs.
+    const meta = cloneMetadata((m) => {
+      // biome-ignore lint/suspicious/noExplicitAny: test setup
+      (m.services.email as any).dnsProvider = "cloudflare";
+    });
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(meta);
+
+    const { createInboundDNSRecordsForProvider } = await import(
+      "../../utils/dns/index.js"
+    );
+    vi.mocked(createInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      success: true,
+      recordsCreated: 0,
+      errors: ["add include:amazonses.com to your existing SPF record"],
+    });
+    const { note, log } = await import("@clack/prompts");
+
+    await replyInit({ domain: "support.foo.com", yes: true });
+
+    expect(vi.mocked(note)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining("DNS Records for r.mail.support.foo.com")
+    );
+    // 308's behaviour must survive: errors are still warned.
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      "add include:amazonses.com to your existing SPF record"
+    );
+  });
 });
 
 describe("replyDestroy", () => {

@@ -370,9 +370,11 @@ async function replyInitForSingleDomain(params: {
           region,
           domain
         );
-        if (result.success && result.recordsCreated > 0) {
+        if (result.success) {
           progress.succeed(
-            `Created ${result.recordsCreated} DNS records for r.mail.${domain} via ${getDNSProviderDisplayName(dnsProvider)}`
+            result.recordsCreated > 0
+              ? `Created ${result.recordsCreated} DNS records for r.mail.${domain} via ${getDNSProviderDisplayName(dnsProvider)}`
+              : `DNS already configured for r.mail.${domain}`
           );
           dnsAutoCreated = true;
         }

@@ -432,6 +432,98 @@ describe("inboundAdd apex domain reachability", () => {
   });
 });
 
+describe("inboundAdd successful no-op DNS write", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    setJsonMode(false);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
+
+    const { loadConnectionMetadata } = await import(
+      "../../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockImplementation(async () =>
+      cloneMetadataWithDnsProvider()
+    );
+  });
+
+  it("does not print the manual-DNS block when success:true, recordsCreated:0 (harmful-advice bug)", async () => {
+    const { createInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+    vi.mocked(createInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      success: true,
+      recordsCreated: 0,
+    });
+    const { note } = await import("@clack/prompts");
+
+    await inboundAdd({ domain: "example.com", yes: true });
+
+    expect(vi.mocked(note)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "DNS Records — Add these to your DNS provider"
+    );
+  });
+
+  it("does not report a successful no-op write as a failure", async () => {
+    const { createInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+    vi.mocked(createInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      success: true,
+      recordsCreated: 0,
+    });
+    const { log } = await import("@clack/prompts");
+
+    await inboundAdd({ domain: "example.com", yes: true });
+
+    // progress.fail() routes through clack.log.error, not console.log.
+    expect(vi.mocked(log.error)).not.toHaveBeenCalledWith(
+      "Failed to create some DNS records"
+    );
+  });
+
+  it("still warns errors carried alongside a successful no-op write (pins 308's behaviour)", async () => {
+    const { createInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+    vi.mocked(createInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      success: true,
+      recordsCreated: 0,
+      errors: ["add include:amazonses.com to your existing SPF record"],
+    });
+    const { log } = await import("@clack/prompts");
+
+    await inboundAdd({ domain: "example.com", yes: true });
+
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      "add include:amazonses.com to your existing SPF record"
+    );
+  });
+
+  it("still reports a genuine failure and prints the manual-DNS block (today's behaviour preserved)", async () => {
+    const { createInboundDNSRecordsForProvider } = await import(
+      "../../../utils/dns/index.js"
+    );
+    vi.mocked(createInboundDNSRecordsForProvider).mockResolvedValueOnce({
+      success: false,
+      recordsCreated: 0,
+      errors: ["some hard failure"],
+    });
+    const { note, log } = await import("@clack/prompts");
+
+    await inboundAdd({ domain: "example.com", yes: true });
+
+    expect(vi.mocked(log.error)).toHaveBeenCalledWith(
+      "Failed to create some DNS records"
+    );
+    expect(vi.mocked(note)).toHaveBeenCalledWith(
+      expect.anything(),
+      "DNS Records — Add these to your DNS provider"
+    );
+  });
+});
+
 describe("buildInboundDNSRecords", () => {
   it("returns exactly the inbound MX and SPF records for the receiving domain", () => {
     const records = buildInboundDNSRecords("support.example.com", "us-east-1");

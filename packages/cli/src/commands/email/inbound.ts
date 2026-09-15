@@ -466,9 +466,11 @@ export async function inboundInit(
         domain
       );
 
-      if (result.success && result.recordsCreated > 0) {
+      if (result.success) {
         progress.succeed(
-          `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+          result.recordsCreated > 0
+            ? `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+            : `DNS already configured for ${receivingDomain}`
         );
         dnsAutoCreated = true;
       } else {
@@ -1551,9 +1553,11 @@ export async function inboundAdd(
         parentDomain
       );
 
-      if (result.success && result.recordsCreated > 0) {
+      if (result.success) {
         progress.succeed(
-          `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+          result.recordsCreated > 0
+            ? `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+            : `DNS already configured for ${receivingDomain}`
         );
         dnsAutoCreated = true;
 
