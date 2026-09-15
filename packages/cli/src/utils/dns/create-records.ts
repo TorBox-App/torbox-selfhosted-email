@@ -510,7 +510,7 @@ function buildRoute53InboundTXTChange(
   if (hasExistingSpf) {
     return {
       change: null,
-      skippedReason: `Skipped SPF record for ${record.name}: an SPF (v=spf1) TXT record already exists there, and two v=spf1 records on one name is invalid (RFC 7208). Add "include:amazonses.com" to the existing record yourself.`,
+      skippedReason: formatSkippedSpfMessage(record.name),
     };
   }
 
@@ -614,6 +614,67 @@ function classifyRoute53Error(
 }
 
 /**
+ * Message shown when the inbound SPF write is skipped because a v=spf1 TXT
+ * record already exists at `name`. Matches the wording
+ * `buildRoute53InboundTXTChange` uses for its own skip, so all three
+ * providers report the same thing.
+ */
+export function formatSkippedSpfMessage(name: string): string {
+  return `Skipped SPF record for ${name}: an SPF (v=spf1) TXT record already exists there, and two v=spf1 records on one name is invalid (RFC 7208). Add "include:amazonses.com" to the existing record yourself.`;
+}
+
+/**
+ * Drop the `inbound_spf` record from `records` when a v=spf1 TXT already
+ * exists at `receivingDomain` — two v=spf1 records on one name is an RFC
+ * 7208 PermError. A failed read must not silently drop SPF, so any error
+ * from `listTxtRecords` leaves `records` unchanged.
+ */
+async function dropInboundSpfIfExisting(
+  listTxtRecords: () => Promise<Array<{ content: string; priority?: number }>>,
+  records: DNSRecordInfo[],
+  receivingDomain: string
+): Promise<{ records: DNSRecordInfo[]; skippedReason?: string }> {
+  let existingTxt: Array<{ content: string; priority?: number }>;
+  try {
+    existingTxt = await listTxtRecords();
+  } catch {
+    return { records };
+  }
+
+  const hasExistingSpf = existingTxt.some((r) =>
+    r.content.replace(/^"|"$/g, "").startsWith("v=spf1")
+  );
+
+  if (!hasExistingSpf) {
+    return { records };
+  }
+
+  return {
+    records: records.filter((r) => r.category !== "inbound_spf"),
+    skippedReason: formatSkippedSpfMessage(receivingDomain),
+  };
+}
+
+/**
+ * Merge a preflight `skippedReason` into a write result's `errors` array,
+ * matching how the Route53 branch surfaces its own SPF skip (see
+ * `buildRoute53InboundTXTChange`): `success` stays true, the skip is just
+ * reported alongside.
+ */
+function appendSkippedReason(
+  result: DNSCreationResult,
+  skippedReason: string | undefined
+): DNSCreationResult {
+  if (!skippedReason) {
+    return result;
+  }
+  return {
+    ...result,
+    errors: [...(result.errors ?? []), skippedReason],
+  };
+}
+
+/**
  * Create inbound DNS records (MX + SPF) using the appropriate provider
  * @param parentDomain - The root domain (e.g., "wraps.dev") needed for Vercel DNS zone
  */
@@ -704,7 +765,14 @@ export async function createInboundDNSRecordsForProvider(
         credentials.zoneId,
         credentials.token
       );
-      return client.createRecords(records);
+      const { records: recordsToWrite, skippedReason } =
+        await dropInboundSpfIfExisting(
+          () => client.listRecords(receivingDomain, "TXT"),
+          records,
+          receivingDomain
+        );
+      const result = await client.createRecords(recordsToWrite);
+      return appendSkippedReason(result, skippedReason);
     }
 
     case "vercel": {
@@ -713,7 +781,14 @@ export async function createInboundDNSRecordsForProvider(
         credentials.token,
         credentials.teamId
       );
-      return client.createRecords(records);
+      const { records: recordsToWrite, skippedReason } =
+        await dropInboundSpfIfExisting(
+          () => client.listRecords(receivingDomain, "TXT"),
+          records,
+          receivingDomain
+        );
+      const result = await client.createRecords(recordsToWrite);
+      return appendSkippedReason(result, skippedReason);
     }
 
     case "manual":

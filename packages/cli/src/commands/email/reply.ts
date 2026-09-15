@@ -222,7 +222,15 @@ async function replyInitForSingleDomain(params: {
   parameterName: string;
   dnsAutoCreated: boolean;
 }> {
-  const { domain, metadata, accountId, region, stackName, progress } = params;
+  const {
+    domain,
+    metadata,
+    accountId,
+    region,
+    stackName,
+    progress,
+    autoConfirm,
+  } = params;
 
   const emailService = metadata.services.email;
   if (!emailService) {
@@ -323,6 +331,7 @@ async function replyInitForSingleDomain(params: {
       buildInboundDNSRecords: buildRecords,
       getDNSProviderDisplayName,
       formatManualDNSInstructions,
+      guardInboundDNSWrite,
     } = await import("../../utils/dns/index.js");
 
     const existingDnsProvider = metadata.services.email?.dnsProvider;
@@ -346,9 +355,18 @@ async function replyInitForSingleDomain(params: {
         region
       );
       if (credentialResult.valid && credentialResult.credentials) {
+        const replyDomain = `r.mail.${domain}`;
+        await guardInboundDNSWrite({
+          credentials: credentialResult.credentials,
+          receivingDomain: replyDomain,
+          region,
+          parentDomain: domain,
+          yes: autoConfirm ?? false,
+        });
+
         const result = await createInboundDNSRecordsForProvider(
           credentialResult.credentials,
-          `r.mail.${domain}`,
+          replyDomain,
           region,
           domain
         );
@@ -357,6 +375,16 @@ async function replyInitForSingleDomain(params: {
             `Created ${result.recordsCreated} DNS records for r.mail.${domain} via ${getDNSProviderDisplayName(dnsProvider)}`
           );
           dnsAutoCreated = true;
+        }
+        // Printed regardless of success: a skipped SPF write (e.g. an
+        // existing v=spf1 record) still reports `success: true` with the
+        // MX created, and `errors` is the only place the "add
+        // include:amazonses.com yourself" guidance is carried — without
+        // this, the reply-threading path drops it silently.
+        if (result.errors) {
+          for (const err of result.errors) {
+            clack.log.warn(err);
+          }
         }
       }
     }

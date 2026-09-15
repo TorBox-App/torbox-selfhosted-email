@@ -1187,6 +1187,18 @@ export const errors = {
       "https://wraps.dev/docs/quickstart/email"
     ),
 
+  inboundMxConflict: (
+    receivingDomain: string,
+    parentDomain: string,
+    existingMx: string[]
+  ) =>
+    new WrapsError(
+      `${receivingDomain} already has mail routed to it`,
+      "INBOUND_MX_CONFLICT",
+      `Existing MX record(s): ${existingMx.join(", ")}\n\nAdding an SES MX record alongside these can divert or duplicate inbound mail. Pick a subdomain of ${parentDomain} that has no MX record today instead, e.g.:\n  wraps email inbound add --subdomain support\nwhich receives at support.${parentDomain}.\n\nRun interactively (without --yes) to confirm and proceed anyway.`,
+      "https://wraps.dev/docs/quickstart/email"
+    ),
+
   receiptRuleSetConflict: (activeRuleSet: string) =>
     new WrapsError(
       `Another receipt rule set is active: ${activeRuleSet}`,

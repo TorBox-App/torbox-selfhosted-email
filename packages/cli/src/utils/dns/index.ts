@@ -23,7 +23,6 @@ export {
   getDNSProviderDisplayName,
   getDNSProviderTokenUrl,
 } from "./create-records.js";
-
 // Credentials management
 export {
   type CredentialValidationResult,
@@ -41,6 +40,14 @@ export {
   deleteInboundDNSRecordsForProvider,
   type InboundDNSCleanupResult,
 } from "./inbound-dns-cleanup.js";
+// Inbound DNS preflight
+export {
+  checkInboundDNSPreflight,
+  describeInboundDNSConflict,
+  guardInboundDNSWrite,
+  type InboundDNSConflict,
+  type InboundDNSPreflight,
+} from "./inbound-preflight.js";
 // Types
 export type {
   DNSConfig,

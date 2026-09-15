@@ -62,27 +62,107 @@ vi.mock("../../../utils/email/receipt-rules.js", async (importOriginal) => {
 });
 
 // Mock DNS detection/creation so the command doesn't touch the network
-vi.mock("../../../utils/dns/index.js", () => ({
-  detectAvailableDNSProviders: vi
-    .fn()
-    .mockResolvedValue([{ provider: "manual", detected: true }]),
-  getDNSCredentials: vi.fn().mockResolvedValue({
-    valid: true,
-    credentials: { provider: "manual" },
-  }),
-  createInboundDNSRecordsForProvider: vi
-    .fn()
-    .mockResolvedValue({ success: true, recordsCreated: 0 }),
-  deleteInboundDNSRecordsForProvider: vi.fn().mockResolvedValue({
-    deleted: [],
-    skipped: [],
-    supported: true,
-    errors: [],
-  }),
-  buildInboundDNSRecords: vi.fn().mockReturnValue([]),
-  formatManualDNSInstructions: vi.fn().mockReturnValue(""),
-  getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
-}));
+vi.mock("../../../utils/dns/index.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../utils/dns/index.js")
+  >("../../../utils/dns/index.js");
+  // The real module's own copy of these — used below by clackPrompts/errors/
+  // isJsonMode, imported dynamically because by the time this factory body
+  // runs (lazily, on first import) every other vi.mock in this file is
+  // already registered, so these resolve to the mocked/real modules exactly
+  // as production code sees them.
+  const clackPrompts = await import("@clack/prompts");
+  const { errors } = await import("../../../utils/shared/errors.js");
+  const { isJsonMode } = await import("../../../utils/shared/json-output.js");
+
+  const checkInboundDNSPreflight = vi.fn().mockResolvedValue({
+    checked: false,
+    existingMx: [],
+    existingSpf: [],
+    alreadyPointsAtSes: false,
+  });
+
+  // Mirrors production `guardInboundDNSWrite` (utils/dns/inbound-preflight.ts)
+  // against THIS file's own `checkInboundDNSPreflight` mock. The production
+  // function calls its module-local `checkInboundDNSPreflight` directly, so a
+  // plain object-spread mock can't intercept that internal call — this
+  // closure is what lets per-test `mockResolvedValueOnce` overrides reach it.
+  const guardInboundDNSWrite = vi.fn(
+    async (params: {
+      credentials: unknown;
+      receivingDomain: string;
+      region: string;
+      parentDomain: string;
+      yes: boolean;
+    }) => {
+      const preflight = await checkInboundDNSPreflight(
+        params.credentials,
+        params.receivingDomain,
+        params.region,
+        params.parentDomain
+      );
+      const conflict = actual.describeInboundDNSConflict(
+        preflight,
+        params.receivingDomain
+      );
+
+      if (conflict.severity === "ok") {
+        return;
+      }
+      if (
+        conflict.severity === "unverified" ||
+        conflict.severity === "spf-conflict"
+      ) {
+        clackPrompts.log.warn(conflict.message);
+        return;
+      }
+      // mx-conflict
+      if (params.yes || isJsonMode()) {
+        throw errors.inboundMxConflict(
+          params.receivingDomain,
+          params.parentDomain,
+          preflight.existingMx
+        );
+      }
+      clackPrompts.log.warn(conflict.message);
+      const confirmed = await clackPrompts.confirm({
+        message: `Continue adding the SES MX record to ${params.receivingDomain}?`,
+        initialValue: false,
+      });
+      if (clackPrompts.isCancel(confirmed) || !confirmed) {
+        clackPrompts.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+    }
+  );
+
+  return {
+    detectAvailableDNSProviders: vi
+      .fn()
+      .mockResolvedValue([{ provider: "manual", detected: true }]),
+    getDNSCredentials: vi.fn().mockResolvedValue({
+      valid: true,
+      credentials: { provider: "manual" },
+    }),
+    createInboundDNSRecordsForProvider: vi
+      .fn()
+      .mockResolvedValue({ success: true, recordsCreated: 0 }),
+    deleteInboundDNSRecordsForProvider: vi.fn().mockResolvedValue({
+      deleted: [],
+      skipped: [],
+      supported: true,
+      errors: [],
+    }),
+    buildInboundDNSRecords: vi.fn().mockReturnValue([]),
+    formatManualDNSInstructions: vi.fn().mockReturnValue(""),
+    getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
+    checkInboundDNSPreflight,
+    // Real implementation: it's pure and cheap, and several new tests need
+    // its actual severity classification rather than a stubbed one.
+    describeInboundDNSConflict: actual.describeInboundDNSConflict,
+    guardInboundDNSWrite,
+  };
+});
 
 import { inboundAdd, inboundRemove } from "../inbound.js";
 
@@ -265,16 +345,84 @@ describe("inboundAdd apex domain reachability", () => {
     );
   });
 
-  // NOTE: characterization only — there is no preflight check for pre-existing
-  // MX/SPF on the target domain today. Plan 308 adds one. This test asserts the
-  // call happens; plan 308 changes it to assert the call is REFUSED.
-  it("writes DNS records straight to the apex with no guard", async () => {
-    const { createInboundDNSRecordsForProvider } = await import(
-      "../../../utils/dns/index.js"
-    );
+  it("refuses non-interactively when the apex already has a non-SES MX record", async () => {
+    const { createInboundDNSRecordsForProvider, checkInboundDNSPreflight } =
+      await import("../../../utils/dns/index.js");
+    vi.mocked(checkInboundDNSPreflight).mockResolvedValueOnce({
+      checked: true,
+      existingMx: ["1 aspmx.l.google.com"],
+      existingSpf: [],
+      alreadyPointsAtSes: false,
+    });
+
+    await expect(
+      inboundAdd({ root: true, domain: "example.com", yes: true })
+    ).rejects.toThrow(/already has mail routed to it/);
+
+    expect(
+      vi.mocked(createInboundDNSRecordsForProvider)
+    ).not.toHaveBeenCalled();
+  });
+
+  it("does not write a second SPF record when one already exists (warns and proceeds)", async () => {
+    const { createInboundDNSRecordsForProvider, checkInboundDNSPreflight } =
+      await import("../../../utils/dns/index.js");
+    vi.mocked(checkInboundDNSPreflight).mockResolvedValueOnce({
+      checked: true,
+      existingMx: [],
+      existingSpf: ["v=spf1 -all"],
+      alreadyPointsAtSes: false,
+    });
 
     await inboundAdd({ root: true, domain: "example.com", yes: true });
 
+    // The preflight never drops the SPF record itself — that guard lives in
+    // createInboundDNSRecordsForProvider (mocked here), which is why the
+    // write still proceeds; the preflight only decides whether to warn.
+    expect(vi.mocked(createInboundDNSRecordsForProvider)).toHaveBeenCalledWith(
+      expect.anything(),
+      "example.com",
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("proceeds without a prompt when the MX already points at SES (idempotent re-run)", async () => {
+    const { createInboundDNSRecordsForProvider, checkInboundDNSPreflight } =
+      await import("../../../utils/dns/index.js");
+    vi.mocked(checkInboundDNSPreflight).mockResolvedValueOnce({
+      checked: true,
+      existingMx: ["10 inbound-smtp.us-east-1.amazonaws.com"],
+      existingSpf: [],
+      alreadyPointsAtSes: true,
+    });
+    const { confirm } = await import("@clack/prompts");
+
+    await inboundAdd({ root: true, domain: "example.com", yes: true });
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(vi.mocked(createInboundDNSRecordsForProvider)).toHaveBeenCalledWith(
+      expect.anything(),
+      "example.com",
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("proceeds with a warning when the provider could not be read (manual/checked: false)", async () => {
+    const { createInboundDNSRecordsForProvider, checkInboundDNSPreflight } =
+      await import("../../../utils/dns/index.js");
+    vi.mocked(checkInboundDNSPreflight).mockResolvedValueOnce({
+      checked: false,
+      existingMx: [],
+      existingSpf: [],
+      alreadyPointsAtSes: false,
+    });
+    const { log } = await import("@clack/prompts");
+
+    await inboundAdd({ root: true, domain: "example.com", yes: true });
+
+    expect(vi.mocked(log.warn)).toHaveBeenCalled();
     expect(vi.mocked(createInboundDNSRecordsForProvider)).toHaveBeenCalledWith(
       expect.anything(),
       "example.com",

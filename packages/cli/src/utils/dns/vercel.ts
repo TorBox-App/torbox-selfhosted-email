@@ -146,6 +146,35 @@ export class VercelDNSClient implements DNSProviderClient {
     );
   }
 
+  /**
+   * All records matching name+type. Unlike `findRecord`, this returns every
+   * match — callers that need to know whether a name ALREADY has mail records
+   * cannot use a single-result lookup.
+   */
+  async listRecords(
+    name: string,
+    type: string
+  ): Promise<Array<{ content: string; priority?: number }>> {
+    const result = await this.request<VercelRecordsResponse>(
+      `/v4/domains/${this.domain}/records`
+    );
+
+    if (result.error || !result.records) {
+      return [];
+    }
+
+    // Vercel stores relative names, so we need to match accordingly
+    // Root domain should be "@"
+    const relativeName =
+      name === this.domain ? "@" : name.replace(`.${this.domain}`, "");
+
+    return result.records
+      .filter(
+        (r) => (r.name === relativeName || r.name === name) && r.type === type
+      )
+      .map((r) => ({ content: r.value, priority: r.mxPriority }));
+  }
+
   private async deleteRecord(recordId: string): Promise<boolean> {
     const result = await this.request<{ id: string }>(
       `/v2/domains/${this.domain}/records/${recordId}`,

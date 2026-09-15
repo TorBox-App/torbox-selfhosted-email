@@ -123,6 +123,29 @@ export class CloudflareDNSClient implements DNSProviderClient {
     return null;
   }
 
+  /**
+   * All records matching name+type. Unlike `findRecord`, this returns every
+   * match — callers that need to know whether a name ALREADY has mail records
+   * cannot use a single-result lookup.
+   */
+  async listRecords(
+    name: string,
+    type: string
+  ): Promise<Array<{ content: string; priority?: number }>> {
+    const result = await this.request<CloudflareRecord[]>(
+      `/dns_records?name=${encodeURIComponent(name)}&type=${type}`
+    );
+
+    if (!(result.success && result.result)) {
+      return [];
+    }
+
+    return result.result.map((r) => ({
+      content: r.content,
+      priority: r.priority,
+    }));
+  }
+
   private async deleteRecord(recordId: string): Promise<boolean> {
     const result = await this.request<{ id: string }>(
       `/dns_records/${recordId}`,

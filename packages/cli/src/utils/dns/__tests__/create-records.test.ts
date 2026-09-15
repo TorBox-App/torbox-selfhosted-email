@@ -655,6 +655,194 @@ describe("createInboundDNSRecordsForProvider - route53 (non-destructive write)",
   });
 });
 
+describe("createInboundDNSRecordsForProvider - cloudflare/vercel SPF guard", () => {
+  const receivingDomain = "support.example.com";
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function mockCloudflareFetch(txtRecords: Array<{ content: string }>) {
+    vi.spyOn(global, "fetch").mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("type=TXT")) {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              success: true,
+              result: txtRecords.map((r, i) => ({
+                id: `txt-${i}`,
+                name: receivingDomain,
+                type: "TXT",
+                content: r.content,
+              })),
+            }),
+        } as Response);
+      }
+      // POST create-record calls.
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({ success: true, result: { id: "created" } }),
+      } as Response);
+    });
+  }
+
+  function mockCloudflareFetchTxtReadFails() {
+    vi.spyOn(global, "fetch").mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("type=TXT")) {
+        return Promise.reject(new Error("network error"));
+      }
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({ success: true, result: { id: "created" } }),
+      } as Response);
+    });
+  }
+
+  function mockVercelFetch(txtRecords: Array<{ content: string }>) {
+    vi.spyOn(global, "fetch").mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("/v4/domains/")) {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              records: txtRecords.map((r, i) => ({
+                id: `txt-${i}`,
+                name: "support",
+                type: "TXT",
+                value: r.content,
+              })),
+            }),
+        } as Response);
+      }
+      // POST create-record calls.
+      return Promise.resolve({
+        json: () => Promise.resolve({ id: "created" }),
+      } as Response);
+    });
+  }
+
+  function mockVercelFetchTxtReadFails() {
+    vi.spyOn(global, "fetch").mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes("/v4/domains/")) {
+        return Promise.reject(new Error("network error"));
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ id: "created" }),
+      } as Response);
+    });
+  }
+
+  function postedRecordTypes(): string[] {
+    return vi
+      .mocked(fetch)
+      .mock.calls.filter(([, init]) => init?.method === "POST")
+      .map(([, init]) => JSON.parse(init?.body as string).type as string);
+  }
+
+  it("cloudflare: skips the SPF POST when a v=spf1 TXT already exists, but still creates the MX", async () => {
+    mockCloudflareFetch([{ content: "v=spf1 include:othersender.com ~all" }]);
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "cloudflare", token: "tok", zoneId: "zone-1" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.errors?.some((e) => e.includes("SPF"))).toBe(true);
+
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).not.toContain("TXT");
+  });
+
+  it("cloudflare: writes both records when the existing TXT is not SPF", async () => {
+    mockCloudflareFetch([{ content: "google-site-verification=abc123" }]);
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "cloudflare", token: "tok", zoneId: "zone-1" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).toContain("TXT");
+  });
+
+  it("cloudflare: writes both records unchanged when the TXT read fails", async () => {
+    mockCloudflareFetchTxtReadFails();
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "cloudflare", token: "tok", zoneId: "zone-1" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).toContain("TXT");
+  });
+
+  it("vercel: skips the SPF POST when a v=spf1 TXT already exists, but still creates the MX", async () => {
+    mockVercelFetch([{ content: "v=spf1 include:othersender.com ~all" }]);
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "vercel", token: "tok" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.errors?.some((e) => e.includes("SPF"))).toBe(true);
+
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).not.toContain("TXT");
+  });
+
+  it("vercel: writes both records when the existing TXT is not SPF", async () => {
+    mockVercelFetch([{ content: "google-site-verification=abc123" }]);
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "vercel", token: "tok" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).toContain("TXT");
+  });
+
+  it("vercel: writes both records unchanged when the TXT read fails", async () => {
+    mockVercelFetchTxtReadFails();
+
+    const result = await createInboundDNSRecordsForProvider(
+      { provider: "vercel", token: "tok" },
+      receivingDomain,
+      "us-east-1",
+      "example.com"
+    );
+
+    expect(result.success).toBe(true);
+    const posted = postedRecordTypes();
+    expect(posted).toContain("MX");
+    expect(posted).toContain("TXT");
+  });
+});
+
 describe("getDNSProviderDisplayName", () => {
   it("should return correct name for route53", () => {
     expect(getDNSProviderDisplayName("route53")).toBe("AWS Route53");

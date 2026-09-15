@@ -90,21 +90,96 @@ vi.mock("../../utils/email/receipt-rules.js", async (importOriginal) => {
 });
 
 // Mock DNS detection/creation so init doesn't touch the network
-vi.mock("../../utils/dns/index.js", () => ({
-  detectAvailableDNSProviders: vi
-    .fn()
-    .mockResolvedValue([{ provider: "manual", detected: true }]),
-  getDNSCredentials: vi.fn().mockResolvedValue({
-    valid: true,
-    credentials: { provider: "manual" },
-  }),
-  createInboundDNSRecordsForProvider: vi
-    .fn()
-    .mockResolvedValue({ success: true, recordsCreated: 0 }),
-  buildInboundDNSRecords: vi.fn().mockReturnValue([]),
-  formatManualDNSInstructions: vi.fn().mockReturnValue(""),
-  getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
-}));
+vi.mock("../../utils/dns/index.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../utils/dns/index.js")
+  >("../../utils/dns/index.js");
+  // Dynamic so these resolve to the mocked/real modules exactly as
+  // production code sees them (every other vi.mock in this file is already
+  // registered by the time this factory body runs, lazily, on first import).
+  const clackPrompts = await import("@clack/prompts");
+  const { errors } = await import("../../utils/shared/errors.js");
+  const { isJsonMode } = await import("../../utils/shared/json-output.js");
+
+  const checkInboundDNSPreflight = vi.fn().mockResolvedValue({
+    checked: false,
+    existingMx: [],
+    existingSpf: [],
+    alreadyPointsAtSes: false,
+  });
+
+  // Mirrors production `guardInboundDNSWrite` (utils/dns/inbound-preflight.ts)
+  // against THIS file's own `checkInboundDNSPreflight` mock — see the same
+  // helper in inbound.test.ts for why a plain object-spread mock can't just
+  // reuse the real `guardInboundDNSWrite`.
+  const guardInboundDNSWrite = vi.fn(
+    async (params: {
+      credentials: unknown;
+      receivingDomain: string;
+      region: string;
+      parentDomain: string;
+      yes: boolean;
+    }) => {
+      const preflight = await checkInboundDNSPreflight(
+        params.credentials,
+        params.receivingDomain,
+        params.region,
+        params.parentDomain
+      );
+      const conflict = actual.describeInboundDNSConflict(
+        preflight,
+        params.receivingDomain
+      );
+
+      if (conflict.severity === "ok") {
+        return;
+      }
+      if (
+        conflict.severity === "unverified" ||
+        conflict.severity === "spf-conflict"
+      ) {
+        clackPrompts.log.warn(conflict.message);
+        return;
+      }
+      // mx-conflict
+      if (params.yes || isJsonMode()) {
+        throw errors.inboundMxConflict(
+          params.receivingDomain,
+          params.parentDomain,
+          preflight.existingMx
+        );
+      }
+      clackPrompts.log.warn(conflict.message);
+      const confirmed = await clackPrompts.confirm({
+        message: `Continue adding the SES MX record to ${params.receivingDomain}?`,
+        initialValue: false,
+      });
+      if (clackPrompts.isCancel(confirmed) || !confirmed) {
+        clackPrompts.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+    }
+  );
+
+  return {
+    detectAvailableDNSProviders: vi
+      .fn()
+      .mockResolvedValue([{ provider: "manual", detected: true }]),
+    getDNSCredentials: vi.fn().mockResolvedValue({
+      valid: true,
+      credentials: { provider: "manual" },
+    }),
+    createInboundDNSRecordsForProvider: vi
+      .fn()
+      .mockResolvedValue({ success: true, recordsCreated: 0 }),
+    buildInboundDNSRecords: vi.fn().mockReturnValue([]),
+    formatManualDNSInstructions: vi.fn().mockReturnValue(""),
+    getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
+    checkInboundDNSPreflight,
+    describeInboundDNSConflict: actual.describeInboundDNSConflict,
+    guardInboundDNSWrite,
+  };
+});
 
 const baseMetadata = {
   version: "1.0.0",

@@ -397,6 +397,7 @@ export async function inboundInit(
     getDNSProviderDisplayName,
     buildInboundDNSRecords: buildRecords,
     formatManualDNSInstructions,
+    guardInboundDNSWrite,
   } = await import("../../utils/dns/index.js");
   const { promptDNSProvider, promptContinueManualDNS } = await import(
     "../../utils/shared/prompts.js"
@@ -447,6 +448,14 @@ export async function inboundInit(
         clack.log.info(pc.dim(`  ${record.type} ${record.name} → ${value}`));
       }
 
+      await guardInboundDNSWrite({
+        credentials: credentialResult.credentials,
+        receivingDomain,
+        region,
+        parentDomain: domain,
+        yes: options.yes ?? false,
+      });
+
       progress.start(
         `Creating DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
       );
@@ -464,10 +473,14 @@ export async function inboundInit(
         dnsAutoCreated = true;
       } else {
         progress.fail("Failed to create some DNS records");
-        if (result.errors) {
-          for (const err of result.errors) {
-            clack.log.warn(err);
-          }
+      }
+      // Printed regardless of success: a skipped SPF write (e.g. an
+      // existing v=spf1 record) still reports `success: true` with the
+      // MX created, and `errors` is the only place the "add
+      // include:amazonses.com yourself" guidance is carried.
+      if (result.errors) {
+        for (const err of result.errors) {
+          clack.log.warn(err);
         }
       }
     } else {
@@ -1477,6 +1490,7 @@ export async function inboundAdd(
     getDNSProviderDisplayName,
     buildInboundDNSRecords: buildRecords,
     formatManualDNSInstructions,
+    guardInboundDNSWrite,
   } = await import("../../utils/dns/index.js");
   const { promptDNSProvider, promptContinueManualDNS } = await import(
     "../../utils/shared/prompts.js"
@@ -1519,6 +1533,14 @@ export async function inboundAdd(
         clack.log.info(pc.dim(`  ${record.type} ${record.name} → ${value}`));
       }
 
+      await guardInboundDNSWrite({
+        credentials: credentialResult.credentials,
+        receivingDomain,
+        region,
+        parentDomain,
+        yes: options.yes ?? false,
+      });
+
       progress.start(
         `Creating DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
       );
@@ -1539,9 +1561,17 @@ export async function inboundAdd(
         // via the same provider credentials.
         if (replyThreadingEnabled) {
           try {
+            const replyDomain = `r.mail.${parentDomain}`;
+            await guardInboundDNSWrite({
+              credentials: credentialResult.credentials,
+              receivingDomain: replyDomain,
+              region,
+              parentDomain,
+              yes: options.yes ?? false,
+            });
             const replyResult = await createInboundDNSRecordsForProvider(
               credentialResult.credentials,
-              `r.mail.${parentDomain}`,
+              replyDomain,
               region,
               parentDomain
             );
@@ -1549,6 +1579,11 @@ export async function inboundAdd(
               progress.succeed(
                 `Created ${replyResult.recordsCreated} DNS records for r.mail.${parentDomain}`
               );
+            }
+            if (replyResult.errors) {
+              for (const err of replyResult.errors) {
+                clack.log.warn(err);
+              }
             }
           } catch (error) {
             clack.log.warn(
@@ -1558,10 +1593,14 @@ export async function inboundAdd(
         }
       } else {
         progress.fail("Failed to create some DNS records");
-        if (result.errors) {
-          for (const err of result.errors) {
-            clack.log.warn(err);
-          }
+      }
+      // Printed regardless of success: a skipped SPF write (e.g. an
+      // existing v=spf1 record) still reports `success: true` with the
+      // MX created, and `errors` is the only place the "add
+      // include:amazonses.com yourself" guidance is carried.
+      if (result.errors) {
+        for (const err of result.errors) {
+          clack.log.warn(err);
         }
       }
     } else {
