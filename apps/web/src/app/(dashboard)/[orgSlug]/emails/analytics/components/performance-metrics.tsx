@@ -44,19 +44,7 @@ function MetricRow({
           </span>
         </div>
       </div>
-      <Progress
-        className="h-2"
-        indicatorClassName={
-          tone === "success"
-            ? "bg-success"
-            : tone === "warning"
-              ? "bg-warning"
-              : tone === "destructive"
-                ? "bg-destructive"
-                : "bg-primary"
-        }
-        value={percentage}
-      />
+      <Progress className="h-2" value={percentage} variant={tone} />
     </div>
   );
 }

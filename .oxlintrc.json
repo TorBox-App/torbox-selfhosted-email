@@ -83,7 +83,10 @@
             "pattern": "^Badge$",
             "allow": ["layout", "gap-*", "font-mono", "rounded-full"]
           },
-          { "pattern": "^Button$", "allow": ["layout", "gap-*"] }
+          {
+            "pattern": "^Button$",
+            "allow": ["layout", "gap-*", "ph-no-capture"]
+          }
         ]
       }
     ],

@@ -646,7 +646,7 @@ export function CodeTemplateAIPanel({
         >
           <div>
             <Textarea
-              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-foreground/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] focus-visible:ring-0"
+              className="w-full resize-none overflow-y-auto px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal]"
               disabled={isLoading || aiUsage?.remaining === 0}
               onBlur={() => setIsFocused(false)}
               onChange={(e) => {
@@ -662,6 +662,7 @@ export function CodeTemplateAIPanel({
               }
               ref={textareaRef}
               value={input}
+              variant="seamless"
             />
           </div>
 

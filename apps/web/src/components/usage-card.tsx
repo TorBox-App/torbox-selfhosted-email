@@ -21,6 +21,13 @@ export type UsageData = {
   threshold: "normal" | "warning" | "critical" | "exceeded";
 };
 
+const THRESHOLD_VARIANT = {
+  normal: "default",
+  warning: "warning",
+  critical: "destructive",
+  exceeded: "destructive",
+} as const satisfies Record<UsageData["threshold"], string>;
+
 type UsageCardProps = {
   icon: LucideIcon;
   title: string;
@@ -93,15 +100,8 @@ export function UsageCard({
             </p>
             <Progress
               className="h-2"
-              indicatorClassName={
-                usage.threshold === "warning"
-                  ? "bg-warning"
-                  : usage.threshold === "critical" ||
-                      usage.threshold === "exceeded"
-                    ? "bg-destructive"
-                    : "bg-primary"
-              }
               value={displayPercent}
+              variant={THRESHOLD_VARIANT[usage.threshold]}
             />
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
