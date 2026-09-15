@@ -281,11 +281,13 @@ describe("copy button is named, visible on focus, and reports failure (H3, L4)",
     );
 
     const copy = screen.getByRole("button", { name: "Copy ada@example.com" });
-    // jsdom cannot resolve :focus-visible against a class, so assert the rule
-    // that lifts opacity is present alongside the hover one it used to be
-    // alone.
-    expect(copy.className).toContain("opacity-0");
-    expect(copy.className).toContain("focus-visible:opacity-100");
+    // jsdom cannot resolve :focus-within against a class, so assert the
+    // reveal rule is present on the wrapper that owns it: the button's
+    // opacity classes live on the wrapping <span>, not the button itself.
+    const wrapper = copy.parentElement;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.className).toContain("opacity-0");
+    expect(wrapper?.className).toContain("focus-within:opacity-100");
   });
 
   it("announces the copy through a live region rather than the icon alone", async () => {
