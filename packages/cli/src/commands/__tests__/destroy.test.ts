@@ -65,6 +65,7 @@ vi.mock("../../utils/route53.js");
 vi.mock("@aws-sdk/client-sesv2");
 vi.mock("../../utils/shared/agent-api.js");
 
+import * as sesv2 from "@aws-sdk/client-sesv2";
 import * as prompts from "@clack/prompts";
 import * as route53 from "../../utils/route53.js";
 import * as agentApi from "../../utils/shared/agent-api.js";
@@ -144,7 +145,12 @@ describe("email destroy command", () => {
 
     // Mock Route53 utilities
     vi.mocked(route53.findHostedZone).mockResolvedValue(null);
-    vi.mocked(route53.deleteDNSRecords).mockResolvedValue(undefined);
+    vi.mocked(route53.deleteDNSRecords).mockResolvedValue({
+      deleted: [],
+      skipped: [],
+      supported: true,
+      errors: [],
+    });
 
     // Default: no reachable Wraps Platform (agent kill step is best-effort).
     vi.mocked(agentApi.createAgentApiClient).mockResolvedValue({
@@ -429,6 +435,44 @@ describe("email destroy command", () => {
       await emailDestroy({ force: true });
 
       expect(route53.deleteDNSRecords).not.toHaveBeenCalled();
+    });
+
+    it("reports deleted, skipped, and errored DNS records after cleanup runs", async () => {
+      await setupPulumiMock();
+      vi.mocked(route53.findHostedZone).mockResolvedValue({
+        id: "Z123456789",
+        name: "example.com",
+      });
+      vi.mocked(sesv2.SESv2Client.prototype.send).mockResolvedValueOnce({
+        DkimAttributes: { Tokens: ["tok1", "tok2", "tok3"] },
+      } as never);
+      vi.mocked(route53.deleteDNSRecords).mockResolvedValue({
+        deleted: ["CNAME tok1._domainkey.example.com"],
+        // Non-Wraps record listed first deliberately: a buggy "report the
+        // first thing found" implementation would surface this instead of
+        // the actual skip, and the assertion below would catch it.
+        skipped: [
+          {
+            record: "TXT _dmarc.example.com",
+            reason:
+              "The TXT record set at _dmarc.example.com does not contain the value Wraps created — leaving it in place.",
+          },
+        ],
+        supported: true,
+        errors: ["MX example.com: some provider error"],
+      });
+
+      await emailDestroy({ force: true });
+
+      expect(prompts.log.success).toHaveBeenCalledWith(
+        "Deleted DNS record: CNAME tok1._domainkey.example.com"
+      );
+      expect(prompts.log.warn).toHaveBeenCalledWith(
+        "Left DNS record in place: TXT _dmarc.example.com (The TXT record set at _dmarc.example.com does not contain the value Wraps created — leaving it in place.)"
+      );
+      expect(prompts.log.warn).toHaveBeenCalledWith(
+        "DNS cleanup error: MX example.com: some provider error"
+      );
     });
   });
 
@@ -837,7 +881,12 @@ describe("global destroy command", () => {
 
     // Mock Route53 utilities
     vi.mocked(route53.findHostedZone).mockResolvedValue(null);
-    vi.mocked(route53.deleteDNSRecords).mockResolvedValue(undefined);
+    vi.mocked(route53.deleteDNSRecords).mockResolvedValue({
+      deleted: [],
+      skipped: [],
+      supported: true,
+      errors: [],
+    });
   });
 
   it("should warn if no services are deployed", async () => {

@@ -9,6 +9,7 @@ import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { WrapsEmailConfig } from "../../types/email.js";
 import type { DestroyOptions } from "../../types/index.js";
+import type { EmailDNSCleanupResult } from "../../utils/dns/index.js";
 import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
 import { createAgentApiClient } from "../../utils/shared/agent-api.js";
 import {
@@ -65,6 +66,23 @@ async function getEmailIdentityInfo(
       return { dkimTokens: [] };
     }
     throw error;
+  }
+}
+
+/**
+ * Print the result of `deleteDNSRecords` — deleted/skipped/errored records.
+ * Mirrors `reportInboundDNSCleanup` (`commands/email/inbound.ts`), the
+ * inbound teardown's equivalent reporter.
+ */
+function reportEmailDNSCleanup(result: EmailDNSCleanupResult): void {
+  for (const label of result.deleted) {
+    clack.log.success(`Deleted DNS record: ${label}`);
+  }
+  for (const skip of result.skipped) {
+    clack.log.warn(`Left DNS record in place: ${skip.record} (${skip.reason})`);
+  }
+  for (const err of result.errors) {
+    clack.log.warn(`DNS cleanup error: ${err}`);
   }
 }
 
@@ -293,7 +311,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         shouldCleanDNS = true; // Auto-clean with --force
       } else {
         const cleanDNS = await clack.confirm({
-          message: `Found Route53 hosted zone for ${pc.cyan(domain)}. Delete DNS records (DKIM, DMARC, MAIL FROM)?`,
+          message: `Found Route53 hosted zone for ${pc.cyan(domain)}. Delete the DNS records Wraps created (DKIM, DMARC, tracking CNAME, MAIL FROM)? Records Wraps did not create are left in place.`,
           initialValue: true,
         });
 
@@ -396,16 +414,19 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   // 7. Clean up DNS records first (before destroying SES identity)
   if (shouldCleanDNS && hostedZone && domain && dkimTokens.length > 0) {
     try {
-      await progress.execute(`Deleting DNS records for ${domain}`, async () => {
-        await deleteDNSRecords(
-          hostedZone.id,
-          domain,
-          dkimTokens,
-          region,
-          emailConfig?.tracking?.customRedirectDomain,
-          mailFromDomain
-        );
-      });
+      const result = await progress.execute(
+        `Deleting DNS records for ${domain}`,
+        () =>
+          deleteDNSRecords(
+            hostedZone.id,
+            domain,
+            dkimTokens,
+            region,
+            emailConfig?.tracking?.customRedirectDomain,
+            mailFromDomain
+          )
+      );
+      reportEmailDNSCleanup(result);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       clack.log.warn(`Could not delete DNS records: ${msg}`);

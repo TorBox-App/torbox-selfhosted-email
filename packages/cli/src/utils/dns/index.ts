@@ -35,6 +35,11 @@ export {
   hasCloudflareToken,
   hasVercelToken,
 } from "./credentials.js";
+// Outbound email DNS cleanup (delete-side of buildEmailDNSRecords)
+export {
+  deleteEmailDNSRecordsForProvider,
+  type EmailDNSCleanupResult,
+} from "./email-dns-cleanup.js";
 // Inbound DNS cleanup (delete-side of buildInboundDNSRecords)
 export {
   deleteInboundDNSRecordsForProvider,

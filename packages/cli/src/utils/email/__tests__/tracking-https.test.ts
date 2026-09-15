@@ -27,6 +27,12 @@ vi.mock("../../dns/index.js", () => ({
     valid: true,
     credentials: { provider: "vercel", token: "tok" },
   }),
+  deleteEmailDNSRecordsForProvider: vi.fn().mockResolvedValue({
+    deleted: [],
+    skipped: [],
+    supported: true,
+    errors: [],
+  }),
 }));
 
 vi.mock("../../dns/vercel.js", () => ({

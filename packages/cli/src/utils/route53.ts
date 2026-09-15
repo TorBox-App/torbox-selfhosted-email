@@ -6,6 +6,7 @@ import {
   type ResourceRecordSet,
   Route53Client,
 } from "@aws-sdk/client-route-53";
+import type { EmailDNSCleanupResult } from "./dns/email-dns-cleanup.js";
 
 /**
  * Proposed DNS record with conflict detection info
@@ -682,7 +683,16 @@ export async function createDNSRecords(
 }
 
 /**
- * Delete DNS records from Route53 that were created for SES
+ * Delete DNS records from Route53 that were created for SES.
+ *
+ * A thin adapter over `deleteEmailDNSRecordsForProvider` (see
+ * `./dns/email-dns-cleanup.js`) — this signature is kept because `destroy.ts`
+ * already imports it from this module and other code may still reference it.
+ * The actual value-matched, per-category deletion logic lives there: every
+ * deletion matches name + type + exact value (never name+type alone), and a
+ * Route53 record set carrying non-Wraps values is `UPSERT`ed with Wraps'
+ * value subtracted rather than bare-`DELETE`d. The apex SPF record is never
+ * touched — see that module's doc comment.
  */
 export async function deleteDNSRecords(
   hostedZoneId: string,
@@ -691,69 +701,22 @@ export async function deleteDNSRecords(
   region: string,
   customTrackingDomain?: string,
   mailFromDomain?: string
-): Promise<void> {
-  const client = new Route53Client({ region });
-
-  // First, we need to get the current record values to delete them
-  // Route53 DELETE requires exact match of the record
-  const response = await client.send(
-    new ListResourceRecordSetsCommand({
-      HostedZoneId: hostedZoneId,
-      MaxItems: 500,
-    })
+): Promise<EmailDNSCleanupResult> {
+  // Dynamic import: `./dns/email-dns-cleanup.js` pulls in `./dns/create-records.js`,
+  // which itself imports from this module (`createSelectedDNSRecords`) — a
+  // static import here would close that into a circular ESM dependency.
+  // Mirrors the same pattern `reply.ts` uses to reach the DNS module.
+  const { deleteEmailDNSRecordsForProvider } = await import(
+    "./dns/email-dns-cleanup.js"
   );
-
-  const recordSets = response.ResourceRecordSets || [];
-  const changes: Change[] = [];
-
-  // Helper to find and add deletion for a record
-  const addDeletionIfExists = (name: string, type: string) => {
-    // Route53 names end with a dot
-    const normalizedName = name.endsWith(".") ? name : `${name}.`;
-    const record = recordSets.find(
-      (rs) => rs.Name === normalizedName && rs.Type === type
-    );
-    if (record?.ResourceRecords) {
-      changes.push({
-        Action: "DELETE",
-        ResourceRecordSet: record,
-      });
+  return deleteEmailDNSRecordsForProvider(
+    { provider: "route53", hostedZoneId },
+    {
+      domain,
+      dkimTokens,
+      region,
+      customTrackingDomain,
+      mailFromDomain,
     }
-  };
-
-  // DKIM CNAME records
-  for (const token of dkimTokens) {
-    addDeletionIfExists(`${token}._domainkey.${domain}`, "CNAME");
-  }
-
-  // DMARC record
-  addDeletionIfExists(`_dmarc.${domain}`, "TXT");
-
-  // Custom tracking domain CNAME
-  if (customTrackingDomain) {
-    addDeletionIfExists(customTrackingDomain, "CNAME");
-  }
-
-  // MAIL FROM domain records
-  if (mailFromDomain) {
-    addDeletionIfExists(mailFromDomain, "MX");
-    addDeletionIfExists(mailFromDomain, "TXT");
-  }
-
-  // Note: We don't delete the main domain SPF record as it might contain
-  // other providers' includes. Users should manually remove amazonses.com
-  // from their SPF if needed.
-
-  if (changes.length === 0) {
-    return; // Nothing to delete
-  }
-
-  await client.send(
-    new ChangeResourceRecordSetsCommand({
-      HostedZoneId: hostedZoneId,
-      ChangeBatch: {
-        Changes: changes,
-      },
-    })
   );
 }

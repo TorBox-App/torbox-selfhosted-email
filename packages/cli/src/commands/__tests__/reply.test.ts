@@ -172,6 +172,12 @@ vi.mock("../../utils/dns/index.js", async () => {
     createInboundDNSRecordsForProvider: vi
       .fn()
       .mockResolvedValue({ success: true, recordsCreated: 0 }),
+    deleteEmailDNSRecordsForProvider: vi.fn().mockResolvedValue({
+      deleted: [],
+      skipped: [],
+      supported: true,
+      errors: [],
+    }),
     buildInboundDNSRecords: vi.fn().mockReturnValue([]),
     formatManualDNSInstructions: vi.fn().mockReturnValue(""),
     getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),

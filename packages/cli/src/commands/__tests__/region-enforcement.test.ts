@@ -457,6 +457,12 @@ vi.mock("../../utils/dns/index.js", () => ({
   getDNSProviderTokenUrl: vi.fn().mockReturnValue(""),
   buildEmailDNSRecords: vi.fn().mockReturnValue([]),
   formatManualDNSInstructions: vi.fn().mockReturnValue(""),
+  deleteEmailDNSRecordsForProvider: vi.fn().mockResolvedValue({
+    deleted: [],
+    skipped: [],
+    supported: true,
+    errors: [],
+  }),
 }));
 
 // Route53 utils.
