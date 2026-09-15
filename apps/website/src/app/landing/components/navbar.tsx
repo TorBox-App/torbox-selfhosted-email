@@ -200,7 +200,7 @@ export function LandingNavbar() {
                 {item.hasSubmenu ? (
                   <>
                     <NavigationMenuTrigger
-                      className="cursor-pointer bg-transparent px-4 py-2 font-medium text-sm transition-colors hover:bg-transparent hover:text-primary focus:bg-transparent focus:text-primary data-[state=open]:bg-transparent data-active:bg-transparent"
+                      className="cursor-pointer"
                       onClick={() => {
                         if (item.submenuType === "docs") {
                           window.location.href = item.href;
@@ -234,7 +234,7 @@ export function LandingNavbar() {
                   </>
                 ) : (
                   <NavigationMenuLink
-                    className="group inline-flex h-10 w-max cursor-pointer items-center justify-center px-4 py-2 font-medium text-sm transition-colors hover:text-primary focus:text-primary focus:outline-none"
+                    className="group inline-flex h-10 w-max cursor-pointer items-center justify-center"
                     href={item.href}
                     onClick={(e) => {
                       // Try smooth scroll for hash links (works if element exists on page)
@@ -247,7 +247,7 @@ export function LandingNavbar() {
                     <span className="inline-flex items-center gap-1.5">
                       {item.name}
                       {item.badge && (
-                        <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 font-medium text-[10px] text-orange-600 dark:text-orange-400">
+                        <span className="rounded-full bg-brand/10 px-1.5 py-0.5 font-medium text-3xs text-brand">
                           {item.badge}
                         </span>
                       )}
@@ -279,10 +279,7 @@ export function LandingNavbar() {
           <Button asChild className="cursor-pointer" variant="ghost">
             <a href="https://app.wraps.dev/auth?mode=signin">Log in</a>
           </Button>
-          <Button
-            asChild
-            className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
-          >
+          <Button asChild className="cursor-pointer" variant="brand">
             <a
               href="https://app.wraps.dev/auth?mode=signup"
               onClick={() =>
@@ -311,7 +308,7 @@ export function LandingNavbar() {
           >
             <div className="flex h-full flex-col">
               {/* Header */}
-              <SheetHeader className="space-y-0 border-b p-4 pb-2">
+              <SheetHeader className="space-y-0 p-4 pb-2">
                 <div className="flex items-center gap-2">
                   <Logo size={24} />
                   <div className="ml-auto flex items-center gap-2">
@@ -383,7 +380,7 @@ export function LandingNavbar() {
                               : resourcesOpen
                           }
                         >
-                          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
+                          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between">
                             {item.name}
                             <ChevronDown
                               aria-hidden="true"
@@ -442,7 +439,7 @@ export function LandingNavbar() {
                         >
                           {item.name}
                           {item.badge && (
-                            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-600 text-xs dark:text-orange-400">
+                            <span className="rounded-full bg-brand/10 px-2 py-0.5 font-medium text-brand text-xs">
                               {item.badge}
                             </span>
                           )}
@@ -459,8 +456,9 @@ export function LandingNavbar() {
                 <div className="space-y-3">
                   <Button
                     asChild
-                    className="w-full cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
+                    className="w-full cursor-pointer"
                     size="lg"
+                    variant="brand"
                   >
                     <a
                       href="https://app.wraps.dev/auth?mode=signup"

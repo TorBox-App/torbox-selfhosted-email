@@ -76,7 +76,7 @@ export default function AlternativesHubPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {ALTERNATIVES_PAGES.map((page) => (
                 <Link href={`/alternatives/${page.slug}`} key={page.slug}>
-                  <Card className="h-full transition-colors hover:border-orange-500/50">
+                  <Card className="h-full transition-colors hover:border-brand/50">
                     <CardContent>
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <h2 className="font-heading font-semibold text-lg tracking-tight">
@@ -84,7 +84,7 @@ export default function AlternativesHubPage() {
                         </h2>
                         <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                       </div>
-                      <p className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]">
+                      <p className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-widest">
                         {page.ranked.length} options, ranked
                       </p>
                       <p className="text-muted-foreground text-sm">

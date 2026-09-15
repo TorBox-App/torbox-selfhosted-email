@@ -75,19 +75,13 @@ export function FaqSection() {
         Answered the way we would answer them in the meeting, which means some
         of these argue against us.
       </p>
-      <Accordion className="space-y-2" collapsible type="single">
+      <Accordion collapsible type="single">
         {faqItems.map((item) => (
-          <AccordionItem
-            className="rounded-lg border px-4"
-            key={item.id}
-            value={item.id}
-          >
-            <AccordionTrigger className="text-left hover:no-underline">
+          <AccordionItem key={item.id} value={item.id}>
+            <AccordionTrigger className="text-left">
               {item.question}
             </AccordionTrigger>
-            <AccordionContent className="text-muted-foreground">
-              {item.answer}
-            </AccordionContent>
+            <AccordionContent>{item.answer}</AccordionContent>
           </AccordionItem>
         ))}
       </Accordion>

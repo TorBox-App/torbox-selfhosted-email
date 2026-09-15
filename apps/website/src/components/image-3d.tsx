@@ -24,7 +24,7 @@ export function Image3D({
     <div className={cn("group relative aspect-4/3 w-full", className)}>
       <div className="perspective-distant transform-3d size-full">
         {/* Animated background glow */}
-        <div className="sm:-inset-8 absolute rounded-3xl bg-linear-to-r from-orange-500/10 via-orange-500/5 to-orange-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
+        <div className="sm:-inset-8 absolute rounded-3xl bg-linear-to-r from-brand/10 via-brand/5 to-brand/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
 
         {/* Main 3D container */}
         <div
@@ -35,7 +35,7 @@ export function Image3D({
         >
           {/* Depth layers for 3D effect */}
           <div className="-translate-z-8 -top-5 -right-4 -bottom-5 -left-7 absolute translate-x-2 translate-y-0 rounded-3xl">
-            <div className="size-full rounded-3xl border border-orange-500/20 bg-linear-to-br from-orange-500/5 via-background/40 to-orange-500/5 shadow-xl" />
+            <div className="size-full rounded-3xl border border-brand/20 bg-linear-to-br from-brand/5 via-background/40 to-brand/5 shadow-xl" />
           </div>
 
           {/* Main image container */}
@@ -76,7 +76,7 @@ export function Image3D({
             />
 
             {/* Border highlight */}
-            <div className="absolute inset-0 rounded-xl ring-1 ring-white/20 transition-all duration-500 group-hover:ring-orange-500/30 dark:ring-white/10" />
+            <div className="absolute inset-0 rounded-xl ring-1 ring-white/20 transition-all duration-500 group-hover:ring-brand/30 dark:ring-white/10" />
           </div>
         </div>
       </div>

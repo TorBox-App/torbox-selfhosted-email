@@ -351,7 +351,7 @@ export default function PermissionsPageContent() {
                 <div className="flex flex-wrap gap-2">
                   {preset.services.map((service) => (
                     <Badge
-                      className="font-mono text-xs"
+                      className="font-mono"
                       key={service}
                       variant="outline"
                     >
@@ -592,7 +592,7 @@ export default function PermissionsPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>Check the error message</strong>
                   <p className="text-muted-foreground text-sm">
@@ -601,7 +601,7 @@ export default function PermissionsPageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>Regenerate the policy</strong>
                   <p className="text-muted-foreground text-sm">
@@ -614,7 +614,7 @@ export default function PermissionsPageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>Check for SCPs</strong>
                   <p className="text-muted-foreground text-sm">

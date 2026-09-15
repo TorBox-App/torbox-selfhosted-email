@@ -94,7 +94,7 @@ export default function ProductionAccessPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 <span className="text-muted-foreground">
                   <strong className="text-foreground">
                     Verified recipients only
@@ -104,7 +104,7 @@ export default function ProductionAccessPageContent() {
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 <span className="text-muted-foreground">
                   <strong className="text-foreground">
                     200 emails per day
@@ -113,7 +113,7 @@ export default function ProductionAccessPageContent() {
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 <span className="text-muted-foreground">
                   <strong className="text-foreground">
                     1 email per second
@@ -298,7 +298,7 @@ export default function ProductionAccessPageContent() {
         <h2 className="mb-4 font-bold text-2xl">Tips for Faster Approval</h2>
         <ul className="space-y-3">
           <li className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">
                 Verify your domain first
@@ -307,7 +307,7 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">
                 Use a real website URL
@@ -316,7 +316,7 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">
                 Provide accurate contact info
@@ -325,7 +325,7 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">Acknowledge the terms</strong>{" "}
               — Confirm you'll only send to opted-in recipients and handle
@@ -430,7 +430,7 @@ export default function ProductionAccessPageContent() {
         </p>
         <ul className="mb-6 space-y-3">
           <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">No verified domain</strong> —
               A request from an account that has only verified a single email
@@ -438,7 +438,7 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">
                 The website does not explain the mail
@@ -448,14 +448,14 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">No opt-in story</strong> —
               Nothing in the request says how recipients ended up on the list
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">
                 No bounce or complaint handling
@@ -465,7 +465,7 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
               <strong className="text-foreground">Brand-new AWS account</strong>{" "}
               — Reviewers have less history to go on, so expect more questions

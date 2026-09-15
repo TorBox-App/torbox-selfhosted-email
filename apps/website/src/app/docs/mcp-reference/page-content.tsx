@@ -274,7 +274,7 @@ export default function McpReferencePageContent() {
         <p className="text-muted-foreground">
           A manifest covering both servers is published at{" "}
           <a
-            className="text-orange-500 underline underline-offset-4"
+            className="text-brand underline underline-offset-4"
             href="/.well-known/mcp.json"
           >
             /.well-known/mcp.json
@@ -337,14 +337,7 @@ export default function McpReferencePageContent() {
                       </td>
                       <td className="py-2 pr-4">{tool.description}</td>
                       <td className="py-2">
-                        <Badge
-                          className={
-                            tool.write
-                              ? "border-orange-500/40 text-orange-500"
-                              : "text-muted-foreground"
-                          }
-                          variant="outline"
-                        >
+                        <Badge variant={tool.write ? "brand" : "outline"}>
                           {tool.write ? "write" : "read"}
                         </Badge>
                       </td>
@@ -455,7 +448,7 @@ export default function McpReferencePageContent() {
         <div className="mb-4">
           <ConfigBlock code={writeModeConfig} filename=".mcp.json" />
         </div>
-        <div className="rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">No allowlist means no limits</p>
           <p className="mt-2 text-muted-foreground text-sm">
             Running with{" "}

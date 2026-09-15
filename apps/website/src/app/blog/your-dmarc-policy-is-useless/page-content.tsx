@@ -16,6 +16,7 @@ import {
   Terminal,
   XCircle,
 } from "lucide-react";
+import type * as React from "react";
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/utils/analytics";
 
@@ -106,7 +107,7 @@ export const EmailHeaderScroller = () => {
   }, []);
 
   return (
-    <div className="pointer-events-none absolute inset-0 mx-auto w-2xl opacity-[0.60] dark:opacity-[0.55]">
+    <div className="pointer-events-none absolute inset-0 mx-auto w-2xl opacity-60 dark:opacity-55">
       <div
         className="whitespace-nowrap text-left font-mono text-foreground text-xs"
         style={{ transform: `translateY(-${offset}px)` }}
@@ -126,18 +127,18 @@ export const EmailHeaderScroller = () => {
                 <span
                   className={
                     h.type === "spoof"
-                      ? "text-red-500"
+                      ? "text-destructive"
                       : h.type === "blocked"
-                        ? "text-yellow-500"
-                        : "text-green-500"
+                        ? "text-warning"
+                        : "text-success"
                   }
                 >
                   {h.status.toUpperCase()}
                 </span>{" "}
-                <span className="text-blue-500">From:</span> {h.from}{" "}
-                <span className="text-purple-500">{h.auth}</span>
+                <span className="text-info">From:</span> {h.from}{" "}
+                <span className="text-brand">{h.auth}</span>
                 {h.type === "spoof" && (
-                  <span className="ml-2 text-red-600">SPOOFED</span>
+                  <span className="ml-2 text-destructive">SPOOFED</span>
                 )}
               </div>
             ))}
@@ -240,10 +241,10 @@ export const DMARCSimulator = () => {
               className={`rounded px-3 py-1 font-mono text-sm transition-all ${
                 policy === p
                   ? p === "none"
-                    ? "bg-red-600 text-white"
+                    ? "bg-destructive text-white"
                     : p === "quarantine"
-                      ? "bg-yellow-600 text-white"
-                      : "bg-green-600 text-white"
+                      ? "bg-warning text-white"
+                      : "bg-success text-white"
                   : "bg-muted text-muted-foreground hover:bg-accent"
               }`}
               key={p}
@@ -266,25 +267,25 @@ export const DMARCSimulator = () => {
 
       <div className="mb-6 grid grid-cols-4 gap-4">
         <div className="rounded-lg bg-muted p-3 text-center">
-          <div className="font-bold text-2xl text-green-500">
+          <div className="font-bold text-2xl text-success">
             {stats.delivered}
           </div>
           <div className="text-muted-foreground text-xs">Delivered</div>
         </div>
         <div className="rounded-lg bg-muted p-3 text-center">
-          <div className="font-bold text-2xl text-yellow-500">
+          <div className="font-bold text-2xl text-warning">
             {stats.quarantined}
           </div>
           <div className="text-muted-foreground text-xs">Quarantined</div>
         </div>
         <div className="rounded-lg bg-muted p-3 text-center">
-          <div className="font-bold text-2xl text-blue-500">
-            {stats.rejected}
-          </div>
+          <div className="font-bold text-2xl text-info">{stats.rejected}</div>
           <div className="text-muted-foreground text-xs">Rejected</div>
         </div>
         <div className="rounded-lg bg-muted p-3 text-center">
-          <div className="font-bold text-2xl text-red-500">{stats.spoofed}</div>
+          <div className="font-bold text-2xl text-destructive">
+            {stats.spoofed}
+          </div>
           <div className="text-muted-foreground text-xs">
             Spoofed & Delivered
           </div>
@@ -296,32 +297,34 @@ export const DMARCSimulator = () => {
           <div
             className={`flex items-center justify-between rounded-lg p-3 font-mono text-sm ${
               email.outcome === "delivered" && !email.legit
-                ? "border border-red-500/50 bg-red-500/10"
+                ? "border border-destructive/50 bg-destructive/10"
                 : email.outcome === "quarantined"
-                  ? "border border-yellow-500/50 bg-yellow-500/10"
+                  ? "border border-warning/50 bg-warning/10"
                   : "border bg-muted"
             }`}
             key={email.id}
           >
             <div className="flex items-center gap-3">
               {email.legit ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CheckCircle className="h-4 w-4 text-success" />
               ) : (
-                <ShieldOff className="h-4 w-4 text-red-500" />
+                <ShieldOff className="h-4 w-4 text-destructive" />
               )}
               <span className="text-foreground">{email.from}</span>
               {email.label && (
-                <span className="text-red-500 text-xs">({email.label})</span>
+                <span className="text-destructive text-xs">
+                  ({email.label})
+                </span>
               )}
             </div>
             <div
               className={`rounded px-2 py-0.5 text-xs ${
                 email.outcome === "delivered" && !email.legit
-                  ? "bg-red-600 text-white"
+                  ? "bg-destructive text-white"
                   : email.outcome === "delivered"
-                    ? "bg-green-600 text-white"
+                    ? "bg-success text-white"
                     : email.outcome === "quarantined"
-                      ? "bg-yellow-600 text-black"
+                      ? "bg-warning text-black"
                       : "bg-muted-foreground text-background"
               }`}
             >
@@ -332,8 +335,8 @@ export const DMARCSimulator = () => {
       </div>
 
       {policy === "none" && stats.spoofed > 0 && (
-        <div className="mt-4 rounded-lg border border-red-500/50 bg-red-500/10 p-3">
-          <p className="text-red-600 text-sm dark:text-red-400">
+        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+          <p className="text-destructive text-sm dark:text-destructive">
             <AlertTriangle className="mr-2 inline h-4 w-4" />
             <strong>{stats.spoofed} spoofed emails delivered.</strong> Your
             p=none policy tells receivers not to enforce authentication
@@ -344,8 +347,8 @@ export const DMARCSimulator = () => {
       )}
 
       {policy === "reject" && (
-        <div className="mt-4 rounded-lg border border-green-500/50 bg-green-500/10 p-3">
-          <p className="text-green-600 text-sm dark:text-green-400">
+        <div className="mt-4 rounded-lg border border-success/50 bg-success/10 p-3">
+          <p className="text-success text-sm dark:text-success">
             <Shield className="mr-2 inline h-4 w-4" />
             <strong>Full protection requested.</strong> Major email providers
             will reject spoofed emails.
@@ -395,9 +398,9 @@ export const AuthExplainer = () => {
 
   const c = content[activeTab];
   const colors: Record<string, string> = {
-    blue: "border-l-blue-500 bg-blue-500/10",
-    purple: "border-l-purple-500 bg-purple-500/10",
-    green: "border-l-green-500 bg-green-500/10",
+    blue: "border-l-info bg-info/10",
+    purple: "border-l-brand bg-brand/10",
+    green: "border-l-success bg-success/10",
   };
 
   return (
@@ -429,7 +432,7 @@ export const AuthExplainer = () => {
           {c.record}
         </div>
 
-        <div className="flex items-start gap-2 text-sm text-yellow-600 dark:text-yellow-400">
+        <div className="flex items-start gap-2 text-sm text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <span>
             <strong>The problem:</strong> {c.problem}
@@ -509,21 +512,21 @@ export const BreachTimeline = () => {
     switch (color) {
       case "purple":
         return {
-          bg: "bg-purple-500",
-          bgLight: "bg-purple-500/10",
-          text: "text-purple-600 dark:text-purple-400",
+          bg: "bg-info",
+          bgLight: "bg-info/10",
+          text: "text-info",
         };
       case "orange":
         return {
-          bg: "bg-orange-500",
-          bgLight: "bg-orange-500/10",
-          text: "text-orange-600 dark:text-orange-400",
+          bg: "bg-brand",
+          bgLight: "bg-brand/10",
+          text: "text-brand",
         };
       default:
         return {
-          bg: "bg-red-500",
-          bgLight: "bg-red-500/10",
-          text: "text-red-600 dark:text-red-400",
+          bg: "bg-destructive",
+          bgLight: "bg-destructive/10",
+          text: "text-destructive",
         };
     }
   };
@@ -531,7 +534,7 @@ export const BreachTimeline = () => {
   return (
     <div className="relative">
       {/* Timeline line */}
-      <div className="absolute top-0 bottom-0 left-[39px] w-0.5 bg-gradient-to-b from-red-500 via-orange-500 to-red-500 md:left-[119px]" />
+      <div className="absolute top-0 bottom-0 left-[39px] w-0.5 bg-gradient-to-b from-destructive via-brand to-destructive md:left-[119px]" />
 
       <div className="space-y-6">
         {breaches.map((breach, i) => {
@@ -596,8 +599,8 @@ export const BreachTimeline = () => {
 
                     {/* DMARC issue tag */}
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
-                      <span className="text-sm text-yellow-600 dark:text-yellow-400">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                      <span className="text-sm text-warning">
                         {breach.dmarcIssue}
                       </span>
                     </div>
@@ -787,27 +790,27 @@ export const DomainChecker = () => {
   };
 
   const gradeColors: Record<string, string> = {
-    "A+": "text-green-600 bg-green-500/20 dark:text-green-400",
-    A: "text-green-600 bg-green-500/20 dark:text-green-400",
-    "A-": "text-green-600 bg-green-500/20 dark:text-green-400",
-    "B+": "text-lime-600 bg-lime-500/20 dark:text-lime-400",
-    B: "text-lime-600 bg-lime-500/20 dark:text-lime-400",
-    "B-": "text-yellow-600 bg-yellow-500/20 dark:text-yellow-400",
-    "C+": "text-yellow-600 bg-yellow-500/20 dark:text-yellow-400",
-    C: "text-orange-600 bg-orange-500/20 dark:text-orange-400",
-    "C-": "text-orange-600 bg-orange-500/20 dark:text-orange-400",
-    D: "text-red-600 bg-red-500/20 dark:text-red-400",
-    F: "text-red-600 bg-red-500/20 dark:text-red-400",
+    "A+": "text-success bg-success/20 dark:text-success",
+    A: "text-success bg-success/20 dark:text-success",
+    "A-": "text-success bg-success/20 dark:text-success",
+    "B+": "text-success bg-success/20 dark:text-success",
+    B: "text-success bg-success/20 dark:text-success",
+    "B-": "text-warning bg-warning/20 dark:text-warning",
+    "C+": "text-warning bg-warning/20 dark:text-warning",
+    C: "text-brand bg-brand/20",
+    "C-": "text-brand bg-brand/20",
+    D: "text-destructive bg-destructive/20 dark:text-destructive",
+    F: "text-destructive bg-destructive/20 dark:text-destructive",
   };
 
   const getStatusIcon = (status: "pass" | "warn" | "fail") => {
     if (status === "pass") {
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
+      return <CheckCircle className="h-5 w-5 text-success" />;
     }
     if (status === "warn") {
-      return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+      return <AlertTriangle className="h-5 w-5 text-warning" />;
     }
-    return <XCircle className="h-5 w-5 text-red-500" />;
+    return <XCircle className="h-5 w-5 text-destructive" />;
   };
 
   const getMessage = () => {
@@ -836,12 +839,12 @@ export const DomainChecker = () => {
     }
     const policy = result.dmarc.policy;
     if (!result.dmarc.exists || policy === "none") {
-      return "border border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
+      return "border border-destructive/50 bg-destructive/10 text-destructive";
     }
     if (policy === "quarantine") {
-      return "border border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
+      return "border border-warning/50 bg-warning/10 text-warning";
     }
-    return "border border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400";
+    return "border border-success/50 bg-success/10 text-success";
   };
 
   return (
@@ -865,8 +868,10 @@ export const DomainChecker = () => {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 p-4">
-          <p className="text-red-600 text-sm dark:text-red-400">{error}</p>
+        <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-destructive text-sm dark:text-destructive">
+            {error}
+          </p>
         </div>
       )}
 
@@ -908,14 +913,18 @@ export const DomainChecker = () => {
                   </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full transition-all ${
+                      className={`h-full w-(--score) transition-all ${
                         data.score === data.max
-                          ? "bg-green-500"
+                          ? "bg-success"
                           : data.score >= data.max * 0.5
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
+                            ? "bg-warning"
+                            : "bg-destructive"
                       }`}
-                      style={{ width: `${(data.score / data.max) * 100}%` }}
+                      style={
+                        {
+                          "--score": `${(data.score / data.max) * 100}%`,
+                        } as React.CSSProperties
+                      }
                     />
                   </div>
                   <span className="w-10 text-right font-mono text-muted-foreground text-xs">
@@ -988,9 +997,9 @@ export const DomainChecker = () => {
                 <div
                   className={`rounded p-2 text-sm ${
                     issue.severity === "critical"
-                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      ? "bg-destructive/10 text-destructive"
                       : issue.severity === "warning"
-                        ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                        ? "bg-warning/10 text-warning"
                         : "bg-muted text-muted-foreground"
                   }`}
                   key={i}
@@ -1029,9 +1038,9 @@ export const DomainChecker = () => {
           result.score.grade === "F" ||
           !result.dmarc.exists ||
           result.dmarc.policy === "none") && (
-          <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/5 p-4">
+          <div className="mt-4 rounded-xl border border-brand/30 bg-brand/5 p-4">
             <div className="mb-2 flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-orange-500" />
+              <Terminal className="h-4 w-4 text-brand" />
               <p className="font-semibold text-foreground">
                 Fix this automatically
               </p>
@@ -1043,8 +1052,9 @@ export const DomainChecker = () => {
             <div className="flex gap-3">
               <Button
                 asChild
-                className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+                className="cursor-pointer"
                 size="sm"
+                variant="brand"
               >
                 <a
                   href="/docs/quickstart"

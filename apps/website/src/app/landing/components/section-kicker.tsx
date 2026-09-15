@@ -14,11 +14,11 @@ export function SectionKicker({
   return (
     <span
       className={cn(
-        "mb-5 inline-flex items-center gap-2.5 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]",
+        "mb-5 inline-flex items-center gap-2.5 font-mono text-muted-foreground text-xs uppercase tracking-widest",
         className
       )}
     >
-      <span aria-hidden="true" className="h-px w-6 bg-orange-500" />
+      <span aria-hidden="true" className="h-px w-6 bg-brand" />
       {children}
     </span>
   );

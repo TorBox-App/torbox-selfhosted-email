@@ -12,14 +12,14 @@ export function MarketingHeroSection() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · for marketing</span>
             </div>
 
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
               Grow the list.{" "}
-              <span className="text-orange-500">Watch the bill stay put.</span>
+              <span className="text-brand">Watch the bill stay put.</span>
             </h1>
 
             <p className="mb-6 max-w-md text-muted-foreground">
@@ -34,7 +34,7 @@ export function MarketingHeroSection() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-orange-500/10 opacity-60 blur-2xl" />
+            <div className="absolute -inset-4 rounded-3xl bg-brand/10 opacity-60 blur-2xl" />
             <div className="relative">
               <ContactPriceCurve />
             </div>

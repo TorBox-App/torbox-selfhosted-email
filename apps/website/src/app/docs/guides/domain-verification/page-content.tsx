@@ -107,15 +107,15 @@ export default function DomainVerificationPageContent() {
         </p>
         <ul className="mb-4 space-y-2 text-muted-foreground">
           <li className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             Emails are more likely to land in spam folders
           </li>
           <li className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             Spammers can spoof your domain to send phishing emails
           </li>
           <li className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             Your sender reputation can be damaged by abuse
           </li>
         </ul>
@@ -557,7 +557,7 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
           src="/docs/dns-add-cname.png"
         />
 
-        <div className="rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">Important: Record Name Format</p>
           <p className="mt-2 text-muted-foreground text-sm">
             Copy the exact record names from SES. Don't add extra underscores or
@@ -1153,19 +1153,19 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>Domain added to SES</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>3 DKIM CNAME records added to DNS</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>Domain status shows "Verified" in SES</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>DMARC TXT record added to DNS</span>
               </li>
             </ul>

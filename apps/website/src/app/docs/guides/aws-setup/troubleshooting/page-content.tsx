@@ -268,14 +268,14 @@ export default function TroubleshootingPageContent() {
             <Card key={index}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  <AlertCircle className="h-5 w-5 text-destructive" />
                   {issue.title}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Error Message */}
-                <div className="rounded-lg bg-red-500/10 p-3">
-                  <code className="text-red-600 text-sm dark:text-red-400">
+                <div className="rounded-lg bg-destructive/10 p-3">
+                  <code className="text-destructive text-sm dark:text-destructive">
                     {issue.error}
                   </code>
                 </div>
@@ -296,7 +296,7 @@ export default function TroubleshootingPageContent() {
                 {/* Solutions */}
                 <div>
                   <h4 className="mb-2 flex items-center gap-1 font-medium text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                     Solutions
                   </h4>
                   <div className="space-y-3">

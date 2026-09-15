@@ -18,16 +18,16 @@ export function UpgradeToProButton() {
       <HoverCard closeDelay={100} openDelay={100}>
         <HoverCardTrigger asChild>
           <Button
-            className="cursor-pointer bg-linear-to-br from-slate-900 to-slate-400 px-6 py-3 font-bold text-white shadow-lg"
+            className="min-w-45 cursor-pointer"
             onClick={() => window.open(WRAPS_URL, "_blank")}
             size="lg"
-            style={{ minWidth: 180 }}
+            variant="brand"
           >
             Upgrade to Pro
             <Rocket className="ml-1" size={30} />
           </Button>
         </HoverCardTrigger>
-        <HoverCardContent className="fade-in slide-in-from-bottom-4 relative mr-4 mb-3 w-90 animate-in rounded-xl border border-border bg-background p-3 shadow-2xl md:mr-6 lg:mr-8">
+        <HoverCardContent className="relative mr-4 mb-3 w-90 p-3 md:mr-6 lg:mr-8">
           <div className="flex flex-col items-center gap-3 text-center">
             <a
               className="cursor-pointer"
@@ -46,10 +46,7 @@ export function UpgradeToProButton() {
             <h3 className="flex items-center gap-2 py-2 font-bold text-lg">
               <Rocket className="text-primary" size={18} />
               Unlock Premium Blocks
-              <Badge
-                className="rounded-full px-2 py-0.5 text-xs shadow"
-                variant="destructive"
-              >
+              <Badge className="rounded-full" variant="destructive">
                 Live
               </Badge>
             </h3>
@@ -80,10 +77,7 @@ export function UpgradeToProButton() {
                   Pro Dashboards
                 </Button>
                 <span className="-top-5 -right-1 absolute">
-                  <Badge
-                    className="rounded-full border-yellow-400 bg-yellow-400 px-2 py-0.5 text-xs text-yellow-900 shadow"
-                    variant="outline"
-                  >
+                  <Badge className="rounded-full" variant="warning">
                     Coming soon
                   </Badge>
                 </span>

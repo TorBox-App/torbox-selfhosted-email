@@ -1,5 +1,6 @@
 "use client";
 
+import type * as React from "react";
 import ReactFlow, {
   Background,
   type Edge,
@@ -36,12 +37,14 @@ const BaseNode = ({
 }) => (
   <div className="relative group">
     <div
-      className="px-4 py-3 rounded-xl border backdrop-blur-sm transition-all duration-300 group-hover:scale-105"
-      style={{
-        background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
-        borderColor: `${color}40`,
-        boxShadow: `0 4px 24px ${color}20`,
-      }}
+      className="rounded-xl border border-(--node-color) bg-(image:--node-bg) px-4 py-3 shadow-(--node-shadow) backdrop-blur-sm transition-all duration-300 group-hover:scale-105"
+      style={
+        {
+          "--node-bg": `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+          "--node-color": `${color}40`,
+          "--node-shadow": `0 4px 24px ${color}20`,
+        } as React.CSSProperties
+      }
     >
       <div className="flex items-center gap-3">
         {icon && <span className="text-xl">{icon}</span>}
@@ -62,13 +65,13 @@ const BaseNode = ({
 const SESNode = ({ data }: { data: NodeData }) => (
   <>
     <Handle
-      className="!bg-orange-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-brand !w-3 !h-3 !border-2 !border-background"
       id="top"
       position={Position.Top}
       type="target"
     />
     <Handle
-      className="!bg-orange-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-brand !w-3 !h-3 !border-2 !border-background"
       id="left"
       position={Position.Left}
       type="target"
@@ -80,13 +83,13 @@ const SESNode = ({ data }: { data: NodeData }) => (
       sublabel={data.sublabel}
     />
     <Handle
-      className="!bg-orange-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-brand !w-3 !h-3 !border-2 !border-background"
       id="right"
       position={Position.Right}
       type="source"
     />
     <Handle
-      className="!bg-orange-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-brand !w-3 !h-3 !border-2 !border-background"
       id="bottom"
       position={Position.Bottom}
       type="target"
@@ -139,7 +142,7 @@ const SQSNode = ({ data }: { data: NodeData }) => (
 const LambdaNode = ({ data }: { data: NodeData }) => (
   <>
     <Handle
-      className="!bg-amber-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-warning !w-3 !h-3 !border-2 !border-background"
       position={Position.Left}
       type="target"
     />
@@ -150,7 +153,7 @@ const LambdaNode = ({ data }: { data: NodeData }) => (
       sublabel={data.sublabel}
     />
     <Handle
-      className="!bg-amber-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-warning !w-3 !h-3 !border-2 !border-background"
       position={Position.Right}
       type="source"
     />
@@ -160,7 +163,7 @@ const LambdaNode = ({ data }: { data: NodeData }) => (
 const DatabaseNode = ({ data }: { data: NodeData }) => (
   <>
     <Handle
-      className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-success !w-3 !h-3 !border-2 !border-background"
       position={Position.Left}
       type="target"
     />
@@ -171,7 +174,7 @@ const DatabaseNode = ({ data }: { data: NodeData }) => (
       sublabel={data.sublabel}
     />
     <Handle
-      className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-success !w-3 !h-3 !border-2 !border-background"
       position={Position.Right}
       type="source"
     />
@@ -181,7 +184,7 @@ const DatabaseNode = ({ data }: { data: NodeData }) => (
 const CloudWatchNode = ({ data }: { data: NodeData }) => (
   <>
     <Handle
-      className="!bg-blue-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-info !w-3 !h-3 !border-2 !border-background"
       position={Position.Left}
       type="target"
     />
@@ -192,7 +195,7 @@ const CloudWatchNode = ({ data }: { data: NodeData }) => (
       sublabel={data.sublabel}
     />
     <Handle
-      className="!bg-blue-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-info !w-3 !h-3 !border-2 !border-background"
       position={Position.Right}
       type="source"
     />
@@ -279,13 +282,13 @@ const ConfigSetNode = ({ data }: { data: NodeData }) => (
 const IPPoolNode = ({ data }: { data: NodeData }) => (
   <>
     <Handle
-      className="!bg-rose-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-destructive !w-3 !h-3 !border-2 !border-background"
       id="top"
       position={Position.Top}
       type="target"
     />
     <Handle
-      className="!bg-rose-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-destructive !w-3 !h-3 !border-2 !border-background"
       id="left"
       position={Position.Left}
       type="target"
@@ -297,13 +300,13 @@ const IPPoolNode = ({ data }: { data: NodeData }) => (
       sublabel={data.sublabel}
     />
     <Handle
-      className="!bg-rose-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-destructive !w-3 !h-3 !border-2 !border-background"
       id="bottom"
       position={Position.Bottom}
       type="source"
     />
     <Handle
-      className="!bg-rose-500 !w-3 !h-3 !border-2 !border-background"
+      className="!bg-destructive !w-3 !h-3 !border-2 !border-background"
       id="right"
       position={Position.Right}
       type="source"
@@ -622,7 +625,10 @@ export const FlowDiagram = ({
       <div className="px-4 py-3 border-b bg-muted/50">
         <h4 className="text-sm font-medium text-foreground">{title}</h4>
       </div>
-      <div style={{ height }}>
+      <div
+        className="h-(--diagram-height)"
+        style={{ "--diagram-height": `${height}px` } as React.CSSProperties}
+      >
         <ReactFlow
           defaultEdgeOptions={defaultEdgeOptions}
           edges={edgesState}

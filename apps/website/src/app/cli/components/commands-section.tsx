@@ -55,7 +55,7 @@ export function CliCommandsSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Simple inline label */}
         <p className="mb-8 text-center font-mono text-muted-foreground text-sm">
-          <span className="text-orange-500">$</span> wraps --help
+          <span className="text-brand">$</span> wraps --help
         </p>
 
         {/* Commands grid */}
@@ -68,7 +68,7 @@ export function CliCommandsSection() {
                   {group.title}
                 </span>
                 {group.status === "beta" && (
-                  <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+                  <span className="rounded border border-border px-1.5 py-0.5 font-mono text-3xs text-muted-foreground uppercase tracking-eyebrow">
                     beta
                   </span>
                 )}
@@ -81,10 +81,10 @@ export function CliCommandsSection() {
                     className="flex items-baseline gap-3 rounded px-2 py-1.5 transition-colors hover:bg-muted/60"
                     key={cmd.command}
                   >
-                    <code className="shrink-0 font-mono text-orange-500 text-xs">
+                    <code className="shrink-0 font-mono text-brand text-xs">
                       {cmd.command}
                     </code>
-                    <span className="font-mono text-[11px] text-muted-foreground">
+                    <span className="font-mono text-2xs text-muted-foreground">
                       {cmd.description}
                     </span>
                   </div>

@@ -279,19 +279,19 @@ const workflowTemplates: WorkflowTemplate[] = [
 ];
 
 const typeColors: Record<StepType, string> = {
-  trigger: "border-yellow-500 bg-yellow-500/10",
-  wait: "border-purple-500 bg-purple-500/10",
-  wait_event: "border-amber-500 bg-amber-500/10",
-  condition: "border-orange-500 bg-orange-500/10",
-  action: "border-blue-500 bg-blue-500/10",
+  trigger: "border-warning bg-warning/10",
+  wait: "border-success bg-success/10",
+  wait_event: "border-warning bg-warning/10",
+  condition: "border-brand bg-brand/10",
+  action: "border-info bg-info/10",
 };
 
 const typeBgColors: Record<StepType, string> = {
-  trigger: "bg-yellow-500",
-  wait: "bg-purple-500",
-  wait_event: "bg-amber-500",
-  condition: "bg-orange-500",
-  action: "bg-blue-500",
+  trigger: "bg-warning",
+  wait: "bg-success",
+  wait_event: "bg-warning",
+  condition: "bg-brand",
+  action: "bg-info",
 };
 
 function WorkflowNode({
@@ -314,7 +314,7 @@ function WorkflowNode({
         compact ? "w-full max-w-[200px]" : "w-full max-w-[260px]",
         typeColors[step.type],
         isActive
-          ? "ring-2 ring-orange-500 ring-offset-2 ring-offset-background scale-[1.02]"
+          ? "ring-2 ring-brand ring-offset-2 ring-offset-background scale-[1.02]"
           : "hover:scale-[1.01] hover:shadow-md"
       )}
       onClick={onClick}
@@ -366,15 +366,15 @@ function BranchActionNode({
     <button
       className={cn(
         "group relative flex w-full max-w-[200px] items-center gap-3 rounded-xl border-2 p-3 transition-all duration-200",
-        "border-blue-500 bg-background",
+        "border-info bg-background",
         isActive
-          ? "ring-2 ring-orange-500 ring-offset-2 ring-offset-background scale-[1.02]"
+          ? "ring-2 ring-brand ring-offset-2 ring-offset-background scale-[1.02]"
           : "hover:scale-[1.01] hover:shadow-md"
       )}
       onClick={onClick}
       type="button"
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info">
         <Icon className="size-5 text-white" />
       </div>
       <div className="min-w-0 flex-1 text-left">
@@ -417,12 +417,12 @@ function ConditionBranch({
           className={cn(
             "relative flex size-20 rotate-45 items-center justify-center rounded-xl border-2 bg-background shadow-sm",
             isConditionActive
-              ? "border-orange-500 ring-2 ring-orange-500 ring-offset-2 ring-offset-background"
-              : "border-border hover:border-orange-500/50 hover:shadow-md"
+              ? "border-brand ring-2 ring-brand ring-offset-2 ring-offset-background"
+              : "border-border hover:border-brand/50 hover:shadow-md"
           )}
         >
           <div className="-rotate-45 flex flex-col items-center gap-1">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-orange-500">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-brand">
               <Icon className="size-4 text-white" />
             </div>
             <p className="max-w-[60px] truncate text-center font-medium text-xs">
@@ -459,7 +459,7 @@ function ConditionBranch({
 
             {/* Yes branch - smooth curve left and down to action node */}
             <path
-              className="text-green-500"
+              className="text-success"
               d="M200 20 Q200 40 140 40 Q80 40 80 60 L80 95"
               fill="none"
               stroke="currentColor"
@@ -469,7 +469,7 @@ function ConditionBranch({
 
             {/* No branch - smooth curve right and down to action node */}
             <path
-              className="text-red-400"
+              className="text-destructive"
               d="M200 20 Q200 40 260 40 Q320 40 320 60 L320 95"
               fill="none"
               stroke="currentColor"
@@ -481,7 +481,7 @@ function ConditionBranch({
           {/* Yes branch action - left side */}
           <div className="relative flex flex-col items-center pt-4">
             {/* Yes Label Badge - positioned on the line */}
-            <span className="absolute top-6 rounded bg-green-100 px-2 py-0.5 font-medium text-green-700 text-xs dark:bg-green-500/20 dark:text-green-400">
+            <span className="absolute top-6 rounded bg-success/10 px-2 py-0.5 font-medium text-success text-xs">
               Yes
             </span>
             <div className="mt-16">
@@ -497,7 +497,7 @@ function ConditionBranch({
           {/* No branch action - right side */}
           <div className="relative flex flex-col items-center pt-4">
             {/* No Label Badge - positioned on the line */}
-            <span className="absolute top-6 rounded bg-red-100 px-2 py-0.5 font-medium text-red-700 text-xs dark:bg-red-500/20 dark:text-red-400">
+            <span className="absolute top-6 rounded bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-xs">
               No
             </span>
             <div className="mt-16">
@@ -580,24 +580,24 @@ function WorkflowDetails({
 }) {
   const Icon = step.icon;
 
-  const getBadgeStyles = () => {
+  const getBadgeVariant = () => {
     switch (badgeType) {
       case "trigger":
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+        return "success";
       case "wait":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+        return "info";
       case "wait_event":
-        return "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400";
+        return "warning";
       case "condition":
-        return "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+        return "secondary";
       case "action":
-        return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+        return "brand";
       case "yes":
-        return "bg-green-500/10 text-green-600 dark:text-green-400";
+        return "success";
       case "no":
-        return "bg-red-500/10 text-red-600 dark:text-red-400";
+        return "destructive";
       default:
-        return "bg-muted text-muted-foreground";
+        return "secondary";
     }
   };
 
@@ -617,19 +617,19 @@ function WorkflowDetails({
   const getIconBg = () => {
     switch (badgeType) {
       case "trigger":
-        return "bg-emerald-500";
+        return "bg-success";
       case "wait":
-        return "bg-blue-500";
+        return "bg-info";
       case "wait_event":
-        return "bg-cyan-500";
+        return "bg-warning";
       case "condition":
-        return "bg-purple-500";
+        return "bg-muted-foreground";
       case "yes":
-        return "bg-green-500";
+        return "bg-success";
       case "no":
-        return "bg-red-500";
+        return "bg-destructive";
       default:
-        return "bg-orange-500";
+        return "bg-brand";
     }
   };
 
@@ -645,7 +645,7 @@ function WorkflowDetails({
           <Icon className="size-6 text-white" />
         </div>
         <div>
-          <Badge className={cn("mb-1", getBadgeStyles())} variant="secondary">
+          <Badge className="mb-1" variant={getBadgeVariant()}>
             {getBadgeLabel()}
           </Badge>
           <h4 className="font-semibold text-lg">{step.label}</h4>
@@ -711,8 +711,8 @@ function WorkflowTemplateCard({
       className={cn(
         "flex flex-col items-start rounded-xl border p-4 text-left transition-all",
         isActive
-          ? "border-orange-500 bg-orange-500/5"
-          : "hover:border-orange-500/50 hover:bg-muted/50"
+          ? "border-brand bg-brand/5"
+          : "hover:border-brand/50 hover:bg-muted/50"
       )}
       onClick={onClick}
       type="button"
@@ -721,7 +721,7 @@ function WorkflowTemplateCard({
         <Sparkles
           className={cn(
             "size-4",
-            isActive ? "text-orange-500" : "text-muted-foreground"
+            isActive ? "text-brand" : "text-muted-foreground"
           )}
         />
         <span className="font-semibold">{template.name}</span>
@@ -848,9 +848,9 @@ export function InteractiveWorkflowBuilder() {
         <div className="flex items-center justify-between border-b bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex gap-1.5">
-              <div className="size-3 rounded-full bg-red-500/80" />
-              <div className="size-3 rounded-full bg-yellow-500/80" />
-              <div className="size-3 rounded-full bg-green-500/80" />
+              <div className="size-3 rounded-full bg-destructive/80" />
+              <div className="size-3 rounded-full bg-warning/80" />
+              <div className="size-3 rounded-full bg-success/80" />
             </div>
             <span className="font-medium">{activeTemplate.name}</span>
           </div>

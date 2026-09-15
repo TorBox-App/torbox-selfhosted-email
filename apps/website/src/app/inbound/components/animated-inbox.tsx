@@ -84,12 +84,12 @@ export function AnimatedInbox() {
       {/* Inbox header */}
       <div className="flex items-center justify-between border-border border-b bg-muted/30 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Inbox aria-hidden="true" className="size-3.5 text-orange-500" />
+          <Inbox aria-hidden="true" className="size-3.5 text-brand" />
           <span className="font-mono text-muted-foreground text-xs">
             inbox@yourapp.com
           </span>
         </div>
-        <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+        <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
           {visibleEmails.length} emails
         </span>
       </div>
@@ -107,7 +107,7 @@ export function AnimatedInbox() {
                 isVisible && "translate-x-0 border-border bg-card opacity-100",
                 !isVisible && isAnimating && "translate-x-8 opacity-50",
                 !(isVisible || isAnimating) && "translate-x-full opacity-0",
-                isVisible && "hover:border-orange-500/30 hover:bg-orange-500/5"
+                isVisible && "hover:border-brand/30 hover:bg-brand/5"
               )}
               key={email.id}
             >
@@ -122,7 +122,7 @@ export function AnimatedInbox() {
                       <Paperclip className="size-3 shrink-0 text-muted-foreground" />
                     )}
                     {!email.isSpam && (
-                      <ShieldCheck className="size-3 shrink-0 text-emerald-700 dark:text-emerald-400" />
+                      <ShieldCheck className="size-3 shrink-0 text-success" />
                     )}
                   </div>
                   <p className="mb-0.5 truncate font-medium text-sm">
@@ -143,7 +143,7 @@ export function AnimatedInbox() {
         {/* Incoming email indicator */}
         {animatingEmail !== null && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-center">
-            <div className="size-2 animate-ping rounded-full bg-orange-500" />
+            <div className="size-2 animate-ping rounded-full bg-brand" />
           </div>
         )}
       </div>

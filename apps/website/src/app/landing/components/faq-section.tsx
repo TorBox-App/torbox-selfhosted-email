@@ -8,7 +8,7 @@ export function FaqSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header - server rendered */}
         <SectionKicker>FAQ</SectionKicker>
-        <h2 className="mb-10 max-w-[24ch] font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+        <h2 className="mb-10 max-w-[24ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
           Questions? We&apos;ve got answers.
         </h2>
 
@@ -38,7 +38,7 @@ export function FaqSection() {
         <p className="mt-8 text-muted-foreground text-sm">
           Still have questions?{" "}
           <a
-            className="text-orange-500 underline-offset-4 hover:underline"
+            className="text-brand underline-offset-4 hover:underline"
             href="mailto:support@wraps.dev"
           >
             Contact support

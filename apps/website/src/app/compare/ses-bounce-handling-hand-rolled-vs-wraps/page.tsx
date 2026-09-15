@@ -659,12 +659,12 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />A
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />A
                       Delivery event can be followed by a Bounce for the same
                       message — status is a log, not a state machine.
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Permanent bounces with subtype{" "}
                       <code className="rounded bg-muted px-1 text-xs">
                         OnAccountSuppressionList
@@ -673,12 +673,12 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                       rate, and the handler above treats them as fresh news.
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Transient bounces need a counter and a threshold, not a
                       suppression. The handler above ignores them entirely.
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       SES gives no ordering or batching guarantees. One
                       notification may cover many recipients, or many
                       notifications may cover one.
@@ -804,12 +804,11 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
             </div>
 
             <p className="mt-4 text-muted-foreground text-xs">
-              <Check className="mb-0.5 inline size-3 text-green-600 dark:text-green-400" />{" "}
-              = built-in or included,{" "}
-              <Minus className="mb-0.5 inline size-3 text-orange-600 dark:text-orange-500" />{" "}
+              <Check className="mb-0.5 inline size-3 text-success" /> = built-in
+              or included, <Minus className="mb-0.5 inline size-3 text-brand" />{" "}
               = possible but requires manual setup,{" "}
-              <X className="mb-0.5 inline size-3 text-red-500 dark:text-red-400" />{" "}
-              = not available
+              <X className="mb-0.5 inline size-3 text-destructive" /> = not
+              available
             </p>
           </section>
 
@@ -829,7 +828,7 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                 <ul className="space-y-3">
                   {stillYourJob.map((item) => (
                     <li className="flex items-start gap-3" key={item}>
-                      <Minus className="mt-0.5 size-5 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <Minus className="mt-0.5 size-5 shrink-0 text-brand" />
                       <span className="text-muted-foreground">{item}</span>
                     </li>
                   ))}
@@ -863,7 +862,7 @@ export default function SesBounceHandlingHandRolledVsWrapsPage() {
                 <ul className="space-y-3">
                   {chooseHandRollReasons.map((reason) => (
                     <li className="flex items-start gap-3" key={reason}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span className="text-muted-foreground">{reason}</span>
                     </li>
                   ))}

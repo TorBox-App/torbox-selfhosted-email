@@ -547,7 +547,7 @@ export default function KlaviyoVsWrapsPage() {
                       All data stored on Klaviyo&rsquo;s AWS, not yours
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                       Close your account = all data permanently deleted
                     </li>
                     <li className="flex items-start gap-2">
@@ -567,25 +567,25 @@ export default function KlaviyoVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       SES deployed to your AWS account -- you own the sending
                       infrastructure
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Dedicated IPs in your account, reputation you control
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Email events live in your DynamoDB. Contacts exportable
                       anytime.
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Stop using Wraps = everything keeps running
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Zero stored credentials -- OIDC temporary access only
                     </li>
                   </ul>
@@ -641,7 +641,7 @@ export default function KlaviyoVsWrapsPage() {
                           {row.wrapsTotal}/mo
                         </td>
                         <td className="p-4">
-                          <span className="font-mono text-[11px] text-orange-600 tracking-[0.08em] dark:text-orange-500">
+                          <span className="font-mono text-2xs text-brand tracking-widest">
                             {row.savings}
                           </span>
                         </td>
@@ -681,7 +681,7 @@ export default function KlaviyoVsWrapsPage() {
               <CardContent>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>Profile-based billing:</strong> You pay for
                       contacts you never email. Feb 2025 billing change shifted
@@ -690,35 +690,35 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>Auto-upgrade:</strong> Exceeding profile limits
                       triggers automatic tier bumps at the next billing cycle.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>Klaviyo One surcharge:</strong> Mandatory 20% fee
                       once you spend over $10K/month.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>90-day suppression lock:</strong> Suppress a
                       profile and you can&rsquo;t unsuppress for 3 months.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>SMS credits don&rsquo;t roll over:</strong>{" "}
                       Use-it-or-lose-it each month.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                     <span>
                       <strong>CDP add-on:</strong> Advanced data platform starts
                       at $500+/month.
@@ -809,7 +809,7 @@ export default function KlaviyoVsWrapsPage() {
                 </p>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You run a Shopify store</strong> and need deep,
                       native e-commerce integration -- abandoned cart flows,
@@ -818,7 +818,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>Your team is marketing-led,</strong> not
                       engineering-led. Klaviyo&rsquo;s visual flow builder,
@@ -827,7 +827,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
                         You need predictive analytics and CDP features
@@ -838,7 +838,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You want 350+ pre-built integrations</strong> with
                       e-commerce platforms, payment processors, and marketing
@@ -846,7 +846,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You need omnichannel marketing automation</strong>{" "}
                       -- email, SMS, push, and WhatsApp in a single visual
@@ -870,7 +870,7 @@ export default function KlaviyoVsWrapsPage() {
               <CardContent>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You&rsquo;re a SaaS company</strong> that needs
                       transactional email (password resets, invoices,
@@ -879,7 +879,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
                         You&rsquo;re paying $700+/month at Klaviyo
@@ -890,7 +890,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
                         You want to own your sending infrastructure
@@ -900,7 +900,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
                         Your contact list is large but send volume is moderate.
@@ -911,7 +911,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>
                         You want workflows you can version-control.
@@ -922,7 +922,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>You care about site performance.</strong>{" "}
                       Klaviyo&rsquo;s JS has been documented to drop PageSpeed
@@ -931,7 +931,7 @@ export default function KlaviyoVsWrapsPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
                     <span>
                       <strong>Data sovereignty matters to you.</strong> Your
                       sending infrastructure and email events stay in your AWS
@@ -995,19 +995,19 @@ export default function KlaviyoVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Contact profiles (CSV)
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Email templates (HTML)
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Campaign performance (API)
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Historical events (API with pagination)
                     </li>
                   </ul>
@@ -1022,19 +1022,19 @@ export default function KlaviyoVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                       Flows (automations) -- no portable format
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                       Segments -- criteria must be manually recreated
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                       Signup forms -- not exportable
                     </li>
                     <li className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                       Predictive properties (CLV, churn) -- Klaviyo-proprietary
                     </li>
                   </ul>

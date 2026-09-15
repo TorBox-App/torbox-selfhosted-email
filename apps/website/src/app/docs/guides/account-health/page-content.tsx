@@ -371,12 +371,12 @@ export default function AccountHealthPageContent() {
         </p>
         <ul className="grid gap-3 text-muted-foreground">
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Poll this endpoint before a send, not instead of watching for
             in-band send failures — the verdict is at most an hour stale.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             An account that has never connected, or whose console-access role
             cannot be assumed, reports{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">unknown</code> —

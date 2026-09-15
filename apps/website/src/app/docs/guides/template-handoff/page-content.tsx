@@ -281,10 +281,10 @@ export default function TemplateHandoffPageContent() {
         <h2 className="mb-4 font-heading font-semibold text-2xl tracking-tight">
           The limit worth planning around
         </h2>
-        <Card className="border-yellow-500/40 bg-yellow-500/5">
+        <Card className="border-warning/40 bg-warning/5">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-500" />
+              <AlertTriangle className="size-4 text-warning" />
               There is no <code>templates pull</code>
             </CardTitle>
           </CardHeader>
@@ -310,17 +310,17 @@ export default function TemplateHandoffPageContent() {
         </h2>
         <ul className="grid gap-3 text-muted-foreground">
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Engineers push from CI on merge to main, never from a laptop. The
             repo is then the only thing that can introduce a structural change.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Marketing edits copy in the dashboard and sends themselves a test
             before anything goes out.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             When CI reports a conflict, whoever owns the template copies the
             dashboard wording into the repo, opens a small pull request, and
             pushes with <code>--force</code> after it merges. The repo becomes
@@ -328,7 +328,7 @@ export default function TemplateHandoffPageContent() {
             conflict, so the job has to check the output rather than the status.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Run <code>--dry-run</code> in CI on pull requests so a reviewer can
             see which templates a merge would touch.
           </li>

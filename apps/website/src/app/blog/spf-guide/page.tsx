@@ -94,14 +94,14 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => {
   const styles = {
-    tip: "border-green-500/50 bg-green-500/10",
-    warning: "border-yellow-500/50 bg-yellow-500/10",
-    danger: "border-red-500/50 bg-red-500/10",
+    tip: "border-success/50 bg-success/10",
+    warning: "border-warning/50 bg-warning/10",
+    danger: "border-destructive/50 bg-destructive/10",
   };
   const iconStyles = {
-    tip: "text-green-600 dark:text-green-400",
-    warning: "text-yellow-600 dark:text-yellow-400",
-    danger: "text-red-600 dark:text-red-400",
+    tip: "text-success",
+    warning: "text-warning",
+    danger: "text-destructive",
   };
 
   return (
@@ -335,7 +335,7 @@ export default function Page() {
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardContent className="pt-6">
-                  <h4 className="mb-3 font-semibold text-red-500">
+                  <h4 className="mb-3 font-semibold text-destructive">
                     Mechanisms That Count
                   </h4>
                   <ul className="space-y-2 text-sm">
@@ -380,7 +380,7 @@ export default function Page() {
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <h4 className="mb-3 font-semibold text-green-500">
+                  <h4 className="mb-3 font-semibold text-success">
                     Mechanisms That Don't Count
                   </h4>
                   <ul className="space-y-2 text-sm">
@@ -475,10 +475,10 @@ export default function Page() {
                         <span
                           className={`font-mono ${
                             provider.lookups >= 4
-                              ? "text-yellow-500"
+                              ? "text-warning"
                               : provider.lookups >= 3
-                                ? "text-yellow-600 dark:text-yellow-400"
-                                : "text-green-500"
+                                ? "text-warning"
+                                : "text-success"
                           }`}
                         >
                           {provider.lookups}
@@ -535,15 +535,15 @@ export default function Page() {
             <Collapsible defaultOpen title="Pros of SPF Flattening">
               <ul className="space-y-2 text-muted-foreground text-sm">
                 <li className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   Eliminates lookup limit concerns entirely
                 </li>
                 <li className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   Faster SPF evaluation (no DNS chain to follow)
                 </li>
                 <li className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   Can include unlimited providers
                 </li>
               </ul>
@@ -552,15 +552,15 @@ export default function Page() {
             <Collapsible title="Cons of SPF Flattening">
               <ul className="space-y-2 text-muted-foreground text-sm">
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-500" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />
                   Provider IPs change — you must update regularly
                 </li>
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-500" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />
                   Can exceed DNS record size limits (255 chars per string)
                 </li>
                 <li className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-500" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />
                   Requires automation or a third-party service
                 </li>
               </ul>
@@ -584,7 +584,7 @@ export default function Page() {
 
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">
                     Use -all (hard fail) in production
@@ -597,7 +597,7 @@ export default function Page() {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">
                     Only authorize what you actually use
@@ -610,7 +610,7 @@ export default function Page() {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">
                     Prefer IP mechanisms for dedicated IPs
@@ -623,7 +623,7 @@ export default function Page() {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">One SPF record per domain</h4>
                   <p className="text-muted-foreground text-sm">
@@ -634,7 +634,7 @@ export default function Page() {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">Monitor with DMARC reports</h4>
                   <p className="text-muted-foreground text-sm">

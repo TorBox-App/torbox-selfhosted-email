@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@wraps/ui/components/ui/card";
+import type * as React from "react";
 
 // Simple icon component for company logos
 const SimpleIcon = ({
@@ -41,17 +42,17 @@ const SimpleIcon = ({
   if (!iconPath) {
     return (
       <div
-        className="animate-pulse rounded-sm bg-muted"
-        style={{ width: size, height: size }}
+        className="size-(--logo) animate-pulse rounded-sm bg-muted"
+        style={{ "--logo": `${size}px` } as React.CSSProperties}
       />
     );
   }
 
   return (
     <svg
-      className="fill-black dark:fill-white"
+      className="size-(--logo) fill-black dark:fill-white"
       role="img"
-      style={{ width: size, height: size }}
+      style={{ "--logo": `${size}px` } as React.CSSProperties}
       viewBox="0 0 24 24"
     >
       <path d={iconPath} />
@@ -98,7 +99,7 @@ export function LogoCarousel() {
                 {/* First set of logos */}
                 {techCompanies.map((company) => (
                   <Card
-                    className="flex h-16 w-40 shrink-0 items-center justify-center border-0 bg-transparent opacity-60 shadow-none transition-opacity duration-300 hover:opacity-100"
+                    className="flex h-16 w-40 shrink-0 items-center justify-center border-0 bg-transparent shadow-none transition-opacity"
                     key={`first-${company.id}`}
                   >
                     <div className="flex items-center gap-3">
@@ -112,7 +113,7 @@ export function LogoCarousel() {
                 {/* Second set for seamless loop - identical to first */}
                 {techCompanies.map((company) => (
                   <Card
-                    className="flex h-16 w-40 shrink-0 items-center justify-center border-0 bg-transparent opacity-60 shadow-none transition-opacity duration-300 hover:opacity-100"
+                    className="flex h-16 w-40 shrink-0 items-center justify-center border-0 bg-transparent shadow-none transition-opacity"
                     key={`second-${company.id}`}
                   >
                     <div className="flex items-center gap-3">

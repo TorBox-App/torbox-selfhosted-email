@@ -92,7 +92,7 @@ export function SdkEventsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Any event name</span>
@@ -108,7 +108,7 @@ export function SdkEventsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Typed properties</span>
@@ -122,7 +122,7 @@ export function SdkEventsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Batch support</span>
@@ -135,7 +135,7 @@ export function SdkEventsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">
@@ -167,7 +167,7 @@ export function SdkEventsSection() {
             </div>
 
             <a
-              className="inline-flex items-center gap-1 font-medium text-orange-500 text-sm hover:text-orange-600"
+              className="inline-flex items-center gap-1 font-medium text-brand text-sm hover:text-brand"
               href="/docs/guides/custom-events"
             >
               Events reference

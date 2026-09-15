@@ -38,7 +38,7 @@ export function MarketingHonestSection() {
         <div className="space-y-6">
           {limits.map(({ claim, reality }) => (
             <div
-              className="border-orange-500/40 border-l-2 pl-5 sm:pl-6"
+              className="border-brand/40 border-l-2 pl-5 sm:pl-6"
               key={claim}
             >
               <h3 className="mb-2 font-medium text-lg tracking-tight">

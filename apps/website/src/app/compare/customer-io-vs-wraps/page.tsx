@@ -487,17 +487,17 @@ export default function CustomerIoVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                       <span>
                         Bulk data export requires Premium tier ($1,000/mo)
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                       <span>No self-hosted or BYOC option available</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-500" />
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                       <span>Workflows and templates cannot be exported</span>
                     </li>
                   </ul>
@@ -519,20 +519,20 @@ export default function CustomerIoVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
                         Email events and sending infra stay in your AWS account.
                         Contacts exportable anytime.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
                         If you stop using Wraps, everything keeps running
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span>
                         Inherits your AWS compliance posture (SOC 2, HIPAA,
                         FedRAMP)
@@ -604,7 +604,7 @@ export default function CustomerIoVsWrapsPage() {
                             </div>
                           </td>
                           <td className="p-4">
-                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                            <span className="font-mono text-2xs text-brand uppercase tracking-widest">
                               {savingsPercent}% less
                             </span>
                           </td>
@@ -697,7 +697,7 @@ export default function CustomerIoVsWrapsPage() {
                     "You need a dedicated CSM, 90-day onboarding program, and enterprise support SLAs",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span>{point}</span>
                     </li>
                   ))}

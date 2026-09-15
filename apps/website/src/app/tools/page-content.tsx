@@ -37,6 +37,7 @@ import {
 import Link from "next/link";
 import Script from "next/script";
 import { parseAsString, useQueryStates } from "nuqs";
+import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
 
 // Turnstile types for Cloudflare bot protection
@@ -176,17 +177,17 @@ type EmailCheckResult = {
 
 function GradeDisplay({ grade, score }: { grade: string; score: number }) {
   const gradeColors: Record<string, string> = {
-    "A+": "text-green-500 border-green-500",
-    A: "text-green-500 border-green-500",
-    "A-": "text-green-600 border-green-600",
-    "B+": "text-lime-500 border-lime-500",
-    B: "text-lime-500 border-lime-500",
-    "B-": "text-yellow-500 border-yellow-500",
-    "C+": "text-yellow-500 border-yellow-500",
-    C: "text-orange-500 border-orange-500",
-    "C-": "text-orange-500 border-orange-500",
-    D: "text-red-500 border-red-500",
-    F: "text-red-600 border-red-600",
+    "A+": "text-success border-success",
+    A: "text-success border-success",
+    "A-": "text-success border-success",
+    "B+": "text-success border-success",
+    B: "text-success border-success",
+    "B-": "text-warning border-warning",
+    "C+": "text-warning border-warning",
+    C: "text-brand border-brand",
+    "C-": "text-brand border-brand",
+    D: "text-destructive border-destructive",
+    F: "text-destructive border-destructive",
   };
 
   const colorClass = gradeColors[grade] || "text-muted-foreground border-muted";
@@ -213,19 +214,19 @@ function StatusBadge({
   const config = {
     pass: {
       icon: Check,
-      className: "bg-green-500/10 text-green-600 border-green-500/20",
+      className: "bg-success/10 text-success border-success/20",
     },
     warn: {
       icon: AlertTriangle,
-      className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+      className: "bg-warning/10 text-warning border-warning/20",
     },
     fail: {
       icon: X,
-      className: "bg-red-500/10 text-red-600 border-red-500/20",
+      className: "bg-destructive/10 text-destructive border-destructive/20",
     },
     info: {
       icon: Info,
-      className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+      className: "bg-info/10 text-info border-info/20",
     },
     none: {
       icon: X,
@@ -263,7 +264,7 @@ function RecordDisplay({
   return (
     <div className="rounded-lg border bg-card">
       <Collapsible onOpenChange={setIsOpen} open={isOpen}>
-        <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover:bg-muted/50">
+        <CollapsibleTrigger className="flex w-full items-center justify-between">
           <div className="flex items-center gap-3">
             <StatusBadge label={label} status={status} />
             {extra}
@@ -287,7 +288,7 @@ function RecordDisplay({
               <div className="mt-3 space-y-2">
                 {warnings.map((warning, i) => (
                   <div
-                    className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
+                    className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 p-2.5 text-xs text-warning"
                     key={`warning-${i}`}
                   >
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -553,9 +554,10 @@ export default function ToolsPageContent() {
               />
             </div>
             <Button
-              className="h-12 w-full bg-orange-500 px-6 text-white hover:bg-orange-600 sm:w-auto"
+              className="h-12 w-full sm:w-auto"
               disabled={isLoading || !domain.trim()}
               onClick={checkDomain}
+              variant="brand"
             >
               {isLoading ? (
                 <>
@@ -575,7 +577,7 @@ export default function ToolsPageContent() {
 
           {/* Advanced Options */}
           <Collapsible onOpenChange={setShowAdvanced} open={showAdvanced}>
-            <CollapsibleTrigger className="mt-4 flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground">
+            <CollapsibleTrigger className="mt-4 flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
               Advanced Options
               <ChevronDown
@@ -616,11 +618,14 @@ export default function ToolsPageContent() {
 
       {/* Error State */}
       {error && (
-        <Card className="mb-8 border-red-500/20 bg-red-500/5" role="alert">
+        <Card
+          className="mb-8 border-destructive/20 bg-destructive/5"
+          role="alert"
+        >
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <p className="text-red-600 dark:text-red-400">{error}</p>
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <p className="text-destructive">{error}</p>
             </div>
           </CardContent>
         </Card>
@@ -723,11 +728,11 @@ export default function ToolsPageContent() {
 
           {/* AWS SES DKIM Prompt */}
           {isAwsSesWithoutDkim && (
-            <Card className="border-blue-500/20 bg-blue-500/5">
+            <Card className="border-info/20 bg-info/5">
               <CardContent className="pt-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">
-                    <Key className="mt-0.5 h-5 w-5 text-blue-500" />
+                    <Key className="mt-0.5 h-5 w-5 text-info" />
                     <div>
                       <h3 className="font-semibold">
                         AWS SES Detected — DKIM Likely Configured
@@ -802,22 +807,24 @@ export default function ToolsPageContent() {
                         role="progressbar"
                       >
                         <div
-                          className={`h-full transition-all ${
+                          className={`h-full w-(--score) transition-all ${
                             data.score === data.max
-                              ? "bg-green-500"
+                              ? "bg-success"
                               : data.score >= data.max * 0.5
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
+                                ? "bg-warning"
+                                : "bg-destructive"
                           }`}
-                          style={{
-                            width: `${(data.score / data.max) * 100}%`,
-                          }}
+                          style={
+                            {
+                              "--score": `${(data.score / data.max) * 100}%`,
+                            } as React.CSSProperties
+                          }
                         />
                       </div>
                       {key === "dkim" &&
                         isAwsSesWithoutDkim &&
                         data.score === 0 && (
-                          <p className="flex items-center gap-1 text-blue-500 text-xs">
+                          <p className="flex items-center gap-1 text-info text-xs">
                             <Info className="h-3 w-3" />
                             DKIM score may be inaccurate — AWS SES uses
                             undiscoverable selectors
@@ -829,7 +836,7 @@ export default function ToolsPageContent() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                          <Sparkles className="h-3.5 w-3.5 text-brand" />
                           Bonus Points
                         </span>
                         <span className="text-muted-foreground">
@@ -846,10 +853,12 @@ export default function ToolsPageContent() {
                         role="progressbar"
                       >
                         <div
-                          className="h-full bg-orange-500 transition-all"
-                          style={{
-                            width: `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
-                          }}
+                          className="h-full w-(--bonus) bg-brand transition-all"
+                          style={
+                            {
+                              "--bonus": `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
+                            } as React.CSSProperties
+                          }
                         />
                       </div>
                     </div>
@@ -864,7 +873,7 @@ export default function ToolsPageContent() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  <AlertTriangle className="h-5 w-5 text-warning" />
                   Issues Found ({result.issues.length})
                 </CardTitle>
               </CardHeader>
@@ -883,10 +892,10 @@ export default function ToolsPageContent() {
                       <div
                         className={`rounded-lg border p-4 ${
                           issue.severity === "critical"
-                            ? "border-red-500/20 bg-red-500/5"
+                            ? "border-destructive/20 bg-destructive/5"
                             : issue.severity === "warning"
-                              ? "border-yellow-500/20 bg-yellow-500/5"
-                              : "border-blue-500/20 bg-blue-500/5"
+                              ? "border-warning/20 bg-warning/5"
+                              : "border-info/20 bg-info/5"
                         }`}
                         key={`issue-${i}`}
                       >
@@ -897,21 +906,19 @@ export default function ToolsPageContent() {
                               if (issue.severity === "critical") {
                                 return (
                                   <XCircle
-                                    className={`${iconClass} text-red-500`}
+                                    className={`${iconClass} text-destructive`}
                                   />
                                 );
                               }
                               if (issue.severity === "warning") {
                                 return (
                                   <AlertTriangle
-                                    className={`${iconClass} text-yellow-500`}
+                                    className={`${iconClass} text-warning`}
                                   />
                                 );
                               }
                               return (
-                                <Info
-                                  className={`${iconClass} text-blue-500`}
-                                />
+                                <Info className={`${iconClass} text-info`} />
                               );
                             })()}
                             <div>
@@ -962,7 +969,7 @@ export default function ToolsPageContent() {
             <Card className="border-border bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-orange-500" />
+                  <Sparkles className="h-5 w-5 text-brand" />
                   Bonus Points Earned ({result.bonuses.length})
                 </CardTitle>
               </CardHeader>
@@ -980,12 +987,7 @@ export default function ToolsPageContent() {
                           - {bonus.reason}
                         </span>
                       </div>
-                      <Badge
-                        className="border-orange-500/50 text-orange-600 dark:text-orange-400"
-                        variant="outline"
-                      >
-                        +{bonus.points} pts
-                      </Badge>
+                      <Badge variant="brand">+{bonus.points} pts</Badge>
                     </div>
                   ))}
                 </div>
@@ -1005,10 +1007,10 @@ export default function ToolsPageContent() {
                     <span
                       className={`font-mono text-xs ${
                         result.spf.lookupCount > result.spf.lookupLimit
-                          ? "text-red-500"
+                          ? "text-destructive"
                           : result.spf.lookupCount > 7
-                            ? "text-yellow-500"
-                            : "text-green-500"
+                            ? "text-warning"
+                            : "text-success"
                       }`}
                     >
                       {result.spf.lookupCount}/{result.spf.lookupLimit} lookups
@@ -1053,7 +1055,7 @@ export default function ToolsPageContent() {
                       <div className="mt-3 space-y-2">
                         {result.dkim.warnings.map((warning, i) => (
                           <div
-                            className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
+                            className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 p-2.5 text-xs text-warning"
                             key={`dkim-warning-${i}`}
                           >
                             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -1101,7 +1103,7 @@ export default function ToolsPageContent() {
                     {result.blacklist.overallClean ? (
                       <Badge variant="outline">Clean</Badge>
                     ) : (
-                      <span className="text-red-500 text-sm">
+                      <span className="text-destructive text-sm">
                         {result.blacklist.domainListings.length +
                           result.blacklist.ipListings.length}{" "}
                         listing(s)
@@ -1297,9 +1299,9 @@ export default function ToolsPageContent() {
                             <span
                               className={
                                 result.domainAge.daysUntilExpiry < 30
-                                  ? "text-red-500"
+                                  ? "text-destructive"
                                   : result.domainAge.daysUntilExpiry < 90
-                                    ? "text-yellow-500"
+                                    ? "text-warning"
                                     : ""
                               }
                             >
@@ -1406,11 +1408,7 @@ export default function ToolsPageContent() {
                     AWS account in under 2 minutes.
                   </p>
                 </div>
-                <Button
-                  asChild
-                  className="bg-orange-500 text-white hover:bg-orange-600"
-                  size="lg"
-                >
+                <Button asChild size="lg" variant="brand">
                   <Link href="/docs/quickstart">Get Started</Link>
                 </Button>
               </div>

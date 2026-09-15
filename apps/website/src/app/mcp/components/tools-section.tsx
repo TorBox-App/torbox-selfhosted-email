@@ -73,14 +73,10 @@ export function McpToolsSection() {
             <Card key={tool.name}>
               <CardContent className="p-5">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="truncate font-mono text-[13px]">{tool.name}</p>
+                  <p className="truncate font-mono text-sm">{tool.name}</p>
                   <Badge
-                    className={
-                      tool.write
-                        ? "shrink-0 border-orange-500/40 text-orange-500"
-                        : "shrink-0 text-muted-foreground"
-                    }
-                    variant="outline"
+                    className="shrink-0"
+                    variant={tool.write ? "brand" : "outline"}
                   >
                     {tool.write ? "write" : "read"}
                   </Badge>

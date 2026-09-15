@@ -59,7 +59,7 @@ export function SdkFeaturesSection() {
             const Icon = feature.icon;
             return (
               <div
-                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-4 transition-colors hover:border-orange-500/40"
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-4 transition-colors hover:border-brand/40"
                 key={feature.title}
               >
                 <Icon

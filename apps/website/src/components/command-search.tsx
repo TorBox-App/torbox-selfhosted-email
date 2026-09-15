@@ -44,7 +44,7 @@ const Command = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-white text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50",
+      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-background text-foreground",
       className
     )}
     ref={ref}
@@ -59,7 +59,7 @@ const CommandInput = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Input
     className={cn(
-      "mb-4 flex h-12 w-full border-zinc-200 border-b border-none bg-transparent px-4 py-3 text-[17px] outline-none placeholder:text-zinc-500 dark:border-zinc-800 dark:placeholder:text-zinc-400",
+      "mb-4 flex h-12 w-full border-border border-b border-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-muted-foreground",
       className
     )}
     ref={ref}
@@ -88,7 +88,7 @@ const CommandEmpty = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >((props, ref) => (
   <CommandPrimitive.Empty
-    className="flex h-12 items-center justify-center text-sm text-zinc-500 dark:text-zinc-400"
+    className="flex h-12 items-center justify-center text-muted-foreground text-sm"
     ref={ref}
     {...props}
   />
@@ -101,7 +101,7 @@ const CommandGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Group
     className={cn(
-      "not-first:mt-2 overflow-hidden px-2 **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:text-zinc-500 dark:**:[[cmdk-group-heading]]:text-zinc-400",
+      "not-first:mt-2 overflow-hidden px-2 **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground **:[[cmdk-group-heading]]:text-xs",
       className
     )}
     ref={ref}
@@ -116,7 +116,7 @@ const CommandItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Item
     className={cn(
-      "relative flex min-h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 py-2 text-sm text-zinc-700 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-zinc-100 data-[selected=true]:text-zinc-900 data-[disabled=true]:opacity-50 dark:text-zinc-300 dark:data-[selected=true]:bg-zinc-800 dark:data-[selected=true]:text-zinc-100 [&+[cmdk-item]]:mt-1",
+      "relative flex min-h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 py-2 text-foreground text-sm outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [&+[cmdk-item]]:mt-1",
       className
     )}
     ref={ref}
@@ -650,7 +650,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-w-[640px] overflow-hidden border border-zinc-200 p-0 shadow-2xl dark:border-zinc-800">
+      <DialogContent className="max-w-[640px] overflow-hidden p-0">
         <DialogTitle className="sr-only">Command Search</DialogTitle>
         <Command
           className="transition-transform duration-100 ease-out"
@@ -679,7 +679,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                       )}
                       <div className="flex min-w-0 flex-col">
                         <span>{item.title}</span>
-                        <span className="line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="line-clamp-1 text-muted-foreground text-xs">
                           {item.description}
                         </span>
                       </div>
@@ -704,7 +704,7 @@ export function SearchTrigger({ onClick }: { onClick: () => void }) {
       <Search className="mr-2 h-3.5 w-3.5" />
       <span className="hidden lg:inline-flex">Search...</span>
       <span className="inline-flex lg:hidden">Search...</span>
-      <kbd className="pointer-events-none absolute top-1.5 right-1.5 hidden h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:flex">
+      <kbd className="pointer-events-none absolute top-1.5 right-1.5 hidden h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-3xs opacity-100 sm:flex">
         <span className="text-xs">⌘</span>K
       </kbd>
     </button>

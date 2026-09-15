@@ -39,8 +39,8 @@ export function WhyByocSection() {
                 className="rounded-lg border border-border bg-background/50 p-6"
                 key={card.title}
               >
-                <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
-                  <Icon aria-hidden="true" className="size-5 text-orange-500" />
+                <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-brand/10">
+                  <Icon aria-hidden="true" className="size-5 text-brand" />
                 </div>
                 <h3 className="mb-2 font-medium">{card.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">

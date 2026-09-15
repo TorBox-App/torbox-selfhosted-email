@@ -72,8 +72,8 @@ function TabBar({
   return (
     <div className="mb-8 flex justify-center">
       <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
-        <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
+        <div className="absolute inset-0 rounded-full bg-brand/20 blur-xl" />
+        <div className="relative inline-flex gap-1 rounded-full border border-brand/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:bg-background/50">
           {tabs.map((tab, index) => {
             const isActive = activeIndex === index;
             const Icon = tab.icon;
@@ -82,22 +82,22 @@ function TabBar({
                 className={cn(
                   "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
                   isActive
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
-                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
+                    ? "bg-brand text-white shadow-lg shadow-brand/30"
+                    : "text-muted-foreground hover:bg-brand/10 hover:text-foreground dark:hover:bg-brand/20"
                 )}
                 key={tab.key}
                 onClick={() => onTabClick(index)}
                 type="button"
               >
                 {isActive && (
-                  <div className="absolute inset-0 rounded-full bg-orange-500 blur-md opacity-50" />
+                  <div className="absolute inset-0 rounded-full bg-brand blur-md opacity-50" />
                 )}
                 <Icon
                   className={cn(
                     "relative size-4 transition-transform duration-300",
                     isActive
                       ? "scale-110"
-                      : "group-hover:scale-110 group-hover:text-orange-500"
+                      : "group-hover:scale-110 group-hover:text-brand"
                   )}
                 />
                 <span className="relative">{tab.label}</span>
@@ -134,10 +134,10 @@ function ComparisonPanel({
       {/* Code side */}
       <div className="flex min-w-0 flex-col">
         <Link
-          className="mb-3 flex items-center gap-2 rounded-full w-fit px-1 transition-colors hover:bg-emerald-500/5"
+          className="mb-3 flex items-center gap-2 rounded-full w-fit px-1 transition-colors hover:bg-success/5"
           href="/sdk"
         >
-          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
             Code
           </span>
           <span className="text-sm text-foreground/50">for engineers</span>
@@ -177,10 +177,10 @@ function ComparisonPanel({
       {/* Visual side */}
       <div className="flex min-w-0 flex-col">
         <Link
-          className="mb-3 flex items-center gap-2 rounded-full w-fit px-1 transition-colors hover:bg-orange-500/5"
+          className="mb-3 flex items-center gap-2 rounded-full w-fit px-1 transition-colors hover:bg-brand/5"
           href="/platform"
         >
-          <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
+          <span className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
             Visual
           </span>
           <span className="text-sm text-foreground/50">for your team</span>
@@ -307,7 +307,7 @@ export function DualPathTabbedSection() {
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              className="inline-flex items-center text-sm font-medium text-orange-500 hover:text-orange-600"
+              className="inline-flex items-center text-sm font-medium text-brand hover:text-brand"
               href="/docs/quickstart/email"
             >
               Start with code →

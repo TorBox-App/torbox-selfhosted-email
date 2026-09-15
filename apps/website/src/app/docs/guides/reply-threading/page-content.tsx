@@ -691,9 +691,9 @@ export default function ReplyThreadingPageContent() {
           filename="send.ts"
           language="typescript"
         />
-        <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div>
               <p className="font-medium text-sm">
                 Infinite TTL is a real infinite

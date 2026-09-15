@@ -94,7 +94,7 @@ export function DashboardTemplatesSection() {
         <div className="flex flex-wrap gap-3">
           {features.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 transition-colors hover:border-orange-500/40"
+              className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 transition-colors hover:border-brand/40"
               key={feature.title}
             >
               <feature.icon
@@ -103,10 +103,7 @@ export function DashboardTemplatesSection() {
               />
               <span className="font-medium text-sm">{feature.title}</span>
               {feature.badge && (
-                <Badge
-                  className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]"
-                  variant="secondary"
-                >
+                <Badge className="font-mono" variant="secondary">
                   {feature.badge}
                 </Badge>
               )}

@@ -169,10 +169,10 @@ export default function QuickstartPageContent() {
       </div>
 
       {/* Platform Card */}
-      <Card className="group relative overflow-hidden transition-all hover:border-orange-500/50 hover:shadow-lg">
+      <Card className="group relative overflow-hidden transition-all hover:border-brand/50 hover:shadow-lg">
         <CardHeader>
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/10">
-            <Blocks className="h-6 w-6 text-orange-500" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-brand/10">
+            <Blocks className="h-6 w-6 text-brand" />
           </div>
           <CardTitle className="text-2xl">{platformGuide.title}</CardTitle>
         </CardHeader>
@@ -181,15 +181,12 @@ export default function QuickstartPageContent() {
           <ul className="grid grid-cols-2 gap-2 text-muted-foreground text-sm md:grid-cols-4">
             {platformGuide.features.map((feature) => (
               <li className="flex items-center gap-2" key={feature}>
-                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <div className="h-1.5 w-1.5 rounded-full bg-brand" />
                 {feature}
               </li>
             ))}
           </ul>
-          <Button
-            asChild
-            className="w-full bg-orange-500 text-white hover:bg-orange-600 md:w-auto"
-          >
+          <Button asChild className="w-full md:w-auto" variant="brand">
             <a
               href="https://app.wraps.dev/auth?mode=signup&plan=starter"
               rel="noopener noreferrer"

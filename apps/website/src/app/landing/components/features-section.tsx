@@ -120,9 +120,9 @@ export const FeaturesSection = memo(function FeaturesSection() {
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs ${
                           feature.status === "Available"
-                            ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                            ? "bg-success/10 text-success"
                             : feature.status === "Next"
-                              ? "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                              ? "bg-info/10 text-info"
                               : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -139,10 +139,7 @@ export const FeaturesSection = memo(function FeaturesSection() {
           </ul>
 
           <div className="flex flex-col gap-4 pe-4 pt-2 sm:flex-row">
-            <Button
-              className="cursor-pointer bg-orange-500 hover:bg-orange-600"
-              size="lg"
-            >
+            <Button className="cursor-pointer" size="lg" variant="brand">
               <a className="flex items-center" href="#pricing">
                 Get Started Free
                 <ArrowRight aria-hidden="true" className="ms-2 size-4" />
@@ -196,10 +193,7 @@ export const FeaturesSection = memo(function FeaturesSection() {
           </ul>
 
           <div className="flex flex-col gap-4 pe-4 pt-2 sm:flex-row">
-            <Button
-              className="cursor-pointer bg-orange-500 hover:bg-orange-600"
-              size="lg"
-            >
+            <Button className="cursor-pointer" size="lg" variant="brand">
               <a className="flex items-center" href="/docs">
                 Read the Docs
                 <ArrowRight aria-hidden="true" className="ms-2 size-4" />

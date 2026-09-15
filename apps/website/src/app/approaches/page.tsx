@@ -32,13 +32,13 @@ export default function ApproachesPage() {
         <section className="border-border border-b pt-20 pb-16 md:pt-24">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <SectionKicker>Choosing an approach</SectionKicker>
-            <h1 className="max-w-[22ch] font-heading font-semibold text-[38px] text-foreground leading-[1.05] tracking-[-0.03em] md:text-[52px]">
+            <h1 className="max-w-[22ch] font-heading font-semibold text-4xl text-foreground leading-none tracking-tight md:text-5xl">
               There are four ways to send application email.
             </h1>
-            <p className="mt-6 max-w-[62ch] text-[17px] text-muted-foreground leading-[1.6]">
+            <p className="mt-6 max-w-[62ch] text-lg text-muted-foreground leading-relaxed">
               {APPROACHES_RUBRIC}
             </p>
-            <p className="mt-4 max-w-[62ch] text-[17px] text-muted-foreground leading-[1.6]">
+            <p className="mt-4 max-w-[62ch] text-lg text-muted-foreground leading-relaxed">
               We sell one of these. We have written the other three the way
               their own users would, because a comparison that only lists other
               people's weaknesses is not worth reading, and because for a good
@@ -65,10 +65,10 @@ export default function ApproachesPage() {
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
-                      <h2 className="font-heading font-semibold text-2xl text-foreground leading-[1.15] tracking-[-0.02em] md:text-[28px]">
+                      <h2 className="font-heading font-semibold text-2xl text-foreground leading-tight tracking-tight md:text-3xl">
                         {approach.title}
                       </h2>
-                      <p className="mt-1 text-[13px] text-muted-foreground">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {approach.examples}
                       </p>
                     </div>
@@ -76,24 +76,24 @@ export default function ApproachesPage() {
 
                   <dl className="grid gap-5 sm:grid-cols-2">
                     <div>
-                      <dt className="mb-1.5 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
+                      <dt className="mb-1.5 font-mono text-2xs text-muted-foreground uppercase tracking-widest">
                         What it is good at
                       </dt>
-                      <dd className="text-[14.5px] text-foreground/90 leading-[1.6]">
+                      <dd className="text-sm text-foreground/90 leading-relaxed">
                         {approach.pro}
                       </dd>
                     </div>
                     <div>
-                      <dt className="mb-1.5 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
+                      <dt className="mb-1.5 font-mono text-2xs text-muted-foreground uppercase tracking-widest">
                         What it costs you
                       </dt>
-                      <dd className="text-[14.5px] text-foreground/90 leading-[1.6]">
+                      <dd className="text-sm text-foreground/90 leading-relaxed">
                         {approach.con}
                       </dd>
                     </div>
                   </dl>
 
-                  <p className="mt-5 border-foreground border-t pt-4 text-[14.5px] text-foreground leading-[1.6]">
+                  <p className="mt-5 border-foreground border-t pt-4 text-sm text-foreground leading-relaxed">
                     <span className="font-semibold">Pick this if: </span>
                     {approach.pickThisIf}
                   </p>
@@ -107,10 +107,10 @@ export default function ApproachesPage() {
         <section className="border-border border-b py-16 md:py-20">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <SectionKicker>The one distinction that matters</SectionKicker>
-            <h2 className="max-w-[26ch] font-heading font-semibold text-[28px] text-foreground leading-[1.1] tracking-[-0.022em] md:text-4xl">
+            <h2 className="max-w-[26ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
               Every one of these ships a send API. Four of the five stop there.
             </h2>
-            <div className="mt-6 max-w-[62ch] space-y-4 text-base text-muted-foreground leading-[1.65]">
+            <div className="mt-6 max-w-[62ch] space-y-4 text-base text-muted-foreground leading-relaxed">
               <p>
                 Since the middle of 2026 a wave of open-source projects has
                 rebuilt a Resend-compatible API on top of your own SES, and

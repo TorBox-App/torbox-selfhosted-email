@@ -62,7 +62,7 @@ export function AlternativesPageLayout({ page }: { page: AlternativesPage }) {
                     <li className="flex items-start gap-3" key={reason}>
                       <span
                         aria-hidden="true"
-                        className="mt-2 size-1.5 shrink-0 rounded-full bg-orange-500"
+                        className="mt-2 size-1.5 shrink-0 rounded-full bg-brand"
                       />
                       <span className="text-muted-foreground">{reason}</span>
                     </li>
@@ -85,7 +85,7 @@ export function AlternativesPageLayout({ page }: { page: AlternativesPage }) {
                   <li className="p-4 sm:p-5" key={rule.condition}>
                     <p className="font-medium">{rule.condition}</p>
                     <p className="mt-1 flex items-start gap-2 text-muted-foreground text-sm">
-                      <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-orange-500" />
+                      <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-brand" />
                       {rule.pick}
                     </p>
                   </li>
@@ -140,7 +140,7 @@ export function AlternativesPageLayout({ page }: { page: AlternativesPage }) {
           {page.compareHref && (
             <section className="mb-16">
               <Link className="block" href={page.compareHref}>
-                <Card className="transition-colors hover:border-orange-500/50">
+                <Card className="transition-colors hover:border-brand/50">
                   <CardContent className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium">
@@ -211,7 +211,7 @@ export function AlternativesPageLayout({ page }: { page: AlternativesPage }) {
 
 function Disclosure({ incumbent }: { incumbent: string }) {
   return (
-    <Card className="border-orange-500/30 bg-orange-500/5">
+    <Card className="border-brand/30 bg-brand/5">
       <CardContent>
         <p className="text-muted-foreground text-sm">
           <strong className="text-foreground">We make Wraps</strong>, which is
@@ -230,7 +230,16 @@ function RankedCard({ entry, rank }: { entry: RankedEntry; rank: number }) {
   const vendor = VENDORS[entry.vendor];
 
   return (
-    <Card className={cardAccent(entry)} id={vendor.id}>
+    <Card
+      className={
+        vendor.isUs
+          ? "border-primary/30"
+          : entry.isIncumbent
+            ? "bg-muted/30"
+            : ""
+      }
+      id={vendor.id}
+    >
       <CardContent>
         <div className="mb-3 flex items-start gap-4">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted font-mono font-medium text-muted-foreground text-sm">
@@ -279,20 +288,9 @@ function RankedCard({ entry, rank }: { entry: RankedEntry; rank: number }) {
   );
 }
 
-/** Our own entry is outlined, the incumbent's is recessed, everything else plain. */
-function cardAccent(entry: RankedEntry): string {
-  if (VENDORS[entry.vendor].isUs) {
-    return "border-primary/30";
-  }
-  if (entry.isIncumbent) {
-    return "bg-muted/30";
-  }
-  return "";
-}
-
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border px-2 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
+    <span className="rounded-full border px-2 py-0.5 font-mono text-3xs text-muted-foreground uppercase tracking-widest">
       {children}
     </span>
   );

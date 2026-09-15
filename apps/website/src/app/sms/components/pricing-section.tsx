@@ -35,7 +35,7 @@ const featureComparison = [
 ];
 
 const headerCellClass =
-  "border-border border-b pb-3 font-mono font-medium text-muted-foreground text-xs uppercase tracking-[0.08em]";
+  "border-border border-b pb-3 font-mono font-medium text-muted-foreground text-xs uppercase tracking-widest";
 
 export function SmsPricingSection() {
   return (
@@ -58,7 +58,7 @@ export function SmsPricingSection() {
           {/* Cost Breakdown */}
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-border border-b px-6 py-4">
-              <h3 className="font-mono font-medium text-muted-foreground text-xs uppercase tracking-[0.08em]">
+              <h3 className="font-mono font-medium text-muted-foreground text-xs uppercase tracking-widest">
                 Monthly AWS Cost
               </h3>
             </div>
@@ -86,9 +86,7 @@ export function SmsPricingSection() {
                       <td className="py-3 font-mono text-muted-foreground">
                         {row.number}
                       </td>
-                      <td className="py-3 font-mono text-orange-500">
-                        {row.total}
-                      </td>
+                      <td className="py-3 font-mono text-brand">{row.total}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -108,7 +106,7 @@ export function SmsPricingSection() {
           {/* Feature Comparison */}
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-border border-b px-6 py-4">
-              <h3 className="font-mono font-medium text-muted-foreground text-xs uppercase tracking-[0.08em]">
+              <h3 className="font-mono font-medium text-muted-foreground text-xs uppercase tracking-widest">
                 Feature Comparison
               </h3>
             </div>
@@ -118,7 +116,7 @@ export function SmsPricingSection() {
                   <tr className="text-left">
                     <th className={headerCellClass}>Feature</th>
                     <th className={`${headerCellClass} text-center`}>
-                      <span className="text-orange-500">Wraps</span>
+                      <span className="text-brand">Wraps</span>
                     </th>
                     <th className={`${headerCellClass} text-center`}>Twilio</th>
                   </tr>
@@ -131,7 +129,7 @@ export function SmsPricingSection() {
                         {row.wraps ? (
                           <Check
                             aria-label="Yes"
-                            className="mx-auto size-4 text-orange-500"
+                            className="mx-auto size-4 text-brand"
                           />
                         ) : (
                           <X

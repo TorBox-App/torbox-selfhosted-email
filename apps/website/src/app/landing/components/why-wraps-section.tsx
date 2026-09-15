@@ -7,7 +7,7 @@ export function WhyWrapsSection() {
       {/* Grain texture — ties back to hero */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04]"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-4"
       >
         <filter id="why-noise">
           <feTurbulence
@@ -23,7 +23,7 @@ export function WhyWrapsSection() {
       {/* Large W motif — background watermark */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 top-1/2 h-[500px] w-[500px] -translate-y-1/2 text-foreground opacity-[0.03] md:h-[700px] md:w-[700px] lg:-right-10 lg:h-[800px] lg:w-[800px]"
+        className="pointer-events-none absolute -right-20 top-1/2 h-[500px] w-[500px] -translate-y-1/2 text-foreground opacity-3 md:h-[700px] md:w-[700px] lg:-right-10 lg:h-[800px] lg:w-[800px]"
         fill="none"
         stroke="currentColor"
         strokeWidth="4"
@@ -36,7 +36,7 @@ export function WhyWrapsSection() {
         <div className="grid items-center gap-12 md:grid-cols-[1fr_auto] md:gap-16 lg:gap-24">
           {/* Left column — narrative */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
+            <p className="text-xs font-semibold uppercase tracking-eyebrow text-brand">
               Why Wraps
             </p>
 
@@ -50,7 +50,7 @@ export function WhyWrapsSection() {
 
               <p className="text-lg leading-relaxed text-muted-foreground md:text-xl">
                 <Link
-                  className="text-foreground underline underline-offset-2 hover:text-orange-500 transition-colors"
+                  className="text-foreground underline underline-offset-2 hover:text-brand transition-colors"
                   href="/alternatives"
                 >
                   Postmark charges per email. Resend charges per email.
@@ -62,19 +62,16 @@ export function WhyWrapsSection() {
             </div>
 
             {/* Turning point */}
-            <div className="my-8 h-px w-20 bg-orange-500" />
+            <div className="my-8 h-px w-20 bg-brand" />
 
-            <p
-              className="text-5xl uppercase leading-[0.85] tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-[5.5rem]"
-              style={{ fontFamily: '"League Gothic Condensed", sans-serif' }}
-            >
-              So I built <span className="text-orange-500">Wraps.</span>
+            <p className="font-condensed text-5xl uppercase leading-none tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-8xl">
+              So I built <span className="text-brand">Wraps.</span>
             </p>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-foreground/80 md:text-xl">
               Deploy to your AWS and use the{" "}
               <Link
-                className="text-foreground underline underline-offset-2 hover:text-orange-500 transition-colors"
+                className="text-foreground underline underline-offset-2 hover:text-brand transition-colors"
                 href="/platform"
               >
                 platform

@@ -10,14 +10,13 @@ export function ByocHeroSection() {
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-            <span className="size-1.5 rounded-full bg-orange-500" />
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+            <span className="size-1.5 rounded-full bg-brand" />
             <span>wraps · byoc</span>
           </div>
 
           <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-            BYOC sending{" "}
-            <span className="text-orange-500">infrastructure.</span>
+            BYOC sending <span className="text-brand">infrastructure.</span>
           </h1>
 
           <p className="mb-8 max-w-xl text-lg text-muted-foreground">
@@ -27,11 +26,7 @@ export function ByocHeroSection() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              className="bg-orange-500 text-white hover:bg-orange-600"
-              size="lg"
-            >
+            <Button asChild size="lg" variant="brand">
               <a href="https://app.wraps.dev/auth?mode=signup">Start sending</a>
             </Button>
             <Button asChild size="lg" variant="outline">

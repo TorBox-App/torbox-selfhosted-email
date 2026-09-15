@@ -55,13 +55,13 @@ export function CopyForAIButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuItem
-          className="flex items-start gap-3 p-3"
+          className="flex items-start gap-3"
           onClick={() => handleCopy("markdown")}
           onSelect={(e) => e.preventDefault()}
         >
           <div className="mt-0.5 rounded-md border bg-background p-1.5">
             {copied === "markdown" ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-success" />
             ) : (
               <Copy className="h-4 w-4" />
             )}
@@ -74,13 +74,13 @@ export function CopyForAIButton({
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="flex items-start gap-3 p-3"
+          className="flex items-start gap-3"
           onClick={() => handleCopy("slash")}
           onSelect={(e) => e.preventDefault()}
         >
           <div className="mt-0.5 rounded-md border bg-background p-1.5">
             {copied === "slash" ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-success" />
             ) : (
               <Terminal className="h-4 w-4" />
             )}

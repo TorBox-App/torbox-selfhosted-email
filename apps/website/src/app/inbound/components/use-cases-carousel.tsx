@@ -64,7 +64,7 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
     <>
       {/* Horizontal scroll container */}
       <div
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 sm:-mx-6 sm:gap-6 sm:px-6 lg:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]"
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 sm:-mx-6 sm:gap-6 sm:px-6 lg:px-8"
         ref={scrollRef}
       >
         {useCases.map((useCase, index) => {
@@ -73,7 +73,7 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
             <div
               className={cn(
                 "w-[85vw] max-w-md shrink-0 snap-center overflow-hidden rounded-lg border border-border bg-card transition-colors duration-300 sm:w-[70vw] lg:w-[400px]",
-                activeIndex === index && "border-orange-500/40"
+                activeIndex === index && "border-brand/40"
               )}
               data-card
               key={useCase.id}
@@ -82,7 +82,7 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
               <div className="border-border border-b p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="size-5 text-orange-500" />
+                    <Icon className="size-5 text-brand" />
                   </div>
                   <h3 className="font-heading font-semibold text-lg tracking-tight">
                     {useCase.title}
@@ -112,7 +112,7 @@ export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
             className={cn(
               "size-2 rounded-full transition-all",
               activeIndex === index
-                ? "w-6 bg-orange-500"
+                ? "w-6 bg-brand"
                 : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
             )}
             key={useCase.id}

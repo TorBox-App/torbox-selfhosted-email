@@ -18,14 +18,14 @@ export function ProblemContrastSection() {
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-foreground">
             Wraps deploys email infrastructure to your AWS account. SES, event
             tracking, analytics, all of it. You pay AWS directly at{" "}
-            <span className="text-orange-500">$0.10 per 1,000 emails</span> on à
-            la carte (AWS defaults new accounts to $0.16 — Wraps tells you which
+            <span className="text-brand">$0.10 per 1,000 emails</span> on à la
+            carte (AWS defaults new accounts to $0.16 — Wraps tells you which
             plan applies). Cancel Wraps and everything keeps running.
           </p>
 
           <div className="mt-10">
             <Link
-              className="inline-flex items-center gap-1.5 font-medium text-sm text-orange-500 transition-colors hover:text-orange-600"
+              className="inline-flex items-center gap-1.5 font-medium text-sm text-brand transition-colors hover:text-brand"
               href="/docs/quickstart/email"
             >
               See what gets deployed

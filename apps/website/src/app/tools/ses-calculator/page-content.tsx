@@ -674,7 +674,7 @@ function SESCalculatorInner() {
                 </span>
               </div>
               {wrapsCosts.annualSavings > 0 && (
-                <div className="flex justify-between text-green-600 dark:text-green-400">
+                <div className="flex justify-between text-success">
                   <span className="ml-4">Annual savings</span>
                   <span className="tabular-nums font-medium">
                     Save ${wrapsCosts.annualSavings}/yr
@@ -738,14 +738,14 @@ function SESCalculatorInner() {
 
             {/* Collapsible AWS service breakdown */}
             <Collapsible className="mt-4">
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors [&[data-state=open]>svg]:rotate-180">
+              <CollapsibleTrigger className="flex w-full items-center justify-between [&[data-state=open]>svg]:rotate-180">
                 View AWS breakdown
                 <ChevronDown
                   aria-hidden="true"
                   className="size-4 transition-transform duration-200"
                 />
               </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+              <CollapsibleContent className="overflow-hidden">
                 <div className="space-y-3 pt-3 border-t mt-2">
                   {breakdown.map((item) => (
                     <div
@@ -773,10 +773,10 @@ function SESCalculatorInner() {
 
         {/* Storage Growth Explanation */}
         {dynamoDBEnabled && storageGrowth.length > 0 && (
-          <Card className="border-blue-500/20 bg-blue-500/5">
+          <Card className="border-info/20 bg-info/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Info aria-hidden="true" className="size-5 text-blue-600" />
+                <Info aria-hidden="true" className="size-5 text-info" />
                 Storage Growth Over Time
               </CardTitle>
             </CardHeader>
@@ -830,18 +830,18 @@ function SESCalculatorInner() {
         )}
 
         {/* AWS Free Tier Notice */}
-        <Card className="border-green-500/20 bg-green-500/5">
+        <Card className="border-success/20 bg-success/5">
           <CardContent className="pt-6">
             <div className="flex gap-3">
               <Info
                 aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-green-600"
+                className="mt-0.5 size-5 shrink-0 text-success"
               />
               <div className="space-y-2 text-sm">
-                <p className="font-semibold text-green-900 dark:text-green-100">
+                <p className="font-semibold text-success">
                   AWS Free Tier Included
                 </p>
-                <ul className="space-y-1 text-green-800 dark:text-green-200">
+                <ul className="space-y-1 text-success">
                   <li>• 1M Lambda requests/month</li>
                   <li>• 400K Lambda GB-seconds/month</li>
                   <li>• 1M SQS requests/month</li>

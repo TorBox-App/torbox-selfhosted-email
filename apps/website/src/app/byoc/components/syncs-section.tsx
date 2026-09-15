@@ -44,7 +44,7 @@ export function SyncsSection() {
               <li className="flex gap-3 text-sm" key={text.slice(0, 40)}>
                 <span
                   aria-hidden="true"
-                  className="mt-2 size-1.5 shrink-0 rounded-full bg-orange-500"
+                  className="mt-2 size-1.5 shrink-0 rounded-full bg-brand"
                 />
                 <span className="text-foreground">{text}</span>
               </li>
@@ -117,7 +117,7 @@ export function SyncsSection() {
           <p className="text-muted-foreground text-sm">
             Read the generator on{" "}
             <a
-              className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
+              className="text-brand underline underline-offset-2 hover:text-brand"
               href="https://github.com/wraps-team/wraps/blob/main/packages/cli/src/commands/platform/update-role.ts"
               rel="noopener noreferrer"
               target="_blank"

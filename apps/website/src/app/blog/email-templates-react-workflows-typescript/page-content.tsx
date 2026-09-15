@@ -111,10 +111,10 @@ export function CompilationDiagram() {
 
   const colorClasses = {
     yellow: {
-      bg: "bg-yellow-500/10 dark:bg-yellow-500/20",
-      border: "border-yellow-500/50",
-      text: "text-yellow-600 dark:text-yellow-400",
-      glow: "shadow-yellow-500/25",
+      bg: "bg-warning/10 dark:bg-warning/20",
+      border: "border-warning/50",
+      text: "text-warning",
+      glow: "shadow-warning/25",
     },
     violet: {
       bg: "bg-violet-500/10 dark:bg-violet-500/20",
@@ -123,22 +123,22 @@ export function CompilationDiagram() {
       glow: "shadow-violet-500/25",
     },
     blue: {
-      bg: "bg-blue-500/10 dark:bg-blue-500/20",
-      border: "border-blue-500/50",
-      text: "text-blue-600 dark:text-blue-400",
-      glow: "shadow-blue-500/25",
+      bg: "bg-info/10 dark:bg-info/20",
+      border: "border-info/50",
+      text: "text-info",
+      glow: "shadow-info/25",
     },
     orange: {
-      bg: "bg-orange-500/10 dark:bg-orange-500/20",
-      border: "border-orange-500/50",
-      text: "text-orange-600 dark:text-orange-400",
-      glow: "shadow-orange-500/25",
+      bg: "bg-brand/10",
+      border: "border-brand/50",
+      text: "text-brand",
+      glow: "shadow-brand/25",
     },
     green: {
-      bg: "bg-green-500/10 dark:bg-green-500/20",
-      border: "border-green-500/50",
-      text: "text-green-600 dark:text-green-400",
-      glow: "shadow-green-500/25",
+      bg: "bg-success/10 dark:bg-success/20",
+      border: "border-success/50",
+      text: "text-success",
+      glow: "shadow-success/25",
     },
     purple: {
       bg: "bg-purple-500/10 dark:bg-purple-500/20",
@@ -389,7 +389,7 @@ delay('short-pause', { minutes: 30 })`,
                 onClick={() => setExpandedRow(expandedRow === i ? null : i)}
               >
                 <td className="px-4 py-3">
-                  <code className="rounded bg-violet-500/10 px-2 py-1 font-mono text-violet-600 text-sm dark:text-violet-400">
+                  <code className="rounded bg-brand/10 px-2 py-1 font-mono text-brand text-sm">
                     {s.type}
                   </code>
                 </td>
@@ -482,13 +482,13 @@ export function GuaranteeComparison() {
               <td className="px-4 py-3 font-medium text-sm">{row.dimension}</td>
               <td className="px-4 py-3">
                 <span className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <X className="text-red-400" size={14} />
+                  <X className="text-destructive" size={14} />
                   {row.traditional}
                 </span>
               </td>
               <td className="px-4 py-3">
                 <span className="flex items-center gap-2 text-sm">
-                  <Check className="text-green-500" size={14} />
+                  <Check className="text-success" size={14} />
                   {row.wraps}
                 </span>
               </td>
@@ -549,7 +549,7 @@ export function CLIDemo() {
         ◐ Scaffolding templates directory...
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={2500}>
+      <AnimatedSpan className="text-success" delay={2500}>
         ✓ Created wraps/templates/
       </AnimatedSpan>
 
@@ -563,7 +563,7 @@ export function CLIDemo() {
         {"  "}✓ wraps.config.ts
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={4200}>
+      <AnimatedSpan className="text-success" delay={4200}>
         ✓ Templates initialized!
       </AnimatedSpan>
 
@@ -587,11 +587,11 @@ export function CLIDemo() {
         ◐ Uploading to SES...
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={9200}>
+      <AnimatedSpan className="text-success" delay={9200}>
         ✓ 1 template pushed to SES
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-violet-500" delay={9800}>
+      <AnimatedSpan className="text-brand" delay={9800}>
         ✓ Dashboard synced
       </AnimatedSpan>
 

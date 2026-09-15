@@ -72,7 +72,7 @@ const ContactSection = memo(function ContactSection() {
             <Card className="transition-shadow hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Github aria-hidden="true" className="h-5 w-5 text-primary" />
+                  <Github aria-hidden="true" className="h-5 w-5" />
                   GitHub Issues
                 </CardTitle>
               </CardHeader>
@@ -129,8 +129,8 @@ const ContactSection = memo(function ContactSection() {
           <div className="order-1 lg:order-2 lg:col-span-2">
             <Cal
               calLink="wraps/get-started-with-wraps"
+              className="h-full w-full overflow-scroll"
               config={{ layout: "month_view" }}
-              style={{ width: "100%", height: "100%", overflow: "scroll" }}
             />
           </div>
         </div>

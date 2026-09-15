@@ -150,10 +150,10 @@ export default function IdempotencyPageContent() {
             enqueues the job again.
           </li>
         </ul>
-        <Card className="border-yellow-500/40 bg-yellow-500/5">
+        <Card className="border-warning/40 bg-warning/5">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-500" />
+              <AlertTriangle className="size-4 text-warning" />
               Wraps does not deduplicate this for you
             </CardTitle>
           </CardHeader>
@@ -410,17 +410,17 @@ export default function IdempotencyPageContent() {
         </h2>
         <ul className="grid gap-3 text-muted-foreground">
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Call your handler twice with the same payload. One email should
             arrive.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Throw after the send on purpose. The message redelivers, the claim
             fails, and no second email goes out.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Run two consumers against the same message at once. Exactly one
             should win the conditional write.
           </li>

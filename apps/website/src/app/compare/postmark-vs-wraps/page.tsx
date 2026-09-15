@@ -358,7 +358,7 @@ export default function PostmarkVsWrapsPage() {
           <section className="mb-16">
             <div className="mb-4 flex items-center gap-2">
               <SectionKicker className="mb-0">Comparison</SectionKicker>
-              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
+              <span className="font-mono text-2xs text-muted-foreground uppercase tracking-widest">
                 Last updated: March 2026
               </span>
             </div>
@@ -501,7 +501,7 @@ export default function PostmarkVsWrapsPage() {
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Server className="size-5 text-primary" />
-                    <CardTitle className="text-primary">Wraps</CardTitle>
+                    <CardTitle>Wraps</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -582,7 +582,7 @@ export default function PostmarkVsWrapsPage() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                          <span className="font-mono text-2xs text-brand uppercase tracking-widest">
                             {row.savings} less
                           </span>
                         </td>
@@ -691,7 +691,7 @@ export default function PostmarkVsWrapsPage() {
                     "You need official SDKs in Ruby, PHP, .NET, Java, or Go (Wraps currently offers TypeScript only)",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       <span className="text-sm">{point}</span>
                     </li>
                   ))}

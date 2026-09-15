@@ -75,9 +75,7 @@ export function SmsFeaturesSection() {
               <feature.icon
                 aria-hidden="true"
                 className={`mt-0.5 size-5 shrink-0 ${
-                  feature.highlighted
-                    ? "text-orange-500"
-                    : "text-muted-foreground"
+                  feature.highlighted ? "text-brand" : "text-muted-foreground"
                 }`}
               />
               <div>

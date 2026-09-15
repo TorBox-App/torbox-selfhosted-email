@@ -58,7 +58,7 @@ export function BlogSection() {
                 <div className="relative aspect-video">
                   <Image
                     alt={blog.title}
-                    className="size-full object-cover dark:brightness-[0.95] dark:invert"
+                    className="size-full object-cover dark:brightness-95 dark:invert"
                     fill
                     loading="lazy"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

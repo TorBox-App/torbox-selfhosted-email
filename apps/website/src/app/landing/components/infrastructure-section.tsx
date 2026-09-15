@@ -40,9 +40,9 @@ export function InfrastructureSection() {
             const Icon = point.icon;
             return (
               <StaggerItem key={point.text}>
-                <div className="flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-orange-500/50">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-500/10">
-                    <Icon className="size-5 text-orange-500" />
+                <div className="flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-brand/50">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+                    <Icon className="size-5 text-brand" />
                   </div>
                   <p className="text-foreground">{point.text}</p>
                 </div>

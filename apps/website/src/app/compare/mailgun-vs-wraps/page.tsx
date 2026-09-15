@@ -515,7 +515,7 @@ export default function MailgunVsWrapsPage() {
 
               <Card className="border-primary/30">
                 <CardHeader>
-                  <CardTitle className="text-primary">Wraps</CardTitle>
+                  <CardTitle>Wraps</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
@@ -527,19 +527,19 @@ export default function MailgunVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Data residency in any AWS SES region
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       HIPAA on any plan via your existing AWS BAA
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Infrastructure persists if you stop using Wraps
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Modern template editor and workflow builder included
                     </li>
                   </ul>
@@ -591,7 +591,7 @@ export default function MailgunVsWrapsPage() {
                         </td>
                         <td className="hidden p-4 sm:table-cell">
                           {row.savings ? (
-                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                            <span className="font-mono text-2xs text-brand uppercase tracking-widest">
                               {row.savings} less
                             </span>
                           ) : null}
@@ -705,7 +705,7 @@ export default function MailgunVsWrapsPage() {
                 <ul className="space-y-3">
                   {chooseWrapsReasons.map((reason) => (
                     <li className="flex items-start gap-3" key={reason}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span>{reason}</span>
                     </li>
                   ))}

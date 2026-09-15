@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@wraps/ui/components/ui/button";
 import { Input } from "@wraps/ui/components/ui/input";
 import { Label } from "@wraps/ui/components/ui/label";
 import * as React from "react";
@@ -60,11 +59,13 @@ export function ColorPicker({
       </Label>
       <div className="flex items-start gap-2">
         <div className="relative">
-          <Button
-            className="h-8 w-8 cursor-pointer overflow-hidden p-0"
-            style={{ backgroundColor: displayColor }}
+          {/* Not a <Button>: this swatch's whole purpose is to show an
+           * arbitrary user-chosen color, which Button's variant system
+           * can't express since Button owns its own color. */}
+          <button
+            className="h-8 w-8 cursor-pointer overflow-hidden rounded-md border bg-(--preview-color) shadow-xs outline-none transition-all focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            style={{ "--preview-color": displayColor } as React.CSSProperties}
             type="button"
-            variant="outline"
           >
             <input
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -73,7 +74,7 @@ export function ColorPicker({
               type="color"
               value={displayColor}
             />
-          </Button>
+          </button>
         </div>
         <Input
           className="h-8 flex-1 text-xs"

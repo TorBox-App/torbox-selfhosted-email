@@ -76,14 +76,14 @@ export function DashboardEventsSection() {
               <div
                 className={`relative overflow-hidden rounded-2xl border p-6 ${
                   type.counted
-                    ? "border-orange-500/40 bg-orange-500/5"
+                    ? "border-brand/40 bg-brand/5"
                     : "border-border bg-muted/30"
                 }`}
                 key={type.title}
               >
                 {/* Badge */}
                 <div className="absolute top-4 right-4">
-                  <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
+                  <span className="font-mono text-3xs text-muted-foreground uppercase tracking-widest">
                     {type.counted ? "Sent via API" : "Automatic"}
                   </span>
                 </div>
@@ -92,7 +92,7 @@ export function DashboardEventsSection() {
                   <Icon
                     aria-hidden="true"
                     className={`size-5 ${
-                      type.counted ? "text-orange-500" : "text-muted-foreground"
+                      type.counted ? "text-brand" : "text-muted-foreground"
                     }`}
                   />
                   <h3 className="font-semibold text-lg">{type.title}</h3>

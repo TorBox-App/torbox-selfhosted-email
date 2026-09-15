@@ -351,7 +351,7 @@ export default function Page() {
               type="danger"
             >
               Lovable apps use Vite — any variable prefixed with{" "}
-              <code className="rounded bg-red-500/20 px-1">VITE_</code> gets
+              <code className="rounded bg-destructive/20 px-1">VITE_</code> gets
               bundled into browser JavaScript and is readable by anyone in
               DevTools. Edge Function Secrets are only accessible server-side.
             </InfoCard>

@@ -7,9 +7,9 @@ export function CTASection() {
     <section className="py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionKicker>Get started</SectionKicker>
-        <p className="mb-6 max-w-[18ch] font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+        <p className="mb-6 max-w-[18ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
           Your infrastructure. Your data.{" "}
-          <span className="text-orange-500">Your AWS bill.</span>
+          <span className="text-brand">Your AWS bill.</span>
         </p>
 
         <p className="mb-8 max-w-[52ch] text-muted-foreground">

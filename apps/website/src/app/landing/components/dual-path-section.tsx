@@ -180,20 +180,20 @@ export function DualPathSection() {
         <div className="mb-12">
           <div className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6">
             <Link
-              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-emerald-500/5"
+              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-success/5"
               href="/sdk"
             >
-              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
                 Code
               </span>
               <span className="text-sm text-foreground/50">for engineers</span>
             </Link>
             <span className="text-sm text-foreground/50">+</span>
             <Link
-              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-orange-500/5"
+              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-brand/5"
               href="/platform"
             >
-              <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
+              <span className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
                 Visual
               </span>
               <span className="text-sm text-foreground/50">for marketers</span>
@@ -252,7 +252,7 @@ export function DualPathSection() {
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              className="inline-flex items-center text-sm font-medium text-orange-500 hover:text-orange-600"
+              className="inline-flex items-center text-sm font-medium text-brand hover:text-brand"
               href="/docs/quickstart/email"
             >
               Read the docs →

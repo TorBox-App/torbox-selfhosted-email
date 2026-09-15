@@ -28,7 +28,7 @@ const emailJson = {
 
 // One accent, both panes. The highlight links a rendered element to its parsed
 // field — it isn't a per-field category color.
-const highlight = "ring-1 ring-orange-500 bg-orange-500/10";
+const highlight = "ring-1 ring-brand bg-brand/10";
 
 const verdictKeys = new Set(["spamVerdict", "virusVerdict"]);
 
@@ -167,14 +167,14 @@ function EmailPreview({
           isActive={highlighted === "spamVerdict"}
           onHover={onHover}
         >
-          <ShieldCheck className="size-4 text-emerald-700 dark:text-emerald-400" />
-          <span className="font-medium text-emerald-700 text-sm dark:text-emerald-400">
+          <ShieldCheck className="size-4 text-success" />
+          <span className="font-medium text-success text-sm dark:text-success">
             Not Spam
           </span>
         </FieldTarget>
         <div className="flex items-center gap-2">
-          <ShieldCheck className="size-4 text-emerald-700 dark:text-emerald-400" />
-          <span className="font-medium text-emerald-700 text-sm dark:text-emerald-400">
+          <ShieldCheck className="size-4 text-success" />
+          <span className="font-medium text-success text-sm dark:text-success">
             No Virus
           </span>
         </div>
@@ -203,7 +203,7 @@ function JsonPreview({
       <span
         className={cn(
           "text-muted-foreground",
-          verdictKeys.has(key) && "text-emerald-700 dark:text-emerald-400"
+          verdictKeys.has(key) && "text-success"
         )}
       >
         {value}
@@ -216,7 +216,7 @@ function JsonPreview({
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       {/* Header */}
       <div className="flex items-center gap-2 border-border border-b bg-muted/30 px-4 py-3">
-        <Mail aria-hidden="true" className="size-3.5 text-orange-500" />
+        <Mail aria-hidden="true" className="size-3.5 text-brand" />
         <span className="font-mono text-muted-foreground text-xs">
           InboundEmail.json
         </span>
@@ -250,7 +250,7 @@ export function AnatomyInteractive() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Email preview */}
         <div>
-          <p className="mb-3 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+          <p className="mb-3 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
             Email Preview
           </p>
           <EmailPreview highlighted={highlighted} onHover={setHighlighted} />
@@ -258,7 +258,7 @@ export function AnatomyInteractive() {
 
         {/* JSON structure */}
         <div>
-          <p className="mb-3 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+          <p className="mb-3 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
             Parsed Data
           </p>
           <JsonPreview highlighted={highlighted} onHover={setHighlighted} />

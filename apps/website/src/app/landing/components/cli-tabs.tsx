@@ -130,9 +130,7 @@ function DeployContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Terminal} />
           <div>
-            <h3 className="font-semibold text-orange-500">
-              Deploy Infrastructure
-            </h3>
+            <h3 className="font-semibold text-brand">Deploy Infrastructure</h3>
             <p className="text-muted-foreground text-sm">
               One command deploys everything to AWS
             </p>
@@ -177,7 +175,7 @@ function DeployContent() {
             "Vercel OIDC support",
           ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
-              <Check className="size-4 text-orange-500" />
+              <Check className="size-4 text-brand" />
               <span className="text-sm">{item}</span>
             </div>
           ))}
@@ -202,9 +200,7 @@ function SendContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Code2} />
           <div>
-            <h3 className="font-semibold text-orange-500">
-              Install SDK & Send
-            </h3>
+            <h3 className="font-semibold text-brand">Install SDK & Send</h3>
             <p className="text-muted-foreground text-sm">
               Add the package and start sending
             </p>
@@ -219,10 +215,7 @@ function SendContent() {
               <SnippetTabsTrigger value="yarn">yarn</SnippetTabsTrigger>
               <SnippetTabsTrigger value="bun">bun</SnippetTabsTrigger>
             </SnippetTabsList>
-            <SnippetCopyButton
-              className="opacity-100"
-              value={installCommands.npm}
-            />
+            <SnippetCopyButton value={installCommands.npm} />
           </SnippetHeader>
           {Object.entries(installCommands).map(([key, command]) => (
             <SnippetTabsContent key={key} value={key}>
@@ -286,7 +279,7 @@ function ReceiveContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Inbox} />
           <div>
-            <h3 className="font-semibold text-orange-500">Receive Emails</h3>
+            <h3 className="font-semibold text-brand">Receive Emails</h3>
             <p className="text-muted-foreground text-sm">
               Deploy inbound infrastructure to your AWS
             </p>
@@ -369,7 +362,7 @@ function ReceiveContent() {
             "Reply with threading",
           ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
-              <Check className="size-4 text-orange-500" />
+              <Check className="size-4 text-brand" />
               <span className="text-sm">{item}</span>
             </div>
           ))}
@@ -383,23 +376,23 @@ function _ConsoleContent() {
   return (
     <div className="space-y-8">
       <div className="group relative mx-auto max-w-4xl">
-        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-orange-500/20 opacity-50 blur-3xl transition-opacity duration-700 group-hover:opacity-70" />
-        <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/20 bg-background shadow-2xl dark:border-orange-500/30">
+        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-brand/20 via-brand/10 to-brand/20 opacity-50 blur-3xl transition-opacity duration-700 group-hover:opacity-70" />
+        <div className="relative overflow-hidden rounded-2xl border-2 border-brand/20 bg-background shadow-2xl">
           <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
-                <div className="size-3 rounded-full bg-red-500" />
-                <div className="size-3 rounded-full bg-yellow-500" />
-                <div className="size-3 rounded-full bg-green-500" />
+                <div className="size-3 rounded-full bg-destructive" />
+                <div className="size-3 rounded-full bg-warning" />
+                <div className="size-3 rounded-full bg-success" />
               </div>
               <div className="hidden items-center gap-2 rounded-md bg-background/80 px-3 py-1 sm:flex">
-                <div className="size-3 rounded-full bg-green-500/50" />
+                <div className="size-3 rounded-full bg-success/50" />
                 <span className="font-mono text-muted-foreground text-xs">
                   localhost:5555
                 </span>
               </div>
             </div>
-            <span className="hidden rounded bg-orange-500/10 px-2 py-0.5 font-medium text-orange-600 text-xs sm:inline dark:text-orange-400">
+            <span className="hidden rounded bg-brand/10 px-2 py-0.5 font-medium text-brand text-xs sm:inline">
               Local Mode
             </span>
           </div>
@@ -428,11 +421,11 @@ function _ConsoleContent() {
           const Icon = feature.icon;
           return (
             <div
-              className="flex flex-col items-center rounded-xl border bg-muted/30 p-4 text-center transition-colors hover:border-orange-500/50"
+              className="flex flex-col items-center rounded-xl border bg-muted/30 p-4 text-center transition-colors hover:border-brand/50"
               key={feature.title}
             >
-              <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
-                <Icon className="size-5 text-orange-500" />
+              <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-brand/10">
+                <Icon className="size-5 text-brand" />
               </div>
               <h4 className="mb-1 font-semibold text-sm">{feature.title}</h4>
               <p className="text-muted-foreground text-xs leading-relaxed">
@@ -461,8 +454,8 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
   return (
     <div className="mb-8 flex flex-col items-center gap-4">
       <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
-        <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
+        <div className="absolute inset-0 rounded-full bg-brand/20 blur-xl" />
+        <div className="relative inline-flex gap-1 rounded-full border border-brand/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:bg-background/50">
           {tabs.map((tab, index) => {
             const isActive = activeIndex === index;
             const Icon = tab.icon;
@@ -471,22 +464,22 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
                 className={cn(
                   "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
                   isActive
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105"
-                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
+                    ? "bg-brand text-white shadow-lg shadow-brand/30 scale-105"
+                    : "text-muted-foreground hover:bg-brand/10 hover:text-foreground dark:hover:bg-brand/20"
                 )}
                 key={tab.key}
                 onClick={() => onTabClick(index)}
                 type="button"
               >
                 {isActive && (
-                  <div className="absolute inset-0 rounded-full bg-orange-500 blur-md opacity-50" />
+                  <div className="absolute inset-0 rounded-full bg-brand blur-md opacity-50" />
                 )}
                 <Icon
                   className={cn(
                     "relative size-4 transition-transform duration-300",
                     isActive
                       ? "scale-110"
-                      : "group-hover:scale-110 group-hover:text-orange-500"
+                      : "group-hover:scale-110 group-hover:text-brand"
                   )}
                 />
                 <span className="relative hidden sm:inline">{tab.label}</span>

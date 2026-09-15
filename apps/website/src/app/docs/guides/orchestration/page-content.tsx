@@ -222,28 +222,28 @@ export default function OrchestrationPageContent() {
         </p>
         <div className="flex flex-col items-center gap-2 rounded-lg border bg-muted/30 p-6">
           <div className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2">
-            <Mail className="h-4 w-4 text-blue-500" />
+            <Mail className="h-4 w-4 text-info" />
             <span className="font-medium text-sm">Send Email</span>
           </div>
           <ArrowDown className="h-4 w-4 text-muted-foreground" />
           <div className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2">
-            <GitBranch className="h-4 w-4 text-orange-500" />
+            <GitBranch className="h-4 w-4 text-brand" />
             <span className="font-medium text-sm">Opened?</span>
           </div>
           <div className="flex gap-8">
             <div className="flex flex-col items-center gap-1">
-              <span className="rounded bg-green-100 px-2 py-0.5 font-medium text-green-700 text-xs dark:bg-green-500/20 dark:text-green-400">
+              <span className="rounded bg-success/10 px-2 py-0.5 font-medium text-success text-xs">
                 Yes
               </span>
               <span className="text-muted-foreground text-xs">Stop</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="rounded bg-red-100 px-2 py-0.5 font-medium text-red-700 text-xs dark:bg-red-500/20 dark:text-red-400">
+              <span className="rounded bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-xs">
                 No
               </span>
               <ArrowDown className="h-3 w-3 text-muted-foreground" />
               <div className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2">
-                <MessageSquare className="h-4 w-4 text-green-500" />
+                <MessageSquare className="h-4 w-4 text-success" />
                 <span className="font-medium text-sm">Send SMS</span>
               </div>
             </div>

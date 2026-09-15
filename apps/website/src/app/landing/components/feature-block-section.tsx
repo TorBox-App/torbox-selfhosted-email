@@ -1,4 +1,5 @@
 import { Lock, Mail, ShieldCheck, TerminalSquare } from "lucide-react";
+import type * as React from "react";
 import { SectionKicker } from "./section-kicker";
 
 type Check = {
@@ -57,19 +58,19 @@ function StackVideo({ theme }: { theme: "light" | "dark" }) {
       autoPlay
       className={
         theme === "light"
-          ? "size-full object-cover dark:hidden"
-          : "hidden size-full object-cover dark:block"
+          ? "size-full bg-cover bg-center object-cover bg-(image:--poster) dark:hidden"
+          : "hidden size-full bg-cover bg-center object-cover bg-(image:--poster) dark:block"
       }
       loop
       muted
       playsInline
       preload="metadata"
       src={`/landing/PlatformStack${suffix}.mp4`}
-      style={{
-        backgroundImage: `url(/landing/posters/PlatformStack${suffix}.jpg)`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      style={
+        {
+          "--poster": `url(/landing/posters/PlatformStack${suffix}.jpg)`,
+        } as React.CSSProperties
+      }
     >
       <track
         kind="descriptions"
@@ -85,10 +86,10 @@ export function FeatureBlockSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 max-w-[620px]">
           <SectionKicker>The platform</SectionKicker>
-          <h2 className="font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+          <h2 className="font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
             One command stands up the whole sending stack.
           </h2>
-          <p className="mt-4 max-w-[52ch] text-[17px] text-muted-foreground leading-[1.55]">
+          <p className="mt-4 max-w-[52ch] text-lg text-muted-foreground leading-relaxed">
             Wraps deploys SES, DynamoDB, Lambda, EventBridge, and scoped IAM
             roles into your AWS account. Every event streams to tables you own —
             query them yourself, or watch them in the dashboard.
@@ -110,13 +111,13 @@ export function FeatureBlockSection() {
                 <li className="flex items-start gap-3.5" key={check.title}>
                   <Icon
                     aria-hidden="true"
-                    className="mt-0.5 size-5 shrink-0 text-orange-600 dark:text-orange-500"
+                    className="mt-0.5 size-5 shrink-0 text-brand"
                   />
                   <div>
-                    <h3 className="mb-1 font-semibold text-[15px] text-foreground">
+                    <h3 className="mb-1 font-semibold text-base text-foreground">
                       {check.title}
                     </h3>
-                    <p className="text-[13.5px] text-muted-foreground leading-[1.55] [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
+                    <p className="text-sm text-muted-foreground leading-relaxed [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
                       {check.description}
                     </p>
                   </div>

@@ -160,9 +160,9 @@ export default function SuppressionListsPageContent() {
             </CardContent>
           </Card>
         </div>
-        <div className="mt-4 rounded-lg border-l-4 border-yellow-500 bg-yellow-500/10 p-4">
+        <div className="mt-4 rounded-lg border-l-4 border-warning bg-warning/10 p-4">
           <p className="flex items-center gap-2 font-medium text-sm">
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            <AlertTriangle className="h-4 w-4 text-warning" />
             Suppressed sends still cost you
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
@@ -380,7 +380,7 @@ export default function SuppressionListsPageContent() {
             "BOUNCE removals require the user to re-confirm the address",
           ].map((item) => (
             <li className="flex items-start gap-3" key={item}>
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
               <span className="text-muted-foreground">{item}</span>
             </li>
           ))}

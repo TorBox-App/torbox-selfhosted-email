@@ -820,7 +820,7 @@ export default function InfrastructureEventsPageContent() {
                       Recipient clicked a tracked link
                     </td>
                   </tr>
-                  <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <tr className="border-b bg-destructive/10">
                     <td className="p-4 font-medium">Bounce</td>
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">
@@ -836,7 +836,7 @@ export default function InfrastructureEventsPageContent() {
                       Email could not be delivered
                     </td>
                   </tr>
-                  <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <tr className="border-b bg-destructive/10">
                     <td className="p-4 font-medium">Complaint</td>
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">
@@ -916,7 +916,7 @@ export default function InfrastructureEventsPageContent() {
                       Recipient changed subscription preferences
                     </td>
                   </tr>
-                  <tr className="bg-blue-50/50 dark:bg-blue-950/20">
+                  <tr className="bg-info/10">
                     <td className="p-4 font-medium">Inbound Email</td>
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">
@@ -1661,7 +1661,7 @@ export default function InfrastructureEventsPageContent() {
                       Suppress &mdash; mailbox does not exist
                     </td>
                   </tr>
-                  <tr className="border-b bg-blue-50/50 dark:bg-blue-950/20">
+                  <tr className="border-b bg-info/10">
                     <td className="p-4 font-medium">Permanent</td>
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">
@@ -1673,7 +1673,7 @@ export default function InfrastructureEventsPageContent() {
                       Suppressed)
                     </td>
                   </tr>
-                  <tr className="border-b bg-blue-50/50 dark:bg-blue-950/20">
+                  <tr className="border-b bg-info/10">
                     <td className="p-4 font-medium">Permanent</td>
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">

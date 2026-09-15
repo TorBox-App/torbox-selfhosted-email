@@ -321,11 +321,11 @@ export default function QuickStartPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>AWS CLI installed and configured</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     aws sts get-caller-identity
@@ -334,14 +334,14 @@ export default function QuickStartPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   User has required permissions (AdministratorAccess or custom
                   policy)
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   Run{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">

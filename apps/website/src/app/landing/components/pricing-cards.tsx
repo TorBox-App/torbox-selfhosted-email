@@ -22,14 +22,14 @@ function PricingCard({
   const isFree = plan.id === "free";
   return (
     <div
-      className={`relative flex flex-col overflow-hidden rounded-2xl border bg-background ${isFree ? "border-2 border-orange-500" : ""}`}
+      className={`relative flex flex-col overflow-hidden rounded-2xl border bg-background ${isFree ? "border-2 border-brand" : ""}`}
     >
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4">
           <div className="mb-2 flex items-center gap-2">
             <h3 className="font-bold text-lg">{plan.name}</h3>
             {isFree && (
-              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-600 text-[10px] dark:text-orange-400">
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 font-semibold text-brand text-3xs">
                 Free Forever
               </span>
             )}
@@ -49,7 +49,7 @@ function PricingCard({
         <ul className="mb-6 flex-1 space-y-2">
           {plan.features.map((feature) => (
             <li className="flex items-start gap-2" key={feature}>
-              <Check className="mt-0.5 size-3 shrink-0 text-orange-500/70" />
+              <Check className="mt-0.5 size-3 shrink-0 text-brand/70" />
               <span className="text-sm">{feature}</span>
             </li>
           ))}
@@ -58,9 +58,9 @@ function PricingCard({
         {plan.ctaLink ? (
           <Button
             asChild
-            className={`w-full cursor-pointer ${isFree ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+            className="w-full cursor-pointer"
             size="default"
-            variant={isFree ? "default" : "outline"}
+            variant={isFree ? "brand" : "outline"}
           >
             <a href={getCtaLink(plan, billingInterval)}>
               {isFree ? "Get Started Free" : plan.cta}
@@ -68,7 +68,7 @@ function PricingCard({
           </Button>
         ) : (
           <Button
-            className="w-full cursor-not-allowed opacity-60"
+            className="w-full cursor-not-allowed"
             disabled
             size="default"
             variant="outline"

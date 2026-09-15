@@ -249,7 +249,7 @@ export default function Page() {
             </div>
 
             <InfoCard icon={AlertTriangle} title="Important" type="warning">
-              <code className="rounded bg-yellow-500/20 px-1">
+              <code className="rounded bg-warning/20 px-1">
                 wraps email init
               </code>{" "}
               runs on your local machine. Replit doesn't need your AWS
@@ -355,8 +355,10 @@ export default function Page() {
               type="danger"
             >
               Replit Secrets are the right place: accessible via{" "}
-              <code className="rounded bg-red-500/10 px-1">process.env</code> in
-              your server, but never sent to the browser or committed to the
+              <code className="rounded bg-destructive/10 px-1">
+                process.env
+              </code>{" "}
+              in your server, but never sent to the browser or committed to the
               project.
             </InfoCard>
           </section>

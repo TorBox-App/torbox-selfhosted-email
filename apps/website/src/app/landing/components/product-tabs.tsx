@@ -66,7 +66,7 @@ function TemplatesContent() {
   return (
     <div className="space-y-8">
       <div className="group relative">
-        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-brand/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <Image
             alt="Template Editor - Light Mode"
@@ -91,19 +91,12 @@ function TemplatesContent() {
         <div className="flex flex-wrap justify-center gap-3">
           {templateFeatures.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-brand/50"
               key={feature.title}
             >
-              <feature.icon className="size-4 text-orange-500" />
+              <feature.icon className="size-4 text-brand" />
               <span className="font-medium text-sm">{feature.title}</span>
-              {feature.badge && (
-                <Badge
-                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                  variant="secondary"
-                >
-                  {feature.badge}
-                </Badge>
-              )}
+              {feature.badge && <Badge variant="brand">{feature.badge}</Badge>}
             </div>
           ))}
         </div>
@@ -116,7 +109,7 @@ function BroadcastsContent() {
   return (
     <div className="space-y-8">
       <div className="group relative">
-        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-brand/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <Image
             alt="Broadcasts Dashboard - Light Mode"
@@ -141,19 +134,12 @@ function BroadcastsContent() {
         <div className="flex flex-wrap justify-center gap-3">
           {broadcastFeatures.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-brand/50"
               key={feature.title}
             >
-              <feature.icon className="size-4 text-orange-500" />
+              <feature.icon className="size-4 text-brand" />
               <span className="font-medium text-sm">{feature.title}</span>
-              {feature.badge && (
-                <Badge
-                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                  variant="secondary"
-                >
-                  {feature.badge}
-                </Badge>
-              )}
+              {feature.badge && <Badge variant="brand">{feature.badge}</Badge>}
             </div>
           ))}
         </div>
@@ -166,7 +152,7 @@ function AutomationsContent() {
   return (
     <div className="space-y-8">
       <div className="group relative">
-        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-brand/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <Image
             alt="Workflow Builder - Light Mode"
@@ -191,19 +177,12 @@ function AutomationsContent() {
         <div className="flex flex-wrap justify-center gap-3">
           {automationFeatures.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-brand/50"
               key={feature.title}
             >
-              <feature.icon className="size-4 text-orange-500" />
+              <feature.icon className="size-4 text-brand" />
               <span className="font-medium text-sm">{feature.title}</span>
-              {feature.badge && (
-                <Badge
-                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                  variant="secondary"
-                >
-                  {feature.badge}
-                </Badge>
-              )}
+              {feature.badge && <Badge variant="brand">{feature.badge}</Badge>}
             </div>
           ))}
         </div>
@@ -255,12 +234,12 @@ function EventWorkflowCard({
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-background">
-      <div className="flex items-center gap-3 border-b bg-orange-500/5 px-4 py-3">
-        <div className="flex size-8 items-center justify-center rounded-full bg-orange-500">
+      <div className="flex items-center gap-3 border-b bg-brand/5 px-4 py-3">
+        <div className="flex size-8 items-center justify-center rounded-full bg-brand">
           <Zap className="size-4 text-white" />
         </div>
         <div>
-          <code className="font-mono font-semibold text-orange-500 text-sm">
+          <code className="font-mono font-semibold text-brand text-sm">
             {example.event}
           </code>
           <p className="text-muted-foreground text-xs">triggers</p>
@@ -288,52 +267,54 @@ function EventWorkflowCard({
 
 function EventCodeExample() {
   return (
-    <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border bg-zinc-950">
-      <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/50 px-4 py-2">
+    <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border bg-terminal">
+      <div className="flex items-center gap-2 border-b border-terminal-border bg-terminal-border/50 px-4 py-2">
         <div className="flex gap-1.5">
-          <div className="size-3 rounded-full bg-red-500/80" />
-          <div className="size-3 rounded-full bg-yellow-500/80" />
-          <div className="size-3 rounded-full bg-green-500/80" />
+          <div className="size-3 rounded-full bg-destructive/80" />
+          <div className="size-3 rounded-full bg-warning/80" />
+          <div className="size-3 rounded-full bg-success/80" />
         </div>
-        <span className="ml-2 font-mono text-zinc-500 text-xs">
+        <span className="ml-2 font-mono text-terminal-muted text-xs">
           your-app.ts
         </span>
       </div>
       <div className="p-4">
         <pre className="font-mono text-sm leading-relaxed">
-          <span className="text-zinc-500">
+          <span className="text-terminal-muted">
             {"// Send an event when a user upgrades"}
           </span>
           {"\n"}
-          <span className="text-purple-400">await</span>
-          <span className="text-zinc-300"> client.</span>
-          <span className="text-yellow-400">POST</span>
-          <span className="text-zinc-300">(</span>
-          <span className="text-green-400">'/v1/events/'</span>
-          <span className="text-zinc-300">, {"{"}</span>
+          <span className="text-brand">await</span>
+          <span className="text-terminal-foreground"> client.</span>
+          <span className="text-warning">POST</span>
+          <span className="text-terminal-foreground">(</span>
+          <span className="text-success">'/v1/events/'</span>
+          <span className="text-terminal-foreground">, {"{"}</span>
           {"\n"}
-          <span className="text-zinc-300">
+          <span className="text-terminal-foreground">
             {"  "}body: {"{"}
           </span>
           {"\n"}
-          <span className="text-zinc-300">{"    "}name: </span>
-          <span className="text-green-400">'plan.upgraded'</span>
-          <span className="text-zinc-300">,</span>
+          <span className="text-terminal-foreground">{"    "}name: </span>
+          <span className="text-success">'plan.upgraded'</span>
+          <span className="text-terminal-foreground">,</span>
           {"\n"}
-          <span className="text-zinc-300">{"    "}contactEmail: </span>
-          <span className="text-green-400">'jane@acme.co'</span>
-          <span className="text-zinc-300">,</span>
+          <span className="text-terminal-foreground">
+            {"    "}contactEmail:{" "}
+          </span>
+          <span className="text-success">'jane@acme.co'</span>
+          <span className="text-terminal-foreground">,</span>
           {"\n"}
-          <span className="text-zinc-300">
+          <span className="text-terminal-foreground">
             {"    "}properties: {"{"}{" "}
           </span>
-          <span className="text-zinc-300">plan: </span>
-          <span className="text-green-400">'pro'</span>
-          <span className="text-zinc-300">{" }"}</span>
+          <span className="text-terminal-foreground">plan: </span>
+          <span className="text-success">'pro'</span>
+          <span className="text-terminal-foreground">{" }"}</span>
           {"\n"}
-          <span className="text-zinc-300">{"  }"}</span>
+          <span className="text-terminal-foreground">{"  }"}</span>
           {"\n"}
-          <span className="text-zinc-300">{"})"}</span>
+          <span className="text-terminal-foreground">{"})"}</span>
         </pre>
       </div>
     </div>
@@ -360,21 +341,13 @@ function EventsContent() {
         <div className="flex flex-wrap justify-center gap-3">
           {eventFeatures.map((feature) => (
             <div
-              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-brand/50"
               key={feature.title}
             >
-              <feature.icon className="size-4 text-orange-500" />
+              <feature.icon className="size-4 text-brand" />
               <span className="font-medium text-sm">{feature.title}</span>
               {feature.badge && (
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    feature.badge === "Free"
-                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                      : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                  )}
-                  variant="secondary"
-                >
+                <Badge variant={feature.badge === "Free" ? "success" : "brand"}>
                   {feature.badge}
                 </Badge>
               )}
@@ -402,8 +375,8 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
   return (
     <div className="mb-8 flex flex-col items-center gap-4">
       <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
-        <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
+        <div className="absolute inset-0 rounded-full bg-brand/20 blur-xl" />
+        <div className="relative inline-flex gap-1 rounded-full border border-brand/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:bg-background/50">
           {tabs.map((tab, index) => {
             const isActive = activeIndex === index;
             const Icon = tab.icon;
@@ -412,28 +385,28 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
                 className={cn(
                   "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
                   isActive
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105"
-                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
+                    ? "bg-brand text-white shadow-lg shadow-brand/30 scale-105"
+                    : "text-muted-foreground hover:bg-brand/10 hover:text-foreground dark:hover:bg-brand/20"
                 )}
                 key={tab.key}
                 onClick={() => onTabClick(index)}
                 type="button"
               >
                 {isActive && (
-                  <div className="absolute inset-0 rounded-full bg-orange-500 blur-md opacity-50" />
+                  <div className="absolute inset-0 rounded-full bg-brand blur-md opacity-50" />
                 )}
                 <Icon
                   className={cn(
                     "relative size-4 transition-transform duration-300",
                     isActive
                       ? "scale-110"
-                      : "group-hover:scale-110 group-hover:text-orange-500"
+                      : "group-hover:scale-110 group-hover:text-brand"
                   )}
                 />
                 <span className="relative hidden sm:inline">{tab.label}</span>
                 {!isActive && (
                   <div
-                    className="absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
+                    className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-brand/10 to-transparent"
                     style={{ animationDelay: `${index * 0.3}s` }}
                   />
                 )}
@@ -463,7 +436,7 @@ export function ProductTabs() {
       </div>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
+        <Button asChild size="lg" variant="brand">
           <a
             href="https://app.wraps.dev/auth?mode=signup"
             onClick={() =>

@@ -141,7 +141,7 @@ export function SdkAutomationsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Event triggers</span>
@@ -155,7 +155,7 @@ export function SdkAutomationsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Wait for events</span>
@@ -169,7 +169,7 @@ export function SdkAutomationsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Conditional branching</span>
@@ -183,7 +183,7 @@ export function SdkAutomationsSection() {
               <div className="flex items-start gap-3">
                 <div
                   aria-hidden="true"
-                  className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                  className="mt-2 h-px w-3 shrink-0 bg-brand"
                 />
                 <p className="text-sm">
                   <span className="font-medium">Multi-channel</span>
@@ -197,7 +197,7 @@ export function SdkAutomationsSection() {
             </div>
 
             <a
-              className="inline-flex items-center gap-1 font-medium text-orange-500 text-sm hover:text-orange-600"
+              className="inline-flex items-center gap-1 font-medium text-brand text-sm hover:text-brand"
               href="/docs/guides/workflows"
             >
               Workflow guide

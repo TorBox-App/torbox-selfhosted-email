@@ -17,29 +17,29 @@ export function HeroTerminal() {
         Deploying to us-east-1...
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={3000}>
+      <AnimatedSpan className="text-success" delay={3000}>
         ✓ SES identity verified (acme.com)
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={3600}>
+      <AnimatedSpan className="text-success" delay={3600}>
         ✓ DKIM, SPF, DMARC configured
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={4200}>
+      <AnimatedSpan className="text-success" delay={4200}>
         ✓ Event tracking pipeline deployed
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={4800}>
+      <AnimatedSpan className="text-success" delay={4800}>
         ✓ Analytics tables created
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={5400}>
+      <AnimatedSpan className="text-success" delay={5400}>
         ✓ Bounce &amp; complaint handlers active
       </AnimatedSpan>
 
       <AnimatedSpan delay={6200}>
         <span className="text-foreground">
-          Infrastructure <strong className="text-orange-500">deployed</strong>
+          Infrastructure <strong className="text-brand">deployed</strong>
         </span>
       </AnimatedSpan>
 

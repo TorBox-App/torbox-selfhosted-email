@@ -83,14 +83,7 @@ export function LandingFooter() {
           <div className="col-span-4 max-w-2xl lg:col-span-2">
             <div className="mb-4 flex w-full items-center max-lg:justify-center">
               <a className="flex w-full cursor-pointer items-center" href="/">
-                <Logo
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    aspectRatio: "3/1",
-                    position: "relative",
-                  }}
-                />
+                <Logo className="aspect-[3/1] h-auto w-full" />
               </a>
             </div>
             <p className="mb-6 text-muted-foreground max-lg:flex max-lg:justify-center max-lg:text-center">
@@ -126,7 +119,7 @@ export function LandingFooter() {
 
           {/* Links Columns */}
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-widest">
               Product
             </h4>
             <ul className="space-y-3">
@@ -144,7 +137,7 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-widest">
               Developers
             </h4>
             <ul className="space-y-3">
@@ -162,7 +155,7 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-widest">
               Company
             </h4>
             <ul className="space-y-3">
@@ -180,7 +173,7 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-widest">
               Resources
             </h4>
             <ul className="space-y-3">
@@ -200,7 +193,7 @@ export function LandingFooter() {
           </div>
 
           <div className="max-md:col-span-2 lg:col-span-1">
-            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-[0.08em]">
+            <h4 className="mb-4 font-mono font-semibold text-foreground text-xs uppercase tracking-widest">
               Legal
             </h4>
             <ul className="space-y-3">
@@ -229,7 +222,7 @@ export function LandingFooter() {
               <span>Built with</span>
               <Heart
                 aria-hidden="true"
-                className="h-4 w-4 fill-current text-red-500"
+                className="h-4 w-4 fill-current text-destructive"
               />
               <span className="sr-only">love</span>
               <span>for developers</span>

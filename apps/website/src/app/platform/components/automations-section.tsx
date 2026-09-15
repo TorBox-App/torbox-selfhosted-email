@@ -71,10 +71,7 @@ export function DashboardAutomationsSection() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{feature.title}</span>
                       {feature.badge && (
-                        <Badge
-                          className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]"
-                          variant="secondary"
-                        >
+                        <Badge className="font-mono" variant="secondary">
                           {feature.badge}
                         </Badge>
                       )}

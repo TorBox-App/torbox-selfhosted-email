@@ -62,16 +62,16 @@ export default function AboutPage() {
 
       <main className="container mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-16 max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
             <span
               aria-hidden="true"
-              className="size-1.5 rounded-full bg-orange-500"
+              className="size-1.5 rounded-full bg-brand"
             />
             <span>wraps · about</span>
           </div>
 
           <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-            About <span className="text-orange-500">Wraps</span>
+            About <span className="text-brand">Wraps</span>
           </h1>
 
           <p className="text-lg text-muted-foreground">
@@ -118,17 +118,17 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {values.map((value) => (
               <div
-                className="rounded-xl border border-border bg-card p-6 transition-colors hover:border-orange-500/40"
+                className="rounded-xl border border-border bg-card p-6 transition-colors hover:border-brand/40"
                 key={value.title}
               >
                 <value.icon
                   aria-hidden
                   className="mb-4 size-5 text-foreground"
                 />
-                <h3 className="mb-2 text-balance font-heading font-semibold text-[15px] text-foreground">
+                <h3 className="mb-2 text-balance font-heading font-semibold text-base text-foreground">
                   {value.title}
                 </h3>
-                <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {value.description}
                 </p>
               </div>
@@ -158,10 +158,7 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              asChild
-              className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
-            >
+            <Button asChild className="cursor-pointer" variant="brand">
               <a
                 href="https://github.com/wraps-team/wraps"
                 rel="noopener noreferrer"

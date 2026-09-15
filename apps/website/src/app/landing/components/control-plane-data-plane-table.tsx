@@ -64,7 +64,7 @@ export function ControlPlaneDataPlaneTable({
             <h3 className="font-heading font-semibold text-lg">
               Control plane
             </h3>
-            <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.1em]">
+            <span className="font-mono text-2xs text-muted-foreground uppercase tracking-widest">
               Wraps-hosted
             </span>
           </div>
@@ -73,7 +73,7 @@ export function ControlPlaneDataPlaneTable({
               <li className="flex items-start gap-3" key={item}>
                 <Check
                   aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-orange-500"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
                 />
                 <span className="text-foreground text-sm">{item}</span>
               </li>
@@ -81,10 +81,10 @@ export function ControlPlaneDataPlaneTable({
           </ul>
         </div>
 
-        <div className="rounded-xl border-2 border-orange-500/30 border-dashed bg-orange-500/5 p-6">
+        <div className="rounded-xl border-2 border-brand/30 border-dashed bg-brand/5 p-6">
           <div className="mb-5 flex items-baseline justify-between gap-2">
             <h3 className="font-heading font-semibold text-lg">Data plane</h3>
-            <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.1em]">
+            <span className="font-mono text-2xs text-muted-foreground uppercase tracking-widest">
               Your AWS account
             </span>
           </div>

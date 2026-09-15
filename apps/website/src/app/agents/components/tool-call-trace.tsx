@@ -56,11 +56,11 @@ const steps: Step[] = [
 // Terminal surface is dark in both themes (matches CLI hero precedent),
 // so text colors are explicit rather than theme tokens.
 const roleColor: Record<Step["role"], string> = {
-  user: "text-zinc-400",
-  injected: "text-red-400",
-  tool: "text-orange-400",
-  result: "text-emerald-400",
-  held: "text-amber-400",
+  user: "text-terminal-muted",
+  injected: "text-destructive",
+  tool: "text-brand",
+  result: "text-success",
+  held: "text-warning",
 };
 
 function reducer(state: number) {
@@ -92,19 +92,19 @@ export function ToolCallTrace() {
   const visible = steps.slice(0, cursor);
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-      <div className="flex items-center gap-2 border-zinc-800 border-b bg-black/40 px-4 py-3">
+    <div className="relative overflow-hidden rounded-xl border border-terminal-border bg-terminal shadow-2xl">
+      <div className="flex items-center gap-2 border-terminal-border border-b bg-black/40 px-4 py-3">
         <div className="flex gap-1.5">
-          <div className="size-2.5 rounded-full bg-red-500/80" />
-          <div className="size-2.5 rounded-full bg-yellow-500/80" />
-          <div className="size-2.5 rounded-full bg-green-500/80" />
+          <div className="size-2.5 rounded-full bg-destructive/80" />
+          <div className="size-2.5 rounded-full bg-warning/80" />
+          <div className="size-2.5 rounded-full bg-success/80" />
         </div>
-        <span className="ml-2 font-mono text-[11px] text-zinc-500 tracking-tight">
+        <span className="ml-2 font-mono text-2xs text-terminal-muted tracking-tight">
           agent · tool_call trace
         </span>
       </div>
 
-      <div className="min-h-[420px] space-y-3 px-5 py-5 font-mono text-[13px] leading-relaxed">
+      <div className="min-h-[420px] space-y-3 px-5 py-5 font-mono text-sm leading-relaxed">
         <AnimatePresence initial={false}>
           {visible.map((step, i) => (
             <motion.div
@@ -116,11 +116,11 @@ export function ToolCallTrace() {
               transition={{ duration: 0.35, ease: "easeOut" }}
             >
               <span
-                className={`${roleColor[step.role]} shrink-0 text-[11px] uppercase tracking-wider`}
+                className={`${roleColor[step.role]} shrink-0 text-2xs uppercase tracking-wider`}
               >
                 {step.label}
               </span>
-              <pre className="whitespace-pre-wrap break-words text-zinc-100">
+              <pre className="whitespace-pre-wrap break-words text-terminal-foreground">
                 {step.body}
               </pre>
             </motion.div>
@@ -128,18 +128,18 @@ export function ToolCallTrace() {
           {cursor < steps.length ? (
             <motion.div
               animate={{ opacity: 1 }}
-              className="flex items-center gap-2 pl-[84px] text-xs text-zinc-500"
+              className="flex items-center gap-2 pl-21 text-terminal-muted text-xs"
               initial={{ opacity: 0 }}
               key="thinking"
             >
               <span className="inline-flex gap-1">
-                <span className="size-1.5 animate-pulse rounded-full bg-orange-500" />
+                <span className="size-1.5 animate-pulse rounded-full bg-brand" />
                 <span
-                  className="size-1.5 animate-pulse rounded-full bg-orange-500"
+                  className="size-1.5 animate-pulse rounded-full bg-brand"
                   style={{ animationDelay: "120ms" }}
                 />
                 <span
-                  className="size-1.5 animate-pulse rounded-full bg-orange-500"
+                  className="size-1.5 animate-pulse rounded-full bg-brand"
                   style={{ animationDelay: "240ms" }}
                 />
               </span>

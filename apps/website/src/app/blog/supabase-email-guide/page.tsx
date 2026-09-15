@@ -179,14 +179,14 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => {
   const styles = {
-    tip: "border-green-500/50 bg-green-500/10",
-    warning: "border-yellow-500/50 bg-yellow-500/10",
-    danger: "border-red-500/50 bg-red-500/10",
+    tip: "border-success/50 bg-success/10",
+    warning: "border-warning/50 bg-warning/10",
+    danger: "border-destructive/50 bg-destructive/10",
   };
   const iconStyles = {
-    tip: "text-green-600 dark:text-green-400",
-    warning: "text-yellow-600 dark:text-yellow-400",
-    danger: "text-red-600 dark:text-red-400",
+    tip: "text-success",
+    warning: "text-warning",
+    danger: "text-destructive",
   };
 
   return (
@@ -402,10 +402,10 @@ Sender:   noreply@yourdomain.com`}
                 <tbody className="divide-y">
                   <tr>
                     <td className="px-4 py-3">AWS SES</td>
-                    <td className="px-4 py-3 text-right font-mono text-green-500">
+                    <td className="px-4 py-3 text-right font-mono text-success">
                       $0.10
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-green-500">
+                    <td className="px-4 py-3 text-right font-mono text-success">
                       $5
                     </td>
                   </tr>
@@ -546,7 +546,7 @@ export async function POST(req: Request) {
             <Collapsible title="When to use which approach">
               <div className="space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   <span>
                     <strong className="text-foreground">
                       Edge Functions + fetch
@@ -555,7 +555,7 @@ export async function POST(req: Request) {
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   <span>
                     <strong className="text-foreground">
                       Next.js API route + SDK
@@ -565,7 +565,7 @@ export async function POST(req: Request) {
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                  <Check className="mt-0.5 h-4 w-4 text-success" />
                   <span>
                     <strong className="text-foreground">
                       Database webhooks
@@ -598,7 +598,7 @@ export async function POST(req: Request) {
 
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
                 <div>
                   <h4 className="font-medium">
                     Export users to CSV, import to Mailchimp
@@ -611,7 +611,7 @@ export async function POST(req: Request) {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
                 <div>
                   <h4 className="font-medium">
                     Sync users to a third-party via webhooks
@@ -625,7 +625,7 @@ export async function POST(req: Request) {
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-500" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
                 <div>
                   <h4 className="font-medium">
                     Build it yourself with Edge Functions
@@ -684,21 +684,21 @@ export async function POST(req: Request) {
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES" ? "text-green-500" : ""
+                          row.provider === "Wraps + SES" ? "text-success" : ""
                         }`}
                       >
                         {row.cost50k}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES" ? "text-green-500" : ""
+                          row.provider === "Wraps + SES" ? "text-success" : ""
                         }`}
                       >
                         {row.cost250k}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES" ? "text-green-500" : ""
+                          row.provider === "Wraps + SES" ? "text-success" : ""
                         }`}
                       >
                         {row.cost1m}
@@ -909,19 +909,19 @@ serve(async () => {
                   <h4 className="mb-3 font-semibold">What You Own</h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                      <Check className="mt-0.5 h-4 w-4 text-success" />
                       SES configuration and sending reputation
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                      <Check className="mt-0.5 h-4 w-4 text-success" />
                       Email event data in your DynamoDB
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                      <Check className="mt-0.5 h-4 w-4 text-success" />
                       Domain verification (DKIM, SPF, DMARC)
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                      <Check className="mt-0.5 h-4 w-4 text-success" />
                       Everything stays if you leave Wraps
                     </li>
                   </ul>

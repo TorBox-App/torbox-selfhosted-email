@@ -80,9 +80,9 @@ export function CodeBlock({ code, title, animate = false }: CodeBlockProps) {
         <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-red-500/80" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-              <div className="h-3 w-3 rounded-full bg-green-500/80" />
+              <div className="h-3 w-3 rounded-full bg-destructive/80" />
+              <div className="h-3 w-3 rounded-full bg-warning/80" />
+              <div className="h-3 w-3 rounded-full bg-success/80" />
             </div>
             <span className="ml-2 font-medium text-muted-foreground text-sm">
               {title}
@@ -94,10 +94,7 @@ export function CodeBlock({ code, title, animate = false }: CodeBlockProps) {
             type="button"
           >
             {copied ? (
-              <Check
-                className="text-emerald-600 dark:text-emerald-400"
-                size={16}
-              />
+              <Check className="text-success" size={16} />
             ) : (
               <Copy size={16} />
             )}
@@ -108,9 +105,7 @@ export function CodeBlock({ code, title, animate = false }: CodeBlockProps) {
         <code className="font-mono text-foreground/80 text-sm">
           {animate ? displayText : code}
           {animate && !isComplete && (
-            <span className="animate-pulse text-emerald-600 dark:text-emerald-400">
-              ▋
-            </span>
+            <span className="animate-pulse text-success">▋</span>
           )}
         </code>
       </pre>
@@ -218,16 +213,16 @@ export function ArchitectureDiagram() {
 
   const colorClasses = {
     emerald: {
-      bg: "bg-emerald-500/10 dark:bg-emerald-500/20",
-      border: "border-emerald-500/50",
-      text: "text-emerald-600 dark:text-emerald-400",
-      glow: "shadow-emerald-500/25",
+      bg: "bg-success/10 dark:bg-success/20",
+      border: "border-success/50",
+      text: "text-success",
+      glow: "shadow-success/25",
     },
     blue: {
-      bg: "bg-blue-500/10 dark:bg-blue-500/20",
-      border: "border-blue-500/50",
-      text: "text-blue-600 dark:text-blue-400",
-      glow: "shadow-blue-500/25",
+      bg: "bg-info/10 dark:bg-info/20",
+      border: "border-info/50",
+      text: "text-info",
+      glow: "shadow-info/25",
     },
     purple: {
       bg: "bg-purple-500/10 dark:bg-purple-500/20",
@@ -236,10 +231,10 @@ export function ArchitectureDiagram() {
       glow: "shadow-purple-500/25",
     },
     orange: {
-      bg: "bg-orange-500/10 dark:bg-orange-500/20",
-      border: "border-orange-500/50",
-      text: "text-orange-600 dark:text-orange-400",
-      glow: "shadow-orange-500/25",
+      bg: "bg-brand/10",
+      border: "border-brand/50",
+      text: "text-brand",
+      glow: "shadow-brand/25",
     },
     pink: {
       bg: "bg-pink-500/10 dark:bg-pink-500/20",
@@ -318,7 +313,7 @@ export function ArchitectureDiagram() {
                   <ArrowRight
                     className={`transition-colors duration-300 ${
                       index < activeStep
-                        ? "text-emerald-600 dark:text-emerald-500"
+                        ? "text-success"
                         : "text-muted-foreground/50"
                     }`}
                     size={20}
@@ -382,10 +377,10 @@ export function ComparisonTable() {
             <th className="px-6 py-4 text-left font-semibold text-foreground/80 text-sm">
               Task
             </th>
-            <th className="px-6 py-4 text-left font-semibold text-red-600 dark:text-red-400 text-sm">
+            <th className="px-6 py-4 text-left font-semibold text-destructive text-sm">
               Manual SES
             </th>
-            <th className="px-6 py-4 text-left font-semibold text-emerald-600 dark:text-emerald-400 text-sm">
+            <th className="px-6 py-4 text-left font-semibold text-success text-sm">
               With Wraps
             </th>
           </tr>
@@ -408,11 +403,9 @@ export function ComparisonTable() {
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 text-sm">
-                    {row.wraps}
-                  </span>
+                  <span className="text-success text-sm">{row.wraps}</span>
                   {hoveredRow === index && (
-                    <span className="animate-fade-in rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 text-emerald-600 dark:text-emerald-400 text-xs">
+                    <span className="animate-fade-in rounded-full bg-success/10 dark:bg-success/20 px-2 py-0.5 text-success text-xs">
                       {row.savings} less work
                     </span>
                   )}
@@ -474,7 +467,7 @@ export function PresetCards() {
         <button
           className={`relative rounded-2xl p-6 text-left transition-all duration-300 ${
             selected === preset.id
-              ? "border-2 border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-lg shadow-emerald-500/10"
+              ? "border-2 border-success/50 bg-success/5 dark:bg-success/10 shadow-lg shadow-success/10"
               : "border-2 border-border bg-muted/30 hover:border-muted-foreground/30"
           }`}
           key={preset.id}
@@ -484,7 +477,7 @@ export function PresetCards() {
           <h4 className="font-semibold text-foreground text-lg">
             {preset.name}
           </h4>
-          <p className="mt-1 font-bold text-2xl text-emerald-600 dark:text-emerald-400">
+          <p className="mt-1 font-bold text-2xl text-success">
             {preset.cost}
             <span className="font-normal text-muted-foreground text-sm">
               /mo
@@ -499,10 +492,7 @@ export function PresetCards() {
                 className="flex items-center gap-2 text-foreground/80 text-sm"
                 key={feature}
               >
-                <Check
-                  className="text-emerald-600 dark:text-emerald-500"
-                  size={14}
-                />
+                <Check className="text-success" size={14} />
                 {feature}
               </li>
             ))}
@@ -559,9 +549,9 @@ export function CLIDemo() {
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-red-500/80" />
-            <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-            <div className="h-3 w-3 rounded-full bg-green-500/80" />
+            <div className="h-3 w-3 rounded-full bg-destructive/80" />
+            <div className="h-3 w-3 rounded-full bg-warning/80" />
+            <div className="h-3 w-3 rounded-full bg-success/80" />
           </div>
           <span className="ml-2 font-medium text-muted-foreground text-sm">
             Terminal
@@ -571,7 +561,7 @@ export function CLIDemo() {
           className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium text-sm transition-all ${
             isRunning
               ? "cursor-not-allowed bg-muted text-muted-foreground"
-              : "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/30"
+              : "bg-success/10 dark:bg-success/20 text-success hover:bg-success/20 dark:hover:bg-success/30"
           }`}
           disabled={isRunning}
           onClick={runDemo}
@@ -585,7 +575,7 @@ export function CLIDemo() {
       <div className="min-h-[300px] p-4 font-mono text-sm">
         {step >= 0 && steps[0].command && (
           <div className="mb-2 flex items-center gap-2 text-foreground/80">
-            <span className="text-emerald-600 dark:text-emerald-400">$</span>
+            <span className="text-success">$</span>
             <span>{steps[0].command}</span>
           </div>
         )}
@@ -599,11 +589,7 @@ export function CLIDemo() {
           </div>
         ))}
 
-        {isRunning && (
-          <span className="animate-pulse text-emerald-600 dark:text-emerald-400">
-            ▋
-          </span>
-        )}
+        {isRunning && <span className="animate-pulse text-success">▋</span>}
       </div>
     </div>
   );
@@ -665,7 +651,7 @@ await wraps.track('order.completed', {
           <button
             className={`relative px-4 py-3 font-medium text-sm transition-colors ${
               activeTab === key
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-success"
                 : "text-muted-foreground hover:text-foreground/80"
             }`}
             key={key}
@@ -674,7 +660,7 @@ await wraps.track('order.completed', {
           >
             {label}
             {activeTab === key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-success" />
             )}
           </button>
         ))}

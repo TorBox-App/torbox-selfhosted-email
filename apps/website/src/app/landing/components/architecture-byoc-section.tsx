@@ -32,7 +32,7 @@ export function ArchitectureByocSection() {
 
         <div className="mt-6">
           <Link
-            className="font-medium text-orange-500 text-sm hover:text-orange-600 hover:underline"
+            className="font-medium text-brand text-sm hover:text-brand hover:underline"
             href="/byoc"
           >
             How our BYOC model works →

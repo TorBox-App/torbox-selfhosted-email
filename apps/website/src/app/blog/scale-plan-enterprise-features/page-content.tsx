@@ -22,7 +22,7 @@ export function ScalePlanContent() {
     <main className="mx-auto max-w-4xl space-y-20 px-6 py-16">
       {/* Update note — this post describes the pre-2026-08 ladder. Do not
           rewrite the body; the plan names and prices below are historical. */}
-      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm">
+      <div className="rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm">
         <p className="text-foreground/90">
           <strong>Updated 2026-08:</strong> the Scale plan described in this
           post is now called Business. Existing Scale subscriptions keep their
@@ -52,39 +52,39 @@ export function ScalePlanContent() {
       {/* What you get on Scale */}
       <section>
         <h2 className="mb-8 flex items-center gap-3 font-bold text-3xl">
-          <Zap className="text-orange-500" />
+          <Zap className="text-brand" />
           What Scale unlocks
         </h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {[
             {
-              icon: <Key className="text-orange-500" size={18} />,
+              icon: <Key className="text-brand" size={18} />,
               title: "SSO + SCIM provisioning",
               desc: "Connect any SAML 2.0 or OIDC IdP. SCIM syncs user provisioning and deprovisioning automatically.",
             },
             {
-              icon: <TrendingUp className="text-orange-500" size={18} />,
+              icon: <TrendingUp className="text-brand" size={18} />,
               title: "Behavioral segments",
               desc: "Segment users by events they've fired, not just properties they have. \"Users who opened 3+ emails but haven't converted\" is a behavioral segment.",
             },
             {
-              icon: <Server className="text-orange-500" size={18} />,
+              icon: <Server className="text-brand" size={18} />,
               title: "Unlimited AWS accounts",
               desc: "Growth caps at 3 accounts. Scale removes the limit. Connect staging, prod, and every regional account.",
             },
             {
-              icon: <Database className="text-orange-500" size={18} />,
+              icon: <Database className="text-brand" size={18} />,
               title: "1-year event history",
               desc: "Events, deliveries, and segment memberships retained for 365 days. Growth keeps 90, Starter keeps 30.",
             },
             {
-              icon: <Sparkles className="text-orange-500" size={18} />,
+              icon: <Sparkles className="text-brand" size={18} />,
               title: "1,000 AI generations/month",
               desc: "Template generation, workflow generation, subject line suggestions — 1K per month vs. 250 on Growth.",
             },
             {
-              icon: <Shield className="text-orange-500" size={18} />,
+              icon: <Shield className="text-brand" size={18} />,
               title: "Priority support + SLA",
               desc: "Named SLA, not just priority queue. Response time commitments in writing.",
             },
@@ -105,7 +105,7 @@ export function ScalePlanContent() {
       {/* SSO + SCIM */}
       <section>
         <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-          <Lock className="text-orange-500" />
+          <Lock className="text-brand" />
           SSO + SCIM provisioning
         </h2>
 
@@ -131,7 +131,7 @@ export function ScalePlanContent() {
                 className="flex items-start gap-3 text-foreground/80 text-sm"
                 key={item}
               >
-                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-orange-500" />
+                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand" />
                 {item}
               </li>
             ))}
@@ -140,7 +140,7 @@ export function ScalePlanContent() {
 
         <p className="mb-6 text-foreground/80 leading-relaxed">
           The SSO settings live at{" "}
-          <span className="font-mono text-orange-500 text-sm">
+          <span className="font-mono text-brand text-sm">
             app.wraps.dev → Settings → SSO
           </span>
           . You paste your metadata URL, we detect the provider, and you're
@@ -205,20 +205,16 @@ export function ScalePlanContent() {
       {/* Behavioral Segments */}
       <section>
         <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-          <TrendingUp className="text-orange-500" />
+          <TrendingUp className="text-brand" />
           Behavioral segments
         </h2>
 
         <p className="mb-6 text-foreground/80 text-lg leading-relaxed">
           Property-based segments are available from Starter. You can target
           users where{" "}
-          <span className="font-mono text-orange-500 text-sm">
-            plan === "paid"
-          </span>{" "}
+          <span className="font-mono text-brand text-sm">plan === "paid"</span>{" "}
           or{" "}
-          <span className="font-mono text-orange-500 text-sm">
-            country === "US"
-          </span>
+          <span className="font-mono text-brand text-sm">country === "US"</span>
           . That covers most cases.
         </p>
 
@@ -274,7 +270,7 @@ export function ScalePlanContent() {
       {/* Unlimited AWS accounts */}
       <section>
         <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-          <Building2 className="text-orange-500" />
+          <Building2 className="text-brand" />
           Unlimited AWS accounts
         </h2>
 
@@ -306,13 +302,13 @@ export function ScalePlanContent() {
             },
           ].map((row) => (
             <Card
-              className={`p-5 ${row.highlight ? "border-orange-500/50 bg-orange-500/5" : ""}`}
+              className={`p-5 ${row.highlight ? "border-brand/50 bg-brand/5" : ""}`}
               key={row.tier}
             >
               <p className="font-semibold text-foreground">{row.tier}</p>
               <p className="text-muted-foreground text-sm">{row.price}</p>
               <p
-                className={`mt-2 font-bold text-2xl ${row.highlight ? "text-orange-500" : "text-foreground"}`}
+                className={`mt-2 font-bold text-2xl ${row.highlight ? "text-brand" : "text-foreground"}`}
               >
                 {row.accounts}
               </p>
@@ -324,7 +320,7 @@ export function ScalePlanContent() {
       {/* Volume limits */}
       <section>
         <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-          <Database className="text-orange-500" />
+          <Database className="text-brand" />
           Scale-grade limits
         </h2>
 
@@ -342,7 +338,7 @@ export function ScalePlanContent() {
                 <th className="px-4 py-3 text-left font-semibold text-foreground">
                   Growth ($79/mo)
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-orange-500">
+                <th className="px-4 py-3 text-left font-semibold text-brand">
                   Scale ($199/mo)
                 </th>
               </tr>
@@ -392,7 +388,7 @@ export function ScalePlanContent() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {row.growth}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-orange-500">
+                  <td className="px-4 py-3 font-semibold text-brand">
                     {row.scale}
                   </td>
                 </tr>
@@ -411,7 +407,7 @@ export function ScalePlanContent() {
       {/* What's coming */}
       <section>
         <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-          <Clock className="text-orange-500" />
+          <Clock className="text-brand" />
           What's coming to Scale
         </h2>
 
@@ -423,15 +419,13 @@ export function ScalePlanContent() {
         <div className="space-y-4">
           <Card className="p-6">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-                <Shield className="text-orange-500" size={16} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10">
+                <Shield className="text-brand" size={16} />
               </div>
               <h3 className="font-semibold text-foreground text-lg">
                 Audit trail
               </h3>
-              <Badge className="text-xs" variant="outline">
-                Coming soon
-              </Badge>
+              <Badge variant="outline">Coming soon</Badge>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               A tamper-evident log of every action taken in your Wraps
@@ -445,15 +439,13 @@ export function ScalePlanContent() {
 
           <Card className="p-6">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-                <Database className="text-orange-500" size={16} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10">
+                <Database className="text-brand" size={16} />
               </div>
               <h3 className="font-semibold text-foreground text-lg">
                 Custom data retention
               </h3>
-              <Badge className="text-xs" variant="outline">
-                Coming soon
-              </Badge>
+              <Badge variant="outline">Coming soon</Badge>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               Scale today includes a fixed 365-day retention window. Custom
@@ -520,7 +512,7 @@ export function ScalePlanContent() {
 
       {/* CTA */}
       <section className="relative">
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 blur-xl" />
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-brand/10 to-warning/10 blur-xl" />
         <Card className="relative p-8 text-center md:p-12">
           <h2 className="mb-4 font-bold text-3xl md:text-4xl">
             Ready to scale?
@@ -532,7 +524,7 @@ export function ScalePlanContent() {
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-400"
+              className="flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white transition-colors hover:bg-brand"
               href="https://app.wraps.dev/auth?mode=signup&plan=scale"
             >
               Subscribe to Scale

@@ -169,7 +169,7 @@ export default function ComparePage() {
           <div className="mb-16 grid gap-4">
             {comparisons.map((c) => (
               <Link href={c.href} key={c.href}>
-                <Card className="transition-colors hover:border-orange-500/50">
+                <Card className="transition-colors hover:border-brand/50">
                   <CardContent className="flex items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-3">

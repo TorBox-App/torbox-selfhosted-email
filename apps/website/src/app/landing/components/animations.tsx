@@ -285,7 +285,7 @@ export const GradientDivider = memo(function GradientDivider({
   return (
     <motion.div
       animate={animate}
-      className={`h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent ${className}`}
+      className={`h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent ${className}`}
       initial={{ scaleX: 0, opacity: 0 }}
       ref={ref}
       transition={transition}

@@ -517,9 +517,7 @@ export default function SendGridVsWrapsPage() {
               </Card>
               <Card className="border-primary/30">
                 <CardHeader>
-                  <CardTitle className="text-primary">
-                    Wraps: Your AWS Account
-                  </CardTitle>
+                  <CardTitle>Wraps: Your AWS Account</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
@@ -615,11 +613,11 @@ export default function SendGridVsWrapsPage() {
                         </td>
                         <td className="p-4">
                           {row.savings ? (
-                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                            <span className="font-mono text-2xs text-brand uppercase tracking-widest">
                               {row.savings}
                             </span>
                           ) : (
-                            <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-[0.08em]">
+                            <span className="font-mono text-2xs text-muted-foreground/60 uppercase tracking-widest">
                               Comparable
                             </span>
                           )}
@@ -784,7 +782,7 @@ export default function SendGridVsWrapsPage() {
                     "You value transparency. You can see exactly what infrastructure runs, audit the open-source code, and pay AWS directly.",
                   ].map((point) => (
                     <li className="flex items-start gap-3" key={point}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span className="text-sm">{point}</span>
                     </li>
                   ))}
@@ -828,7 +826,7 @@ export default function SendGridVsWrapsPage() {
               <h3 className="font-medium">Migration advantages with Wraps</h3>
               <ul className="space-y-2 text-muted-foreground text-sm">
                 <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                  <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
                     <strong>No IP warmup needed.</strong> SES reputation is
                     domain-based. If you already have SES sending history, you
@@ -836,7 +834,7 @@ export default function SendGridVsWrapsPage() {
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                  <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
                     <strong>No DNS vendor dependency.</strong> Domain
                     verification is done in SES (your account). No third-party
@@ -844,14 +842,14 @@ export default function SendGridVsWrapsPage() {
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                  <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
                     <strong>Suppression list import.</strong> Export your
                     SendGrid suppression CSV and import it into Wraps.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 size-5 shrink-0 text-green-500" />
+                  <Check className="mt-0.5 size-5 shrink-0 text-success" />
                   <span>
                     <strong>Deploy in ~2 minutes.</strong> Run{" "}
                     <code className="rounded bg-muted px-1">

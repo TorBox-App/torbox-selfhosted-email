@@ -222,7 +222,7 @@ export default function WebhooksPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   Wraps email infrastructure deployed (
                   <code className="rounded bg-muted px-1.5 py-0.5">
@@ -232,7 +232,7 @@ export default function WebhooksPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   Event tracking enabled (Production preset or higher, or
                   manually via{" "}
@@ -243,7 +243,7 @@ export default function WebhooksPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                 <span>An HTTPS endpoint ready to receive POST requests</span>
               </li>
             </ul>
@@ -513,7 +513,7 @@ export default function WebhooksPageContent() {
         </p>
         <ul className="mb-6 space-y-2 text-muted-foreground">
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             Read the{" "}
             <code className="rounded bg-muted px-1.5 py-0.5">
               X-Wraps-Signature
@@ -521,11 +521,11 @@ export default function WebhooksPageContent() {
             header from the incoming request
           </li>
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             Compare it against the secret stored in your environment variables
           </li>
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             Use constant-time comparison to prevent timing attacks
           </li>
         </ul>
@@ -695,9 +695,9 @@ export default function WebhooksPageContent() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div>
               <p className="font-medium text-sm">
                 Regenerating invalidates immediately

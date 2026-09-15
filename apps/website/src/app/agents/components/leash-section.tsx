@@ -9,7 +9,7 @@ const checks = [
     step: "01",
     title: "Kill switch",
     outcome: "blocked",
-    tone: "text-red-700 dark:text-red-400",
+    tone: "text-destructive",
     description:
       "A killed agent stops sending as soon as the kill syncs to your enforcer, and killing is permanent. No IAM console, no key rotation, one click.",
   },
@@ -18,7 +18,7 @@ const checks = [
     step: "02",
     title: "Sender pin",
     outcome: "blocked",
-    tone: "text-red-700 dark:text-red-400",
+    tone: "text-destructive",
     description:
       "An agent can only send as its own address. It cannot borrow billing@ or ceo@, even though the enforcer itself holds broader SES permission.",
   },
@@ -27,7 +27,7 @@ const checks = [
     step: "03",
     title: "Recipient allowlist",
     outcome: "pending_approval",
-    tone: "text-amber-700 dark:text-amber-400",
+    tone: "text-warning",
     description:
       "A send to someone off the list isn't rejected, it's queued. The agent keeps working; the decision moves to you.",
   },
@@ -36,7 +36,7 @@ const checks = [
     step: "04",
     title: "Hourly and daily caps",
     outcome: "pending_approval",
-    tone: "text-amber-700 dark:text-amber-400",
+    tone: "text-warning",
     description:
       "New agents start at 20 sends an hour and 100 a day. Past the cap, sends queue instead of going out. A runaway loop becomes a full inbox, not an incident.",
   },
@@ -64,7 +64,7 @@ export function AgentsLeashSection() {
               <Card key={check.step}>
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <Icon className="mt-0.5 size-5 shrink-0 text-orange-500" />
+                    <Icon className="mt-0.5 size-5 shrink-0 text-brand" />
                     <div>
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-mono text-muted-foreground text-xs">
@@ -91,7 +91,7 @@ export function AgentsLeashSection() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-start gap-3">
-              <Inbox className="mt-0.5 size-4 shrink-0 text-orange-500" />
+              <Inbox className="mt-0.5 size-4 shrink-0 text-brand" />
               <div>
                 <p className="font-medium">
                   Flagged sends wait in an approval queue.
@@ -108,7 +108,7 @@ export function AgentsLeashSection() {
 
           <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-start gap-3">
-              <Fingerprint className="mt-0.5 size-4 shrink-0 text-orange-500" />
+              <Fingerprint className="mt-0.5 size-4 shrink-0 text-brand" />
               <div>
                 <p className="font-medium">
                   An agent can't lie about which agent it is.

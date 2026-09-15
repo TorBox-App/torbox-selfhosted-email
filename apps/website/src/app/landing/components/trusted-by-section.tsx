@@ -1,9 +1,11 @@
 "use client";
 
+import type * as React from "react";
+
 function GridPattern() {
   return (
     <svg
-      className="absolute inset-0 size-full opacity-[0.04] dark:opacity-[0.03]"
+      className="absolute inset-0 size-full opacity-4 dark:opacity-3"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
@@ -32,10 +34,7 @@ function DotGrid() {
 
   return (
     <div className="absolute -right-4 -top-4">
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-      >
+      <div className="grid grid-cols-12 gap-3">
         {Array.from({ length: rows * cols }).map((_, i) => {
           const row = Math.floor(i / cols);
           const col = i % cols;
@@ -50,9 +49,9 @@ function DotGrid() {
 
           return (
             <div
-              className="size-1 rounded-full bg-orange-500 dark:bg-orange-400"
+              className="size-1 rounded-full bg-brand opacity-(--dot-opacity)"
               key={i}
-              style={{ opacity: opacity * 0.5 }}
+              style={{ "--dot-opacity": opacity * 0.5 } as React.CSSProperties}
             />
           );
         })}
@@ -72,7 +71,7 @@ export function TrustedBySection() {
 
       {/* <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-8 text-center sm:mb-10">
-          <p className="mb-2 font-medium text-orange-500 text-sm">Built On</p>
+          <p className="mb-2 font-medium text-brand text-sm">Built On</p>
           <h2 className="font-bold text-xl text-foreground sm:text-2xl">
             Battle-tested infrastructure
           </h2>

@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import type * as React from "react";
 import { useEffect, useState } from "react";
 
 // ============================================================================
@@ -170,14 +171,14 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => {
   const styles = {
-    tip: "border-green-500/50 bg-green-500/10",
-    warning: "border-yellow-500/50 bg-yellow-500/10",
-    danger: "border-red-500/50 bg-red-500/10",
+    tip: "border-success/50 bg-success/10",
+    warning: "border-warning/50 bg-warning/10",
+    danger: "border-destructive/50 bg-destructive/10",
   };
   const iconStyles = {
-    tip: "text-green-600 dark:text-green-400",
-    warning: "text-yellow-600 dark:text-yellow-400",
-    danger: "text-red-600 dark:text-red-400",
+    tip: "text-success",
+    warning: "text-warning",
+    danger: "text-destructive",
   };
 
   return (
@@ -215,7 +216,7 @@ const CodeBlock = ({
         <button
           className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors ${
             copied
-              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+              ? "bg-success/20 text-success"
               : "bg-muted text-muted-foreground hover:text-foreground"
           }`}
           onClick={handleCopy}
@@ -296,7 +297,7 @@ const ChecklistGroup = ({
         <span
           className={`rounded px-2 py-0.5 font-mono text-xs ${
             isComplete
-              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+              ? "bg-success/20 text-success"
               : "bg-muted text-muted-foreground"
           }`}
         >
@@ -318,7 +319,7 @@ const ChecklistGroup = ({
               <div
                 className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors ${
                   checkedItems.includes(item.id)
-                    ? "border-green-500 bg-green-500 text-white"
+                    ? "border-success bg-success text-white"
                     : "border-muted-foreground"
                 }`}
               >
@@ -336,12 +337,12 @@ const ChecklistGroup = ({
                   {item.description}
                 </div>
                 {item.required && (
-                  <span className="mt-1 inline-block rounded bg-red-500/20 px-2 py-0.5 font-mono text-red-600 text-xs dark:text-red-400">
+                  <span className="mt-1 inline-block rounded bg-destructive/20 px-2 py-0.5 font-mono text-destructive text-xs dark:text-destructive">
                     Required
                   </span>
                 )}
                 {item.recommended && (
-                  <span className="mt-1 inline-block rounded bg-blue-500/20 px-2 py-0.5 font-mono text-blue-600 text-xs dark:text-blue-400">
+                  <span className="mt-1 inline-block rounded bg-info/20 px-2 py-0.5 font-mono text-info text-xs dark:text-info">
                     Recommended
                   </span>
                 )}
@@ -412,10 +413,10 @@ const DecisionFlowDiagram = () => (
 
     <div className="grid gap-4 md:grid-cols-2">
       <div>
-        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+        <div className="mb-2 text-center font-mono text-success text-sm dark:text-success">
           YES
         </div>
-        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+        <div className="rounded-xl border border-info/50 bg-info/5 p-4">
           <div className="font-semibold">Check custom MAIL FROM</div>
           <div className="text-muted-foreground text-sm">
             Verify SPF record is published
@@ -423,10 +424,10 @@ const DecisionFlowDiagram = () => (
         </div>
       </div>
       <div>
-        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+        <div className="mb-2 text-center font-mono text-destructive text-sm dark:text-destructive">
           NO
         </div>
-        <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+        <div className="rounded-xl border border-warning/50 bg-warning/5 p-4">
           <div className="font-semibold">Stop — Complete DNS setup first</div>
           <div className="text-muted-foreground text-sm">
             Requests without DKIM are almost always denied
@@ -450,10 +451,10 @@ const DecisionFlowDiagram = () => (
 
     <div className="grid gap-4 md:grid-cols-2">
       <div>
-        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+        <div className="mb-2 text-center font-mono text-success text-sm dark:text-success">
           YES
         </div>
-        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+        <div className="rounded-xl border border-info/50 bg-info/5 p-4">
           <div className="font-semibold">Write detailed request</div>
           <div className="text-muted-foreground text-sm">
             Target ~1000 words with specific details
@@ -461,10 +462,10 @@ const DecisionFlowDiagram = () => (
         </div>
       </div>
       <div>
-        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+        <div className="mb-2 text-center font-mono text-destructive text-sm dark:text-destructive">
           NO
         </div>
-        <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+        <div className="rounded-xl border border-warning/50 bg-warning/5 p-4">
           <div className="font-semibold">Configure SNS topics</div>
           <div className="text-muted-foreground text-sm">
             Required for bounce/complaint handling proof
@@ -477,7 +478,7 @@ const DecisionFlowDiagram = () => (
       <ArrowDown className="h-5 w-5 text-muted-foreground" />
     </div>
 
-    <div className="rounded-xl border border-green-500/50 bg-green-500/5 p-4">
+    <div className="rounded-xl border border-success/50 bg-success/5 p-4">
       <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
         Ready
       </div>
@@ -684,7 +685,7 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           <button
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
               copied
-                ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                ? "bg-success/20 text-success"
                 : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
             onClick={handleCopy}
@@ -720,7 +721,7 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           <span
             className={`pointer-events-none absolute top-2 right-2 flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs transition-opacity ${
               copied
-                ? "bg-green-500/20 text-green-600 opacity-100 dark:text-green-400"
+                ? "bg-success/20 text-success opacity-100 dark:text-success"
                 : "bg-background/90 text-muted-foreground opacity-0 group-hover:opacity-100"
             }`}
           >
@@ -736,7 +737,7 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           </span>
         </div>
         <div
-          className={`mt-3 flex items-center gap-2 font-mono text-sm ${wordCount >= 400 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
+          className={`mt-3 flex items-center gap-2 font-mono text-sm ${wordCount >= 400 ? "text-success" : "text-warning"}`}
         >
           <FileText className="h-4 w-4" />
           {wordCount} words{" "}
@@ -750,7 +751,7 @@ We are committed to maintaining excellent deliverability and sender reputation. 
 // Denial Recovery Flow
 const DenialRecoveryFlow = () => (
   <div className="my-8 space-y-4">
-    <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+    <div className="rounded-xl border border-warning/50 bg-warning/5 p-4">
       <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
         Status
       </div>
@@ -773,10 +774,10 @@ const DenialRecoveryFlow = () => (
 
     <div className="grid gap-4 md:grid-cols-2">
       <div>
-        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+        <div className="mb-2 text-center font-mono text-success text-sm dark:text-success">
           YES — First denial
         </div>
-        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+        <div className="rounded-xl border border-info/50 bg-info/5 p-4">
           <div className="font-semibold">Resubmit with more detail</div>
           <div className="text-muted-foreground text-sm">
             Expand your request to ~1000 words. Add specifics about your tech
@@ -785,10 +786,10 @@ const DenialRecoveryFlow = () => (
         </div>
       </div>
       <div>
-        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+        <div className="mb-2 text-center font-mono text-destructive text-sm dark:text-destructive">
           Multiple denials
         </div>
-        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+        <div className="rounded-xl border border-info/50 bg-info/5 p-4">
           <div className="font-semibold">Request escalation</div>
           <div className="text-muted-foreground text-sm">
             Ask for "secondary review" or "escalation to senior reviewer" in
@@ -802,7 +803,7 @@ const DenialRecoveryFlow = () => (
       <ArrowDown className="h-5 w-5 text-muted-foreground" />
     </div>
 
-    <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+    <div className="rounded-xl border border-info/50 bg-info/5 p-4">
       <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
         Action
       </div>
@@ -829,18 +830,18 @@ const ProgressHeader = ({
     <div className="container mx-auto flex items-center gap-4 px-4">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-primary/80 via-primary to-primary/80 transition-all duration-500"
-          style={{ width: `${progress}%` }}
+          className="h-full w-(--progress) rounded-full bg-gradient-to-r from-primary/80 via-primary to-primary/80 transition-all duration-500"
+          style={{ "--progress": `${progress}%` } as React.CSSProperties}
         />
       </div>
       <div className="font-mono text-primary text-sm">{progress}%</div>
       <div
         className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-sm ${
           approval.level === "high"
-            ? "bg-green-500/20 text-green-600 dark:text-green-400"
+            ? "bg-success/20 text-success"
             : approval.level === "medium"
-              ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-              : "bg-red-500/20 text-red-600 dark:text-red-400"
+              ? "bg-warning/20 text-warning"
+              : "bg-destructive/20 text-destructive"
         }`}
       >
         {approval.level === "high" && <CheckCircle className="h-4 w-4" />}

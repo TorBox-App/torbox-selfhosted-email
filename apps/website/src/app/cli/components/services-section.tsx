@@ -102,7 +102,7 @@ export function CliServicesSection() {
                       {service.name}
                     </h3>
                     {service.status === "beta" && (
-                      <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+                      <span className="rounded-full border border-border px-2 py-0.5 font-mono text-3xs text-muted-foreground uppercase tracking-eyebrow">
                         Beta
                       </span>
                     )}
@@ -116,7 +116,6 @@ export function CliServicesSection() {
                       {service.command}
                     </code>
                     <CopyButton
-                      className="text-muted-foreground hover:text-foreground"
                       content={service.command}
                       size="sm"
                       variant="ghost"
@@ -126,7 +125,7 @@ export function CliServicesSection() {
 
                 {/* Features */}
                 <div className="p-6">
-                  <p className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]">
+                  <p className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-widest">
                     What gets deployed
                   </p>
                   <ul className="space-y-2">
@@ -143,7 +142,7 @@ export function CliServicesSection() {
 
                   {service.consoleFeature && (
                     <>
-                      <p className="mt-6 mb-3 font-mono text-muted-foreground text-xs uppercase tracking-[0.08em]">
+                      <p className="mt-6 mb-3 font-mono text-muted-foreground text-xs uppercase tracking-widest">
                         In the local console
                       </p>
                       <ul className="space-y-2">

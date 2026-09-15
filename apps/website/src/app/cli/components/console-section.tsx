@@ -26,9 +26,9 @@ export function CliConsoleSection() {
             {/* Simple browser chrome */}
             <div className="flex items-center gap-2 border-border border-b bg-muted/40 px-4 py-3">
               <div className="flex gap-1.5">
-                <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                <div className="size-3 rounded-full bg-muted-foreground/40" />
+                <div className="size-3 rounded-full bg-muted-foreground/40" />
+                <div className="size-3 rounded-full bg-muted-foreground/40" />
               </div>
               <span className="ml-2 font-mono text-muted-foreground text-xs">
                 localhost:5555

@@ -70,7 +70,7 @@ export function BillingToggle({
 
       {/* Savings note */}
       {!compact && (
-        <p className="text-center text-green-600 text-xs font-medium dark:text-green-400">
+        <p className="text-center text-success text-xs font-medium dark:text-success">
           Save with annual billing
         </p>
       )}

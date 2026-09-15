@@ -107,9 +107,7 @@ const comparisonFeatures = [
 ];
 
 // Premium background class - use this on all premium sections
-// Light mode: warm neutral stone tint
-// Dark mode: slightly lighter than base (white overlay)
-export const premiumBgClass = "bg-stone-100/50 dark:bg-white/[0.06]";
+export const premiumBgClass = "bg-muted";
 
 // Terminal-style transition between sections
 function TerminalTransition() {
@@ -122,18 +120,18 @@ function TerminalTransition() {
         {/* Terminal window */}
         <motion.div
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0a0a0a] shadow-2xl"
+          className="overflow-hidden rounded-lg border border-terminal-border bg-terminal shadow-2xl"
           initial={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.5 }}
         >
           {/* Terminal header */}
-          <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/50 px-4 py-2">
+          <div className="flex items-center gap-2 border-b border-terminal-border bg-terminal-border/50 px-4 py-2">
             <div className="flex gap-1.5">
-              <div className="size-3 rounded-full bg-red-500/80" />
-              <div className="size-3 rounded-full bg-yellow-500/80" />
-              <div className="size-3 rounded-full bg-green-500/80" />
+              <div className="size-3 rounded-full bg-destructive/80" />
+              <div className="size-3 rounded-full bg-warning/80" />
+              <div className="size-3 rounded-full bg-success/80" />
             </div>
-            <span className="ml-2 font-mono text-zinc-500 text-xs">
+            <span className="ml-2 font-mono text-terminal-muted text-xs">
               ~/wraps
             </span>
           </div>
@@ -145,13 +143,13 @@ function TerminalTransition() {
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 0.3 }}
             >
-              <span className="text-green-500">$</span>
-              <span className="text-zinc-300"> wraps platform</span>
+              <span className="text-success">$</span>
+              <span className="text-terminal-foreground"> wraps platform</span>
             </motion.div>
 
             <motion.div
               animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="mt-2 text-zinc-500"
+              className="mt-2 text-terminal-muted"
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 0.6 }}
             >
@@ -160,7 +158,7 @@ function TerminalTransition() {
 
             <motion.div
               animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="text-zinc-500"
+              className="text-terminal-muted"
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 0.8 }}
             >
@@ -169,7 +167,7 @@ function TerminalTransition() {
 
             <motion.div
               animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="mt-2 text-orange-500"
+              className="mt-2 text-brand"
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 1.0 }}
             >
@@ -182,8 +180,8 @@ function TerminalTransition() {
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 1.3 }}
             >
-              <span className="text-green-500">$</span>
-              <span className="ml-1 h-4 w-2 animate-pulse bg-zinc-300" />
+              <span className="text-success">$</span>
+              <span className="ml-1 h-4 w-2 animate-pulse bg-terminal-foreground" />
             </motion.div>
           </div>
         </motion.div>
@@ -219,7 +217,7 @@ function TableRow({
           </span>
         ) : row.free ? (
           <>
-            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <Check aria-hidden="true" className="size-5 text-success" />
             <span className="sr-only">Included</span>
           </>
         ) : (
@@ -234,7 +232,7 @@ function TableRow({
           <span className="text-foreground text-xs sm:text-sm">{row.pro}</span>
         ) : row.pro ? (
           <>
-            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <Check aria-hidden="true" className="size-5 text-success" />
             <span className="sr-only">Included</span>
           </>
         ) : (
@@ -246,12 +244,12 @@ function TableRow({
       </div>
       <div className="flex justify-center">
         {typeof row.business === "string" ? (
-          <span className="font-medium text-orange-500 text-xs sm:text-sm">
+          <span className="font-medium text-brand text-xs sm:text-sm">
             {row.business}
           </span>
         ) : row.business ? (
           <>
-            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <Check aria-hidden="true" className="size-5 text-success" />
             <span className="sr-only">Included</span>
           </>
         ) : (
@@ -273,9 +271,7 @@ export function UpgradeSection() {
     <section className="relative pt-16">
       {/* Header */}
       <FadeIn className="pb-12 text-center">
-        <p className="mb-2 font-medium text-orange-500 text-sm">
-          Ready for More?
-        </p>
+        <p className="mb-2 font-medium text-brand text-sm">Ready for More?</p>
         <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
           Compare Plans
         </h2>
@@ -288,12 +284,7 @@ export function UpgradeSection() {
       {/* Table section */}
       <div className="relative">
         {/* Diagonal background transition */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-stone-100/50 dark:bg-white/[0.06]"
-          style={{
-            clipPath: "polygon(0 31%, 100% 10%, 100% 100%, 0 100%)",
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0 bg-muted clip-diagonal" />
         <div className="relative pb-2">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl" ref={tableRef}>
@@ -311,7 +302,7 @@ export function UpgradeSection() {
                     Feature
                   </div>
                   <div className="text-center">
-                    <span className="font-semibold text-green-600 text-sm dark:text-green-400">
+                    <span className="font-semibold text-success text-sm dark:text-success">
                       Free
                     </span>
                     <p className="text-muted-foreground text-xs">
@@ -325,7 +316,7 @@ export function UpgradeSection() {
                     </p>
                   </div>
                   <div className="text-center">
-                    <span className="font-semibold text-orange-500 text-sm">
+                    <span className="font-semibold text-brand text-sm">
                       Business
                     </span>
                     <p className="text-muted-foreground text-xs">
@@ -354,7 +345,7 @@ export function UpgradeSection() {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               asChild
-              className="border-green-500/50 bg-background text-green-700 hover:bg-green-500/10 dark:text-green-400"
+              className="border-success/50 bg-background text-success hover:bg-success/10 dark:text-success"
               size="lg"
               variant="outline"
             >
@@ -362,11 +353,7 @@ export function UpgradeSection() {
                 Start Free
               </a>
             </Button>
-            <Button
-              asChild
-              className="bg-orange-500 hover:bg-orange-600"
-              size="lg"
-            >
+            <Button asChild size="lg" variant="brand">
               <Link href="/platform">
                 See Platform Details
                 <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />

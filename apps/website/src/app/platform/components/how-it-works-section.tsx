@@ -28,8 +28,8 @@ export function HowItWorksSection() {
               className="rounded-lg border border-border bg-card p-4"
               key={item.title}
             >
-              <div className="mb-3 flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-                <span className="h-px w-3 bg-orange-500" />
+              <div className="mb-3 flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+                <span className="h-px w-3 bg-brand" />
                 {String(index + 1).padStart(2, "0")}
               </div>
               <div className="flex items-start gap-2.5">

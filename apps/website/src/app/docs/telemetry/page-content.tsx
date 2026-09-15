@@ -86,9 +86,7 @@ export default function TelemetryPageContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-destructive text-lg">
-              What We Never Collect
-            </CardTitle>
+            <CardTitle className="text-lg">What We Never Collect</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">

@@ -425,7 +425,7 @@ export default function MigrateFromMailgunPage() {
                     <h3 className="mb-1.5 font-semibold text-foreground">
                       {step.title}
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-[1.6] [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
+                    <p className="text-muted-foreground text-sm leading-relaxed [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
                       {step.body}
                     </p>
                   </div>
@@ -471,10 +471,10 @@ export default function MigrateFromMailgunPage() {
             <div className="grid gap-6 sm:grid-cols-2">
               <Card className="p-6">
                 <h3 className="mb-2 font-semibold text-foreground">Mailgun</h3>
-                <p className="text-muted-foreground text-sm leading-[1.6]">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {VENDORS.mailgun.pricing}
                 </p>
-                <p className="mt-3 text-muted-foreground text-sm leading-[1.6]">
+                <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
                   {VENDORS.mailgun.watchOut}
                 </p>
               </Card>
@@ -482,10 +482,10 @@ export default function MigrateFromMailgunPage() {
                 <h3 className="mb-2 font-semibold text-foreground">
                   Amazon SES
                 </h3>
-                <p className="text-muted-foreground text-sm leading-[1.6]">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {VENDORS["amazon-ses"].pricing}
                 </p>
-                <p className="mt-3 text-muted-foreground text-sm leading-[1.6]">
+                <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
                   {VENDORS["amazon-ses"].watchOut}
                 </p>
               </Card>
@@ -527,7 +527,7 @@ export default function MigrateFromMailgunPage() {
                     <li className="flex gap-2.5" key={item}>
                       <Check
                         aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"
+                        className="mt-0.5 size-4 shrink-0 text-success"
                       />
                       {item}
                     </li>
@@ -571,7 +571,9 @@ export default function MigrateFromMailgunPage() {
                   <h3 className="mb-1.5 font-semibold text-foreground">
                     {faq.q}
                   </h3>
-                  <p className="text-muted-foreground leading-[1.6]">{faq.a}</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {faq.a}
+                  </p>
                 </div>
               ))}
             </div>

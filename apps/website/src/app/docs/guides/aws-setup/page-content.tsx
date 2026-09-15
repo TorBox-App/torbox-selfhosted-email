@@ -198,7 +198,7 @@ export default function AWSSetupPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>You own your infrastructure</strong>
                   <p className="text-muted-foreground text-sm">
@@ -207,7 +207,7 @@ export default function AWSSetupPageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>Pay AWS directly</strong>
                   <p className="text-muted-foreground text-sm">
@@ -216,7 +216,7 @@ export default function AWSSetupPageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <strong>We never store your credentials</strong>
                   <p className="text-muted-foreground text-sm">

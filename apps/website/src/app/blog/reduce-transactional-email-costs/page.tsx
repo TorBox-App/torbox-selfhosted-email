@@ -247,10 +247,10 @@ export default function Page() {
 
         {/* Hero */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-radial-top from-success/20 via-transparent to-transparent" />
 
           <div className="relative mx-auto max-w-4xl px-6 pt-20 pb-16">
-            <div className="mb-4 flex items-center gap-2 font-medium text-emerald-600 text-sm dark:text-emerald-400">
+            <div className="mb-4 flex items-center gap-2 font-medium text-success text-sm dark:text-success">
               <Receipt size={16} />
               <span>Research</span>
               <span className="text-muted-foreground/50">&bull;</span>
@@ -263,7 +263,7 @@ export default function Page() {
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">
               At 100K Emails a Month,
-              <span className="block bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent dark:from-emerald-400 dark:to-teal-400">
+              <span className="block bg-gradient-to-r from-success to-success bg-clip-text text-transparent dark:from-success dark:to-success">
                 the Send Rate Is the Small Number
               </span>
             </h1>
@@ -279,28 +279,19 @@ export default function Page() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <TrendingDown
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <TrendingDown className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   $12.50/mo all-in at 100K
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <AlertTriangle
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <AlertTriangle className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   You may be on a plan you never chose
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Scissors
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <Scissors className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Cutting 30K sends saves $3.00
                 </span>
@@ -314,7 +305,7 @@ export default function Page() {
           <section>
             <h2 className="mb-6 font-bold text-3xl">The short answer</h2>
 
-            <Card className="mb-6 border-emerald-600/30 p-6 dark:border-emerald-400/30">
+            <Card className="mb-6 border-success/30 p-6 dark:border-success/30">
               <ol className="space-y-3 text-foreground/80 leading-relaxed">
                 <li>
                   <strong>1.</strong> Check which SES pricing plan each account
@@ -354,7 +345,7 @@ export default function Page() {
           {/* What 100K costs */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Receipt className="text-emerald-600 dark:text-emerald-400" />
+              <Receipt className="text-success" />
               What 100,000 emails actually costs
             </h2>
 
@@ -501,7 +492,7 @@ export default function Page() {
           {/* Step 1 */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Globe className="text-emerald-600 dark:text-emerald-400" />
+              <Globe className="text-success" />
               Step 1: Find out which plan you're on
             </h2>
 
@@ -557,7 +548,7 @@ wraps email plan --region us-east-1 --set alacarte`}
           {/* Step 2 */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Paperclip className="text-emerald-600 dark:text-emerald-400" />
+              <Paperclip className="text-success" />
               Step 2: Find what costs more than your sending
             </h2>
 
@@ -767,7 +758,7 @@ wraps email plan --region us-east-1 --set alacarte`}
           {/* The standard advice */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Scissors className="text-emerald-600 dark:text-emerald-400" />
+              <Scissors className="text-success" />
               The standard advice, priced out
             </h2>
 
@@ -882,7 +873,7 @@ wraps email plan --region us-east-1 --set alacarte`}
           {/* Order */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Server className="text-emerald-600 dark:text-emerald-400" />
+              <Server className="text-success" />
               The order to do this in
             </h2>
 
@@ -1026,7 +1017,7 @@ wraps email plan --region us-east-1 --set alacarte`}
 
           {/* CTA */}
           <section className="relative">
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 blur-xl" />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-success/10 to-success/10 blur-xl" />
             <Card className="relative p-8 text-center md:p-12">
               <h2 className="mb-4 font-bold text-3xl md:text-4xl">
                 Price your own 100K
@@ -1037,11 +1028,11 @@ wraps email plan --region us-east-1 --set alacarte`}
                 storage, all of it billed to your own AWS account.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-emerald-600 dark:text-emerald-400">
+                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-success">
                   GET /api/pricing/estimate
                 </div>
                 <a
-                  className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-emerald-400"
+                  className="flex items-center gap-2 rounded-xl bg-success px-6 py-3 font-semibold text-white transition-colors hover:bg-success"
                   href="/tools/ses-calculator"
                 >
                   Open the Calculator

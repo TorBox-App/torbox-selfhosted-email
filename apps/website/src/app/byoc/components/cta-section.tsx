@@ -5,8 +5,8 @@ export function ByocCtaSection() {
     <section className="py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-2xl bg-foreground px-8 py-16 text-background">
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-background/60 uppercase tracking-[0.18em]">
-            <span className="size-1.5 rounded-full bg-orange-500" />
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-background/60 uppercase tracking-eyebrow">
+            <span className="size-1.5 rounded-full bg-brand" />
             <span>BYOC sending infrastructure</span>
           </div>
 
@@ -19,11 +19,7 @@ export function ByocCtaSection() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              className="bg-orange-500 text-white hover:bg-orange-600"
-              size="lg"
-            >
+            <Button asChild size="lg" variant="brand">
               <a href="https://app.wraps.dev/auth?mode=signup">Start sending</a>
             </Button>
             <Button

@@ -2,6 +2,7 @@
 
 import { Badge } from "@wraps/ui/components/ui/badge";
 import { Cloud } from "lucide-react";
+import type * as React from "react";
 import { AwsDynamodb } from "@/components/ui/svgs/awsDynamodb";
 import { AwsEventbridge } from "@/components/ui/svgs/awsEventbridge";
 import { AwsLambda } from "@/components/ui/svgs/awsLambda";
@@ -239,16 +240,18 @@ export function TechStackSection() {
                     key={tech.name}
                   >
                     <div
-                      className="flex h-8 w-8 items-center justify-center rounded"
-                      style={{
-                        backgroundColor: `${tech.color}15`,
-                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded bg-(--tech-bg)"
+                      style={
+                        {
+                          "--tech-bg": `${tech.color}15`,
+                        } as React.CSSProperties
+                      }
                     >
                       <tech.Icon
-                        className="h-5 w-5 object-contain"
-                        style={{
-                          color: tech.color,
-                        }}
+                        className="h-5 w-5 object-contain text-(--tech-color)"
+                        style={
+                          { "--tech-color": tech.color } as React.CSSProperties
+                        }
                       />
                     </div>
                     <span className="font-medium text-sm">{tech.name}</span>

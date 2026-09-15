@@ -7,7 +7,7 @@ export function ProductTabbedSection() {
         {/* Header - server rendered */}
         <div className="mx-auto mb-12 max-w-5xl text-center animate-fade-in-up">
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand to-warning bg-clip-text text-transparent">
               Automate.
             </span>{" "}
             Broadcast. Design.

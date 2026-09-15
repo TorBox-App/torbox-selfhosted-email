@@ -24,13 +24,13 @@ export function SdkHeroSection() {
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
           {/* Left column — mono-forward copy */}
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · typescript sdk</span>
             </div>
 
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-              Communication <span className="text-orange-500">as code.</span>
+              Communication <span className="text-brand">as code.</span>
             </h1>
 
             <p className="mb-5 max-w-md text-muted-foreground">
@@ -45,11 +45,7 @@ export function SdkHeroSection() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
-                size="lg"
-              >
+              <Button asChild size="lg" variant="brand">
                 <Link href="/docs/quickstart/email">Get Started</Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -61,11 +57,11 @@ export function SdkHeroSection() {
           {/* Right column — the API itself, no chrome */}
           <div className="relative">
             <div className="overflow-hidden rounded-lg border border-border bg-card/60">
-              <div className="flex items-center gap-2 border-border border-b px-4 py-2.5 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-                <span className="size-1.5 rounded-full bg-orange-500" />
+              <div className="flex items-center gap-2 border-border border-b px-4 py-2.5 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+                <span className="size-1.5 rounded-full bg-brand" />
                 app/send.ts
               </div>
-              <pre className="overflow-x-auto px-4 py-4 font-mono text-[13px] text-foreground/90 leading-relaxed">
+              <pre className="overflow-x-auto px-4 py-4 font-mono text-sm text-foreground/90 leading-relaxed">
                 <code>{heroSnippet}</code>
               </pre>
             </div>

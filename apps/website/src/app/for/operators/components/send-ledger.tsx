@@ -12,7 +12,7 @@ const events = [
   {
     at: "14:02:12.867",
     type: "Delivery",
-    tone: "text-emerald-700 dark:text-emerald-400",
+    tone: "text-success",
     detail: "smtp 250 · 1.66s",
   },
   {
@@ -24,19 +24,19 @@ const events = [
   {
     at: "16:41:02.559",
     type: "Open",
-    tone: "text-emerald-700 dark:text-emerald-400",
+    tone: "text-success",
     detail: "counted",
   },
   {
     at: "16:41:35.118",
     type: "Click",
-    tone: "text-emerald-700 dark:text-emerald-400",
+    tone: "text-success",
     detail: "/pricing",
   },
   {
     at: "16:44:09.732",
     type: "Complaint",
-    tone: "text-red-700 dark:text-red-400",
+    tone: "text-destructive",
     detail: "feedback loop · suppressed",
   },
 ];
@@ -45,10 +45,10 @@ export function SendLedger() {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm backdrop-blur">
       <div className="flex items-center justify-between border-border border-b px-4 py-3">
-        <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+        <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
           message trace
         </span>
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-2xs text-muted-foreground">
           0102f9a1c4e7b3d0
         </span>
       </div>
@@ -56,7 +56,7 @@ export function SendLedger() {
       <ol className="divide-y divide-border/60">
         {events.map((event) => (
           <li
-            className="flex items-baseline gap-3 px-4 py-2.5 font-mono text-[12px]"
+            className="flex items-baseline gap-3 px-4 py-2.5 font-mono text-xs"
             key={`${event.at}-${event.type}`}
           >
             <span className="shrink-0 text-muted-foreground/70 tabular-nums">
@@ -73,7 +73,7 @@ export function SendLedger() {
       </ol>
 
       <div className="border-border border-t bg-muted/40 px-4 py-3">
-        <p className="text-[12px] text-muted-foreground leading-relaxed">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           The complaint suppressed the contact automatically. The next broadcast
           cannot select them, whoever builds it.
         </p>

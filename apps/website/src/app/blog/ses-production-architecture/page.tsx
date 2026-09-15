@@ -131,28 +131,28 @@ const Callout = ({
 }) => {
   const styles = {
     info: {
-      bg: "bg-blue-500/10",
-      border: "border-blue-500/30",
+      bg: "bg-info/10",
+      border: "border-info/30",
       icon: <Lightbulb className="h-4 w-4" />,
-      text: "text-blue-600 dark:text-blue-400",
+      text: "text-info",
     },
     warning: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/30",
+      bg: "bg-warning/10",
+      border: "border-warning/30",
       icon: <AlertTriangle className="h-4 w-4" />,
-      text: "text-amber-600 dark:text-amber-400",
+      text: "text-warning",
     },
     danger: {
-      bg: "bg-red-500/10",
-      border: "border-red-500/30",
+      bg: "bg-destructive/10",
+      border: "border-destructive/30",
       icon: <AlertTriangle className="h-4 w-4" />,
-      text: "text-red-600 dark:text-red-400",
+      text: "text-destructive",
     },
     success: {
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/30",
+      bg: "bg-success/10",
+      border: "border-success/30",
       icon: <CheckCircle className="h-4 w-4" />,
-      text: "text-emerald-600 dark:text-emerald-400",
+      text: "text-success",
     },
   };
   const s = styles[type];
@@ -268,13 +268,12 @@ export default function Page() {
 
                 <Callout title="What Wraps Deploys" type="success">
                   One command (
-                  <code className="text-emerald-400">wraps email init</code>)
+                  <code className="text-success">wraps email init</code>)
                   deploys this entire architecture to your AWS account: IAM
                   roles with OIDC authentication, SES configuration set with all
                   10 event types, EventBridge rules, SQS queues with DLQ, Lambda
                   processor, and DynamoDB for event history. All tagged with{" "}
-                  <code className="text-emerald-400">ManagedBy: wraps-cli</code>
-                  .
+                  <code className="text-success">ManagedBy: wraps-cli</code>.
                 </Callout>
 
                 <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -397,7 +396,7 @@ export default function Page() {
 
                 <Callout title="Wraps Configuration Set" type="success">
                   Wraps creates a single configuration set{" "}
-                  <code className="text-emerald-400">wraps-email-tracking</code>{" "}
+                  <code className="text-success">wraps-email-tracking</code>{" "}
                   that captures all 10 event types. It includes: EventBridge
                   destination for event routing, bounce & complaint suppression
                   at the config set level, optional TLS enforcement, and
@@ -635,11 +634,11 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
 
                 <Callout title="Or configure with Wraps CLI" type="success">
                   Skip the Terraform—enable these same alerts in one command:{" "}
-                  <code className="text-emerald-400">wraps email upgrade</code>{" "}
-                  → "Enable reputation alerts". Wraps deploys 5 CloudWatch
-                  alarms with thresholds that warn <em>before</em> AWS takes
-                  action: bounce rate at 2%/4% (vs AWS 5%/10%), complaint rate
-                  at 0.05%/0.08% (vs AWS 0.1%/0.5%), plus DLQ monitoring. You'll
+                  <code className="text-success">wraps email upgrade</code> →
+                  "Enable reputation alerts". Wraps deploys 5 CloudWatch alarms
+                  with thresholds that warn <em>before</em> AWS takes action:
+                  bounce rate at 2%/4% (vs AWS 5%/10%), complaint rate at
+                  0.05%/0.08% (vs AWS 0.1%/0.5%), plus DLQ monitoring. You'll
                   get email notifications when your reputation needs attention.
                 </Callout>
 
@@ -726,10 +725,10 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     },
                   ].map((item, i) => (
                     <div
-                      className="p-4 rounded-xl border border-red-500/20 bg-red-500/5"
+                      className="p-4 rounded-xl border border-destructive/20 bg-destructive/5"
                       key={i}
                     >
-                      <h4 className="font-semibold text-red-600 dark:text-red-400 mb-1">
+                      <h4 className="font-semibold text-destructive mb-1">
                         {item.title}
                       </h4>
                       <p className="text-sm text-muted-foreground">

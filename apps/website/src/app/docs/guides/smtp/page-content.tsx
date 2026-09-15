@@ -243,7 +243,7 @@ export default function SMTPPageContent() {
           ) with permission to send email via SES, then generates an access key
           and derives the SMTP password.
         </p>
-        <div className="rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">
             Save your credentials immediately
           </p>

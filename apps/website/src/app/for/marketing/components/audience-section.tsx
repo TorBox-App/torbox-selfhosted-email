@@ -31,7 +31,7 @@ export function MarketingAudienceSection() {
                 <li className="flex gap-2.5" key={example}>
                   <span
                     aria-hidden="true"
-                    className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                    className="mt-2 h-px w-3 shrink-0 bg-brand"
                   />
                   <span>{example}</span>
                 </li>
@@ -64,7 +64,7 @@ export function MarketingAudienceSection() {
                 <li className="flex gap-2.5" key={example}>
                   <span
                     aria-hidden="true"
-                    className="mt-2 h-px w-3 shrink-0 bg-orange-500"
+                    className="mt-2 h-px w-3 shrink-0 bg-brand"
                   />
                   <span>{example}</span>
                 </li>

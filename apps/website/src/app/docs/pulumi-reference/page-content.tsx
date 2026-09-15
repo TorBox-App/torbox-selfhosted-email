@@ -1452,7 +1452,7 @@ export default function PulumiReferencePageContent() {
           archive access are granted identically by both.
         </p>
 
-        <div className="mb-6 rounded-lg border-orange-500 border-l-4 bg-orange-500/10 p-4">
+        <div className="mb-6 rounded-lg border-brand border-l-4 bg-brand/10 p-4">
           <h3 className="mb-2 font-medium">
             No replay archive, no delivery-failure alarm
           </h3>
@@ -1464,7 +1464,7 @@ export default function PulumiReferencePageContent() {
             ) of every raw SES event, so a broken pipeline can be repaired and
             replayed instead of losing events, plus a CloudWatch alarm on
             EventBridge delivery failures. This library creates neither. The{" "}
-            <Link className="text-orange-500 underline" href="/byoc">
+            <Link className="text-brand underline" href="/byoc">
               BYOC page
             </Link>{" "}
             describes the event pipeline&apos;s replay path. That description is

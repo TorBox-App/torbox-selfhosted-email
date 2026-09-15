@@ -185,7 +185,7 @@ export default function Page() {
             <div className="relative z-10 mx-4 max-w-3xl rounded-2xl border bg-background/80 p-8 shadow-2xl backdrop-blur-sm md:p-12">
               <h1 className="mb-4 font-bold text-4xl md:text-6xl">
                 How Email{" "}
-                <span className="bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-brand to-warning bg-clip-text text-transparent">
                   Actually
                 </span>{" "}
                 Works
@@ -308,19 +308,19 @@ export default function Page() {
 
                   <p className="text-foreground/80 text-xl leading-relaxed">
                     Every SMTP response starts with a three-digit code.{" "}
-                    <code className="rounded bg-green-500/20 px-1.5 py-0.5 text-green-600 dark:text-green-400">
+                    <code className="rounded bg-success/20 px-1.5 py-0.5 text-success">
                       2xx
                     </code>{" "}
                     means success.{" "}
-                    <code className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-yellow-600 dark:text-yellow-400">
+                    <code className="rounded bg-warning/20 px-1.5 py-0.5 text-warning">
                       3xx
                     </code>{" "}
                     means "keep going" (like 354 after DATA).{" "}
-                    <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                    <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                       4xx
                     </code>{" "}
                     is a temporary error (try again).{" "}
-                    <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                    <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                       5xx
                     </code>{" "}
                     is permanent failure (don't retry). The entire protocol runs
@@ -454,7 +454,7 @@ export default function Page() {
                     SMTP was designed in 1982 — before spam, before phishing,
                     before anyone imagined email would carry financial
                     transactions. The protocol has{" "}
-                    <span className="font-semibold text-red-600 dark:text-red-400">
+                    <span className="font-semibold text-destructive">
                       zero built-in authentication
                     </span>
                     . Any server can claim to be sending from any domain. It's
@@ -628,9 +628,9 @@ export default function Page() {
 
                 <div className="overflow-hidden rounded-xl border bg-muted/50">
                   <div className="flex items-center gap-2 border-b px-4 py-2 text-muted-foreground text-xs">
-                    <span className="inline-block h-3 w-3 rounded-full bg-red-500/60" />
-                    <span className="inline-block h-3 w-3 rounded-full bg-yellow-500/60" />
-                    <span className="inline-block h-3 w-3 rounded-full bg-green-500/60" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-destructive/60" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-warning/60" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-success/60" />
                     <span className="ml-2">Terminal</span>
                   </div>
                   <div className="p-4">
@@ -643,7 +643,7 @@ export default function Page() {
 
                 <div className="flex flex-col justify-center gap-3 sm:flex-row">
                   <a
-                    className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-6 py-2.5 font-medium text-white transition-colors hover:bg-orange-600"
+                    className="inline-flex items-center justify-center rounded-lg bg-brand px-6 py-2.5 font-medium text-white transition-colors hover:bg-brand/90"
                     href="/docs/quickstart"
                   >
                     Free CLI Quickstart

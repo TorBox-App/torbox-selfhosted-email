@@ -404,7 +404,7 @@ export default function ResendVsWrapsPage() {
                 <dt className="mb-1.5 font-semibold text-foreground">
                   &ldquo;Sandboxed by default&rdquo;
                 </dt>
-                <dd className="text-[15px] text-muted-foreground leading-[1.6]">
+                <dd className="text-base text-muted-foreground leading-relaxed">
                   Wraps cannot grant production access and neither can anyone
                   else selling you software — it is an AWS decision made from
                   your own account, and some requests are refused. What the CLI
@@ -419,7 +419,7 @@ export default function ResendVsWrapsPage() {
                 <dt className="mb-1.5 font-semibold text-foreground">
                   &ldquo;You must handle bounces/complaints yourself&rdquo;
                 </dt>
-                <dd className="text-[15px] text-muted-foreground leading-[1.6]">
+                <dd className="text-base text-muted-foreground leading-relaxed">
                   This one Wraps removes. Bounce and complaint processing,
                   suppression, and the event pipeline are deployed with
                   everything else on the first run. The dashboard then draws
@@ -571,7 +571,7 @@ export default function ResendVsWrapsPage() {
 
               <Card className="border-primary/30">
                 <CardHeader>
-                  <CardTitle className="text-primary">Wraps</CardTitle>
+                  <CardTitle>Wraps</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-muted-foreground text-sm">
@@ -583,19 +583,19 @@ export default function ResendVsWrapsPage() {
                   </p>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Data residency in your chosen AWS region
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Your uptime is AWS SES uptime (99.9%+ SLA)
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Infrastructure persists if you stop using Wraps
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Inherits your AWS compliance posture (SOC 2, HIPAA, etc.)
                     </li>
                   </ul>
@@ -653,7 +653,7 @@ export default function ResendVsWrapsPage() {
                         </td>
                         <td className="hidden p-4 sm:table-cell">
                           {row.savings ? (
-                            <span className="font-mono text-[11px] text-orange-600 uppercase tracking-[0.08em] dark:text-orange-500">
+                            <span className="font-mono text-2xs text-brand uppercase tracking-widest">
                               {row.savings} less
                             </span>
                           ) : null}
@@ -768,7 +768,7 @@ export default function ResendVsWrapsPage() {
                 <ul className="space-y-3">
                   {chooseWrapsReasons.map((reason) => (
                     <li className="flex items-start gap-3" key={reason}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span>{reason}</span>
                     </li>
                   ))}

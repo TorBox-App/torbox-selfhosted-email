@@ -16,14 +16,14 @@ export function SmsCtaSection() {
         <div className="rounded-xl border border-border bg-card p-8 md:p-12">
           <div className="max-w-2xl">
             {/* Mono tag */}
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · sms</span>
             </div>
 
             {/* Headline */}
             <h2 className="mb-4 font-heading font-semibold text-3xl tracking-tight md:text-4xl">
-              Start sending SMS <span className="text-orange-500">today</span>
+              Start sending SMS <span className="text-brand">today</span>
             </h2>
 
             {/* Description */}
@@ -36,10 +36,7 @@ export function SmsCtaSection() {
             <div className="mb-8 flex flex-wrap gap-x-6 gap-y-3">
               {benefits.map((benefit) => (
                 <div className="flex items-center gap-2 text-sm" key={benefit}>
-                  <Check
-                    aria-hidden="true"
-                    className="size-4 text-orange-500"
-                  />
+                  <Check aria-hidden="true" className="size-4 text-brand" />
                   <span>{benefit}</span>
                 </div>
               ))}
@@ -47,11 +44,7 @@ export function SmsCtaSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
-                size="lg"
-              >
+              <Button asChild size="lg" variant="brand">
                 <Link href="/docs/quickstart/sms">Get Started</Link>
               </Button>
               <Button asChild size="lg" variant="outline">

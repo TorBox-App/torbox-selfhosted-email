@@ -313,26 +313,26 @@ export default function ReputationPageContent() {
         </h2>
         <ul className="grid gap-3 text-muted-foreground">
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             DMARC is enforcing, not <code>p=none</code>, and someone reads the
             reports.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             One-click unsubscribe works, end to end, on a real send.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Recipients with no engagement in six months are suppressed or in a
             separate low-frequency stream.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Marketing and transactional are on different subdomains and
             different configuration sets.
           </li>
           <li className="flex gap-2.5">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
             Reputation alarms exist and point at a channel a human reads. The
             Starter preset ships with alerting off.
           </li>

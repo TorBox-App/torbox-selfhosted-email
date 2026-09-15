@@ -119,9 +119,9 @@ type FeatureCardProps = {
 
 function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
   return (
-    <Card className="group p-6 transition-colors hover:border-emerald-500/30">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
-        <Icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+    <Card className="group p-6 transition-colors hover:border-success/30">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-success/10 transition-colors group-hover:bg-success/20">
+        <Icon className="h-6 w-6 text-success" />
       </div>
       <h4 className="mb-2 font-semibold text-foreground text-lg">{title}</h4>
       <p className="text-muted-foreground text-sm leading-relaxed">
@@ -139,8 +139,8 @@ type StepProps = {
 
 function Step({ number, title, children }: StepProps) {
   return (
-    <div className="relative border-l-2 pb-12 pl-12 last:border-transparent last:pb-0 border-emerald-500">
-      <div className="absolute -left-5 flex h-10 w-10 items-center justify-center rounded-full font-bold text-lg bg-emerald-500 text-white">
+    <div className="relative border-l-2 pb-12 pl-12 last:border-transparent last:pb-0 border-success">
+      <div className="absolute -left-5 flex h-10 w-10 items-center justify-center rounded-full font-bold text-lg bg-success text-white">
         {number}
       </div>
       <div className="pt-1">
@@ -194,13 +194,13 @@ export default function Page() {
         {/* Hero Section */}
         <section className="relative overflow-hidden">
           {/* Background effects */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/20 via-transparent to-transparent" />
-          <div className="absolute top-0 left-1/2 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-emerald-500/5 blur-[120px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-success/20 via-transparent to-transparent" />
+          <div className="absolute top-0 left-1/2 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-success/5 blur-3xl" />
 
           <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-16">
             {/* Badge */}
             <div className="mb-8 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-emerald-600 dark:text-emerald-400 text-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-4 py-2 text-success text-sm">
                 <Zap className="h-4 w-4" />
                 <span>Next.js + Vercel + AWS SES</span>
               </div>
@@ -210,7 +210,7 @@ export default function Page() {
             <h1 className="mb-6 text-center font-extrabold text-5xl leading-tight md:text-7xl">
               <span className="text-foreground">Stop Wrestling with</span>
               <br />
-              <span className="bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 bg-clip-text text-transparent dark:from-red-400 dark:via-orange-400 dark:to-amber-400">
+              <span className="bg-gradient-to-r from-destructive via-brand to-warning bg-clip-text text-transparent dark:from-destructive dark:to-warning">
                 AWS SES Configuration
               </span>
             </h1>
@@ -219,7 +219,7 @@ export default function Page() {
               Deploy production-ready email infrastructure to your AWS account
               in minutes.
               <br />
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-success">
                 No stored credentials. No access keys. You own everything.
               </span>
             </p>
@@ -461,7 +461,7 @@ export default function Page() {
                     Configuration Set, EventBridge Rule, SQS Queue + DLQ, Lambda
                     Processor, and DynamoDB Tables.
                   </p>
-                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  <p className="font-semibold text-success">
                     Total time: ~2 minutes.
                   </p>
                 </div>
@@ -780,9 +780,7 @@ await email.send({
                 <div>Monthly Volume</div>
                 <div className="text-center">Resend</div>
                 <div className="text-center">SendGrid</div>
-                <div className="text-center text-emerald-600 dark:text-emerald-400">
-                  Wraps + AWS
-                </div>
+                <div className="text-center text-success">Wraps + AWS</div>
               </div>
               {COST_DATA.map((row, i) => (
                 <div
@@ -797,10 +795,10 @@ await email.send({
                     {row.sendgrid}
                   </div>
                   <div className="text-center">
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-semibold text-success">
                       {row.wraps}
                     </span>
-                    <span className="ml-2 text-emerald-700 dark:text-emerald-600 text-xs">
+                    <span className="ml-2 text-success text-xs">
                       Save {row.savings}
                     </span>
                   </div>
@@ -1075,7 +1073,7 @@ npm install @wraps.dev/email
 
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-emerald-400"
+                className="inline-flex items-center gap-2 rounded-lg bg-success px-6 py-3 font-semibold text-white transition-colors hover:bg-success"
                 href="/cli"
               >
                 Explore the CLI

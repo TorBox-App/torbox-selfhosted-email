@@ -738,7 +738,7 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     ],
     audience: "evaluating-wraps",
     rationale:
-      "Rewritten 2026-09-14 for the approver rather than the engineer: a risk register in AWS's own enforcement numbers, the exit story, and the security-review questions answered including the ones we fail. Nothing else on the site answers \"should we let this vendor into our AWS account\", and the old framing (AWS pricing plus modern DX) duplicated every /compare/*-vs-wraps page.",
+      'Rewritten 2026-09-14 for the approver rather than the engineer: a risk register in AWS\'s own enforcement numbers, the exit story, and the security-review questions answered including the ones we fail. Nothing else on the site answers "should we let this vendor into our AWS account", and the old framing (AWS pricing plus modern DX) duplicated every /compare/*-vs-wraps page.',
   },
   {
     route: "/for/marketing",

@@ -48,14 +48,14 @@ export function AgentsTrustSection() {
 
         <div className="mb-10 grid gap-3">
           <div className="flex items-start gap-3">
-            <Mail className="mt-1 size-4 shrink-0 text-orange-500" />
+            <Mail className="mt-1 size-4 shrink-0 text-brand" />
             <p className="text-muted-foreground">
               Agents send to people who already expect mail from you —
               customers, teammates, subscribers.
             </p>
           </div>
           <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-1 size-4 shrink-0 text-orange-500" />
+            <ShieldCheck className="mt-1 size-4 shrink-0 text-brand" />
             <p className="text-muted-foreground">
               DKIM, SPF, and DMARC sign every message from your domain. If an
               agent misbehaves, your DMARC report surfaces it before an ISP
@@ -63,7 +63,7 @@ export function AgentsTrustSection() {
             </p>
           </div>
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-1 size-4 shrink-0 text-orange-500" />
+            <AlertTriangle className="mt-1 size-4 shrink-0 text-warning" />
             <p className="text-muted-foreground">
               Prospecting and unsolicited mail violate the AWS SES Acceptable
               Use Policy and will burn your sending domain. Don't ship that;
@@ -74,7 +74,7 @@ export function AgentsTrustSection() {
 
         <div className="mb-10 rounded-lg border border-border bg-card p-5">
           <div className="flex items-start gap-3">
-            <MessageSquare className="mt-0.5 size-4 shrink-0 text-orange-500" />
+            <MessageSquare className="mt-0.5 size-4 shrink-0 text-brand" />
             <div>
               <p className="font-medium">
                 Signed reply-to threading, now in beta.
@@ -98,7 +98,7 @@ export function AgentsTrustSection() {
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <Link
-                  className="inline-flex items-center gap-1 text-orange-500 text-sm underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60"
+                  className="inline-flex items-center gap-1 text-brand text-sm underline decoration-brand/30 underline-offset-4 hover:decoration-brand/60"
                   href="/docs/guides/reply-threading"
                 >
                   Guide

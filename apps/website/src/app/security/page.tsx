@@ -274,7 +274,7 @@ export default function SecurityPage() {
                     <h3 className="mb-1.5 font-semibold text-foreground">
                       {step.title}
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-[1.6] [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
+                    <p className="text-muted-foreground text-sm leading-relaxed [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
                       {step.body}
                     </p>
                   </div>
@@ -317,7 +317,7 @@ export default function SecurityPage() {
                     <li className="flex gap-2.5" key={item}>
                       <Check
                         aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"
+                        className="mt-0.5 size-4 shrink-0 text-success"
                       />
                       {item}
                     </li>
@@ -458,7 +458,7 @@ export default function SecurityPage() {
                         <td className="p-4 text-muted-foreground">
                           {row.where}
                           {row.ours ? (
-                            <span className="ml-2 inline-block rounded bg-orange-500/10 px-1.5 py-0.5 font-medium text-[11px] text-orange-700 dark:bg-orange-500/15 dark:text-orange-400">
+                            <span className="ml-2 inline-block rounded bg-brand/10 px-1.5 py-0.5 font-medium text-2xs text-brand/20">
                               Wraps holds this
                             </span>
                           ) : null}
@@ -504,7 +504,7 @@ export default function SecurityPage() {
                   {row.status === "yes" ? (
                     <Check
                       aria-hidden="true"
-                      className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-500"
+                      className="mt-0.5 size-5 shrink-0 text-success"
                     />
                   ) : (
                     <X
@@ -516,7 +516,7 @@ export default function SecurityPage() {
                     <h3 className="font-semibold text-foreground">
                       {row.claim}
                     </h3>
-                    <p className="mt-1 text-muted-foreground text-sm leading-[1.6]">
+                    <p className="mt-1 text-muted-foreground text-sm leading-relaxed">
                       {row.detail}
                     </p>
                   </div>
@@ -561,7 +561,7 @@ export default function SecurityPage() {
                   <h3 className="mb-2 font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm leading-[1.6]">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {item.body}
                   </p>
                 </Card>

@@ -94,21 +94,21 @@ export default function FullGuidePageContent() {
         </p>
         <ul className="mb-4 space-y-2 text-muted-foreground">
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <span>
               <strong className="text-foreground">You own everything</strong> —
               Infrastructure runs in your account
             </span>
           </li>
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <span>
               <strong className="text-foreground">Transparent pricing</strong> —
               Pay AWS directly at $0.10/1,000 emails
             </span>
           </li>
           <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <span>
               <strong className="text-foreground">No vendor lock-in</strong> —
               Infrastructure stays even if you stop using Wraps
@@ -147,15 +147,15 @@ export default function FullGuidePageContent() {
           <CardContent>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 Email address
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 Phone number for verification
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 Credit or debit card (for verification, free tier available)
               </li>
             </ul>
@@ -173,7 +173,7 @@ export default function FullGuidePageContent() {
           </a>
         </Button>
 
-        <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="flex items-center gap-2 font-medium text-sm">
             <AlertTriangle className="h-4 w-4" />
             Account activation takes a few minutes
@@ -364,7 +364,7 @@ export default function FullGuidePageContent() {
           </li>
         </ol>
 
-        <div className="rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="flex items-center gap-2 font-medium text-sm">
             <Shield className="h-4 w-4" />
             Keep your Secret Access Key safe!
@@ -614,19 +614,19 @@ export default function FullGuidePageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>AWS account created and activated</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>AWS CLI installed</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>IAM user created with access keys</span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   AWS CLI configured (
                   <code className="rounded bg-muted px-1.5 py-0.5">
@@ -636,7 +636,7 @@ export default function FullGuidePageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   Verified with{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">
@@ -645,7 +645,7 @@ export default function FullGuidePageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <span>
                   Deployed with{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">

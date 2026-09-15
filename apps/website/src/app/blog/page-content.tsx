@@ -376,7 +376,7 @@ const posts: BlogPost[] = [
   },
 ];
 
-const META_RULE = "font-mono text-[11px] uppercase tracking-[0.08em]";
+const META_RULE = "font-mono text-2xs uppercase tracking-widest";
 
 const TRAILING_READ = /\s*read$/;
 
@@ -406,13 +406,10 @@ function PostArt({ post }: { post: BlogPost }) {
   return (
     <div className="flex size-full flex-col justify-between bg-muted/40 p-6">
       <div>
-        <span className="font-mono text-[19px] text-foreground uppercase leading-none tracking-[0.06em] md:text-[22px]">
+        <span className="font-mono text-xl text-foreground uppercase leading-none tracking-widest md:text-2xl">
           {post.category}
         </span>
-        <span
-          aria-hidden="true"
-          className="mt-4 block h-px w-10 bg-orange-500"
-        />
+        <span aria-hidden="true" className="mt-4 block h-px w-10 bg-brand" />
       </div>
       <div className={`${META_RULE} space-y-1 text-muted-foreground`}>
         <div>{post.date}</div>
@@ -426,7 +423,7 @@ function PostArt({ post }: { post: BlogPost }) {
 function FeaturedCard({ post }: { post: BlogPost }) {
   return (
     <a
-      className="group block border-foreground border-t pt-6 transition-colors hover:border-orange-500"
+      className="group block border-foreground border-t pt-6 transition-colors hover:border-brand"
       href={`/blog/${post.slug}`}
     >
       <div className="grid gap-6 md:grid-cols-[minmax(0,300px)_1fr] md:gap-10">
@@ -438,9 +435,7 @@ function FeaturedCard({ post }: { post: BlogPost }) {
           <div
             className={`${META_RULE} mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-muted-foreground`}
           >
-            <span className="text-orange-600 dark:text-orange-500">
-              {post.category}
-            </span>
+            <span className="text-brand">{post.category}</span>
             <span aria-hidden="true">/</span>
             <span>{post.author}</span>
             <span aria-hidden="true">/</span>
@@ -449,15 +444,15 @@ function FeaturedCard({ post }: { post: BlogPost }) {
             <span>{post.readTime}</span>
           </div>
 
-          <h3 className="font-heading font-semibold text-[22px] text-foreground leading-[1.15] tracking-[-0.02em] transition-colors group-hover:text-orange-600 md:text-[27px] dark:group-hover:text-orange-500">
+          <h3 className="font-heading font-semibold text-2xl text-foreground leading-tight tracking-tight transition-colors group-hover:text-brand md:text-3xl dark:group-hover:text-brand">
             {post.title}
           </h3>
 
-          <p className="mt-3 max-w-[62ch] text-[14.5px] text-muted-foreground leading-[1.6]">
+          <p className="mt-3 max-w-[62ch] text-sm text-muted-foreground leading-relaxed">
             {post.description}
           </p>
 
-          <span className="mt-5 inline-flex items-center gap-2 font-medium text-[13.5px] text-foreground">
+          <span className="mt-5 inline-flex items-center gap-2 font-medium text-sm text-foreground">
             Read article
             <ArrowRight
               aria-hidden="true"
@@ -473,24 +468,22 @@ function FeaturedCard({ post }: { post: BlogPost }) {
 function PostCard({ post }: { post: BlogPost }) {
   return (
     <a
-      className="group block border-foreground border-t pt-5 transition-colors hover:border-orange-500"
+      className="group block border-foreground border-t pt-5 transition-colors hover:border-brand"
       href={`/blog/${post.slug}`}
     >
       <div
         className={`${META_RULE} mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-muted-foreground`}
       >
-        <span className="text-orange-600 dark:text-orange-500">
-          {post.category}
-        </span>
+        <span className="text-brand">{post.category}</span>
         <span aria-hidden="true">/</span>
         <span>{shortReadTime(post.readTime)}</span>
       </div>
 
-      <h3 className="mb-2 font-semibold text-[15px] text-foreground leading-snug transition-colors group-hover:text-orange-600 dark:group-hover:text-orange-500">
+      <h3 className="mb-2 font-semibold text-base text-foreground leading-snug transition-colors group-hover:text-brand dark:group-hover:text-brand">
         {post.title}
       </h3>
 
-      <p className="line-clamp-3 text-[13.5px] text-muted-foreground leading-[1.55]">
+      <p className="line-clamp-3 text-sm text-muted-foreground leading-relaxed">
         {post.description}
       </p>
 
@@ -515,10 +508,10 @@ export default function BlogContent() {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-[620px]">
               <SectionKicker>The Wraps blog</SectionKicker>
-              <h1 className="font-heading font-semibold text-[34px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[46px]">
+              <h1 className="font-heading font-semibold text-4xl text-foreground leading-none tracking-tight md:text-5xl">
                 Deep dives into email infrastructure.
               </h1>
-              <p className="mt-4 max-w-[52ch] text-[17px] text-muted-foreground leading-[1.55]">
+              <p className="mt-4 max-w-[52ch] text-lg text-muted-foreground leading-relaxed">
                 Deliverability, DNS, AWS pricing, and developer experience —
                 researched properly, with the sources and the numbers shown.
               </p>
@@ -558,10 +551,10 @@ export default function BlogContent() {
         <section className="py-16 md:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-[52ch] border-foreground border-t pt-5">
-              <h2 className="mb-2 font-semibold text-[15px] text-foreground">
+              <h2 className="mb-2 font-semibold text-base text-foreground">
                 More coming soon
               </h2>
-              <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 We're working on more deep-dives into email infrastructure, DNS,
                 and developer tooling. Stay tuned.
               </p>

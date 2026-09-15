@@ -1865,7 +1865,7 @@ export function ChangelogReleasesSection() {
                       <div
                         className={
                           index === 0
-                            ? "flex size-10 items-center justify-center rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-500"
+                            ? "flex size-10 items-center justify-center rounded-full border border-brand/40 bg-brand/10 text-brand"
                             : "flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
                         }
                       >
@@ -1887,7 +1887,7 @@ export function ChangelogReleasesSection() {
                             {release.date}
                           </span>
                           {index === 0 && (
-                            <span className="rounded-full border border-orange-500/40 px-2 py-0.5 font-mono text-[10px] text-orange-500 uppercase tracking-[0.12em]">
+                            <span className="rounded-full border border-brand/40 px-2 py-0.5 font-mono text-3xs text-brand uppercase tracking-eyebrow">
                               Latest
                             </span>
                           )}

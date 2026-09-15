@@ -597,7 +597,7 @@ export default function Context7PageContent() {
         <h2 className="mb-4 font-bold text-2xl">Tips</h2>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div>
               <p className="font-medium">Be specific in prompts</p>
               <p className="text-muted-foreground text-sm">
@@ -608,7 +608,7 @@ export default function Context7PageContent() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div>
               <p className="font-medium">
                 Use &ldquo;wraps&rdquo; or &ldquo;wraps-js&rdquo; as the library
@@ -620,7 +620,7 @@ export default function Context7PageContent() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div>
               <p className="font-medium">
                 Combine with framework-specific context
@@ -632,7 +632,7 @@ export default function Context7PageContent() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div>
               <p className="font-medium">Docs stay current</p>
               <p className="text-muted-foreground text-sm">

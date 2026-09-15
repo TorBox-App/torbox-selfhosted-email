@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { SectionKicker } from "./section-kicker";
 
 type Tile = {
@@ -109,19 +110,19 @@ function TileVideo({
       autoPlay
       className={
         theme === "light"
-          ? "absolute inset-0 size-full object-cover dark:hidden"
-          : "absolute inset-0 hidden size-full object-cover dark:block"
+          ? "absolute inset-0 size-full bg-cover bg-center object-cover bg-(image:--poster) dark:hidden"
+          : "absolute inset-0 hidden size-full bg-cover bg-center object-cover bg-(image:--poster) dark:block"
       }
       loop
       muted
       playsInline
       preload="metadata"
       src={`/landing/${clip}${suffix}.mp4`}
-      style={{
-        backgroundImage: `url(/landing/posters/${clip}${suffix}.jpg)`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      style={
+        {
+          "--poster": `url(/landing/posters/${clip}${suffix}.jpg)`,
+        } as React.CSSProperties
+      }
     >
       <track kind="descriptions" label={title} />
     </video>
@@ -133,7 +134,7 @@ export function ProductShowcaseSection() {
     <section className="border-border border-b py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionKicker>Product tour</SectionKicker>
-        <h2 className="mb-8 max-w-[24ch] font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+        <h2 className="mb-8 max-w-[24ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
           Everything that happens after you hit send.
         </h2>
 
@@ -167,15 +168,15 @@ export function ProductShowcaseSection() {
                  * so nothing readable ends up underneath it.
                  */}
                 <div className="absolute inset-x-0 bottom-0 flex items-baseline gap-2 bg-gradient-to-t from-background/95 via-background/80 to-transparent px-3.5 pt-6 pb-2.5">
-                  <span className="font-mono text-[11px] text-orange-500">
+                  <span className="font-mono text-2xs text-brand">
                     {tile.index}
                   </span>
-                  <span className="font-medium text-[13px] text-foreground">
+                  <span className="font-medium text-sm text-foreground">
                     {tile.title}
                     {/* Wraps onto a second line on a stacked tile, which eats
                       into the clip's safe area — one line or nothing. */}
                     {tile.meta ? (
-                      <small className="ml-1.5 hidden font-normal text-[11px] text-muted-foreground md:inline">
+                      <small className="ml-1.5 hidden font-normal text-2xs text-muted-foreground md:inline">
                         {tile.meta}
                       </small>
                     ) : null}

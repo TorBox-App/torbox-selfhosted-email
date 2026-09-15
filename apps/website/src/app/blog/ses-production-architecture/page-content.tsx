@@ -38,7 +38,7 @@ export const CodeBlock = ({
         <button
           className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors ${
             copied
-              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+              ? "bg-success/20 text-success"
               : "bg-muted text-muted-foreground hover:text-foreground"
           }`}
           onClick={handleCopy}

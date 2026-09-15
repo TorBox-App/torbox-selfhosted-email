@@ -138,13 +138,13 @@ function QuoteCard({
 }) {
   return (
     <Card className="relative p-6">
-      <div className="absolute -top-3 -left-2 font-serif text-6xl text-emerald-500/20">
+      <div className="absolute -top-3 -left-2 font-serif text-6xl text-success/20">
         &ldquo;
       </div>
       <blockquote className="relative z-10 italic leading-relaxed text-foreground/80">
         {quote}
         {highlight && (
-          <span className="mt-3 block font-semibold not-italic text-emerald-600 dark:text-emerald-400">
+          <span className="mt-3 block font-semibold not-italic text-success">
             {highlight}
           </span>
         )}
@@ -178,7 +178,7 @@ function ResourceTable({
         <tbody>
           {rows.map((row) => (
             <tr className="border-t" key={row.resource}>
-              <td className="px-4 py-3 font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+              <td className="px-4 py-3 font-mono text-success text-sm">
                 {row.resource}
               </td>
               <td className="px-4 py-3 text-foreground/80 text-sm">
@@ -202,11 +202,11 @@ export default function Page() {
 
         {/* Hero Section */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-radial-top from-success/20 via-transparent to-transparent" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239C92AC%22 fill-opacity=%220.03%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
 
           <div className="relative mx-auto max-w-4xl px-6 pt-20 pb-16">
-            <div className="mb-4 flex items-center gap-2 font-medium text-emerald-600 dark:text-emerald-400 text-sm">
+            <div className="mb-4 flex items-center gap-2 font-medium text-success text-sm">
               <Terminal size={16} />
               <span>Engineering</span>
               <span className="text-muted-foreground/50">&bull;</span>
@@ -217,7 +217,7 @@ export default function Page() {
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">
               AWS SES Setup Simplified:
-              <span className="block bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent dark:from-emerald-400 dark:to-cyan-400">
+              <span className="block bg-gradient-to-r from-success to-success bg-clip-text text-transparent dark:from-success">
                 From Hours to Minutes
               </span>
             </h1>
@@ -238,28 +238,19 @@ export default function Page() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Clock
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <Clock className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Minutes to deploy
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <DollarSign
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <DollarSign className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   $0.10 per 1K emails
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Shield
-                  className="text-emerald-600 dark:text-emerald-400"
-                  size={16}
-                />
+                <Shield className="text-success" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Your AWS, your data
                 </span>
@@ -272,7 +263,7 @@ export default function Page() {
           {/* Problem Section */}
           <section>
             <h2 className="mb-8 flex items-center gap-3 font-bold text-3xl">
-              <AlertCircle className="text-red-600 dark:text-red-400" />
+              <AlertCircle className="text-destructive" />
               The Problem: SES Setup is a Nightmare
             </h2>
 
@@ -319,7 +310,7 @@ export default function Page() {
                   </strong>{" "}
                   ($0.10 per 1,000 emails) and you own the infrastructure. The
                   problem isn&apos;t SES itself.{" "}
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-semibold text-success">
                     It&apos;s the setup.
                   </span>
                 </p>
@@ -330,7 +321,7 @@ export default function Page() {
           {/* Solution Section */}
           <section>
             <h2 className="mb-8 flex items-center gap-3 font-bold text-3xl">
-              <Zap className="text-emerald-600 dark:text-emerald-400" />
+              <Zap className="text-success" />
               The Solution: Infrastructure as Code, Zero Console
             </h2>
 
@@ -364,10 +355,7 @@ export default function Page() {
                   className="flex items-start gap-3 text-foreground/80 leading-relaxed"
                   key={item}
                 >
-                  <Check
-                    className="mt-1 shrink-0 text-emerald-600 dark:text-emerald-500"
-                    size={16}
-                  />
+                  <Check className="mt-1 shrink-0 text-success" size={16} />
                   {item}
                 </li>
               ))}
@@ -400,7 +388,7 @@ export default function Page() {
                   className="rounded-xl border bg-muted/30 p-4 text-center"
                   key={stat.label}
                 >
-                  <div className="font-bold text-3xl text-emerald-600 dark:text-emerald-400">
+                  <div className="font-bold text-3xl text-success">
                     {stat.value}
                   </div>
                   <div className="mt-1 font-medium text-foreground text-sm">
@@ -451,10 +439,7 @@ npx @wraps.dev/cli email init`}
                     className="flex items-center gap-2 text-foreground/80 text-sm"
                     key={req}
                   >
-                    <Check
-                      className="text-emerald-600 dark:text-emerald-500"
-                      size={14}
-                    />
+                    <Check className="text-success" size={14} />
                     {req}
                   </li>
                 ))}
@@ -529,7 +514,7 @@ npx @wraps.dev/cli email init`}
                     },
                   ].map((row) => (
                     <tr className="border-t" key={row.flag}>
-                      <td className="px-4 py-3 font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+                      <td className="px-4 py-3 font-mono text-success text-sm">
                         {row.flag}
                       </td>
                       <td className="px-4 py-3 text-foreground/80 text-sm">
@@ -614,11 +599,11 @@ wraps email destroy`}
             </h2>
             <p className="mb-6 text-foreground/80 text-lg leading-relaxed">
               Under the hood, Wraps uses Pulumi with{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 @pulumi/aws
               </code>{" "}
               to provision infrastructure. All resources are namespaced with{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 wraps-email-*
               </code>{" "}
               for easy identification. Here&apos;s the complete picture.
@@ -735,11 +720,11 @@ wraps email destroy`}
             </h3>
             <p className="text-foreground/80 leading-relaxed">
               All Wraps resources follow the pattern{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 wraps-email-&#123;resource-type&#125;
               </code>
               . Every resource is tagged with{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 ManagedBy: &apos;wraps-cli&apos;
               </code>{" "}
               so you can easily identify and audit Wraps-managed infrastructure
@@ -753,7 +738,7 @@ wraps email destroy`}
             <p className="mb-8 text-muted-foreground leading-relaxed">
               Choose your deployment complexity based on your needs. Upgrade
               anytime with{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 wraps email upgrade
               </code>
               .
@@ -809,7 +794,7 @@ wraps email destroy`}
             <h3 className="mb-4 font-semibold text-xl">Setup</h3>
             <p className="text-foreground/80 leading-relaxed">
               During{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 wraps email init
               </code>
               , you&apos;ll be asked for your Vercel team slug and project name.
@@ -840,7 +825,7 @@ wraps email destroy`}
               deploys Wraps resources non-destructively. It never modifies your
               existing configuration&mdash;all new resources are created with
               the{" "}
-              <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+              <code className="rounded bg-muted px-2 py-0.5 text-success">
                 wraps-email-
               </code>{" "}
               prefix.
@@ -853,16 +838,16 @@ wraps email destroy`}
 
             <div className="space-y-6">
               <Card className="p-6">
-                <h3 className="mb-2 font-semibold text-xl text-red-600 dark:text-red-400">
+                <h3 className="mb-2 font-semibold text-xl text-destructive">
                   &ldquo;AWS credentials not found&rdquo;
                 </h3>
                 <p className="text-foreground/80 leading-relaxed">
                   Ensure the AWS CLI is configured by running{" "}
-                  <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+                  <code className="rounded bg-muted px-2 py-0.5 text-success">
                     aws configure
                   </code>
                   . Verify your identity with{" "}
-                  <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+                  <code className="rounded bg-muted px-2 py-0.5 text-success">
                     aws sts get-caller-identity
                   </code>
                   .
@@ -870,7 +855,7 @@ wraps email destroy`}
               </Card>
 
               <Card className="p-6">
-                <h3 className="mb-2 font-semibold text-xl text-red-600 dark:text-red-400">
+                <h3 className="mb-2 font-semibold text-xl text-destructive">
                   &ldquo;Insufficient permissions&rdquo;
                 </h3>
                 <p className="text-foreground/80 leading-relaxed">
@@ -881,12 +866,12 @@ wraps email destroy`}
               </Card>
 
               <Card className="p-6">
-                <h3 className="mb-2 font-semibold text-xl text-red-600 dark:text-red-400">
+                <h3 className="mb-2 font-semibold text-xl text-destructive">
                   &ldquo;Domain verification pending&rdquo;
                 </h3>
                 <p className="text-foreground/80 leading-relaxed">
                   Add the DKIM CNAME records to your DNS provider. Run{" "}
-                  <code className="rounded bg-muted px-2 py-0.5 text-emerald-600 dark:text-emerald-400">
+                  <code className="rounded bg-muted px-2 py-0.5 text-success">
                     wraps email domains verify -d yourdomain.com
                   </code>{" "}
                   to check progress. DNS propagation can take up to 72 hours,
@@ -903,7 +888,7 @@ wraps email destroy`}
               </Card>
 
               <Card className="p-6">
-                <h3 className="mb-2 font-semibold text-xl text-red-600 dark:text-red-400">
+                <h3 className="mb-2 font-semibold text-xl text-destructive">
                   &ldquo;OIDC provider already exists&rdquo;
                 </h3>
                 <p className="text-foreground/80 leading-relaxed">
@@ -935,10 +920,7 @@ wraps email destroy`}
                   className="flex items-start gap-3 text-foreground/80 leading-relaxed"
                   key={item}
                 >
-                  <Check
-                    className="mt-1 shrink-0 text-emerald-600 dark:text-emerald-500"
-                    size={16}
-                  />
+                  <Check className="mt-1 shrink-0 text-success" size={16} />
                   {item}
                 </li>
               ))}
@@ -947,11 +929,11 @@ wraps email destroy`}
             <Card className="p-6">
               <p className="text-foreground/80 text-lg leading-relaxed">
                 If you&apos;re sending 100,000 emails per month:{" "}
-                <span className="font-semibold text-red-600 dark:text-red-400">
+                <span className="font-semibold text-destructive">
                   Resend ~$90/month
                 </span>{" "}
                 vs{" "}
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="font-semibold text-success">
                   Wraps ~$12 to AWS
                 </span>
                 .
@@ -1079,7 +1061,7 @@ wraps email destroy`}
 
           {/* CTA */}
           <section className="relative">
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 blur-xl" />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-success/10 to-success/10 blur-xl" />
             <Card className="relative p-8 text-center md:p-12">
               <h2 className="mb-4 font-bold text-3xl md:text-4xl">
                 Ready to escape the AWS console?
@@ -1089,11 +1071,11 @@ wraps email destroy`}
                 account in minutes.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-emerald-600 dark:text-emerald-400">
+                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-success">
                   npx @wraps.dev/cli email init
                 </div>
                 <a
-                  className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-emerald-400"
+                  className="flex items-center gap-2 rounded-xl bg-success px-6 py-3 font-semibold text-white transition-colors hover:bg-success"
                   href="/cli"
                 >
                   Explore the CLI

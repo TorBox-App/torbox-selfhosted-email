@@ -16,14 +16,14 @@ export function SmsHeroSection() {
           {/* Left column — copy */}
           <div>
             {/* Mono tag, no marketing badge */}
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · sms</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-              AWS SMS, <span className="text-orange-500">simplified.</span>
+              AWS SMS, <span className="text-brand">simplified.</span>
             </h1>
 
             {/* Subheading */}
@@ -34,11 +34,7 @@ export function SmsHeroSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
-                size="lg"
-              >
+              <Button asChild size="lg" variant="brand">
                 <Link href="/docs/quickstart/sms">Get Started</Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -57,28 +53,28 @@ export function SmsHeroSection() {
               <div className="flex items-center gap-2 border-border border-b px-4 py-3">
                 <span
                   aria-hidden="true"
-                  className="size-1.5 rounded-full bg-orange-500"
+                  className="size-1.5 rounded-full bg-brand"
                 />
-                <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+                <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
                   index.ts
                 </span>
               </div>
               {/* Code content */}
-              <pre className="overflow-x-auto p-5 text-left font-mono text-[13px] text-foreground/90 leading-relaxed">
+              <pre className="overflow-x-auto p-5 text-left font-mono text-sm text-foreground/90 leading-relaxed">
                 <code>
                   <span className="text-muted-foreground">import</span>
                   {" { "}
                   <span className="text-foreground">WrapsSMS</span>
                   {" } "}
                   <span className="text-muted-foreground">from</span>{" "}
-                  <span className="text-orange-500">'@wraps.dev/sms'</span>
+                  <span className="text-brand">'@wraps.dev/sms'</span>
                   {";\n\n"}
                   <span className="text-muted-foreground">const</span> sms ={" "}
                   <span className="text-muted-foreground">new</span>{" "}
                   <span className="text-foreground">WrapsSMS</span>();
                   {"\n\n"}
                   <span className="text-muted-foreground">await</span> sms.
-                  <span className="text-orange-500">send</span>({"{"}
+                  <span className="text-brand">send</span>({"{"}
                   {"\n  "}
                   <span className="text-foreground/60">to</span>:{" "}
                   <span className="text-foreground">'+14155551234'</span>,

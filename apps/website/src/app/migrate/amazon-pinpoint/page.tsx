@@ -213,17 +213,16 @@ const fateStyles: Record<Fate, { label: string; className: string }> = {
   gone: {
     label: "Goes away",
     className:
-      "bg-red-500/10 text-red-700 dark:bg-red-500/15 dark:text-red-400",
+      "bg-destructive/10 text-destructive dark:bg-destructive/15 dark:text-destructive",
   },
   moves: {
     label: "You rebuild it",
-    className:
-      "bg-orange-500/10 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400",
+    className: "bg-brand/10 text-brand/20",
   },
   stays: {
     label: "Unaffected",
     className:
-      "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
+      "bg-success/10 text-success dark:bg-success/15 dark:text-success",
   },
 };
 
@@ -412,11 +411,11 @@ export default function MigrateFromAmazonPinpointPage() {
             </p>
 
             {daysLeft > 0 && (
-              <Card className="mt-8 flex flex-col gap-3 border-orange-500/40 bg-orange-500/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between">
+              <Card className="mt-8 flex flex-col gap-3 border-warning/40 bg-warning/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <AlertTriangle
                     aria-hidden="true"
-                    className="mt-0.5 size-5 shrink-0 text-orange-600 dark:text-orange-500"
+                    className="mt-0.5 size-5 shrink-0 text-warning"
                   />
                   <div>
                     <p className="font-semibold text-foreground">
@@ -589,7 +588,7 @@ export default function MigrateFromAmazonPinpointPage() {
                     <li className="flex gap-2.5" key={item}>
                       <Check
                         aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"
+                        className="mt-0.5 size-4 shrink-0 text-success"
                       />
                       {item}
                     </li>
@@ -650,7 +649,7 @@ export default function MigrateFromAmazonPinpointPage() {
                     <h3 className="mb-1.5 font-semibold text-foreground">
                       {step.title}
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-[1.6] [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
+                    <p className="text-muted-foreground text-sm leading-relaxed [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground">
                       {step.body}
                     </p>
                   </div>
@@ -708,7 +707,9 @@ export default function MigrateFromAmazonPinpointPage() {
                   <h3 className="mb-1.5 font-semibold text-foreground">
                     {faq.q}
                   </h3>
-                  <p className="text-muted-foreground leading-[1.6]">{faq.a}</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {faq.a}
+                  </p>
                 </div>
               ))}
             </div>

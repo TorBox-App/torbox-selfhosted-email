@@ -20,7 +20,7 @@ export function SdkInstallSection() {
         <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
           {packages.map((pkg) => (
             <div
-              className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-orange-500/40"
+              className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand/40"
               key={pkg.name}
             >
               <code className="font-mono text-foreground text-sm">

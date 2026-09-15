@@ -32,11 +32,11 @@ export function HeroSection() {
               The open-source operations layer for Amazon SES
             </SectionKicker>
 
-            <h1 className="max-w-[21ch] text-left font-heading font-semibold text-[40px] text-foreground leading-[1.04] tracking-[-0.03em] md:text-[52px] lg:text-[62px]">
+            <h1 className="max-w-[21ch] text-left font-heading font-semibold text-4xl text-foreground leading-none tracking-tight md:text-5xl lg:text-6xl">
               Run Amazon SES without becoming its operator.
             </h1>
 
-            <p className="mt-5 max-w-[48ch] text-left text-[17px] text-muted-foreground leading-[1.55] md:text-[19px]">
+            <p className="mt-5 max-w-[48ch] text-left text-lg text-muted-foreground leading-relaxed md:text-xl">
               SES is the cheapest way to send email, and most teams still do not
               use it — production access is an approval you can be refused, and
               bounce handling becomes your job on day one. Wraps deploys the
@@ -59,10 +59,10 @@ export function HeroSection() {
                   className={`py-4 sm:px-5 sm:first:pl-0 ${i > 0 ? "border-border border-t sm:border-t-0 sm:border-l" : ""}`}
                   key={stat.k}
                 >
-                  <dt className="font-mono font-semibold text-[20px] text-foreground tracking-[-0.01em]">
+                  <dt className="font-mono font-semibold text-xl text-foreground tracking-tight">
                     {stat.n}
                   </dt>
-                  <dd className="mt-0.5 text-pretty text-[12.5px] text-muted-foreground">
+                  <dd className="mt-0.5 text-pretty text-xs text-muted-foreground">
                     {stat.k}
                   </dd>
                 </div>

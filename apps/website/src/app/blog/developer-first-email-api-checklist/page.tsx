@@ -144,9 +144,9 @@ const ITEMS: Item[] = [
 ];
 
 const VERDICT_STYLES: Record<Item["wraps"]["verdict"], string> = {
-  pass: "text-emerald-600 dark:text-emerald-500",
-  partial: "text-yellow-600 dark:text-yellow-500",
-  fail: "text-red-600 dark:text-red-500",
+  pass: "text-success",
+  partial: "text-warning",
+  fail: "text-destructive",
 };
 
 const VERDICT_LABEL: Record<Item["wraps"]["verdict"], string> = {

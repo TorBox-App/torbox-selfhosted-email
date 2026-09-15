@@ -15,7 +15,7 @@ export function AlsoAlternatives({ currentSlug }: { currentSlug: string }) {
       <div className="grid gap-3 sm:grid-cols-2">
         {others.map((page) => (
           <Link href={`/alternatives/${page.slug}`} key={page.slug}>
-            <Card className="h-full transition-colors hover:border-orange-500/50">
+            <Card className="h-full transition-colors hover:border-brand/50">
               <CardContent className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">{page.incumbent} alternatives</p>

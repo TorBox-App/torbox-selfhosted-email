@@ -47,7 +47,7 @@ export function OperatorsConsentSection() {
               <dt className="mb-2 flex items-baseline gap-2.5 font-medium tracking-tight">
                 <span
                   aria-hidden="true"
-                  className="h-px w-4 shrink-0 translate-y-[-0.35rem] bg-orange-500"
+                  className="h-px w-4 shrink-0 translate-y-[-0.35rem] bg-brand"
                 />
                 {question}
               </dt>

@@ -45,9 +45,7 @@ export function SmsTeaserSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-10 text-center">
-          <p className="mb-2 font-medium text-orange-500 text-sm">
-            Platform Vision
-          </p>
+          <p className="mb-2 font-medium text-brand text-sm">Platform Vision</p>
           <h2 className="mb-3 font-bold text-2xl tracking-tight sm:text-3xl">
             Start with Email. Expand When Ready.
           </h2>
@@ -68,8 +66,8 @@ export function SmsTeaserSection() {
               <div
                 className={`group relative flex flex-col overflow-hidden rounded-2xl border transition-all ${
                   isAvailable
-                    ? "border-zinc-200 bg-white hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/5 dark:border-zinc-800 dark:bg-zinc-900"
-                    : "border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/30"
+                    ? "border-border bg-card hover:border-brand/50 hover:shadow-xl hover:shadow-brand/5"
+                    : "border-border bg-muted/50"
                 }`}
                 key={service.name}
               >
@@ -77,36 +75,36 @@ export function SmsTeaserSection() {
                 <div
                   className={`pointer-events-none absolute -right-8 -top-8 transition-opacity ${
                     isAvailable
-                      ? "opacity-[0.06] group-hover:opacity-[0.1]"
-                      : "opacity-[0.03]"
+                      ? "opacity-6 group-hover:opacity-10"
+                      : "opacity-3"
                   }`}
                 >
                   <Icon
                     className={`size-40 ${
-                      isAvailable ? "text-orange-500" : "text-foreground"
+                      isAvailable ? "text-brand" : "text-foreground"
                     }`}
                   />
                 </div>
 
                 {/* Header */}
-                <div className="relative border-b border-zinc-100 p-5 pb-4 dark:border-zinc-800">
+                <div className="relative border-b border-border p-5 pb-4">
                   <div className="mb-3 flex items-start justify-between">
                     <div
                       className={`flex size-11 items-center justify-center rounded-xl ${
                         isAvailable
-                          ? "bg-orange-500 text-white"
-                          : "bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+                          ? "bg-brand text-white"
+                          : "bg-muted text-muted-foreground"
                       }`}
                     >
                       <Icon className="size-5" />
                     </div>
                     {isAvailable ? (
-                      <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-[10px] font-medium text-green-700 dark:text-green-400">
+                      <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-3xs font-medium text-success">
                         <Check className="size-2.5" />
                         Available
                       </span>
                     ) : (
-                      <span className="rounded-full bg-orange-500/10 px-2 py-1 text-[10px] font-medium text-orange-600 dark:text-orange-400">
+                      <span className="rounded-full bg-brand/10 px-2 py-1 text-3xs font-medium text-brand">
                         Coming Soon
                       </span>
                     )}
@@ -126,8 +124,8 @@ export function SmsTeaserSection() {
                 {/* Body */}
                 <div className="relative flex flex-1 flex-col p-5">
                   {/* AWS Badge */}
-                  <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-1 dark:bg-zinc-800">
-                    <span className="font-mono text-[10px] text-muted-foreground">
+                  <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md bg-accent px-2 py-1">
+                    <span className="font-mono text-3xs text-muted-foreground">
                       {service.aws}
                     </span>
                   </div>
@@ -154,7 +152,7 @@ export function SmsTeaserSection() {
                       >
                         <Check
                           className={`size-3.5 ${
-                            isAvailable ? "text-orange-500" : "text-zinc-400"
+                            isAvailable ? "text-brand" : "text-muted-foreground"
                           }`}
                         />
                         {feature}
@@ -164,10 +162,7 @@ export function SmsTeaserSection() {
 
                   {/* CTA */}
                   {isAvailable ? (
-                    <Button
-                      asChild
-                      className="w-full bg-orange-500 hover:bg-orange-600"
-                    >
+                    <Button asChild className="w-full" variant="brand">
                       <a href={service.href}>
                         {service.cta}
                         <ArrowRight className="ml-1.5 size-4" />

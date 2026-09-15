@@ -8,23 +8,13 @@ type FeatureValue = boolean | "yes" | "no" | "partial" | string;
  */
 export function FeatureCell({ value }: { value: FeatureValue }) {
   if (value === true || value === "yes") {
-    return (
-      <Check
-        aria-label="Yes"
-        className="size-4 text-green-600 dark:text-green-400"
-      />
-    );
+    return <Check aria-label="Yes" className="size-4 text-success" />;
   }
   if (value === false || value === "no") {
     return <X aria-label="No" className="size-4 text-muted-foreground/50" />;
   }
   if (value === "partial") {
-    return (
-      <Minus
-        aria-label="Partial"
-        className="size-4 text-orange-600 dark:text-orange-500"
-      />
-    );
+    return <Minus aria-label="Partial" className="size-4 text-brand" />;
   }
   return <span className="text-muted-foreground text-sm">{value}</span>;
 }

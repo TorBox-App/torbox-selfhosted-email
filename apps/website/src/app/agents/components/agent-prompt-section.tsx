@@ -70,8 +70,8 @@ export function AgentsPromptSection() {
     <section className="py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10 max-w-3xl">
-          <div className="mb-4 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-            <span className="size-1.5 rounded-full bg-orange-500" />
+          <div className="mb-4 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+            <span className="size-1.5 rounded-full bg-brand" />
             <span>what to tell your agent</span>
           </div>
           <h2 className="mb-3 font-bold text-3xl tracking-tight sm:text-4xl">
@@ -93,8 +93,8 @@ export function AgentsPromptSection() {
                 <button
                   className={`group flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
                     isActive
-                      ? "border-orange-500/40 bg-orange-500/5"
-                      : "border-border bg-card hover:border-orange-500/20"
+                      ? "border-brand/40 bg-brand/5"
+                      : "border-border bg-card hover:border-brand/20"
                   }`}
                   key={prompt.id}
                   onClick={() => setActiveId(prompt.id)}
@@ -102,7 +102,7 @@ export function AgentsPromptSection() {
                 >
                   <Icon
                     className={`mt-0.5 size-4 shrink-0 ${
-                      isActive ? "text-orange-500" : "text-muted-foreground"
+                      isActive ? "text-brand" : "text-muted-foreground"
                     }`}
                   />
                   <span>
@@ -125,11 +125,11 @@ export function AgentsPromptSection() {
           {/* Active prompt */}
           <Card className="overflow-hidden border-border bg-card">
             <div className="flex items-center justify-between border-border/60 border-b px-4 py-3">
-              <span className="font-mono text-[11px] text-muted-foreground tracking-wider uppercase">
+              <span className="font-mono text-2xs text-muted-foreground tracking-wider uppercase">
                 prompt.md
               </span>
               <button
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground uppercase tracking-wider hover:border-orange-500/40 hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 font-mono text-2xs text-muted-foreground uppercase tracking-wider hover:border-brand/40 hover:text-foreground"
                 onClick={onCopy}
                 type="button"
               >
@@ -138,7 +138,7 @@ export function AgentsPromptSection() {
               </button>
             </div>
             <CardContent className="p-0">
-              <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-words px-5 py-5 font-mono text-[13px] leading-relaxed text-foreground/90">
+              <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-words px-5 py-5 font-mono text-sm leading-relaxed text-foreground/90">
                 {active.body}
               </pre>
             </CardContent>

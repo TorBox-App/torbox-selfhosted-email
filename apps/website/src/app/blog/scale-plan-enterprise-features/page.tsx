@@ -66,10 +66,10 @@ export default function Page() {
         <LandingNavbar />
 
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-radial-top from-brand/20 via-transparent to-transparent" />
 
           <div className="relative mx-auto max-w-4xl px-6 pt-20 pb-16">
-            <div className="mb-4 flex items-center gap-2 font-medium text-orange-600 text-sm dark:text-orange-400">
+            <div className="mb-4 flex items-center gap-2 font-medium text-brand text-sm">
               <Building2 size={16} />
               <span>Product</span>
               <span className="text-muted-foreground/50">&bull;</span>
@@ -80,7 +80,7 @@ export default function Page() {
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">
               SSO, Behavioral Segments,
-              <span className="block bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-brand to-warning bg-clip-text text-transparent">
                 and What's Next
               </span>
             </h1>

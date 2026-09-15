@@ -332,9 +332,9 @@ export default function BounceHandlingPageContent() {
               <CardContent className="p-6">
                 <div className="mb-3 flex items-center gap-3">
                   {b.tone === "bad" ? (
-                    <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
                   ) : (
-                    <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-500" />
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
                   )}
                   <code className="font-semibold text-base">{b.type}</code>
                 </div>
@@ -562,7 +562,7 @@ export default function BounceHandlingPageContent() {
             "You have tested all five simulator addresses end to end",
           ].map((item) => (
             <li className="flex items-start gap-3" key={item}>
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
               <span className="text-muted-foreground">{item}</span>
             </li>
           ))}

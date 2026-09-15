@@ -22,7 +22,7 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "text-muted-foreground hover:bg-accent hover:text-foreground dark:hover:bg-accent/50",
       },
       size: {
         default: "size-8 rounded-lg [&_svg]:size-4",

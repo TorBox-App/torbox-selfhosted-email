@@ -101,7 +101,7 @@ export default function MigrationGuidePageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <span className="font-medium">Own your infrastructure</span>
                   <p className="text-muted-foreground text-sm">
@@ -111,7 +111,7 @@ export default function MigrationGuidePageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <span className="font-medium">$0.10 per 1,000 emails</span>
                   <p className="text-muted-foreground text-sm">
@@ -121,7 +121,7 @@ export default function MigrationGuidePageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <span className="font-medium">No vendor lock-in</span>
                   <p className="text-muted-foreground text-sm">
@@ -131,7 +131,7 @@ export default function MigrationGuidePageContent() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <div>
                   <span className="font-medium">Full data ownership</span>
                   <p className="text-muted-foreground text-sm">

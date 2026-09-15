@@ -140,13 +140,13 @@ export default function ConfigurationPresetsPageContent() {
                   Open & Click Tracking
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 pl-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
               </tr>
               <tr className="border-b">
@@ -154,13 +154,13 @@ export default function ConfigurationPresetsPageContent() {
                   Bounce/Complaint Suppression
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 pl-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
               </tr>
               <tr className="border-b">
@@ -171,10 +171,10 @@ export default function ConfigurationPresetsPageContent() {
                   &mdash;
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 pl-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
               </tr>
               <tr className="border-b">
@@ -195,10 +195,10 @@ export default function ConfigurationPresetsPageContent() {
                   &mdash;
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
                 <td className="py-3 pl-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
               </tr>
               <tr className="border-b">
@@ -212,7 +212,7 @@ export default function ConfigurationPresetsPageContent() {
                   &mdash;
                 </td>
                 <td className="py-3 pl-4 text-center">
-                  <CheckCircle2 className="mx-auto h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
                 </td>
               </tr>
               <tr className="border-b">
@@ -261,19 +261,19 @@ export default function ConfigurationPresetsPageContent() {
             <h3 className="mb-3 font-medium">What you get:</h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   SES configuration set with engagement tracking
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   Bounce and complaint suppression list
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   Open and click tracking
                 </span>
@@ -320,25 +320,25 @@ export default function ConfigurationPresetsPageContent() {
             <h3 className="mb-3 font-medium">Everything in Starter, plus:</h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   EventBridge, SQS, and Lambda event processing pipeline
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   90-day email history with search (DynamoDB)
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   Real-time event tracking
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   Reputation metrics dashboard
                 </span>
@@ -389,19 +389,19 @@ export default function ConfigurationPresetsPageContent() {
             </h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   Dedicated IP address for sending
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   365-day email history retention
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 <span className="text-muted-foreground">
                   All 10 SES event types tracked
                 </span>
@@ -426,9 +426,9 @@ export default function ConfigurationPresetsPageContent() {
             </div>
           </CardContent>
         </Card>
-        <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div>
               <p className="font-medium text-sm">
                 Dedicated IPs require warming

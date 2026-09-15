@@ -126,11 +126,11 @@ export default function Page() {
 
         {/* Hero Section */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-radial-top from-brand/20 via-transparent to-transparent" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239C92AC%22 fill-opacity=%220.03%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
 
           <div className="relative mx-auto max-w-4xl px-6 pt-20 pb-16">
-            <div className="mb-4 flex items-center gap-2 font-medium text-cyan-600 text-sm dark:text-cyan-400">
+            <div className="mb-4 flex items-center gap-2 font-medium text-brand text-sm">
               <Inbox size={16} />
               <span>Engineering</span>
               <span className="text-muted-foreground/50">&bull;</span>
@@ -141,7 +141,7 @@ export default function Page() {
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">
               Receive Emails in
-              <span className="block bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:from-cyan-400 dark:to-blue-400">
+              <span className="block bg-gradient-to-r from-brand to-info bg-clip-text text-transparent dark:to-info">
                 Your AWS Account
               </span>
             </h1>
@@ -154,22 +154,19 @@ export default function Page() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Clock className="text-cyan-600 dark:text-cyan-400" size={16} />
+                <Clock className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Deploy in minutes
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Zap className="text-cyan-600 dark:text-cyan-400" size={16} />
+                <Zap className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Real-time webhooks
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Shield
-                  className="text-cyan-600 dark:text-cyan-400"
-                  size={16}
-                />
+                <Shield className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Spam &amp; virus detection
                 </span>
@@ -182,7 +179,7 @@ export default function Page() {
           {/* Why Inbound Email */}
           <section>
             <h2 className="mb-8 flex items-center gap-3 font-bold text-3xl">
-              <Inbox className="text-cyan-600 dark:text-cyan-400" />
+              <Inbox className="text-brand" />
               Why Inbound Email?
             </h2>
 
@@ -208,7 +205,7 @@ export default function Page() {
                     SES, S3, Lambda, and EventBridge
                   </strong>{" "}
                   working together.{" "}
-                  <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                  <span className="font-semibold text-brand">
                     Your data never leaves your AWS account.
                   </span>
                 </p>
@@ -225,7 +222,7 @@ export default function Page() {
           {/* Architecture */}
           <section>
             <h2 className="mb-8 flex items-center gap-3 font-bold text-3xl">
-              <Zap className="text-cyan-600 dark:text-cyan-400" />
+              <Zap className="text-brand" />
               How It Works
             </h2>
 
@@ -304,10 +301,7 @@ export default function Page() {
                     className="flex items-center gap-2 text-foreground/80 text-sm"
                     key={item}
                   >
-                    <Check
-                      className="text-cyan-600 dark:text-cyan-500"
-                      size={14}
-                    />
+                    <Check className="text-brand" size={14} />
                     {item}
                   </li>
                 ))}
@@ -467,7 +461,7 @@ TTL: 3600`}
 
           {/* CTA */}
           <section className="relative">
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-xl" />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-brand/10 to-info/10 blur-xl" />
             <Card className="relative p-8 text-center md:p-12">
               <h2 className="mb-4 font-bold text-3xl md:text-4xl">
                 Ready to receive emails?
@@ -477,11 +471,11 @@ TTL: 3600`}
                 Build support inboxes, automate workflows, and own your data.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-cyan-600 dark:text-cyan-400">
+                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-brand">
                   npx @wraps.dev/cli email inbound init
                 </div>
                 <a
-                  className="flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-cyan-400"
+                  className="flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white transition-colors hover:bg-brand/90"
                   href="/inbound"
                 >
                   Learn More

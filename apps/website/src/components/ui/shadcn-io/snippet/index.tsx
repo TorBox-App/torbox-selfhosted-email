@@ -17,14 +17,24 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 
-export type SnippetProps = ComponentProps<typeof Tabs>;
+export type SnippetProps = ComponentProps<typeof Tabs> & {
+  /** "card" raises the snippet onto the page's card surface (bg-card,
+   * border, always-visible copy button, monospace body) instead of the
+   * default flat/secondary look. */
+  variant?: "default" | "card";
+};
 
-export const Snippet = ({ className, ...props }: SnippetProps) => (
+export const Snippet = ({
+  className,
+  variant = "default",
+  ...props
+}: SnippetProps) => (
   <Tabs
     className={cn(
       "group w-full gap-0 overflow-hidden rounded-md border",
       className
     )}
+    data-variant={variant}
     {...props}
   />
 );
@@ -35,6 +45,7 @@ export const SnippetHeader = ({ className, ...props }: SnippetHeaderProps) => (
   <div
     className={cn(
       "flex flex-row items-center justify-between border-b bg-secondary p-1",
+      "group-data-[variant=card]:bg-card",
       className
     )}
     {...props}
@@ -87,7 +98,10 @@ export const SnippetCopyButton = ({
 
   return (
     <Button
-      className="opacity-0 transition-opacity group-hover:opacity-100"
+      className={cn(
+        "opacity-0 transition-opacity group-hover:opacity-100",
+        "group-data-[variant=card]:opacity-100"
+      )}
       onClick={copyToClipboard}
       size="icon"
       variant="ghost"
@@ -100,7 +114,15 @@ export const SnippetCopyButton = ({
 
 export type SnippetTabsListProps = ComponentProps<typeof TabsList>;
 
-export const SnippetTabsList = TabsList;
+export const SnippetTabsList = ({
+  className,
+  ...props
+}: SnippetTabsListProps) => (
+  <TabsList
+    className={cn("group-data-[variant=card]:bg-transparent", className)}
+    {...props}
+  />
+);
 
 export type SnippetTabsTriggerProps = ComponentProps<typeof TabsTrigger>;
 
@@ -120,7 +142,11 @@ export const SnippetTabsContent = ({
 }: SnippetTabsContentProps) => (
   <TabsContent
     asChild
-    className={cn("mt-0 bg-background p-4 text-sm", className)}
+    className={cn(
+      "mt-0 bg-background p-4 text-sm",
+      "group-data-[variant=card]:bg-card group-data-[variant=card]:font-mono group-data-[variant=card]:text-foreground",
+      className
+    )}
     {...props}
   >
     <pre className="truncate">{children}</pre>

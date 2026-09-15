@@ -147,13 +147,13 @@ export default function InboundPage() {
               <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
                 {/* Left column - Text content */}
                 <div>
-                  <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-                    <span className="size-1.5 rounded-full bg-orange-500" />
+                  <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+                    <span className="size-1.5 rounded-full bg-brand" />
                     <span>wraps · inbound email</span>
                   </div>
 
                   <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-                    <span className="text-orange-500">Every inbox.</span>
+                    <span className="text-brand">Every inbox.</span>
                     <br />
                     Your infrastructure.
                   </h1>
@@ -169,7 +169,7 @@ export default function InboundPage() {
                       <div className="flex items-center gap-2.5" key={feature}>
                         <span
                           aria-hidden="true"
-                          className="h-px w-3 shrink-0 bg-orange-500"
+                          className="h-px w-3 shrink-0 bg-brand"
                         />
                         <span className="text-muted-foreground text-sm">
                           {feature}
@@ -181,7 +181,7 @@ export default function InboundPage() {
 
                 {/* Right column - Animated Inbox (client component) */}
                 <div className="relative">
-                  <div className="-inset-4 absolute rounded-3xl bg-orange-500/10 opacity-60 blur-2xl" />
+                  <div className="-inset-4 absolute rounded-3xl bg-brand/10 opacity-60 blur-2xl" />
                   <div className="relative">
                     <AnimatedInbox />
                   </div>
@@ -365,12 +365,12 @@ export default function InboundPage() {
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <div className="flex items-center justify-between border-border border-b bg-muted/30 px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Lock className="size-4 text-orange-500" />
+                    <Lock className="size-4 text-brand" />
                     <span className="font-medium text-sm">
                       Your AWS Account
                     </span>
                   </div>
-                  <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+                  <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
                     Full Ownership
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export default function InboundPage() {
                         <div className="flex items-center" key={node.id}>
                           <div className="flex flex-col items-center rounded-lg border border-border bg-background p-4">
                             <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-muted">
-                              <Icon className="size-6 text-orange-500" />
+                              <Icon className="size-6 text-brand" />
                             </div>
                             <span className="font-medium text-sm">
                               {node.label}
@@ -454,9 +454,9 @@ export default function InboundPage() {
                   <div className="flex items-center gap-3 border-border border-b bg-muted/30 px-4 py-3">
                     <Terminal
                       aria-hidden="true"
-                      className="size-3.5 text-orange-500"
+                      className="size-3.5 text-brand"
                     />
-                    <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+                    <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
                       CLI
                     </span>
                   </div>
@@ -469,11 +469,7 @@ export default function InboundPage() {
 
               {/* CTA buttons */}
               <div className="flex flex-wrap gap-3">
-                <Button
-                  asChild
-                  className="gap-2 bg-orange-500 text-white hover:bg-orange-600"
-                  size="lg"
-                >
+                <Button asChild className="gap-2" size="lg" variant="brand">
                   <Link href="/docs/quickstart/email/inbound">
                     Get Started
                     <ArrowRight className="size-4" />

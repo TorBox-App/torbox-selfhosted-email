@@ -65,9 +65,9 @@ export function SdkTabs({ examples }: { examples: CodeExamples }) {
         {exampleKeys.map((key) => (
           <button
             className={cn(
-              "cursor-pointer rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-[0.1em] transition-all",
+              "cursor-pointer rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-widest transition-all",
               activeExample === key
-                ? "bg-orange-500 text-white"
+                ? "bg-brand text-white"
                 : "border border-border bg-card text-muted-foreground hover:text-foreground"
             )}
             key={key}
@@ -126,7 +126,7 @@ export function SdkTabs({ examples }: { examples: CodeExamples }) {
             <span className="font-mono text-muted-foreground text-xs">
               InboundEmail Response
             </span>
-            <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+            <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
               JSON
             </span>
           </div>

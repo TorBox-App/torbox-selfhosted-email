@@ -11,14 +11,14 @@ export function ChangelogHeroSection() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           {/* Mono tag, no marketing badge */}
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-            <span className="size-1.5 rounded-full bg-orange-500" />
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+            <span className="size-1.5 rounded-full bg-brand" />
             <span>wraps · changelog</span>
           </div>
 
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-            What&apos;s new <span className="text-orange-500">in Wraps.</span>
+            What&apos;s new <span className="text-brand">in Wraps.</span>
           </h1>
 
           {/* Subheading */}

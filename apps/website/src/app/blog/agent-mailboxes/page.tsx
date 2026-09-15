@@ -83,7 +83,7 @@ function ChainStep({
       <div className="flex items-start gap-4">
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-muted/50 font-mono font-semibold text-orange-600 text-sm dark:text-orange-400"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-muted/50 font-mono font-semibold text-brand text-sm"
         >
           {step}
         </span>
@@ -108,11 +108,11 @@ export default function Page() {
 
         {/* Hero */}
         <header className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-radial-top from-brand/20 via-transparent to-transparent" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239C92AC%22 fill-opacity=%220.03%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
 
           <div className="relative mx-auto max-w-4xl px-6 pt-20 pb-16">
-            <div className="mb-4 flex items-center gap-2 font-medium text-orange-600 text-sm dark:text-orange-400">
+            <div className="mb-4 flex items-center gap-2 font-medium text-brand text-sm">
               <Bot size={16} />
               <span>Product</span>
               <span className="text-muted-foreground/50">&bull;</span>
@@ -125,7 +125,7 @@ export default function Page() {
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">
               Agent Mailboxes
-              <span className="block bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:from-orange-400 dark:to-amber-400">
+              <span className="block bg-gradient-to-r from-brand to-warning bg-clip-text text-transparent dark:to-warning">
                 A leash the agent can't reach
               </span>
             </h1>
@@ -146,28 +146,19 @@ export default function Page() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <KeyRound
-                  className="text-orange-600 dark:text-orange-400"
-                  size={16}
-                />
+                <KeyRound className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Identity from the alias qualifier
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Shield
-                  className="text-orange-600 dark:text-orange-400"
-                  size={16}
-                />
+                <Shield className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   One IAM statement, one Lambda
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-4 py-2">
-                <Server
-                  className="text-orange-600 dark:text-orange-400"
-                  size={16}
-                />
+                <Server className="text-brand" size={16} />
                 <span className="text-foreground/80 text-sm">
                   Enforced in your AWS account
                 </span>
@@ -295,7 +286,7 @@ export default function Page() {
           {/* Identity */}
           <section>
             <h2 className="mb-6 flex items-center gap-3 font-bold text-3xl">
-              <Shield className="text-orange-600 dark:text-orange-400" />
+              <Shield className="text-brand" />
               Identity is the alias qualifier
             </h2>
 
@@ -1183,7 +1174,7 @@ AWS_REGION=us-east-1`}
 
           {/* CTA */}
           <section className="relative">
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 blur-xl" />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-brand/10 to-warning/10 blur-xl" />
             <Card className="relative p-8 text-center md:p-12">
               <h2 className="mb-4 font-bold text-3xl md:text-4xl">
                 Give your agent an address, and a leash
@@ -1193,11 +1184,11 @@ AWS_REGION=us-east-1`}
                 can invoke one Lambda alias and nothing else.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-orange-600 dark:text-orange-400">
+                <div className="rounded-xl border bg-muted/30 px-6 py-3 font-mono text-brand">
                   npx @wraps.dev/cli email agent create sdr
                 </div>
                 <a
-                  className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-400"
+                  className="flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white transition-colors hover:bg-brand"
                   href="/docs/mcp-reference"
                 >
                   Read the Reference

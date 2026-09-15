@@ -41,10 +41,7 @@ export function NavUser({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              size="lg"
-            >
+            <SidebarMenuButton className="cursor-pointer" size="lg">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg">
                 <Logo size={28} />
               </div>
@@ -59,11 +56,11 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <DropdownMenuLabel>
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <div className="h-8 w-8 rounded-lg">
                   <Logo size={28} />

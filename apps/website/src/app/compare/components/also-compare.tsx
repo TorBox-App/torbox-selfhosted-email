@@ -72,7 +72,7 @@ export function AlsoCompare({
           className="mb-6 block"
           href={`/alternatives/${alternatives.slug}`}
         >
-          <Card className="transition-colors hover:border-orange-500/50">
+          <Card className="transition-colors hover:border-brand/50">
             <CardContent className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium">
@@ -95,7 +95,7 @@ export function AlsoCompare({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {others.map((c) => (
           <Link href={c.href} key={c.href}>
-            <Card className="h-full transition-colors hover:border-orange-500/50">
+            <Card className="h-full transition-colors hover:border-brand/50">
               <CardContent className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">{c.competitor} vs Wraps</p>

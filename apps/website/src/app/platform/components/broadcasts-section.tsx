@@ -42,12 +42,7 @@ export function DashboardBroadcastsSection() {
       id="broadcasts"
     >
       {/* Diagonal transition at top - regular bg bleeding into premium */}
-      <div
-        className="absolute inset-x-0 top-0 h-20 bg-background"
-        style={{
-          clipPath: "polygon(0 0, 100% 0, 100% 100%)",
-        }}
-      />
+      <div className="absolute inset-x-0 top-0 h-20 bg-background clip-slant-tr" />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Chapter indicator */}
@@ -101,10 +96,7 @@ export function DashboardBroadcastsSection() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{feature.title}</span>
                       {feature.badge && (
-                        <Badge
-                          className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]"
-                          variant="secondary"
-                        >
+                        <Badge className="font-mono" variant="secondary">
                           {feature.badge}
                         </Badge>
                       )}

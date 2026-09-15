@@ -43,18 +43,18 @@ export function SmsValuePropsSection() {
         <div className="grid gap-4 md:grid-cols-3">
           {valueProps.map((prop) => (
             <div
-              className="flex flex-col rounded-xl border border-border bg-card p-6 transition-colors hover:border-orange-500/40"
+              className="flex flex-col rounded-xl border border-border bg-card p-6 transition-colors hover:border-brand/40"
               key={prop.title}
             >
               <prop.icon
                 aria-hidden="true"
-                className="mb-4 size-5 text-orange-500"
+                className="mb-4 size-5 text-brand"
               />
               <h3 className="mb-2 font-medium">{prop.title}</h3>
               <p className="flex-1 text-muted-foreground text-sm">
                 {prop.description}
               </p>
-              <div className="mt-5 border-border border-t pt-4 font-mono text-[13px] text-foreground">
+              <div className="mt-5 border-border border-t pt-4 font-mono text-sm text-foreground">
                 {prop.highlight}
               </div>
             </div>

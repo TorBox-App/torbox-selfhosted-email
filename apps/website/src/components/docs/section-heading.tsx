@@ -44,7 +44,7 @@ export function SectionHeading({
         className={cn(
           "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors",
           copied
-            ? "border-green-500/30 bg-green-500/10 text-green-600"
+            ? "border-success/30 bg-success/10 text-success"
             : "border-border bg-background text-foreground hover:cursor-auto hover:bg-muted/50 hover:text-foreground/90"
         )}
         onClick={handleCopy}

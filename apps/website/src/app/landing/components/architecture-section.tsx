@@ -73,7 +73,7 @@ function IconBox({
         compact ? "size-10" : "size-14"
       } ${
         highlighted
-          ? "border-orange-500 bg-orange-500/5 text-orange-500"
+          ? "border-brand bg-brand/5 text-brand"
           : "border-border text-muted-foreground"
       }`}
     >
@@ -119,14 +119,14 @@ function SimpleNode({
           compact ? "size-11" : "size-14"
         } ${
           highlighted
-            ? "border-orange-500 bg-orange-500/5 text-orange-500"
+            ? "border-brand bg-brand/5 text-brand"
             : "border-border text-muted-foreground"
         }`}
       >
         <Icon className={compact ? "size-5" : "size-6"} />
       </div>
       <span
-        className={`font-medium text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+        className={`font-medium text-xs ${highlighted ? "text-brand" : "text-muted-foreground"}`}
       >
         {label}
       </span>
@@ -174,7 +174,7 @@ function AWSAccountBox({
               compact ? "h-12 w-12" : "h-16 w-16"
             } ${
               sesHighlighted
-                ? "border-orange-500 bg-orange-500/5 text-orange-500"
+                ? "border-brand bg-brand/5 text-brand"
                 : "border-border bg-background text-muted-foreground"
             }`}
           >
@@ -182,7 +182,7 @@ function AWSAccountBox({
           </div>
           <span
             className={`font-medium text-xs ${
-              sesHighlighted ? "text-orange-500" : "text-muted-foreground"
+              sesHighlighted ? "text-brand" : "text-muted-foreground"
             }`}
           >
             SES
@@ -195,7 +195,7 @@ function AWSAccountBox({
             compact ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"
           } ${
             wrapsHighlighted
-              ? "border-orange-500 bg-orange-500/5"
+              ? "border-brand bg-brand/5"
               : "border-border bg-background"
           }`}
           ref={wrapsRef}
@@ -245,14 +245,14 @@ function MobileNode({
       <div
         className={`flex aspect-square size-14 items-center justify-center rounded-full border-2 ${
           highlighted
-            ? "border-orange-500 bg-orange-500/5 text-orange-500"
+            ? "border-brand bg-brand/5 text-brand"
             : "border-border bg-background text-muted-foreground"
         }`}
       >
         <Icon className="h-11 w-11" />
       </div>
       <span
-        className={`text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+        className={`text-xs ${highlighted ? "text-brand" : "text-muted-foreground"}`}
       >
         {label}
       </span>
@@ -274,9 +274,7 @@ function MobileAWSBox({
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="text-[10px] text-muted-foreground">
-        Your AWS Account
-      </span>
+      <span className="text-3xs text-muted-foreground">Your AWS Account</span>
       <div className="flex items-center gap-3 rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 px-4 py-3">
         {showSES && (
           <MobileNode
@@ -309,13 +307,9 @@ function MobileFlow({ activeTab }: { activeTab: ArchitectureTabKey }) {
         <div className={nodeOffset}>
           <MobileNode highlighted icon={Code2} label="Your App" />
         </div>
-        <ArrowRight
-          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
-        />
+        <ArrowRight className={`h-4 w-4 shrink-0 text-brand ${arrowOffset}`} />
         <MobileAWSBox sesHighlighted showWraps={false} />
-        <ArrowRight
-          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
-        />
+        <ArrowRight className={`h-4 w-4 shrink-0 text-brand ${arrowOffset}`} />
         <div className={nodeOffset}>
           <MobileNode highlighted icon={Users} label="Recipients" />
         </div>
@@ -329,9 +323,7 @@ function MobileFlow({ activeTab }: { activeTab: ArchitectureTabKey }) {
         <div className={nodeOffset}>
           <MobileNode highlighted icon={Users} label="Recipients" />
         </div>
-        <ArrowRight
-          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
-        />
+        <ArrowRight className={`h-4 w-4 shrink-0 text-brand ${arrowOffset}`} />
         <MobileAWSBox sesHighlighted wrapsHighlighted />
       </div>
     );
@@ -343,9 +335,7 @@ function MobileFlow({ activeTab }: { activeTab: ArchitectureTabKey }) {
       <div className={nodeOffset}>
         <MobileNode highlighted icon={Terminal} label="CLI" />
       </div>
-      <ArrowRight
-        className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
-      />
+      <ArrowRight className={`h-4 w-4 shrink-0 text-brand ${arrowOffset}`} />
       <MobileAWSBox sesHighlighted wrapsHighlighted />
     </div>
   );
@@ -398,10 +388,7 @@ function ConnectionLines({
   const wrapsXOffset = compact ? 70 : 120;
 
   return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-      style={{ zIndex: 0 }}
-    >
+    <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible">
       <defs>
         <marker
           id="arrowhead"
@@ -412,7 +399,7 @@ function ConnectionLines({
           refX="8"
           refY="4"
         >
-          <path d="M 0 0 L 8 4 L 0 8 Z" fill="hsl(var(--muted-foreground))" />
+          <path d="M 0 0 L 8 4 L 0 8 Z" fill="var(--color-muted-foreground)" />
         </marker>
         <marker
           id="arrowhead-orange"
@@ -423,7 +410,7 @@ function ConnectionLines({
           refX="8"
           refY="4"
         >
-          <path d="M 0 0 L 8 4 L 0 8 Z" fill="#ff6b00" />
+          <path d="M 0 0 L 8 4 L 0 8 Z" fill="var(--color-brand)" />
         </marker>
       </defs>
 
@@ -439,7 +426,7 @@ function ConnectionLines({
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -452,7 +439,7 @@ function ConnectionLines({
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -467,7 +454,7 @@ function ConnectionLines({
             fill="none"
             markerEnd="url(#arrowhead-orange)"
             opacity={0.6}
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -478,7 +465,7 @@ function ConnectionLines({
             fill="none"
             markerEnd="url(#arrowhead-orange)"
             opacity={0.6}
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -498,7 +485,7 @@ function ConnectionLines({
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -508,7 +495,7 @@ function ConnectionLines({
             d={`M ${ses.x - nodeOffset} ${ses.y - 12} C ${ses.x - nodeOffset - 30} ${ses.y - 12}, ${wraps.x - wrapsXOffset + 45} ${ses.y + 20}, ${wraps.x - wrapsXOffset + 45} ${wraps.y - (compact ? 40 : 58)}`}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -528,7 +515,7 @@ function ConnectionLines({
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -542,7 +529,7 @@ function ConnectionLines({
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
+            stroke="var(--color-brand)"
             strokeDasharray="8 6"
             strokeWidth="2"
           />
@@ -718,14 +705,14 @@ export function InteractiveArchitectureDiagram({
                 {activeTab === "send" && compact && (
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex gap-1">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-brand/50 bg-brand/10 text-brand">
                         <Eye className="h-2.5 w-2.5" />
                       </div>
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-brand/50 bg-brand/10 text-brand">
                         <MousePointerClick className="h-2.5 w-2.5" />
                       </div>
                     </div>
-                    <span className="text-[9px] text-orange-500/70">
+                    <span className="text-3xs text-brand/70">
                       opens · clicks
                     </span>
                   </div>
@@ -734,17 +721,17 @@ export function InteractiveArchitectureDiagram({
                 {activeTab === "track" && !compact && (
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex gap-1.5">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-brand/50 bg-brand/10 text-brand">
                         <Eye className="h-3.5 w-3.5" />
                       </div>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-brand/50 bg-brand/10 text-brand">
                         <MousePointerClick className="h-3.5 w-3.5" />
                       </div>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-brand/50 bg-brand/10 text-brand">
                         <AlertTriangle className="h-3.5 w-3.5" />
                       </div>
                     </div>
-                    <span className="text-[10px] text-orange-500">
+                    <span className="text-3xs text-brand">
                       opens · clicks · bounces
                     </span>
                   </div>
@@ -783,7 +770,7 @@ export function InteractiveArchitectureDiagram({
       {!compact && (
         <div className="mt-6 hidden flex-wrap items-center justify-center gap-6 text-muted-foreground text-sm md:flex">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded border-2 border-orange-500 bg-orange-500/20" />
+            <div className="h-3 w-3 rounded border-2 border-brand bg-brand/20" />
             <span>Active Flow</span>
           </div>
           <div className="flex items-center gap-2">
@@ -791,23 +778,11 @@ export function InteractiveArchitectureDiagram({
             <span>Infrastructure</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-0.5 w-6 border-orange-500 border-t-2 border-dashed" />
+            <div className="h-0.5 w-6 border-brand border-t-2 border-dashed" />
             <span>Data Path</span>
           </div>
         </div>
       )}
-
-      {/* CSS for dash animation */}
-      <style>{`
-        @keyframes dash {
-          to {
-            stroke-dashoffset: -20;
-          }
-        }
-        .animate-dash {
-          animation: dash 1s linear infinite;
-        }
-      `}</style>
     </>
   );
 }

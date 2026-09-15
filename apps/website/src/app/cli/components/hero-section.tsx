@@ -39,15 +39,15 @@ export function CliHeroSection() {
           {/* Left column - Text content */}
           <div>
             {/* Mono tag, no marketing badge */}
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · cli · free forever</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
               Deploy email, SMS, and CDN to your AWS{" "}
-              <span className="text-orange-500">in one command.</span>
+              <span className="text-brand">in one command.</span>
             </h1>
 
             {/* Subheading */}
@@ -60,26 +60,23 @@ export function CliHeroSection() {
             {/* Install command */}
             <div className="mb-8 max-w-md">
               <Snippet
-                className="border-border bg-card"
                 onValueChange={(value) => setManager(value as InstallManager)}
                 value={manager}
+                variant="card"
               >
-                <SnippetHeader className="border-border bg-card">
-                  <SnippetTabsList className="bg-transparent">
+                <SnippetHeader>
+                  <SnippetTabsList>
                     {Object.keys(installCommands).map((key) => (
                       <SnippetTabsTrigger key={key} value={key}>
                         {key}
                       </SnippetTabsTrigger>
                     ))}
                   </SnippetTabsList>
-                  <SnippetCopyButton
-                    className="opacity-100"
-                    value={installCommands[manager]}
-                  />
+                  <SnippetCopyButton value={installCommands[manager]} />
                 </SnippetHeader>
                 {Object.entries(installCommands).map(([key, command]) => (
                   <SnippetTabsContent
-                    className="bg-card text-left font-mono text-foreground"
+                    className="text-left"
                     key={key}
                     value={key}
                   >
@@ -114,16 +111,16 @@ export function CliHeroSection() {
               {/* Terminal header */}
               <div className="flex items-center gap-2 border-border border-b bg-muted/40 px-4 py-3">
                 <div className="flex gap-1.5">
-                  <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                  <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                  <div className="size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                  <div className="size-3 rounded-full bg-muted-foreground/40" />
+                  <div className="size-3 rounded-full bg-muted-foreground/40" />
+                  <div className="size-3 rounded-full bg-muted-foreground/40" />
                 </div>
                 <span className="ml-2 font-mono text-muted-foreground text-xs">
                   terminal — wraps email init
                 </span>
               </div>
               {/* Asciinema Player — recording canvas keeps its own dark surface */}
-              <div className="bg-[#121314]">
+              <div className="bg-terminal">
                 <AsciinemaPlayer
                   cols={80}
                   fit="width"

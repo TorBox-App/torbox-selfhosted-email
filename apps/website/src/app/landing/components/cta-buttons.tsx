@@ -8,11 +8,7 @@ import { trackEvent } from "@/utils/analytics";
 export function CTAButtons() {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:justify-start">
-      <Button
-        asChild
-        className="cursor-pointer bg-orange-500 hover:bg-orange-600"
-        size="lg"
-      >
+      <Button asChild className="cursor-pointer" size="lg" variant="brand">
         <a
           href="https://app.wraps.dev/auth?mode=signup"
           onClick={() =>

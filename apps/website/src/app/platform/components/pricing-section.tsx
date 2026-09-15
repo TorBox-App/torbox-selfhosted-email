@@ -33,12 +33,7 @@ export function DashboardPricingSection() {
   return (
     <section className="relative pt-32 pb-24" id="pricing">
       {/* Diagonal transition from premium bg */}
-      <div
-        className="absolute inset-x-0 top-0 h-20 bg-muted/30"
-        style={{
-          clipPath: "polygon(0 0, 100% 0, 0 100%)",
-        }}
-      />
+      <div className="absolute inset-x-0 top-0 h-20 bg-muted/30 clip-slant-tl" />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -63,19 +58,19 @@ export function DashboardPricingSection() {
             return (
               <div
                 className={`relative flex flex-col overflow-hidden rounded-2xl border bg-background ${
-                  tier.highlight ? "border-orange-500" : "border-border"
+                  tier.highlight ? "border-brand" : "border-border"
                 }`}
                 key={tier.name}
               >
                 {/* Header */}
                 <div
                   className={`border-border border-b px-6 py-6 ${
-                    tier.highlight ? "bg-orange-500/5" : "bg-muted/30"
+                    tier.highlight ? "bg-brand/5" : "bg-muted/30"
                   }`}
                 >
                   <div
                     className={`mb-1 font-semibold ${
-                      tier.highlight ? "text-orange-500" : "text-foreground"
+                      tier.highlight ? "text-brand" : "text-foreground"
                     }`}
                   >
                     {tier.name}
@@ -122,7 +117,7 @@ export function DashboardPricingSection() {
                       <Check
                         className={`mt-0.5 size-4 shrink-0 ${
                           tier.highlight
-                            ? "text-orange-500"
+                            ? "text-brand"
                             : "text-muted-foreground"
                         }`}
                       />
@@ -138,7 +133,7 @@ export function DashboardPricingSection() {
                         <Check
                           className={`mt-0.5 size-4 shrink-0 ${
                             tier.highlight
-                              ? "text-orange-500"
+                              ? "text-brand"
                               : "text-muted-foreground"
                           }`}
                         />
@@ -149,9 +144,9 @@ export function DashboardPricingSection() {
 
                   <Button
                     asChild
-                    className={`mt-auto w-full ${tier.highlight ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                    className="mt-auto w-full"
                     size="lg"
-                    variant={tier.highlight ? "default" : "outline"}
+                    variant={tier.highlight ? "brand" : "outline"}
                   >
                     <a href={getCtaLink(tier)}>Get Started</a>
                   </Button>
@@ -164,7 +159,7 @@ export function DashboardPricingSection() {
         {/* Founding Member Program */}
         <div className="mt-10 rounded-xl border border-border bg-muted/30 p-6">
           <div className="mb-3 flex items-center gap-2">
-            <span aria-hidden="true" className="h-px w-6 bg-orange-500" />
+            <span aria-hidden="true" className="h-px w-6 bg-brand" />
             <p className="font-semibold text-foreground">
               {PRICING_COPY.foundingMemberTitle}
             </p>

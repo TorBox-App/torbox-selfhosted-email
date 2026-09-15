@@ -64,8 +64,8 @@ function _PlaceholderImage({
       className={`relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-muted-foreground/25 border-dashed bg-muted/50 ${className}`}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="flex aspect-square size-16 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-          <LayoutGrid className="size-8 text-orange-500" />
+        <div className="flex aspect-square size-16 items-center justify-center rounded-full border-2 border-brand bg-brand/5">
+          <LayoutGrid className="size-8 text-brand" />
         </div>
         <div>
           <p className="font-semibold text-foreground">{alt}</p>
@@ -115,7 +115,7 @@ export function TemplateEditorSection() {
       <div className="mb-16">
         <div className="group relative">
           {/* Background glow */}
-          <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+          <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-brand/10 blur-2xl lg:h-32" />
 
           <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
             {/* Light mode image */}
@@ -147,16 +147,16 @@ export function TemplateEditorSection() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div
-              className="rounded-xl border bg-background p-6 transition-all hover:border-orange-500/50"
+              className="rounded-xl border bg-background p-6 transition-all hover:border-brand/50"
               key={feature.title}
             >
-              <div className="mb-4 flex aspect-square size-10 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-                <feature.icon className="size-5 text-orange-500" />
+              <div className="mb-4 flex aspect-square size-10 items-center justify-center rounded-full border-2 border-brand bg-brand/5">
+                <feature.icon className="size-5 text-brand" />
               </div>
               <div className="mb-2 flex items-center gap-2">
                 <h3 className="font-semibold text-lg">{feature.title}</h3>
                 {"premium" in feature && feature.premium && (
-                  <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-600 text-xs dark:text-orange-400">
+                  <span className="rounded-full bg-brand/10 px-2 py-0.5 text-brand text-xs">
                     AI
                   </span>
                 )}
@@ -175,8 +175,8 @@ export function TemplateEditorSection() {
         <div className="flex flex-col gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex aspect-square size-10 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-                <Sparkles className="size-5 text-orange-500" />
+              <div className="flex aspect-square size-10 items-center justify-center rounded-full border-2 border-brand bg-brand/5">
+                <Sparkles className="size-5 text-brand" />
               </div>
               <h3 className="font-semibold text-xl">AI Content Assistant</h3>
             </div>
@@ -187,15 +187,15 @@ export function TemplateEditorSection() {
             </p>
             <ul className="space-y-2 text-muted-foreground text-sm">
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 Quick prompts for welcome, newsletter, and more
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 Conversational chat interface
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 10 AI generations on Free, 250 on Pro
               </li>
             </ul>
@@ -213,8 +213,8 @@ export function TemplateEditorSection() {
         <div className="flex flex-col gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex aspect-square size-10 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-                <LayoutGrid className="size-5 text-orange-500" />
+              <div className="flex aspect-square size-10 items-center justify-center rounded-full border-2 border-brand bg-brand/5">
+                <LayoutGrid className="size-5 text-brand" />
               </div>
               <h3 className="font-semibold text-xl">Raw Code Editor</h3>
             </div>
@@ -224,15 +224,15 @@ export function TemplateEditorSection() {
             </p>
             <ul className="space-y-2 text-muted-foreground text-sm">
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 React Email components with TypeScript
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 Edit HTML or JSX — your choice
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 Version history and instant rollback
               </li>
             </ul>
@@ -249,11 +249,7 @@ export function TemplateEditorSection() {
 
       {/* CTA Buttons */}
       <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button
-          asChild
-          className="cursor-pointer bg-orange-500 hover:bg-orange-600"
-          size="lg"
-        >
+        <Button asChild className="cursor-pointer" size="lg" variant="brand">
           <a href="https://app.wraps.dev/auth?mode=signup&plan=starter">
             Start Building Templates
             <ArrowRight className="ml-2 h-4 w-4" />

@@ -112,7 +112,7 @@ export const ReadingProgress = () => {
 
   return (
     <motion.div
-      className="fixed top-0 right-0 left-0 z-50 h-1 origin-left bg-gradient-to-r from-orange-500 to-amber-400"
+      className="fixed top-0 right-0 left-0 z-50 h-1 origin-left bg-gradient-to-r from-brand to-warning"
       style={{ scaleX: scrollYProgress }}
     />
   );
@@ -192,75 +192,75 @@ const SMTP_CONVERSATIONS = [
   {
     type: "S",
     text: "220 mail.example.com ESMTP ready",
-    color: "text-green-500/70",
+    color: "text-success/70",
   },
-  { type: "C", text: "EHLO yourcompany.com", color: "text-blue-400/70" },
-  { type: "S", text: "250-mail.example.com Hello", color: "text-green-500/70" },
-  { type: "S", text: "250-STARTTLS", color: "text-green-500/50" },
-  { type: "S", text: "250 Ok", color: "text-green-500/70" },
+  { type: "C", text: "EHLO yourcompany.com", color: "text-info/70" },
+  { type: "S", text: "250-mail.example.com Hello", color: "text-success/70" },
+  { type: "S", text: "250-STARTTLS", color: "text-success/50" },
+  { type: "S", text: "250 Ok", color: "text-success/70" },
   {
     type: "C",
     text: "MAIL FROM:<you@yourcompany.com>",
-    color: "text-blue-400/70",
+    color: "text-info/70",
   },
-  { type: "S", text: "250 2.1.0 Ok", color: "text-green-500/70" },
-  { type: "C", text: "RCPT TO:<alice@example.com>", color: "text-blue-400/70" },
-  { type: "S", text: "250 2.1.5 Ok", color: "text-green-500/70" },
-  { type: "C", text: "DATA", color: "text-blue-400/70" },
+  { type: "S", text: "250 2.1.0 Ok", color: "text-success/70" },
+  { type: "C", text: "RCPT TO:<alice@example.com>", color: "text-info/70" },
+  { type: "S", text: "250 2.1.5 Ok", color: "text-success/70" },
+  { type: "C", text: "DATA", color: "text-info/70" },
   {
     type: "S",
     text: "354 End data with <CR><LF>.<CR><LF>",
-    color: "text-green-500/50",
+    color: "text-success/50",
   },
-  { type: "C", text: "From: you@yourcompany.com", color: "text-blue-400/50" },
-  { type: "C", text: "To: alice@example.com", color: "text-blue-400/50" },
-  { type: "C", text: "Subject: Quick question", color: "text-blue-400/50" },
-  { type: "C", text: ".", color: "text-blue-400/70" },
+  { type: "C", text: "From: you@yourcompany.com", color: "text-info/50" },
+  { type: "C", text: "To: alice@example.com", color: "text-info/50" },
+  { type: "C", text: "Subject: Quick question", color: "text-info/50" },
+  { type: "C", text: ".", color: "text-info/70" },
   {
     type: "S",
     text: "250 2.0.0 Ok: queued as ABC123",
-    color: "text-green-500/70",
+    color: "text-success/70",
   },
-  { type: "C", text: "QUIT", color: "text-blue-400/70" },
-  { type: "S", text: "221 2.0.0 Bye", color: "text-green-500/70" },
+  { type: "C", text: "QUIT", color: "text-info/70" },
+  { type: "S", text: "221 2.0.0 Bye", color: "text-success/70" },
   { type: " ", text: "", color: "text-transparent" },
   {
     type: "S",
     text: "220 mx.recipient.org ESMTP Postfix",
-    color: "text-green-500/70",
+    color: "text-success/70",
   },
-  { type: "C", text: "EHLO relay.google.com", color: "text-blue-400/70" },
-  { type: "S", text: "250-mx.recipient.org", color: "text-green-500/70" },
-  { type: "S", text: "250-AUTH PLAIN LOGIN", color: "text-green-500/50" },
-  { type: "S", text: "250 Ok", color: "text-green-500/70" },
+  { type: "C", text: "EHLO relay.google.com", color: "text-info/70" },
+  { type: "S", text: "250-mx.recipient.org", color: "text-success/70" },
+  { type: "S", text: "250-AUTH PLAIN LOGIN", color: "text-success/50" },
+  { type: "S", text: "250 Ok", color: "text-success/70" },
   {
     type: "C",
     text: "MAIL FROM:<bounce+id=abc@yourcompany.com>",
-    color: "text-blue-400/60",
+    color: "text-info/60",
   },
-  { type: "S", text: "250 2.1.0 Ok", color: "text-green-500/70" },
-  { type: "C", text: "RCPT TO:<bob@recipient.org>", color: "text-blue-400/70" },
-  { type: "S", text: "250 2.1.5 Ok", color: "text-green-500/70" },
-  { type: "C", text: "DATA", color: "text-blue-400/70" },
-  { type: "S", text: "354 Go ahead", color: "text-green-500/50" },
+  { type: "S", text: "250 2.1.0 Ok", color: "text-success/70" },
+  { type: "C", text: "RCPT TO:<bob@recipient.org>", color: "text-info/70" },
+  { type: "S", text: "250 2.1.5 Ok", color: "text-success/70" },
+  { type: "C", text: "DATA", color: "text-info/70" },
+  { type: "S", text: "354 Go ahead", color: "text-success/50" },
   {
     type: "C",
     text: "DKIM-Signature: v=1; a=rsa-sha256; d=yourcompany.com",
-    color: "text-purple-400/55",
+    color: "text-brand/55",
   },
   {
     type: "C",
     text: "Authentication-Results: spf=pass dkim=pass dmarc=pass",
-    color: "text-purple-400/55",
+    color: "text-brand/55",
   },
-  { type: "C", text: ".", color: "text-blue-400/70" },
+  { type: "C", text: ".", color: "text-info/70" },
   {
     type: "S",
     text: "250 2.0.0 Ok: queued as DEF456",
-    color: "text-green-500/70",
+    color: "text-success/70",
   },
-  { type: "C", text: "QUIT", color: "text-blue-400/70" },
-  { type: "S", text: "221 Bye", color: "text-green-500/70" },
+  { type: "C", text: "QUIT", color: "text-info/70" },
+  { type: "S", text: "221 Bye", color: "text-success/70" },
 ];
 
 export const ParallaxHero = () => {
@@ -279,7 +279,7 @@ export const ParallaxHero = () => {
 
   if (prefersReduced) {
     return (
-      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.15]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-15">
         <div className="mx-auto max-w-2xl px-4 pt-16 font-mono text-xs">
           {SMTP_CONVERSATIONS.slice(0, 18).map((line, i) => (
             <div className={line.color.replace(/\/\d+/, "")} key={i}>
@@ -295,7 +295,7 @@ export const ParallaxHero = () => {
   }
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.8] dark:opacity-[0.7]">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-80 dark:opacity-70">
       <div
         className="mx-auto max-w-2xl whitespace-nowrap px-4 text-left font-mono text-xs leading-6"
         style={{ transform: `translateY(-${offset}px)` }}
@@ -307,7 +307,7 @@ export const ParallaxHero = () => {
               {line.type !== " " && (
                 <span
                   className={
-                    line.type === "S" ? "text-green-600/60" : "text-blue-500/60"
+                    line.type === "S" ? "text-success/60" : "text-info/60"
                   }
                 >
                   {line.type}:{" "}
@@ -350,7 +350,7 @@ export const ComposeViewer = () => {
 
   const highlightClass = (field: string) =>
     activeHighlight === field
-      ? "bg-orange-500/20 rounded px-1 -mx-1 transition-colors"
+      ? "bg-brand/20 rounded px-1 -mx-1 transition-colors"
       : "transition-colors";
 
   const rawMessage = useMemo(() => {
@@ -493,7 +493,7 @@ QUIT`;
               }
               return (
                 <span
-                  className={hl ? "bg-orange-500/20 text-foreground" : ""}
+                  className={hl ? "bg-brand/20 text-foreground" : ""}
                   key={i}
                 >
                   {line}
@@ -647,9 +647,9 @@ export const SmtpTerminal = () => {
       {/* Terminal header */}
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
         <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-red-500" />
-          <div className="h-3 w-3 rounded-full bg-yellow-500" />
-          <div className="h-3 w-3 rounded-full bg-green-500" />
+          <div className="h-3 w-3 rounded-full bg-destructive" />
+          <div className="h-3 w-3 rounded-full bg-warning" />
+          <div className="h-3 w-3 rounded-full bg-success" />
           <span className="ml-2 font-mono text-xs text-muted-foreground">
             smtp — telnet mail.example.com 25
           </span>
@@ -688,7 +688,7 @@ export const SmtpTerminal = () => {
 
       {/* Terminal body */}
       <div
-        className="h-80 overflow-y-auto bg-zinc-950 p-4 font-mono text-sm"
+        className="h-80 overflow-y-auto bg-terminal p-4 font-mono text-sm"
         ref={scrollRef}
       >
         <AnimatePresence initial={false}>
@@ -697,10 +697,10 @@ export const SmtpTerminal = () => {
               animate={{ opacity: 1, y: 0 }}
               className={`${
                 line.type === "server"
-                  ? "text-green-400"
+                  ? "text-success"
                   : line.type === "info"
-                    ? "text-yellow-400 italic"
-                    : "text-zinc-300"
+                    ? "text-warning italic"
+                    : "text-terminal-foreground"
               }`}
               exit={{ opacity: 0 }}
               initial={{ opacity: 0, y: 4 }}
@@ -708,13 +708,13 @@ export const SmtpTerminal = () => {
               transition={{ duration: 0.15 }}
             >
               {line.type === "client" && (
-                <span className="text-blue-400">{"C: "}</span>
+                <span className="text-info">{"C: "}</span>
               )}
               {line.type === "server" && (
-                <span className="text-green-600">{"S: "}</span>
+                <span className="text-success">{"S: "}</span>
               )}
               {line.type === "info" && (
-                <span className="text-yellow-600">{"# "}</span>
+                <span className="text-warning">{"# "}</span>
               )}
               {line.text}
             </motion.div>
@@ -723,7 +723,7 @@ export const SmtpTerminal = () => {
 
         {/* Step indicator for guided mode */}
         {mode === "guided" && !done && step < SMTP_STEPS.length && (
-          <div className="mt-2 text-zinc-600 text-xs">
+          <div className="mt-2 text-terminal-muted text-xs">
             Step {step + 1}/{SMTP_STEPS.length}: {SMTP_STEPS[step].hint}
           </div>
         )}
@@ -731,13 +731,13 @@ export const SmtpTerminal = () => {
 
       {/* Input */}
       <form
-        className="flex items-center border-t bg-zinc-950 px-4 py-2"
+        className="flex items-center border-t bg-terminal px-4 py-2"
         onSubmit={handleSubmit}
       >
-        <span className="mr-2 font-mono text-blue-400 text-sm">{">"}</span>
+        <span className="mr-2 font-mono text-info text-sm">{">"}</span>
         <input
           aria-label="SMTP command input"
-          className="flex-1 bg-transparent font-mono text-sm text-zinc-200 placeholder-zinc-600 outline-none"
+          className="flex-1 bg-transparent font-mono text-sm text-terminal-foreground placeholder-terminal-muted outline-none"
           disabled={done}
           onChange={(e) => setInput(e.target.value)}
           placeholder={
@@ -751,7 +751,7 @@ export const SmtpTerminal = () => {
         />
         {done && (
           <button
-            className="ml-2 rounded bg-zinc-800 px-3 py-1 font-mono text-xs text-zinc-300 hover:bg-zinc-700"
+            className="ml-2 rounded bg-terminal-border px-3 py-1 font-mono text-xs text-terminal-foreground hover:bg-terminal-border/70"
             onClick={reset}
             type="button"
           >
@@ -828,8 +828,10 @@ export const MxLookup = () => {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-3">
-          <p className="text-red-600 text-sm dark:text-red-400">{error}</p>
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+          <p className="text-destructive text-sm dark:text-destructive">
+            {error}
+          </p>
         </div>
       )}
 
@@ -858,14 +860,14 @@ export const MxLookup = () => {
                     key={i}
                     transition={{ delay: i * 0.1, duration: 0.2 }}
                   >
-                    <span className="text-orange-500">{record.priority}</span>
+                    <span className="text-brand">{record.priority}</span>
                     <span className="text-foreground">{record.exchange}</span>
                   </motion.div>
                 ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3">
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+            <div className="rounded-lg border border-warning/50 bg-warning/10 p-3">
+              <p className="text-sm text-warning">
                 No MX records found. This domain may not accept email.
               </p>
             </div>
@@ -888,8 +890,8 @@ export const AuthVisualizer = () => {
     spf: {
       title: "SPF",
       color: "blue",
-      borderColor: "border-l-blue-500",
-      bgColor: "bg-blue-500/10",
+      borderColor: "border-l-info",
+      bgColor: "bg-info/10",
       question: "Is this server allowed to send for this domain?",
       steps: [
         "Receiving server extracts Return-Path domain",
@@ -900,9 +902,9 @@ export const AuthVisualizer = () => {
     },
     dkim: {
       title: "DKIM",
-      color: "purple",
-      borderColor: "border-l-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: "brand",
+      borderColor: "border-l-brand",
+      bgColor: "bg-brand/10",
       question: "Was this email tampered with in transit?",
       steps: [
         "Sending server signs email headers + body with private key",
@@ -914,8 +916,8 @@ export const AuthVisualizer = () => {
     dmarc: {
       title: "DMARC",
       color: "green",
-      borderColor: "border-l-green-500",
-      bgColor: "bg-green-500/10",
+      borderColor: "border-l-success",
+      bgColor: "bg-success/10",
       question:
         "Does the From: domain align with SPF/DKIM, and what to do if not?",
       steps: [
@@ -970,15 +972,11 @@ export const AuthVisualizer = () => {
 
       {/* Chain visualization */}
       <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span className="rounded bg-blue-500/20 px-2 py-0.5 text-blue-600 dark:text-blue-400">
-          SPF
-        </span>
+        <span className="rounded bg-info/20 px-2 py-0.5 text-info">SPF</span>
         <ArrowRight className="h-3 w-3" />
-        <span className="rounded bg-purple-500/20 px-2 py-0.5 text-purple-600 dark:text-purple-400">
-          DKIM
-        </span>
+        <span className="rounded bg-brand/20 px-2 py-0.5 text-brand">DKIM</span>
         <ArrowRight className="h-3 w-3" />
-        <span className="rounded bg-green-500/20 px-2 py-0.5 text-green-600 dark:text-green-400">
+        <span className="rounded bg-success/20 px-2 py-0.5 text-success">
           DMARC
         </span>
         <ArrowRight className="h-3 w-3" />
@@ -1014,9 +1012,9 @@ export const PredictionPrompt = ({
   };
 
   return (
-    <Card className="border-orange-500/30 bg-orange-500/5 p-6">
+    <Card className="border-warning/30 bg-warning/10 p-6">
       <div className="mb-4 flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 text-orange-500" />
+        <AlertTriangle className="h-4 w-4 text-warning" />
         <span className="font-medium text-sm text-foreground">Prediction</span>
       </div>
       <p className="mb-4 text-foreground">{question}</p>
@@ -1029,9 +1027,9 @@ export const PredictionPrompt = ({
               className={`w-full rounded-lg border p-3 text-left text-sm transition-all ${
                 showResult
                   ? opt.correct
-                    ? "border-green-500/50 bg-green-500/10"
+                    ? "border-success/50 bg-success/10"
                     : isSelected
-                      ? "border-red-500/50 bg-red-500/10"
+                      ? "border-destructive/50 bg-destructive/10"
                       : "border-border bg-muted/30 opacity-60"
                   : "border-border hover:border-primary/50 hover:bg-muted/50"
               }`}
@@ -1043,10 +1041,10 @@ export const PredictionPrompt = ({
               <div className="flex items-center justify-between">
                 <span>{opt.label}</span>
                 {showResult && opt.correct && (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-success" />
                 )}
                 {showResult && isSelected && !opt.correct && (
-                  <X className="h-4 w-4 text-red-500" />
+                  <X className="h-4 w-4 text-destructive" />
                 )}
               </div>
               {showResult && (isSelected || opt.correct) && (
@@ -1088,12 +1086,12 @@ export const RelayMap = () => {
           >
             {/* Node */}
             {prefersReduced ? (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand font-bold text-white">
                 {i + 1}
               </div>
             ) : (
               <motion.div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-500 font-bold text-white"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand font-bold text-white"
                 initial={{ scale: 0, opacity: 0 }}
                 transition={{
                   delay: i * 0.2,
@@ -1117,7 +1115,7 @@ export const RelayMap = () => {
               <div className="font-medium text-sm text-foreground">
                 {node.label}
               </div>
-              <div className="font-mono text-[10px] text-muted-foreground leading-tight">
+              <div className="font-mono text-3xs text-muted-foreground leading-tight">
                 {node.header}
               </div>
             </div>
@@ -1126,15 +1124,12 @@ export const RelayMap = () => {
       </div>
 
       {/* Connection line (desktop) */}
-      <div
-        className="relative mx-auto mt-4 hidden h-1 sm:block"
-        style={{ width: "80%" }}
-      >
+      <div className="relative mx-auto mt-4 hidden h-1 w-4/5 sm:block">
         {prefersReduced ? (
-          <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+          <div className="h-full rounded-full bg-gradient-to-r from-brand to-warning" />
         ) : (
           <motion.div
-            className="h-full origin-left rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
+            className="h-full origin-left rounded-full bg-gradient-to-r from-brand to-warning"
             initial={{ scaleX: 0 }}
             transition={{
               duration: 1,
@@ -1253,7 +1248,7 @@ export const HeaderChain = () => {
                     expandedHeaders.has(i) ? "rotate-90" : ""
                   }`}
                 />
-                <span className="text-xs font-medium text-orange-500">
+                <span className="text-xs font-medium text-brand">
                   {h.chapter}
                 </span>
                 {viewMode === "parsed" && (
@@ -1296,7 +1291,7 @@ export const HeaderChain = () => {
                     {"auth" in h.parsed && (
                       <div>
                         <span className="text-muted-foreground">Auth: </span>
-                        <span className="font-mono text-green-500">
+                        <span className="font-mono text-success">
                           {h.parsed.auth}
                         </span>
                       </div>

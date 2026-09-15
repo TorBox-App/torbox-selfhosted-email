@@ -53,20 +53,20 @@ export function McpHeroSection() {
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
           {/* Left column — mono-forward copy */}
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · mcp server</span>
             </div>
 
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
               The MCP server for email{" "}
-              <span className="text-orange-500">your agent owns.</span>
+              <span className="text-brand">your agent owns.</span>
             </h1>
 
             {/* Mono anchor: the install command IS the marketing */}
-            <pre className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/60 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground/90">
+            <pre className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/60 px-4 py-3 font-mono text-sm leading-relaxed text-foreground/90">
               <span className="text-muted-foreground">$</span> npx -y{" "}
-              <span className="text-orange-500">@wraps.dev/mcp</span>
+              <span className="text-brand">@wraps.dev/mcp</span>
             </pre>
 
             <p className="mb-6 max-w-md text-muted-foreground">
@@ -77,11 +77,7 @@ export function McpHeroSection() {
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
-                size="lg"
-              >
+              <Button asChild size="lg" variant="brand">
                 <Link href="/docs/mcp-reference">
                   Read the MCP docs
                   <ArrowRight className="ml-2 size-4" />
@@ -102,10 +98,10 @@ export function McpHeroSection() {
 
           {/* Right column — the tool surface */}
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-orange-500/10 opacity-60 blur-2xl" />
+            <div className="absolute -inset-4 rounded-3xl bg-brand/10 opacity-60 blur-2xl" />
             <div className="relative overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm backdrop-blur">
               <div className="flex items-center gap-2 border-border border-b px-4 py-2.5">
-                <span className="size-1.5 rounded-full bg-orange-500" />
+                <span className="size-1.5 rounded-full bg-brand" />
                 <span className="font-mono text-muted-foreground text-xs">
                   wraps · 6 tools · 7 in enforced mode
                 </span>
@@ -117,7 +113,7 @@ export function McpHeroSection() {
                     key={tool.name}
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-[13px] text-foreground/90">
+                      <p className="truncate font-mono text-sm text-foreground/90">
                         {tool.name}
                       </p>
                       <p className="truncate text-muted-foreground text-xs">
@@ -125,12 +121,8 @@ export function McpHeroSection() {
                       </p>
                     </div>
                     <Badge
-                      className={
-                        tool.write
-                          ? "shrink-0 border-orange-500/40 text-orange-500"
-                          : "shrink-0 text-muted-foreground"
-                      }
-                      variant="outline"
+                      className="shrink-0"
+                      variant={tool.write ? "brand" : "outline"}
                     >
                       {tool.write ? "write" : "read"}
                     </Badge>

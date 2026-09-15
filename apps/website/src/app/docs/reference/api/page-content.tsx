@@ -924,11 +924,7 @@ export default function PageContent() {
                   <span className="font-medium text-foreground text-sm">
                     {group.name}
                   </span>
-                  {!group.auth && (
-                    <Badge className="text-xs" variant="outline">
-                      Public
-                    </Badge>
-                  )}
+                  {!group.auth && <Badge variant="outline">Public</Badge>}
                 </div>
                 <p className="mt-0.5 text-muted-foreground text-xs">
                   {group.description}
@@ -936,7 +932,7 @@ export default function PageContent() {
               </div>
               <div className="flex gap-1">
                 {group.methods.map((method) => (
-                  <Badge className="text-xs" key={method} variant="secondary">
+                  <Badge key={method} variant="secondary">
                     {method}
                   </Badge>
                 ))}
@@ -1993,7 +1989,7 @@ export default function PageContent() {
           </code>{" "}
           protocol read and write.
         </p>
-        <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mb-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">The API does not compile TSX</p>
           <p className="mt-2 text-muted-foreground text-sm">
             Supply{" "}
@@ -2226,7 +2222,7 @@ export default function PageContent() {
           markdown={SECTION_MD.segments}
           title="Segments"
         />
-        <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mb-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">
             Every /v1/segments route requires the Pro plan or above
           </p>

@@ -2,6 +2,7 @@
 
 import { Button } from "@wraps/ui/components/ui/button";
 import { Check, Copy } from "lucide-react";
+import type * as React from "react";
 import { useState } from "react";
 
 export function DomainChecker() {
@@ -28,7 +29,7 @@ export function DomainChecker() {
           type="text"
           value={domain}
         />
-        <Button className="shrink-0 px-6" onClick={handleCheck}>
+        <Button className="shrink-0" onClick={handleCheck}>
           Check Your Grade
         </Button>
       </div>
@@ -43,7 +44,7 @@ export function DomainChecker() {
       >
         <span className="font-mono">npx mail-audit yourdomain.com</span>
         {copied ? (
-          <Check className="h-3 w-3 text-green-500" />
+          <Check className="h-3 w-3 text-success" />
         ) : (
           <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
         )}
@@ -82,8 +83,8 @@ export function GradeBar({
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={`h-full rounded-full transition-all duration-700 ${color.replace("text-", "bg-").replace("border-", "bg-")}`}
-            style={{ width: `${pct}%` }}
+            className={`h-full w-(--pct) rounded-full transition-all duration-700 ${color.replace("text-", "bg-").replace("border-", "bg-")}`}
+            style={{ "--pct": `${pct}%` } as React.CSSProperties}
           />
         </div>
       </div>
@@ -96,31 +97,31 @@ export function GradeDistribution() {
     {
       grade: "A",
       count: 45,
-      color: "text-green-500 border-green-500 bg-green-500",
+      color: "text-success border-success bg-success",
       description: "SPF + DKIM + DMARC enforcing",
     },
     {
       grade: "B",
       count: 54,
-      color: "text-yellow-500 border-yellow-500 bg-yellow-500",
+      color: "text-warning border-warning bg-warning",
       description: "All present, not enforcing",
     },
     {
       grade: "C",
       count: 38,
-      color: "text-orange-500 border-orange-500 bg-orange-500",
+      color: "text-brand border-brand bg-brand",
       description: "Missing one record",
     },
     {
       grade: "D",
       count: 40,
-      color: "text-red-500 border-red-500 bg-red-500",
+      color: "text-destructive border-destructive bg-destructive",
       description: "Missing two records",
     },
     {
       grade: "F",
       count: 23,
-      color: "text-red-700 border-red-700 bg-red-700",
+      color: "text-destructive border-destructive bg-destructive",
       description: "No auth or critical failure",
     },
   ];

@@ -38,10 +38,10 @@ export function StatsSection() {
         <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
           {stats.map((stat) => {
             const cardContent = (
-              <div className="rounded-xl border bg-background p-6 text-center transition-all hover:border-orange-500/50">
+              <div className="rounded-xl border bg-background p-6 text-center transition-all hover:border-brand/50">
                 <div className="mb-3 flex justify-center">
-                  <div className="flex aspect-square size-12 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-                    <stat.icon className="size-6 text-orange-500" />
+                  <div className="flex aspect-square size-12 items-center justify-center rounded-full border-2 border-brand bg-brand/5">
+                    <stat.icon className="size-6 text-brand" />
                   </div>
                 </div>
                 <h3 className="font-bold text-2xl text-foreground sm:text-3xl">

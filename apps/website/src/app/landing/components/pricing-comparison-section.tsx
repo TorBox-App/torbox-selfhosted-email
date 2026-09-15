@@ -86,7 +86,7 @@ export function PricingComparisonSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <p className="text-orange-500 font-medium text-sm mb-3 tracking-wide uppercase">
+          <p className="text-brand font-medium text-sm mb-3 tracking-wide uppercase">
             The real cost comparison
           </p>
           <h2 className="font-bold text-3xl md:text-4xl tracking-tight mb-4">
@@ -107,8 +107,8 @@ export function PricingComparisonSection() {
                 className={cn(
                   "group flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200",
                   isActive
-                    ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/25"
-                    : "bg-background border-border hover:border-orange-500/50 text-muted-foreground hover:text-foreground"
+                    ? "bg-brand border-brand text-white shadow-lg shadow-brand/25"
+                    : "bg-background border-border hover:border-brand/50 text-muted-foreground hover:text-foreground"
                 )}
                 key={useCase.id}
                 onClick={() => setActiveCase(useCase)}
@@ -131,7 +131,7 @@ export function PricingComparisonSection() {
         {/* Main Comparison Card */}
         <div className="relative">
           {/* Background decoration */}
-          <div className="absolute inset-0 bg-linear-to-br from-orange-500/5 via-transparent to-orange-500/5 rounded-3xl" />
+          <div className="absolute inset-0 bg-linear-to-br from-brand/5 via-transparent to-brand/5 rounded-3xl" />
 
           <div className="relative rounded-3xl border bg-background/80 backdrop-blur-sm overflow-hidden">
             {/* Top section - The dramatic comparison */}
@@ -153,7 +153,7 @@ export function PricingComparisonSection() {
 
                 <div className="relative inline-block">
                   {/* Strikethrough line */}
-                  <div className="absolute top-1/2 -left-2 -right-2 h-0.5 bg-red-500/60 -rotate-6" />
+                  <div className="absolute top-1/2 -left-2 -right-2 h-0.5 bg-destructive/60 -rotate-6" />
                   <span className="font-bold text-5xl md:text-6xl text-muted-foreground/40">
                     ${activeCase.competitor.price}
                   </span>
@@ -164,8 +164,8 @@ export function PricingComparisonSection() {
               </div>
 
               {/* Wraps Side */}
-              <div className="p-8 md:p-10 bg-linear-to-br from-orange-500/8 to-transparent relative">
-                <div className="absolute top-6 right-6 text-orange-500 text-xs font-medium uppercase tracking-wider">
+              <div className="p-8 md:p-10 bg-linear-to-br from-brand/8 to-transparent relative">
+                <div className="absolute top-6 right-6 text-brand text-xs font-medium uppercase tracking-wider">
                   You pay
                 </div>
 
@@ -188,7 +188,7 @@ export function PricingComparisonSection() {
                 </div>
 
                 {/* Savings badge */}
-                <div className="mt-6 inline-flex items-center gap-2 bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-1.5 rounded-full">
+                <div className="mt-6 inline-flex items-center gap-2 bg-success/10 text-success px-3 py-1.5 rounded-full">
                   <span className="font-bold text-lg">
                     {activeCase.savings}% less
                   </span>

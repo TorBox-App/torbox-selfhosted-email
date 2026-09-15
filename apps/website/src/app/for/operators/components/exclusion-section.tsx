@@ -24,7 +24,7 @@ export function OperatorsExclusionSection() {
               filter splits a large audience into even cohorts when you want to
               ramp a domain instead of hitting it all at once.
             </p>
-            <p className="border-orange-500/40 border-l-2 pl-4 text-muted-foreground leading-relaxed">
+            <p className="border-brand/40 border-l-2 pl-4 text-muted-foreground leading-relaxed">
               And when a segment is deleted or its filters no longer compile,
               recipient selection fails closed — the send resolves to nobody,
               not to everybody. The worst outcome is a broadcast that
@@ -33,10 +33,10 @@ export function OperatorsExclusionSection() {
           </div>
 
           <div className="rounded-xl border border-border bg-card/60 p-5">
-            <div className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+            <div className="mb-4 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
               filters available
             </div>
-            <ul className="space-y-3 font-mono text-[12.5px]">
+            <ul className="space-y-3 font-mono text-xs">
               {[
                 [
                   "Email status",

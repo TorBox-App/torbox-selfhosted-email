@@ -1,5 +1,6 @@
 import { Card } from "@wraps/ui/components/ui/card";
 import type { Metadata } from "next";
+import type * as React from "react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { JsonLd } from "@/components/json-ld";
@@ -165,7 +166,7 @@ const TheFix = () => (
           </div>
           <div className="flex-1">
             <h4 className="mb-1 font-semibold text-foreground">{step.title}</h4>
-            <div className="mb-2 overflow-x-auto rounded bg-muted p-2 font-mono text-green-600 text-sm dark:text-green-400">
+            <div className="mb-2 overflow-x-auto rounded bg-muted p-2 font-mono text-success text-sm dark:text-success">
               {step.code}
             </div>
             <p className="text-muted-foreground text-sm">{step.desc}</p>
@@ -181,25 +182,25 @@ const DMARC_ADOPTION_DATA = [
   {
     label: "No DMARC at all",
     value: 82,
-    color: "bg-red-500",
+    color: "bg-destructive",
     annotation: "completely unprotected",
   },
   {
     label: "p=none",
     value: 9.7,
-    color: "bg-yellow-500",
+    color: "bg-warning",
     annotation: "monitoring only",
   },
   {
     label: "p=quarantine",
     value: 3.1,
-    color: "bg-orange-500",
+    color: "bg-brand",
     annotation: "partial protection",
   },
   {
     label: "p=reject",
     value: 5.2,
-    color: "bg-green-500",
+    color: "bg-success",
     annotation: "actual protection",
   },
 ];
@@ -246,12 +247,12 @@ export default function Page() {
           <EmailHeaderScroller />
           <div className="relative z-10 mx-4 max-w-3xl rounded-2xl border bg-background/80 p-8 shadow-2xl backdrop-blur-sm md:p-12">
             <h1 className="mb-4 font-bold text-4xl md:text-6xl">
-              Your DMARC policy is <span className="text-red-500">useless</span>
-              .
+              Your DMARC policy is{" "}
+              <span className="text-destructive">useless</span>.
             </h1>
             <p className="mb-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
               82% of domains have no DMARC. Of those that do, most set{" "}
-              <code className="rounded bg-red-500/20 px-2 py-0.5 text-red-600 dark:text-red-400">
+              <code className="rounded bg-destructive/20 px-2 py-0.5 text-destructive">
                 p=none
               </code>
               &mdash;which tells receivers not to enforce.
@@ -284,7 +285,7 @@ export default function Page() {
               </p>
               <p className="text-foreground/80 text-xl leading-relaxed">
                 This isn't hypothetical.{" "}
-                <span className="font-semibold text-red-600 dark:text-red-400">
+                <span className="font-semibold text-destructive">
                   $2.77 billion
                 </span>{" "}
                 was stolen through BEC attacks in 2024 alone. Google and
@@ -310,7 +311,7 @@ export default function Page() {
               <p className="text-foreground/80 text-xl leading-relaxed">
                 In 2024, Business Email Compromise (BEC) attacks cost
                 organizations{" "}
-                <span className="font-semibold text-red-600 dark:text-red-400">
+                <span className="font-semibold text-destructive">
                   $2.77 billion
                 </span>{" "}
                 in reported losses, according to the{" "}
@@ -344,7 +345,7 @@ export default function Page() {
                   Red Sift
                 </a>{" "}
                 found that only{" "}
-                <span className="font-semibold text-green-600 dark:text-green-400">
+                <span className="font-semibold text-success">
                   5.2% have p=reject
                 </span>
                 —the only policy that actually stops spoofed emails. The rest?
@@ -362,8 +363,10 @@ export default function Page() {
                   </div>
                   <div className="h-6 flex-1 overflow-hidden rounded bg-muted">
                     <div
-                      className={`h-full rounded ${item.color}`}
-                      style={{ width: `${item.value}%` }}
+                      className={`h-full w-(--value) rounded ${item.color}`}
+                      style={
+                        { "--value": `${item.value}%` } as React.CSSProperties
+                      }
                     />
                   </div>
                   <div className="w-48 shrink-0">
@@ -452,13 +455,13 @@ export default function Page() {
                   CISA's BOD 18-01
                 </a>{" "}
                 requires all US federal agencies to implement{" "}
-                <code className="rounded bg-green-500/20 px-1.5 py-0.5 text-green-600 dark:text-green-400">
+                <code className="rounded bg-success/20 px-1.5 py-0.5 text-success">
                   p=reject
                 </code>
                 . The UK, Australia, Canada, Denmark, and New Zealand have
                 similar mandates. And the results are stark: in countries with
                 mandatory DMARC, phishing success rates dropped from{" "}
-                <span className="font-semibold text-red-600 dark:text-red-400">
+                <span className="font-semibold text-destructive">
                   69% to 14%
                 </span>
                 . Meanwhile, the Netherlands—without mandates—saw vulnerability
@@ -554,7 +557,7 @@ export default function Page() {
               <p className="text-foreground/80 text-xl leading-relaxed">
                 The attack is straightforward. They query DNS for your DMARC
                 record. If it returns{" "}
-                <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                   p=none
                 </code>
                 , they know the domain owner won't request enforcement of
@@ -567,9 +570,9 @@ export default function Page() {
             {/* Attack flow visualization */}
             <div className="my-8 overflow-hidden rounded-lg border bg-muted/30">
               <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
-                <div className="h-3 w-3 rounded-full bg-red-500" />
-                <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                <div className="h-3 w-3 rounded-full bg-green-500" />
+                <div className="h-3 w-3 rounded-full bg-destructive" />
+                <div className="h-3 w-3 rounded-full bg-warning" />
+                <div className="h-3 w-3 rounded-full bg-success" />
                 <span className="ml-2 font-mono text-muted-foreground text-xs">
                   Email header from Kimsuky attack (FBI advisory)
                 </span>
@@ -578,19 +581,17 @@ export default function Page() {
                 <div className="text-muted-foreground">
                   Authentication-Results: spf=fail; dkim=fail;
                 </div>
-                <div className="text-red-600 dark:text-red-400">
+                <div className="text-destructive">
                   {"  "}dmarc=fail (p=none sp=none dis=none)
                 </div>
                 <div className="mt-2 text-muted-foreground">
                   From: trusted.journalist@legitimate-news.org{" "}
-                  <span className="text-yellow-600 dark:text-yellow-400">
-                    (spoofed)
-                  </span>
+                  <span className="text-warning">(spoofed)</span>
                 </div>
                 <div className="text-muted-foreground">
                   To: policy.analyst@thinktank.org
                 </div>
-                <div className="mt-2 border-muted border-t pt-2 text-green-600 dark:text-green-400">
+                <div className="mt-2 border-muted border-t pt-2 text-success">
                   Status: Delivered to inbox ✓
                 </div>
               </div>
@@ -600,11 +601,11 @@ export default function Page() {
               <p className="text-foreground/80 text-xl leading-relaxed">
                 The email failed every authentication check—SPF, DKIM, and
                 DMARC—but was delivered anyway because the policy was set to{" "}
-                <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                   p=none
                 </code>
                 . The advisory explicitly states that upgrading to{" "}
-                <code className="rounded bg-green-500/20 px-1.5 py-0.5 text-green-600 dark:text-green-400">
+                <code className="rounded bg-success/20 px-1.5 py-0.5 text-success">
                   p=reject
                 </code>{" "}
                 would have prevented these attacks entirely.
@@ -614,7 +615,7 @@ export default function Page() {
                 The US Treasury sanctioned Kimsuky in November 2023, but
                 technical exploitation continues because organizations still
                 haven't enforced their policies. Your{" "}
-                <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                   p=none
                 </code>{" "}
                 isn't just a configuration choice—it's an invitation.
@@ -632,7 +633,7 @@ export default function Page() {
                 Enter any domain below and see what policy it's running. You
                 might be surprised—many organizations think they have protection
                 when they're actually running{" "}
-                <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                   p=none
                 </code>{" "}
                 or have no DMARC record at all.
@@ -650,7 +651,7 @@ export default function Page() {
             <div className="prose prose-neutral dark:prose-invert max-w-none">
               <p className="text-foreground/80 text-xl leading-relaxed">
                 Beyond the{" "}
-                <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
+                <code className="rounded bg-destructive/20 px-1.5 py-0.5 text-destructive">
                   p=none
                 </code>{" "}
                 problem, dozens of technical misconfigurations silently break
@@ -703,7 +704,7 @@ export default function Page() {
                 instead. The March 2022 SEC domain spoofing case demonstrated a
                 related problem: attackers couldn't spoof sec.gov directly (it
                 has{" "}
-                <code className="rounded bg-green-500/20 px-1.5 py-0.5 text-green-600 dark:text-green-400">
+                <code className="rounded bg-success/20 px-1.5 py-0.5 text-success">
                   p=reject
                 </code>
                 ), so they spoofed an unprotected government email delivery
@@ -774,7 +775,7 @@ export default function Page() {
             </div>
             <TheFix />
 
-            <div className="mt-6 rounded-xl border border-orange-500/30 bg-orange-500/5 p-5">
+            <div className="mt-6 rounded-xl border border-brand/30 bg-brand/5 p-5">
               <p className="mb-2 font-semibold text-foreground">
                 Skip the manual setup
               </p>
@@ -783,7 +784,7 @@ export default function Page() {
                 deploy. One command, production-ready authentication.
               </p>
               <a
-                className="inline-flex items-center gap-1 font-medium text-orange-500 text-sm hover:text-orange-600"
+                className="inline-flex items-center gap-1 font-medium text-brand text-sm hover:text-brand"
                 href="/docs/quickstart"
               >
                 Deploy in 2 minutes &rarr;
@@ -798,7 +799,7 @@ export default function Page() {
                 </span>{" "}
                 in 2024. DMARC implementation costs as little as $8-50/month.
                 Forrester estimates large enterprises save{" "}
-                <span className="font-semibold text-green-600 dark:text-green-400">
+                <span className="font-semibold text-success">
                   $2.4 million annually
                 </span>{" "}
                 with proper enforcement. The ManageMyHealth case shows what
@@ -821,9 +822,9 @@ export default function Page() {
 
             <div className="overflow-hidden rounded-xl border bg-muted/50">
               <div className="flex items-center gap-2 border-b px-4 py-2 text-muted-foreground text-xs">
-                <span className="inline-block h-3 w-3 rounded-full bg-red-500/60" />
-                <span className="inline-block h-3 w-3 rounded-full bg-yellow-500/60" />
-                <span className="inline-block h-3 w-3 rounded-full bg-green-500/60" />
+                <span className="inline-block h-3 w-3 rounded-full bg-destructive/60" />
+                <span className="inline-block h-3 w-3 rounded-full bg-warning/60" />
+                <span className="inline-block h-3 w-3 rounded-full bg-success/60" />
                 <span className="ml-2">Terminal</span>
               </div>
               <div className="p-4">
@@ -836,7 +837,7 @@ export default function Page() {
 
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <a
-                className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-6 py-2.5 font-medium text-white transition-colors hover:bg-orange-600"
+                className="inline-flex items-center justify-center rounded-lg bg-brand px-6 py-2.5 font-medium text-white transition-colors hover:bg-brand/90"
                 href="/docs/quickstart"
               >
                 Free CLI Quickstart
@@ -904,7 +905,7 @@ export default function Page() {
                 </a>
               </div>
             </Card>
-            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-6">
+            <div className="rounded-xl border border-brand/20 bg-brand/5 p-6">
               <p className="font-semibold text-foreground">
                 Stop configuring. Start sending.
               </p>
@@ -914,7 +915,7 @@ export default function Page() {
               </p>
               <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
                 <a
-                  className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-5 py-2 font-medium text-sm text-white transition-colors hover:bg-orange-600"
+                  className="inline-flex items-center justify-center rounded-lg bg-brand px-5 py-2 font-medium text-sm text-white transition-colors hover:bg-brand/90"
                   href="/docs/quickstart"
                 >
                   Get Started Free &rarr;

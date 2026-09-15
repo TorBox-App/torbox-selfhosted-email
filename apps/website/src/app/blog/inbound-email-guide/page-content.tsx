@@ -103,22 +103,22 @@ export function InboundArchitectureDiagram() {
       glow: "shadow-gray-500/25",
     },
     orange: {
-      bg: "bg-orange-500/10 dark:bg-orange-500/20",
-      border: "border-orange-500/50",
-      text: "text-orange-600 dark:text-orange-400",
-      glow: "shadow-orange-500/25",
+      bg: "bg-brand/10",
+      border: "border-brand/50",
+      text: "text-brand",
+      glow: "shadow-brand/25",
     },
     green: {
-      bg: "bg-green-500/10 dark:bg-green-500/20",
-      border: "border-green-500/50",
-      text: "text-green-600 dark:text-green-400",
-      glow: "shadow-green-500/25",
+      bg: "bg-success/10 dark:bg-success/20",
+      border: "border-success/50",
+      text: "text-success",
+      glow: "shadow-success/25",
     },
     yellow: {
-      bg: "bg-yellow-500/10 dark:bg-yellow-500/20",
-      border: "border-yellow-500/50",
-      text: "text-yellow-600 dark:text-yellow-400",
-      glow: "shadow-yellow-500/25",
+      bg: "bg-warning/10 dark:bg-warning/20",
+      border: "border-warning/50",
+      text: "text-warning",
+      glow: "shadow-warning/25",
     },
     purple: {
       bg: "bg-purple-500/10 dark:bg-purple-500/20",
@@ -231,45 +231,45 @@ export function UseCasesGrid() {
       title: "Support Inbox",
       description:
         "Auto-create tickets from customer emails. Route by subject, extract order IDs, assign to teams.",
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: "text-info",
+      bgColor: "bg-info/10",
     },
     {
       icon: Package,
       title: "Order Processing",
       description:
         "Parse confirmations, extract tracking numbers, update databases automatically.",
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
+      color: "text-brand",
+      bgColor: "bg-brand/10",
     },
     {
       icon: FileText,
       title: "Email-to-Ticket",
       description: "Integrate with Jira, Linear, GitHub Issues via webhooks.",
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
     },
     {
       icon: Mail,
       title: "Auto-Responders",
       description:
         "Send acknowledgments, out-of-office, or follow-up sequences.",
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
+      color: "text-success",
+      bgColor: "bg-success/10",
     },
     {
       icon: Users,
       title: "Lead Capture",
       description: "Extract contact info from inquiries, sync to CRM.",
-      color: "text-pink-500",
-      bgColor: "bg-pink-500/10",
+      color: "text-brand",
+      bgColor: "bg-brand/10",
     },
     {
       icon: Database,
       title: "Document Processing",
       description: "Extract attachments, process PDFs, trigger workflows.",
-      color: "text-cyan-500",
-      bgColor: "bg-cyan-500/10",
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
     },
   ];
 
@@ -381,7 +381,7 @@ export function CLIDemo() {
         ◐ Validating AWS credentials...
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={2500}>
+      <AnimatedSpan className="text-success" delay={2500}>
         ✓ AWS credentials valid (account: 123456789012)
       </AnimatedSpan>
 
@@ -408,11 +408,11 @@ export function CLIDemo() {
         {"  "}✓ IAM Policies configured
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-green-500" delay={7000}>
+      <AnimatedSpan className="text-success" delay={7000}>
         ✓ Inbound infrastructure deployed!
       </AnimatedSpan>
 
-      <AnimatedSpan className="text-cyan-500" delay={7500}>
+      <AnimatedSpan className="text-brand" delay={7500}>
         MX Record: 10 inbound-smtp.us-east-1.amazonaws.com
       </AnimatedSpan>
 
@@ -448,12 +448,5 @@ export function EmailJsonPreview() {
 }`,
   };
 
-  return (
-    <CodeTabs
-      className="my-6 border-cyan-500/30"
-      codes={codes}
-      copyButton
-      lang="json"
-    />
-  );
+  return <CodeTabs className="my-6" codes={codes} copyButton lang="json" />;
 }

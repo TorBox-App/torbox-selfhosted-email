@@ -170,7 +170,7 @@ export default function WhyWrapsPage() {
                       "What it cannot do",
                     ].map((h) => (
                       <th
-                        className="border-border border-b px-3 py-3 font-mono font-medium text-muted-foreground text-xs uppercase tracking-[0.08em]"
+                        className="border-border border-b px-3 py-3 font-mono font-medium text-muted-foreground text-xs uppercase tracking-widest"
                         key={h}
                       >
                         {h}
@@ -231,14 +231,14 @@ export default function WhyWrapsPage() {
                       {row.price}
                     </span>
                   </dt>
-                  <dd className="text-muted-foreground text-sm leading-[1.6]">
+                  <dd className="text-muted-foreground text-sm leading-relaxed">
                     {row.forWho}
                   </dd>
                 </div>
               ))}
             </dl>
 
-            <p className="mt-7 max-w-2xl text-muted-foreground text-sm leading-[1.65]">
+            <p className="mt-7 max-w-2xl text-muted-foreground text-sm leading-relaxed">
               Worth saying to whoever is reviewing the budget: price is not the
               reason to do this. Below roughly 100,000 emails a month the
               difference against a hosted API is small, and if the case rests on
@@ -267,7 +267,7 @@ export default function WhyWrapsPage() {
                   <h3 className="mb-2 font-semibold text-foreground text-sm">
                     {point.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm leading-[1.6]">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {point.body}
                   </p>
                 </div>
@@ -294,7 +294,7 @@ export default function WhyWrapsPage() {
             <ul className="space-y-4">
               {badFit.map((item) => (
                 <li
-                  className="border-border border-t pt-4 text-muted-foreground text-sm leading-[1.65]"
+                  className="border-border border-t pt-4 text-muted-foreground text-sm leading-relaxed"
                   key={item}
                 >
                   {item}

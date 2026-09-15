@@ -129,7 +129,7 @@ export function TestimonialsSection() {
             >
               <CardContent>
                 <div className="flex items-start gap-4">
-                  <Avatar className="size-12 shrink-0 bg-muted">
+                  <Avatar className="size-12 shrink-0">
                     <AvatarImage
                       alt={testimonial.name}
                       height="120"

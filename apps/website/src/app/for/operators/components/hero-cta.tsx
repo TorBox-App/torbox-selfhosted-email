@@ -6,11 +6,7 @@ import { trackEvent } from "@/utils/analytics";
 export function OperatorsHeroCTA() {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button
-        asChild
-        className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
-        size="lg"
-      >
+      <Button asChild className="cursor-pointer" size="lg" variant="brand">
         <a
           href="https://app.wraps.dev/auth?mode=signup"
           onClick={() =>

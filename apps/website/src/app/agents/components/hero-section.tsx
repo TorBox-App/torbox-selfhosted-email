@@ -14,21 +14,21 @@ export function AgentsHeroSection() {
           {/* Left column — mono-forward copy */}
           <div>
             {/* Mono tag, no marketing badge */}
-            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              <span className="size-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+              <span className="size-1.5 rounded-full bg-brand" />
               <span>wraps · for agents</span>
             </div>
 
             <h1 className="mb-6 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
               Give your agent an email address.{" "}
-              <span className="text-orange-500">Keep the leash.</span>
+              <span className="text-brand">Keep the leash.</span>
             </h1>
 
             {/* Mono anchor: the return type IS the marketing. Every send has
                 three possible endings, and one of them is "a human decides". */}
-            <pre className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/60 px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground/90">
+            <pre className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/60 px-4 py-3 font-mono text-sm leading-relaxed text-foreground/90">
               <span className="text-muted-foreground">tool</span>{" "}
-              <span className="text-orange-500">send_email</span>
+              <span className="text-brand">send_email</span>
               {"("}
               {"\n  "}from: <span className="text-foreground/60">string</span>,
               {"\n  "}to: <span className="text-foreground/60">string</span>,
@@ -36,17 +36,11 @@ export function AgentsHeroSection() {
               <span className="text-foreground/60">string</span>,{"\n  "}html:{" "}
               <span className="text-foreground/60">string</span>,{"\n"}
               {"): { status: "}
-              <span className="text-emerald-700 dark:text-emerald-400">
-                {'"sent"'}
-              </span>
+              <span className="text-success">{'"sent"'}</span>
               {" | "}
-              <span className="text-amber-700 dark:text-amber-400">
-                {'"pending_approval"'}
-              </span>
+              <span className="text-warning">{'"pending_approval"'}</span>
               {" | "}
-              <span className="text-red-700 dark:text-red-400">
-                {'"blocked"'}
-              </span>
+              <span className="text-destructive">{'"blocked"'}</span>
               <span className="text-foreground/60">{" | … }"}</span>
             </pre>
 
@@ -62,7 +56,7 @@ export function AgentsHeroSection() {
 
           {/* Right column — animated tool-call trace */}
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-orange-500/10 opacity-60 blur-2xl" />
+            <div className="absolute -inset-4 rounded-3xl bg-brand/10 opacity-60 blur-2xl" />
             <div className="relative">
               <ToolCallTrace />
             </div>

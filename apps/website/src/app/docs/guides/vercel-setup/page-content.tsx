@@ -145,15 +145,15 @@ export default function VercelSetupPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>A Vercel project deployed</span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>AWS account with CLI access configured</span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   Wraps CLI installed (
                   <code className="rounded bg-muted px-1.5 py-0.5">

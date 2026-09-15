@@ -56,10 +56,10 @@ export function PrinciplesSection() {
                   aria-hidden="true"
                   className="mb-4 size-5 text-foreground"
                 />
-                <h3 className="mb-2 font-semibold text-[15px] text-foreground">
+                <h3 className="mb-2 font-semibold text-base text-foreground">
                   {principle.title}
                 </h3>
-                <p className="text-[13.5px] text-muted-foreground leading-[1.55]">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {principle.description}
                 </p>
               </>
@@ -68,7 +68,7 @@ export function PrinciplesSection() {
             if (principle.href) {
               return (
                 <Link
-                  className="block border-foreground border-t pt-5 transition-colors hover:border-orange-500"
+                  className="block border-foreground border-t pt-5 transition-colors hover:border-brand"
                   href={principle.href}
                   key={principle.title}
                 >

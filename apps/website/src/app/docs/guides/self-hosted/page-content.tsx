@@ -297,11 +297,11 @@ export default function SelfHostedPageContent() {
           <CardContent className="p-6">
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>Node.js 22+ and pnpm 10+ installed locally</span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   AWS CLI configured with credentials that have IAM, Lambda, S3,
                   CloudFormation, SSM, CloudFront, SQS, DynamoDB, EventBridge
@@ -309,7 +309,7 @@ export default function SelfHostedPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   Postgres database connection string —{" "}
                   <a
@@ -366,7 +366,7 @@ export default function SelfHostedPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>
                   Wraps enterprise license key — contact{" "}
                   <Link
@@ -379,7 +379,7 @@ export default function SelfHostedPageContent() {
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <Check className="h-5 w-5 shrink-0 text-green-500" />
+                <Check className="h-5 w-5 shrink-0 text-success" />
                 <span>GitHub account for forking the repository</span>
               </li>
             </ul>
@@ -542,7 +542,7 @@ pnpm install`,
             and login need these tables
           </li>
         </ol>
-        <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mb-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">
             If migrations fail, the infrastructure is still deployed
           </p>
@@ -918,7 +918,7 @@ pnpm install`,
           and confirm your connected AWS account and any email or SMS
           infrastructure are visible.
         </p>
-        <div className="rounded-lg border-green-500 border-l-4 bg-green-500/10 p-4">
+        <div className="rounded-lg border-success border-l-4 bg-success/10 p-4">
           <p className="font-medium text-sm">You are fully self-hosted</p>
           <p className="mt-2 text-muted-foreground text-sm">
             All API calls from the dashboard go directly to your Lambda. No
@@ -1210,7 +1210,7 @@ pnpm install`,
               at the workflow level, which is required for OIDC token exchange.
               You do not need to add this manually.
             </p>
-            <div className="mt-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-3 text-sm">
+            <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-3 text-sm">
               <p className="font-medium">
                 If the deploy fails with "Could not assume role with OIDC: Not
                 authorized to perform sts:AssumeRoleWithWebIdentity"
@@ -1255,7 +1255,7 @@ pnpm install`,
               </span>{" "}
               and add the following:
             </p>
-            <div className="mb-4 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-3 text-sm">
+            <div className="mb-4 rounded-lg border-warning border-l-4 bg-warning/10 p-3 text-sm">
               <p className="font-medium">After your first deploy</p>
               <p className="mt-1 text-muted-foreground">
                 Open{" "}
@@ -1789,7 +1789,7 @@ pnpm install`,
           <code className="rounded bg-muted px-1.5 py-0.5">apac.</code>) is
           applied for you.
         </p>
-        <div className="mb-6 rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="mb-6 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">
             One step the deploy cannot do for you
           </p>

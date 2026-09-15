@@ -2,6 +2,7 @@
 
 import { Card } from "@wraps/ui/components/ui/card";
 import { Check, Cloud, Copy, Lock, Mail, Server, Shield } from "lucide-react";
+import type * as React from "react";
 import { useEffect, useState } from "react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
 import { assetUrl } from "@/lib/utils";
@@ -34,7 +35,7 @@ export function CodeBlock({ code, filename }: CodeBlockProps) {
             type="button"
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <Check className="h-3.5 w-3.5 text-success" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -75,8 +76,12 @@ export function OIDCDiagram() {
         {/* Connection line */}
         <div className="absolute top-1/2 right-0 left-0 h-0.5 -translate-y-1/2 bg-border" />
         <div
-          className="absolute top-1/2 left-0 h-0.5 -translate-y-1/2 bg-emerald-500 transition-all duration-500"
-          style={{ width: `${(activeStep / 5) * 100}%` }}
+          className="absolute top-1/2 left-0 h-0.5 w-(--progress) -translate-y-1/2 bg-success transition-all duration-500"
+          style={
+            {
+              "--progress": `${(activeStep / 5) * 100}%`,
+            } as React.CSSProperties
+          }
         />
 
         {steps.map((step, i) => (
@@ -84,7 +89,7 @@ export function OIDCDiagram() {
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 ${
                 i <= activeStep
-                  ? "scale-110 bg-emerald-500 text-white"
+                  ? "scale-110 bg-success text-white"
                   : "bg-muted text-muted-foreground"
               }`}
             >
@@ -92,9 +97,7 @@ export function OIDCDiagram() {
             </div>
             <span
               className={`mt-2 text-center text-xs transition-colors duration-300 ${
-                i <= activeStep
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-muted-foreground/50"
+                i <= activeStep ? "text-success" : "text-muted-foreground/50"
               }`}
             >
               {step.label}
@@ -115,19 +118,19 @@ export function TerminalDemo() {
   return (
     <div className="mx-auto mt-12 max-w-3xl">
       <div className="group relative">
-        <div className="absolute -inset-4 rounded-3xl bg-emerald-500/10 opacity-50 blur-2xl transition-opacity group-hover:opacity-70" />
-        <div className="relative overflow-hidden rounded-xl border-2 border-emerald-500/30 shadow-2xl">
+        <div className="absolute -inset-4 rounded-3xl bg-success/10 opacity-50 blur-2xl transition-opacity group-hover:opacity-70" />
+        <div className="relative overflow-hidden rounded-xl border-2 border-success/30 shadow-2xl">
           <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
             <div className="flex gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-red-500" />
-              <div className="h-3 w-3 rounded-full bg-amber-500" />
-              <div className="h-3 w-3 rounded-full bg-emerald-500" />
+              <div className="h-3 w-3 rounded-full bg-destructive" />
+              <div className="h-3 w-3 rounded-full bg-warning" />
+              <div className="h-3 w-3 rounded-full bg-success" />
             </div>
             <span className="ml-2 font-medium text-muted-foreground text-xs">
               terminal — wraps email init
             </span>
           </div>
-          <div className="bg-[#121314]">
+          <div className="bg-terminal">
             <AsciinemaPlayer
               cols={80}
               fit="width"

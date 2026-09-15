@@ -158,7 +158,7 @@ export function TeamSection() {
                   {/* Avatar */}
                   <div className="mb-4 flex justify-center">
                     <CardDecorator>
-                      <Avatar className="h-24 w-24 border shadow-lg">
+                      <Avatar className="h-24 w-24">
                         <AvatarImage
                           alt={member.name}
                           className="object-cover"
@@ -188,8 +188,8 @@ export function TeamSection() {
                   <div className="flex items-center justify-center gap-3">
                     <Button
                       asChild
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
-                      size="icon"
+                      className="cursor-pointer"
+                      size="icon-sm"
                       variant="ghost"
                     >
                       <a
@@ -203,8 +203,8 @@ export function TeamSection() {
                     </Button>
                     <Button
                       asChild
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
-                      size="icon"
+                      className="cursor-pointer"
+                      size="icon-sm"
                       variant="ghost"
                     >
                       <a
@@ -218,8 +218,8 @@ export function TeamSection() {
                     </Button>
                     <Button
                       asChild
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
-                      size="icon"
+                      className="cursor-pointer"
+                      size="icon-sm"
                       variant="ghost"
                     >
                       <a

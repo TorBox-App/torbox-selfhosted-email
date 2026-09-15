@@ -15,11 +15,7 @@ export function OperatorsCtaSection() {
         </p>
 
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
-          <Button
-            asChild
-            className="bg-orange-500 text-white hover:bg-orange-600"
-            size="lg"
-          >
+          <Button asChild size="lg" variant="brand">
             <a
               href="https://app.wraps.dev/auth?mode=signup"
               onClick={() =>

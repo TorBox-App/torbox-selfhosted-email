@@ -48,7 +48,7 @@ export function OperatorsPaperTrailSection() {
           {artifacts.map(({ icon: Icon, title, description }) => (
             <Card className="border-border/70 bg-card/60" key={title}>
               <CardContent className="p-5">
-                <Icon className="mb-3 size-4 text-orange-500" />
+                <Icon className="mb-3 size-4 text-brand" />
                 <h3 className="mb-2 font-medium text-base tracking-tight">
                   {title}
                 </h3>
@@ -64,7 +64,7 @@ export function OperatorsPaperTrailSection() {
           <p className="mb-3 font-medium text-sm tracking-tight">
             How far back the dashboard reads
           </p>
-          <div className="flex flex-wrap gap-x-8 gap-y-3 font-mono text-[12.5px]">
+          <div className="flex flex-wrap gap-x-8 gap-y-3 font-mono text-xs">
             {[
               ["Free", "7 days"],
               ["Starter", "30 days"],

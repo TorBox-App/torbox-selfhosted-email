@@ -105,7 +105,7 @@ export function AwsCredentialsPrereqs({
             )}
           </CodeBlockBody>
         </CodeBlock>
-        <div className="rounded-lg border-yellow-500 border-l-4 bg-yellow-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <p className="font-medium text-sm">
             Missing credentials fail after the first prompt
           </p>

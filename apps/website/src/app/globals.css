@@ -20,6 +20,14 @@
   --font-sans: var(--font-inter);
   --font-heading: var(--font-space-grotesk), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-condensed: "League Gothic Condensed", sans-serif;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+  --tracking-eyebrow: 0.16em;
+  --animate-shimmer: shimmer 3s ease-in-out infinite;
+  --animate-dash: dash 1s linear infinite;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -55,6 +63,10 @@
   --color-info-foreground: var(--info-foreground);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-terminal: var(--terminal);
+  --color-terminal-foreground: var(--terminal-foreground);
+  --color-terminal-muted: var(--terminal-muted);
+  --color-terminal-border: var(--terminal-border);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -107,6 +119,10 @@
   --info-foreground: oklch(0.985 0 0);
   --brand: oklch(0.705 0.213 47.604);
   --brand-foreground: oklch(0.985 0 0);
+  --terminal: oklch(0.141 0.005 285.823);
+  --terminal-foreground: oklch(0.871 0.006 286.286);
+  --terminal-muted: oklch(0.552 0.016 285.938);
+  --terminal-border: oklch(0.274 0.006 286.033);
   --motif-fill: #fdfdfc;
 }
 
@@ -150,6 +166,10 @@
   --info-foreground: oklch(0.985 0 0);
   --brand: oklch(0.75 0.183 55.934);
   --brand-foreground: oklch(0.985 0 0);
+  --terminal: oklch(0.141 0.005 285.823);
+  --terminal-foreground: oklch(0.871 0.006 286.286);
+  --terminal-muted: oklch(0.552 0.016 285.938);
+  --terminal-border: oklch(0.274 0.006 286.033);
   --motif-fill: #0f100f;
 }
 
@@ -293,4 +313,30 @@ html {
 
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out forwards;
+}
+
+@utility bg-radial-top {
+  background-image: radial-gradient(ellipse at top, var(--tw-gradient-stops));
+}
+
+@utility bg-dot-grid {
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+}
+
+@utility clip-diagonal {
+  clip-path: polygon(0 31%, 100% 10%, 100% 100%, 0 100%);
+}
+
+@utility clip-slant-tl {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+@utility clip-slant-tr {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
 }

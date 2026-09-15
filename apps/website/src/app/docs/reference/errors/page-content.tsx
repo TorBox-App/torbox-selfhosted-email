@@ -1504,9 +1504,9 @@ export default function PageContent() {
 
       {/* Important Callout */}
       <section className="mb-12">
-        <div className="rounded-lg border-amber-500 border-l-4 bg-amber-500/10 p-4">
+        <div className="rounded-lg border-warning border-l-4 bg-warning/10 p-4">
           <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <div>
               <p className="font-medium">No Automatic Retries</p>
               <p className="mt-1 text-muted-foreground text-sm">

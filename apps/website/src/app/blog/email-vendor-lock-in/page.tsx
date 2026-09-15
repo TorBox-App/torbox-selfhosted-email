@@ -277,7 +277,7 @@ export default function Page() {
 
             <div className="mt-8 grid gap-6 sm:grid-cols-2">
               <div className="rounded-xl border p-6">
-                <div className="mb-3 flex items-center gap-2 font-semibold text-emerald-600 dark:text-emerald-500">
+                <div className="mb-3 flex items-center gap-2 font-semibold text-success">
                   <Check className="h-4 w-4" />
                   Solved by the architecture
                 </div>

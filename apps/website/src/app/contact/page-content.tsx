@@ -74,15 +74,15 @@ function ChannelCard({ channel }: { channel: Channel }) {
     <>
       <Icon
         aria-hidden="true"
-        className="mb-3 size-5 text-foreground transition-colors group-hover:text-orange-500"
+        className="mb-3 size-5 text-foreground transition-colors group-hover:text-brand"
       />
-      <h3 className="mb-1.5 font-heading font-semibold text-[15px] text-foreground">
+      <h3 className="mb-1.5 font-heading font-semibold text-base text-foreground">
         {channel.title}
       </h3>
-      <p className="mb-3 text-[13.5px] text-muted-foreground leading-[1.55]">
+      <p className="mb-3 text-sm text-muted-foreground leading-relaxed">
         {channel.description}
       </p>
-      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em] transition-colors group-hover:text-orange-500">
+      <span className="inline-flex items-center gap-1.5 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow transition-colors group-hover:text-brand">
         {channel.action}
         <ArrowUpRight aria-hidden="true" className="size-3" />
       </span>
@@ -90,7 +90,7 @@ function ChannelCard({ channel }: { channel: Channel }) {
   );
 
   const className =
-    "group block rounded-xl border border-border bg-card p-5 transition-colors hover:border-orange-500/40";
+    "group block rounded-xl border border-border bg-card p-5 transition-colors hover:border-brand/40";
 
   if (channel.external) {
     return (
@@ -131,7 +131,7 @@ function BookingPlaceholder({
       aria-hidden="true"
       className="absolute inset-0 flex flex-col gap-4 p-5 sm:p-6"
     >
-      <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+      <div className="flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
         {unavailable ? "calendar unavailable" : "loading calendar"}
       </div>
 
@@ -233,11 +233,8 @@ function BookingPanel() {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b px-4 py-3">
-        <span className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-          <span
-            aria-hidden="true"
-            className="size-1.5 rounded-full bg-orange-500"
-          />
+        <span className="inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-brand" />
           book · intro call
         </span>
       </div>
@@ -272,13 +269,9 @@ function BookingPanel() {
         </p>
         <Button
           asChild
-          className={
-            degraded
-              ? "cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
-              : "cursor-pointer"
-          }
+          className="cursor-pointer"
           size="sm"
-          variant={degraded ? "default" : "outline"}
+          variant={degraded ? "brand" : "outline"}
         >
           <a href={CAL_PAGE_URL} rel="noopener noreferrer" target="_blank">
             Open booking page
@@ -295,16 +288,16 @@ export function ContactPageContent() {
     <section className="py-16 sm:py-20" id="contact">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 max-w-2xl">
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+          <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
             <span
               aria-hidden="true"
-              className="size-1.5 rounded-full bg-orange-500"
+              className="size-1.5 rounded-full bg-brand"
             />
             <span>wraps · contact</span>
           </div>
 
           <h1 className="mb-4 text-pretty font-heading font-semibold text-4xl leading-tight tracking-tight sm:text-5xl">
-            Book a call <span className="text-orange-500">with us</span>
+            Book a call <span className="text-brand">with us</span>
           </h1>
 
           <p className="text-lg text-muted-foreground">

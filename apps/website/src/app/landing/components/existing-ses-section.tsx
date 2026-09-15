@@ -49,7 +49,7 @@ export function ExistingSesSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-10 text-center">
-          <p className="mb-2 font-medium text-orange-500 text-sm">
+          <p className="mb-2 font-medium text-brand text-sm">
             Already using SES?
           </p>
           <h2 className="mb-3 font-bold text-2xl tracking-tight sm:text-3xl">
@@ -71,11 +71,11 @@ export function ExistingSesSection() {
             const Icon = benefit.icon;
             return (
               <div
-                className="rounded-xl border bg-background p-5 transition-colors hover:border-orange-500/50"
+                className="rounded-xl border bg-background p-5 transition-colors hover:border-brand/50"
                 key={benefit.title}
               >
-                <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
-                  <Icon className="size-5 text-orange-500" />
+                <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-brand/10">
+                  <Icon className="size-5 text-brand" />
                 </div>
                 <h3 className="mb-1 font-semibold">{benefit.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -89,21 +89,21 @@ export function ExistingSesSection() {
         {/* CTA */}
         <div className="flex flex-col items-center gap-4">
           <button
-            className="flex items-center gap-2 rounded-lg border-2 border-orange-500/30 bg-background px-5 py-3 font-mono text-sm transition-colors hover:border-orange-500 hover:bg-orange-500/5"
+            className="flex items-center gap-2 rounded-lg border-2 border-brand/30 bg-background px-5 py-3 font-mono text-sm transition-colors hover:border-brand hover:bg-brand/5"
             onClick={copyToClipboard}
             type="button"
           >
             <span className="text-muted-foreground">$</span>
             <span>{command}</span>
             {copied ? (
-              <Check className="size-4 text-green-500" />
+              <Check className="size-4 text-success" />
             ) : (
               <Copy className="size-4 text-muted-foreground" />
             )}
           </button>
           <Button
             asChild
-            className="group cursor-pointer text-muted-foreground"
+            className="group cursor-pointer"
             size="sm"
             variant="link"
           >

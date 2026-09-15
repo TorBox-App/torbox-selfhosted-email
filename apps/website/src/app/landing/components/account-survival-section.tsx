@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { SectionKicker } from "./section-kicker";
 
 /*
@@ -73,32 +74,30 @@ function Meter({
 
   return (
     <div className="space-y-2">
-      <p className="text-[12.5px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p
-        className={`font-mono font-semibold text-[22px] tabular-nums tracking-[-0.01em] ${TEXT[level]}`}
+        className={`font-mono font-semibold text-2xl tabular-nums tracking-tight ${TEXT[level]}`}
       >
         {display}
       </p>
       <div className="relative h-1.5 w-full rounded-full bg-muted">
         <div
-          className={`h-full rounded-full ${FILL[level]}`}
-          style={{ width: `${valuePct}%` }}
+          className={`h-full w-(--value) rounded-full ${FILL[level]}`}
+          style={{ "--value": `${valuePct}%` } as React.CSSProperties}
         />
         {/* AWS's two lines. These are the component. */}
         <span
           aria-hidden="true"
-          className="absolute top-[-3px] h-[12px] w-px bg-muted-foreground/60"
-          style={{ left: `${reviewPct}%` }}
+          className="absolute top-[-3px] left-(--review) h-[12px] w-px bg-muted-foreground/60"
+          style={{ "--review": `${reviewPct}%` } as React.CSSProperties}
         />
         <span
           aria-hidden="true"
-          className="absolute top-[-3px] h-[12px] w-px bg-muted-foreground"
-          style={{ left: `${pausePct}%` }}
+          className="absolute top-[-3px] left-(--pause) h-[12px] w-px bg-muted-foreground"
+          style={{ "--pause": `${pausePct}%` } as React.CSSProperties}
         />
       </div>
-      <p className="text-[11.5px] text-muted-foreground leading-[1.5]">
-        {note}
-      </p>
+      <p className="text-2xs text-muted-foreground leading-normal">{note}</p>
     </div>
   );
 }
@@ -112,25 +111,27 @@ function QuotaMeter() {
 
   return (
     <div className="space-y-2">
-      <p className="text-[12.5px] text-muted-foreground">24h quota</p>
-      <p className="font-mono font-semibold text-[22px] text-foreground tabular-nums tracking-[-0.01em]">
+      <p className="text-xs text-muted-foreground">24h quota</p>
+      <p className="font-mono font-semibold text-2xl text-foreground tabular-nums tracking-tight">
         {QUOTA_SENT.toLocaleString("en-US")}
-        <span className="ml-1 font-normal text-[13px] text-muted-foreground">
+        <span className="ml-1 font-normal text-sm text-muted-foreground">
           / {QUOTA_MAX.toLocaleString("en-US")}
         </span>
       </p>
       <div className="relative h-1.5 w-full rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-foreground"
-          style={{ width: `${ratio * 100}%` }}
+          className="h-full w-(--ratio) rounded-full bg-foreground"
+          style={{ "--ratio": `${ratio * 100}%` } as React.CSSProperties}
         />
         <span
           aria-hidden="true"
-          className="absolute top-[-3px] h-[12px] w-px bg-muted-foreground"
-          style={{ left: `${QUOTA_WARN_RATIO * 100}%` }}
+          className="absolute top-[-3px] left-(--warn) h-[12px] w-px bg-muted-foreground"
+          style={
+            { "--warn": `${QUOTA_WARN_RATIO * 100}%` } as React.CSSProperties
+          }
         />
       </div>
-      <p className="text-[11.5px] text-muted-foreground leading-[1.5]">
+      <p className="text-2xs text-muted-foreground leading-normal">
         Warns at 80% of the send quota AWS grants the account.
       </p>
     </div>
@@ -144,23 +145,23 @@ export function AccountSurvivalSection() {
         <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
           <div>
             <SectionKicker>Account survival</SectionKicker>
-            <h2 className="max-w-[20ch] font-heading font-semibold text-3xl text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+            <h2 className="max-w-[20ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
               Your bounce rate, against the line AWS pauses you at.
             </h2>
-            <p className="mt-5 max-w-[48ch] text-base text-muted-foreground leading-[1.6]">
+            <p className="mt-5 max-w-[48ch] text-base text-muted-foreground leading-relaxed">
               Amazon can place an account under review once its bounce rate
               passes 5%, and can pause sending at 10%. For complaints the lines
               are 0.1% and 0.5%. Nothing in the AWS console draws your rate
               against them, so the first news most teams get is the email
               telling them sending is disabled.
             </p>
-            <p className="mt-4 max-w-[48ch] text-base text-muted-foreground leading-[1.6]">
+            <p className="mt-4 max-w-[48ch] text-base text-muted-foreground leading-relaxed">
               Wraps reads those metrics every hour, marks the account healthy,
               at risk, or in danger, and notifies your owners and admins when it
               crosses a line. An email API does not do this — it is not their
               account to lose.
             </p>
-            <p className="mt-6 text-[13.5px] text-muted-foreground leading-[1.6]">
+            <p className="mt-6 text-sm text-muted-foreground leading-relaxed">
               Bounces and complaints are suppressed on the way in, so the rates
               have a floor under them rather than only a gauge over them.
             </p>
@@ -170,10 +171,10 @@ export function AccountSurvivalSection() {
           <figure className="m-0 lg:justify-self-end lg:pt-10">
             <div className="rounded-lg border border-border bg-background p-6 md:p-7">
               <div className="mb-6 flex flex-wrap items-center gap-2">
-                <h3 className="mr-auto font-semibold text-[15px] text-foreground">
+                <h3 className="mr-auto font-semibold text-base text-foreground">
                   Account survival
                 </h3>
-                <span className="rounded border border-warning/40 bg-warning/10 px-2 py-0.5 font-mono text-[11px] text-warning uppercase tracking-[0.06em]">
+                <span className="rounded border border-warning/40 bg-warning/10 px-2 py-0.5 font-mono text-2xs text-warning uppercase tracking-widest">
                   Under review
                 </span>
               </div>
@@ -198,7 +199,7 @@ export function AccountSurvivalSection() {
                 <QuotaMeter />
               </div>
             </div>
-            <figcaption className="mt-3 text-xs text-muted-foreground leading-[1.5]">
+            <figcaption className="mt-3 text-xs text-muted-foreground leading-normal">
               The dashboard's account survival card. Rates shown are an example;
               the thresholds are AWS's own.
             </figcaption>

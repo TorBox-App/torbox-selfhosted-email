@@ -504,23 +504,23 @@ export default function AmazonSesVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Abandon your SES infrastructure
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Lose sending reputation and warm-up history
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Change DNS records (new DKIM, new SPF)
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Rewrite sending code to a new API
                     </li>
                     <li className="flex items-start gap-2">
-                      <X className="mt-0.5 size-4 shrink-0 text-red-500" />
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
                       Accept vendor lock-in, pay 5-20x more per email
                     </li>
                   </ul>
@@ -536,23 +536,23 @@ export default function AmazonSesVsWrapsPage() {
                 <CardContent>
                   <ul className="space-y-2 text-muted-foreground text-sm">
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       SES stays — same service, account, region
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Same DKIM keys, SPF records, DMARC policy
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Same sending reputation — zero warm-up risk
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Existing sending code continues unchanged
                     </li>
                     <li className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       Same AWS bill, same compliance posture
                     </li>
                   </ul>
@@ -728,12 +728,11 @@ export default function AmazonSesVsWrapsPage() {
             </div>
 
             <p className="mt-4 text-muted-foreground text-xs">
-              <Check className="mb-0.5 inline size-3 text-green-600 dark:text-green-400" />{" "}
-              = built-in or included,{" "}
-              <Minus className="mb-0.5 inline size-3 text-orange-600 dark:text-orange-500" />{" "}
+              <Check className="mb-0.5 inline size-3 text-success" /> = built-in
+              or included, <Minus className="mb-0.5 inline size-3 text-brand" />{" "}
               = possible but requires manual setup,{" "}
-              <X className="mb-0.5 inline size-3 text-red-500 dark:text-red-400" />{" "}
-              = not available
+              <X className="mb-0.5 inline size-3 text-destructive" /> = not
+              available
             </p>
           </section>
 
@@ -754,7 +753,7 @@ export default function AmazonSesVsWrapsPage() {
                 <ul className="space-y-3">
                   {chooseSesReasons.map((reason) => (
                     <li className="flex items-start gap-3" key={reason}>
-                      <Check className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+                      <Check className="mt-0.5 size-5 shrink-0 text-success" />
                       <span className="text-muted-foreground">{reason}</span>
                     </li>
                   ))}

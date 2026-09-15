@@ -316,8 +316,8 @@ TTL: 300`,
             )}
           </CodeBlockBody>
         </CodeBlock>
-        <div className="mt-4 rounded-lg border-amber-500 border-l-4 bg-amber-500/10 p-4">
-          <p className="font-medium text-amber-700 text-sm dark:text-amber-400">
+        <div className="mt-4 rounded-lg border-warning border-l-4 bg-warning/10 p-4">
+          <p className="font-medium text-warning text-sm dark:text-warning">
             Region-specific endpoint
           </p>
           <p className="mt-1 text-muted-foreground text-sm">

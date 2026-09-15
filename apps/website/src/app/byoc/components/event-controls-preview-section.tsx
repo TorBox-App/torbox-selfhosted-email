@@ -22,7 +22,7 @@ function LockedTypePill({ label }: { label: string }) {
     <HoverCard openDelay={200}>
       <HoverCardTrigger asChild>
         <button
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 font-medium text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 font-medium text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           type="button"
         >
           <Lock aria-hidden="true" className="size-3" />
@@ -162,7 +162,7 @@ export function EventControlsPreviewSection() {
                 ) : null}
               </div>
 
-              <p className="mb-2 text-muted-foreground text-xs uppercase tracking-[0.08em]">
+              <p className="mb-2 text-muted-foreground text-xs uppercase tracking-widest">
                 Forwards to Wraps
               </p>
               <div className="mb-4 flex flex-wrap gap-1.5">
@@ -193,7 +193,7 @@ export function EventControlsPreviewSection() {
           including Full. Hover or focus a locked type above for why. Interested
           in this before it ships? Tell us at{" "}
           <a
-            className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
+            className="text-brand underline underline-offset-2 hover:text-brand"
             href="/contact"
           >
             /contact

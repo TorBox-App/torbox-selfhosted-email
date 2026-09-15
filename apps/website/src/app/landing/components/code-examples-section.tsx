@@ -215,7 +215,6 @@ export const CodeExamplesSection = memo(function CodeExamplesSection() {
 
           {/* Framework Tabs */}
           <CodeTabs
-            className="border-2 shadow-lg"
             codes={codeExamples}
             lang="typescript"
             themes={{

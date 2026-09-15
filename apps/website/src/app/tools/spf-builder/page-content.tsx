@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
+import type * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Custom include with resolved lookup count
@@ -656,22 +657,22 @@ export default function SPFBuilderWidget() {
 
   const getStatusColor = () => {
     if (lookupCount > 10) {
-      return "text-red-500";
+      return "text-destructive";
     }
     if (lookupCount > 7) {
-      return "text-yellow-500";
+      return "text-warning";
     }
-    return "text-green-500";
+    return "text-success";
   };
 
   const getProgressColor = () => {
     if (lookupCount > 10) {
-      return "bg-red-500";
+      return "bg-destructive";
     }
     if (lookupCount > 7) {
-      return "bg-yellow-500";
+      return "bg-warning";
     }
-    return "bg-green-500";
+    return "bg-success";
   };
 
   return (
@@ -702,7 +703,7 @@ export default function SPFBuilderWidget() {
               />
             </div>
             <Button
-              className="h-12 px-6"
+              className="h-12"
               disabled={lookupLoading || !lookupDomain.trim()}
               onClick={lookUpSpf}
             >
@@ -722,7 +723,7 @@ export default function SPFBuilderWidget() {
 
           {lookupError && (
             <div
-              className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-red-600 text-sm dark:text-red-400"
+              className="mt-4 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-destructive text-sm dark:text-destructive"
               role="alert"
             >
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -746,10 +747,10 @@ export default function SPFBuilderWidget() {
                   <span
                     className={`font-semibold ${
                       lookupResult.lookups > 10
-                        ? "text-red-500"
+                        ? "text-destructive"
                         : lookupResult.lookups > 7
-                          ? "text-yellow-500"
-                          : "text-green-500"
+                          ? "text-warning"
+                          : "text-success"
                     }`}
                   >
                     {lookupResult.lookups}/10
@@ -760,7 +761,7 @@ export default function SPFBuilderWidget() {
                 <div className="space-y-2">
                   {lookupResult.warnings.map((warning) => (
                     <div
-                      className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-600 dark:text-yellow-400"
+                      className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 p-3 text-sm text-warning"
                       key={warning}
                     >
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -795,15 +796,17 @@ export default function SPFBuilderWidget() {
               role="progressbar"
             >
               <div
-                className={`h-full transition-all duration-500 ${getProgressColor()}`}
-                style={{
-                  width: `${Math.min((lookupCount / 10) * 100, 100)}%`,
-                }}
+                className={`h-full w-(--lookups) transition-all duration-500 ${getProgressColor()}`}
+                style={
+                  {
+                    "--lookups": `${Math.min((lookupCount / 10) * 100, 100)}%`,
+                  } as React.CSSProperties
+                }
               />
             </div>
             {lookupCount > 10 && (
               <div
-                className="mt-3 flex items-start gap-2 text-red-500 text-sm"
+                className="mt-3 flex items-start gap-2 text-destructive text-sm"
                 role="alert"
               >
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -816,7 +819,7 @@ export default function SPFBuilderWidget() {
             {lookupCount > 7 && lookupCount <= 10 && (
               <div
                 aria-live="polite"
-                className="mt-3 flex items-start gap-2 text-yellow-500 text-sm"
+                className="mt-3 flex items-start gap-2 text-warning text-sm"
               >
                 <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
                 <span>
@@ -921,7 +924,7 @@ export default function SPFBuilderWidget() {
                       </span>
                       <button
                         aria-label={`Remove ${inc.domain}`}
-                        className="text-muted-foreground hover:text-red-500"
+                        className="text-muted-foreground hover:text-destructive"
                         onClick={() => removeInclude(inc.domain)}
                         type="button"
                       >
@@ -973,7 +976,7 @@ export default function SPFBuilderWidget() {
                     {ip}
                     <button
                       aria-label={`Remove IP ${ip}`}
-                      className="text-muted-foreground hover:text-red-500"
+                      className="text-muted-foreground hover:text-destructive"
                       onClick={() => removeIP(ip)}
                       type="button"
                     >
@@ -1050,27 +1053,22 @@ export default function SPFBuilderWidget() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-sm">
-              <span className="text-purple-500 dark:text-purple-400">
-                v=spf1
-              </span>
+              <span className="text-muted-foreground">v=spf1</span>
               {customIPs.map((ip) => (
-                <span className="text-cyan-600 dark:text-cyan-400" key={ip}>
+                <span className="text-brand" key={ip}>
                   {" "}
                   {ip.includes(":") ? "ip6:" : "ip4:"}
                   {ip}
                 </span>
               ))}
               {selectedProviders.map((p) => (
-                <span className="text-green-600 dark:text-green-400" key={p}>
+                <span className="text-success" key={p}>
                   {" "}
                   {PROVIDERS[p]?.mechanism}
                 </span>
               ))}
               {customIncludes.map((inc) => (
-                <span
-                  className="text-blue-600 dark:text-blue-400"
-                  key={inc.domain}
-                >
+                <span className="text-info" key={inc.domain}>
                   {" "}
                   include:{inc.domain}
                 </span>
@@ -1078,9 +1076,9 @@ export default function SPFBuilderWidget() {
               <span
                 className={
                   qualifier === "-all"
-                    ? "text-green-600 dark:text-green-400"
+                    ? "text-success"
                     : qualifier === "~all"
-                      ? "text-yellow-600 dark:text-yellow-400"
+                      ? "text-warning"
                       : "text-muted-foreground"
                 }
               >

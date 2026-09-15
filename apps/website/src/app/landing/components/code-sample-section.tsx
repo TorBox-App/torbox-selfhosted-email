@@ -37,18 +37,15 @@ export function CodeSampleSection() {
         {/* Copy */}
         <div>
           <SectionKicker>TypeScript SDK</SectionKicker>
-          <h2 className="font-heading font-semibold text-[30px] text-foreground leading-[1.08] tracking-[-0.022em] md:text-[40px]">
+          <h2 className="font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
             Send an email. That&apos;s the whole API.
           </h2>
-          <p className="mt-4 max-w-[52ch] text-[17px] text-muted-foreground leading-[1.55]">
+          <p className="mt-4 max-w-[52ch] text-lg text-muted-foreground leading-relaxed">
             One import, one client, one call. Events stream to DynamoDB in your
             account — query them yourself or use the dashboard.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Button
-              asChild
-              className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
-            >
+            <Button asChild className="cursor-pointer" variant="brand">
               <a href="/docs/sdk-reference">Read the docs</a>
             </Button>
             <Button asChild className="cursor-pointer" variant="outline">

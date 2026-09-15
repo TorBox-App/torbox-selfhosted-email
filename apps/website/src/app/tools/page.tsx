@@ -73,13 +73,12 @@ export default function ToolsPage() {
           <div className="mx-auto max-w-4xl">
             {/* Page Header */}
             <div className="mb-12">
-              <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-                <span className="size-1.5 rounded-full bg-orange-500" />
+              <div className="mb-5 inline-flex items-center gap-2 font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
+                <span className="size-1.5 rounded-full bg-brand" />
                 <span>wraps · free tool</span>
               </div>
               <h1 className="mb-4 text-pretty font-heading font-semibold text-3xl tracking-tight sm:text-5xl">
-                Email Deliverability{" "}
-                <span className="text-orange-500">Checker</span>
+                Email Deliverability <span className="text-brand">Checker</span>
               </h1>
               <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
                 Check your domain's email authentication setup. We analyze SPF,
@@ -104,7 +103,7 @@ export default function ToolsPage() {
                   Sender Policy Framework (SPF) specifies which mail servers are
                   authorized to send email on behalf of your domain.{" "}
                   <a
-                    className="text-orange-500 underline underline-offset-2 hover:text-orange-600"
+                    className="text-brand underline underline-offset-2 hover:text-brand"
                     href="/tools/spf-builder"
                   >
                     Build your SPF record →
@@ -150,11 +149,7 @@ export default function ToolsPage() {
                       DynamoDB.
                     </p>
                   </div>
-                  <Button
-                    asChild
-                    className="bg-orange-500 text-white hover:bg-orange-600"
-                    size="lg"
-                  >
+                  <Button asChild size="lg" variant="brand">
                     <Link href="/tools/ses-calculator">Open Calculator</Link>
                   </Button>
                 </div>

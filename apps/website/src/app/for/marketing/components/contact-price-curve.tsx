@@ -14,23 +14,23 @@ export function ContactPriceCurve() {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm backdrop-blur">
       <div className="border-border border-b px-4 py-3">
-        <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+        <span className="font-mono text-2xs text-muted-foreground uppercase tracking-eyebrow">
           monthly platform fee by list size
         </span>
       </div>
 
       <table className="w-full text-left">
         <thead>
-          <tr className="border-border/60 border-b font-mono text-[11px] text-muted-foreground uppercase tracking-[0.1em]">
+          <tr className="border-border/60 border-b font-mono text-2xs text-muted-foreground uppercase tracking-widest">
             <th className="px-4 py-2.5 font-normal">Contacts</th>
             <th className="px-3 py-2.5 font-normal">Customer.io</th>
             <th className="px-3 py-2.5 font-normal">Klaviyo</th>
-            <th className="px-4 py-2.5 text-right font-normal text-orange-500">
+            <th className="px-4 py-2.5 text-right font-normal text-brand">
               Wraps
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/60 font-mono text-[12.5px] tabular-nums">
+        <tbody className="divide-y divide-border/60 font-mono text-xs tabular-nums">
           {rows.map((row) => (
             <tr key={row.contacts}>
               <td className="px-4 py-2.5 text-muted-foreground">
@@ -51,7 +51,7 @@ export function ContactPriceCurve() {
       </table>
 
       <div className="border-border border-t bg-muted/40 px-4 py-3">
-        <p className="text-[12px] text-muted-foreground leading-relaxed">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           Wraps' fee is flat by plan, not by list size, and sending is billed by
           AWS directly at SES rates. Competitor figures verified July 2026.
         </p>

@@ -178,7 +178,7 @@ export default function MigrateHubPage() {
                           Hardest part: {guide.hardestPart}
                         </span>
                       </div>
-                      <p className="text-muted-foreground text-sm leading-[1.6]">
+                      <p className="text-muted-foreground text-sm leading-relaxed">
                         {guide.summary}
                       </p>
                     </div>
@@ -215,7 +215,7 @@ export default function MigrateHubPage() {
                   <h3 className="mb-1.5 font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground leading-[1.6]">
+                  <p className="text-muted-foreground leading-relaxed">
                     {item.body}
                   </p>
                 </div>
