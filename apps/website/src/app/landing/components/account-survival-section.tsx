@@ -144,26 +144,24 @@ export function AccountSurvivalSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
           <div>
-            <SectionKicker>Account survival</SectionKicker>
+            <SectionKicker>The control plane</SectionKicker>
             <h2 className="max-w-[20ch] font-heading font-semibold text-3xl text-foreground leading-none tracking-tight md:text-4xl">
-              Your bounce rate, against the line AWS pauses you at.
+              Staying on top of it, without opening the AWS console.
             </h2>
             <p className="mt-5 max-w-[48ch] text-base text-muted-foreground leading-relaxed">
-              Amazon can place an account under review once its bounce rate
-              passes 5%, and can pause sending at 10%. For complaints the lines
-              are 0.1% and 0.5%. Nothing in the AWS console draws your rate
-              against them, so the first news most teams get is the email
-              telling them sending is disabled.
+              Most teams pick a hosted API because they do not want to deal with
+              any of this. Fair. So we made dealing with it the easy part:
+              Amazon can put an account under review once its bounce rate passes
+              5% and pause sending at 10%, and the console will not draw your
+              rates against those lines — the control plane does, swept hourly,
+              with owners and admins notified when one is crossed.
             </p>
             <p className="mt-4 max-w-[48ch] text-base text-muted-foreground leading-relaxed">
-              Wraps reads those metrics every hour, marks the account healthy,
-              at risk, or in danger, and notifies your owners and admins when it
-              crosses a line. An email API does not do this — it is not their
-              account to lose.
-            </p>
-            <p className="mt-6 text-sm text-muted-foreground leading-relaxed">
-              Bounces and complaints are suppressed on the way in, so the rates
-              have a floor under them rather than only a gauge over them.
+              Same surface for the rest of the daily job: suppression you can
+              browse and clear, deliverability and blacklist audits, and a
+              per-message event log. Bounces and complaints are suppressed on
+              the way in, so the rates have a floor under them and not only a
+              gauge over them.
             </p>
           </div>
 

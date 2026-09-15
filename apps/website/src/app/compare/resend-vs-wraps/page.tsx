@@ -410,9 +410,8 @@ export default function ResendVsWrapsPage() {
                   your own account, and some requests are refused. What the CLI
                   does is detect sandbox at the end of a deploy, explain what it
                   means, and point you at the request, so it is not something
-                  you discover from a failed send. If you are likely to be
-                  refused, Resend is the better answer and we would rather say
-                  so here.
+                  you discover from a failed send. That constraint applies to
+                  every approach that sends from an account you own.
                 </dd>
               </div>
               <div className="border-border border-t pt-4">

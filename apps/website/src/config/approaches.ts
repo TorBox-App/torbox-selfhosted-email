@@ -4,11 +4,17 @@
  * Source: ~/Obsidian/ops/sops/positioning.md, Section 1 — the positioning
  * canvas. That document is upstream of this file; if the two disagree, it wins.
  *
- * Every approach carries a real `pro` and a real `pickThisIf`, including the
- * ones that are not us. That is the whole point of the page: a buyer who has
- * already decided against AWS should leave here with a better answer, not a
- * worse opinion of us. `src/__tests__/approaches.test.ts` enforces it, so a
- * later copy edit cannot quietly turn this into a competitor hit piece.
+ * Note the shape: there are FOUR approaches and Wraps is inside the fourth, not
+ * a fifth standing outside them. Wraps is an open-source, self-hostable wrapper
+ * over your own SES — that is the product, and the name. An earlier version of
+ * this file made Wraps its own category and then recommended the free wrappers
+ * over it, which argued us out of a category we lead. The comparison that
+ * matters happens INSIDE the fourth approach, in WRAPPER_CRITERIA below.
+ *
+ * Fairness still holds and is still test-pinned: every approach carries a real
+ * strength and a real reader, the reader with no AWS account is sent to a
+ * hosted API, and WRAPS_LIMITS says where we lose. Fair is not the same as
+ * deferential.
  *
  * Vendor prices are NOT inlined here — they live in `alternatives.ts`, which is
  * the single source of truth for every vendor number on the site.
@@ -18,12 +24,11 @@ export type ApproachId =
   | "diy"
   | "sending-api"
   | "marketing-platform"
-  | "oss-wrapper"
-  | "wraps";
+  | "oss-wrapper";
 
 export type Approach = {
   id: ApproachId;
-  /** Short label used in the rubric table. */
+  /** Short label used in the rubric. */
   label: string;
   /** The approach stated as the buyer would state it. */
   title: string;
@@ -31,11 +36,12 @@ export type Approach = {
   examples: string;
   /** What this approach is actually good at. Written to be fair. */
   pro: string;
-  /** What it costs you. Written to be specific rather than damning. */
+  /** What it costs you. Specific rather than damning. */
   con: string;
-  /** The reader who should stop here and go do this instead. */
+  /** The reader this approach is for. */
   pickThisIf: string;
-  isUs?: boolean;
+  /** True for the approach Wraps is one of. */
+  isOurs?: boolean;
 };
 
 export const APPROACHES: readonly Approach[] = [
@@ -47,7 +53,7 @@ export const APPROACHES: readonly Approach[] = [
     pro: "Cheapest by an order of magnitude — $0.10 per 1,000 emails à la carte, $0.16 on the Essentials plan new accounts default to. You own the account, the domain reputation, and the data. No third party sits in the send path, and there is nothing to migrate, ever.",
     con: "Sandboxed by default, and production access is an AWS approval that can be refused. You own bounce and complaint handling, and AWS pauses accounts that get it wrong. There is no dashboard, no templates, no event pipeline, no suppression UI and no message search until you build them.",
     pickThisIf:
-      "You already have production access, you have run SES before, and you have the volume to justify building the operational layer once and maintaining it.",
+      "Your sending is simple enough that one SendEmail call covers it, and you would rather own a hundred lines than a dependency.",
   },
   {
     id: "sending-api",
@@ -57,7 +63,7 @@ export const APPROACHES: readonly Approach[] = [
     pro: "Working in minutes, with no AWS account at all. Resend's developer experience is excellent and deserves its reputation. Deliverability is somebody else's job, and when mail goes missing there is a support desk to ask.",
     con: "Markup that compounds with volume. A shared IP reputation pool you neither see nor control. Short log retention. Your sending history lives with them and leaves with them, and you keep no infrastructure when you go.",
     pickThisIf:
-      "You want to send email today and never think about AWS. For a small team with no AWS commitment this is the honest answer, and we will say so on a sales call.",
+      "You have no AWS account and no appetite for one. Everything below this row assumes you are willing to hold an AWS account; if you are not, this is your row.",
   },
   {
     id: "marketing-platform",
@@ -72,25 +78,69 @@ export const APPROACHES: readonly Approach[] = [
   {
     id: "oss-wrapper",
     label: "Self-host an open-source wrapper",
-    title: "Self-host an open-source wrapper on your own SES",
-    examples: "OpenSend, useSend, MillionSend, and a growing list of others",
-    pro: "Free, or close to it — you pay AWS for sending and nothing for the platform. Several expose a Resend-compatible API, so migrating off Resend can be a base-URL change. Dashboard, domain verification, webhooks and broadcasts are all there, and the source is open, so the ownership argument is theirs as much as ours. Several are good.",
-    con: "They ship the platform layer and stop there. We read the docs for OpenSend, useSend and MillionSend in September 2026: none of the three helps with production access, governs bounces and complaints past emitting a webhook, runs blacklist checks, or watches your account against the rates AWS enforces. Each takes AWS credentials into a container you run, rather than a role you can revoke. You end up operating the platform as well as SES.",
+    title: "Put an open-source wrapper over your own SES",
+    examples: "Wraps, OpenSend, useSend, MillionSend",
+    pro: "You keep everything the first row gives you — your AWS account, your domain reputation, your data, AWS's prices — and stop hand-building the parts that are identical for everybody. A dashboard, domain verification, templates, webhooks and an event pipeline, with source you can read, audit and fork if the vendor disappears. Most of this category is free or close to it.",
+    con: "You need an AWS account and someone willing to hold it, and production access is still an AWS approval nobody in this category can grant. Past that, the category varies enormously in how far beyond the API it goes, which is the whole decision once you are here.",
     pickThisIf:
-      "You already have production access, you already handle bounces, and what you want is a dashboard and a Resend-shaped API over the SES you are running well. Do this and pay nobody.",
-  },
-  {
-    id: "wraps",
-    label: "Wraps",
-    title: "Run SES yourself, with an operations layer on top",
-    examples: "Wraps",
-    pro: "One command deploys SES, DKIM, SPF, DMARC, the event pipeline and suppression handling into your own AWS account, without touching SES resources you already have. Then the part the other four skip: bounce and complaint rates drawn against the lines AWS reviews and pauses at, swept hourly, plus deliverability and blacklist audits, a message-level event log, and a doctor that names the fix. We assume an IAM role you can revoke; we store no credentials.",
-    con: "You need an AWS account and a reason to want one. We cannot grant SES production access — only AWS can, from your account, and some requests are refused. We are not SOC 2 certified. Contacts, templates and workflow state live in our database, not yours; sending data and delivery events land in your AWS.",
-    pickThisIf:
-      "You are committed to AWS, you want the account and the reputation to be yours, and you would rather not become an SES operator to get there.",
-    isUs: true,
+      "You want the account, the reputation and the data to be yours, and you want the tooling to be open source. This is the row Wraps is in.",
+    isOurs: true,
   },
 ];
+
+/**
+ * The within-category comparison — the real decision for anyone who has landed
+ * on the fourth approach, and the one nobody writes down, because every project
+ * in the category writes about its API instead.
+ *
+ * Answers were read out of each project's own documentation in September 2026.
+ * The last row is deliberately the one where we are no better than anyone else.
+ */
+export type WrapperCriterion = {
+  question: string;
+  others: string;
+  wraps: string;
+};
+
+export const WRAPPER_CRITERIA: readonly WrapperCriterion[] = [
+  {
+    question: "Does it watch the rates AWS suspends accounts over?",
+    others: "No",
+    wraps:
+      "Bounce and complaint rates drawn against AWS's review and pause lines, swept hourly, owners and admins notified",
+  },
+  {
+    question: "Does it govern bounces and complaints, or only report them?",
+    others: "Emits a webhook",
+    wraps:
+      "SES account-level suppression wired on for bounces and complaints from the first send",
+  },
+  {
+    question: "Does it audit deliverability, or only verify the domain?",
+    others: "Domain verification",
+    wraps: "DKIM, SPF, DMARC, MX and TLS, BIMI and public blacklist checks",
+  },
+  {
+    question: "What does it want from your AWS account?",
+    others: "AWS credentials, in a container you run",
+    wraps: "An IAM role you create and can revoke. No stored keys",
+  },
+  {
+    question: "Can it get you SES production access?",
+    others: "No",
+    wraps:
+      "No. Nobody in this category can — it is an AWS decision made from your own account. We detect the sandbox and explain it, and that is the end of what anyone can do",
+  },
+];
+
+/** Where we lose, in the category we are part of. Test-pinned; do not soften. */
+export const WRAPS_LIMITS = [
+  "You need an AWS account. There is no version of this that works without one.",
+  "We cannot grant SES production access, and some requests are refused.",
+  "We are not SOC 2 certified, and there is no BAA.",
+  "Contacts, templates, workflows and per-message send records live in our database. Sending and the event history live in yours.",
+  "The SDKs are TypeScript and Python. That is the list.",
+] as const;
 
 /** The rubric's one-line framing. Kept here so the page and the test agree. */
 export const APPROACHES_RUBRIC =

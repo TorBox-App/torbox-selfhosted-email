@@ -7,7 +7,7 @@ import { SectionKicker } from "./section-kicker";
 // SES wrappers it is an argument we lose. See ops/sops/positioning.md.
 const proofStats: { n: string; k: string }[] = [
   { n: "~2 min", k: "typical first deploy" },
-  { n: "5% / 0.1%", k: "the AWS bounce and complaint lines we watch" },
+  { n: "5% / 0.1%", k: "AWS bounce and complaint limits" },
   { n: "0", k: "credentials we store" },
 ];
 
@@ -29,23 +29,17 @@ export function HeroSection() {
           {/* Left column: copy */}
           <div className="flex flex-col items-start">
             <SectionKicker>
-              The open-source operations layer for Amazon SES
+              Open-source email infrastructure for Amazon SES
             </SectionKicker>
 
             <h1 className="max-w-[21ch] text-left font-heading font-semibold text-4xl text-foreground leading-none tracking-tight md:text-5xl lg:text-6xl">
-              Run Amazon SES without becoming its operator.
+              Everything Amazon SES needs, including operations.
             </h1>
 
-            <p className="mt-5 max-w-[48ch] text-left text-lg text-muted-foreground leading-relaxed md:text-xl">
-              SES is the cheapest way to send email, and most teams still do not
-              use it — production access is an approval you can be refused, and
-              bounce handling becomes your job on day one. Wraps deploys the
-              whole SES surface into your AWS account in one command. Send from
-              your app or your agent, and we watch the account against the rates{" "}
-              <strong className="text-foreground/90">
-                AWS suspends people for
-              </strong>
-              .
+            <p className="mt-5 max-w-[46ch] text-left text-lg text-muted-foreground leading-relaxed md:text-xl">
+              One command puts the whole SES surface in your AWS account. Send
+              from your app or your agent. Then run it day to day from{" "}
+              <strong className="text-foreground/90">one control plane</strong>.
             </p>
 
             <div className="mt-8 mb-10">

@@ -116,7 +116,7 @@ const exitPoints = [
 ];
 
 const badFit = [
-  "You have no AWS account and no appetite for one. Use a hosted API — for a small team with no AWS commitment that is the better answer, not a consolation prize.",
+  "You have no AWS account and no appetite for one. Everything on this page depends on holding one, so a hosted sending API is the right shape for you.",
   "Your review requires SOC 2, HIPAA or a BAA today. We have none of them.",
   "You expect to be refused SES production access. Wraps cannot change that outcome, and a sandboxed account sends to nobody.",
   "Your stack is not TypeScript or Python. Those are the SDKs that exist.",

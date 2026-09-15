@@ -19,13 +19,13 @@ const faqItems = [
     id: "soc2",
     question: "Are you SOC 2 certified?",
     answer:
-      "No. Not SOC 2, not HIPAA, and there is no BAA. If your review process requires a report, we will not pass it and you should stop here. What is true is narrower: the sending infrastructure runs inside your own AWS account, so your existing AWS posture covers that half. The gap is the Wraps platform itself — the dashboard, and the contacts and templates in our database.",
+      "No. Not SOC 2, not HIPAA, and there is no BAA. If your process requires a report today, this will not clear it. What is true is narrower: the sending infrastructure runs inside your own AWS account, so your existing AWS posture already covers that half. The gap is the Wraps platform itself — the dashboard, and the contacts and templates in our database.",
   },
   {
     id: "sandbox",
     question: "Will we get stuck in the SES sandbox?",
     answer:
-      "Possibly, and nobody selling you software can promise otherwise. New AWS accounts can only send to verified addresses until AWS grants production access, that request is made from your account, and it is sometimes refused. Wraps detects sandbox at the end of a deploy, explains it, and points you at the request — it cannot approve it. If your team expects a refusal, a hosted API is the safer plan.",
+      "Possibly, and nobody selling you software can promise otherwise. New AWS accounts can only send to verified addresses until AWS grants production access, the request is made from your account, and it is sometimes refused. Wraps detects the sandbox at the end of a deploy, explains it, and points you at the request — it cannot approve it, and neither can any other tool that sends from an account you own. If your team is likely to be refused, that constraint applies to this whole approach, not to Wraps specifically.",
   },
   {
     id: "data",
@@ -55,13 +55,13 @@ const faqItems = [
     id: "wrapper",
     question: "Isn't this just a wrapper around SES? There are free ones.",
     answer:
-      "The API part is, and yes there are free ones — OpenSend, useSend, MillionSend and others will give you a Resend-shaped API over your own SES for nothing. If your team already has production access and already handles bounces, that is a real option and we would rather you heard it here. What none of them build is the operational layer: reputation against the rates AWS enforces, an hourly sweep, blacklist and authentication audits, suppression wired in from the first send.",
+      "Wraps is a wrapper around SES — that is the product and the name, it is AGPL-3.0, and you can self-host the whole stack. So the question is not whether to use a wrapper, it is which one. OpenSend, useSend and MillionSend will give you a Resend-shaped API and a dashboard over your own SES, and the API is table stakes across all of us. What we build past it is the operational layer: bounce and complaint rates against the lines AWS enforces, swept hourly and alerted on, deliverability and blacklist audits, suppression wired in from the first send, and an IAM role you revoke instead of AWS keys sitting in a container. If those do not matter to you, the CLI and SDKs are free and open source and you can stop at the deploy.",
   },
   {
     id: "migration",
     question: "How disruptive is the migration?",
     answer:
-      "Deploy alongside whatever you run now — the install is namespaced and does not modify existing SES resources, so it can coexist with an account that is already sending. Move traffic gradually, keep the old provider up until you are satisfied, then decommission. Your sending domain does not change. The deploy itself takes minutes; the cutover takes as long as your sending code takes to repoint, and we would rather not put a number on that for you.",
+      "Deploy alongside whatever you run now — the install is namespaced and does not modify existing SES resources, so it can coexist with an account that is already sending. Move traffic gradually, keep the old provider up until you are satisfied, then decommission. Your sending domain does not change. The deploy takes minutes; the cutover takes as long as your sending code takes to repoint.",
   },
 ];
 
