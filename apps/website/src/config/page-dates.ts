@@ -6,7 +6,7 @@
 // <lastmod>, which cannot be derived at build time: see the script header.
 
 export const PAGE_DATES: Record<string, string> = {
-  "/": "2026-09-15T08:41:41-06:00",
+  "/": "2026-09-15T09:08:13-06:00",
   "/about": "2026-09-15T08:41:41-06:00",
   "/agents": "2026-09-15T08:41:41-06:00",
   "/alternatives": "2026-09-15T08:41:41-06:00",
@@ -16,7 +16,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/alternatives/postmark": "2026-08-27T23:39:39-06:00",
   "/alternatives/resend": "2026-08-27T23:39:39-06:00",
   "/alternatives/sendgrid": "2026-08-27T23:39:39-06:00",
-  "/approaches": "2026-09-15T08:41:41-06:00",
+  "/approaches": "2026-09-15T09:08:13-06:00",
   "/blog": "2026-09-15T08:41:41-06:00",
   "/blog/agent-mailboxes": "2026-09-15T08:41:41-06:00",
   "/blog/agent-readable-docs": "2026-09-15T08:41:41-06:00",
@@ -57,7 +57,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/compare/klaviyo-vs-wraps": "2026-09-15T08:41:41-06:00",
   "/compare/mailgun-vs-wraps": "2026-09-15T08:41:41-06:00",
   "/compare/postmark-vs-wraps": "2026-09-15T08:41:41-06:00",
-  "/compare/resend-vs-wraps": "2026-09-15T08:41:41-06:00",
+  "/compare/resend-vs-wraps": "2026-09-15T09:08:13-06:00",
   "/compare/sendgrid-vs-wraps": "2026-09-15T08:41:41-06:00",
   "/compare/ses-bounce-handling-hand-rolled-vs-wraps":
     "2026-09-15T08:41:41-06:00",
@@ -171,5 +171,5 @@ export const PAGE_DATES: Record<string, string> = {
   "/tools": "2026-09-15T08:41:41-06:00",
   "/tools/ses-calculator": "2026-09-15T08:41:41-06:00",
   "/tools/spf-builder": "2026-09-15T08:41:41-06:00",
-  "/why-wraps": "2026-09-15T08:41:41-06:00",
+  "/why-wraps": "2026-09-15T09:08:13-06:00",
 };
