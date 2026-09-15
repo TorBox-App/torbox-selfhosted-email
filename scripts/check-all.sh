@@ -15,9 +15,10 @@ trap 'rm -rf "$LOGDIR"' EXIT
 export TURBO_UI=stream
 
 typeset -a STEPS CMDS
-STEPS=(lint migrations typecheck infra baseline deadcode build test scripts)
+STEPS=(lint design migrations typecheck infra baseline deadcode build test scripts)
 CMDS=(
   "pnpm check:errors"
+  "pnpm check:design"
   "pnpm --filter @wraps/db exec drizzle-kit check"
   "pnpm typecheck"
   # infra/ is outside the pnpm workspace, so `turbo run typecheck` never visits

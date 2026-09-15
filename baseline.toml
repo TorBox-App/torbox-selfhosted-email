@@ -179,10 +179,10 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-\\[#[0-9a-fA-F]+\\]"
 regex = true
-max_count = 3
+max_count = 0
 glob = "apps/website/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
-message = "Migrate arbitrary hex colors to theme tokens (3 remaining, ratchet down)"
+message = "No arbitrary hex colors in Tailwind classes. Use theme tokens instead."
 
 # T5c: Hardcoded white/black in web app (ratchet down from 177)
 [[rule]]

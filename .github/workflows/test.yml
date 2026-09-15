@@ -364,6 +364,9 @@ jobs:
       - name: Run linter
         run: pnpm check:errors
 
+      - name: Run design-system lint ceilings
+        run: pnpm check:design
+
   # Clean-clone smoke test for the self-hosted deploy path. A CI runner IS a
   # fresh customer clone — this job proves the path a fork customer follows
   # actually works without any maintainer-machine state (stale gitignored

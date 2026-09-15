@@ -87,7 +87,10 @@
         ]
       }
     ],
-    "shadcn/no-raw-colors": "warn",
+    "shadcn/no-raw-colors": [
+      "warn",
+      { "allow": ["bg-radial-top", "bg-dot-grid"] }
+    ],
     "shadcn/no-arbitrary-values": [
       "warn",
       { "allow": ["layout", "text-[0.85em]"] }
