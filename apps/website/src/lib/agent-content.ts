@@ -1459,10 +1459,13 @@ function verifySignature(req: Request, secret: string): boolean {
   const signature = req.headers.get("x-wraps-signature");
   if (!signature || !secret) return false;
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(secret)
-  );
+  const sent = Buffer.from(signature);
+  const expected = Buffer.from(secret);
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
+  return sent.length === expected.length &&
+    crypto.timingSafeEqual(sent, expected);
 }
 \`\`\`
 
@@ -1479,10 +1482,13 @@ const WEBHOOK_SECRET = process.env.WRAPS_WEBHOOK_SECRET;
 
 app.post("/webhooks/email", (req, res) => {
   const signature = req.headers["x-wraps-signature"];
-  if (!signature || !crypto.timingSafeEqual(
-    Buffer.from(signature as string),
-    Buffer.from(WEBHOOK_SECRET!)
-  )) {
+  const expected = Buffer.from(WEBHOOK_SECRET!);
+  const sent = signature ? Buffer.from(signature as string) : null;
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
+  if (!sent || sent.length !== expected.length ||
+      !crypto.timingSafeEqual(sent, expected)) {
     return res.status(401).json({ error: "Invalid signature" });
   }
 
@@ -1516,10 +1522,13 @@ export async function POST(request: Request) {
   const signature = request.headers.get("x-wraps-signature");
   const secret = process.env.WRAPS_WEBHOOK_SECRET!;
 
-  if (!signature || !crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(secret)
-  )) {
+  const expected = Buffer.from(secret);
+  const sent = signature ? Buffer.from(signature) : null;
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
+  if (!sent || sent.length !== expected.length ||
+      !crypto.timingSafeEqual(sent, expected)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

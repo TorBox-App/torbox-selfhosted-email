@@ -67,11 +67,13 @@ function verifySignature(req) {
   const signature = req.headers["x-wraps-signature"];
   if (!signature || !WEBHOOK_SECRET) return false;
 
-  // Use constant-time comparison to prevent timing attacks
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(WEBHOOK_SECRET)
-  );
+  const sent = Buffer.from(signature);
+  const expected = Buffer.from(WEBHOOK_SECRET);
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
+  return sent.length === expected.length &&
+    crypto.timingSafeEqual(sent, expected);
 }`;
 
 const expressHandlerExample = `app.post("/webhooks/email", (req, res) => {
@@ -123,11 +125,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Constant-time comparison
-  const isValid = crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(WEBHOOK_SECRET)
-  );
+  const sent = Buffer.from(signature);
+  const expected = Buffer.from(WEBHOOK_SECRET);
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
+  const isValid =
+    sent.length === expected.length &&
+    crypto.timingSafeEqual(sent, expected);
 
   if (!isValid) {
     return NextResponse.json(

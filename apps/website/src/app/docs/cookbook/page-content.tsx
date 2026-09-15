@@ -117,12 +117,15 @@ const WEBHOOK_SECRET = process.env.WRAPS_WEBHOOK_SECRET!;
 export async function POST(request: NextRequest) {
   // Verify the webhook signature
   const signature = request.headers.get("x-wraps-signature");
+  const expected = Buffer.from(WEBHOOK_SECRET);
+  const sent = signature ? Buffer.from(signature) : null;
+
+  // timingSafeEqual throws when the buffers differ in length, so compare
+  // lengths first — otherwise a wrong-length header throws instead of failing.
   if (
-    !signature ||
-    !crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(WEBHOOK_SECRET),
-    )
+    !sent ||
+    sent.length !== expected.length ||
+    !crypto.timingSafeEqual(sent, expected)
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
