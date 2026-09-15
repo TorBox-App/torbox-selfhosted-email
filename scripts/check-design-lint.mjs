@@ -16,26 +16,26 @@
 // plans/322-promote-design-lint-to-error-and-ci.md.
 import { execFileSync } from "node:child_process";
 
-// Measured on 912cbe80 (2026-09-15). Lower a number whenever a sweep lands;
+// Measured on ffb33912 (2026-09-15). Lower a number whenever a sweep lands;
 // never raise one to make a failing run pass.
 export const CEILINGS = {
-  "shadcn(no-arbitrary-values) apps/web": 35,
+  "shadcn(no-arbitrary-values) apps/web": 34,
   "shadcn(no-arbitrary-values) apps/website": 45,
-  "shadcn(no-arbitrary-values) packages/console": 3,
+  "shadcn(no-arbitrary-values) packages/console": 1,
   "shadcn(no-arbitrary-values) packages/ui": 4,
   "shadcn(no-inline-styles) apps/web": 73,
   "shadcn(no-inline-styles) apps/website": 1,
   "shadcn(no-inline-styles) packages/console": 1,
   "shadcn(no-inline-styles) packages/ui": 2,
-  "shadcn(no-raw-colors) apps/web": 596,
+  "shadcn(no-raw-colors) apps/web": 474,
   "shadcn(no-raw-colors) apps/website": 49,
-  "shadcn(no-raw-colors) packages/console": 67,
-  "shadcn(no-restyle) apps/web": 573,
+  "shadcn(no-raw-colors) packages/console": 23,
+  "shadcn(no-restyle) apps/web": 0,
   "shadcn(no-restyle) apps/website": 35,
-  "shadcn(no-restyle) packages/console": 117,
+  "shadcn(no-restyle) packages/console": 0,
   "shadcn(no-restyle) packages/ui": 14,
-  "shadcn(require-static-classes) apps/web": 34,
-  "shadcn(require-static-classes) packages/console": 4,
+  "shadcn(require-static-classes) apps/web": 0,
+  "shadcn(require-static-classes) packages/console": 0,
 };
 
 export function tally(diagnostics) {
