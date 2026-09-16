@@ -43,6 +43,7 @@ import { t } from "elysia";
 import { log } from "../lib/logger";
 import { createAuthenticatedRoutes, getAuth } from "../middleware/auth";
 import {
+  classifySyncFailure,
   executeApprovedSend,
   syncAgentPolicy,
 } from "../services/agent-enforcer";
@@ -494,9 +495,12 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
           syncStatus = "synced";
         } catch (error) {
           syncStatus = "failed";
-          warning =
-            "Kill applied in Wraps, but syncing it to the enforcer failed — the agent may keep sending until the sync succeeds. Retry the kill.";
-          log.error("Kill sync-back failed", error, { agentId: killed.id });
+          const classified = classifySyncFailure(error);
+          warning = `Kill applied in Wraps, but syncing it to the enforcer failed — the agent may keep sending until the sync succeeds. ${classified.detail}`;
+          log.error("Kill sync-back failed", error, {
+            agentId: killed.id,
+            cause: classified.cause,
+          });
         }
       }
 
@@ -596,10 +600,11 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
           syncStatus = "synced";
         } catch (error) {
           syncStatus = "failed";
-          warning =
-            "Policy saved in Wraps, but pushing it to the enforcer failed — the agent is still enforcing its previous policy. Retry.";
+          const classified = classifySyncFailure(error);
+          warning = `Policy saved in Wraps, but pushing it to the enforcer failed — the agent is still enforcing its previous policy. ${classified.detail}`;
           log.error("Policy update sync-back failed", error, {
             agentId: updated.id,
+            cause: classified.cause,
           });
         }
       }
@@ -719,10 +724,11 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
           syncStatus = "synced";
         } catch (error) {
           syncStatus = "failed";
-          warning =
-            "Agent registered, but pushing its config to the enforcer failed — the agent cannot send until this succeeds. The console access role is most likely missing dynamodb:PutItem on wraps-email-agent-policy; redeploy the email stack with `wraps email config` to apply the grant, then retry.";
+          const classified = classifySyncFailure(error);
+          warning = classified.warning;
           log.error("Initial policy sync failed", error, {
             agentId: updated.id,
+            cause: classified.cause,
           });
         }
       }

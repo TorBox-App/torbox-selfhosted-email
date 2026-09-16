@@ -100,6 +100,103 @@ function describeAwsError(error: unknown): string {
   return message || "Unknown error invoking the enforcer";
 }
 
+/** Why a `syncAgentPolicy` push to the enforcer failed. */
+export type SyncFailureCause =
+  | "no_aws_account"
+  | "account_not_configured"
+  | "assume_role_denied"
+  | "dynamodb_denied"
+  | "policy_table_missing"
+  | "unknown";
+
+const SYNC_FAILURE_LEDE =
+  "Agent config could not be pushed to the enforcer, so the agent cannot send until this succeeds.";
+const UNKNOWN_MESSAGE_MAX_LENGTH = 300;
+
+/**
+ * Classify why `syncAgentPolicy` failed, so the operator-facing warning
+ * follows the evidence instead of guessing. `syncAgentPolicy` can fail three
+ * ways, in order: no linked AWS account (thrown locally), `getCredentials` →
+ * `sts:AssumeRole` (a deleted role, a changed trust policy, or an
+ * `sts:ExternalId` mismatch), or the DynamoDB `PutCommand` (missing
+ * `dynamodb:PutItem`, or a missing/torn-down policy table).
+ *
+ * Built from POSITIVE matches only — never `error.name !== "X"`. AWS SDK v3
+ * is asymmetric here: a name that matches is trustworthy, but a name that
+ * does not match proves nothing, because the SDK sometimes returns
+ * `name: "Error"` with the real exception type only in `error.message` (see
+ * `describeAwsError` above). A negative name check would wrongly rule out a
+ * cause the message actually confirms.
+ *
+ * Order matters: STS returns the bare code `AccessDenied` and DynamoDB
+ * returns `AccessDeniedException` — the STS check must run first, or a
+ * substring match on `AccessDenied` would misclassify every DynamoDB denial
+ * as an STS one (`AccessDeniedException` contains `AccessDenied`).
+ *
+ * The `unknown` fallback must never invent a cause — it quotes what AWS
+ * actually said instead.
+ *
+ * Returns both `warning` (the generic `SYNC_FAILURE_LEDE` + the cause-specific
+ * sentence — used as-is by callers with no lede of their own, e.g.
+ * `/policy-sync`) and `detail` (the cause-specific sentence ALONE, with no
+ * lede — for callers that prepend their own route-specific lede, e.g. `/kill`
+ * and `PATCH /:id/policy`). A caller that concatenates its own lede with
+ * `warning` instead of `detail` ends up with two ledes making contradictory
+ * claims about whether the agent can still send — always use `detail` there.
+ */
+export function classifySyncFailure(error: unknown): {
+  cause: SyncFailureCause;
+  warning: string;
+  detail: string;
+} {
+  const name = error instanceof Error ? error.name : "";
+  const message = error instanceof Error ? error.message : String(error);
+
+  let cause: SyncFailureCause;
+  let detail: string;
+
+  if (message.includes("has no linked AWS account")) {
+    cause = "no_aws_account";
+    detail =
+      "The agent is not linked to an AWS account yet; finish `wraps email agent create`.";
+  } else if (message.includes("not found or not configured")) {
+    cause = "account_not_configured";
+    detail =
+      "No connected AWS account with a role ARN was found for this organization. Run `wraps platform connect`.";
+  } else if (
+    name === "AccessDenied" ||
+    message.includes("sts:AssumeRole") ||
+    message.includes("AssumeRole")
+  ) {
+    cause = "assume_role_denied";
+    detail =
+      "Wraps could not assume the console access role in your AWS account. This is usually an `sts:ExternalId` mismatch between the role's trust policy and this connection. Run `wraps platform update-role` (CLI 3.11.0 or newer — older versions update permissions without repairing the trust policy), then retry.";
+  } else if (
+    name === "ResourceNotFoundException" ||
+    message.includes("ResourceNotFoundException")
+  ) {
+    cause = "policy_table_missing";
+    detail =
+      "The `wraps-email-agent-policy` table does not exist in this account or region. Deploy the email stack with `wraps email init`.";
+  } else if (
+    name === "AccessDeniedException" ||
+    message.includes("dynamodb:PutItem")
+  ) {
+    cause = "dynamodb_denied";
+    detail =
+      "The console access role is most likely missing `dynamodb:PutItem` on `wraps-email-agent-policy`; redeploy the email stack with `wraps email config` to apply the grant, then retry.";
+  } else {
+    cause = "unknown";
+    const truncatedMessage =
+      message.length > UNKNOWN_MESSAGE_MAX_LENGTH
+        ? `${message.slice(0, UNKNOWN_MESSAGE_MAX_LENGTH)}…`
+        : message;
+    detail = `AWS reported: \`${name || "Error"}: ${truncatedMessage}\`. Retry, and if it persists contact support with that message.`;
+  }
+
+  return { cause, warning: `${SYNC_FAILURE_LEDE} ${detail}`, detail };
+}
+
 function docClientFor(creds: Awaited<ReturnType<typeof getCredentials>>) {
   return DynamoDBDocumentClient.from(
     new DynamoDBClient({

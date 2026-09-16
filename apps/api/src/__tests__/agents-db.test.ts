@@ -314,6 +314,49 @@ describe("POST /v1/agents/:id/kill sync-failure surface (SEC-5)", () => {
     const killedNote = notes.find((n) => n.type === "agent.killed");
     expect(killedNote?.href).toBe(`/${PREFIX}-org/automations/agents`);
   });
+
+  it("leads with 'Kill applied in Wraps' and then carries the classified cause (plan 331)", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "kill-classified",
+        emailAddress: `kill-classified@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: {
+          maxPerHour: 5,
+          maxPerDay: 20,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        },
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(new Error("not authorized to perform: sts:AssumeRole"), {
+        name: "AccessDenied",
+      })
+    );
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/kill`, {
+        method: "POST",
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("Kill applied in Wraps");
+    expect(body.warning).toContain("update-role");
+    // Regression guard (plan 331 revise): the route lede already says the
+    // agent "may keep sending" — the classifier's own generic lede
+    // ("...cannot send until this succeeds") must NOT also be appended, or
+    // the two sentences contradict each other about the one fact the
+    // operator needs.
+    expect(body.warning).not.toContain("cannot send until this succeeds");
+  });
 });
 
 describe("PATCH /v1/agents/:id/policy", () => {
@@ -407,6 +450,51 @@ describe("PATCH /v1/agents/:id/policy", () => {
     // The Neon write already happened — assert by re-reading the agent.
     const [stored] = await db.select().from(agent).where(eq(agent.id, a.id));
     expect(stored?.policy).toEqual(newPolicy);
+  });
+
+  it("leads with 'Policy saved in Wraps' and then carries the classified cause (plan 331 batch amendment)", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-classified",
+        emailAddress: `policy-classified@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(new Error("not authorized to perform: sts:AssumeRole"), {
+        name: "AccessDenied",
+      })
+    );
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("Policy saved in Wraps");
+    expect(body.warning).toContain("update-role");
+    // Regression guard (plan 331 revise): the route lede already says the
+    // agent "is still enforcing its previous policy" — the classifier's own
+    // generic lede ("...cannot send until this succeeds") must NOT also be
+    // appended, or the two sentences contradict each other.
+    expect(body.warning).not.toContain("cannot send until this succeeds");
   });
 
   it("returns syncStatus=skipped and never calls syncAgentPolicy for an agent with no awsAccountId", async () => {
@@ -794,7 +882,18 @@ describe("POST /v1/agents/:id/policy-sync sync-outcome surface", () => {
       })
       .returning();
 
-    syncAgentPolicyMock.mockRejectedValueOnce(new Error("AccessDenied"));
+    // A realistic DynamoDB PutItem denial (plan 331: classifySyncFailure reads
+    // the real error rather than always guessing this cause — a bare
+    // `new Error("AccessDenied")` no longer classifies as this without an
+    // AccessDeniedException name or a dynamodb:PutItem mention).
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(
+        new Error(
+          "User: arn:aws:sts::111111111111:assumed-role/wraps-console-access-role/wraps-api is not authorized to perform: dynamodb:PutItem on resource: wraps-email-agent-policy"
+        ),
+        { name: "AccessDeniedException" }
+      )
+    );
 
     const app = appFor(ids.org, ids.user);
     const res = await app.handle(
@@ -866,5 +965,150 @@ describe("POST /v1/agents/:id/policy-sync sync-outcome surface", () => {
     expect(body.syncStatus).toBe("skipped");
     expect(body.warning).toBeUndefined();
     expect(syncAgentPolicyMock).not.toHaveBeenCalled();
+  });
+
+  // Plan 331: classifySyncFailure reads the actual AWS error instead of
+  // always assuming the DynamoDB grant is missing.
+  async function syncOutcomeAgent(name: string) {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name,
+        emailAddress: `${name}@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: {
+          maxPerHour: 5,
+          maxPerDay: 20,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        },
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+    return a;
+  }
+
+  async function postPolicySync(agentId: string) {
+    const app = appFor(ids.org, ids.user);
+    return await app.handle(
+      new Request(`http://localhost/v1/agents/${agentId}/policy-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          awsAccountId: accountNumber,
+          enforcerFunctionArn: `arn:aws:lambda:us-east-1:${accountNumber}:function:wraps-agent-enforcer`,
+          credentialUserArn: `arn:aws:iam::${accountNumber}:user/wraps-agent-classify`,
+        }),
+      })
+    );
+  }
+
+  it("classifies an STS AssumeRole denial and points at `wraps platform update-role`, not the DynamoDB grant", async () => {
+    const a = await syncOutcomeAgent("classify-sts-denied");
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(
+        new Error(
+          "User: arn:aws:sts::111111111111:assumed-role/wraps-console-access-role/wraps-api is not authorized to perform: sts:AssumeRole"
+        ),
+        { name: "AccessDenied" }
+      )
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("update-role");
+    expect(body.warning).not.toContain("dynamodb:PutItem");
+  });
+
+  it("classifies a DynamoDB PutItem denial and points at `wraps email config`", async () => {
+    const a = await syncOutcomeAgent("classify-dynamo-denied");
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(
+        new Error(
+          "User: arn:aws:sts::111111111111:assumed-role/wraps-console-access-role/wraps-api is not authorized to perform: dynamodb:PutItem on resource: wraps-email-agent-policy"
+        ),
+        { name: "AccessDeniedException" }
+      )
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("wraps email config");
+  });
+
+  it("classifies a missing policy table and points at `wraps email init`", async () => {
+    const a = await syncOutcomeAgent("classify-table-missing");
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(new Error("Requested resource not found"), {
+        name: "ResourceNotFoundException",
+      })
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("wraps email init");
+  });
+
+  it('classifies an STS denial even when the SDK collapses the name to "Error" (v3 asymmetry regression guard)', async () => {
+    const a = await syncOutcomeAgent("classify-v3-asymmetry");
+
+    // The documented AWS SDK v3 quirk: name is the generic "Error", and the
+    // real exception type is only in the message. A classifier built on
+    // `error.name !== "X"` would wrongly rule this out; positive matching on
+    // the message must still catch it.
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(
+        new Error("AccessDenied: not authorized to perform: sts:AssumeRole"),
+        { name: "Error" }
+      )
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("update-role");
+    expect(body.warning).not.toContain("dynamodb:PutItem");
+  });
+
+  it("falls back to quoting AWS instead of inventing a cause it cannot identify", async () => {
+    const a = await syncOutcomeAgent("classify-unknown");
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(new Error("socket hang up"), { name: "Error" })
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning).toContain("socket hang up");
+    expect(body.warning).not.toContain("dynamodb:PutItem");
+    expect(body.warning).not.toContain("update-role");
+    expect(body.warning).not.toContain("wraps email init");
+  });
+
+  it("truncates a very long unclassifiable AWS error message so the warning stays a reasonable size", async () => {
+    const a = await syncOutcomeAgent("classify-truncated");
+
+    syncAgentPolicyMock.mockRejectedValueOnce(
+      Object.assign(new Error("x".repeat(5000)), { name: "Error" })
+    );
+
+    const res = await postPolicySync(a.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(body.warning.length).toBeLessThan(600);
   });
 });
