@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm", "cjs"],
-  dts: true,
+  dts: { resolve: ["@wraps/core"] }, // Bundle core's types, not just its JS
   sourcemap: true,
   clean: true,
   external: ["@pulumi/pulumi", "@pulumi/aws"],
