@@ -246,9 +246,17 @@ const CLI_ERROR_SECTIONS: ErrorSection[] = [
           "Remove ~/.wraps/pulumi/.pulumi/locks (local), or delete the lock object under .pulumi/locks/ in your wraps-state-* bucket (S3)",
       },
       {
+        code: "PENDING_OPERATIONS",
+        message:
+          "The Pulumi stack has unresolved operations from a previous deployment",
+        solution:
+          "Run pulumi refresh to reconcile state, or pulumi stack export to inspect it. If a deployment is genuinely still running elsewhere, wait for it instead.",
+      },
+      {
         code: "PULUMI_ERROR",
         message: "Infrastructure deployment failed: <message>",
-        solution: "Check your AWS permissions and try again",
+        solution:
+          "The message above is Pulumi's own output. Re-run the command if it looks transient; see the troubleshooting guide if it persists.",
       },
       {
         code: "PULUMI_NOT_INSTALLED",

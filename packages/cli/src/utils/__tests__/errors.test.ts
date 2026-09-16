@@ -362,6 +362,41 @@ describe("handleCLIError", () => {
       expect(output.error.message).toContain("SQS permission denied");
     });
 
+    it("maps a pending-operations Pulumi failure to a suggestion naming pulumi refresh, not permissions", () => {
+      const error = new Error(
+        "Attempting to deploy or update resources with 1 pending operations from previous deployment"
+      );
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.error.code).toBe("PULUMI_PENDING_OPERATIONS");
+      expect(output.error.suggestion).toContain("pulumi refresh");
+      expect(output.error.suggestion).not.toContain("permission");
+      expect(output.error.suggestion).not.toContain("Permission");
+    });
+
+    it("does not assert a cause it does not know for an unclassifiable Pulumi failure", () => {
+      // "resource"/"creating" trip isPulumiError()'s heuristic without matching
+      // any of the specific classified cases, so this falls through to the
+      // honest PULUMI_ERROR fallback.
+      const error = new Error(
+        "Pulumi encountered an unexpected error creating resources: connection reset by peer"
+      );
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.error.code).toBe("PULUMI_PULUMI_ERROR");
+      // This is the case that matters most: the fallback must not name a
+      // cause it does not know, such as AWS permissions.
+      expect(output.error.suggestion).not.toContain("permission");
+      expect(output.error.suggestion).not.toContain("Permission");
+      expect(output.error.suggestion).not.toContain("IAM");
+    });
+
     it("should handle unknown errors in JSON mode", () => {
       const error = new Error("something broke");
 
@@ -508,7 +543,11 @@ describe("error factory functions", () => {
       expect(error).toBeInstanceOf(WrapsError);
       expect(error.message).toContain("Failed to create IAM role");
       expect(error.code).toBe("PULUMI_ERROR");
-      expect(error.suggestion).toContain("AWS permissions");
+      // The fallback path could not classify the failure, so it must not
+      // assert a cause it does not know — no naming AWS permissions.
+      expect(error.suggestion).not.toContain("permission");
+      expect(error.suggestion).not.toContain("Permission");
+      expect(error.suggestion).toContain("Pulumi");
       expect(error.docsUrl).toBe(
         "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
       );
@@ -549,6 +588,22 @@ describe("error factory functions", () => {
       expect(error.code).toBe("STACK_LOCKED");
       expect(error.suggestion).toContain("rm -rf");
       expect(error.suggestion).toContain("locks");
+    });
+  });
+
+  describe("pendingOperations", () => {
+    it("should create proper error", () => {
+      const error = errors.pendingOperations();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("unresolved operations");
+      expect(error.code).toBe("PENDING_OPERATIONS");
+      expect(error.suggestion).toContain("pulumi refresh");
+      expect(error.suggestion).not.toContain("permission");
+      expect(error.suggestion).not.toContain("Permission");
+      expect(error.docsUrl).toBe(
+        "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+      );
     });
   });
 
@@ -1008,6 +1063,26 @@ describe("parsePulumiError", () => {
     const result = parsePulumiError(error);
 
     expect(result.code).toBe("STACK_LOCKED");
+  });
+
+  it("should detect pending operations from an interrupted deployment", () => {
+    const error = new Error(
+      "Attempting to deploy or update resources with 1 pending operations from previous deployment"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("PENDING_OPERATIONS");
+  });
+
+  it("classifies pending operations alongside AlreadyExists as RESOURCE_CONFLICT, the more actionable diagnosis", () => {
+    const error = new Error(
+      "error creating 'wraps-email-config-set' (aws:ses/configurationSet:ConfigurationSet): EntityAlreadyExists: Configuration set wraps-email-config-set already exists, with 1 pending operations from previous deployment"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
   });
 
   it("should return generic error for unknown Pulumi errors", () => {

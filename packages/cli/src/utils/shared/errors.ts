@@ -202,6 +202,17 @@ export function parsePulumiError(error: Error): {
     return { code: "STACK_LOCKED" };
   }
 
+  // A deployment interrupted mid-flight (Ctrl-C, crashed CI job, lost network)
+  // leaves operations recorded as in-progress in the stack state. Pulumi refuses
+  // to proceed until they are resolved. This is a state problem, never a
+  // permissions one.
+  if (
+    message.includes("pending operations") ||
+    message.includes("pending_operations")
+  ) {
+    return { code: "PENDING_OPERATIONS" };
+  }
+
   // Pulumi binary missing from PATH (e.g. "spawn pulumi ENOENT") — match the
   // ENOENT to the pulumi binary itself so a different missing binary during a
   // Pulumi operation isn't misreported as "Pulumi CLI is not installed".
@@ -666,6 +677,8 @@ function pulumiErrorToWrapsError(
       );
     case "STACK_LOCKED":
       return errors.stackLocked();
+    case "PENDING_OPERATIONS":
+      return errors.pendingOperations();
     case "NOT_INSTALLED":
       return errors.pulumiNotInstalled();
     case "SES_PERMISSION_DENIED":
@@ -797,7 +810,7 @@ export const errors = {
     new WrapsError(
       `Infrastructure deployment failed: ${message}`,
       "PULUMI_ERROR",
-      "Check your AWS permissions and try again",
+      "The message above is Pulumi's own output. If it is not self-explanatory, re-run the command — some failures are transient — and see the troubleshooting guide if it persists.",
       "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
@@ -822,6 +835,14 @@ export const errors = {
       "The Pulumi stack is locked from a previous run",
       "STACK_LOCKED",
       "This happens when a previous deployment was interrupted.\n\nFor local state, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nFor S3 state, delete the lock object in your wraps-state-* bucket under .pulumi/locks/\n\nThen try your command again.",
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+    ),
+
+  pendingOperations: () =>
+    new WrapsError(
+      "The Pulumi stack has unresolved operations from a previous deployment",
+      "PENDING_OPERATIONS",
+      "This happens when a previous deployment was interrupted (Ctrl-C, a crashed CI job, lost network) before it could record whether its changes finished.\n\nThose operations may have partially completed, so the safe first move is to reconcile state against what actually exists in AWS:\n  pulumi refresh\n\nTo inspect what Pulumi thinks is pending before doing anything:\n  pulumi stack export\n\nThen try your command again.\n\nIf a deployment is genuinely still running elsewhere, wait for it to finish instead of clearing anything.",
       "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
