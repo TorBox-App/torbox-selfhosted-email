@@ -404,7 +404,7 @@ function inventoryLine(call: RegistryCall): string {
 const EXPECTED_REJECTIONS = [
   'missingInput("--domain", "wraps email verify --domain yourapp.com")',
   'unknownCommand("inbound command", inboundSubCommand, "Available commands: init, destroy, status, verify, test, add, remove")',
-  'unknownCommand("agent command", agentSubCommand, "Available commands: create, list, kill")',
+  'unknownCommand("agent command", agentSubCommand, "Available commands: create, list, kill, policy")',
   'unknownCommand("reply command", replySubCommand, "Available commands: init, rotate, status, destroy, decode")',
   'missingInput("--domain", "wraps email domains verify --domain yourapp.com")',
   'missingInput("--domain", "wraps email domains get-dkim --domain yourapp.com")',

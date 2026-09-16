@@ -1,3 +1,4 @@
+import { promises as dns } from "node:dns";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
@@ -56,6 +57,46 @@ const DEFAULT_AGENT_POLICY = {
 // email local part, so keep them to a safe lowercase slug. Capped at 52 chars:
 // the `wraps-agent-` prefix (12) + 52 = the 64-char IAM username limit (COR-8).
 const AGENT_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,51}$/;
+
+// `resolveMx` can hang on a slow or unreachable resolver; a create that has
+// already succeeded must never stall on this probe.
+const MX_LOOKUP_TIMEOUT_MS = 3000;
+
+/**
+ * Whether the agent's own domain can receive mail. `buildEmailDNSRecords`
+ * only creates an MX for the MAIL FROM subdomain (bounce handling), so a
+ * send-only domain has no apex MX and every human reply bounces.
+ *
+ * Returns `null` — "could not determine" — for anything other than a
+ * definite ENOTFOUND/ENODATA "no MX" answer (a timeout, ESERVFAIL, a
+ * network error, …), so a flaky resolver never produces a false-alarm
+ * warning printed right next to freshly minted credentials.
+ */
+async function domainAcceptsMail(domain: string): Promise<boolean | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = Symbol("mx-lookup-timeout");
+  const timeout = new Promise<typeof timedOut>((resolve) => {
+    timer = setTimeout(() => resolve(timedOut), MX_LOOKUP_TIMEOUT_MS);
+  });
+
+  try {
+    const result = await Promise.race([dns.resolveMx(domain), timeout]);
+    if (result === timedOut) {
+      return null;
+    }
+    return result.length > 0;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    if (code === "ENODATA" || code === "ENOTFOUND") {
+      return false;
+    }
+    return null;
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
 
 type AgentRecord = {
   id: string;
@@ -557,6 +598,20 @@ export async function agentCreate(
 
   const syncFailed = sync.syncStatus === "failed";
 
+  // Whether a human reply to this agent's address can be received. Never let
+  // this jeopardise the create's output — creation already succeeded, so any
+  // failure here (beyond what domainAcceptsMail already swallows into `null`)
+  // is itself swallowed rather than surfaced. domainAcceptsMail already
+  // classifies every expected DNS failure into null; this outer catch is
+  // belt-and-suspenders against an unexpected throw.
+  let mailAccepted: boolean | null = null;
+  try {
+    mailAccepted = await domainAcceptsMail(domain);
+    // baseline:allow-next-line no-swallowed-errors — creation already succeeded; nothing here should ever reach the operator
+  } catch {
+    mailAccepted = null;
+  }
+
   // 14. Output — credential shown ONCE.
   if (isJsonMode()) {
     jsonSuccess("email.agent.create", {
@@ -579,6 +634,10 @@ export async function agentCreate(
       // scripted caller isn't looking at. syncStatus is the field to branch on.
       syncStatus: sync.syncStatus ?? "unknown",
       warning: sync.warning ?? null,
+      // true/false when the apex MX lookup resolved definitively, null when it
+      // could not be determined (timeout, network issue, …) — null must never
+      // be read as "no MX".
+      domainAcceptsMail: mailAccepted,
     });
     return;
   }
@@ -596,6 +655,20 @@ export async function agentCreate(
   console.log(`  ${pc.dim("Agent ID:")}    ${pc.cyan(created.id)}`);
   console.log(`  ${pc.dim("Enforcer:")}    ${pc.cyan(aliasArn)}`);
   console.log();
+
+  // mailAccepted === false is a definite "no MX" — only then is a human
+  // reply guaranteed to bounce. null ("could not determine": timeout,
+  // network issue, …) must stay silent, or a flaky resolver trains people to
+  // ignore output printed right next to real credentials.
+  if (mailAccepted === false) {
+    clack.log.warn(
+      `Replies to ${pc.cyan(emailAddress)} will bounce — ${pc.cyan(domain)} has no MX record.`
+    );
+    console.log(
+      `  Set ${pc.cyan("replyTo")} on every send to a mailbox that can receive, or run ${pc.cyan("wraps email inbound")} to make ${domain} receive mail.`
+    );
+    console.log();
+  }
 
   const mcpEnv = [
     `WRAPS_AGENT_ID=${created.id}`,

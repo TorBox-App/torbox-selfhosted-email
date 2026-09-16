@@ -18,6 +18,11 @@ vi.mock("@pulumi/pulumi", () => ({
   },
 }));
 vi.mock("@clack/prompts");
+vi.mock("node:dns", () => ({
+  promises: {
+    resolveMx: vi.fn(),
+  },
+}));
 vi.mock("../../../utils/shared/aws.js");
 vi.mock("../../../utils/shared/config.js");
 vi.mock("../../../utils/shared/fs.js");
@@ -26,6 +31,7 @@ vi.mock("../../../utils/shared/pulumi.js");
 vi.mock("../../../utils/shared/timeout.js");
 vi.mock("../../../infrastructure/email-stack.js");
 
+import { promises as dns } from "node:dns";
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import { deployEmailStack } from "../../../infrastructure/email-stack.js";
@@ -148,6 +154,13 @@ describe("email agent commands", () => {
     });
     vi.mocked(aws.getAWSRegion).mockResolvedValue(REGION);
     vi.mocked(aws.isSESSandbox).mockResolvedValue(false);
+
+    // ---- dns (reply deliverability probe) ----
+    // Default: domain accepts mail, so the existing create tests (none of
+    // which anticipate this call) see no warning and no behavior change.
+    vi.mocked(dns.resolveMx)
+      .mockReset()
+      .mockResolvedValue([{ exchange: "mx.example.com", priority: 10 }]);
 
     // ---- config / auth ----
     vi.mocked(config.resolveTokenAsync).mockResolvedValue("test-token");
@@ -916,6 +929,154 @@ describe("email agent commands", () => {
         .map(String)
         .join("\n");
       expect(infoText).toContain("No changes");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Reply deliverability warning (plan 334) — buildEmailDNSRecords only ever
+  // creates an MX for the MAIL FROM subdomain, so a send-only domain has no
+  // apex MX and every human reply bounces silently. agentCreate probes the
+  // domain and warns, but the probe must never gate or delay a successful
+  // create, and an undetermined result must stay silent (no false alarm next
+  // to freshly printed credentials).
+  // ---------------------------------------------------------------------------
+  describe("reply deliverability warning", () => {
+    function warnText(): string {
+      return vi.mocked(clack.log).warn.mock.calls.flat().map(String).join("\n");
+    }
+
+    it("resolveMx resolves with an MX record → no warning, create output unchanged", async () => {
+      vi.mocked(dns.resolveMx).mockResolvedValueOnce([
+        { exchange: "mx.example.com", priority: 10 },
+      ]);
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(warnText()).not.toContain("will bounce");
+      expect(clack.log.success).toHaveBeenCalledWith(
+        expect.stringContaining("is ready")
+      );
+    });
+
+    it("resolveMx rejects with ENODATA → warning printed and mentions replyTo", async () => {
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx ENODATA example.com"), {
+          code: "ENODATA",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(warnText()).toContain("will bounce");
+      const consoleText = consoleLogSpy.mock.calls
+        .flat()
+        .map(String)
+        .join("\n");
+      expect(consoleText).toContain("replyTo");
+    });
+
+    it("resolveMx rejects with ENOTFOUND → warning printed", async () => {
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx ENOTFOUND example.com"), {
+          code: "ENOTFOUND",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(warnText()).toContain("will bounce");
+    });
+
+    it("resolveMx rejects with an unrecognized code (e.g. SERVFAIL) → no warning (undetermined, not a false alarm)", async () => {
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx SERVFAIL example.com"), {
+          code: "SERVFAIL",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(warnText()).not.toContain("will bounce");
+    });
+
+    it("resolveMx that never settles still lets the command complete — no warning, MCP note still printed", async () => {
+      vi.mocked(dns.resolveMx).mockReturnValue(new Promise(() => {}));
+      vi.useFakeTimers();
+      try {
+        const createPromise = agentCreate({
+          name: "sdr",
+          domain: "example.com",
+          yes: true,
+        });
+        // The probe times out at 3s (MX_LOOKUP_TIMEOUT_MS); advance past it
+        // so the create can finish instead of hanging on a dead resolver.
+        await vi.advanceTimersByTimeAsync(3100);
+        await createPromise;
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(deployEmailStack).toHaveBeenCalledTimes(1);
+      expect(clack.note).toHaveBeenCalled();
+      expect(warnText()).not.toContain("will bounce");
+    }, 10_000);
+
+    it("prints the warning before the MCP env note", async () => {
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx ENODATA example.com"), {
+          code: "ENODATA",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      const warnOrder = vi.mocked(clack.log).warn.mock.invocationCallOrder[0];
+      const noteOrder = vi.mocked(clack.note).mock.invocationCallOrder[0];
+      expect(warnOrder).toBeDefined();
+      expect(noteOrder).toBeDefined();
+      expect(warnOrder).toBeLessThan(noteOrder);
+    });
+
+    it("JSON mode: no human warning; domainAcceptsMail:false is in the success payload", async () => {
+      setJsonMode(true);
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx ENODATA example.com"), {
+          code: "ENODATA",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(clack.log.warn).not.toHaveBeenCalled();
+      const env = jsonEnvelopes().find(
+        (e) => e.command === "email.agent.create"
+      );
+      expect(env.success).toBe(true);
+      expect(env.data.domainAcceptsMail).toBe(false);
+    });
+
+    it("a probe result never flips the success branch — the agent is still reported created", async () => {
+      vi.mocked(dns.resolveMx).mockRejectedValueOnce(
+        Object.assign(new Error("queryMx ENODATA example.com"), {
+          code: "ENODATA",
+        })
+      );
+
+      await agentCreate({ name: "sdr", domain: "example.com", yes: true });
+
+      expect(deployEmailStack).toHaveBeenCalledTimes(1);
+      expect(postedTo("/v1/agents")).toBe(true);
+      expect(clack.log.success).toHaveBeenCalledWith(
+        expect.stringContaining("is ready")
+      );
+      // Never the "CANNOT send yet" branch, which is unrelated (sync-status
+      // failure), not the reply-deliverability warning.
+      const successText = vi
+        .mocked(clack.log)
+        .success.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(successText).not.toContain("CANNOT send yet");
     });
   });
 });
