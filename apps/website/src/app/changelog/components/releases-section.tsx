@@ -66,6 +66,69 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CLI v3.11.1",
+    date: "September 2026",
+    icon: Wrench,
+    title: "Teardown That Leaves Your DNS Alone",
+    items: [
+      <>
+        <Code>wraps email destroy</Code> deletes only the records Wraps created.
+        Every deletion matches name, type and exact value, and a Route53 record
+        set holding values Wraps did not write is rewritten without Wraps&rsquo;
+        value rather than deleted whole. Deletion previously matched name and
+        type alone, so accepting the DNS cleanup prompt on a domain that already
+        had a <Code>_dmarc</Code> policy removed that policy along with the
+        records Wraps wrote, and the same applied to every TXT record at the
+        MAIL FROM subdomain. Cloudflare and Vercel domains were never cleaned up
+        at all, since teardown only ever ran through Route53. The record lookup
+        is also paginated now, so zones larger than 500 record sets no longer
+        skip records silently
+      </>,
+      <>
+        If you ran <Code>wraps email destroy</Code> on a domain whose DMARC
+        policy predated Wraps, check that the <Code>_dmarc</Code> record is
+        still published before relying on it
+      </>,
+      <>
+        <Code>wraps email reply destroy</Code> deletes the MX and SPF records it
+        created at <Code>r.mail.&lt;domain&gt;</Code> instead of printing a
+        reminder to remove them by hand. Once the receipt rule was gone the MX
+        still pointed at SES with nothing configured to receive, so signed reply
+        addresses bounced rather than failing closed.{" "}
+        <Code>wraps email inbound destroy</Code> now warns when reply threading
+        is configured, and still never deletes those records itself: they follow
+        the sending domain, not the inbound receiving domain
+      </>,
+      <>
+        Fix: a DNS write that correctly did nothing is no longer reported as a
+        failure. Re-running <Code>wraps email inbound init</Code>,{" "}
+        <Code>inbound add</Code> or <Code>reply init</Code> against records that
+        were already correct printed{" "}
+        <Code>Failed to create some DNS records</Code>, then printed the full
+        manual block instructing you to add{" "}
+        <Code>v=spf1 include:amazonses.com ~all</Code>. On a name that already
+        carried an SPF record, following that produced a second{" "}
+        <Code>v=spf1</Code> record, which is the RFC 7208 PermError the
+        preflight exists to prevent
+      </>,
+      <>
+        Fix: <Code>wraps email check</Code> recommends <Code>~all</Code> and no
+        longer grades a domain down for it. A <Code>-all</Code> deduction
+        applies only where the domain authorizes senders and DMARC is absent,
+        invalid, <Code>p=none</Code> or <Code>t=y</Code>, and a parked{" "}
+        <Code>v=spf1 -all</Code> is never flagged. RFC 9989 section 7.1 cautions
+        against <Code>-all</Code> because it rejects pre-DATA, before DMARC can
+        pass a message on an aligned DKIM signature
+      </>,
+      <>
+        The apex SPF record is still left for you to edit by hand. Stripping{" "}
+        <Code>include:amazonses.com</Code> from a record that may carry other
+        providers&rsquo; includes is a rewrite rather than a deletion, and{" "}
+        <Code>destroy</Code> does not attempt it
+      </>,
+    ],
+  },
+  {
     version: "Platform v0.28.0",
     date: "September 2026",
     icon: LayoutDashboard,
