@@ -259,6 +259,90 @@ async function deployEventBridge(
 const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
 
 /**
+ * Read the deployed trust policy back and confirm it carries the externalId
+ * we just wrote. A write that silently did not take (eventual consistency, a
+ * permissions edge case, the wrong role) would otherwise look identical to a
+ * real repair — the exact failure mode that cost roughly an hour to diagnose
+ * on 2026-09-15, when a Pulumi failure threw past the (then-later) role step
+ * and left the role trusting a stale externalId with no warning.
+ *
+ * A READ failure (e.g. no `iam:GetRole`) is NOT a WRITE failure: it is logged
+ * as a note and treated as success, so a verification-permissions gap does
+ * not regress an otherwise-successful write into a reported failure.
+ */
+async function verifyTrustPolicyExternalId(
+  iam: IAMClient,
+  roleName: string,
+  externalId: string,
+  progress: DeploymentProgress
+): Promise<void> {
+  const readCurrentExternalId = async (): Promise<string | undefined> => {
+    const roleResult = await iam.send(
+      new GetRoleCommand({ RoleName: roleName })
+    );
+    const rawDocument = roleResult.Role?.AssumeRolePolicyDocument;
+    if (!rawDocument) {
+      // A real GetRole response always includes the trust policy — an
+      // absent one is an incomplete read (a minimal API response, a
+      // sandboxed test double, an SDK quirk), not confirmation the trust
+      // policy is empty. Treat it the same as a read failure: unverifiable,
+      // not a mismatch, so it can't turn a successful write into a false
+      // failure.
+      throw new Error(
+        "GetRole response did not include AssumeRolePolicyDocument"
+      );
+    }
+    // GetRole returns the trust policy as a URL-encoded JSON string — decode
+    // before parsing, or this throws (or silently mismatches) every time.
+    const parsed = JSON.parse(decodeURIComponent(rawDocument)) as {
+      Statement?: Array<{
+        Condition?: { StringEquals?: Record<string, string> };
+      }>;
+    };
+    return parsed.Statement?.[0]?.Condition?.StringEquals?.["sts:ExternalId"];
+  };
+
+  const reportUnverifiable = (error: unknown): void => {
+    const errName =
+      error && typeof error === "object" && "name" in error
+        ? (error as Error).name
+        : "Unknown";
+    const errMsg = error instanceof Error ? error.message : String(error);
+    progress.info(
+      `Could not verify the trust policy write (${errName}: ${errMsg}) — assuming it succeeded.`
+    );
+  };
+
+  let current: string | undefined;
+  try {
+    current = await readCurrentExternalId();
+  } catch (error) {
+    reportUnverifiable(error);
+    return;
+  }
+
+  if (current === externalId) {
+    return;
+  }
+
+  // IAM is eventually consistent for some read paths — retry once before
+  // concluding the write did not take.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  try {
+    current = await readCurrentExternalId();
+  } catch (error) {
+    reportUnverifiable(error);
+    return;
+  }
+
+  if (current !== externalId) {
+    throw new Error(
+      `Trust policy verification failed: role ${roleName} does not carry the expected externalId after the write.`
+    );
+  }
+}
+
+/**
  * Shared: Update or create platform access IAM role
  */
 async function updatePlatformRole(
@@ -347,6 +431,9 @@ async function updatePlatformRole(
           })
         );
       });
+      await progress.execute("Verifying trust policy", () =>
+        verifyTrustPolicyExternalId(iam, roleName, externalId, progress)
+      );
     }
 
     progress.succeed("Platform access role updated");
@@ -392,6 +479,9 @@ async function updatePlatformRole(
         })
       );
     });
+    await progress.execute("Verifying trust policy", () =>
+      verifyTrustPolicyExternalId(iam, roleName, externalId, progress)
+    );
 
     progress.succeed("Platform access role created");
   } else {
@@ -732,6 +822,7 @@ async function authenticatedConnect(
     }
 
     progress.succeed("Connection registered");
+    const connectionRegistered = true;
 
     // 5. Save the issuing plane's identity immediately (so externalId survives
     // if later steps fail). Self-hosted writes its OWN slot — the two planes
@@ -779,21 +870,14 @@ async function authenticatedConnect(
     }
     await saveConnectionMetadata(metadata);
 
-    // 6. Deploy EventBridge with server-provided webhook secret. Never on an
-    // adopted run — adoption registers and repairs access only, it deploys
-    // nothing.
-    if (hasEmail && !adopted) {
-      await deployEventBridge(
-        metadata,
-        region,
-        identity,
-        result.webhookSecret,
-        progress,
-        selfhosted ? { url: apiBaseUrl } : undefined
-      );
-    }
-
-    // 7. Update IAM role with server-provided externalId
+    // 6. Update the IAM role FIRST. Registering the connection issued a new
+    // externalId; until the role's trust policy carries it, the platform
+    // cannot assume the role at all. This step is two IAM calls and cannot
+    // block, while the EventBridge deploy below is a multi-minute Pulumi run
+    // that fails for reasons that have nothing to do with IAM. Running the
+    // deploy first meant a Pulumi failure threw past this block and left the
+    // role trusting a stale externalId, silently. Do not reorder.
+    let roleUpdated = false;
     try {
       await updatePlatformRole(
         metadata,
@@ -801,6 +885,7 @@ async function authenticatedConnect(
         result.externalId,
         selfhosted
       );
+      roleUpdated = true;
     } catch (error) {
       const errName =
         error && typeof error === "object" && "name" in error
@@ -814,12 +899,49 @@ async function authenticatedConnect(
       );
     }
 
+    // 7. Deploy EventBridge with server-provided webhook secret. Never on an
+    // adopted run — adoption registers and repairs access only, it deploys
+    // nothing. A Pulumi failure here must not abort the run: the connection
+    // is already registered and (when step 6 succeeded) the access role
+    // already carries the new externalId, so only event streaming is
+    // affected — it must not throw past the rest of the command.
+    let eventStreamingOk: boolean | null = null;
+    if (hasEmail && !adopted) {
+      try {
+        await deployEventBridge(
+          metadata,
+          region,
+          identity,
+          result.webhookSecret,
+          progress,
+          selfhosted ? { url: apiBaseUrl } : undefined
+        );
+        eventStreamingOk = true;
+      } catch (error) {
+        eventStreamingOk = false;
+        const errName =
+          error && typeof error === "object" && "name" in error
+            ? (error as Error).name
+            : "Unknown";
+        const errMsg = error instanceof Error ? error.message : String(error);
+        log.warn(
+          `Could not configure event streaming (${errName}): ${errMsg}\n` +
+            "  The connection is registered and the access role is up to date — the dashboard will work.\n" +
+            `  Only SES event delivery is missing. Run ${pc.cyan("wraps email config")} to retry.`
+        );
+      }
+    }
+
     // 8. Save metadata again (captures any changes from deployment/role steps)
     await saveConnectionMetadata(metadata);
 
     progress.stop();
 
-    // 9. Output
+    // 9. Output — report per-step outcomes. A role-update failure means the
+    // platform genuinely cannot reach the account (see the comment on step 6
+    // above), so it is the one outcome that fails the whole command; a
+    // degraded event-streaming step does not, because the connection is
+    // otherwise fully working.
     if (isJsonMode()) {
       jsonSuccess("platform.connect", {
         accountId: identity.accountId,
@@ -829,16 +951,31 @@ async function authenticatedConnect(
         webhookConnected: !adopted,
         selfhosted,
         adopted,
+        connectionRegistered,
+        roleUpdated,
+        eventStreamingOk,
       });
     } else if (adopted) {
-      outro(pc.green("AWS account adopted!"));
-
-      console.log();
-      console.log(
-        pc.dim(
-          "Registered this account and repaired the IAM trust policy so the dashboard can reach it."
-        )
-      );
+      if (roleUpdated) {
+        outro(pc.green("AWS account adopted!"));
+        console.log();
+        console.log(
+          pc.dim(
+            "Registered this account and repaired the IAM trust policy so the dashboard can reach it."
+          )
+        );
+      } else {
+        outro(
+          pc.yellow("AWS account adopted, but the IAM role was NOT repaired.")
+        );
+        console.log();
+        console.log(
+          pc.dim(
+            "Registered this account, but the dashboard CANNOT reach it yet — the IAM trust policy was not repaired."
+          )
+        );
+        console.log(`  Run ${pc.cyan("wraps platform update-role")} to retry.`);
+      }
       console.log(
         pc.dim(
           "No infrastructure was deployed and no event wiring was changed."
@@ -847,20 +984,51 @@ async function authenticatedConnect(
       console.log(`  Dashboard: ${pc.cyan(dashboardUrl)}`);
       console.log();
     } else {
+      const fullySucceeded = roleUpdated && eventStreamingOk !== false;
       outro(
-        pc.green(
-          selfhosted
-            ? "Self-hosted connection complete!"
-            : "Platform connection complete!"
-        )
+        fullySucceeded
+          ? pc.green(
+              selfhosted
+                ? "Self-hosted connection complete!"
+                : "Platform connection complete!"
+            )
+          : pc.yellow(
+              selfhosted
+                ? "Self-hosted connection registered, with issues."
+                : "Platform connection registered, with issues."
+            )
       );
 
       console.log();
       console.log(
-        pc.dim(
-          "Events from your AWS infrastructure will stream to the dashboard."
-        )
+        `  ${roleUpdated ? pc.green("✓") : pc.red("✗")} Access role: ${
+          roleUpdated
+            ? "up to date"
+            : "NOT updated — dashboard cannot reach this account"
+        }`
       );
+      if (eventStreamingOk !== null) {
+        console.log(
+          `  ${eventStreamingOk ? pc.green("✓") : pc.yellow("!")} Event streaming: ${
+            eventStreamingOk ? "configured" : "not configured"
+          }`
+        );
+      }
+      if (!roleUpdated) {
+        console.log(`  Run ${pc.cyan("wraps platform update-role")} to retry.`);
+      }
+      if (eventStreamingOk === false) {
+        console.log(
+          `  Run ${pc.cyan("wraps email config")} to retry event streaming.`
+        );
+      }
+      if (fullySucceeded) {
+        console.log(
+          pc.dim(
+            "Events from your AWS infrastructure will stream to the dashboard."
+          )
+        );
+      }
       console.log(`  Dashboard: ${pc.cyan(dashboardUrl)}`);
       console.log();
     }
@@ -871,6 +1039,14 @@ async function authenticatedConnect(
       duration_ms: duration,
       authenticated: true,
     });
+
+    // The platform genuinely cannot reach this account until the role is
+    // repaired — fail the exit code even though registration itself
+    // succeeded. A degraded event-streaming step alone stays exit 0: that is
+    // a working connection with one missing feature, not a broken one.
+    if (!roleUpdated) {
+      process.exit(1);
+    }
   } catch (error) {
     progress.stop();
 
