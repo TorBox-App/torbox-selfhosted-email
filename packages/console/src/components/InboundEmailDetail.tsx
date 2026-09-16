@@ -313,9 +313,15 @@ export function InboundEmailDetail() {
         </CardHeader>
         <CardContent>
           {email.html ? (
+            /* Fully sandboxed: this body is HTML from whoever sent the message, so
+               it is not trusted. Nothing here reads contentWindow, so the frame has
+               no reason to hold the app's origin. no-referrer keeps remote images
+               from leaking the dashboard URL — or confirming to the sender that
+               someone opened the message. */
             <iframe
               className="h-[500px] w-full rounded-md border bg-white"
-              sandbox="allow-same-origin"
+              referrerPolicy="no-referrer"
+              sandbox=""
               srcDoc={email.html}
               title="Email content"
             />

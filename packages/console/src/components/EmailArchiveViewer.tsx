@@ -222,9 +222,14 @@ export function EmailArchiveViewer({
           <TabsContent className="space-y-4" value="rendered">
             {archivedEmail.html ? (
               <div className="rounded-md border">
+                {/* Fully sandboxed: this is the org's own archived sent mail, but
+                    nothing here reads contentWindow, so the frame has no reason
+                    to hold the app's origin. no-referrer keeps remote images from
+                    leaking the dashboard URL to whatever host serves them. */}
                 <iframe
                   className="h-[600px] w-full rounded-md"
-                  sandbox="allow-same-origin"
+                  referrerPolicy="no-referrer"
+                  sandbox=""
                   srcDoc={archivedEmail.html}
                   title="Email preview"
                 />
