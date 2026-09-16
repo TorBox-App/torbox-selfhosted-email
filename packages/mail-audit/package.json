@@ -2,6 +2,12 @@
   "name": "mail-audit",
   "version": "1.2.2",
   "description": "Email deliverability audit — SPF, DKIM, DMARC, MX, blacklists, TLS. Letter grades A-F.",
+  "homepage": "https://wraps.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps.git",
+    "directory": "packages/mail-audit"
+  },
   "type": "module",
   "bin": {
     "mail-audit": "dist/cli.js"
