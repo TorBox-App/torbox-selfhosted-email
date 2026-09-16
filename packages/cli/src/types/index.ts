@@ -128,6 +128,22 @@ export type EmailPlanOptions = {
   json?: boolean;
 };
 
+/**
+ * Command options for `wraps email agent policy` — change an agent's send
+ * caps or allowlist after creation. Declared directly here rather than in
+ * `email.ts`, matching `EmailPlanOptions` above.
+ */
+export type EmailAgentPolicyOptions = {
+  name?: string;
+  maxPerHour?: number;
+  maxPerDay?: number;
+  allowRecipient?: string[];
+  allowDomain?: string[];
+  clearAllowlist?: boolean;
+  token?: string;
+  json?: boolean;
+};
+
 // Backwards compatibility aliases (deprecated, use specific types instead)
 // Import specific types for legacy aliases
 import type {

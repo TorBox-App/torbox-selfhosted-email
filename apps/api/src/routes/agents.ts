@@ -7,6 +7,7 @@
  * POST   /v1/agents                    - Create an agent
  * GET    /v1/agents/:id                - Get a single agent
  * POST   /v1/agents/:id/kill           - Kill-switch (status → KILLED + sync-back)
+ * PATCH  /v1/agents/:id/policy         - Replace an agent's send policy (caps + allowlist)
  * POST   /v1/agents/:id/policy-sync    - Store deploy outputs (CLI, post-deploy)
  * GET    /v1/agents/approvals          - List the approval queue
  * POST   /v1/agents/approvals/:id/approve - Approve → execute → SENT/FAILED
@@ -540,6 +541,111 @@ export const agentsRoutes = createAuthenticatedRoutes("/v1/agents")
         404: errorResponse,
       },
       detail: { tags: ["agents"], summary: "Kill an agent" },
+    }
+  )
+  // Replace an agent's send policy (caps + allowlist)
+  .patch(
+    "/:id/policy",
+    async (ctx) => {
+      const auth = getAuth(ctx);
+      const gate = await requireOwnerOrAdmin(ctx);
+      if (!gate.ok) {
+        return { error: FORBIDDEN_MESSAGE };
+      }
+
+      const existing = await findAgentForOrg(
+        ctx.params.id,
+        auth.organizationId
+      );
+      if (!existing) {
+        ctx.set.status = 404;
+        return { error: "Agent not found" };
+      }
+
+      // Kill is terminal — a policy write on a dead agent invites the
+      // assumption that it can be revived. Reject before touching the row.
+      if (existing.status === "KILLED") {
+        ctx.set.status = 409;
+        return {
+          error: "Agent is killed — its policy can no longer be changed",
+        };
+      }
+
+      const updated = await updateAgentForOrg(
+        ctx.params.id,
+        auth.organizationId,
+        {
+          policy: ctx.body,
+        }
+      );
+      if (!updated) {
+        ctx.set.status = 404;
+        return { error: "Agent not found" };
+      }
+
+      // Sync-back so the enforcer picks up the new policy immediately. The
+      // Neon write already happened; a silent 200 when the sync-back fails
+      // leaves the enforcer running the previous policy, so we SURFACE the
+      // outcome to the operator instead of swallowing it (same contract as
+      // /kill and /policy-sync above).
+      let syncStatus: "synced" | "skipped" | "failed" = "skipped";
+      let warning: string | undefined;
+      if (updated.awsAccountId) {
+        try {
+          await syncAgentPolicy(updated);
+          syncStatus = "synced";
+        } catch (error) {
+          syncStatus = "failed";
+          warning =
+            "Policy saved in Wraps, but pushing it to the enforcer failed — the agent is still enforcing its previous policy. Retry.";
+          log.error("Policy update sync-back failed", error, {
+            agentId: updated.id,
+          });
+        }
+      }
+
+      try {
+        const [org] = await db
+          .select({ slug: organization.slug })
+          .from(organization)
+          .where(eq(organization.id, auth.organizationId))
+          .limit(1);
+        if (org?.slug) {
+          await notifyOrg({
+            organizationId: auth.organizationId,
+            type: "agent.policy_updated",
+            title: `Agent ${updated.name} policy updated`,
+            body: "Send caps or allowlist changed.",
+            href: `/${org.slug}/automations/agents`,
+            data: { agentId: updated.id, syncStatus },
+          });
+        }
+      } catch (error) {
+        log.error("Policy update notify failed", error, {
+          agentId: updated.id,
+        });
+      }
+
+      return { agent: serializeAgent(updated), syncStatus, warning };
+    },
+    {
+      params: t.Object({ id: t.String({ maxLength: 255 }) }),
+      body: policySchema,
+      response: {
+        200: t.Object({
+          agent: agentResponseSchema,
+          syncStatus: t.Union([
+            t.Literal("synced"),
+            t.Literal("skipped"),
+            t.Literal("failed"),
+          ]),
+          warning: t.Optional(t.String()),
+        }),
+        403: errorResponse,
+        404: errorResponse,
+        409: errorResponse,
+      },
+      detail: { tags: ["agents"], summary: "Replace an agent's send policy" },
     }
   )
   // Store deploy outputs (CLI calls this after `wraps email agent create`)

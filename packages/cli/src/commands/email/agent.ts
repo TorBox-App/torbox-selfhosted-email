@@ -6,6 +6,7 @@ import type {
   EmailAgentCreateOptions,
   EmailAgentKillOptions,
   EmailAgentListOptions,
+  EmailAgentPolicyOptions,
 } from "../../types/index.js";
 import {
   createAgentApiClient,
@@ -787,4 +788,222 @@ export async function agentKill(options: EmailAgentKillOptions): Promise<void> {
   }
 
   clack.log.success(`Killed ${pc.cyan(target.emailAddress)}.`);
+}
+
+// mri yields a string for a single flag occurrence, an array for a repeated
+// one, and undefined when it is absent at all — normalize all three to a
+// list so the merge logic below never has to branch on shape.
+function toList(value: unknown): string[] {
+  if (value === undefined) {
+    return [];
+  }
+  return Array.isArray(value) ? value.map(String) : [String(value)];
+}
+
+function dedupePreserveOrder(base: string[], additions: string[]): string[] {
+  const seen = new Set(base);
+  const result = [...base];
+  for (const item of additions) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+function sameStringArray(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+/**
+ * Change an agent's send caps or allowlist after creation. Merges the given
+ * flags over the agent's CURRENT policy — an unspecified field is preserved,
+ * never reset — then PATCHes the merged result.
+ */
+export async function agentPolicy(
+  options: EmailAgentPolicyOptions
+): Promise<void> {
+  const api = await createAgentApiClient(options.token);
+  if (!api.ok) {
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", {
+        code: "NOT_AUTHENTICATED",
+        message: "No API token found.",
+        suggestion: "Run: wraps auth login",
+      });
+    } else {
+      clack.log.error("No API token found. Run: wraps auth login");
+    }
+    return;
+  }
+
+  // Resolve the target agent (by name or id) — same shape as agentKill.
+  const listResp = await api.get("/v1/agents");
+  if (!listResp.ok) {
+    const message = await parseError(listResp);
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "API_ERROR", message });
+    } else {
+      clack.log.error(`Failed to list agents: ${message}`);
+    }
+    return;
+  }
+  const { agents } = (await listResp.json()) as { agents: AgentRecord[] };
+
+  const target = options.name
+    ? agents.find((a) => a.name === options.name || a.id === options.name)
+    : undefined;
+
+  if (!target) {
+    const message = options.name
+      ? `No agent named "${options.name}".`
+      : "Agent name is required.";
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "NOT_FOUND", message });
+    } else {
+      clack.log.error(message);
+    }
+    return;
+  }
+
+  if (target.status === "KILLED") {
+    const message = `Agent "${target.name}" is killed — its policy can no longer be changed.`;
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "AGENT_KILLED", message });
+    } else {
+      clack.log.error(message);
+    }
+    return;
+  }
+
+  const clearAllowlist = options.clearAllowlist === true;
+  const allowRecipientAdditions = toList(options.allowRecipient);
+  const allowDomainAdditions = toList(options.allowDomain);
+
+  if (
+    clearAllowlist &&
+    (allowRecipientAdditions.length > 0 || allowDomainAdditions.length > 0)
+  ) {
+    const message =
+      "--clear-allowlist cannot be combined with --allow-recipient or --allow-domain.";
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "VALIDATION", message });
+    } else {
+      clack.log.error(message);
+    }
+    return;
+  }
+
+  const current = target.policy;
+  const maxPerHour =
+    options.maxPerHour === undefined
+      ? current.maxPerHour
+      : Number(options.maxPerHour);
+  const maxPerDay =
+    options.maxPerDay === undefined
+      ? current.maxPerDay
+      : Number(options.maxPerDay);
+
+  if (!(Number.isInteger(maxPerHour) && maxPerHour >= 0)) {
+    const message = "--max-per-hour must be a whole number >= 0.";
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "VALIDATION", message });
+    } else {
+      clack.log.error(message);
+    }
+    return;
+  }
+  if (!(Number.isInteger(maxPerDay) && maxPerDay >= 0)) {
+    const message = "--max-per-day must be a whole number >= 0.";
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "VALIDATION", message });
+    } else {
+      clack.log.error(message);
+    }
+    return;
+  }
+
+  const allowedRecipients = clearAllowlist
+    ? []
+    : dedupePreserveOrder(current.allowedRecipients, allowRecipientAdditions);
+  const allowedRecipientDomains = clearAllowlist
+    ? []
+    : dedupePreserveOrder(
+        current.allowedRecipientDomains,
+        allowDomainAdditions
+      );
+
+  const nextPolicy = {
+    maxPerHour,
+    maxPerDay,
+    allowedRecipients,
+    allowedRecipientDomains,
+  };
+
+  const noChange =
+    nextPolicy.maxPerHour === current.maxPerHour &&
+    nextPolicy.maxPerDay === current.maxPerDay &&
+    sameStringArray(nextPolicy.allowedRecipients, current.allowedRecipients) &&
+    sameStringArray(
+      nextPolicy.allowedRecipientDomains,
+      current.allowedRecipientDomains
+    );
+
+  if (noChange) {
+    if (isJsonMode()) {
+      jsonSuccess("email.agent.policy", {
+        agent: target,
+        syncStatus: "skipped",
+        noChange: true,
+      });
+    } else {
+      clack.log.info("No changes.");
+    }
+    return;
+  }
+
+  const resp = await api.patch(`/v1/agents/${target.id}/policy`, nextPolicy);
+  if (!resp.ok) {
+    const message = await parseError(resp);
+    if (isJsonMode()) {
+      jsonError("email.agent.policy", { code: "API_ERROR", message });
+    } else {
+      clack.log.error(`Failed to update policy: ${message}`);
+    }
+    return;
+  }
+
+  const body = (await resp.json()) as {
+    agent: AgentRecord;
+    syncStatus: "synced" | "skipped" | "failed";
+    warning?: string;
+  };
+  const syncFailed = body.syncStatus === "failed";
+
+  if (isJsonMode()) {
+    jsonSuccess("email.agent.policy", {
+      agent: body.agent,
+      syncStatus: body.syncStatus,
+      warning: body.warning ?? null,
+    });
+    if (syncFailed) {
+      process.exit(1);
+    }
+    return;
+  }
+
+  const before = `${current.maxPerHour}/hr · ${current.maxPerDay}/day`;
+  const after = `${body.agent.policy.maxPerHour}/hr · ${body.agent.policy.maxPerDay}/day`;
+  clack.log.success(`${before} → ${after}`);
+  console.log(
+    `  Allowlist: ${body.agent.policy.allowedRecipients.length} recipient(s), ${body.agent.policy.allowedRecipientDomains.length} domain(s)`
+  );
+
+  if (syncFailed) {
+    if (body.warning) {
+      clack.log.warn(body.warning);
+    }
+    process.exit(1);
+  }
 }

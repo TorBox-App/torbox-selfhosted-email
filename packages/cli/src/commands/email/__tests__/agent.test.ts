@@ -36,7 +36,7 @@ import * as metadata from "../../../utils/shared/metadata.js";
 import * as pulumiUtils from "../../../utils/shared/pulumi.js";
 import * as timeout from "../../../utils/shared/timeout.js";
 // Import after mocks so the module picks up the mocked deps.
-import { agentCreate, agentKill, agentList } from "../agent.js";
+import { agentCreate, agentKill, agentList, agentPolicy } from "../agent.js";
 
 const ACCOUNT_ID = "123456789012";
 const REGION = "us-east-1";
@@ -104,6 +104,7 @@ describe("email agent commands", () => {
   let agentsListResp: ResponseLike;
   let policySyncResp: ResponseLike;
   let killResp: ResponseLike;
+  let policyPatchResp: ResponseLike;
   let stackUpOutputs: Record<string, unknown>;
   let capturedEmailConfigOverride: any;
   let capturedStackConfig: any;
@@ -223,6 +224,10 @@ describe("email agent commands", () => {
       syncStatus: "synced",
     });
     killResp = res(200, { ok: true });
+    policyPatchResp = res(200, {
+      agent: createdAgentRecord(),
+      syncStatus: "synced",
+    });
 
     fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
       const path = new URL(url).pathname;
@@ -245,6 +250,10 @@ describe("email agent commands", () => {
       }
       if (/^\/v1\/agents\/[^/]+\/kill$/.test(path) && method === "POST") {
         return killResp;
+      }
+      if (/^\/v1\/agents\/[^/]+\/policy$/.test(path) && method === "PATCH") {
+        sequence.push("policy-patch");
+        return policyPatchResp;
       }
       throw new Error(`Unmocked fetch: ${method} ${path}`);
     });
@@ -294,6 +303,29 @@ describe("email agent commands", () => {
       const isPost = method === "POST";
       return isPost && (typeof path === "string" ? p === path : path.test(p));
     });
+  }
+
+  function patchedTo(path: RegExp | string): boolean {
+    return fetchMock.mock.calls.some(([url, init]) => {
+      const p = new URL(url as string).pathname;
+      const method = ((init as RequestInit)?.method || "GET").toUpperCase();
+      const isPatch = method === "PATCH";
+      return isPatch && (typeof path === "string" ? p === path : path.test(p));
+    });
+  }
+
+  function patchBodyFor(path: RegExp | string): any {
+    const call = fetchMock.mock.calls.find(([url, init]) => {
+      const p = new URL(url as string).pathname;
+      const method = ((init as RequestInit)?.method || "GET").toUpperCase();
+      const isPatch = method === "PATCH";
+      return isPatch && (typeof path === "string" ? p === path : path.test(p));
+    });
+    if (!call) {
+      return undefined;
+    }
+    const init = call[1] as RequestInit;
+    return JSON.parse(init.body as string);
   }
 
   function jsonEnvelopes(): any[] {
@@ -735,6 +767,155 @@ describe("email agent commands", () => {
       );
 
       expect(postedTo(/\/kill$/)).toBe(false);
+    });
+  });
+
+  describe("agent policy", () => {
+    function agentWithPolicy(overrides: Record<string, unknown> = {}) {
+      return createdAgentRecord({
+        id: "policy-id",
+        name: "sdr",
+        emailAddress: "sdr@example.com",
+        status: "ACTIVE",
+        policy: {
+          maxPerHour: 20,
+          maxPerDay: 100,
+          allowedRecipients: ["existing@example.com"],
+          allowedRecipientDomains: ["existing.com"],
+        },
+        ...overrides,
+      });
+    }
+
+    it("only --max-per-day given → PATCH body keeps maxPerHour and the allowlists", async () => {
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      await agentPolicy({ name: "sdr", maxPerDay: 5 });
+
+      const body = patchBodyFor("/v1/agents/policy-id/policy");
+      expect(body).toEqual({
+        maxPerHour: 20,
+        maxPerDay: 5,
+        allowedRecipients: ["existing@example.com"],
+        allowedRecipientDomains: ["existing.com"],
+      });
+    });
+
+    it("--allow-recipient given twice (array from mri) → both appended, de-duplicated against existing entries", async () => {
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      await agentPolicy({
+        name: "sdr",
+        allowRecipient: ["existing@example.com", "new@example.com"],
+      });
+
+      const body = patchBodyFor("/v1/agents/policy-id/policy");
+      expect(body.allowedRecipients).toEqual([
+        "existing@example.com",
+        "new@example.com",
+      ]);
+    });
+
+    it("--allow-recipient given once (string from mri) → normalized to a one-element array", async () => {
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      // mri yields a bare string, not an array, for a single occurrence.
+      await agentPolicy({
+        name: "sdr",
+        allowRecipient: "new@example.com" as unknown as string[],
+      });
+
+      const body = patchBodyFor("/v1/agents/policy-id/policy");
+      expect(body.allowedRecipients).toEqual([
+        "existing@example.com",
+        "new@example.com",
+      ]);
+    });
+
+    it("--clear-allowlist with --allow-recipient → validation error, no API call", async () => {
+      setJsonMode(true);
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      await agentPolicy({
+        name: "sdr",
+        clearAllowlist: true,
+        allowRecipient: ["new@example.com"],
+      });
+
+      expect(patchedTo(/\/policy$/)).toBe(false);
+      const env = jsonEnvelopes().find(
+        (e) => e.command === "email.agent.policy"
+      );
+      expect(env.success).toBe(false);
+      expect(env.error.code).toBe("VALIDATION");
+    });
+
+    it("unknown agent name → NOT_FOUND, no API call", async () => {
+      setJsonMode(true);
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      await agentPolicy({ name: "does-not-exist" });
+
+      expect(patchedTo(/\/policy$/)).toBe(false);
+      const env = jsonEnvelopes().find(
+        (e) => e.command === "email.agent.policy"
+      );
+      expect(env.success).toBe(false);
+      expect(env.error.code).toBe("NOT_FOUND");
+    });
+
+    it("KILLED agent → AGENT_KILLED, no API call", async () => {
+      setJsonMode(true);
+      agentsListResp = res(200, {
+        agents: [agentWithPolicy({ status: "KILLED" })],
+      });
+
+      await agentPolicy({ name: "sdr", maxPerDay: 5 });
+
+      expect(patchedTo(/\/policy$/)).toBe(false);
+      const env = jsonEnvelopes().find(
+        (e) => e.command === "email.agent.policy"
+      );
+      expect(env.success).toBe(false);
+      expect(env.error.code).toBe("AGENT_KILLED");
+    });
+
+    it("syncStatus=failed in the response → the warning is surfaced and the command exits non-zero", async () => {
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+      policyPatchResp = res(200, {
+        agent: agentWithPolicy({ policy: { ...agentWithPolicy().policy } }),
+        syncStatus: "failed",
+        warning: "the agent is still enforcing its previous policy",
+      });
+
+      await expect(
+        agentPolicy({ name: "sdr", maxPerDay: 5 })
+      ).rejects.toBeInstanceOf(ExitError);
+
+      const warnText = vi
+        .mocked(clack.log)
+        .warn.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(warnText).toContain("still enforcing its previous policy");
+    });
+
+    it("no-op change → 'No changes', no API call", async () => {
+      agentsListResp = res(200, { agents: [agentWithPolicy()] });
+
+      await agentPolicy({
+        name: "sdr",
+        maxPerHour: 20,
+        maxPerDay: 100,
+      });
+
+      expect(patchedTo(/\/policy$/)).toBe(false);
+      const infoText = vi
+        .mocked(clack.log)
+        .info.mock.calls.flat()
+        .map(String)
+        .join("\n");
+      expect(infoText).toContain("No changes");
     });
   });
 });

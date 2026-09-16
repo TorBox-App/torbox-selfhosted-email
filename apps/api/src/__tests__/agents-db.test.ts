@@ -316,6 +316,276 @@ describe("POST /v1/agents/:id/kill sync-failure surface (SEC-5)", () => {
   });
 });
 
+describe("PATCH /v1/agents/:id/policy", () => {
+  const basePolicy = {
+    maxPerHour: 20,
+    maxPerDay: 100,
+    allowedRecipients: [],
+    allowedRecipientDomains: [],
+  };
+
+  it("replaces the policy and persists it (happy path + sync surfaced)", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-happy",
+        emailAddress: `policy-happy@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockResolvedValueOnce(undefined);
+
+    const app = appFor(ids.org, ids.user);
+    const newPolicy = {
+      maxPerHour: 2,
+      maxPerDay: 5,
+      allowedRecipients: ["trusted@example.com"],
+      allowedRecipientDomains: [],
+    };
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPolicy),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.agent.policy).toEqual(newPolicy);
+    expect(body.syncStatus).toBe("synced");
+    expect(body.warning).toBeUndefined();
+    expect(syncAgentPolicyMock).toHaveBeenCalledTimes(1);
+
+    // Re-read via GET to confirm the write is persisted, not just echoed.
+    const getRes = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}`, { method: "GET" })
+    );
+    expect((await getRes.json()).policy).toEqual(newPolicy);
+  });
+
+  it("persists the policy even when the enforcer sync fails, and surfaces the warning", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-sync-fail",
+        emailAddress: `policy-sync-fail@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+        awsAccountId: ids.awsAccount,
+      })
+      .returning();
+
+    syncAgentPolicyMock.mockRejectedValueOnce(new Error("AccessDenied"));
+
+    const app = appFor(ids.org, ids.user);
+    const newPolicy = {
+      maxPerHour: 1,
+      maxPerDay: 1,
+      allowedRecipients: [],
+      allowedRecipientDomains: [],
+    };
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPolicy),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("failed");
+    expect(typeof body.warning).toBe("string");
+    expect(body.warning.length).toBeGreaterThan(0);
+
+    // The Neon write already happened — assert by re-reading the agent.
+    const [stored] = await db.select().from(agent).where(eq(agent.id, a.id));
+    expect(stored?.policy).toEqual(newPolicy);
+  });
+
+  it("returns syncStatus=skipped and never calls syncAgentPolicy for an agent with no awsAccountId", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-skip",
+        emailAddress: `policy-skip@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+      })
+      .returning();
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(basePolicy),
+      })
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.syncStatus).toBe("skipped");
+    expect(body.warning).toBeUndefined();
+    expect(syncAgentPolicyMock).not.toHaveBeenCalled();
+  });
+
+  it("RBAC: 403s a plain member, leaves the policy unchanged; owner succeeds (SEC-7)", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-rbac",
+        emailAddress: `policy-rbac@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+      })
+      .returning();
+
+    const memberApp = appFor(ids.org, MEMBER_USER_ID);
+    const denied = await memberApp.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+    expect(denied.status).toBe(403);
+
+    const [unchanged] = await db.select().from(agent).where(eq(agent.id, a.id));
+    expect(unchanged?.policy).toEqual(basePolicy);
+
+    const ownerApp = appFor(ids.org, ids.user);
+    const allowed = await ownerApp.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+    expect(allowed.status).toBe(200);
+  });
+
+  it("cross-org IDOR: 404s for an agent owned by another org, and leaves it untouched", async () => {
+    const [foreign] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.otherOrg,
+        name: "policy-foreign",
+        emailAddress: `policy-foreign@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+      })
+      .returning();
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${foreign.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("Agent not found");
+
+    const [unchanged] = await db
+      .select()
+      .from(agent)
+      .where(eq(agent.id, foreign.id));
+    expect(unchanged?.policy).toEqual(basePolicy);
+  });
+
+  it("409s a policy change on a killed agent, and leaves the stored policy unchanged", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-killed",
+        emailAddress: `policy-killed@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+        status: "KILLED",
+      })
+      .returning();
+
+    const app = appFor(ids.org, ids.user);
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: [],
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+    expect(res.status).toBe(409);
+
+    const [unchanged] = await db.select().from(agent).where(eq(agent.id, a.id));
+    expect(unchanged?.policy).toEqual(basePolicy);
+  });
+
+  it("422s when allowedRecipients exceeds the 100-item cap", async () => {
+    const [a] = await db
+      .insert(agent)
+      .values({
+        organizationId: ids.org,
+        name: "policy-too-many",
+        emailAddress: `policy-too-many@${PREFIX}.example.com`,
+        domain: `${PREFIX}.example.com`,
+        policy: basePolicy,
+      })
+      .returning();
+
+    const app = appFor(ids.org, ids.user);
+    const tooMany = Array.from(
+      { length: 101 },
+      (_, i) => `recipient-${i}@example.com`
+    );
+    const res = await app.handle(
+      new Request(`http://localhost/v1/agents/${a.id}/policy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxPerHour: 1,
+          maxPerDay: 1,
+          allowedRecipients: tooMany,
+          allowedRecipientDomains: [],
+        }),
+      })
+    );
+    expect(res.status).toBe(422);
+
+    const [unchanged] = await db.select().from(agent).where(eq(agent.id, a.id));
+    expect(unchanged?.policy).toEqual(basePolicy);
+  });
+});
+
 describe("POST /v1/agents/:id/policy-sync ARN validation (SEC-6)", () => {
   it("400s when the ARN account segment does not match awsAccountId", async () => {
     const [a] = await db

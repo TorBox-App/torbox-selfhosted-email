@@ -6,7 +6,7 @@ export type ApiCall = (
 ) => Promise<Response>;
 
 export type AgentApiClient =
-  | { ok: true; get: ApiCall; post: ApiCall }
+  | { ok: true; get: ApiCall; post: ApiCall; patch: ApiCall }
   | { ok: false; reason: string };
 
 /**
@@ -41,7 +41,12 @@ export async function createAgentApiClient(
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
-  return { ok: true, get: call("GET"), post: call("POST") };
+  return {
+    ok: true,
+    get: call("GET"),
+    post: call("POST"),
+    patch: call("PATCH"),
+  };
 }
 
 export async function parseAgentApiError(resp: Response): Promise<string> {

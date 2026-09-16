@@ -20,7 +20,12 @@ import { cdnUpgrade } from "./commands/cdn/upgrade.js";
 import { cdnVerify } from "./commands/cdn/verify.js";
 // Aggregate diagnostics
 import { wrapsDoctor } from "./commands/doctor.js";
-import { agentCreate, agentKill, agentList } from "./commands/email/agent.js";
+import {
+  agentCreate,
+  agentKill,
+  agentList,
+  agentPolicy,
+} from "./commands/email/agent.js";
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
 import { connect } from "./commands/email/connect.js";
@@ -259,7 +264,10 @@ function showHelp() {
   );
   console.log(`  ${pc.cyan("email agent list")}     List agents`);
   console.log(
-    `  ${pc.cyan("email agent kill")}     Kill an agent (revoke sending)\n`
+    `  ${pc.cyan("email agent kill")}     Kill an agent (revoke sending)`
+  );
+  console.log(
+    `  ${pc.cyan("email agent policy")}   Change an agent's caps or allowlist\n`
   );
   console.log("Template Commands:");
   console.log(
@@ -877,11 +885,25 @@ async function run() {
               });
               break;
 
+            case "policy":
+              await agentPolicy({
+                // baseline:allow-no-region — API-backed like agentList/agentKill, not direct AWS
+                name: sub[3] || flags.name,
+                maxPerHour: flags["max-per-hour"],
+                maxPerDay: flags["max-per-day"],
+                allowRecipient: flags["allow-recipient"],
+                allowDomain: flags["allow-domain"],
+                clearAllowlist: flags["clear-allowlist"] === true,
+                token: flags.token,
+                json: flags.json,
+              });
+              break;
+
             default:
               throw errors.unknownCommand(
                 "agent command",
                 agentSubCommand,
-                "Available commands: create, list, kill"
+                "Available commands: create, list, kill, policy"
               );
           }
           break;
