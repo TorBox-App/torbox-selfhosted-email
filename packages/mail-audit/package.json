@@ -1,6 +1,6 @@
 {
   "name": "mail-audit",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Email deliverability audit — SPF, DKIM, DMARC, MX, blacklists, TLS. Letter grades A-F.",
   "type": "module",
   "bin": {
