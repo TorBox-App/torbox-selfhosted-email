@@ -41,12 +41,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wraps-dev/wraps.git",
+    "url": "https://github.com/wraps-team/wraps.git",
     "directory": "packages/core"
   },
   "homepage": "https://wraps.dev",
   "bugs": {
-    "url": "https://github.com/wraps-dev/wraps/issues"
+    "url": "https://github.com/wraps-team/wraps/issues"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "catalog:",

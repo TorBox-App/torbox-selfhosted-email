@@ -17,7 +17,7 @@ export async function support(): Promise<void> {
   console.log();
   console.log(`  ${pc.bold("Email:")}   ${pc.cyan("hey@wraps.dev")}`);
   console.log(
-    `  ${pc.bold("GitHub:")}  ${pc.cyan("https://github.com/wraps-dev/wraps/issues")}`
+    `  ${pc.bold("GitHub:")}  ${pc.cyan("https://github.com/wraps-team/wraps/issues")}`
   );
   console.log(`  ${pc.bold("Docs:")}    ${pc.cyan("https://wraps.dev/docs")}`);
   console.log(
