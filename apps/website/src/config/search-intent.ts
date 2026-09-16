@@ -1130,6 +1130,191 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     rationale:
       "Nearly every result for this pair compares features when the monthly floor decides it first, and neither vendor will say out loud that the deciding question is whether anyone on the team will actually own the messaging platform day to day.",
   },
+  {
+    route: "/versus/amazon-ses-vs-resend",
+    primaryQuery: "should i use amazon ses directly or resend",
+    secondaryQueries: [
+      "resend is built on amazon ses",
+      "what does resend add on top of ses",
+      "moving from resend to raw ses",
+      "ses sandbox versus a hosted email api",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Almost every result for this comparison is published by one of the two parties, and neither leads with the fact that decides it: they share a delivery substrate, so the real trade is ownership and tooling rather than inbox placement.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-self-hosted",
+    primaryQuery: "is it worth running your own mail server instead of ses",
+    secondaryQueries: [
+      "postal mail server versus amazon ses",
+      "self hosted smtp deliverability problems",
+      "port 25 blocked on cloud provider",
+      "cost of running your own outbound mail server",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The people asking this have already rejected the hosted-API tier on price, so a comparison that reasons about per-message rates is answering a question they stopped asking. What they need priced is the operational work, and nobody selling either option has a reason to itemise it.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-cloudflare-email",
+    primaryQuery: "how to receive email in code with aws or cloudflare",
+    secondaryQueries: [
+      "cloudflare email workers versus ses inbound",
+      "parse incoming email into a lambda",
+      "free way to receive email programmatically",
+      "ses receipt rules explained",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Inbound email is the half of the stack almost nobody writes about, so the query is answered today by product documentation on both sides and by nothing that puts the two next to each other — including the fact that only one of them can also send.",
+  },
+  {
+    route: "/versus/courier-vs-knock",
+    primaryQuery:
+      "notification infrastructure platform comparison for engineers",
+    secondaryQueries: [
+      "do we need a notification service or just send email",
+      "in app notification inbox build or buy",
+      "user notification preference centre off the shelf",
+      "notification orchestration layer pricing",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Teams reach this comparison after deciding to stop hand-rolling notification fan-out, which means they are evaluating a category rather than two products — and the category question, whether this layer is worth paying for at all, is one neither vendor's site will answer honestly.",
+  },
+  {
+    route: "/versus/agentmail-vs-mailslurp",
+    primaryQuery: "api that gives an ai agent its own email inbox",
+    secondaryQueries: [
+      "programmatic inbox for autonomous agents",
+      "how many inboxes can i create over an api",
+      "email address per agent instead of per user",
+      "receive and reply to email from code",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The agent-inbox category is new enough that search results are still dominated by test-automation tooling, so a buyer looking for a production sender of record for a fleet of agents is being shown products whose outbound allowance is measured in hundreds a month.",
+  },
+  {
+    route: "/versus/agentmail-vs-nylas",
+    primaryQuery: "should an ai agent have its own mailbox or use the users",
+    secondaryQueries: [
+      "connect gmail and outlook to an ai agent",
+      "google oauth verification for email scopes timeline",
+      "agent sending email on behalf of a user",
+      "unified email api versus hosted agent inbox",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "This is an architecture decision disguised as a vendor comparison, and the expensive part — a third-party security review of your Gmail scopes, on Google's schedule — appears in neither vendor's marketing and routinely slips launch dates by months.",
+  },
+  {
+    route: "/versus/mailslurp-vs-mailtrap",
+    primaryQuery: "how to test email flows in an automated test suite",
+    secondaryQueries: [
+      "capture outgoing email in staging instead of sending",
+      "assert on a one time code sent by email",
+      "end to end test for signup email verification",
+      "fake smtp server for integration tests",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The common framing treats these as interchangeable email-testing tools, which hides the distinction that actually matters to somebody writing the test: only one of them can receive a message that your own application did not send.",
+  },
+  {
+    route: "/versus/mailtrap-vs-smtp2go",
+    primaryQuery: "reliable smtp relay with good delivery reporting",
+    secondaryQueries: [
+      "smtp relay for an application that cannot use an api",
+      "send email from a device or appliance over smtp",
+      "which smtp service has the best logs",
+      "smtp relay with a staging sandbox",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Buyers searching for a relay rather than an API are usually constrained — a device, a legacy application, a framework with an SMTP transport — and the comparison content in this space is written for people choosing a modern SDK, which is a different reader entirely.",
+  },
+  {
+    route: "/versus/ahasend-vs-zeptomail",
+    primaryQuery: "cheapest transactional email api that is not amazon ses",
+    secondaryQueries: [
+      "transactional only email provider policy",
+      "prepaid email credits that expire",
+      "low cost email api without an aws account",
+      "email api under a cent per message",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Price-led comparisons in this category are written by vendors who are not the cheapest, so the two products that genuinely are get described in terms of what they lack rather than in terms of the two very different bets a buyer is choosing between.",
+  },
+  {
+    route: "/versus/ahasend-vs-bavimail",
+    primaryQuery:
+      "small independent alternatives to resend for transactional mail",
+    secondaryQueries: [
+      "new transactional email providers worth trying",
+      "email api with inbound inboxes included",
+      "is a new email provider safe to rely on",
+      "flat rate transactional email pricing",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Both vendors are too new to appear in the comparison content that ranks today, so the person evaluating them is doing it from two pricing pages and no independent read of what each actually includes or what the risk of either is.",
+  },
+  {
+    route: "/versus/mailersend-vs-sendgrid",
+    primaryQuery: "email platform with a template builder a marketer can use",
+    secondaryQueries: [
+      "sendgrid alternative for a small team",
+      "email api with drag and drop templates",
+      "sending for multiple brands from one account",
+      "moving off sendgrid after the free tier ended",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Searches in this space spiked after SendGrid retired its free tier, and the results are dominated by developer-first APIs — which is the wrong recommendation for the substantial share of these teams whose actual requirement is a template a non-engineer can edit.",
+  },
+  {
+    route: "/versus/mandrill-vs-postmark",
+    primaryQuery:
+      "moving transactional email off mailchimp to a dedicated provider",
+    secondaryQueries: [
+      "mandrill requires a paid mailchimp plan",
+      "is mandrill still being developed",
+      "transactional email separate from marketing platform",
+      "mailchimp transactional email alternatives",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The people asking this are already Mailchimp customers evaluating whether to keep transactional there, so the decisive fact is a purchasing constraint rather than a feature gap — and a comparison written for greenfield buyers never mentions it.",
+  },
+  {
+    route: "/versus/brevo-vs-scaleway-tem",
+    primaryQuery: "european email provider for gdpr data residency",
+    secondaryQueries: [
+      "send email without any us cloud provider",
+      "eu hosted transactional email api",
+      "scaleway transactional email review",
+      "european alternative to sendgrid and mailgun",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Residency-driven searches return marketing pages asserting EU hosting without distinguishing where data is stored from who the subprocessors are, which is the distinction a procurement questionnaire actually asks about.",
+  },
+  {
+    route: "/versus/customer-io-vs-knock",
+    primaryQuery: "lifecycle messaging platform or notification infrastructure",
+    secondaryQueries: [
+      "product notifications versus marketing automation tool",
+      "who should own notification logic engineering or marketing",
+      "in app notification feed with preferences",
+      "notification system billed per profile or per send",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Teams discover late that these two are answering different questions, having evaluated them on an overlapping feature list; the decisive difference is organisational — which team owns the workflow — and no vendor page frames it that way.",
+  },
   // END GENERATED VERSUS INTENT
 ];
 
