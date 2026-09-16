@@ -1008,6 +1008,129 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     rationale:
       "This SERP is owned by inbox-warmup vendors whose product benefits from the problem, so a page that puts authentication first and says plainly that no one controls a provider's filtering decision wins on substance rather than volume.",
   },
+
+  // --- Versus (generated) ---
+  // Everything between these markers is written by
+  // `pnpm --filter wraps-website versus:generate` from src/config/versus.ts.
+  // Edit that file, not this block — a regenerate overwrites it.
+  // BEGIN GENERATED VERSUS INTENT
+  {
+    route: "/versus",
+    primaryQuery: "email vendor head to head comparisons",
+    secondaryQueries: [
+      "compare two email providers directly",
+      "email api comparison not written by a vendor",
+      "which email platform should i choose",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Every comparison hub in this space is a vendor listing itself against the field. This one indexes pairs it is not part of, which is both a different query shape and the only version of the page a reader has a reason to trust.",
+  },
+  {
+    route: "/versus/postmark-vs-resend",
+    primaryQuery: "postmark vs resend for transactional email",
+    secondaryQueries: [
+      "is resend or postmark better for deliverability",
+      "resend 30 day log retention limit",
+      "resend two requests per second rate limit",
+      "react email with postmark",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The two facts that decide this in practice — Resend purging logs at thirty days on every non-Enterprise plan, and a two-per-second API ceiling that does not lift on any tier — appear in neither vendor's own comparison, because neither vendor is going to write them down.",
+  },
+  {
+    route: "/versus/loops-vs-resend",
+    primaryQuery: "loops vs resend for product email",
+    secondaryQueries: [
+      "does resend do drip campaigns",
+      "per contact or per send email pricing",
+      "loops transactional email quality",
+      "onboarding sequence without building it yourself",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "These two look interchangeable from the outside and are not: Resend has no journeys at all, so a drip sequence is code you write. Stating that plainly, with the inverted billing units next to it, answers the question people are actually asking when they search the pair.",
+  },
+  {
+    route: "/versus/mailgun-vs-sendgrid",
+    primaryQuery: "mailgun vs sendgrid for high volume sending",
+    secondaryQueries: [
+      "sendgrid free tier ended what replaced it",
+      "sendgrid account suspended no warning",
+      "is sendgrid marketing campaigns a separate plan",
+      "dedicated ip mailgun or sendgrid",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Both vendors' free tiers are gone — SendGrid's ended in May 2025, Mailgun's is a hard hundred a day — and nearly every comparison still treats one of them as the free option. The suspension pattern that dominates both vendors' public reviews is likewise absent from every vendor-written page.",
+  },
+  {
+    route: "/versus/mailgun-vs-postmark",
+    primaryQuery: "mailgun vs postmark deliverability and pricing",
+    secondaryQueries: [
+      "did mailgun raise its prices",
+      "mailgun flex plan discontinued",
+      "postmark message streams explained",
+      "which email api has better inbound routing",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Almost every comparison of these two still quotes Mailgun's pre-December-2025 pay-as-you-go rate, which closed to new signups and then doubled. A page that prices what you can actually buy today is correcting a specific, checkable error the rest of the results are repeating.",
+  },
+  {
+    route: "/versus/customer-io-vs-klaviyo",
+    primaryQuery: "customer.io vs klaviyo for lifecycle messaging",
+    secondaryQueries: [
+      "klaviyo for saas instead of ecommerce",
+      "customer.io profile based pricing explained",
+      "lifecycle email tool that is not ecommerce first",
+      "per profile billing marketing automation",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "These two are usually compared on feature tables when the decision is actually made by data model — events you define against orders and catalogues you did not — and by a shared per-profile meter that neither vendor's page frames as the trade it is.",
+  },
+  {
+    route: "/versus/brevo-vs-klaviyo",
+    primaryQuery: "brevo vs klaviyo for ecommerce email",
+    secondaryQueries: [
+      "does klaviyo charge for unsubscribed profiles",
+      "klaviyo bill keeps going up",
+      "cheaper klaviyo alternative for a big list",
+      "klaviyo sending limit ten times profiles",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Klaviyo has billed all active profiles rather than only subscribers since February 2025 and auto-upgrades across bands without auto-downgrading. That ratchet is the single most common complaint from stores and it is the thing a send-metered competitor is genuinely an answer to.",
+  },
+  {
+    route: "/versus/brevo-vs-sendgrid",
+    primaryQuery: "brevo vs sendgrid marketing and transactional",
+    secondaryQueries: [
+      "eu based alternative to sendgrid",
+      "does brevo put its logo on my emails",
+      "brevo automation which plan",
+      "gdpr compliant transactional email provider",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The decision is usually made by a European compliance review rather than by features, and the two facts that actually change the quote — Brevo branding your footer on lower plans, and SendGrid billing Marketing Campaigns as a second plan — are absent from the comparison tables that rank for this.",
+  },
+  {
+    route: "/versus/customer-io-vs-loops",
+    primaryQuery: "customer.io vs loops for saas lifecycle email",
+    secondaryQueries: [
+      "cheaper alternative to customer.io for a startup",
+      "lifecycle and transactional email in one tool",
+      "customer.io minimum monthly cost",
+      "when do you outgrow loops",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Nearly every result for this pair compares features when the monthly floor decides it first, and neither vendor will say out loud that the deciding question is whether anyone on the team will actually own the messaging platform day to day.",
+  },
+  // END GENERATED VERSUS INTENT
 ];
 
 /** Routes that exist for reasons other than search. */

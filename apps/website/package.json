@@ -12,6 +12,7 @@
     "pricing:md": "tsx scripts/generate-pricing-md.ts",
     "mcp:server-json": "tsx scripts/generate-server-json.ts",
     "sitemap:dates": "tsx scripts/generate-page-dates.ts",
+    "versus:generate": "tsx scripts/generate-versus-pages.ts",
     "deploy:vercel": "vercel --prod",
     "deploy:vercel:preview": "vercel"
   },

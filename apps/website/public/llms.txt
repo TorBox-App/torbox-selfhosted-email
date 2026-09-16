@@ -536,3 +536,19 @@ Wraps publishes Claude Code skills at `https://wraps.dev/.well-known/skills/`:
 - [Changelog](https://wraps.dev/changelog): Release notes
 - [About](https://wraps.dev/about): Who builds Wraps, and the model it is built on
 - [Contact](https://wraps.dev/contact): Book a call, or reach the team on Discord or GitHub
+
+## Versus: other vendors, head to head
+
+Comparisons between two other vendors, with published prices and a straight answer about who should pick which. Wraps is not one of the two being compared on these pages.
+
+<!-- BEGIN GENERATED VERSUS -->
+- [All head-to-head comparisons](https://wraps.dev/versus): Two other vendors compared directly, with published prices and no pitch
+- [Postmark vs Resend](https://wraps.dev/versus/postmark-vs-resend): Postmark sells inbox placement and a decade of operating its own mail infrastructure. Resend sells the twenty minutes between an empty project and a sent email. Which of those you are short of decides this.
+- [Loops vs Resend](https://wraps.dev/versus/loops-vs-resend): Both are modern, developer-first, and pleasant to use. One is a finished product that bills per contact; the other is a primitive that bills per send. The billing units invert, and so does everything downstream.
+- [Mailgun vs SendGrid](https://wraps.dev/versus/mailgun-vs-sendgrid): Two large, mature sending platforms, each owned by a bigger communications company. At volume the differences are procurement, marketing tooling and how each one handles an account it does not like.
+- [Mailgun vs Postmark](https://wraps.dev/versus/mailgun-vs-postmark): One is a broad sending platform with routing, validation and log search. The other is a narrow deliverability specialist that refuses to grow features. Breadth against focus, and what each choice costs you.
+- [Customer.io vs Klaviyo](https://wraps.dev/versus/customer-io-vs-klaviyo): Both bill per profile and both automate lifecycle messaging. One was built for product teams reasoning about behaviour, the other for stores reasoning about revenue. The data model is the fork in the road.
+- [Brevo vs Klaviyo](https://wraps.dev/versus/brevo-vs-klaviyo): Klaviyo is built for ecommerce and bills every profile you store. Brevo is a generalist that bills what you send. The billing unit is not a detail here — it is the whole decision.
+- [Brevo vs SendGrid](https://wraps.dev/versus/brevo-vs-sendgrid): A European all-in-one priced on sends against the American enterprise standard that sells marketing as a separate plan. Data residency, invoice shape, and the tier where the feature you assumed actually lives.
+- [Customer.io vs Loops](https://wraps.dev/versus/customer-io-vs-loops): A programmable behavioural messaging platform against an opinionated product built for small SaaS. The price floor filters most of the decision before the features get a vote.
+<!-- END GENERATED VERSUS -->
