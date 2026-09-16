@@ -20,11 +20,14 @@ jobs:
       package: ${{ steps.meta.outputs.package }}
       npm_package: ${{ steps.meta.outputs.npm_package }}
       filter: ${{ steps.meta.outputs.filter }}
+      dir: ${{ steps.meta.outputs.dir }}
       dist_tag: ${{ steps.meta.outputs.dist_tag }}
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
       is_cli: ${{ steps.meta.outputs.is_cli }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Parse release tag
         id: meta
         run: |
@@ -42,12 +45,12 @@ jobs:
           fi
 
           case "$PACKAGE" in
-            cli)    NPM_PACKAGE="@wraps.dev/cli";    FILTER="@wraps.dev/cli" ;;
-            cdk)    NPM_PACKAGE="@wraps.dev/cdk";    FILTER="@wraps.dev/cdk" ;;
-            pulumi) NPM_PACKAGE="@wraps.dev/pulumi"; FILTER="@wraps.dev/pulumi" ;;
-            core)   NPM_PACKAGE="@wraps/core";       FILTER="@wraps/core" ;;
-            mail)   NPM_PACKAGE="mail-audit";        FILTER="mail-audit" ;;
-            email-check) NPM_PACKAGE="@wraps.dev/email-check"; FILTER="@wraps.dev/email-check" ;;
+            cli)    NPM_PACKAGE="@wraps.dev/cli";    FILTER="@wraps.dev/cli";    DIR="packages/cli" ;;
+            cdk)    NPM_PACKAGE="@wraps.dev/cdk";    FILTER="@wraps.dev/cdk";    DIR="packages/cdk" ;;
+            pulumi) NPM_PACKAGE="@wraps.dev/pulumi"; FILTER="@wraps.dev/pulumi"; DIR="packages/pulumi" ;;
+            core)   NPM_PACKAGE="@wraps/core";       FILTER="@wraps/core";       DIR="packages/core" ;;
+            mail)   NPM_PACKAGE="mail-audit";        FILTER="mail-audit";        DIR="packages/mail-audit" ;;
+            email-check) NPM_PACKAGE="@wraps.dev/email-check"; FILTER="@wraps.dev/email-check"; DIR="packages/email-check" ;;
             *)      echo "::error::Unknown package '$PACKAGE'"; exit 1 ;;
           esac
 
@@ -62,6 +65,7 @@ jobs:
             echo "package=$PACKAGE"
             echo "npm_package=$NPM_PACKAGE"
             echo "filter=$FILTER"
+            echo "dir=$DIR"
             echo "dist_tag=$DIST_TAG"
             echo "version=$VERSION"
             echo "tag=$TAG"
@@ -73,6 +77,35 @@ jobs:
           echo "- **Version:** $VERSION" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dist tag:** $DIST_TAG" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Standalone builds:** $IS_CLI" >> "$GITHUB_STEP_SUMMARY"
+
+      # A package publishes with NPM_CONFIG_PROVENANCE, and the registry
+      # validates the manifest against the signed provenance bundle. A missing
+      # or mismatched repository.url is rejected with a 422 — after the build,
+      # and for the CLI after four standalone binaries. mail-audit hit exactly
+      # that on its first CI release (every earlier version was hand-published,
+      # so the gap was invisible). Fail here instead, before any build runs.
+      - name: Verify the manifest satisfies npm provenance
+        env:
+          PKG_DIR: ${{ steps.meta.outputs.dir }}
+        run: |
+          MANIFEST="$PKG_DIR/package.json"
+          EXPECTED="https://github.com/${GITHUB_REPOSITORY}"
+
+          RAW=$(node -p "((require('./$MANIFEST').repository)||{}).url||''")
+          # Accept the git+https:// prefix and the .git suffix npm also accepts.
+          NORM=$(printf '%s' "$RAW" | sed -e 's#^git+##' -e 's#\.git$##')
+
+          if [ -z "$RAW" ]; then
+            echo "::error::$MANIFEST has no repository.url, which npm provenance requires. Add: \"repository\": { \"type\": \"git\", \"url\": \"$EXPECTED.git\", \"directory\": \"$PKG_DIR\" }"
+            exit 1
+          fi
+
+          if [ "$NORM" != "$EXPECTED" ]; then
+            echo "::error::$MANIFEST repository.url is \"$RAW\", which does not resolve to this repository ($EXPECTED). npm rejects a provenance bundle whose repository does not match."
+            exit 1
+          fi
+
+          echo "repository.url OK: $RAW"
 
   # ── Fast track: non-CLI packages (npm publish + GH release) ──
   publish:
