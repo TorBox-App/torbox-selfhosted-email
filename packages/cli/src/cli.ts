@@ -1279,6 +1279,7 @@ async function run() {
             yes: flags.yes,
             json: flags.json,
             selfhosted: true,
+            org: flags.org,
           });
           break;
 
@@ -1286,6 +1287,7 @@ async function run() {
           await updateRole({
             region: flags.region,
             force: flags.force,
+            yes: flags.yes,
             json: flags.json,
             selfhosted: true,
           });
@@ -1522,6 +1524,7 @@ async function run() {
             force: flags.force,
             yes: flags.yes,
             json: flags.json,
+            org: flags.org,
           });
           break;
 
@@ -1538,6 +1541,7 @@ async function run() {
           await updateRole({
             region: flags.region,
             force: flags.force,
+            yes: flags.yes,
             json: flags.json,
           });
           break;

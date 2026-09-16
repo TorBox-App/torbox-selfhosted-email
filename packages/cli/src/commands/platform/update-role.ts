@@ -139,8 +139,8 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     );
   }
 
-  // 5. Confirm update (unless --force)
-  if (!options.force) {
+  // 5. Confirm update (unless --force or --yes)
+  if (!(options.force || options.yes)) {
     progress.stop();
     const actionLabel = roleExists ? "Update" : "Create";
     const shouldContinue = await confirm({
@@ -174,6 +174,9 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     | undefined;
 
   // 7. Create or update role
+  let permissionsUpdated = false;
+  let trustPolicyRepaired = false;
+
   if (!roleExists && externalId) {
     await progress.execute("Creating IAM role", async () => {
       const trustPolicy = {
@@ -217,6 +220,8 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
         })
       );
     });
+    permissionsUpdated = true;
+    trustPolicyRepaired = true;
   } else {
     await progress.execute("Updating IAM role permissions", async () => {
       const { PutRolePolicyCommand } = await import("@aws-sdk/client-iam");
@@ -229,6 +234,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
         })
       );
     });
+    permissionsUpdated = true;
 
     if (externalId) {
       const trustPolicy = {
@@ -256,6 +262,18 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
           })
         );
       });
+      trustPolicyRepaired = true;
+    } else {
+      // No stored externalId for this control plane — the repair was skipped,
+      // not performed. Staying silent here is the exact 3.9.0 regression:
+      // a clean "updated" exit that looked like the trust policy had been
+      // fixed when it had not been touched at all.
+      log.warn(
+        `Trust policy was ${pc.bold("not")} touched: no stored externalId found for this control plane.`
+      );
+      console.log(
+        `  If ${pc.cyan(selfhosted ? "wraps selfhost connect" : "wraps platform connect")} still cannot assume ${pc.cyan(roleName)}, re-run it to repair the trust policy.`
+      );
     }
   }
 
@@ -263,6 +281,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   // Success
   const actionVerb = roleExists ? "updated" : "created";
+  const externalIdPresent = !!externalId;
 
   trackCommand("platform:update-role", {
     success: true,
@@ -275,11 +294,24 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
       updated: true,
       action: actionVerb,
       roleName,
+      permissionsUpdated,
+      trustPolicyRepaired,
+      externalIdPresent,
     });
     return;
   }
 
   outro(pc.green(`✓ Platform access role ${actionVerb} successfully`));
+
+  console.log(`\n${pc.bold("Summary:")}`);
+  console.log(
+    `  ${pc.green("✓")} permissions: ${permissionsUpdated ? "updated" : "unchanged"}`
+  );
+  console.log(
+    trustPolicyRepaired
+      ? `  ${pc.green("✓")} trust policy: repaired`
+      : `  ${pc.yellow("!")} trust policy: unchanged (no stored externalId)`
+  );
 
   console.log(`\n${pc.bold("Permissions:")}`);
 

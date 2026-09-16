@@ -403,20 +403,66 @@ async function updatePlatformRole(
 
 /**
  * Select an organization from the caller-provided list (SaaS or self-hosted),
- * prompting when there's more than one.
+ * prompting when there's more than one — unless `options.org` resolves it, or
+ * the run is non-interactive, in which case we fail loudly instead of
+ * guessing. Silently auto-picking would risk connecting a production AWS
+ * account to the wrong organization.
  */
-async function resolveOrganization(
-  orgs: OrgInfo[] | undefined
+export async function resolveOrganization(
+  orgs: OrgInfo[] | undefined,
+  options: { org?: string; json?: boolean; yes?: boolean }
 ): Promise<OrgInfo | null> {
   if (!orgs || orgs.length === 0) {
     return null;
+  }
+
+  if (options.org) {
+    const needle = options.org.toLowerCase();
+    const match =
+      orgs.find((o) => o.slug.toLowerCase() === needle) ||
+      orgs.find((o) => o.id.toLowerCase() === needle);
+
+    if (match) {
+      return match;
+    }
+
+    const available = orgs.map((o) => o.slug).join(", ");
+    if (isJsonMode()) {
+      jsonError("platform.connect", {
+        code: "ORG_NOT_FOUND",
+        message: `No organization matches "${options.org}".`,
+        suggestion: `Available organizations: ${available}`,
+      });
+    } else {
+      log.error(`No organization matches ${pc.cyan(options.org)}.`);
+      console.log(`\nAvailable organizations: ${available}\n`);
+    }
+    process.exit(1);
   }
 
   if (orgs.length === 1) {
     return orgs[0];
   }
 
-  // Multiple orgs — prompt
+  if (options.json || options.yes) {
+    const available = orgs.map((o) => o.slug).join(", ");
+    if (isJsonMode()) {
+      jsonError("platform.connect", {
+        code: "ORG_AMBIGUOUS",
+        message:
+          "Multiple organizations found — pass --org <slug> to choose one non-interactively.",
+        suggestion: `Available organizations: ${available}`,
+      });
+    } else {
+      log.error(
+        "Multiple organizations found. Pass --org <slug> to choose one non-interactively."
+      );
+      console.log(`\nAvailable organizations: ${available}\n`);
+    }
+    process.exit(1);
+  }
+
+  // Multiple orgs, interactive — prompt
   const selected = await select({
     message: "Which organization should this AWS account connect to?",
     options: orgs.map((org) => ({
@@ -584,7 +630,11 @@ async function authenticatedConnect(
       organizations = (await readAuthConfig())?.auth?.organizations;
     }
 
-    const org = await resolveOrganization(organizations);
+    const org = await resolveOrganization(organizations, {
+      org: options.org,
+      json: options.json,
+      yes: options.yes,
+    });
     if (!org) {
       progress.stop();
       log.error(

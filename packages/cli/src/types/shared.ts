@@ -91,6 +91,7 @@ export type DashboardOptions = {
 export type UpdateRoleOptions = {
   region?: string;
   force?: boolean; // Skip confirmation prompt
+  yes?: boolean; // Alias for force — skip confirmation prompt
   json?: boolean;
   selfhosted?: boolean; // Target the self-hosted console role instead of the platform's
 };
@@ -104,6 +105,7 @@ export type PlatformConnectOptions = {
   yes?: boolean; // Auto-confirm non-destructive operations
   json?: boolean; // Output as JSON (suppress interactive output)
   selfhosted?: boolean; // Target the self-hosted instance instead of the Wraps Platform
+  org?: string; // Organization slug or id — required for non-interactive runs when the account has more than one
 };
 
 /**
