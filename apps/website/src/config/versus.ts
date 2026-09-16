@@ -2473,6 +2473,1467 @@ const CUSTOMER_IO_VS_KNOCK: VersusPage = {
  * Ordered roughly by search intent. The order is what the hub renders, so a
  * new pair goes where it belongs rather than on the end.
  */
+const AMAZON_SES_VS_SENDGRID: VersusPage = {
+  slug: "amazon-ses-vs-sendgrid",
+  a: "amazon-ses",
+  b: "sendgrid",
+  title: "Amazon SES vs SendGrid",
+  description:
+    "SendGrid sells a company one vendor relationship covering API, SMTP relay, marketing and a procurement contact. SES sells an endpoint. The question is not which delivers better, it is how much of that relationship you actually consume.",
+  search: {
+    primaryQuery: "is amazon ses cheaper than sendgrid",
+    secondaryQueries: [
+      "what does sendgrid do that amazon ses cannot",
+      "sendgrid free tier retired replacement",
+      "sendgrid smtp relay versus ses smtp endpoint",
+      "aws support plan cost when running ses",
+    ],
+    rationale:
+      "Everyone answering this compares a plan price to a per-thousand rate and stops. The costs that decide it in practice — an AWS support plan you did not previously need on one side, a marketing plan sold separately on the other — appear on neither pricing page next to the number people quote.",
+  },
+  intro:
+    "SendGrid is the email vendor most teams tried first, and the one an unusual number are quietly costing out an exit from. That is not because it delivers badly. It is because it is sold as a company-wide relationship — relay for the systems nobody owns, a marketing console for people who do not write code, a procurement contact, a certification pack — and a team that only sends application email from one codebase is paying for the whole relationship to use a tenth of it. SES is the other extreme: an endpoint and a bill, with everything above it left to you.",
+  dimensions: [
+    {
+      heading: "What the first afternoon looks like",
+      a: "You create an IAM policy, verify a domain with three DKIM records, pick a region and call a send API. There is a console, but it exists to manage identities and quotas rather than to look at mail, and nothing in it answers did message X reach the recipient. Every part of an email vendor a non-engineer would recognise is absent by design, and you will either build it or go without it.",
+      b: "You get an account, an API key, SMTP credentials, a template editor, a suppression manager, an activity feed and a catalogue of integrations for platforms you have not thought about yet. The breadth is the product. It also means the first afternoon involves choosing between four ways to do the same thing, and the default for most teams ends up being whichever one the documentation opened on.",
+    },
+    {
+      heading: "Neither one still has the free tier people remember",
+      a: "The old arrangement where mail sent from EC2 was effectively free is gone, and so is the assumption behind a great many tutorials. New accounts now land on a metered plan rather than the flat per-message rate, plans are scoped per account and per region, and the à la carte rate is something you select rather than something you are given. It is still the cheapest credible option at volume by a wide margin — just not free, and not what a 2021 blog post describes.",
+      b: "The permanent free tier was retired in May 2025 and replaced by a time-boxed trial at a low daily cap. This matters more than it sounds: a large number of side projects, internal tools and staging environments were quietly running on that tier, and every one of them became a billing decision on a deadline. If your reason for being on SendGrid was that it cost nothing, that reason has expired.",
+    },
+    {
+      heading: "SMTP relay, and the systems nobody is allowed to rewrite",
+      a: "SES speaks SMTP too, with a per-region endpoint and credentials derived from an IAM user through a conversion step. It works, and it is the path a lot of legacy traffic takes. The rough edges are real: credentials are an IAM artefact so rotating them is an IAM change rather than a button, the endpoint is region-specific so a failover plan has to name a second one, and appliances with opinionated TLS behaviour occasionally need a port argued over.",
+      b: "This is SendGrid's most under-discussed strength. A decade of being the default relay means there is a documented path for WordPress, for Jira, for a Salesforce org, for the CI system and for the warehouse printer, usually written by the other vendor rather than by SendGrid. When the question is how do we get mail out of a system we are not allowed to modify, breadth of prior art is worth more than unit price.",
+    },
+    {
+      heading: "The marketing half, which is a separate purchase",
+      a: "SES has no equivalent and does not pretend to. There are no campaigns, no segments, no audience, no visual builder and no report a marketer would open. Teams that need that alongside SES run a second tool for it, which is a coherent architecture — but it is two vendors, two suppression concepts and two answers to the question of who unsubscribed.",
+      b: "SendGrid has a real marketing product with lists, segments, a drag-and-drop designer and campaign stats. The part that surprises people at renewal is that it is priced as its own plan rather than bundled into the sending tier, so the invoice that looked like one number becomes two. The upside is genuine: the marketing side and the transactional side share a suppression list and a sending reputation, which is exactly the reconciliation problem the two-vendor architecture creates.",
+    },
+    {
+      heading: "Getting cut off, and who you talk to when it happens",
+      a: "AWS will pause sending on an account whose bounce or complaint rate crosses published thresholds, and it is not gentle about it. The difference is that the thresholds are documented, the metrics that lead to them are in your own console and your own CloudWatch, and you can watch the number climb for a week before anything happens. Nothing about it is a surprise unless you never built the alert.",
+      b: "Abrupt suspension is the single most common theme in SendGrid's public reviews, and the accounts describing it are usually not sending anything abusive — a traffic spike, a new domain, an unfamiliar pattern. The compliance team operates on its own schedule and the first-line support tier does not overrule it. If your business stops when mail stops, the operational question is not how good is delivery, it is how long is the phone call.",
+    },
+    {
+      heading: "Support is a line item on one side and a plan on the other",
+      a: "Basic AWS support gets you documentation and forums. A human who will look at your SES account is a paid support plan sitting on top of the sending bill, and for a small team that plan can cost several multiples of the mail itself. This is the cost most SES comparisons omit, and leaving it out is how a cheap-on-paper migration ends up merely competitive.",
+      b: "Support is included in the plan, with the tier you are on deciding the queue you sit in. Response latency is the other recurring complaint in its reviews, so included is not the same as fast, but there is a ticket system, a named severity scale and no additional purchase required to open one. For a team without an AWS account manager already, that is a genuine difference rather than a marketing bullet.",
+    },
+    {
+      heading: "Procurement, paperwork and the contract you already signed",
+      a: "If the company already runs on AWS, SES arrives under an agreement legal has read, on an invoice finance already reconciles, inside a compliance boundary the security team has already assessed. Adding it is a configuration change rather than a vendor onboarding. That is not a small thing in a regulated shop, where the cost of a new supplier is measured in weeks of questionnaire rather than dollars.",
+      b: "SendGrid is a new vendor, with a new security review, a new data processing agreement and a new annual renewal. Twilio maintains the certification pack that makes this survivable and enterprise buyers do get through it routinely. But it is a process with a calendar attached, and a team that discovers it two weeks before launch is going to miss the launch.",
+    },
+    {
+      heading: "What the invoice is actually shaped like",
+      a: "Per message, with no platform fee and no plan to outgrow, billed by AWS alongside everything else. The complications are the ones AWS complications always are: the plan is per account and per region, so a second region is a second decision, and dedicated addresses are a separate line. Cost scales linearly and predictably, which is precisely why large senders end up here.",
+      b: "A sending plan, plus a marketing plan if you use that side, plus dedicated IP charges above a certain tier. Each of those is predictable on its own and the total is the thing people underestimate. The crossover against SES is not close at high volume, and it is genuinely arguable at low volume once an AWS support plan and a week of engineering are in the comparison.",
+    },
+  ],
+  pickA: [
+    "The company already runs on AWS, so SES is a configuration change inside an existing contract rather than a supplier onboarding with a security questionnaire attached.",
+    "Volume is high enough that a per-thousand rate beats a plan ladder even after you price an AWS support plan and the engineering time to build a console.",
+    "You need delivery events in your own warehouse on your own retention schedule, for an audit trail or a dispute process rather than for debugging.",
+    "Nobody at the company needs a visual campaign builder, because nothing about SES will ever provide one.",
+  ],
+  pickB: [
+    "Mail has to leave systems you do not control — a CRM, a ticketing tool, an appliance — and a documented relay path for each of them is worth more than the unit price.",
+    "A marketing team and an engineering team both need to send from the same domain and you would rather they shared one suppression list than reconciled two.",
+    "You need a support ticket to be included rather than purchased, and an enterprise certification pack that a procurement team can read in one sitting.",
+    "Volume is modest and stable, so the plan price is noise against the engineering cost of building what SES omits.",
+  ],
+  thirdOption:
+    "The specific trap on this pair is that the two ends are so far apart. A team leaving SendGrid over price is usually not leaving over the product, and discovers at month two that it has traded an invoice for a backlog: an event consumer, a suppression view, a template pipeline, somewhere to look up a message. That is the gap a platform layer over your own SES account fills, and Wraps is one way to buy it while the account, the reputation and the sending data stay in AWS you control. The honest costs: you still need an AWS account and SES production access, which is an AWS approval on AWS's timetable and not ours to grant, our SDKs cover TypeScript and Python only, contacts and templates live in our database rather than yours, and we are not SOC 2 certified — so a procurement team that chose SendGrid for the certification pack has not been answered by this.",
+  faqs: [
+    {
+      question: "Is SendGrid built on Amazon SES?",
+      answer:
+        "No, and this is the main place the SES comparison differs from the one people make with Resend. SendGrid operates its own mail infrastructure and has done since well before it was acquired by Twilio, so moving between the two genuinely changes the network your mail leaves from, the IP pools it uses and the relationships behind them. Arguments about deliverability between these two are therefore about real differences, not about two accounts on the same substrate.",
+    },
+    {
+      question: "How much cheaper is SES really, once everything is counted?",
+      answer:
+        "At high volume, several multiples, and the gap widens as you grow because one side is metered and the other is a ladder. At low volume the honest answer is that it depends on two costs nobody puts on the slide: an AWS support plan if you want a human to answer, and the engineering weeks to build the console, event pipeline and suppression tooling that arrive free with SendGrid. Below roughly a few hundred thousand messages a month, those two can eat the entire saving.",
+    },
+    {
+      question: "Can I keep SendGrid's SMTP integrations if I move to SES?",
+      answer:
+        "Usually yes, because most of those integrations only want a host, a port and a username and password. SES provides all four. The work is in the details: SMTP credentials are generated from an IAM user rather than issued directly, the endpoint is specific to one region so a failover plan has to name a second, and a few older appliances are fussy about TLS negotiation on the submission port. Budget a day per awkward system, not a week.",
+    },
+    {
+      question: "What happens to my marketing emails if I switch to SES?",
+      answer:
+        "They need a home, because SES will not provide one. The common patterns are a dedicated marketing tool alongside SES, or a platform layer that adds campaigns on top of it. What you should not do is have a developer rebuild segmentation and a visual builder, because that project has a well-documented habit of consuming a quarter and producing something the marketing team refuses to use.",
+    },
+    {
+      question: "Will my deliverability drop if I leave SendGrid?",
+      answer:
+        "For a while, yes, and not because SES is worse. You would be a new sending identity with no history, which every mailbox provider treats cautiously until it has evidence. Ramp volume over a few weeks, start with your most engaged recipients, and have DKIM, SPF and DMARC aligned before the first message rather than after the first spam-folder complaint. Teams that move a large list in one evening are the ones who write the blog posts about how SES has bad deliverability.",
+    },
+    {
+      question: "Does AWS suspend accounts the way SendGrid does?",
+      answer:
+        "AWS will pause sending, and it does so on published bounce and complaint thresholds you can watch approach in your own metrics. That is the substantive difference: the mechanism is documented and the leading indicator is visible to you, so a team with a single CloudWatch alarm gets a week of warning. Whether the recovery conversation is faster depends entirely on whether you are paying for a support plan, which is the cost that keeps reappearing in this comparison.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_POSTMARK: VersusPage = {
+  slug: "amazon-ses-vs-postmark",
+  a: "amazon-ses",
+  b: "postmark",
+  title: "Amazon SES vs Postmark",
+  description:
+    "Postmark is the most deliberately narrow product in transactional email and SES is the least opinionated infrastructure in it. Comparing them on price misses what each is actually selling.",
+  search: {
+    primaryQuery: "does postmark deliver better than amazon ses",
+    secondaryQueries: [
+      "postmark message streams explained",
+      "how long does postmark keep message content",
+      "is postmark worth the price over raw ses",
+      "transactional email that never shares a pool with marketing",
+    ],
+    rationale:
+      "The interesting claim on this pair is not the price gap, which is obvious, but whether a managed sender's inbox placement is structurally better than a well-run account of your own. Nobody neutral writes that down, because both parties have an interest in the answer.",
+  },
+  intro:
+    "Postmark has spent over a decade refusing to become a platform. It sends transactional email, keeps the marketing mail off the same pipes on purpose, stores what it sent so you can read it back, and answers support tickets with people who know how mail works. SES has spent the same decade being infrastructure: enormous, cheap, indifferent, and entirely willing to let you make a mess. The choice is not between a good product and a bad one. It is between buying a mail operation and running one.",
+  dimensions: [
+    {
+      heading: "Separating transactional mail from everything else",
+      a: "SES gives you configuration sets and verified identities, which are the raw materials for the same separation, and nothing that enforces it. A team that puts its password resets and its product newsletter behind one identity with one set of defaults has done something SES considers perfectly reasonable, right up until a campaign's complaint rate drags the account reputation down and the resets start landing in spam. The separation is available. Nothing reminds you to build it.",
+      b: "Postmark makes it structural. Transactional and broadcast mail live in separate streams that do not share reputation, and the product will argue with you if you try to push bulk mail down the transactional one. That is an opinion enforced in software, and it removes the single most common self-inflicted deliverability injury in this category — which is the honest version of why its placement reputation is what it is.",
+    },
+    {
+      heading: "Reading back what you actually sent",
+      a: "SES stores nothing. Deliveries, bounces, complaints, opens and clicks can be published to SNS, EventBridge or Firehose, but only if you configure it, and the message body is never retained anywhere by AWS. When support asks what did the email say, the answer comes from your own rendering code and your own archive, both of which you built. The archive ceiling for stored mail, where you enable it, is permanent rather than a rolling window — but again, only once you have built toward it.",
+      b: "Postmark keeps the rendered message, not just the event, and the activity view will show you the headers, the HTML and the delivery trace for a specific recipient. This is the feature that quietly justifies the price for support-heavy products: a customer says they never got it, and somebody who is not an engineer resolves the question in under a minute without opening a log query.",
+    },
+    {
+      heading:
+        "Who owns the reputation, and what that means when it goes wrong",
+      a: "You do, alone. Your bounce rate, your complaint rate, your account standing, visible in your own console and nobody else's problem. The upside is isolation: a neighbour's bad month cannot touch you. The downside arrives the first time something does go wrong, because there is no one whose job it is to notice. Diagnosing a placement problem on SES means reading your own DMARC reports, your own engagement data and a postmaster tool, and the tooling to do that is not supplied.",
+      b: "Postmark's, managed by people who do it professionally and shared across its transactional pool. Their incentive to keep it clean is direct and their willingness to remove customers who damage it is well established. What you are buying is not a secret technique — it is diligence performed continuously by somebody else, plus a support channel staffed by people who can read a bounce trace.",
+    },
+    {
+      heading: "The support conversation",
+      a: "AWS support is a separate purchase, and on the free tier it is documentation and forums. For a mail problem specifically this is worse than it sounds, because the failure modes are subtle — an alignment mismatch, a Gmail policy change, a reputation dip with no obvious cause — and the first-line response to a paid ticket will not be from a deliverability specialist. Most SES teams end up self-sufficient by necessity rather than choice.",
+      b: "Support is the product as much as the API is. Tickets go to people who have operated mail infrastructure, the answers address the actual question, and a placement problem gets a real investigation rather than a link to a runbook. Teams describe this as the reason they stay after the invoice stops being the cheapest option, which is an unusual thing to be true of a support department.",
+    },
+    {
+      heading: "Where the economics invert, and how sharply",
+      a: "Metered per message with no platform fee, and cheap enough at any meaningful volume that the comparison stops being close. The subtleties are that new accounts land on a metered plan rather than the old flat rate, and that the plan is scoped per account and per region. Nothing about the shape changes as you grow, which is the entire argument for it: the bill is a straight line with a small slope.",
+      b: "A plan with an included allowance and an overage rate that falls as the plan rises. At ten thousand messages a month the difference against SES is small enough that it should not decide anything. At half a million a month the same comparison is a substantial recurring number, and the early-2026 repricing means an account opened years ago is not on the figures a new one is quoted. Check what you are actually on before modelling anything.",
+    },
+    {
+      heading: "Templates and who is allowed to touch them",
+      a: "SES has a template API with token substitution and nobody likes it. The prevailing pattern is to render HTML inside the application and hand SES a finished string, which makes templates part of the codebase — reviewable, versioned and portable, and also invisible to anyone who cannot open a pull request. A preview environment for non-engineers is another thing you build.",
+      b: "Postmark ships a template editor with layouts, a set of well-tested starting points, and a preview that renders against real clients. It is deliberately not a marketing designer and it is not trying to be one. For a product with twenty transactional messages that occasionally need a copy change, it is close to exactly the right size, and the copy change does not need a deploy.",
+    },
+    {
+      heading: "What leaving costs in each direction",
+      a: "Leaving SES is mostly a code change, because the verified domains and the reputation are attached to an account you keep. You can run a second provider from a separate subdomain and move traffic class by class with no drama. That reversibility is a real asset and it is worth more than it looks on the day you sign up.",
+      b: "Leaving Postmark means re-verifying elsewhere and starting reputation from nothing, because the pool you were delivering from was never yours. The API surface is small so the code is a day, but the stored history does not travel and the placement you enjoyed was a property of their operation rather than of your domain. Plan the move as a ramp, not a cutover.",
+    },
+  ],
+  pickA: [
+    "Volume is high enough that the difference is a headcount rather than a rounding error, and somebody on the team genuinely wants to own mail operations.",
+    "Message content and delivery events have to live in storage you control, on a retention policy you set, because of an audit or a regulator rather than a debugging habit.",
+    "You are already inside AWS and want mail under the same account, the same IAM model and the same invoice as everything else.",
+    "You need throughput that rises on request rather than a fixed included allowance, because the traffic is batch-shaped.",
+  ],
+  pickB: [
+    "Inbox placement for password resets and receipts is a business risk rather than an engineering preference, and you would rather rent diligence than perform it.",
+    "Support agents need to answer did this customer get the email without escalating to an engineer, using the rendered message rather than a log line.",
+    "You want the transactional and broadcast separation enforced by the product, because in practice nobody on the team will enforce it by convention.",
+    "Volume is in the tens of thousands a month, where the price difference does not fund the operational work that SES requires.",
+  ],
+  thirdOption:
+    "This is the pair where the crossover is most often mis-modelled. Teams look at the invoice at half a million messages, decide SES wins, and quietly commit to rebuilding the activity view, the stored message body and the support workflow that made Postmark worth paying for — which is the actual product, not the sending. If the thing you want is SES economics with a console that a support agent can use, a platform over your own AWS account is the shape that gives you both, and Wraps is one implementation of it. What it does not give you is Postmark's deliverability operation: you still need an AWS account and SES production access, an approval on AWS's timetable rather than ours, and the reputation that follows is yours to earn and yours to lose. Contacts and templates sit in our database rather than yours, our SDKs are TypeScript and Python only, and we are not SOC 2 certified.",
+  faqs: [
+    {
+      question:
+        "Is Postmark's deliverability actually better, or is that marketing?",
+      answer:
+        "It is real, and the mechanism is less mysterious than the marketing implies. Postmark keeps bulk mail off the transactional pool by design, removes customers who damage it, and monitors placement continuously with staff who know what they are looking at. A well-run SES account can reach the same place; the difference is that on SES nobody performs those three activities unless you hire someone to. You are buying operational discipline rather than a delivery secret.",
+    },
+    {
+      question: "Does SES keep a copy of the emails I send?",
+      answer:
+        "Not by default, and this surprises people who assume a mail service is also a mail archive. Events can be published to SNS, EventBridge or Firehose and from there into anything you like, but the rendered message body is not retained by AWS unless you deliberately configure archiving. If you want to answer what did that email say six months ago, that is a system you build, and building it after you need it is not possible.",
+    },
+    {
+      question: "What are message streams and does SES have an equivalent?",
+      answer:
+        "Streams are Postmark's enforced split between transactional and broadcast mail, so the two do not share sending reputation. SES has the raw materials — separate identities, separate configuration sets, separate dedicated addresses — and no enforcement whatsoever. The equivalent exists if you build and maintain it. The reason it matters is that the most common cause of transactional mail landing in spam is a campaign sent from the same reputation the week before.",
+    },
+    {
+      question: "At what volume does SES clearly win on cost?",
+      answer:
+        "Somewhere in the low hundreds of thousands a month the gap becomes large enough to fund real engineering, and past that it is not arguable. Below that, run the comparison including an AWS support plan and a realistic estimate of the operational work, because a great many SES migrations that looked like a saving turned out to be a transfer of cost from a vendor invoice to a salary line nobody wrote down.",
+    },
+    {
+      question: "Can I use Postmark for transactional and SES for bulk?",
+      answer:
+        "Yes, and it is a more common architecture than either vendor advertises. Use separate subdomains so DKIM keys, reputation and DMARC alignment stay independent, and keep the highest-stakes messages on the path with the best placement. The cost is two suppression lists, two sets of webhooks and a reconciliation nobody performs until a customer who unsubscribed receives a newsletter and complains.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_MAILGUN: VersusPage = {
+  slug: "amazon-ses-vs-mailgun",
+  a: "amazon-ses",
+  b: "mailgun",
+  title: "Amazon SES vs Mailgun",
+  description:
+    "Mailgun is the closest thing on the market to SES with the missing parts filled in — routing, validation, searchable logs. That makes it the most direct comparison SES has, and the one where pricing stability matters most.",
+  search: {
+    primaryQuery: "what mailgun adds on top of amazon ses",
+    secondaryQueries: [
+      "mailgun inbound routes versus ses receipt rules",
+      "email address validation api alternatives",
+      "mailgun flex plan closed to new signups",
+      "searchable email logs without building a pipeline",
+    ],
+    rationale:
+      "Mailgun sits closer to SES on the stack than any other hosted vendor, so the comparison turns on specific capabilities rather than on philosophy — and on a repricing in December 2025 that existing customers noticed and prospective ones have not heard about.",
+  },
+  intro:
+    "Most comparisons in this category pit a primitive against a product with a completely different shape. This one does not. Mailgun is a sending API with inbound routing, address validation and log search bolted on, which is recognisably the list of things a team builds in its first year on SES. That makes the comparison unusually concrete: for each capability you can ask whether you would rather buy it or build it, and the answer differs per capability rather than being decided once by taste.",
+  dimensions: [
+    {
+      heading: "Receiving mail, not just sending it",
+      a: "SES can receive, in a subset of regions, through receipt rule sets that can drop a message into S3, invoke a Lambda, publish to SNS or bounce it. It is powerful and it is assembly. You get the raw MIME and everything after that — parsing, threading, attachment handling, deciding what a reply even is — is code you write, in a runtime you operate, with a rule set that is easy to misconfigure in ways that silently drop mail.",
+      b: "Mailgun Routes are expression-based and match on recipient, sender or header, then forward to a URL, an address or a store. The parsed fields arrive already extracted, which removes the least interesting week of work in any inbound project. The constraint is that the parsing is theirs, so an unusual message shape is handled the way they decided, and a route that behaves oddly is a support ticket rather than a debugging session.",
+    },
+    {
+      heading: "Address validation, which SES has no answer for at all",
+      a: "There is nothing. SES will attempt delivery to whatever you hand it, and you discover the address was a typo when the bounce arrives — which is the expensive way to find out, because bounces are the metric AWS suspends accounts over. Teams on SES either accept a higher bounce rate on signup flows, or buy validation from a third vendor and wire it in, which is one more contract and one more integration.",
+      b: "Validation is a first-class product with syntax checks, domain checks and mailbox-level verification, callable at signup rather than at send time. For any product with a self-serve registration form this is a directly measurable improvement to the number AWS would have suspended you over, and it is the single clearest example on this page of something worth buying rather than building.",
+    },
+    {
+      heading: "Finding one message among millions",
+      a: "SES has no log to search because SES stores no logs. You build the pipeline — configuration set event destination, a stream, somewhere to put it, an index, a query interface — and until all five exist, the answer to what happened to this message is unavailable. The pipeline is not hard. It is also not a weekend, and the half-finished version that captures deliveries but not complaints is worse than useless because it looks like it works.",
+      b: "Log search is in the console on day one, with retention that lengthens as the plan does. You can filter by recipient, status and time, read the SMTP response the receiving server gave, and hand the result to a support agent. The trade is the one every hosted log makes: retention is a plan feature, the window is not long on the cheaper tiers, and the history is not yours to keep when you leave.",
+    },
+    {
+      heading: "Price stability, and the December 2025 change",
+      a: "AWS reprices SES rarely and moves in visible steps. The recent change worth knowing is that new accounts are defaulted to a metered plan rather than the old flat rate, and that plans are scoped per account and per region — but the per-message economics remain the reason large senders are here, and nothing about the pricing model punishes you for growing into it.",
+      b: "The Flex plan closed to new signups in December 2025 and the legacy rate doubled. That is the part of this comparison nobody arrives knowing, and it is the strongest argument for owning the account rather than renting it: the price of a hosted plan is a decision the vendor makes on its own schedule, and the only response available to a customer is to migrate. Teams still on grandfathered terms should confirm what they are actually paying before modelling anything.",
+    },
+    {
+      heading: "Dedicated addresses and warming",
+      a: "SES offers dedicated IPs, including a managed option that handles the warm-up schedule, and standard ones you warm yourself. Because the account is yours, the warmed address stays yours across any tooling change above it — which is the piece people undervalue until they have spent six weeks warming something and then changed vendor.",
+      b: "Dedicated addresses come included from the mid plans upward, with extra ones charged monthly. That bundling is genuinely convenient at the volume where a dedicated address starts making sense. It is also a plan feature, meaning a downgrade takes it away and a migration leaves it behind, and the warm-up you paid for in patience does not travel with you.",
+    },
+    {
+      heading: "Regions, residency and where the mail physically is",
+      a: "SES runs in a long list of AWS regions and the choice is yours per account, which makes an EU-only or a specific-jurisdiction deployment a configuration decision rather than a sales conversation. The caveat a European buyer will raise is ownership rather than geography, and it is a fair one: an EU region operated by a US company is not the same answer as an EU company, whatever the data map says.",
+      b: "Mailgun offers a European region and has done for years, which covers the common GDPR requirement cleanly. The region is selected at domain level and the API endpoint differs, which is a small but real source of confusion for teams that verify a domain in one region and then call the other one for a week wondering why nothing works.",
+    },
+    {
+      heading: "Who is actually behind each one",
+      a: "AWS, with the stability and the indifference that implies. SES will not be discontinued, will not be acquired and will not change its API out from under you. It also will not call you, will not notice your problem and will not have an opinion about your sending practices until a threshold is crossed. For infrastructure, indifference is mostly a feature.",
+      b: "Sinch, following an acquisition, alongside several other messaging brands. The product is mature and well documented, and the honest risk is the ordinary one for an acquired platform: investment follows the parent's priorities rather than yours, and the December repricing is the kind of event that follows from that. Suspensions also recur in its reviews, on the same pattern as the rest of the hosted field.",
+    },
+  ],
+  pickA: [
+    "You want the account, the reputation and the warmed addresses to belong to you, so that changing the tooling above them is never a migration.",
+    "Volume is high enough that a metered rate versus a plan ladder is worth real engineering, and someone is willing to own the event pipeline.",
+    "Inbound handling is genuinely unusual — custom parsing, odd attachment shapes, strict retention — and a vendor's parsed fields would not fit anyway.",
+    "A vendor changing its price list is a risk you specifically want removed from the plan.",
+  ],
+  pickB: [
+    "You need inbound routing and address validation now, and would rather buy two solved problems than spend a quarter building mediocre versions.",
+    "Support agents need searchable logs with the receiving server's response visible, without a data pipeline existing first.",
+    "A dedicated address bundled into a plan is more attractive than provisioning and warming one yourself.",
+    "The team has no AWS presence and adding one for email alone is more organisational work than the saving justifies.",
+  ],
+  thirdOption:
+    "Of every pair in this cluster, this is the one where the middle position is least hypothetical, because Mailgun's feature list is close to a specification for what teams build on top of SES. The reason to think about a platform over your own AWS account here is narrow and specific: it removes the December-2025 problem, where a vendor reprices and your only response is to migrate an account you never owned. Wraps is one way to take that shape. It does not match Mailgun feature for feature — there is no address validation product, and inbound is a thinner story. You will need an AWS account and SES production access, an approval AWS grants on its own timetable and not ours, our SDKs cover TypeScript and Python only, contacts and templates live in our database while sending data and delivery events stay in your AWS, and we are not SOC 2 certified.",
+  faqs: [
+    {
+      question: "Is Mailgun built on Amazon SES?",
+      answer:
+        "No. Mailgun runs its own mail infrastructure and predates most of the vendors that do resell SES, so switching between these two genuinely changes the network, the IP pools and the sending relationships behind your mail. That is worth knowing because it makes deliverability differences between them real rather than an artefact of two accounts on the same substrate, which is the situation with several other hosted providers.",
+    },
+    {
+      question: "Can SES receive inbound email?",
+      answer:
+        "Yes, in a subset of regions, through receipt rule sets that can store to S3, invoke a Lambda, publish to SNS or reject the message. What it does not do is parse. You receive raw MIME and write everything after that yourself, including threading, attachment extraction and deciding what counts as a reply. If inbound is central to your product that control is worth having; if you just need replies to reach a webhook, it is a lot of work for a small feature.",
+    },
+    {
+      question: "What replaced Mailgun's Flex plan?",
+      answer:
+        "Flex closed to new signups in December 2025 and the pay-as-you-go rate for legacy accounts doubled, so new customers start on the plan ladder. The relevance to this comparison is structural rather than emotional: a hosted plan's price is set by the vendor and changed on the vendor's schedule, and a customer's only lever is to move. Owning the AWS account removes that lever from somebody else's hands, which is a different kind of value from a lower number.",
+    },
+    {
+      question: "How do I do address validation on SES?",
+      answer:
+        "You buy it separately or you do without. SES has no validation product, so the options are a third-party validation API called at signup, a lightweight syntax and MX check you write yourself, or accepting a higher bounce rate. The last of those is riskier than it sounds, because bounce rate is precisely the metric AWS uses to decide whether to pause your account, and a self-serve signup form with typos in it is the most common way that number climbs.",
+    },
+    {
+      question: "Which is better for high-volume sending?",
+      answer:
+        "SES on economics, decisively, once volume is high enough for the per-message rate to matter. Mailgun's argument at volume is not price, it is that routing, validation and log search arrive already built, and that a dedicated address comes with the plan. The real question is whether your team wants to operate a mail pipeline. If the answer is yes, SES is cheaper and more durable; if it is no, the saving becomes a backlog.",
+    },
+  ],
+};
+
+const RESEND_VS_SENDGRID: VersusPage = {
+  slug: "resend-vs-sendgrid",
+  a: "resend",
+  b: "sendgrid",
+  title: "Resend vs SendGrid",
+  description:
+    "One is four years old, built for the developer who will integrate it this afternoon. The other has spent fifteen years becoming the email vendor an entire company shares. They barely want the same customer.",
+  search: {
+    primaryQuery: "resend or sendgrid for a new product",
+    secondaryQueries: [
+      "sendgrid replacement for a small dev team",
+      "resend rate limit two requests per second",
+      "sendgrid trial after free tier ended",
+      "does resend have marketing campaigns",
+    ],
+    rationale:
+      "Almost every result is a migration guide published by one of the two. The facts that decide it — a fixed request-rate ceiling on one side that no plan lifts, a retired free tier on the other — are in neither guide, because neither company benefits from raising them.",
+  },
+  intro:
+    "These two are competing for the same search term and not really for the same customer. Resend is built around one person's first hour: a small SDK, fast domain verification, React Email, and a log view that answers did it send. SendGrid is built around an organisation's next three years: relay for systems nobody owns, a marketing console, a certification pack, a procurement contact. If you are one developer shipping a product, the second list is overhead. If you are a company with a marketing team and a compliance review, the first list is a toy.",
+  dimensions: [
+    {
+      heading: "Who the product is actually designed for",
+      a: "One developer, working alone, who wants the email part finished before lunch. Everything follows from that: the SDK surface is deliberately small, the documentation assumes you can read code, domain verification is genuinely quick, and there is no settings page that requires a decision you are not qualified to make. The design succeeds at what it targets. It also means the second and third people who need to touch email — a support agent, a marketer — find much less waiting for them.",
+      b: "An organisation, where email is something several departments do for different reasons. The console reflects that: separate sections for the API user and the campaign user, permission scopes, subusers, an integration catalogue. It is more product than a solo developer needs and the extra surface is the cost of serving everyone from one account. Teams who only ever use the send endpoint experience that breadth purely as friction.",
+    },
+    {
+      heading: "The free tier, which only one of them still has",
+      a: "Resend has a genuinely usable free allowance with a daily cap alongside the monthly one, and it is the reason a very large number of side projects are on it. The daily ceiling is the thing to check against your traffic shape, because a batch that fits comfortably in the monthly number can still fail on a Tuesday. But it exists, it is permanent, and it costs nothing.",
+      b: "SendGrid's permanent free tier was retired in May 2025 and replaced with a time-boxed trial at a low daily cap. Every internal tool, staging environment and side project that was quietly living there became a paid decision on a deadline. If you are comparing these two because a SendGrid trial is running out, that is not a coincidence — it is the most common reason this comparison gets made at all.",
+    },
+    {
+      heading: "The ceiling you hit first",
+      a: "Resend caps API requests at two per second on every tier, including the most expensive one, and upgrading does not lift it. For request-response mail triggered by user actions this never matters. For anything batch-shaped — a digest, an announcement, a nightly job — it means a queue and a drip, which is ordinary engineering that nobody estimated and that no amount of money removes. Check the shape of your traffic before the plan price.",
+      b: "SendGrid's throughput is not the constraint people meet; the plan's included volume is. That is a fundamentally different kind of ceiling, because it is a billing event rather than an architectural one. A campaign that goes out faster than expected costs more, rather than taking six hours. Whether that is better depends entirely on whether your problem is the invoice or the clock.",
+    },
+    {
+      heading: "Marketing mail, and how each one handles it",
+      a: "Resend has broadcasts and an audience concept, with marketing contacts billed separately from sends. That last detail is the one that catches people: a list that grows raises the bill in a month you sent nothing to it, which is a contact-priced model quietly attached to a send-priced product. The campaign tooling itself is deliberately light — enough for an announcement, not enough for a marketing team with a segmentation strategy.",
+      b: "Marketing Campaigns is a full product with lists, segments, a visual designer and campaign reporting, priced as its own plan rather than bundled. It is the better tool for the job by a wide margin, and the reason to notice the pricing structure is that a comparison built on the sending plan alone will understate the invoice by an entire line item. The upside is a shared suppression list across marketing and transactional, which two separate vendors cannot give you.",
+    },
+    {
+      heading: "Templates and where they live",
+      a: "React Email is maintained by Resend, genuinely good, and lives in your repository so template changes go through review like any other code. It is also not a lock-in, because it renders to HTML any provider will accept. The catch is the same one every code-based template system has: a copy change requires a developer and a deploy, and the marketing person who wants to fix a typo cannot.",
+      b: "A template editor in the console with versioning and test sends, editable by someone who has never opened the codebase. It produces less pleasant HTML than a React renderer and it is much more useful on a Friday afternoon when the person who needs to change a subject line is not an engineer. The two approaches are not really competing on quality; they are competing on who is allowed to make a change.",
+    },
+    {
+      heading: "Legacy systems and the SMTP question",
+      a: "Resend supports SMTP, and the support is adequate rather than a focus. If your mail comes from application code calling an API, this never comes up. If it comes from a CRM, a ticketing system, a WordPress install and a build server, you are going to be writing your own integration instructions, because nobody else has written them for you yet.",
+      b: "This is SendGrid's quiet moat. Fifteen years as the default relay means a documented path exists for almost any system that sends mail, frequently written by that system's own vendor. When the requirement is get mail out of a platform we are not allowed to modify, the existence of prior art is worth more than a nicer SDK.",
+    },
+    {
+      heading: "What happens when something goes wrong",
+      a: "Suspension during traffic spikes is the complaint that recurs in Resend's public reviews, and the mechanism is the ordinary one for a shared-pool provider: an unfamiliar surge looks like risk to a platform protecting everyone else, so the conservative move is to pause first. Support is responsive by the standards of a company this size, but there is no severity scale and no contractual response time on the self-serve plans.",
+      b: "Abrupt suspension also dominates SendGrid's reviews, and support latency is the other half of the same complaint. The difference is procedural rather than qualitative: there is a ticket system, a defined severity scale and an escalation path that a customer-success contact can push on at the higher tiers. Neither company comes out of this dimension well; one of them at least has a documented process for the bad day.",
+    },
+    {
+      heading: "Log retention, and what you can still answer next quarter",
+      a: "Thirty days on every plan short of Enterprise, after which the record is gone. That is enough to debug an integration and not enough for a billing dispute, a compliance request or a year-over-year comparison. Streaming events into your own store from day one fixes it and costs a day of work, and almost nobody does it until the first time somebody asks a question about March.",
+      b: "Activity history is available further back, with the window widening on higher plans and an additional retention product available on top. It is more generous than thirty days and it is still a vendor window on a vendor's terms. The structural point is identical for both: if you need the history to outlive the relationship, it has to land somewhere you own, and neither vendor will do that for you by default.",
+    },
+  ],
+  pickA: [
+    "You are a small team shipping application email from your own codebase, and time-to-first-send is the metric that actually matters this month.",
+    "Templates as reviewable React components in the repository is how you want them, and a developer changing copy is acceptable.",
+    "Traffic is request-response and comfortably under two API calls a second, with nothing batch-shaped anywhere in the system.",
+    "A permanent free allowance matters, because a side project or a staging environment should not generate an invoice.",
+  ],
+  pickB: [
+    "Mail has to leave systems you do not control, and a documented relay integration for each of them is worth more than a pleasant SDK.",
+    "A marketing team needs segmentation and a visual designer, and you would rather they shared a suppression list with the transactional side than ran a second vendor.",
+    "Procurement needs a certification pack, a data processing agreement and a named support escalation before anything ships.",
+    "A campaign going out fast is a billing question rather than an architecture question, because the rate ceiling is not something you can engineer around.",
+  ],
+  faqs: [
+    {
+      question: "Why is Resend so much cheaper at small volume?",
+      answer:
+        "Partly because it sends through Amazon SES rather than operating its own network, so the underlying delivery cost is low and the product is the layer above it. Partly because it is not carrying the cost of a marketing platform, a certification programme or an enterprise sales organisation. The gap narrows considerably at volume and once marketing contacts are billed alongside sends, so a comparison drawn at a thousand messages a month will not predict the one at a million.",
+    },
+    {
+      question:
+        "Can I move from SendGrid to Resend without changing my templates?",
+      answer:
+        "The HTML moves fine, since both accept a rendered string. What does not move is anything using SendGrid's dynamic template system with its handlebars-style substitution, because those templates live in SendGrid and are evaluated there. You either re-implement them as React Email components or keep rendering them yourself and send finished HTML. Budget for the second option; it is the one most teams end up on regardless of what they planned.",
+    },
+    {
+      question: "Does the two-requests-per-second limit apply to bulk sends?",
+      answer:
+        "It applies to API requests, so a batch endpoint that accepts multiple recipients in one call goes considerably further than sending one message per call. The constraint bites hardest on architectures that loop over a list making individual calls, which is the shape most application code arrives in. The point worth internalising is that no plan removes the ceiling, so if your traffic is batch-shaped the queue is permanent rather than temporary.",
+    },
+    {
+      question: "Which one is better for deliverability?",
+      answer:
+        "Neither, in any way that generalises. Both run shared pools, both have public complaints about suspension during spikes, and both will deliver well for a sender with clean list practices and correct authentication. The variable that actually predicts your placement is your own sending behaviour — engagement, bounce rate, complaint rate, DMARC alignment — and it dominates the difference between these two vendors by a wide margin.",
+    },
+    {
+      question: "Is SendGrid's free tier really gone?",
+      answer:
+        "Yes. It ended in May 2025 and was replaced by a sixty-day trial with a low daily cap, after which a paid plan is required. This is worth stating plainly because a large amount of the writing comparing these two predates the change and still describes an allowance that no longer exists, and because it is the specific event that pushed a great many small projects into running this comparison in the first place.",
+    },
+  ],
+};
+
+const MAILGUN_VS_RESEND: VersusPage = {
+  slug: "mailgun-vs-resend",
+  a: "mailgun",
+  b: "resend",
+  title: "Mailgun vs Resend",
+  description:
+    "Fifteen years of routing, validation and log search against four years of getting one developer to a sent email faster than anyone else. The gap between them is capability against ergonomics, and which of those is scarce for you.",
+  search: {
+    primaryQuery: "mailgun replacement for a modern stack",
+    secondaryQueries: [
+      "does resend support inbound email routing",
+      "resend api rate limit for bulk sending",
+      "mailgun pay as you go plan discontinued",
+      "email api with address validation built in",
+    ],
+    rationale:
+      "Teams arrive at this comparison after the December 2025 Mailgun repricing and evaluate Resend on developer experience alone, which is the half that is easy to see. The capabilities they would be giving up — inbound routing, validation, deep log search — are not on Resend's feature page to be missed.",
+  },
+  intro:
+    "This comparison usually starts with a Mailgun invoice that changed and a Resend demo that looked delightful, which is a bad way to choose infrastructure because it weighs the two most visible attributes and ignores the rest. Mailgun is a broad platform: it receives mail as well as sending it, validates addresses before you burn a bounce on them, and lets you search a year of logs from a console. Resend is narrow and excellent inside that narrowness. Whether the missing breadth matters is a question about your product, not about either vendor's taste.",
+  dimensions: [
+    {
+      heading: "Inbound mail, which only one of them does",
+      a: "Routes match on recipient, sender or header using an expression syntax, then forward to a URL, an address or storage, with the message already parsed into fields. If your product has replies, ticket ingestion, per-customer addresses or anything else where mail arrives rather than leaves, this is a whole subsystem you get for free, and it is the single largest capability gap on this page.",
+      b: "Resend does not do inbound. That is a deliberate scope decision rather than an oversight, and the usual workaround is a second service in front — Cloudflare Email Routing into a Worker, a Postmark inbound stream, an SES receipt rule — which means a second vendor, a second set of credentials and a seam where replies and sends do not share a view of the conversation.",
+    },
+    {
+      heading: "Address validation before the bounce happens",
+      a: "Validation is a product here: syntax, domain and mailbox-level checks callable at signup rather than at send. For anything with a self-serve registration form this measurably lowers your bounce rate, which is the metric that gets accounts suspended across the entire industry. Buying it from the same vendor that sends the mail also means the suppression and the validation share a view of an address.",
+      b: "Nothing equivalent. You are expected to keep your list clean by other means, which in practice means a third-party validation API or a syntax check you write. This is fine for a product with invited users and genuinely risky for one with an open signup form, because the first sign of trouble is usually a warning email about bounce rate rather than a dashboard number you were watching.",
+    },
+    {
+      heading: "Finding a message six months later",
+      a: "Log search is in the console with retention that widens as the plan does, and it shows the receiving server's actual SMTP response — which is the field that resolves an argument about whether a message was delivered or merely accepted. A support agent can use it without an engineer. The limit is that the retention is a plan feature and the history leaves with you only if you exported it.",
+      b: "Thirty days on every plan short of Enterprise, in a log view designed for debugging an integration rather than for answering questions about last quarter. The view itself is clean and fast. The window is the problem, and it is not a problem you notice during evaluation, because during evaluation everything you want to look at happened this week.",
+    },
+    {
+      heading: "The throughput ceiling",
+      a: "Mailgun's constraint is the plan's included volume rather than a request rate, so a burst costs money rather than time. Batch sending is ordinary and the API expects it. For a nightly digest to a large list this is simply not a design consideration, which is a quiet luxury that only becomes visible when you compare against something that caps you.",
+      b: "Two API requests per second on every tier, and no plan lifts it. Batch endpoints that take several recipients per call stretch this considerably, but any architecture that loops over a list making individual calls will meet the ceiling immediately and permanently. This is the most consequential single fact about Resend for anyone whose traffic is not purely request-response, and it is not on the pricing page.",
+    },
+    {
+      heading: "Templates and the developer experience gap",
+      a: "Handlebars-style templates stored in the vendor, plus a drag-and-drop builder, plus the option of sending finished HTML. It works and nobody enjoys it. The templates live outside version control unless you build a sync, so a change is not reviewable the way code is, and reproducing a production template locally is more effort than it should be.",
+      b: "React Email, first-party and genuinely good, with templates as components in your repository going through the same review as anything else. This is the clearest quality win Resend has and it is why most of these migrations get proposed. Worth knowing before you count it as a reason to switch: React Email renders to plain HTML and works perfectly well with Mailgun, so you can have this half without the migration.",
+    },
+    {
+      heading: "Price, and what changed in December 2025",
+      a: "The Flex pay-as-you-go plan closed to new signups in December 2025 and the legacy rate doubled, which is why a great many teams are running this comparison at all. New customers start on the plan ladder, with dedicated addresses included from the middle tiers. The lesson generalises past this vendor: a hosted plan's price is set by the vendor on the vendor's schedule, and the customer's only lever is migration.",
+      b: "Two plan ladders that price the same volume differently depending which you are on, plus marketing contacts billed separately from sends. That last item is the one that surprises people, because a growing list raises the bill in a month you sent nothing to it. Cheaper than Mailgun at small volume, and the gap narrows as contacts accumulate.",
+    },
+    {
+      heading: "Who runs it and what that implies",
+      a: "Sinch, following an acquisition, alongside a portfolio of other messaging brands. The product is mature and thoroughly documented; the risk is the usual one for an acquired platform, which is that investment tracks the parent's priorities rather than yours. The repricing is the sort of event that follows from that, and it is the reason to read the pricing page rather than a two-year-old comparison.",
+      b: "An independent company four years old, sending through Amazon SES underneath, growing quickly. The upside is obvious in the product. The risks are the ones any young vendor carries — a smaller operations team, less history behind the sending reputation, and a suspension policy that leans conservative during spikes because protecting the shared pool is the correct call for everyone except you.",
+    },
+    {
+      heading: "European deployment",
+      a: "A European region has existed for years, selected per domain, with its own API endpoint. It covers the ordinary GDPR requirement cleanly. The endpoint split is a small but real trap: verify a domain in one region and call the other for a week and nothing will work in a way the error messages do not explain.",
+      b: "Resend's data handling is documented and its subprocessors are published, which is enough for most buyers, but there is no equivalent of picking a region and having mail stay inside it. If your requirement is written as a residency clause rather than as a preference, this is the dimension that ends the comparison rather than informing it.",
+    },
+  ],
+  pickA: [
+    "Your product receives mail as well as sending it, and running a second vendor for inbound would split the conversation across two systems.",
+    "An open signup form makes address validation a bounce-rate control rather than a nicety.",
+    "Support needs to search logs far enough back to answer a question about last quarter, with the receiving server's response visible.",
+    "A written data residency requirement needs a named region rather than a documented policy.",
+  ],
+  pickB: [
+    "Mail is triggered by user actions from your own codebase, comfortably under two API calls a second, and nothing in the system is batch-shaped.",
+    "Templates as reviewable components in the repository is worth more to the team than any capability on the other side of this page.",
+    "Volume is small enough that the cheaper plan and the permanent free allowance genuinely change the monthly number.",
+    "You want the integration finished this afternoon and are willing to add a second service later if inbound ever becomes a requirement.",
+  ],
+  faqs: [
+    {
+      question: "Can I use React Email with Mailgun?",
+      answer:
+        "Yes, and it is worth knowing before you treat React Email as a reason to migrate. The library is open source and renders components to an HTML string; nothing about it is coupled to Resend's API. You render, then hand the result to Mailgun's send call. What you lose is the integrated preview and the first-party polish, and what you keep is the part that mattered, which is that templates are reviewable code rather than rows in a vendor's database.",
+    },
+    {
+      question: "Does Resend have anything like Mailgun Routes?",
+      answer:
+        "No. Resend sends; it does not receive. Teams that need inbound alongside it typically put Cloudflare Email Routing or an SES receipt rule in front and handle parsing themselves, or run a second provider that does inbound properly. Either way it is another system, another set of credentials and a seam where an outgoing message and the reply to it are tracked in different places, which is exactly the integration cost the single-vendor option avoids.",
+    },
+    {
+      question: "Why did my Mailgun bill change?",
+      answer:
+        "The Flex plan closed to new signups in December 2025 and the legacy pay-as-you-go rate doubled, moving most pay-as-you-go accounts either onto the ladder or onto the new rate. If you are on grandfathered terms, confirm what they actually are before comparing anything, because a model built on the old figure will be wrong by a factor that matters. This is the most common reason people arrive at this comparison in 2026.",
+    },
+    {
+      question: "Is Resend's rate limit really fixed on every plan?",
+      answer:
+        "Two requests per second, on every tier including the most expensive, and upgrading does not lift it. Batch endpoints that accept multiple recipients per call give you substantially more headroom than one call per message, so the practical impact depends heavily on how your code is shaped. The point to internalise is that it is architectural rather than commercial: if your traffic is batch-shaped, the queue you build is permanent.",
+    },
+    {
+      question: "Which is better for deliverability?",
+      answer:
+        "The honest answer is that this is decided by your own sending behaviour rather than by the choice. Both run shared pools, both will deliver well for a sender with clean lists and correct authentication, and both have public complaints about suspension. Mailgun has a longer operating history and its own network; Resend rides on Amazon SES. Neither of those facts predicts your placement as strongly as your bounce rate and your engagement do.",
+    },
+  ],
+};
+
+const POSTMARK_VS_SENDGRID: VersusPage = {
+  slug: "postmark-vs-sendgrid",
+  a: "postmark",
+  b: "sendgrid",
+  title: "Postmark vs SendGrid",
+  description:
+    "One company decided to be excellent at a narrow thing and stay there. The other decided to be the email vendor a whole organisation shares. Choosing between them is mostly a question about how many departments send mail.",
+  search: {
+    primaryQuery: "postmark or sendgrid for transactional email",
+    secondaryQueries: [
+      "leaving sendgrid after the free tier ended",
+      "postmark message streams versus sendgrid categories",
+      "which email provider suspends accounts less",
+      "transactional email with a real support team",
+    ],
+    rationale:
+      "This pair is searched by people already on SendGrid and unhappy about something specific — a suspension, a support ticket, a retired free tier. The comparison they need is operational rather than a feature grid, and nobody writes the operational one because it makes both vendors look partly bad.",
+  },
+  intro:
+    "Postmark and SendGrid are both mature, both operate their own mail infrastructure and both will deliver your password resets. The difference is the size of the problem each decided to solve. Postmark solves transactional email for a product team and refuses almost everything else, which is why it has a support department people write nice things about and a marketing feature set people complain is thin. SendGrid solves email for an organisation, which is why it has a marketing console, a relay integration for every legacy system, and a compliance department that occasionally turns your sending off.",
+  dimensions: [
+    {
+      heading: "Keeping bulk mail away from transactional mail",
+      a: "Postmark enforces the split in software. Transactional and broadcast messages travel on separate streams with separate reputation, and the product actively resists you pushing bulk down the transactional path. That constraint is the single largest reason its placement record is what it is, and it is an opinion rather than a technique — the same discipline is available anywhere, and almost nowhere is it mandatory.",
+      b: "SendGrid gives you categories, subusers, IP pools and unsubscribe groups, which together can produce the same separation and none of which oblige you to. The common failure is ordinary organisational drift: marketing sends a large campaign from the same account and the same pool as the transactional traffic, complaint rate rises, and the receipts start landing in promotions. Nothing in the product stops that from happening, and by the time it is visible it has been true for weeks.",
+    },
+    {
+      heading: "What happens when support asks about one message",
+      a: "The activity view holds the rendered message, the headers and the delivery trace for a specific recipient, and it is usable by someone who is not an engineer. This is the feature Postmark customers cite most often when explaining why they stopped price-shopping. A customer says the email never arrived, a support agent resolves it in under a minute, and nobody opens a log query or a ticket with the vendor.",
+      b: "The activity feed will tell you a message was processed, delivered, bounced or dropped, with the receiving server's response attached, and the window depends on your plan with additional retention sold separately. It answers the status question well. It is less good at the content question, so did we send them the right thing frequently becomes an engineering task even though it is a support problem.",
+    },
+    {
+      heading: "The support relationship itself",
+      a: "Tickets reach people who have operated mail infrastructure, and a placement problem produces an investigation rather than a link to a runbook. That level of support is unusual enough that it functions as a product feature, and it is a large part of what the higher per-message price is actually buying. For a small team with no deliverability expertise in-house, renting some is a rational purchase.",
+      b: "Support is included with the plan and the tier decides the queue. Latency is the recurring complaint in its public reviews, and the substance of the complaint is usually not rudeness but round-trip time during an incident. Higher tiers add a customer success contact who can escalate, which is a meaningful difference — but it is a difference you buy, and it does not exist on the plans most teams start on.",
+    },
+    {
+      heading: "Losing your sending, and how each one handles it",
+      a: "Postmark will remove a customer whose sending damages the shared transactional pool, and is open about that being the policy. In practice the removals people describe involve bulk mail on the wrong stream or list practices that would fail anywhere. The conversation is with people who explain what triggered it, which does not make the outage shorter but does make it recoverable.",
+      b: "Abrupt suspension is the dominant theme in SendGrid's public reviews, usually described by accounts sending nothing unusual: a traffic spike, a new domain, an unfamiliar pattern. Compliance operates independently of first-line support and cannot be overruled by it. If your business stops when mail stops, the metric to evaluate is not delivery rate, it is how long the bad day lasts and who you can call during it.",
+    },
+    {
+      heading: "The marketing half, and whether you want it here",
+      a: "Deliberately thin. There are broadcast streams and templates, and there is no segmentation engine, no visual campaign designer and no reporting a marketing team would accept. Postmark's position is that you should use a marketing tool for marketing, and it is a defensible position that also means a second vendor, a second suppression concept and a reconciliation nobody performs.",
+      b: "Marketing Campaigns is a real product — lists, segments, a designer, campaign analytics — priced as its own plan rather than bundled with sending. The genuine advantage is that the marketing and transactional sides share a suppression list and a reputation, which is exactly the problem the two-vendor architecture creates. The genuine cost is that a comparison built on the sending plan alone will understate what you pay by a whole line.",
+    },
+    {
+      heading: "Reaching systems nobody is allowed to modify",
+      a: "Postmark speaks SMTP and that is the extent of the ambition. There is no integration catalogue, because the product is aimed at application email sent from a codebase you control. Point a CRM, a ticketing system and a build server at it and you will be writing your own instructions for each, which is fine for one system and tiresome for six.",
+      b: "Fifteen years as the default relay means somebody has already documented how to point almost anything at SendGrid, frequently the other vendor rather than SendGrid itself. When the requirement is get mail out of a platform we cannot change, prior art is worth more than elegance, and this is the dimension where the breadth that annoys developers earns its keep.",
+    },
+    {
+      heading: "What the bill looks like at each end of the range",
+      a: "A plan with an included allowance and an overage rate that improves as the plan grows, plus a dedicated address as an optional extra above a volume floor. Predictable, and increasingly expensive as volume climbs — the economics genuinely invert somewhere in the hundreds of thousands per month, and the early-2026 repricing means a long-standing account is not on the numbers a new one sees.",
+      b: "A sending plan, plus a marketing plan if you use that side, plus dedicated IP charges above a tier. Each is predictable alone and the total is what gets underestimated. At high volume SendGrid is the cheaper of these two by a clear margin, which is the trade the whole page comes down to: Postmark charges more per message and spends part of it on the operation that keeps your message out of the spam folder.",
+    },
+    {
+      heading: "Procurement, certification and who signs",
+      a: "Postmark is a straightforward vendor to buy from and a small one. The paperwork exists and is proportionate. For an enterprise security review that expects a thick certification pack and a named compliance contact, expect more back-and-forth than with a Twilio company, simply because the machinery on the other side is smaller.",
+      b: "Twilio maintains the certification programme, the data processing agreements and the enterprise contracting machinery, and an enterprise buyer gets through the review routinely. That is a real advantage in a regulated shop, where the cost of a new supplier is measured in weeks of questionnaire. It is also an annual renewal with a sales relationship attached, which smaller teams experience as overhead they did not want.",
+    },
+  ],
+  pickA: [
+    "Password resets and receipts reaching the inbox is a business risk, and you would rather rent an operation that watches placement than build the habit yourself.",
+    "Support agents should resolve did this customer get the email from the rendered message, without escalating to engineering.",
+    "You want the transactional and bulk separation enforced by the product, because nobody on the team will enforce it by convention for eighteen months.",
+    "Volume is in the tens or low hundreds of thousands a month, where the price difference is smaller than the cost of one deliverability incident.",
+  ],
+  pickB: [
+    "Several departments send mail from the same domain and you would rather they shared one suppression list than reconciled two vendors.",
+    "Mail must leave systems you do not control, where a documented relay path for each matters more than per-message quality.",
+    "Procurement needs a certification pack, a data processing agreement and a named escalation contact before anything ships.",
+    "Volume is high enough that the per-message gap is a real recurring number rather than a rounding error.",
+  ],
+  faqs: [
+    {
+      question:
+        "Is Postmark actually better at deliverability, or is that just its marketing?",
+      answer:
+        "It is better in a way that has a mechanism rather than a mystery. Postmark keeps bulk mail off the transactional pool by design, removes senders who damage it, and watches placement continuously with staff who know what they are looking at. SendGrid's pool is much larger and much more varied, which is both its strength and the reason a neighbour's behaviour is more likely to be part of your experience. You are buying enforced discipline, not a secret.",
+    },
+    {
+      question: "I am on SendGrid's retired free tier. What are my options?",
+      answer:
+        "The permanent free tier ended in May 2025 and was replaced by a sixty-day trial with a low daily cap, so the choices are a paid SendGrid plan, another vendor, or moving that traffic somewhere cheap. If the sending in question is a side project or a staging environment, it is worth separating it from production first — a great many teams discover during this exercise that two quite different workloads had been sharing one account and one reputation for years.",
+    },
+    {
+      question:
+        "Can I keep my SendGrid dynamic templates if I move to Postmark?",
+      answer:
+        "Not directly. SendGrid's dynamic templates use a handlebars-style syntax evaluated inside SendGrid, and Postmark's templating is its own. The HTML moves fine; the logic does not. Most teams take the opportunity to move rendering into their own application and send finished HTML, which removes the lock-in entirely and makes the next migration a code change. Budget for that rather than for a direct translation.",
+    },
+    {
+      question: "Does Postmark do marketing email at all?",
+      answer:
+        "It has broadcast streams, which are enough to send an announcement to a list, and it deliberately stops there. There is no segmentation engine and no visual designer, and the company is clear that this is intentional rather than a roadmap gap. If a marketing team needs campaign tooling, plan for a second product alongside Postmark and accept that you will be reconciling two suppression lists, because the alternative is asking Postmark to be something it has spent a decade refusing to become.",
+    },
+    {
+      question: "Which one is less likely to cut me off without warning?",
+      answer:
+        "Both will stop your sending if your metrics justify it, and neither will consult you first. The difference people report is what the conversation is like afterwards: Postmark's is with a small team that explains the trigger, SendGrid's is with a compliance function that operates independently of the support queue you are shouting into. Neither is a guarantee, and the only real protection on either side is clean list practices and a bounce-rate alert you built before you needed it.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_BREVO: VersusPage = {
+  slug: "amazon-ses-vs-brevo",
+  a: "amazon-ses",
+  b: "brevo",
+  title: "Amazon SES vs Brevo",
+  description:
+    "An AWS primitive against a European all-in-one suite with email, SMS and a light CRM on one invoice. Anyone comparing these is really asking whether they need a marketing tool or just a way to send.",
+  search: {
+    primaryQuery: "european email platform or aws ses for a small business",
+    secondaryQueries: [
+      "brevo transactional api versus raw ses",
+      "gdpr compliant email sending without a us vendor",
+      "which brevo plan includes automation",
+      "do i need a marketing platform or just a send api",
+    ],
+    rationale:
+      "These two sit in different categories, so the search that produces this comparison is usually a small European team deciding what kind of tool they need at all. That question has no neutral answer published anywhere, because every vendor answering it sells one of the two shapes.",
+  },
+  intro:
+    "This is a category mismatch that people compare anyway, and the mismatch is the useful part. Brevo is a marketing suite that happens to expose a transactional API. SES is sending infrastructure that will never have a campaign builder. If your company has someone whose job is to write emails to customers, that person needs a tool, and SES is not one. If your email is entirely generated by code, Brevo's suite is a cost you are carrying to use one endpoint. Most teams comparing these two already know which description fits and are looking for permission.",
+  dimensions: [
+    {
+      heading: "Who opens the tool on a Monday morning",
+      a: "Nobody, ideally. SES is configured once by an engineer and then runs, and the console exists to manage identities, quotas and configuration sets rather than to be visited. There is no campaign to schedule, no list to segment, no report to read. A non-technical colleague has no reason to have an account and would find nothing to do with one.",
+      b: "A marketer, a founder wearing the marketing hat, or an operations person. Brevo's whole shape assumes a human sits down and decides who receives what — a contact list, a segment, a designed email, a send time, a report afterwards. That is a different product category from an endpoint, and it is why the comparison is really about org chart rather than technology.",
+    },
+    {
+      heading: "European data residency, and the argument underneath it",
+      a: "SES runs in European AWS regions and the choice is yours, so mail can be processed inside the EU as a configuration decision. The objection a European buyer raises is about ownership rather than geography, and it is a fair objection: an EU region operated by a US-headquartered company is a different answer from an EU-headquartered company, whatever the data flow diagram says. Whether that distinction matters is a legal question for your counsel, not a technical one.",
+      b: "Brevo is a French company operating in the EU, which answers the ownership version of the question rather than only the geography version. For a buyer whose requirement was written by a data protection officer rather than an architect, that is frequently the end of the evaluation. The consent and preference tooling is also built for that regime rather than retrofitted, which shows in the parts of the product concerned with who agreed to what.",
+    },
+    {
+      heading: "Everything that is not email",
+      a: "SES is email. There is SMS in a separate AWS service with its own setup, its own approvals and its own console, and there is no CRM anywhere in the picture. Assembling a multi-channel story on AWS is entirely possible and is genuinely several projects, each with its own registration and compliance steps. Nothing arrives bundled.",
+      b: "Email, SMS, a light CRM, chat and automation on one invoice with one contact record underneath. For a small business this is a real simplification, because the alternative is three vendors and a reconciliation problem. The honest caveat is that each individual piece is less capable than a specialist tool, so the value is in the integration rather than in any one component being best.",
+    },
+    {
+      heading: "The tier that has the feature you assumed was included",
+      a: "SES has no tiers in this sense. The plan affects the rate you pay rather than the capability you get, and there is no feature behind a paywall because there are barely any features. What you have on day one is what you will have in year three, which is either reassuring or bleak depending on what you needed.",
+      b: "The headline tier is usually not the one that works. Automation and A/B testing sit a step up, and removing the Brevo logo from your emails is also not on the entry plan. This is not hidden, but it is consistently how the evaluation goes wrong: a price is quoted from the cheapest row and the requirement list turns out to need the row above it. Price the tier that has the features, not the tier on the homepage.",
+    },
+    {
+      heading: "Deliverability and the shared pool",
+      a: "Your reputation, isolated to your account, visible in your own metrics, and nobody else's problem or benefit. A new SES identity starts from nothing and must be warmed, which is real work. Once warmed, the standing belongs to your account and travels with you across any tooling change, which is the durable half of the argument for owning this layer.",
+      b: "Brevo's shared pools, which draw mixed reports — the common pattern being that a sender with good engagement is fine and a sender with a purchased list discovers that everyone on the pool shares the consequences. Dedicated options exist higher up the range. For a small sender with a clean list the shared pool is usually a net benefit, since their aggregate standing is better than a brand new domain's.",
+    },
+    {
+      heading: "Consent, unsubscribes and the compliance surface",
+      a: "SES gives you an account-level suppression list and a configuration-set-level one, and nothing else. It will not manage consent, will not store a preference centre, will not record why somebody is on your list and will not generate an unsubscribe link. Every one of those is a thing you build, and every one of them is a thing a regulator may ask about. The suppression list is a safety net, not a compliance programme.",
+      b: "Contact attributes, consent tracking, subscription preferences and a hosted unsubscribe flow are part of the product, built for a regime where a data protection officer will ask to see them. For a team without an engineer to spare this is a substantial amount of work you are not doing, and it is probably the strongest non-marketing argument for the suite shape.",
+    },
+    {
+      heading: "What the price is charged against",
+      a: "Messages. No platform fee, no plan to outgrow, billed by AWS with everything else, and the per-message economics are why large senders end up here. New accounts land on a metered plan rather than the old flat rate, and the plan is scoped per account and per region, so a second region is a second decision. The line is straight and the slope is small.",
+      b: "Send volume rather than contacts, which is an unusually sane choice in the marketing-suite category and means a large dormant list does not by itself raise the bill. The tier step is the thing that does. Compared against SES the per-message cost is much higher and the comparison is not really the point, because a substantial part of what you are paying for is the person-shaped tooling SES does not have.",
+    },
+    {
+      heading: "What happens when you outgrow it",
+      a: "You do not, in the sense that matters. SES scales past any volume a small business will reach and the quota rises on request. What you outgrow is the absence of everything else, and the response is to add tooling on top rather than to change providers — which is a much less disruptive kind of growth than a migration.",
+      b: "Growth here tends to mean either climbing the tiers until the invoice provokes a review, or discovering that the automation engine cannot express what your lifecycle has become. Both lead to the same conversation, and the migration is harder than a sending migration because contacts, segments, automations and consent records all have to move rather than just a send call.",
+    },
+  ],
+  pickA: [
+    "All of your email is generated by code, and nobody at the company will ever want to schedule a campaign or open a report.",
+    "Volume is high enough that per-message economics dominate, and you are already inside AWS with an engineer to own the plumbing.",
+    "You need delivery events in your own storage on your own retention schedule rather than in a vendor's reporting view.",
+    "Sending reputation should belong to an account you keep, so that changing the tooling above it is never a migration.",
+  ],
+  pickB: [
+    "Someone whose job is not engineering needs to write, schedule and measure emails without waiting for a deploy.",
+    "A data residency requirement was written by a data protection officer, and an EU-headquartered vendor answers it more cleanly than an EU region of a US one.",
+    "Email, SMS and a contact database on one invoice is worth more than any individual component being best in class.",
+    "Consent tracking, preference management and hosted unsubscribe flows are things you would rather buy than build and maintain.",
+  ],
+  faqs: [
+    {
+      question: "Can I use Brevo for marketing and SES for transactional?",
+      answer:
+        "Yes, and it is a common arrangement for teams whose developers and marketers want different things. Use separate subdomains so DKIM keys, reputation and DMARC alignment stay independent of each other. The cost is the reconciliation: two suppression concepts, two definitions of unsubscribed, and a real chance that somebody who opted out of marketing keeps receiving it because the opt-out landed in the system that was not sending it.",
+    },
+    {
+      question: "Does Brevo charge per contact like most marketing tools?",
+      answer:
+        "No, and this is the most genuinely distinctive thing about its pricing. Brevo charges on send volume rather than on stored contacts, which means a large dormant list does not raise the bill by itself — the opposite of how Klaviyo, Customer.io and Loops all work. If your list is big and your sending is occasional, that difference can be larger than every other factor in the comparison combined.",
+    },
+    {
+      question: "Is SES compliant with GDPR?",
+      answer:
+        "AWS provides the contractual machinery, and SES can be run entirely in European regions, so the infrastructure side is answerable. What SES does not provide is the compliance programme: consent records, preference management, unsubscribe handling and the ability to show a regulator who agreed to what. Those are yours to build. Compliance here is a property of your system rather than a property of the sending service, which is the part that catches teams out.",
+    },
+    {
+      question: "Which Brevo plan do I actually need?",
+      answer:
+        "Almost certainly not the cheapest one. Automation and A/B testing live a tier up, and removing the Brevo logo from your emails is likewise not on the entry plan. Write down the features you need first, find the lowest row that has all of them, and compare that number rather than the headline. Evaluations of this product go wrong at this exact step more often than at any other.",
+    },
+    {
+      question: "How much cheaper is SES in practice?",
+      answer:
+        "Per message, dramatically, and the comparison is close to meaningless on its own because you are comparing an endpoint to a suite. The fair version prices the whole job: SES plus whatever you would run for campaigns, consent and reporting, against Brevo at the tier that has the features you need. Done that way SES still usually wins at volume, and at small volume with a marketing person in the loop it frequently does not.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_KLAVIYO: VersusPage = {
+  slug: "amazon-ses-vs-klaviyo",
+  a: "amazon-ses",
+  b: "klaviyo",
+  title: "Amazon SES vs Klaviyo",
+  description:
+    "Klaviyo sells attributed revenue to an ecommerce marketing team. SES sells delivery to a program. Comparing their prices is comparing a salary to a utility bill, and most teams that run this comparison end up using both.",
+  search: {
+    primaryQuery: "can i replace klaviyo with amazon ses",
+    secondaryQueries: [
+      "klaviyo active profile billing explained",
+      "klaviyo sending limit ten times profile count",
+      "cheaper way to send ecommerce campaigns",
+      "shopify transactional email without klaviyo",
+    ],
+    rationale:
+      "The search is driven by a Klaviyo invoice, and the answers available are written either by Klaviyo or by competitors selling a similar shape. Nobody explains that the honest replacement for Klaviyo is not a send API, which is the thing the person asking most needs to hear.",
+  },
+  intro:
+    "People arrive at this comparison holding a Klaviyo invoice and a memory that SES costs almost nothing, and the arithmetic looks irresistible. It is also mostly wrong, because the two products are not selling the same thing. Klaviyo's product is attributed revenue: it knows what a customer bought, segments on it, and tells a marketing team which campaign paid for itself. SES delivers bytes. You can build a campaign tool on SES; what you cannot cheaply build is the data model and the attribution that made the invoice feel worth paying in the first place.",
+  dimensions: [
+    {
+      heading: "What each one actually knows about a customer",
+      a: "Nothing. SES has no concept of a person, a profile, an order or a purchase. It has verified identities and destination addresses, and if you want to send to everyone who bought a specific product and has not returned in ninety days, that query runs in your database and the result is a list you feed to a send loop. The sending is trivial; the segmentation is a system you already have or a system you are about to write.",
+      b: "A profile per customer, populated by an ecommerce integration, carrying orders, browsing behaviour, lifetime value and campaign history. Segments are built against that in a UI by someone who cannot write SQL, and they update themselves. This data model is the product. The email sending attached to it is comparatively ordinary and is not why anyone chooses Klaviyo.",
+    },
+    {
+      heading: "Revenue attribution, which is the actual purchase",
+      a: "SES reports deliveries, bounces, complaints, opens and clicks if you configure event publishing. It has no idea whether any of that produced a sale, because it has no idea what a sale is. Connecting mail to revenue means joining your event stream to your orders table and building the report, which is an ordinary data engineering task and is nobody's favourite quarter.",
+      b: "Attributed revenue per campaign and per flow, out of the box, against a configurable attribution window. This is the number a marketing team defends its budget with, and it is the reason the invoice survives review. Whether the attribution is generous is a fair argument to have; that it exists as a first-class report, produced without a data team, is not really arguable.",
+    },
+    {
+      heading: "How the bill is calculated, and the trap inside it",
+      a: "Per message sent. A dormant customer costs nothing until you mail them. A list of a million people you never contact is free. That property is unusual in this comparison and it is the strongest financial argument on the SES side, particularly for a business with a long tail of one-time buyers who will never open anything again.",
+      b: "Per active profile, billed on everyone in the account rather than only the people you mail, and the definition of active broadened in February 2025. The plan auto-upgrades as profiles accumulate and never auto-downgrades, so a list that grew during a promotion keeps charging after the promotion ends until somebody manually suppresses or deletes profiles. List hygiene is a billing activity here, not just a deliverability one.",
+    },
+    {
+      heading: "The ceiling nobody reads until it stops them",
+      a: "SES has a sending rate and a daily quota, both of which start conservative and both of which AWS raises on request while your bounce and complaint rates stay healthy. The ceiling moves when you ask. A large seasonal push is planned a week ahead as a quota increase, not as a plan change, and the cost of the push is exactly proportional to its size.",
+      b: "Volume is capped at roughly ten times your profile count, and sending halts when you cross it. For most ecommerce patterns this is generous and invisible. For a business that mails a small, extremely engaged list frequently — a membership, a daily deal, a back-in-stock heavy catalogue — it is a hard stop that can only be lifted by paying for more profiles than you have customers, which is a strange shape to discover mid-campaign.",
+    },
+    {
+      heading: "Flows, and what building them yourself would mean",
+      a: "There is no automation in SES whatsoever. An abandoned-cart sequence on SES is a state machine you write: an event source, a scheduler, a suppression check at send time, an exit condition when the order completes, and a way for a marketer to change the copy without a deploy. None of it is difficult and all of it is real, and the version that exists after one sprint is the version that mails people who already bought.",
+      b: "Flows are the half of Klaviyo that quietly earns the money — abandoned cart, browse abandonment, post-purchase, winback — built in a visual editor, with the exit conditions and timing handled. A marketing team changes them without engineering involvement. This is the capability most likely to be underestimated by someone modelling a migration from the sending cost alone.",
+    },
+    {
+      heading: "Who operates it day to day",
+      a: "An engineer, always. Every change to what is sent, to whom and when is a code change, a deploy and a review. That is genuinely the right arrangement for transactional mail, where you want exactly that level of control. It is the wrong arrangement for promotional mail, where the person with the ideas is not the person with commit access and the round trip kills the tempo.",
+      b: "A marketer, entirely. Campaigns, segments, flows, subject lines, send times and reports are all theirs, and engineering's involvement ends once the integration is connected. For a business where marketing moves faster than the release cycle, this independence is the product benefit even more than the features are.",
+    },
+    {
+      heading: "Deliverability, and who is responsible for it",
+      a: "You are, alone. Your reputation, your bounce rate, your complaint rate, your DMARC reports, your warming schedule. The isolation is real and cuts both ways: no neighbour can hurt you and nobody will notice your problem for you. Ecommerce list practices — purchased lists, aggressive popup capture, resurrecting three-year-old customers — are exactly the practices that damage a reputation, and on SES the damage is entirely yours.",
+      b: "Klaviyo's shared infrastructure, with a deliverability function that monitors it and a commercial interest in keeping the pool clean. Being on a pool with other ecommerce senders during the same seasonal peaks is a mixed blessing, and Klaviyo actively polices sending practices for that reason. For a merchant with no in-house expertise this is a real service, and it is invisible until you leave.",
+    },
+    {
+      heading: "The arrangement most teams actually land on",
+      a: "SES for transactional — order confirmations, shipping notices, password resets, receipts — where the volume is high, the content is generated by code, the placement requirement is strict and the marketing features are irrelevant. This traffic is often the majority of messages and a small minority of the marketing bill, which makes it the cheapest thing to move and the least disruptive.",
+      b: "Klaviyo for campaigns and flows, where the segmentation and the attribution are the whole point. Splitting this way keeps each workload on the tool shaped for it and reduces the profile count Klaviyo bills for, since transactional-only recipients no longer need to be profiles. Use separate subdomains so the reputations stay independent, and accept that you now reconcile two views of who unsubscribed.",
+    },
+  ],
+  pickA: [
+    "The mail in question is transactional — receipts, shipping, resets — where code generates the content and no marketer needs to touch it.",
+    "A long tail of dormant customers is inflating a profile-based bill for people you have no intention of emailing.",
+    "You need to mail a small, highly engaged list far more often than a profile-count multiplier would allow.",
+    "Your team already has the customer data model and the reporting, so what you need from a vendor is delivery rather than a database.",
+  ],
+  pickB: [
+    "A marketing team needs to segment on purchase behaviour and see attributed revenue without asking a data team for anything.",
+    "Abandoned-cart, browse-abandonment and post-purchase flows are the mechanism, and rebuilding them is a quarter you do not have.",
+    "The person who writes the emails does not have commit access and should not need it.",
+    "Nobody in-house owns deliverability, and a vendor whose commercial interest is a clean sending pool is worth paying for.",
+  ],
+  faqs: [
+    {
+      question: "Can I actually replace Klaviyo with SES?",
+      answer:
+        "Only if you replace the parts of Klaviyo you use with something, and for most merchants that means building a segmentation engine, a flow engine and an attribution report on top of SES. The sending is the easy tenth. Teams that try this usually finish the sending in a week, produce a campaign tool in a quarter that the marketing team refuses to use, and end up back on a marketing platform with a year of work behind them.",
+    },
+    {
+      question: "Why did my Klaviyo bill go up when I did not send more?",
+      answer:
+        "Because it is charged on active profiles rather than on sends, and the definition of active broadened in February 2025. Profiles accumulate from signups, from checkout, from integrations, and the plan auto-upgrades as the count crosses each threshold while never auto-downgrading when it falls. Suppressing or deleting profiles you will never mail is a billing action here, and it is the first thing to do before concluding the product is too expensive.",
+    },
+    {
+      question: "What is the ten-times sending limit?",
+      answer:
+        "Klaviyo caps monthly email volume at roughly ten times the number of profiles your plan covers, and sending stops once you cross it. Most ecommerce patterns never approach it. The businesses that do are the ones mailing a small, devoted list frequently — memberships, daily deals, back-in-stock alerts — and their only route past the cap is paying for more profiles than they have customers, which is worth discovering before a peak season rather than during one.",
+    },
+    {
+      question: "Can I send transactional email through Klaviyo?",
+      answer:
+        "There is a transactional path, and it is not what the product is optimised for. Order confirmations and shipping notices are frequently routed through a platform or an ecommerce host instead, and password resets almost always live elsewhere. The more common split is transactional on a cheap reliable sender and campaigns on Klaviyo, which also lowers the profile count you are billed for because transactional-only recipients no longer need to be profiles.",
+    },
+    {
+      question:
+        "If I move transactional email to SES, will my marketing deliverability change?",
+      answer:
+        "It can, and you should plan for it deliberately. Transactional mail has high engagement and contributes positively to a domain's reputation, so removing it from one sender and adding it to another shifts the signal both ways. Use separate subdomains so the two reputations are genuinely independent, warm the new SES identity gradually, and do not make this change in the four weeks before your busiest season.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_CUSTOMER_IO: VersusPage = {
+  slug: "amazon-ses-vs-customer-io",
+  a: "amazon-ses",
+  b: "customer-io",
+  title: "Amazon SES vs Customer.io",
+  description:
+    "Customer.io is a behavioural workflow engine that happens to send email. SES is the sending with no behaviour attached. Teams comparing them are deciding whether lifecycle logic belongs in a product or in their own codebase.",
+  search: {
+    primaryQuery: "build lifecycle emails in house or buy a messaging platform",
+    secondaryQueries: [
+      "customer.io profile billing for unengaged signups",
+      "what it takes to build drip campaigns on ses",
+      "who should own onboarding email logic",
+      "cheaper alternative to a behavioural messaging platform",
+    ],
+    rationale:
+      "The build-or-buy question for lifecycle messaging is asked constantly by SaaS teams and answered almost exclusively by vendors selling the buy side. The specific thing missing from those answers is an honest account of what the build actually contains after the first sprint.",
+  },
+  intro:
+    "Every SaaS team eventually asks whether the onboarding sequence should live in a platform or in the application, and this pair is that question in its purest form. Customer.io ingests events and attributes, holds a profile per user, and lets a non-engineer compose the logic that decides who receives what and when. SES takes a rendered message and an address. The gap between them is not sending — it is a workflow engine, a data model and an editor, and the argument is entirely about whether those belong to you.",
+  dimensions: [
+    {
+      heading: "The data model, which is the real difference",
+      a: "SES has no model of a user. There is a destination address and a message, and that is the whole vocabulary. If the decision to send depends on what someone did last Tuesday, that decision happens in your application against your database, and SES is told the answer. For teams whose product data is already rich and already queryable, this is not a gap at all — it is a refusal to duplicate something they have.",
+      b: "A profile per person, fed by an event stream and an attribute payload from your application, with segments evaluated continuously against it. The platform holds a second copy of the part of your user model that matters for messaging. That duplication is the price of admission and also the entire benefit, because it is what lets somebody who cannot query your database express when a user has not completed setup in five days.",
+    },
+    {
+      heading: "What building the workflow engine actually involves",
+      a: "More than the first estimate and less than the horror stories. A credible in-house sequence needs a trigger source, a scheduler that survives a deploy, per-user state so a restart does not re-send, exit conditions when the user does the thing you were nagging about, a suppression check at send time, a way to change copy without shipping code, and enough observability to notice the sequence stopped firing. Each piece is a day. The integration and the edge cases are the quarter.",
+      b: "All of that exists and is the product. Workflows are built in a visual editor with branches, waits, exit conditions and A/B splits, and they run whether or not your deploy went well. The parts that are hard to build yourself — idempotency across restarts, timezone-aware sends, a person leaving a branch mid-flight — are handled and mostly invisible. That invisibility is why the build estimate is always low.",
+    },
+    {
+      heading: "The bill, and what it is charged against",
+      a: "Messages. Somebody who signed up, never activated and will never be emailed again costs nothing at all. For a product with a wide free tier and a long tail of abandoned accounts, that property is worth more than the per-message rate, because it means list growth and cost growth are decoupled entirely.",
+      b: "Profiles, whether or not you ever message them, with the entry tier covering a fixed count and each additional profile adding a small increment. The structural consequence is that a freemium product with a large dormant signup base pays for people it has given up on. Profile hygiene becomes a recurring billing activity, and it is the first lever to pull before concluding the platform is too expensive.",
+    },
+    {
+      heading: "Who changes the copy on a Thursday",
+      a: "An engineer, with a pull request and a deploy. That is entirely appropriate for transactional messages where the content is generated from data and correctness matters more than tempo. It is a poor fit for lifecycle messaging, where the value comes from iterating on copy and timing quickly, and where a two-day round trip through the release process means the iteration simply does not happen.",
+      b: "Whoever owns lifecycle, usually in marketing or growth, without engineering involvement once the event integration exists. The independence is the point. The cost is the familiar one for any system where business logic lives outside the repository: the behaviour is not in version control, is not covered by your tests, and the reason a particular email fires is discoverable only by opening the platform.",
+    },
+    {
+      heading: "Transactional mail, and where it ends up",
+      a: "This is SES's home ground and it is very hard to beat here. Receipts, password resets and notifications are high volume, code-generated, latency-sensitive and completely uninterested in segmentation. Running them through SES costs almost nothing and keeps them on a path whose reputation you control, independent of whatever marketing is doing that week.",
+      b: "Customer.io can send transactional messages and many teams route everything through it for the single-pane benefit. The consequence worth thinking about is billing and coupling: transactional recipients become profiles, and profiles are the billed unit, so your cheapest and highest-volume traffic starts influencing the price of your lifecycle tooling. A split architecture avoids that and costs you one reconciliation.",
+    },
+    {
+      heading: "Channels beyond email",
+      a: "SES is email only. SMS lives in a separate AWS service with its own registration, its own approvals and its own console, and push is a third. Building a cross-channel sequence on AWS is possible and is several projects, each with its own compliance steps, coordinated by code you write. Nothing about the pieces is designed to be used together.",
+      b: "Email, push, SMS, in-app and webhooks are all channels inside one workflow, with per-person preferences honoured across them. For a product that genuinely needs to reach people in more than one place, orchestrating that from one engine is a substantial simplification and is hard to reproduce piecemeal. If you only ever send email, you are paying for an engine whose shape you are not using.",
+    },
+    {
+      heading: "Deliverability and whose reputation is in play",
+      a: "Yours, isolated, visible in your own metrics, and entirely your responsibility to defend. A new identity starts cold and needs warming. Once warm it stays yours across any change to the tooling above it, which is the durable half of this argument — the reputation is an asset on your side of the line rather than a benefit of a subscription.",
+      b: "Shared infrastructure with a deliverability function attached and a commercial interest in keeping the pool healthy. There are also arrangements where a customer sends through their own provider credentials, which changes this dimension considerably, so check what your plan actually supports rather than assuming either answer. Whichever applies, the operational monitoring is somebody else's job by default.",
+    },
+    {
+      heading: "What the exit looks like",
+      a: "Leaving SES is a code change, because the domains and the reputation attach to an account you keep. Nothing about your lifecycle logic is trapped anywhere, because it was always in your repository. This is the strongest structural argument for the build side and it is rarely weighed properly, because it is a benefit that only shows up on a day that has not happened yet.",
+      b: "Leaving means re-implementing every workflow somewhere else, because the logic lives in the platform rather than in your code. Profiles and events export; branching logic, wait steps and the accumulated judgement about timing do not, in any form that another system will accept. The migration cost grows with every sequence somebody adds, which is worth knowing while there are still only three of them.",
+    },
+  ],
+  pickA: [
+    "Your lifecycle logic is simple enough to live in the application, and the team would rather own it in version control than in a vendor's editor.",
+    "A large dormant signup base makes per-profile billing a charge for people you have already given up on.",
+    "The messages in question are transactional and code-generated, where segmentation adds nothing and unit cost adds up.",
+    "Reversibility matters: you want the reputation and the logic to stay on your side of the line so a future change is a refactor, not a migration.",
+  ],
+  pickB: [
+    "Growth or marketing should be able to change who receives what without a deploy, and the iteration speed is the point of the exercise.",
+    "The sequences involve branches, waits, exit conditions and timezone-aware sends, which is exactly the part of the build that runs long.",
+    "You need email, push and SMS coordinated by one engine with per-person preferences honoured across them.",
+    "Nobody on the team wants to own a scheduler whose failure mode is silently not sending anything for a week.",
+  ],
+  thirdOption:
+    "The trap on this pair is treating it as build everything or buy everything, when the expensive part of the build is narrow. What teams actually want is the workflow editor and the contact model without the per-profile bill and without the lifecycle logic becoming unportable. A platform layer over your own AWS account is one way to split that difference, and Wraps is one implementation — contacts are unlimited on every tier precisely because the dormant-signup problem is the thing that makes profile billing hurt. The honest costs are real: you need an AWS account and SES production access, an approval on AWS's timetable rather than ours, our SDKs cover TypeScript and Python only, our workflow engine is considerably less capable than Customer.io's and has no push or in-app channel, contacts and workflow state live in our database while only sending data and delivery events stay in your AWS, and we are not SOC 2 certified.",
+  faqs: [
+    {
+      question: "How long does it really take to build drip campaigns on SES?",
+      answer:
+        "The first version takes about a week and the version you can trust takes a quarter. The week gets you a scheduled job that sends a sequence. The quarter gets you per-user state that survives deploys, exit conditions so people who converted stop receiving the nag, timezone handling, a suppression check at send time, an editor non-engineers can use, and alerting for the day the scheduler stops silently. The last item is the one teams discover by not having it.",
+    },
+    {
+      question: "Why does Customer.io charge for users I never message?",
+      answer:
+        "Because the billed unit is the profile rather than the send, and a profile exists from the moment your application identifies someone. This is deliberate — the platform is storing and continuously evaluating those profiles against your segments whether or not a message results. The practical consequence for a freemium product is that dormant signups carry cost, and deleting or suppressing profiles you will never contact is a legitimate and frequently overlooked way to lower the bill.",
+    },
+    {
+      question:
+        "Can I use Customer.io for lifecycle and SES for transactional?",
+      answer:
+        "Yes, and it is a common and sensible split. Transactional mail is high volume and low complexity, so running it through the cheapest reliable path keeps it out of your profile count and off your lifecycle bill. Use separate subdomains so DKIM keys and reputation stay independent. The cost is two suppression concepts and the risk that someone who opted out in one system keeps hearing from the other, which needs deliberate reconciliation rather than good intentions.",
+    },
+    {
+      question: "What happens to my workflows if I leave Customer.io?",
+      answer:
+        "Profiles and event history export cleanly. The workflows do not, in any form another platform will ingest — branches, wait steps, exit conditions and the accumulated tuning of timing and copy have to be rebuilt by a human reading the old ones. The cost scales with how many sequences exist, which is an argument for documenting them outside the tool early, while there are three of them rather than thirty.",
+    },
+    {
+      question: "Is SES cheaper if I count the engineering?",
+      answer:
+        "At a large dormant user base, frequently yes, because per-profile billing and per-message billing diverge fastest exactly where freemium products live. At a small, engaged user base with complex sequences, usually not, because the engineering is a fixed cost that does not shrink with your size. Run the comparison with a real estimate of the build rather than a hopeful one, and include the maintenance rather than just the first delivery.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_LOOPS: VersusPage = {
+  slug: "amazon-ses-vs-loops",
+  a: "amazon-ses",
+  b: "loops",
+  title: "Amazon SES vs Loops",
+  description:
+    "Loops charges for contacts and sends as much as you like. SES charges for sends and does not know what a contact is. For a SaaS product with a large free tier, those two sentences decide the whole comparison.",
+  search: {
+    primaryQuery: "contact based pricing versus per send email costs",
+    secondaryQueries: [
+      "loops unlimited sends contact pricing explained",
+      "email tool for saas with a big free tier",
+      "dormant signups inflating email bill",
+      "one tool for product and marketing email",
+    ],
+    rationale:
+      "The two pricing models are genuinely opposite and the crossover point depends entirely on a ratio — sends per contact — that no vendor calculator asks you for. A page that names the ratio is more useful than either pricing page.",
+  },
+  intro:
+    "Loops made two opinionated choices that define this comparison: it charges on subscribed contacts rather than sends, and it puts product and marketing email in one tool with one contact list. SES made the opposite choice on both counts, charging per message and having no concept of a contact at all. Which of these suits you is not a matter of taste. It is a ratio: how many messages do you send per contact per month, and how much of your list is dormant? Work that out and the answer falls out of it.",
+  dimensions: [
+    {
+      heading: "The pricing model, stated as the trade it is",
+      a: "Per message, with a dormant contact costing exactly nothing. A product with fifty thousand signups and four thousand active users pays for the four thousand, because the other forty-six thousand are never sent anything. For freemium SaaS with a wide funnel, this is the single most consequential property of SES and it is frequently worth more than the low unit rate.",
+      b: "Per subscribed contact, with sending unlimited on top. A dormant contact costs the same as your most engaged one, so a large free-tier list is a permanent line on the invoice regardless of whether anything is sent to it. In exchange, a heavily engaged list costs nothing extra to mail more often, and the bill stops moving when your sending does.",
+    },
+    {
+      heading: "What unlimited sends changes about behaviour",
+      a: "Every message has a marginal cost, and while the cost is tiny, the accounting is real: a weekly digest to a large list is a line item somebody can point at. Teams on SES tend to be slightly conservative about volume for this reason, which is occasionally good discipline and occasionally means a useful message does not get sent because nobody wanted to defend it.",
+      b: "Sending more costs nothing, which genuinely changes what teams do. Onboarding sequences get longer, digests get more frequent, re-engagement gets tried. That freedom is real value for a team iterating on lifecycle. It also removes the natural brake on volume, and the constraint that replaces it is your recipients' patience, which gives much less prompt feedback than an invoice does.",
+    },
+    {
+      heading: "One tool for transactional and marketing, or two",
+      a: "SES sends whatever you hand it and knows nothing about the difference, which means the separation is yours to design and yours to forget. Most teams end up with SES for transactional and a second product for marketing, which is coherent and produces the usual seam: two suppression lists, two definitions of unsubscribed, and a reasonable chance of mailing someone who opted out of the other system.",
+      b: "Both in one product against one contact record, with transactional messages triggered by API and marketing campaigns composed in the UI, sharing a subscription state. That shared state is the strongest argument for the single-tool shape: unsubscribed means unsubscribed, once, everywhere, without an integration keeping two systems honest. For a small SaaS team this removes a whole category of embarrassing mistake.",
+    },
+    {
+      heading: "How much control you have over the message",
+      a: "Total. SES accepts a raw MIME message if you want one, so headers, encoding, attachments, list-unsubscribe behaviour and multipart structure are all yours to determine. If you have a genuine requirement about how an email is constructed — a compliance header, an unusual content type, a specific threading behaviour — SES will do it and most products in this category will not.",
+      b: "Considerably less, by design. Loops is a product rather than a primitive: you work within its template model, its sending behaviour and its assumptions about what an email is. For the overwhelming majority of SaaS email that is fine and the constraint is invisible. It becomes visible the first time you need something specific and find that the product simply does not expose it.",
+    },
+    {
+      heading: "Who edits the email",
+      a: "An engineer, in the codebase, through a deploy, because the rendering lives in your application. Templates are reviewable and versioned, which is a real benefit, and completely inaccessible to anyone who does not write code, which is a real cost. A founder who wants to change an onboarding subject line waits for the release cycle.",
+      b: "Anyone, in the editor, immediately, with a preview. The audience Loops is designed for is a small SaaS team where the person writing the copy is the founder or a growth hire, and the round trip through engineering is the bottleneck they are paying to remove. The trade-off is the usual one: the content is not in version control and not covered by your tests.",
+    },
+    {
+      heading: "Segmentation and the data behind it",
+      a: "Whatever your database can express, evaluated by your own code, which is unlimited in principle and unavailable in practice to anybody without SQL access. SES receives a list of addresses and asks no questions. For teams with a strong data layer this is the more powerful option by a distance; for teams without one it is an empty room.",
+      b: "Contact properties and events synced from your application, with audiences built against them in the UI. Less expressive than SQL and enormously more accessible, which is the right trade for the product's audience. The limit people meet is usually a segment that needs a join or a computation the property model cannot express, at which point the answer is to compute it in your application and sync it as a property.",
+    },
+    {
+      heading: "Deliverability and the shape of the sender",
+      a: "You are the sender, alone, and both the isolation and the responsibility are yours. A new identity is cold and needs warming, the metrics are in your console, and nobody will notice a problem on your behalf. The compensating benefit is that the reputation is an asset attached to an account you keep rather than a feature of a subscription you might cancel.",
+      b: "Loops operates the sending and carries the operational burden, which for a small team with no deliverability expertise is a genuine service rather than a checkbox. The corresponding exposure is the one every managed sender has: you inherit both the benefit and the risk of the pool, and the standing you enjoy is not portable to wherever you go next.",
+    },
+    {
+      heading: "What the exit costs",
+      a: "Little, structurally. Domains and reputation stay with an account you keep, templates are already code, and the sending call is a few lines. Running a second provider from a separate subdomain and shifting traffic gradually is straightforward. This reversibility is undervalued at signup and extremely valuable on the day the decision is revisited.",
+      b: "Contacts and their properties export. Campaign history, the visual templates and the accumulated lifecycle configuration mostly do not, and the sending reputation was never yours. The code change is small because the API surface is small; the part that hurts is that the product was doing more for you than the code suggested, and all of that has to be rebuilt or rebought.",
+    },
+  ],
+  pickA: [
+    "A large share of your list is dormant, so paying per contact means paying for people you have no intention of emailing.",
+    "You send relatively few messages per contact per month, which is the ratio that makes per-send billing cheaper.",
+    "You need control over how the message is constructed — headers, encoding, attachments — that a product-shaped tool will not expose.",
+    "The engineering to own templates and segmentation already exists, and duplicating your user model in a vendor buys you nothing.",
+  ],
+  pickB: [
+    "Your list is small and engaged and you want to send to it far more often without a bill that grows every time you do.",
+    "The person writing the emails is not an engineer and the release cycle is the actual bottleneck.",
+    "Product and marketing email sharing one subscription state matters more than the flexibility of running two systems.",
+    "Nobody on the team wants to own deliverability, templates and a segmentation UI as a side project.",
+  ],
+  thirdOption:
+    "The tension on this page is narrower than it first looks: most teams comparing these want the tooling Loops has and object specifically to paying for contacts who will never open anything. That is a solvable shape rather than a law of nature — a platform layer over your own AWS account can meter the platform and let AWS meter the sending, so contacts stop being the billed unit. Wraps does exactly that, with unlimited contacts on every tier. What it costs you is concrete: an AWS account and SES production access, which is an AWS approval on AWS's schedule rather than ours, SDKs in TypeScript and Python only, a template and campaign experience less polished than Loops', contacts and templates stored in our database rather than yours, and no SOC 2 certification.",
+  faqs: [
+    {
+      question: "At what point does contact-based pricing stop being worth it?",
+      answer:
+        "Work out your sends per contact per month. If most of your list receives one message a month or fewer, per-send billing is dramatically cheaper and the dormant portion of the list is pure waste. If your engaged contacts receive several messages a week, unlimited sending starts to justify the per-contact rate quickly. The crossover is a ratio rather than a headcount, which is why comparing the two pricing pages directly tells you almost nothing.",
+    },
+    {
+      question: "Can I delete dormant contacts to lower a contact-based bill?",
+      answer:
+        "Yes, and on any contact-priced tool it is the first thing to do before deciding the price is unreasonable. The awkward part is that deletion is usually irreversible and takes the engagement history with it, so a contact you remove to save money is a contact you cannot later analyse or win back. Suppression where it is available is the gentler version. Either way it is a recurring hygiene task rather than a one-time cleanup.",
+    },
+    {
+      question: "Does SES do marketing email at all?",
+      answer:
+        "It sends whatever you give it, including a campaign, and it provides nothing that helps you compose, schedule, segment or measure one. There is no list, no audience, no editor and no report. Teams doing marketing on SES either run a separate marketing product alongside it or use a platform layer that adds those things on top. Building the campaign tooling in-house is a well-documented way to spend a quarter producing something your marketing person refuses to use.",
+    },
+    {
+      question: "Can I keep transactional on SES and marketing on Loops?",
+      answer:
+        "You can, and it partly defeats the reason to choose Loops, which is one contact record with one subscription state. Splitting reintroduces the reconciliation problem: two suppression lists and two ideas of unsubscribed. If you do it, use separate subdomains so reputations stay independent, and decide explicitly which system owns the opt-out — an unowned opt-out is how somebody who unsubscribed last month receives a newsletter this month.",
+    },
+    {
+      question: "What does unlimited sending actually mean in practice?",
+      answer:
+        "That the invoice does not move when volume does, within acceptable-use bounds any provider enforces. It is a real change in behaviour rather than a pricing gimmick: teams on unlimited plans send longer onboarding sequences and more frequent digests because nobody has to justify the marginal cost. The thing to watch is that the natural brake on volume is now your recipients' tolerance rather than your budget, and that signal arrives as a complaint rate rather than as an invoice.",
+    },
+  ],
+};
+
+const BREVO_VS_RESEND: VersusPage = {
+  slug: "brevo-vs-resend",
+  a: "brevo",
+  b: "resend",
+  title: "Brevo vs Resend",
+  description:
+    "A French all-in-one suite built for a marketer against an API built for one developer's first hour. They overlap on exactly one endpoint and differ on everything surrounding it.",
+  search: {
+    primaryQuery: "marketing suite or developer email api for a startup",
+    secondaryQueries: [
+      "brevo transactional api developer experience",
+      "resend broadcasts versus a real marketing tool",
+      "eu based email platform for gdpr",
+      "does resend charge for marketing contacts",
+    ],
+    rationale:
+      "European startups evaluate these two together because one is the default EU answer and the other is the default developer answer. Neither vendor's material acknowledges the other's category, so the comparison a buyer needs does not exist on either site.",
+  },
+  intro:
+    "Brevo and Resend both send transactional email over an API, and that is roughly where the similarity ends. Brevo is a suite — contacts, campaigns, SMS, a light CRM, automation — sold to a small business that needs marketing to happen. Resend is a sending API sold to a developer who wants the email part of a product finished today. The overlap is one endpoint. Choosing between them means deciding whether your email problem is fundamentally about people who write emails or about code that sends them.",
+  dimensions: [
+    {
+      heading: "The developer experience, honestly assessed",
+      a: "Brevo's API works and nobody describes it as pleasant. The documentation is organised around the suite rather than the sending, the SDKs are generated rather than crafted, and the conceptual overhead of contacts, lists and folders is present whether or not your use case has any. A developer integrating it for transactional mail spends the afternoon on it rather than the hour, and comes away without affection.",
+      b: "This is the entire proposition and it delivers. A small SDK, fast domain verification, sensible defaults, error messages that say what is wrong, and React Email maintained first-party. The integration is genuinely done in an hour for a developer who has done it before, and the documentation assumes competence rather than explaining what an API key is. It is the best-in-class experience in this comparison by a distance.",
+    },
+    {
+      heading: "Marketing capability, equally honestly",
+      a: "Lists, segments, a drag-and-drop designer, scheduling, A/B testing and campaign reporting, all usable by someone who has never opened a terminal. This is a real marketing product with the depth a marketing person expects, and it is the reason Brevo exists. The thing to check is the tier: automation and A/B testing sit above the entry plan, as does removing the Brevo logo from your emails.",
+      b: "Broadcasts and an audience concept, which is enough to send an announcement and not enough to run a marketing programme. There is no meaningful automation, no branching, no lifecycle engine. Resend is clear about being a sending product, so this is scope rather than weakness — but a team that needs campaigns will be adding a second vendor, and should price that at the start rather than in month four.",
+    },
+    {
+      heading: "Where the money goes",
+      a: "Send volume, not stored contacts, which is unusual and genuinely good in this category: a large dormant list does not raise the bill on its own. What raises it is the tier step, which is where the features live. Price the tier that contains what you need rather than the one on the homepage, because that is the most common way an evaluation of this product produces a wrong number.",
+      b: "A plan ladder for sending, plus marketing contacts billed separately at a per-block rate. That second charge is contact-based pricing quietly attached to a send-priced product, so a growing audience raises the invoice in a month you sent nothing to it — which is exactly the model Brevo avoided. Two ladders also price the same volume differently depending which you are on, so check which one you are being quoted.",
+    },
+    {
+      heading: "Europe, and what the requirement actually says",
+      a: "A French company operating in the EU, which answers both the geography and the ownership versions of a residency question. When the requirement comes from a data protection officer rather than an architect, that distinction is frequently the whole evaluation. The consent and preference tooling is built for that regime rather than retrofitted onto it, which shows in the parts of the product concerned with who agreed to what.",
+      b: "A US company with published subprocessors and documented data handling, sending through Amazon SES underneath. That is enough for most buyers and it is not a residency guarantee. There is no equivalent of choosing a region and having mail stay inside it. If your requirement is a clause rather than a preference, this dimension ends the comparison rather than informing it.",
+    },
+    {
+      heading: "Templates and the person who changes them",
+      a: "A visual editor producing templates stored in the platform, editable by a marketer on a Friday with no deploy involved. The HTML it emits is the usual output of a drag-and-drop builder — verbose, and fine. The structural cost is the familiar one: templates are not in version control, not reviewable as code, and reproducing production output locally is harder than it should be.",
+      b: "React Email components in your repository, reviewed like any other code, with a preview during development. Better for correctness, versioning and developer sanity, and completely unavailable to anyone who cannot open a pull request. The thing worth knowing is that React Email is not proprietary: it renders to plain HTML that Brevo will happily send, so this benefit is partly separable from the vendor choice.",
+    },
+    {
+      heading: "The other channels",
+      a: "SMS, WhatsApp, chat and a light CRM alongside email, against one contact record. For a small business that would otherwise run three vendors and reconcile them, the integration is the value even though no individual component is best in class. The CRM in particular is lightweight and is better understood as a contact database with pipeline fields than as a replacement for a real sales tool.",
+      b: "Email only, deliberately. There is no SMS, no push, no chat and no contact database beyond what audiences need. If you later need those, they come from other vendors and the joining is yours to do. For a product whose messaging is entirely email, carrying none of that machinery is a benefit rather than a gap.",
+    },
+    {
+      heading: "Operational risk on each side",
+      a: "Shared sending pools with mixed reports, the usual pattern being that a sender with good engagement is fine and a sender with a purchased list discovers the pool is shared in both directions. Dedicated options exist higher in the range. Brevo is an established company with a long operating history, so the risk here is deliverability variance rather than anything existential.",
+      b: "Suspension during traffic spikes is the recurring complaint in its public reviews, following the ordinary shared-pool logic: an unfamiliar surge looks like risk to a platform protecting everyone, and pausing first is the conservative call. Resend is also a young company, which cuts both ways — more attentive support than its size suggests, and less operating history behind the reputation you inherit.",
+    },
+    {
+      heading: "What you can still answer next quarter",
+      a: "Reporting and contact-level history are retained as part of the suite, which is the natural shape when the product is built around a persistent contact record rather than around individual sends. It is a vendor window on vendor terms, but it is oriented towards the questions a marketer asks about a person over time rather than towards the questions an engineer asks about a request.",
+      b: "Thirty days of logs on every plan short of Enterprise, and then the record is gone. That is enough to debug an integration and not enough for a billing dispute, a compliance request or a year-over-year report. Streaming events into your own store from day one fixes it and costs about a day, and almost nobody does it until the first question about last March.",
+    },
+  ],
+  pickA: [
+    "A marketer needs to build, schedule and measure campaigns, and the tooling for that matters more than how the API feels.",
+    "A residency requirement was written by a data protection officer, and an EU-headquartered vendor answers it more cleanly than a US one with good documentation.",
+    "You want email, SMS and a contact database on one invoice rather than three vendors and a reconciliation.",
+    "Send-volume pricing suits you better than paying for contacts who never open anything.",
+  ],
+  pickB: [
+    "Email is generated by your application and the integration quality is what you will live with every day.",
+    "Templates belong in the repository as reviewable components rather than in a vendor's editor.",
+    "You do not need campaigns, automation or SMS, and would rather not pay for a suite to use one endpoint.",
+    "Time-to-first-send this week is the metric that actually matters, and a permanent free allowance covers the project for now.",
+  ],
+  faqs: [
+    {
+      question: "Can I use Resend for transactional and Brevo for marketing?",
+      answer:
+        "Yes, and it is the arrangement a lot of teams drift into. Use separate subdomains so DKIM keys, reputation and DMARC alignment stay independent. The real cost is not technical: you now have two suppression lists and two definitions of unsubscribed, and unless one of them is explicitly the owner, somebody who opted out of marketing will eventually receive a campaign. Decide which system holds the truth before you need it to.",
+    },
+    {
+      question: "Does Brevo charge per contact?",
+      answer:
+        "No, and it is the most distinctive thing about its pricing. Brevo charges on send volume rather than stored contacts, so a large dormant list does not raise the bill by itself — the opposite of Klaviyo, Customer.io and Loops. Resend, despite being a sending product, does bill marketing contacts separately from sends. If your list is large and your sending is occasional, that single difference can outweigh everything else on this page.",
+    },
+    {
+      question: "Is Resend usable by a non-technical person?",
+      answer:
+        "Partly. The dashboard shows logs, domains and audiences, and broadcasts can be composed without code. What is not available to a non-technical person is the templates, which are React components in your repository, so any change to what a message looks like requires a developer and a deploy. For a product where a founder wants to iterate on copy quickly, that round trip is the constraint to weigh.",
+    },
+    {
+      question: "Which is better for European data residency?",
+      answer:
+        "Brevo, clearly, if the requirement is written as a clause. It is an EU-headquartered company operating in the EU, which answers the ownership question as well as the geography one. Resend publishes its subprocessors and documents its data handling, which satisfies a great many buyers, but there is no region selection and no equivalent guarantee. This is the one dimension on the page where the answer is not a matter of preference.",
+    },
+    {
+      question: "Do I need to pick one?",
+      answer:
+        "Not necessarily, and the hybrid is common enough to be considered a default rather than a compromise. The most frequent shape is transactional mail on the developer-friendly API and campaigns on the suite, split across subdomains. What that costs you is a reconciliation nobody enjoys and a slightly more complicated answer when someone asks where an email came from. What it buys is each workload on a tool actually designed for it.",
+    },
+  ],
+};
+
+const CUSTOMER_IO_VS_RESEND: VersusPage = {
+  slug: "customer-io-vs-resend",
+  a: "customer-io",
+  b: "resend",
+  title: "Customer.io vs Resend",
+  description:
+    "These two barely compete. One is a behavioural workflow engine priced per profile, the other a sending API priced per message. Anyone weighing them is really deciding whether they need a messaging platform at all.",
+  search: {
+    primaryQuery: "do i need a messaging platform or just a send api",
+    secondaryQueries: [
+      "resend for onboarding sequences",
+      "customer.io versus sending email from your own code",
+      "when to move lifecycle email off an api",
+      "cost of a messaging platform for a small saas",
+    ],
+    rationale:
+      "Teams reach this comparison at the moment their onboarding email stops being one message, which is a specific and recurring decision point. Every article about it is published by a platform vendor, so the honest version of when you do not need one is unwritten.",
+  },
+  intro:
+    "This comparison usually happens at a particular moment: the onboarding email that was one message is becoming five, with conditions, and somebody asks whether this belongs in the codebase. Resend is the answer if the logic stays in your application and you want the sending to be excellent and cheap. Customer.io is the answer if the logic should leave your application and belong to whoever owns growth. That is a decision about ownership and tempo, and the products are downstream of it rather than the other way round.",
+  dimensions: [
+    {
+      heading: "What each one is actually for",
+      a: "Deciding. Customer.io ingests events and attributes, holds a profile per person, evaluates segments continuously and runs workflows with branches, waits and exit conditions. The sending is a step at the end of a decision the platform made. If you removed the email and left the engine, most of the value would still be there.",
+      b: "Sending. Resend takes a rendered message and an address and delivers it with unusual polish — a small SDK, quick domain verification, React Email, a clean log view. It does not decide who should receive anything. Broadcasts exist for announcements and stop well short of a lifecycle engine, which is a deliberate scope decision rather than a gap.",
+    },
+    {
+      heading: "Where the logic lives, and who can change it",
+      a: "In the platform, in a visual editor, changed by whoever owns lifecycle without a deploy. That independence is the point and it is worth real money to a team whose growth experiments are currently queued behind a release. The cost is that the behaviour is not in version control, not covered by your tests, and the reason a particular message fired is only discoverable by opening the tool.",
+      b: "In your codebase, changed by an engineer through a pull request. Reviewable, testable, greppable, and slow. For transactional messages that is exactly right. For lifecycle messaging, where the value comes from iterating on timing and copy quickly, the round trip through the release process frequently means the iteration does not happen at all.",
+    },
+    {
+      heading: "The billed unit",
+      a: "Profiles, whether or not you message them, with each additional profile adding a small increment above the tier's included count. A freemium product with a wide funnel pays for everyone who ever signed up, which is why profile hygiene is a billing activity here and not just a hygiene one. The upside is that cost is decoupled from volume, so an active user receiving twenty messages a month costs the same as one receiving two.",
+      b: "Sends on a plan ladder, plus marketing contacts billed separately at a per-block rate. Dormant users you never email are close to free, which suits a wide funnel well. What catches people is that second charge: a growing audience raises the bill in a month you sent nothing to it, so the product is not as purely send-priced as it looks.",
+    },
+    {
+      heading: "What you would have to build to close the gap",
+      a: "Nothing — this is what you are buying. Idempotency across restarts, per-user workflow state, timezone-aware sends, exit conditions when the user does the thing, suppression checked at send time, and a UI a non-engineer trusts. These are the parts of an in-house build that run long, and they are invisible in the platform precisely because they are handled.",
+      b: "All of the above, if your sequences are non-trivial. A scheduler, per-user state that survives a deploy, exit conditions, and observability for the day it silently stops. The first version is a week. The version you would trust with a paying customer's onboarding is a quarter, and the maintenance does not end. Whether that is worth it depends mostly on how complex your sequences will actually get, which teams reliably underestimate.",
+    },
+    {
+      heading: "Channels",
+      a: "Email, push, SMS, in-app and webhooks, coordinated by one workflow with per-person preferences honoured across them. If your product genuinely needs to reach someone in more than one place, orchestrating it from one engine is a substantial simplification that is hard to assemble from parts. If you only send email, you are paying for an engine shaped for a problem you do not have.",
+      b: "Email, and nothing else, permanently. That is a coherent scope and it keeps the product small and good. It also means that the day someone asks for a push notification alongside the email, Resend is not part of the answer and the coordination becomes your code's problem.",
+    },
+    {
+      heading: "Templates",
+      a: "An editor in the platform with a visual mode and a code mode, editable by a marketer, with the content living in the vendor. It is competent and it is not a designer's tool. The structural point is the same as everywhere else in this comparison: the artefact is outside your repository, so it is not reviewed, not tested and not reproducible locally without effort.",
+      b: "React Email in your repository, first-party and genuinely good, going through the same review as the rest of your code. This is the best template story of the two by a distance for an engineering team, and completely unavailable to anybody without commit access. It also renders to plain HTML, so the library itself is portable even if the vendor is not.",
+    },
+    {
+      heading: "Operational ceilings and failure modes",
+      a: "The constraints are commercial rather than technical: tier thresholds, profile counts, and the fact that a workflow misconfigured in the editor will cheerfully message the wrong segment at scale without a code review standing in the way. The platform's own throughput is not something teams run into, but the blast radius of a mistake made in a UI is larger than one made in a pull request.",
+      b: "Two API requests per second on every tier, including the most expensive, which no upgrade lifts. Batch endpoints accepting several recipients per call stretch that a long way, but any code that loops over a list making individual calls meets the ceiling immediately and permanently. For lifecycle sequences fanning out to a large cohort at nine in the morning, this is an architectural constraint to design for rather than a plan to upgrade.",
+    },
+    {
+      heading: "What history you keep",
+      a: "Profile-level activity history over a long window, which is the natural shape for a product built around a person rather than a request. That history is also the thing that makes segments work, so it is not really optional. It is still a vendor's store on a vendor's terms, and it does not leave with you in a form another platform can evaluate.",
+      b: "Thirty days of logs on every plan short of Enterprise, then gone. Fine for debugging, useless for a billing dispute or a compliance request. Streaming events into your own store from the first day is about a day of work and is the single best thing a team on Resend can do for its future self, and almost nobody does it until somebody asks a question about March.",
+    },
+  ],
+  pickA: [
+    "Lifecycle logic should belong to growth or marketing, changeable without a deploy, because iteration speed is the whole point.",
+    "The sequences need branches, waits, exit conditions and timezone-aware sends — precisely the parts of a build that overrun.",
+    "You need email coordinated with push or SMS, with one set of per-person preferences across all of them.",
+    "Nobody wants to own a scheduler whose worst failure mode is silently sending nothing for a week.",
+  ],
+  pickB: [
+    "The messages are triggered by your own application and the logic is simple enough to belong in the codebase.",
+    "A wide free funnel makes per-profile billing a charge for people you have already lost.",
+    "Templates as reviewable React components matter more than any workflow editor would.",
+    "Traffic is request-response and comfortably under two API calls a second, with no large synchronised fan-out.",
+  ],
+  faqs: [
+    {
+      question: "Can I run onboarding sequences on Resend?",
+      answer:
+        "You can run the sending on Resend; the sequence is yours to build. That means a trigger, a scheduler, per-user state that survives deploys, exit conditions so converted users stop receiving the nag, a suppression check at send time, and alerting for the day the scheduler stops. A simple three-message sequence with no branching is genuinely a week of work. Anything with conditions grows fast, and the growth is in the edge cases rather than the happy path.",
+    },
+    {
+      question: "Is Customer.io overkill for a small SaaS?",
+      answer:
+        "Often, and the honest test is whether anyone other than an engineer needs to change who receives what. If the founder writes the copy and the engineer ships it and that arrangement is fine, a platform is buying you independence you are not using while charging for every dormant signup. If growth experiments are queued behind a release cycle and that is costing you experiments, the platform is buying the exact thing you lack.",
+    },
+    {
+      question: "Do they overlap at all?",
+      answer:
+        "On one endpoint. Both will send a transactional message triggered by an API call, and Customer.io's version costs more because it is attached to a platform. Teams running both usually put transactional mail on Resend and lifecycle on Customer.io, split across separate subdomains. That keeps the cheap high-volume traffic out of the profile count and keeps the reputations independent, at the cost of two suppression lists to reconcile.",
+    },
+    {
+      question: "Which is cheaper?",
+      answer:
+        "Resend, by a wide margin, on the sending alone — and that comparison is only meaningful if you are not using the platform. Priced honestly, Customer.io competes against Resend plus the engineering to build and maintain a workflow engine, and against the experiments that do not happen while that engineering is in progress. At a large dormant user base Resend still wins; at a small engaged base with complex sequences it frequently does not.",
+    },
+    {
+      question: "What happens when I outgrow Resend's rate limit?",
+      answer:
+        "You batch, and then you queue. Sending to several recipients in one API call stretches the two-per-second ceiling considerably, and beyond that you spread the fan-out over time. No plan lifts the limit, so this is a design decision rather than a purchase. For a lifecycle sequence that wakes up at nine and messages a large cohort, decide early whether a drip over twenty minutes is acceptable, because that is the shape you will be living with.",
+    },
+  ],
+};
+
+const KLAVIYO_VS_RESEND: VersusPage = {
+  slug: "klaviyo-vs-resend",
+  a: "klaviyo",
+  b: "resend",
+  title: "Klaviyo vs Resend",
+  description:
+    "Klaviyo sells a merchant attributed revenue. Resend sells a developer a finished integration. The comparison only makes sense for one specific person: whoever is being asked to cut an ecommerce email bill.",
+  search: {
+    primaryQuery: "cut ecommerce email costs by moving to an api",
+    secondaryQueries: [
+      "resend for shopify transactional email",
+      "klaviyo profile billing keeps increasing",
+      "what you lose leaving an ecommerce marketing platform",
+      "send order confirmations without a marketing tool",
+    ],
+    rationale:
+      "This search comes from a merchant looking at a Klaviyo invoice, and every available answer is from a competing marketing platform proposing a like-for-like swap. Nobody explains which half of the bill can actually move to a send API and which half cannot.",
+  },
+  intro:
+    "Somebody looks at a Klaviyo invoice, remembers that sending email costs almost nothing, and starts reading about Resend. The arithmetic is seductive and the conclusion is usually wrong, because Klaviyo's product is not the sending — it is a customer data model with revenue attribution attached, operated by a marketer who does not write code. Resend is an excellent sending API operated by someone who does. Some of that invoice can genuinely move. The part that can move is not the part people expect.",
+  dimensions: [
+    {
+      heading: "What the merchant is actually paying for",
+      a: "A profile per shopper carrying orders, browsing behaviour, lifetime value and campaign history, synced from the store, with segments built against it in a UI and revenue attributed back to each campaign and flow. That report is the artefact a marketing budget is defended with. The email sending underneath it is ordinary, and nobody has ever chosen Klaviyo because of it.",
+      b: "Delivery, done unusually well. A small SDK, fast domain verification, React Email, a clean log view and sensible webhooks. There is no customer record, no order history, no segment builder and no attribution, because none of that is what the product is. Resend will send the campaign you composed elsewhere and tell you it was delivered.",
+    },
+    {
+      heading: "Segmentation, and what replaces it",
+      a: "Built by a marketer against synced store data, with segments that update themselves — bought in the last thirty days, browsed without buying, lapsed after two orders. It requires no engineering involvement after the integration exists, which is why it gets used constantly rather than occasionally. That usage frequency is where the value actually accumulates.",
+      b: "Whatever your own database can express, computed by your own code, and delivered to Resend as a list of addresses. Vastly more powerful in principle and unavailable in practice to anyone without SQL access and a deploy. Audiences exist for basic list management; they are not a segmentation engine and are not trying to be.",
+    },
+    {
+      heading: "Flows, which are the half that earns the money",
+      a: "Abandoned cart, browse abandonment, post-purchase, winback — built visually with timing, branches and exit conditions, running continuously. For most merchants these flows outperform campaigns per message by a wide margin, and they are the part of the platform most consistently forgotten when someone models a migration from the sending cost.",
+      b: "Nothing equivalent. A sequence on Resend is a scheduler, per-user state, exit conditions and a suppression check that you write and maintain. For a merchant without an engineering team this is not a trade-off, it is a non-starter. For one with an engineering team it is a quarter of work to reproduce something that already exists and already works.",
+    },
+    {
+      heading: "The billed unit, and why the invoice grows on its own",
+      a: "Active profiles, counted across the account rather than only the people you mail, with the definition of active broadened in February 2025. Plans auto-upgrade as the count crosses thresholds and never auto-downgrade, so a list inflated by one good quarter keeps charging afterwards. Suppressing or deleting profiles you will never mail again is the first lever, and it is usually pulled far too late.",
+      b: "Sends on a plan ladder, plus marketing contacts billed separately at a per-block rate. Dormant shoppers you never email are close to free, which is the structural advantage for a store with a long tail of one-time buyers. The contact charge is the part that catches people, because it is contact-based pricing quietly attached to a product everyone describes as send-priced.",
+    },
+    {
+      heading: "Who operates it",
+      a: "A marketer, entirely, after the store integration is connected. Campaigns, flows, segments, subject lines, send times and reports all belong to them, and engineering's involvement ends. For a merchant where marketing moves faster than the release cycle, that independence is the benefit even more than the features are.",
+      b: "A developer, always. Every change to content, timing or audience is code and a deploy. That is correct for order confirmations and shipping notices, where the content is generated from data and correctness beats tempo. It is the wrong shape for promotional email, where the person with the ideas does not have commit access.",
+    },
+    {
+      heading: "The traffic that can genuinely move",
+      a: "Transactional mail — order confirmations, shipping notices, receipts — is frequently the majority of messages and a minority of the value Klaviyo provides. It is high volume, code-generated, indifferent to segmentation and needs excellent placement. Moving it off a profile-priced platform also reduces the profile count you are billed for, because transactional-only recipients no longer need to be profiles.",
+      b: "This is exactly the traffic Resend is built for, and it will handle it better and far more cheaply. The two things to plan are the rate ceiling, which is two API requests per second on every tier and matters if confirmations burst during a flash sale, and the subdomain split, so the two sending reputations stay independent of each other.",
+    },
+    {
+      heading: "Volume ceilings of different kinds",
+      a: "Monthly volume is capped at roughly ten times your profile count, and sending halts past it. Most ecommerce patterns never come close. The merchants who do are the ones mailing a small devoted list frequently, and their only route past the cap is paying for more profiles than they have customers — a strange thing to discover during a peak week.",
+      b: "Two API requests per second, on every tier, permanently, with batch endpoints accepting multiple recipients per call as the main relief. For steady transactional traffic this is invisible. For a flash sale that generates a thousand order confirmations in five minutes, it is an architecture decision about queueing that you want to make in advance rather than during.",
+    },
+    {
+      heading: "Deliverability responsibility",
+      a: "Klaviyo operates the sending and polices sending practices, with a commercial interest in keeping its pool healthy. Ecommerce list practices — popup capture, purchased lists, resurrecting three-year-old shoppers — are exactly what damages a pool, which is why the policing exists. For a merchant with no in-house expertise this is a real service, and it is completely invisible until the day they leave.",
+      b: "Resend runs shared pools with its own operational team, and suspension during traffic spikes is the recurring complaint in its public reviews. A store moving a large promotional list onto a new sender in one evening is precisely the pattern that triggers that response. Ramp gradually, start with engaged recipients, and do not schedule the move for the month before your busiest season.",
+    },
+  ],
+  pickA: [
+    "Marketing owns the email programme and needs segmentation and attributed revenue without asking anyone for a query.",
+    "Abandoned-cart, browse-abandonment and post-purchase flows are doing real work, and rebuilding them is not a project you have room for.",
+    "Nobody in-house owns deliverability, and a vendor with a commercial stake in a clean pool is worth paying for.",
+    "The store data integration is the thing that makes the whole programme work, and reproducing it would be the actual migration.",
+  ],
+  pickB: [
+    "The mail in question is transactional — confirmations, shipping, receipts — and moving it off a profile-priced platform lowers the bill twice over.",
+    "Your engineering team already owns the customer data model, so what you need from a vendor is delivery rather than a second database.",
+    "Templates as reviewable components in the repository suit how your team works better than a visual editor does.",
+    "A long tail of dormant one-time buyers is inflating a profile count for people who will never open anything again.",
+  ],
+  faqs: [
+    {
+      question: "Can Resend replace Klaviyo?",
+      answer:
+        "Not as a like-for-like swap, and the difference matters. Klaviyo's product is a customer data model with attribution and a flow engine, operated by a marketer. Replacing it with Resend means rebuilding all of that on top of a send API, which is a large engineering project whose output a marketing team frequently refuses to use. What Resend can replace is the transactional half of the sending, which is a much smaller and much more sensible move.",
+    },
+    {
+      question: "Which parts of my Klaviyo bill can I actually reduce?",
+      answer:
+        "Two things, in order. First, suppress or delete profiles you will never mail — the billing is per active profile and plans auto-upgrade without ever auto-downgrading, so an inflated count from one good quarter keeps charging. Second, move transactional mail to a cheap sender, which both removes that volume and removes transactional-only recipients from the profile count. Attack those before considering a migration of the marketing programme.",
+    },
+    {
+      question:
+        "Will splitting transactional off hurt my marketing deliverability?",
+      answer:
+        "It can, in both directions, and it should be planned rather than discovered. Transactional mail has high engagement and contributes positively to a domain's reputation, so removing it changes the signal the remaining sender produces. Use separate subdomains so the two reputations are genuinely independent, warm the new sender gradually starting with engaged recipients, and do not make the change in the weeks before a peak season.",
+    },
+    {
+      question: "Does Resend's rate limit matter for order confirmations?",
+      answer:
+        "Usually not, and there is one scenario where it does. Steady order flow is nowhere near two API requests per second. A flash sale or a successful campaign that produces a thousand orders in five minutes is, and the limit does not lift on any plan. The fix is a queue with batch sends rather than a plan upgrade, which is ordinary engineering and much easier to build before the sale than during it.",
+    },
+    {
+      question: "Why does my profile count keep going up?",
+      answer:
+        "Because profiles are created by signups, checkouts and integrations, the definition of active broadened in February 2025, and plans auto-upgrade when the count crosses a threshold while never auto-downgrading when it falls. The count is therefore a ratchet unless somebody actively manages it. Reviewing it quarterly and suppressing shoppers who have not engaged in a year is the single most effective cost control available on the platform.",
+    },
+    {
+      question: "What would I have to rebuild to run campaigns on Resend?",
+      answer:
+        "A store data sync, a segment engine that evaluates against it, a campaign composer somebody in marketing will actually use, a scheduler, a suppression check at send time, and an attribution report joining sends to orders. The sending is the smallest piece by a wide margin. Merchants who attempt this usually finish the sending in days and then spend a quarter on a campaign tool that the marketing team quietly stops opening, which is the expensive way to learn that the platform was never charging for delivery.",
+    },
+  ],
+};
+
+const AMAZON_SES_VS_MAILERSEND: VersusPage = {
+  slug: "amazon-ses-vs-mailersend",
+  a: "amazon-ses",
+  b: "mailersend",
+  title: "Amazon SES vs MailerSend",
+  description:
+    "MailerSend's product is a template builder a non-engineer can open, wrapped around a competent email API. SES has no builder and never will. That single capability is most of what separates them.",
+  search: {
+    primaryQuery: "email api with a template editor for non developers",
+    secondaryQueries: [
+      "mailersend starter versus professional plan difference",
+      "who edits transactional email templates",
+      "aws ses template api limitations",
+      "multi brand transactional email for an agency",
+    ],
+    rationale:
+      "The decision here is organisational rather than technical — whether a person without commit access needs to change an email — and it is not a decision either vendor's pricing page is organised around, so the comparison has to be written from the outside.",
+  },
+  intro:
+    "Strip away the marketing on both sides and this comparison reduces to one question: does somebody who cannot open a pull request need to change what an email says? If the answer is no, SES is cheaper, more flexible and already inside infrastructure you run. If the answer is yes, MailerSend has built its entire product around that person, and SES has built nothing for them and has no plans to. Everything else on this page is a consequence of that one difference.",
+  dimensions: [
+    {
+      heading: "The template builder, which is the whole argument",
+      a: "SES has a template API with token substitution, and the prevailing practice is to ignore it and render HTML in your own application instead. That makes templates code — versioned, reviewable, portable, testable — and completely invisible to anyone without repository access. A preview environment for non-engineers is a thing you build, and most teams never do, so the person who wants to change a subject line files a ticket.",
+      b: "A drag-and-drop builder with variables, conditional blocks and a preview, aimed squarely at a marketer or a support lead. They change the copy, they see what it will look like, they publish, and no deploy happens. For a company with twenty transactional messages that need occasional wording changes, this removes a recurring low-value interruption from the engineering queue, which is worth considerably more than it sounds.",
+    },
+    {
+      heading: "The free tier, and what it is actually for",
+      a: "There is no meaningful free tier any more. The old arrangement people remember is gone, new accounts land on a metered plan rather than the flat rate, and the plan is scoped per account and per region. SES is extremely cheap and it is not free, so a staging environment or a hobby project is a small bill rather than no bill.",
+      b: "A free allowance that is small in both dimensions — a low monthly cap and a low daily one. It is enough to evaluate the product and not enough to run anything real, including most staging environments. Treat it as a trial with no clock rather than as a tier you could live on, because teams that plan around it discover the daily cap on the first busy Tuesday.",
+    },
+    {
+      heading: "What the higher plan actually buys",
+      a: "Nothing, in this sense. SES has no feature tiers: the plan you select changes the rate you pay, not the capabilities you get. Whatever is available on day one is available forever, which is either reassuring or bleak depending on what you were hoping for. There is no upgrade path because there is nothing above you.",
+      b: "The step from Starter to Professional costs substantially more for the same included volume, and what it buys is seats, longer retention and team features rather than sending. That is worth naming plainly because it is the most common place an evaluation goes wrong: somebody prices Starter, then discovers the requirement list needs Professional, and the comparison against SES changes shape entirely. Price the tier with the features.",
+    },
+    {
+      heading: "Multiple brands and multiple domains",
+      a: "SES handles many verified identities in one account without difficulty, and configuration sets let each one carry its own event destinations and reputation options. What it does not provide is any notion of a workspace, a client or a permission boundary between them, so an agency running mail for twelve customers is building its own separation, its own access control and its own reporting split.",
+      b: "Domains, templates and users are organised in a way that suits running several brands, with the seat and permission model that Professional adds being precisely what an agency needs. For a company sending on behalf of clients, or a group with several product brands, this organisational shape is a real product feature rather than an administrative convenience.",
+    },
+    {
+      heading: "Inbound and the surrounding surface",
+      a: "SES can receive mail in a subset of regions through receipt rule sets that store to S3, invoke a Lambda, publish to SNS or reject. It is powerful and entirely unparsed — you get raw MIME and write everything after that. Combined with the rest of AWS it is the most flexible option here by a distance, and flexibility is another word for work.",
+      b: "Inbound routing exists and is more finished than SES's in the sense that fields arrive parsed, and it is a smaller part of the product than it is for a vendor built around routing. For the common case of getting replies to a webhook it is adequate and quick. For anything structurally unusual it will be the wrong shape, and the escape hatch is another vendor rather than another line of code.",
+    },
+    {
+      heading: "Deliverability and who watches it",
+      a: "Your reputation alone, in your own account, with your own metrics and nobody monitoring them on your behalf. Warming a new identity is real work, the isolation means a neighbour cannot hurt you, and the absence of anyone noticing your problem is the cost. Once the reputation is established it belongs to an account you keep, which is the durable advantage of this side.",
+      b: "MailerSend's shared pools with dedicated options on the higher plans, operated by a team whose job it is. For a mid-market company with no deliverability expertise this is a genuine service. The standard exposure applies: the standing you enjoy belongs to the vendor and does not travel with you, so leaving means starting a reputation from nothing.",
+    },
+    {
+      heading: "The shape of the bill",
+      a: "Per message, no platform fee, no plan to outgrow, billed by AWS alongside everything else and cheap enough at any real volume that the comparison stops being close. The complications are AWS complications — per account, per region, and a metered plan for new accounts — rather than surprises. Cost is a straight line with a small slope.",
+      b: "A plan with an included volume and an overage rate that improves as the plan grows, with the Starter-to-Professional step being about seats and retention rather than sending. Predictable and considerably more expensive per message. The fair comparison is not the raw rate: it is MailerSend against SES plus whatever you would build to give a non-engineer a template they can edit.",
+    },
+    {
+      heading: "Control over the message itself",
+      a: "Total. SES accepts raw MIME if you want it, so headers, encoding, multipart structure, attachments and list-unsubscribe behaviour are all yours to determine exactly. If you have a specific requirement about how an email is constructed, SES will honour it and most products in this category will not even expose the option.",
+      b: "Whatever the builder and the API model expose, which covers ordinary transactional email comfortably and stops there. This is the usual product-versus-primitive trade and it is invisible until the day you need something specific. The failure mode is not that it is difficult — it is that it is unavailable, and the workaround is to stop using the template system you chose the product for.",
+    },
+  ],
+  pickA: [
+    "All email content is generated by code and nobody outside engineering will ever need to change it.",
+    "Volume is high enough that per-message economics dominate, and you are already inside AWS with an engineer to own the plumbing.",
+    "You need exact control over message construction — headers, encoding, attachments — that a product-shaped tool does not expose.",
+    "Sending reputation should attach to an account you keep, so changing the tooling above it is never a migration.",
+  ],
+  pickB: [
+    "Someone without commit access needs to edit transactional email copy, and the current arrangement has them filing tickets to do it.",
+    "You run mail for several brands or clients and want domains, templates and permissions organised that way out of the box.",
+    "Nobody in-house wants to own deliverability monitoring, and a managed pool with dedicated options above it is the simpler answer.",
+    "Volume is modest enough that the plan price is smaller than the engineering cost of building a template experience SES will never provide.",
+  ],
+  faqs: [
+    {
+      question: "Why not just use the SES template API?",
+      answer:
+        "Because it is minimal and nobody enjoys it. It offers token substitution and little else — no conditionals worth the name, no layouts, no preview, and no interface a non-engineer would open. Managing templates means API calls or CLI commands. Most teams conclude within a week that rendering in their own application is better, which is true, and which still leaves the person who wanted to change a subject line filing a ticket.",
+    },
+    {
+      question: "Can I build a template editor on top of SES?",
+      answer:
+        "Yes, and it is a bigger project than it looks. A usable version needs storage and versioning, a visual or markup editor, variable substitution with a preview against realistic data, rendering that survives the major email clients, an approval step and a permission model. Teams that start this generally ship something in a quarter that engineering is proud of and the intended users avoid. Buy it or use a platform layer; building it rarely pays.",
+    },
+    {
+      question:
+        "What is the real difference between MailerSend's Starter and Professional?",
+      answer:
+        "Not sending volume — the included allowance is the same on both at the comparable size. Professional adds seats, longer data retention and team features, which is to say it is priced for organisational capacity rather than for throughput. That is legitimate and it is also why the plan comparison surprises people. Decide which features you need first and price the row that contains them, because the headline row probably does not.",
+    },
+    {
+      question: "Is MailerSend built on Amazon SES?",
+      answer:
+        "It operates its own sending infrastructure rather than reselling SES, so a move between the two genuinely changes the network, the pools and the relationships behind your mail. That matters because it makes deliverability differences between them real rather than an artefact of two accounts on the same substrate, which is the situation with several other providers in this market.",
+    },
+    {
+      question: "How much would I save moving to SES?",
+      answer:
+        "Per message, a great deal, and the honest comparison is not per message. Price SES plus the work to replace what you are using: a template experience for non-engineers, an event pipeline, somewhere to search sent mail, and someone to watch deliverability. At high volume SES still wins clearly. At moderate volume with a marketer editing templates weekly, the saving is frequently smaller than the interruption cost it creates.",
+    },
+  ],
+};
+
 export const VERSUS_PAGES: readonly VersusPage[] = [
   POSTMARK_VS_RESEND,
   LOOPS_VS_RESEND,
@@ -2496,6 +3957,20 @@ export const VERSUS_PAGES: readonly VersusPage[] = [
   MANDRILL_VS_POSTMARK,
   BREVO_VS_SCALEWAY_TEM,
   CUSTOMER_IO_VS_KNOCK,
+  AMAZON_SES_VS_SENDGRID,
+  AMAZON_SES_VS_POSTMARK,
+  AMAZON_SES_VS_MAILGUN,
+  RESEND_VS_SENDGRID,
+  MAILGUN_VS_RESEND,
+  POSTMARK_VS_SENDGRID,
+  AMAZON_SES_VS_BREVO,
+  AMAZON_SES_VS_KLAVIYO,
+  AMAZON_SES_VS_CUSTOMER_IO,
+  AMAZON_SES_VS_LOOPS,
+  BREVO_VS_RESEND,
+  CUSTOMER_IO_VS_RESEND,
+  KLAVIYO_VS_RESEND,
+  AMAZON_SES_VS_MAILERSEND,
 ];
 
 /**

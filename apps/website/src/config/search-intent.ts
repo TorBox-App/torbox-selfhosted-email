@@ -1315,6 +1315,188 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     rationale:
       "Teams discover late that these two are answering different questions, having evaluated them on an overlapping feature list; the decisive difference is organisational — which team owns the workflow — and no vendor page frames it that way.",
   },
+  {
+    route: "/versus/amazon-ses-vs-sendgrid",
+    primaryQuery: "is amazon ses cheaper than sendgrid",
+    secondaryQueries: [
+      "what does sendgrid do that amazon ses cannot",
+      "sendgrid free tier retired replacement",
+      "sendgrid smtp relay versus ses smtp endpoint",
+      "aws support plan cost when running ses",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Everyone answering this compares a plan price to a per-thousand rate and stops. The costs that decide it in practice — an AWS support plan you did not previously need on one side, a marketing plan sold separately on the other — appear on neither pricing page next to the number people quote.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-postmark",
+    primaryQuery: "does postmark deliver better than amazon ses",
+    secondaryQueries: [
+      "postmark message streams explained",
+      "how long does postmark keep message content",
+      "is postmark worth the price over raw ses",
+      "transactional email that never shares a pool with marketing",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The interesting claim on this pair is not the price gap, which is obvious, but whether a managed sender's inbox placement is structurally better than a well-run account of your own. Nobody neutral writes that down, because both parties have an interest in the answer.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-mailgun",
+    primaryQuery: "what mailgun adds on top of amazon ses",
+    secondaryQueries: [
+      "mailgun inbound routes versus ses receipt rules",
+      "email address validation api alternatives",
+      "mailgun flex plan closed to new signups",
+      "searchable email logs without building a pipeline",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Mailgun sits closer to SES on the stack than any other hosted vendor, so the comparison turns on specific capabilities rather than on philosophy — and on a repricing in December 2025 that existing customers noticed and prospective ones have not heard about.",
+  },
+  {
+    route: "/versus/resend-vs-sendgrid",
+    primaryQuery: "resend or sendgrid for a new product",
+    secondaryQueries: [
+      "sendgrid replacement for a small dev team",
+      "resend rate limit two requests per second",
+      "sendgrid trial after free tier ended",
+      "does resend have marketing campaigns",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Almost every result is a migration guide published by one of the two. The facts that decide it — a fixed request-rate ceiling on one side that no plan lifts, a retired free tier on the other — are in neither guide, because neither company benefits from raising them.",
+  },
+  {
+    route: "/versus/mailgun-vs-resend",
+    primaryQuery: "mailgun replacement for a modern stack",
+    secondaryQueries: [
+      "does resend support inbound email routing",
+      "resend api rate limit for bulk sending",
+      "mailgun pay as you go plan discontinued",
+      "email api with address validation built in",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Teams arrive at this comparison after the December 2025 Mailgun repricing and evaluate Resend on developer experience alone, which is the half that is easy to see. The capabilities they would be giving up — inbound routing, validation, deep log search — are not on Resend's feature page to be missed.",
+  },
+  {
+    route: "/versus/postmark-vs-sendgrid",
+    primaryQuery: "postmark or sendgrid for transactional email",
+    secondaryQueries: [
+      "leaving sendgrid after the free tier ended",
+      "postmark message streams versus sendgrid categories",
+      "which email provider suspends accounts less",
+      "transactional email with a real support team",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "This pair is searched by people already on SendGrid and unhappy about something specific — a suspension, a support ticket, a retired free tier. The comparison they need is operational rather than a feature grid, and nobody writes the operational one because it makes both vendors look partly bad.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-brevo",
+    primaryQuery: "european email platform or aws ses for a small business",
+    secondaryQueries: [
+      "brevo transactional api versus raw ses",
+      "gdpr compliant email sending without a us vendor",
+      "which brevo plan includes automation",
+      "do i need a marketing platform or just a send api",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "These two sit in different categories, so the search that produces this comparison is usually a small European team deciding what kind of tool they need at all. That question has no neutral answer published anywhere, because every vendor answering it sells one of the two shapes.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-klaviyo",
+    primaryQuery: "can i replace klaviyo with amazon ses",
+    secondaryQueries: [
+      "klaviyo active profile billing explained",
+      "klaviyo sending limit ten times profile count",
+      "cheaper way to send ecommerce campaigns",
+      "shopify transactional email without klaviyo",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The search is driven by a Klaviyo invoice, and the answers available are written either by Klaviyo or by competitors selling a similar shape. Nobody explains that the honest replacement for Klaviyo is not a send API, which is the thing the person asking most needs to hear.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-customer-io",
+    primaryQuery: "build lifecycle emails in house or buy a messaging platform",
+    secondaryQueries: [
+      "customer.io profile billing for unengaged signups",
+      "what it takes to build drip campaigns on ses",
+      "who should own onboarding email logic",
+      "cheaper alternative to a behavioural messaging platform",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The build-or-buy question for lifecycle messaging is asked constantly by SaaS teams and answered almost exclusively by vendors selling the buy side. The specific thing missing from those answers is an honest account of what the build actually contains after the first sprint.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-loops",
+    primaryQuery: "contact based pricing versus per send email costs",
+    secondaryQueries: [
+      "loops unlimited sends contact pricing explained",
+      "email tool for saas with a big free tier",
+      "dormant signups inflating email bill",
+      "one tool for product and marketing email",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The two pricing models are genuinely opposite and the crossover point depends entirely on a ratio — sends per contact — that no vendor calculator asks you for. A page that names the ratio is more useful than either pricing page.",
+  },
+  {
+    route: "/versus/brevo-vs-resend",
+    primaryQuery: "marketing suite or developer email api for a startup",
+    secondaryQueries: [
+      "brevo transactional api developer experience",
+      "resend broadcasts versus a real marketing tool",
+      "eu based email platform for gdpr",
+      "does resend charge for marketing contacts",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "European startups evaluate these two together because one is the default EU answer and the other is the default developer answer. Neither vendor's material acknowledges the other's category, so the comparison a buyer needs does not exist on either site.",
+  },
+  {
+    route: "/versus/customer-io-vs-resend",
+    primaryQuery: "do i need a messaging platform or just a send api",
+    secondaryQueries: [
+      "resend for onboarding sequences",
+      "customer.io versus sending email from your own code",
+      "when to move lifecycle email off an api",
+      "cost of a messaging platform for a small saas",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Teams reach this comparison at the moment their onboarding email stops being one message, which is a specific and recurring decision point. Every article about it is published by a platform vendor, so the honest version of when you do not need one is unwritten.",
+  },
+  {
+    route: "/versus/klaviyo-vs-resend",
+    primaryQuery: "cut ecommerce email costs by moving to an api",
+    secondaryQueries: [
+      "resend for shopify transactional email",
+      "klaviyo profile billing keeps increasing",
+      "what you lose leaving an ecommerce marketing platform",
+      "send order confirmations without a marketing tool",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "This search comes from a merchant looking at a Klaviyo invoice, and every available answer is from a competing marketing platform proposing a like-for-like swap. Nobody explains which half of the bill can actually move to a send API and which half cannot.",
+  },
+  {
+    route: "/versus/amazon-ses-vs-mailersend",
+    primaryQuery: "email api with a template editor for non developers",
+    secondaryQueries: [
+      "mailersend starter versus professional plan difference",
+      "who edits transactional email templates",
+      "aws ses template api limitations",
+      "multi brand transactional email for an agency",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The decision here is organisational rather than technical — whether a person without commit access needs to change an email — and it is not a decision either vendor's pricing page is organised around, so the comparison has to be written from the outside.",
+  },
   // END GENERATED VERSUS INTENT
 ];
 
