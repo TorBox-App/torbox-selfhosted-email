@@ -66,6 +66,46 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
+    version: "CDK v0.3.1 & Pulumi v0.4.1",
+    date: "September 2026",
+    icon: Blocks,
+    title: "Type Declarations That Resolve",
+    items: [
+      <>
+        The declarations <Code>@wraps.dev/cdk</Code> and{" "}
+        <Code>@wraps.dev/pulumi</Code> publish no longer import{" "}
+        <Code>@wraps/core</Code>. Installing either package into a TypeScript
+        project failed with{" "}
+        <Code>Cannot find module &apos;@wraps/core&apos;</Code> in{" "}
+        <Code>index.d.ts</Code>: the build inlined core&rsquo;s JavaScript but
+        left its types referenced by name, and <Code>@wraps/core</Code> is not
+        published to npm. Every type routed through it —{" "}
+        <Code>EventsConfig</Code>, <Code>SMTPConfig</Code>,{" "}
+        <Code>ArchivingConfig</Code>, <Code>retentionToDays</Code> — failed to
+        resolve with it
+      </>,
+      <>
+        Running code was never affected. Core was already bundled into the
+        published JavaScript, so imports and <Code>require()</Code> resolved
+        normally; the gap was confined to typechecking
+      </>,
+    ],
+  },
+  {
+    version: "CLI v3.11.2",
+    date: "September 2026",
+    icon: Wrench,
+    title: "Support Link Points Somewhere",
+    items: [
+      <>
+        <Code>wraps support</Code> prints a GitHub issues link under{" "}
+        <Code>wraps-team</Code>, the organization the repository lives in. It
+        pointed at a <Code>wraps-dev</Code> organization that returns a 404, so
+        the link was dead
+      </>,
+    ],
+  },
+  {
     version: "CLI v3.11.1",
     date: "September 2026",
     icon: Wrench,
