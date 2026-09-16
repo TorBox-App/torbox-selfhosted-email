@@ -566,6 +566,18 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     rationale:
       'An interactive builder is a different intent than the spf-guide blog post\'s explainer of the 10-lookup limit — one is "help me build this," the other is "help me understand this," and both currently rank for overlapping but distinct queries.',
   },
+  {
+    route: "/tools/ses-production-access",
+    primaryQuery: "ses production access request template",
+    secondaryQueries: [
+      "ses production access denied",
+      "what to write in ses production access request",
+      "appeal aws ses sandbox denial",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      'The sandbox guide explains the process; this is the artifact you send, and nothing else on the web generates one. Someone typing this has already read an explainer and wants text they can paste into a support case, which is a different intent from the guide\'s "get out of aws ses sandbox".',
+  },
 
   // --- Migrate ---
   {

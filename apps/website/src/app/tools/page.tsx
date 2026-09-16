@@ -135,6 +135,29 @@ export default function ToolsPage() {
               </Card>
             </div>
 
+            {/* Production access CTA */}
+            <Card className="mt-8 border-border bg-card">
+              <CardContent className="pt-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <div className="flex-1">
+                    <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">
+                      Stuck in the SES sandbox
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Build the production access request that answers the four
+                      questions the AWS form never asks — or paste a denial and
+                      find out which one you missed.
+                    </p>
+                  </div>
+                  <Button asChild size="lg" variant="brand">
+                    <Link href="/tools/ses-production-access">
+                      Open Request Builder
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Cost Calculator CTA */}
             <Card className="mt-8 border-border bg-card">
               <CardContent className="pt-6">

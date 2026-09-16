@@ -72,6 +72,12 @@ const READING: { href: string; label: string; blurb: string }[] = [
       "DKIM, SPF and DMARC records, and how SES decides a domain is ready.",
   },
   {
+    href: "/tools/ses-production-access",
+    label: "Production access request builder",
+    blurb:
+      "Six answers in, the support-case text out — or paste a denial and see which gap it names.",
+  },
+  {
     href: "/tools/ses-calculator",
     label: "SES cost calculator",
     blurb: "What a given volume costs at AWS pricing, with nothing added on.",

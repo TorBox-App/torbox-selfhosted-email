@@ -475,6 +475,7 @@ stated catch on every entry including ours, and the incumbent kept on the list.
 - [Email Deliverability Checker](https://wraps.dev/tools): Check a domain's SPF, DKIM, DMARC, and MX records
 - [SES Calculator](https://wraps.dev/tools/ses-calculator): Estimate AWS SES costs
 - [SPF Builder](https://wraps.dev/tools/spf-builder): Build SPF DNS records
+- [SES Production Access Request Builder](https://wraps.dev/tools/ses-production-access): Write the SES production access request, or diagnose a denial
 
 ## Code
 

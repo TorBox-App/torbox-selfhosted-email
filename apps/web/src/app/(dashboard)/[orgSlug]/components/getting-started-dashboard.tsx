@@ -1498,6 +1498,21 @@ export function GettingStartedDashboard({
                               </a>{" "}
                               (usually approved in ~24h) to email anyone.
                             </p>
+                            <p>
+                              Requests get declined when they cannot say how
+                              recipients opted in or what happens to a bounce.
+                              Our{" "}
+                              <a
+                                className="font-medium underline underline-offset-4"
+                                href="https://wraps.dev/tools/ses-production-access"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                request builder
+                              </a>{" "}
+                              writes that text for you, and diagnoses a denial
+                              if you already have one.
+                            </p>
                             <p className="font-medium">
                               Meanwhile, send yourself a test below — it works
                               in sandbox right now.

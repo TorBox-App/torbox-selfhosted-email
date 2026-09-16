@@ -21,6 +21,7 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+import { SES_DENIAL_GAPS } from "@/lib/ses-production-access";
 
 const cliCommand = `aws sesv2 put-account-details \\
   --production-access-enabled \\
@@ -429,41 +430,15 @@ export default function ProductionAccessPageContent() {
           little. Denied requests usually share one of these gaps:
         </p>
         <ul className="mb-6 space-y-3">
-          <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">No verified domain</strong> —
-              A request from an account that has only verified a single email
-              address gives AWS nothing to check
-            </span>
-          </li>
-          <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">
-                The website does not explain the mail
-              </strong>{" "}
-              — A parked domain, a landing page with no signup form, or a URL
-              that does not match the sending domain
-            </span>
-          </li>
-          <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">No opt-in story</strong> —
-              Nothing in the request says how recipients ended up on the list
-            </span>
-          </li>
-          <li className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">
-                No bounce or complaint handling
-              </strong>{" "}
-              — The acknowledgement box says you have a process. AWS wants to
-              know what it is
-            </span>
-          </li>
+          {SES_DENIAL_GAPS.map((gap) => (
+            <li className="flex items-start gap-3" key={gap.id}>
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+              <span className="text-muted-foreground">
+                <strong className="text-foreground">{gap.title}</strong> —{" "}
+                {gap.summary}
+              </span>
+            </li>
+          ))}
           <li className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <span className="text-muted-foreground">
@@ -473,6 +448,23 @@ export default function ProductionAccessPageContent() {
             </span>
           </li>
         </ul>
+        <div className="mb-6 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">
+            Paste the denial into the request builder
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            The{" "}
+            <Link
+              className="font-medium text-primary underline"
+              href="/tools/ses-production-access"
+            >
+              SES production access request builder
+            </Link>{" "}
+            matches a denial against these same gaps and drafts the reply for
+            the support case. It runs in your browser — the text you paste is
+            not uploaded anywhere.
+          </p>
+        </div>
         <h3 className="mb-2 font-medium text-lg">What to put in the reply</h3>
         <p className="mb-4 text-muted-foreground">
           Answer the questions the form never asked. Reply on the support case

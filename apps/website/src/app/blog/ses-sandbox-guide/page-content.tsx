@@ -1149,6 +1149,19 @@ export default function SandboxGuideContent() {
           </InfoCard>
 
           <DenialRecoveryFlow />
+
+          <p className="mt-6 text-muted-foreground">
+            Paste the denial into the{" "}
+            <Link
+              className="text-primary underline underline-offset-2"
+              href="/tools/ses-production-access"
+            >
+              SES production access request builder
+            </Link>{" "}
+            and it will tell you which of the four gaps the refusal points at
+            and draft the reply for the support case. It runs in your browser;
+            the denial text is not uploaded anywhere.
+          </p>
         </section>
 
         {/* Common Mistakes */}
