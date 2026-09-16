@@ -20,6 +20,7 @@ import { CheckCircle2, Inbox, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { approveSend, listApprovals, rejectSend } from "@/actions/agents";
+import { AgentApprovalDetailSheet } from "@/components/agent-approval-detail-sheet";
 import { Button } from "@/components/ui/button";
 import type { AgentApprovalStatus, ApprovalWithMeta } from "@/lib/agents";
 
@@ -37,7 +38,7 @@ const STATUS_ORDER: Record<AgentApprovalStatus, number> = {
   REJECTED: 4,
 };
 
-function statusBadge(status: AgentApprovalStatus) {
+export function statusBadge(status: AgentApprovalStatus) {
   switch (status) {
     case "PENDING":
       return <Badge variant="secondary">Pending</Badge>;
@@ -69,6 +70,7 @@ export function AgentApprovalQueue({
   const [approvals, setApprovals] = useState<ApprovalWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ApprovalWithMeta | null>(null);
 
   const canManage = userRole === "owner" || userRole === "admin";
 
@@ -132,6 +134,7 @@ export function AgentApprovalQueue({
           prev.map((a) => (a.id === approval.id ? result.approval : a))
         )
       );
+      setSelected(null);
     } else {
       // A rejected approval, a lost concurrency race, or a FAILED send: surface
       // the reason and re-sync the queue so the row shows its true state
@@ -177,9 +180,7 @@ export function AgentApprovalQueue({
                   <TableHead>Send</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
-                  {canManage && (
-                    <TableHead className="text-right">Actions</TableHead>
-                  )}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -213,39 +214,15 @@ export function AgentApprovalQueue({
                       {approval.reason || "—"}
                     </TableCell>
                     <TableCell>{statusBadge(approval.status)}</TableCell>
-                    {canManage && (
-                      <TableCell className="text-right">
-                        {approval.status === "PENDING" ? (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              disabled={pendingId === approval.id}
-                              onClick={() => handleDecision(approval, "reject")}
-                              size="sm"
-                              variant="outline"
-                            >
-                              Reject
-                            </Button>
-                            <Button
-                              disabled={pendingId === approval.id}
-                              onClick={() =>
-                                handleDecision(approval, "approve")
-                              }
-                              size="sm"
-                            >
-                              {pendingId === approval.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Approve"
-                              )}
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                    )}
+                    <TableCell className="text-right">
+                      <Button
+                        onClick={() => setSelected(approval)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Review
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -253,6 +230,16 @@ export function AgentApprovalQueue({
           </div>
         )}
       </CardContent>
+      <AgentApprovalDetailSheet
+        approval={selected}
+        canManage={canManage}
+        onDecision={handleDecision}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setSelected(null);
+        }}
+        open={selected !== null}
+        pending={pendingId === selected?.id}
+      />
     </Card>
   );
 }
