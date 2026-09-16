@@ -64,6 +64,22 @@ const Code = ({ children }: { children: ReactNode }) => (
   </code>
 );
 
+/**
+ * A pill reads `v3.11.2` for a semver release and `Agent-Ready Platform` for a
+ * named one. Testing for the letter `v` rendered `vWebsite` and
+ * `vWorkflow Engine` on the live page; testing for `v` followed by a digit
+ * tells a version from a product name, and a bare number still gets its `v`.
+ */
+const VERSION_NUMBER = /\bv\d/;
+const BARE_NUMBER = /^\d/;
+
+const pillLabel = (version: string): string => {
+  if (VERSION_NUMBER.test(version)) {
+    return version;
+  }
+  return BARE_NUMBER.test(version) ? `v${version}` : version;
+};
+
 const releases: Release[] = [
   {
     version: "CDK v0.3.1 & Pulumi v0.4.1",
@@ -1982,9 +1998,7 @@ export function ChangelogReleasesSection() {
                       <div className="border-border border-b bg-muted/30 px-6 py-4">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="rounded-full bg-foreground px-3 py-1 font-mono font-semibold text-background text-sm">
-                            {release.version.includes("v")
-                              ? release.version
-                              : `v${release.version}`}
+                            {pillLabel(release.version)}
                           </span>
                           <span className="text-muted-foreground text-sm">
                             {release.date}
