@@ -64,7 +64,6 @@ describe("every versus page carries enough substance to be worth publishing", ()
       expect(page.dimensions.length).toBeGreaterThanOrEqual(4);
       expect(page.pickA.length).toBeGreaterThanOrEqual(3);
       expect(page.pickB.length).toBeGreaterThanOrEqual(3);
-      expect(page.faqs.length).toBeGreaterThanOrEqual(4);
     }
   );
 
@@ -88,40 +87,28 @@ describe("every versus page carries enough substance to be worth publishing", ()
   );
 
   it.each(cases)(
-    "%s: clears the house minimum of roughly 1,800 words",
+    "%s: clears the house minimum of 3,000 words",
     (_slug, page) => {
-      // /alternatives/resend is ~2,700 words and /compare/resend-vs-wraps
-      // ~3,500. Below about 1,800 a comparison page is not competitive for
-      // the query it targets and should not have been written.
-      expect(wordCount(pageProse(page))).toBeGreaterThanOrEqual(1800);
+      // Raised from 1,800 when the depth pass of plan 344 completed. The
+      // competing format in this category runs 4,300-4,900 words per page;
+      // below 3,000 a comparison page is not competitive for the query it
+      // targets and should not have been written. Lowering this floor to let
+      // a thin page through is how the corpus regresses.
+      expect(wordCount(pageProse(page))).toBeGreaterThanOrEqual(3000);
     }
   );
 });
 
-describe("the deepened sections are either absent or real", () => {
-  // The depth pass lands ~10 pages at a time, so these fields are optional
-  // while it is mid-flight. Optional must not mean unchecked: a page that
-  // carries one of them carries a written one, at the shape the renderer
-  // expects. The final run of the pass makes all six required and raises the
-  // word floor, at which point "absent" stops being a legal state.
-
-  it.each(cases)(
-    "%s: brings all four pros/cons arrays or none of them",
-    (_slug, page) => {
-      const present = [page.prosA, page.consA, page.prosB, page.consB].filter(
-        Boolean
-      ).length;
-      expect([0, 4]).toContain(present);
-    }
-  );
+describe("the deepened sections are present and real on every page", () => {
+  // These fields were optional while the depth pass landed ten pages at a
+  // time. All fifty pages now carry them, the type makes them required, and
+  // these assertions are unconditional — "absent" is no longer a legal state
+  // and a new pair arrives at full depth or does not arrive.
 
   it.each(cases)(
     "%s: writes three or four of each, not stubs",
     (_slug, page) => {
       for (const list of [page.prosA, page.consA, page.prosB, page.consB]) {
-        if (!list) {
-          continue;
-        }
         expect(list.length).toBeGreaterThanOrEqual(3);
         expect(list.length).toBeLessThanOrEqual(4);
         expect(new Set(list).size).toBe(list.length);
@@ -134,11 +121,8 @@ describe("the deepened sections are either absent or real", () => {
   );
 
   it.each(cases)(
-    "%s: gives the migration checklist real steps when it has one",
+    "%s: gives the migration checklist real steps",
     (_slug, page) => {
-      if (!page.migrationChecklist) {
-        return;
-      }
       expect(page.migrationChecklist.length).toBeGreaterThanOrEqual(5);
       expect(page.migrationChecklist.length).toBeLessThanOrEqual(9);
       expect(new Set(page.migrationChecklist).size).toBe(
@@ -155,9 +139,6 @@ describe("the deepened sections are either absent or real", () => {
   it.each(cases)(
     "%s: asks buying questions that are questions",
     (_slug, page) => {
-      if (!page.buyingQuestions) {
-        return;
-      }
       expect(page.buyingQuestions.length).toBeGreaterThanOrEqual(5);
       expect(page.buyingQuestions.length).toBeLessThanOrEqual(8);
       expect(new Set(page.buyingQuestions).size).toBe(
@@ -171,18 +152,35 @@ describe("the deepened sections are either absent or real", () => {
     }
   );
 
+  it.each(cases)("%s: answers eight or more questions", (_slug, page) => {
+    // The long-tail capture is the FAQ, which is why the floor moved from
+    // four to eight when the pass completed.
+    expect(page.faqs.length).toBeGreaterThanOrEqual(8);
+    expect(page.faqs.length).toBeLessThanOrEqual(12);
+  });
+
+  it.each(cases)(
+    "%s: declares six or more secondary queries",
+    (_slug, page) => {
+      expect(page.search.secondaryQueries.length).toBeGreaterThanOrEqual(6);
+      expect(new Set(page.search.secondaryQueries).size).toBe(
+        page.search.secondaryQueries.length
+      );
+    }
+  );
+
   it("keeps no deepened line identical across two pages", () => {
     // A pros bullet or a checklist step that appears verbatim on a sibling is
     // the templating failure this whole pass is meant to avoid, and it is
     // cheaper to catch here than in the shingle guard, which only notices once
     // enough of them accumulate.
     const lines = VERSUS_PAGES.flatMap((page) => [
-      ...(page.prosA ?? []),
-      ...(page.consA ?? []),
-      ...(page.prosB ?? []),
-      ...(page.consB ?? []),
-      ...(page.migrationChecklist ?? []),
-      ...(page.buyingQuestions ?? []),
+      ...page.prosA,
+      ...page.consA,
+      ...page.prosB,
+      ...page.consB,
+      ...page.migrationChecklist,
+      ...page.buyingQuestions,
     ]);
     const seen = new Set<string>();
     const duplicated = lines.filter((line) => {
@@ -348,12 +346,12 @@ function pageProse(page: {
   dimensions: readonly { heading: string; a: string; b: string }[];
   pickA: readonly string[];
   pickB: readonly string[];
-  prosA?: readonly string[];
-  consA?: readonly string[];
-  prosB?: readonly string[];
-  consB?: readonly string[];
-  migrationChecklist?: readonly string[];
-  buyingQuestions?: readonly string[];
+  prosA: readonly string[];
+  consA: readonly string[];
+  prosB: readonly string[];
+  consB: readonly string[];
+  migrationChecklist: readonly string[];
+  buyingQuestions: readonly string[];
   thirdOption?: string;
   faqs: readonly { question: string; answer: string }[];
 }): string {
@@ -374,12 +372,12 @@ function pageProse(page: {
     ...page.dimensions.flatMap((d) => [d.heading, d.a, d.b]),
     ...page.pickA,
     ...page.pickB,
-    ...(page.prosA ?? []),
-    ...(page.consA ?? []),
-    ...(page.prosB ?? []),
-    ...(page.consB ?? []),
-    ...(page.migrationChecklist ?? []),
-    ...(page.buyingQuestions ?? []),
+    ...page.prosA,
+    ...page.consA,
+    ...page.prosB,
+    ...page.consB,
+    ...page.migrationChecklist,
+    ...page.buyingQuestions,
     page.thirdOption ?? "",
     ...page.faqs.flatMap((faq) => [faq.question, faq.answer]),
   ].join("\n\n");

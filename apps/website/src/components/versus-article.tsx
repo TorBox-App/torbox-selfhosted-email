@@ -212,10 +212,6 @@ function ProsAndCons({
   page: VersusPage;
 }) {
   const { prosA, consA, prosB, consB } = page;
-  if (!(prosA && consA && prosB && consB)) {
-    return null;
-  }
-
   const columns = [
     { vendor: a, pros: prosA, cons: consA },
     { vendor: b, pros: prosB, cons: consB },
@@ -256,10 +252,7 @@ function ProsAndCons({
   );
 }
 
-function MigrationChecklist({ items }: { items?: readonly string[] }) {
-  if (!items?.length) {
-    return null;
-  }
+function MigrationChecklist({ items }: { items: readonly string[] }) {
   return (
     <section aria-labelledby="migration" className="mt-12">
       <h2
@@ -281,10 +274,7 @@ function MigrationChecklist({ items }: { items?: readonly string[] }) {
   );
 }
 
-function BuyingQuestions({ items }: { items?: readonly string[] }) {
-  if (!items?.length) {
-    return null;
-  }
+function BuyingQuestions({ items }: { items: readonly string[] }) {
   return (
     <section aria-labelledby="buying-questions" className="mt-12">
       <h2

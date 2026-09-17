@@ -1211,6 +1211,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "in app notification inbox build or buy",
       "user notification preference centre off the shelf",
       "notification orchestration layer pricing",
+      "batching notifications into a digest window",
+      "notification failover when a provider is down",
+      "giving a third party our email provider api key",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1224,6 +1227,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "how many inboxes can i create over an api",
       "email address per agent instead of per user",
       "receive and reply to email from code",
+      "outbound sending limit on a test inbox provider",
+      "how to thread an email reply correctly from code",
+      "how long does an api inbox keep messages",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1237,6 +1243,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "google oauth verification for email scopes timeline",
       "agent sending email on behalf of a user",
       "unified email api versus hosted agent inbox",
+      "what does a casa security assessment involve",
+      "handling a revoked oauth token for a mailbox integration",
+      "why is the first mailbox sync so slow",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1250,6 +1259,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "assert on a one time code sent by email",
       "end to end test for signup email verification",
       "fake smtp server for integration tests",
+      "stop a staging deploy sending real email",
+      "how many emails does a test suite generate",
+      "should a test assert on rendered email html",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1279,6 +1291,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "prepaid email credits that expire",
       "low cost email api without an aws account",
       "email api under a cent per message",
+      "is a re-engagement email transactional or marketing",
+      "what happens when prepaid email credits run out",
+      "email provider support hours for a small team",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1293,6 +1308,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "email api with inbound inboxes included",
       "is a new email provider safe to rely on",
       "flat rate transactional email pricing",
+      "email plan limited by number of domains not volume",
+      "what is the overage rate on an email plan",
+      "migrating inbound email addresses to another provider",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1339,6 +1357,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "eu hosted transactional email api",
       "scaleway transactional email review",
       "european alternative to sendgrid and mailgun",
+      "how to read a subprocessor list for a residency requirement",
+      "building an unsubscribe endpoint against a bare sending api",
+      "dedicated sending address on a european email provider",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1352,6 +1373,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "who should own notification logic engineering or marketing",
       "in app notification feed with preferences",
       "notification system billed per profile or per send",
+      "idempotency key for notifications from a queue",
+      "cost of building an in app notification feed",
+      "which system owns notification preferences",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1783,6 +1807,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "brevo automation is on the higher tier",
       "eu email marketing platform for saas",
       "removing the vendor logo from marketing emails",
+      "do unsubscribed contacts count toward a contact priced plan",
+      "daily sending limit under a free email tier",
+      "moving sms sender registrations between providers",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1796,6 +1823,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "when is a behavioural messaging platform worth it",
       "eu data residency for a messaging platform",
       "brevo automation versus a real journey builder",
+      "customer.io monthly minimum for a small company",
+      "can a customer.io data region be changed later",
+      "frequency capping on a behavioural messaging platform",
     ],
     audience: "stranger-with-problem",
     rationale:

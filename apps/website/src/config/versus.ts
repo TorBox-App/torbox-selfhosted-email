@@ -99,28 +99,33 @@ export type VersusPage = {
    * more often than it pulls prose, which is the reason they are separate
    * fields rather than another dimension.
    *
-   * Optional only while the depth pass is mid-flight. All four arrive together
-   * or none of them do, and the final run of that pass makes them required.
+   * Required. These were optional while the depth pass of plan 344 ran ten
+   * pages at a time; the final run of that pass made them mandatory, because
+   * an optional field left optional is how half a corpus quietly stays
+   * shallow. A new pair carries them from its first commit.
    */
-  prosA?: readonly string[];
-  consA?: readonly string[];
-  prosB?: readonly string[];
-  consB?: readonly string[];
+  prosA: readonly string[];
+  consA: readonly string[];
+  prosB: readonly string[];
+  consB: readonly string[];
   /**
    * What actually moves when you switch between these two, in the order you
    * would do it. Five to nine items naming real artefacts on both sides —
    * a suppression list, a template syntax, a webhook payload shape, an IP that
    * does not travel. A generic checklist pasted across pairs is exactly what
-   * the shingle guard exists to reject, so write it per pair or omit it.
+   * the shingle guard exists to reject, so write it per pair.
+   *
+   * Required. A pair that cannot sustain one is a pair too similar to be worth
+   * a page, which is a reason to drop the pair rather than the section.
    */
-  migrationChecklist?: readonly string[];
+  migrationChecklist: readonly string[];
   /**
    * Five to eight questions to put to a sales rep or find the answer to in the
    * docs, aimed at this pair's real failure modes rather than at a feature
-   * grid. Optional until the depth pass completes.
+   * grid. Required.
    */
-  buyingQuestions?: readonly string[];
-  /** Four to six, unique to this pair. Eight to ten once deepened. */
+  buyingQuestions: readonly string[];
+  /** Eight to ten, unique to this pair. */
   faqs: readonly VersusFaq[];
 };
 
@@ -1999,6 +2004,9 @@ const COURIER_VS_KNOCK: VersusPage = {
       "in app notification inbox build or buy",
       "user notification preference centre off the shelf",
       "notification orchestration layer pricing",
+      "batching notifications into a digest window",
+      "notification failover when a provider is down",
+      "giving a third party our email provider api key",
     ],
     rationale:
       "Teams reach this comparison after deciding to stop hand-rolling notification fan-out, which means they are evaluating a category rather than two products — and the category question, whether this layer is worth paying for at all, is one neither vendor's site will answer honestly.",
@@ -2064,6 +2072,49 @@ const COURIER_VS_KNOCK: VersusPage = {
     "Your preference requirements are granular enough that somebody will eventually ask you to prove what a user opted into.",
     "Notification volume is high enough that the platform fee is a small fraction of the total and the per-message rate is what matters.",
   ],
+  prosA: [
+    "There is no floor to clear, so a feature that notifies a few hundred times a month can adopt the layer without anybody approving a subscription.",
+    "A non-engineer can change wording in the designer, which for a team whose copy is edited more often than its logic removes a recurring interruption.",
+    "The line item scales straight with usage, so a quiet quarter is cheap and nobody is defending a fixed cost against a fall in traffic.",
+    "Because the providers underneath were always yours, leaving costs you the routing layer and touches neither your domain setup nor your reputation.",
+  ],
+  consA: [
+    "Some of your notification behaviour now lives where version control cannot see it, which is only tolerable if nobody will ever ask what it was last quarter.",
+    "Fanning one event across four channels costs four times one, which is a real incentive to route thoughtfully and an odd thing to have to think about.",
+    "The feed is one channel among several rather than the centre of the product, so a team shopping specifically for the bell icon is buying the lesser of the two.",
+    "The preference model covers the common case and is deliberately not a consent platform, which matters the first time somebody in legal asks a precise question.",
+  ],
+  prosB: [
+    "A workflow can be pulled down, committed, reviewed and promoted between environments, so notification behaviour is governed the way everything else you ship is.",
+    "Batch windows and keys are explicit steps you control per workflow rather than an option attached to a send, which is what you want when the edges matter.",
+    "The feed is a product in its own right, with seen and read state and components, which is the piece teams most reliably underestimate before building it.",
+    "Because the workflows already exist as files on your machine, the shape of your logic survives a change of supplier even though the runtime does not.",
+  ],
+  consB: [
+    "A substantial monthly fee falls due before the first notification, which is hard to justify for a product that has not yet decided this layer is permanent.",
+    "The preference model asks you to design a notification taxonomy on day one, and there is no way to defer that decision and tidy it later.",
+    "It is a larger surface to learn and to maintain, which is a poor trade for a team whose actual requirement was three reliable emails.",
+    "The fee and the metering sit on top of a delivery bill that continues to arrive separately, so one notification is genuinely two costs.",
+  ],
+  migrationChecklist: [
+    "Write down the exact digest behaviour you need at the boundary, because both products do digesting and the difference between them lives in the edges. What happens when the window closes while the person is looking at the screen? Does a late arrival extend the window or open a new one? What is the key that decides two events belong in the same digest, and what does the message say when the digest contains one item? Answer those four for your own case first, then evaluate against the answers rather than against a feature list.",
+    "Add the delivery bill to the orchestration bill before comparing anything, because neither pricing page will do it for you and the omission changes the ranking. An orchestration product naturally talks about orchestration; the messages still leave through a provider you pay separately, at that provider's rate, for every channel a workflow fans into. Build one number per notification — the layer plus every provider it touches — and then model it at the volume you expect in two years, which is where a fee and a meter cross over.",
+    "List the provider credentials you are about to hand across and decide what each one can do. A sending key that can despatch anything from your domain is a broader capability than the notification layer needs, and once it is stored at a third party the blast radius of a compromise there includes your outbound mail. Where the provider supports a scoped key, issue one. Where it does not, note the exposure somewhere a security reviewer will find it, and set a rotation date rather than trusting that somebody will think of it.",
+    "Define what failover means to you before treating it as a solved feature. Both layers retry and both can route to an alternative channel, and neither can tell the difference between a provider that returns an error and a provider that accepts a message and quietly discards it. The second failure is the one that actually hurts, and detecting it needs delivery telemetry you collect yourself and a threshold somebody watches. Buy the routing, keep the monitoring, and do not let the existence of a fallback path stand in for knowing whether mail is arriving.",
+    "Decide which of the two logs you trust before a customer makes you choose in a hurry. The layer records what it decided and what it handed over; the provider records what it accepted and what happened next. They will disagree, usually because one of them is recording an attempt and the other a result. Nominate the authoritative one per question — routing versus delivery — write that down beside the runbook, and make sure the identifiers in each are correlatable, because reconciling by timestamp and recipient at three in the morning is miserable.",
+    "Settle where the copy is allowed to change without a review, and be specific rather than principled about it. A hosted designer that a writer can edit is genuinely useful and genuinely means production behaviour can change with no record. The workable compromise is usually a boundary: wording is editable, routing and conditions are not. Whether your chosen product can express that boundary is a real question to ask during evaluation, and the answer is more interesting than whether it has a visual builder.",
+    "Adopt on one notification type rather than migrating everything, and decide in advance what would make you expand or stop. A single well-chosen case — the one with a digest requirement, or the one that already fans across two channels — exercises most of the layer and costs almost nothing to abandon. Set the criteria before you start, because a pilot without a stopping rule turns into a permanent second system by default, and a second system deciding independently what a user should be told is worse than either option on its own.",
+    "Check at adoption time, not at departure, how much of your logic would exist outside the supplier. A product whose workflows are files gives you an artefact you already have on disk, which means an exit costs you a runtime rather than a design. A product whose logic is configuration in a console gives you an export that is partial by nature. This is not an argument against the console — it is an argument for knowing which one you chose, and for keeping a written description of the behaviour if the tool will not keep one for you.",
+  ],
+  buyingQuestions: [
+    "When a digest window closes while the person is on the screen, what do we want to happen, and does this product do it?",
+    "What does one notification cost us once the provider's own charge is added to the layer's?",
+    "Which provider keys are we handing over, what can each of them do, and when do they rotate?",
+    "How would we find out that a provider accepted our message and then dropped it, given that no layer can tell us?",
+    "When the layer's log and the provider's log disagree, which one do we treat as the answer?",
+    "Can we let somebody edit the wording without letting them change the routing, and does the product support that line?",
+    "Which single notification are we piloting on, and what result would make us stop rather than expand?",
+  ],
   faqs: [
     {
       question: "Do I need a notification layer at all?",
@@ -2090,6 +2141,26 @@ const COURIER_VS_KNOCK: VersusPage = {
       answer:
         "Both retry and both support routing to an alternative channel or provider, which is one of the better arguments for the category. Read the specifics carefully, because the useful behaviour is not retrying — everything retries — it is whether a provider returning success while silently dropping mail counts as failure. Neither product can know that, which means your fallback strategy still depends on delivery telemetry you are collecting yourself.",
     },
+    {
+      question: "How do I choose a digest window without annoying people?",
+      answer:
+        "Start from what the reader is trying to avoid, not from a duration. Somebody who is mentioned nine times in a busy thread wants one message; somebody who is mentioned once wants it now. That argues for a short window with a collapse key on the conversation rather than a long window on the person, because the long window delays the single important notification in order to solve a problem that only exists in bursts. The second decision is what happens at the boundary, and it is the one that gets skipped: if a tenth mention arrives one second after the window closes, does it extend the digest or start a new one, and if the answer is start a new one, has the reader now received two messages about the same thread? Pick the behaviour deliberately, write the case into a test, and check the product can actually express it — because both of these can digest, and where they differ is exactly here.",
+    },
+    {
+      question: "Is it safe to give a third party my sending provider's key?",
+      answer:
+        "It is normal and it is not free, and the useful posture is to treat it as an exposure you have priced rather than a risk you have dismissed. A key that can send from your domain, in the hands of anyone who compromises the layer, can send anything from your domain — phishing that authenticates correctly, because it genuinely is you. The mitigations are ordinary. Issue a scoped key if your provider supports scoping, so the credential can send and nothing else. Give the layer its own key rather than sharing the one your application uses, so that revoking it does not take your product down with it. Set a rotation date at the moment you create it, because nobody ever rotates a credential they did not schedule. And note the arrangement where a security reviewer will find it, since the question of who holds keys to your sending identity is one that gets asked eventually and is much better answered from a list than from memory.",
+    },
+    {
+      question: "Should I pilot one notification or migrate all of them?",
+      answer:
+        "One, almost always, and with a stopping rule written down before you begin. Choose the case that exercises the most of the layer for the least risk — usually the one that already fans across two channels or already needs a digest — and leave everything else where it is. That gives you a real answer about the product within a fortnight, at a cost you can abandon. The discipline that is easy to skip is defining in advance what result would make you expand and what result would make you stop, because without it a pilot does not end; it simply becomes a second system, and two systems deciding independently what a user should be told will drift and will produce the duplicate nobody can explain. Put a date on the review, name who makes the call, and be prepared for the honest third outcome, which is that the layer is good and your requirement was smaller than the category.",
+    },
+    {
+      question: "Which of these is easier to leave?",
+      answer:
+        "The one whose workflows are already files on your machine, and the margin is larger than it sounds. Notification logic is not the hard part to rebuild in the abstract — it is a set of conditions, channels and templates — but it is very hard to rebuild accurately from memory eighteen months after somebody assembled it in a browser. A product with command-line tooling and environment promotion leaves you holding a description of the behaviour regardless of whether you keep paying, which turns an exit into a reimplementation against a specification instead of an archaeology exercise against a screen. The consolation on the other side is that neither product holds the thing that is genuinely expensive to move: the providers underneath were always yours, so your domain authentication, your sending reputation and your delivery history stay exactly where they are. Leaving an orchestration layer costs you orchestration. That is a much better position than leaving a platform that also sends.",
+    },
   ],
 };
 
@@ -2107,6 +2178,9 @@ const AGENTMAIL_VS_MAILSLURP: VersusPage = {
       "how many inboxes can i create over an api",
       "email address per agent instead of per user",
       "receive and reply to email from code",
+      "outbound sending limit on a test inbox provider",
+      "how to thread an email reply correctly from code",
+      "how long does an api inbox keep messages",
     ],
     rationale:
       "The agent-inbox category is new enough that search results are still dominated by test-automation tooling, so a buyer looking for a production sender of record for a fleet of agents is being shown products whose outbound allowance is measured in hundreds a month.",
@@ -2167,6 +2241,49 @@ const AGENTMAIL_VS_MAILSLURP: VersusPage = {
     "You create and destroy inboxes at high churn and want that to be unmetered rather than the thing your plan caps.",
     "You need a permanent inbox and a disposable one from the same API, because staging and CI have different lifetimes.",
   ],
+  prosA: [
+    "Threading is part of the model your code receives, so a reply keeps its context without anybody reassembling a conversation out of raw headers.",
+    "Being a legitimate sender is the supplier's concern as well as yours, which for correspondence a person will read is most of whether the thing works at all.",
+    "Outbound scales with the plan the way a mail vendor's does, so an agent that answers everything it receives is an anticipated shape rather than an overage.",
+    "An address is a durable identity, which is the right abstraction when the counterparty expects to write back next week and reach the same correspondent.",
+  ],
+  consA: [
+    "The surface is an HTTP interface and webhooks, so anything in your estate that only knows how to relay over SMTP needs an adapter somebody writes.",
+    "Lower tiers cap how many mailboxes may exist, which points in precisely the opposite direction from an architecture that spawns an address per task.",
+    "There is no published certification to hand a security reviewer, so that meeting becomes a conversation about intentions rather than a document exchange.",
+    "Both the company and the category are young, so the terms you signed and the roadmap you liked can each move inside a single year.",
+  ],
+  prosB: [
+    "Creating and destroying mailboxes is effectively unmetered above the free tier, which is the shape you want when every job in a queue deserves its own address.",
+    "Three protocols reach the same mailbox, which is unusually broad and is what lets the product cover work it was never designed to do.",
+    "The blocking wait-for-a-matching-message primitive is better developed here than anywhere else, and it is what makes an email test tolerable instead of flaky.",
+    "A permanent mailbox and a disposable one come from one API, which matters when a staging environment and a build runner have different lifetimes.",
+  ],
+  consB: [
+    "The monthly outbound allowance on the ordinary paid tier is counted in hundreds, which a fleet that answers customers will exhaust inside a week.",
+    "The model is centred on the message, so reassembling a conversation is your problem and so are the clients that mishandle the reference header.",
+    "Nothing about a platform built for disposable fixtures is making the durability promises a mail provider makes about a record you may need in a year.",
+    "You are a guest in somebody else's roadmap, so the capabilities you lean on for an unintended purpose stay exactly where they are while the intended ones improve.",
+  ],
+  migrationChecklist: [
+    "Count the outbound traffic your agents will actually produce, including the half nobody forecasts. An agent that answers what it receives roughly doubles its own volume, and one that follows up unprompted more than doubles it. Take your expected inbound, double it, add the scheduled nudges, and hold that number against the plan's monthly outbound figure rather than against its mailbox count. A product whose plan copy counts outbound in hundreds is telling you plainly what it expects of you, and the arithmetic takes five minutes.",
+    "Work out whether the plan meters mailboxes or messages, then hold that against the architecture you were going to build. One inbox per agent and one inbox per task are very different shapes, and the natural agent design — an address for every conversation, created on demand and kept for as long as the thread lives — collides head-on with a tier that caps how many may exist. Decide the architecture first and pick the meter that matches it, because bending the design to fit a price band is a decision you will be living with in eighteen months.",
+    "Put the agents on a domain you control before the first message leaves, because that is what makes everything afterwards recoverable. Addresses on a supplier's domain are borrowed: the counterparty's reply routes somewhere you do not own, the signature you have been building is somebody else's asset, and a change of supplier invalidates every address a customer has saved. Authenticate your own domain, delegate a subdomain to the agents, and treat the supplier as a thing that sends on your behalf rather than as the place your identity lives.",
+    "Decide how correct threading needs to be, then find out who implements it. Placing a reply inside the right conversation means echoing the identifier of the message being answered, carrying the chain of prior identifiers, and coping with the clients that truncate or reorder that chain — and a surprising number do. One side hands you a conversation object and absorbs the work. The other hands you the headers and your good luck. It is the difference between a coherent exchange and unrelated messages sharing a subject.",
+    "Find out what retention you are getting and start copying anything durable out as it arrives. A platform built around fixtures tunes storage for a build artefact, and a platform built around agents is young enough that its policy may not have been tested by anybody asking for a message from last spring. Either way, correspondence with a customer is a business record, and the wrong place for it is a tool whose retention you do not control. Write the copy into the webhook handler on day one; retrofitting the months you did not keep is impossible.",
+    "Inventory what in your stack is capable of speaking only one protocol, because that single fact can decide this. A legacy connector that relays over SMTP, an off-the-shelf tool that wants IMAP credentials, or a support person who simply wants to point a mail client at the mailbox and look at it are all trivially satisfied by one of these products and an adapter project on the other. Make the list before the evaluation rather than during the integration, since the item that catches teams out is never the main application.",
+    "Plan the sending posture as though a mailbox provider is watching, because one is. What gets automated correspondence blocked is not that a machine composed it — it is unauthenticated mail from a brand-new identity arriving at a rate no human exchange would produce, aimed at people who did not ask. Authenticate the domain, keep outbound roughly proportionate to what comes back, ramp a new address over weeks rather than hours, and make sure a person who replies asking for a human actually reaches one. Those four habits matter more than any feature on either side.",
+    "Prepare the answers a security review will want, since this is the question that stalls agent projects with real customers. Where is the mail stored, in which jurisdiction, who at the supplier is able to read it, how long is it kept, and what certification backs any of that. A young supplier may have honest answers that are thinner than an enterprise buyer accepts, and a testing platform may never have been asked. Get the answers in writing during the trial, because finding out during a procurement review means the project waits on a document that was never going to be produced quickly.",
+  ],
+  buyingQuestions: [
+    "If every agent answers what it receives, what is our real monthly outbound, and where does that sit against the plan?",
+    "Does the tier cap how many mailboxes exist or how many messages pass through them, and which matches the architecture we drew?",
+    "Are the agents sending from a domain we own, so that a change of supplier does not invalidate every address a customer has saved?",
+    "Who implements threading if the product does not, and has that person looked at how a real client mangles the reference chain?",
+    "How long are messages kept, and are we copying anything we might need next year into storage we control?",
+    "What in our estate can only speak SMTP or IMAP, and would we be writing an adapter for it?",
+    "Where is this mail stored, who at the supplier can read it, and can we have that in writing before the security review?",
+  ],
   faqs: [
     {
       question: "Can I use a test-automation inbox service in production?",
@@ -2194,6 +2311,26 @@ const AGENTMAIL_VS_MAILSLURP: VersusPage = {
       answer:
         "For one agent, yes, and it is a perfectly reasonable place to start — a real mailbox at a provider you already pay, polled over IMAP. It stops working at about the point you want the tenth one, because provisioning becomes a manual step, the polling model gets expensive in latency, and consumer mailbox providers actively rate-limit automated access. The API products exist because that curve is steeper than it looks from the first agent.",
     },
+    {
+      question: "How much outbound will a fleet of agents actually generate?",
+      answer:
+        "Considerably more than the inbound figure people start from, and the multiplier is worth calculating before you choose a plan. An agent that replies to what it receives at least doubles the traffic of the conversation it is in. An agent that follows up when nobody answers adds a second message per thread that went quiet, which in practice is most of them. An agent that confirms, summarises or acknowledges adds a third. A realistic rule is to take your expected inbound volume, multiply it by two and a half, and treat that as the floor rather than the estimate. Then hold it against the outbound allowance on the tier you were considering, not against the mailbox count, because the mailbox count is the number that looks generous and the outbound number is the one that stops you. A product whose paid tier counts outbound in the hundreds per month is not being stingy — it is accurately describing a workload where inboxes receive constantly and send almost never, which is the opposite of what a fleet of conversational agents does.",
+    },
+    {
+      question: "Why is threading harder than reading a header?",
+      answer:
+        "Because the header is a chain rather than a pointer, and the chain is maintained by clients of wildly varying quality. Correctly placing a reply means echoing the identifier of the message you are answering and carrying forward the accumulated list of everything before it, so that the recipient's client can rebuild the conversation. Some clients truncate that list when it grows. Some rewrite the identifier entirely. Some forward a message in a way that breaks the link deliberately. Mailing lists rewrite both. So a naive implementation works perfectly in your own tests, works against the two clients you checked, and then produces an agent that appears to start a fresh conversation every time it answers somebody using an unusual mail application — which reads to that person as a system that is not paying attention. A product that models the conversation for you has absorbed this; one that hands you the raw headers has not. It is a fine thing to own if you know you are owning it, and a genuinely unpleasant surprise to discover in week three.",
+    },
+    {
+      question: "How long do these keep my messages?",
+      answer:
+        "Long enough for the use case each was designed for, which may be nothing like long enough for yours. A platform built for test automation is storing what is effectively a build artefact: interesting for minutes, occasionally for days, and of no value once the assertion has passed. A platform built for agent correspondence has a stronger reason to keep things and is usually young enough that its retention policy has not yet been stress-tested by somebody asking for a thread from eleven months ago. The right posture is the same either way and it costs almost nothing at the start: treat the supplier as transport rather than as an archive, and write every inbound and outbound message into storage you control as it arrives, from the webhook handler you were building anyway. Correspondence with a customer is a business record, sometimes a legal one, and the moment you need a message from last spring is invariably the moment you discover what the retention window really was.",
+    },
+    {
+      question: "Should agents send from my domain or the vendor's?",
+      answer:
+        "Yours, and this is the one decision on this page that is much cheaper to make at the beginning than at any later point. An address on a supplier's domain is borrowed in every sense: the reputation you accumulate belongs to them, the replies route through infrastructure you do not control, and the address a customer has saved in their contacts stops working on the day you change supplier. An address on a subdomain you own inverts all three. The reputation is yours to build and yours to keep, the authentication records are in your own zone, and a change of supplier is a configuration change rather than a mass notification to everybody you have ever corresponded with. The extra work is small — delegate a subdomain, publish the authentication records the supplier asks for, and ramp the volume over a few weeks rather than starting at full rate. The alternative is a fleet of agents whose identity is a line item on somebody else's invoice, which is a strange place to have put the thing your customers reply to.",
+    },
   ],
 };
 
@@ -2211,6 +2348,9 @@ const AGENTMAIL_VS_NYLAS: VersusPage = {
       "google oauth verification for email scopes timeline",
       "agent sending email on behalf of a user",
       "unified email api versus hosted agent inbox",
+      "what does a casa security assessment involve",
+      "handling a revoked oauth token for a mailbox integration",
+      "why is the first mailbox sync so slow",
     ],
     rationale:
       "This is an architecture decision disguised as a vendor comparison, and the expensive part — a third-party security review of your Gmail scopes, on Google's schedule — appears in neither vendor's marketing and routinely slips launch dates by months.",
@@ -2276,6 +2416,49 @@ const AGENTMAIL_VS_NYLAS: VersusPage = {
     "Users need to see the agent's work in their own sent folder, because that visibility is what makes them trust it.",
     "You are prepared to fund and schedule the verification work that reading a user's mailbox requires.",
   ],
+  prosA: [
+    "Nothing outside your own company gates the launch, so the gap between deciding to build this and sending the first message is measured in hours.",
+    "The person being helped authorises nothing, installs nothing and understands nothing, which removes an entire screen from the flow where activation is decided.",
+    "Failures happen inside systems you or your supplier operate, so a diagnosis is a matter of reading logs rather than guessing at somebody else's policy change.",
+    "Cost tracks how many agents exist and how much they send, which is a curve you can shorten by consolidating agents rather than by persuading users.",
+  ],
+  consA: [
+    "The agent begins knowing nothing, so every piece of context it needs about a customer has to be fed from a system you already maintain.",
+    "Scheduling anything means a separate calendar integration with its own authorisation, its own failure modes and its own place in your architecture.",
+    "A recipient can see they are corresponding with software, which is honest and is occasionally the opposite of what the buyer was hoping for.",
+    "A security reviewer gets a conversation rather than a certificate, because the supplier is young enough not to have one to hand over.",
+  ],
+  prosB: [
+    "Years of the user's own correspondence are available to the assistant, which is the whole feature and is not something the other model can approximate.",
+    "The work appears in the user's own sent folder and threads, so trust is built by visibility rather than by a report the product generates about itself.",
+    "Calendar and contacts arrive on the same authorisation, which for an assistant whose job is arranging things between people is most of the value.",
+    "The assistant acts as the person it works for, so a reply lands in the conversation the counterparty is already reading rather than starting a new one.",
+  ],
+  consB: [
+    "Reaching general availability on the scopes that read a mailbox means an independent assessment on an assessor's calendar, repeated every year.",
+    "Every linked account is billed whether the agent did anything for that person this month, which makes the economics a function of activation rather than usage.",
+    "The rate limits belong to the mailbox provider, applied per account, and are negotiable by nobody — not by you and not by the supplier you are paying.",
+    "An administrator can revoke access for an entire organisation in one action, and the first you hear of it is a support ticket from a confused customer.",
+  ],
+  migrationChecklist: [
+    "Start the verification paperwork on the day you choose the architecture rather than the day the feature works. The engineering finishes long before the approval does, and most of the elapsed time is not a reviewer reading your form — it is an independent assessment booked against a third party's availability. Teams that build first and apply afterwards ship to a handful of test accounts for months. Teams that apply first find the paperwork has caught up by the time the code has, which is the same work in a different order and a materially different launch date.",
+    "Put the assessment on the budget as a recurring line rather than a one-off, and find out what it costs before anybody commits to the model. It is repeated annually, it involves somebody outside your company looking at how you handle the data, and it constrains what you can change afterwards without going round again. None of that is unreasonable for access to an employee's whole mailbox. It is simply a permanent overhead that has no equivalent on the other side of this page, and it should be visible in the comparison rather than discovered in month four.",
+    "Model the bill on linked accounts including the ones that never do anything, because that is the number you are charged for. A free tier full of people who connected their mailbox during onboarding and never returned is a real monthly cost with no matching revenue, and the usual response is to gate the connection behind a paid plan — which is a product decision with conversion consequences, made for billing reasons. Decide it deliberately now rather than reactively when the invoice arrives.",
+    "Write the reconnection flow before launch, because the integration does not fail loudly. A password change, an expiring token, an administrator tightening a policy, a multi-factor requirement, an account moving between tenants — each of these silently stops the agent for exactly one person, who then experiences your product as having quietly given up on them. You need detection, a clear message, a one-click path back, and an alert for the case where many accounts disconnect at once because something changed at the organisation rather than at the person.",
+    "Test against a shared mailbox and a delegated one, not only against a personal account you control. Permissions on a shared box differ, delegation behaves differently again, and an organisation's setup is routinely more complicated than the one you developed against. The failure shows up as an agent that works perfectly for the champion who bought your product and fails for the team they wanted to roll it out to, which is the single worst moment for it to appear. Find two customers with awkward configurations during the trial and make them part of the test matrix.",
+    "Treat the authorisation screen as a funnel step and measure it, because it is where the model costs you customers. Somebody who has been trained to be wary of exactly this screen is being asked to grant access to their whole mailbox, and in an organisation the request may be blocked outright by policy — turning your activation into an internal approval the user has to champion on your behalf. Find out what share of your target customers work somewhere that would block it, before rather than after the drop-off appears in the numbers.",
+    "Decide what you keep from a user's mailbox and for how long, and write it down in the words a reviewer will use. The answer is the security conversation, and a vague one turns a sale into a quarter of correspondence. Minimise deliberately: process in memory where you can, store only what the feature genuinely needs, put an expiry on it, and be able to say who at your company could read it and under what circumstances. This is cheap to design in and expensive to retrofit, because retrofitting means explaining what you used to do.",
+    "Plan the first synchronisation as a product problem rather than an engineering one. A large archive backfills at whatever rate the mailbox provider permits, which is not a rate you or your supplier can raise, so a user with a decade of mail waits — and waits during exactly the minutes when they are deciding whether your product works. Design the first-run experience around partial data: be useful on the recent mail immediately, show progress honestly, and do not let the agent appear to have no context when the truth is that it has not finished reading yet.",
+  ],
+  buyingQuestions: [
+    "Have we started the verification process, and does our launch date assume an assessor's calendar or our own?",
+    "What does the annual assessment cost, and is it on the budget as a recurring line rather than a one-off?",
+    "How many accounts would connect and then go idle, and are we charged for them?",
+    "What happens in our product when one user's token is revoked, and who finds out first — us or them?",
+    "Have we tested against a shared or delegated mailbox, or only against a personal account we own ourselves?",
+    "What share of our target customers work somewhere an administrator would block this authorisation outright?",
+    "What exactly do we retain from a user's mailbox, for how long, and who here could read it?",
+  ],
   faqs: [
     {
       question: "Why can I not just ask users for an app password?",
@@ -2303,6 +2486,26 @@ const AGENTMAIL_VS_NYLAS: VersusPage = {
       answer:
         "Yes, and mature products often do: an owned address for outbound campaigns and automated correspondence, plus optional mailbox connection for users who want the assistant to work inside their own inbox. The cost is two integrations, two failure modes and two compliance stories, so it is worth doing in sequence rather than at once — ship the one your core use case needs and add the other when customers actually ask.",
     },
+    {
+      question: "What does the independent security assessment actually involve?",
+      answer:
+        "Somebody outside your company examining how your application handles the data it is asking for, against a published set of requirements, and producing a report the mailbox provider will accept. In practice that means answering a long questionnaire about your architecture, demonstrating that you encrypt what you store and limit who can reach it, showing that access is logged and that departing staff lose it, and evidencing that you have a process for handling a breach rather than an intention to have one. Some of it is a scan of your application; some of it is document review. The two things teams underestimate are that it is booked against the assessor's calendar rather than yours, and that it repeats annually — so the cost is not a launch expense but a standing one, and a significant change to how you handle mailbox data can mean going round again. None of this is unreasonable given what is being granted. It is simply a fixed overhead that does not exist at all if the agent has an address of its own, which is the comparison this page is really about.",
+    },
+    {
+      question: "What should happen when a user's connection is revoked?",
+      answer:
+        "Your product should notice within minutes, tell the person plainly, and offer one click that fixes it — and building all three before launch is much cheaper than adding them after the first confused support ticket. Revocation arrives in several disguises: a token that simply expires, a password change, an administrator withdrawing consent for the whole organisation, a security policy that newly requires something your grant does not have. From your side they look similar, which is a detection problem rather than a diagnosis one. Watch for authorisation failures per account, distinguish a transient error from a durable one so you do not nag somebody about a five-minute outage, and set a separate alert for many accounts failing at once, because that pattern means something changed at a company rather than at a person and needs a conversation with their administrator rather than an email to their staff. The message the user sees matters too: somebody who is told that the assistant has been disconnected and here is the button will reconnect, and somebody who simply notices it has gone quiet will assume the product does not work.",
+    },
+    {
+      question: "How likely is an administrator to block us?",
+      answer:
+        "Likely enough that it belongs in your market sizing rather than in your risk register. Any organisation with a security function restricts which third-party applications may request access to staff mailboxes, and the default posture in most of them is to allow nothing that has not been reviewed. That turns your signup into an internal approval request which your user has to champion, in a queue they do not control, against a reviewer whose incentive is to say no. Some of this is winnable — publishing your verification status, having documentation a reviewer can read, being on the list of applications that organisation has already approved — and some of it is structural. The practical step during evaluation is to find out where your target customers work and how those places handle this, because the answer varies enormously between a fifteen-person startup and a regulated enterprise. An assistant that sells beautifully to individuals and stalls entirely at organisations is a common and expensive outcome, and it is visible in advance if you ask.",
+    },
+    {
+      question: "Why is the first synchronisation so slow, and can we speed it up?",
+      answer:
+        "Because the mailbox provider is metering it, and no, not by engineering. Backfilling somebody's archive means pulling a great deal of data through an interface that applies per-account rate limits, and those limits belong to the provider rather than to the integration supplier you are paying — so throwing more workers at it produces throttling rather than throughput. A user with a decade of correspondence can be waiting a long time, and they are waiting during precisely the first session in which they decide whether your product is any good. The fix is a product one. Sync recent mail first and be genuinely useful on it within a minute; show the backfill as visible progress rather than a spinner; and make the agent's answers honest about what it has and has not read yet, because an assistant that confidently says it found nothing is worse than one that says it is still looking. Design the first run for the slowest reasonable case and the fast ones take care of themselves.",
+    },
   ],
 };
 
@@ -2320,6 +2523,9 @@ const MAILSLURP_VS_MAILTRAP: VersusPage = {
       "assert on a one time code sent by email",
       "end to end test for signup email verification",
       "fake smtp server for integration tests",
+      "stop a staging deploy sending real email",
+      "how many emails does a test suite generate",
+      "should a test assert on rendered email html",
     ],
     rationale:
       "The common framing treats these as interchangeable email-testing tools, which hides the distinction that actually matters to somebody writing the test: only one of them can receive a message that your own application did not send.",
@@ -2385,6 +2591,49 @@ const MAILSLURP_VS_MAILTRAP: VersusPage = {
     "You would rather have one vendor for both captured staging mail and delivered production mail.",
     "Integration should require no code change at all — a different set of SMTP credentials per environment and nothing else.",
   ],
+  prosA: [
+    "A test can receive from anything on the internet, which is the only way to assert on a code that a third party sent rather than your own code.",
+    "One address per case with no shared space means a parallel suite has no cross-talk to debug, which removes an entire category of intermittent failure.",
+    "Three protocols reach the same mailbox, so a component that cannot be rewritten to be testable can still be tested as it stands.",
+    "The waiting helper is part of the product, so nobody on your team writes the polling loop that every team otherwise writes slightly wrong.",
+  ],
+  consA: [
+    "A real address protects the recipients you chose and does nothing at all about the ones a buggy loop chose on your behalf.",
+    "The interface is built for a machine to read, so the person who wants to look at a message before release is not the intended audience.",
+    "A mailbox starts empty, so a scenario that assumes existing history means sending the setup messages yourself, one at a time, in every run.",
+    "It is a testing dependency and nothing more, so production sending brings another supplier, another credential and another line in the deployment configuration.",
+  ],
+  prosB: [
+    "Replacing the outbound endpoint means there is no route to the internet at all, which is a stronger guarantee than an address nobody happens to be reading.",
+    "A captured message is rendered as clients would show it, with the source and the authentication checks beside it, which catches what no assertion was written for.",
+    "The integration is a different set of credentials per environment and no code change, which is the smallest possible footprint in an application.",
+    "The same supplier can capture staging mail and deliver production mail, so there is one dashboard and one integration rather than two of each.",
+  ],
+  consB: [
+    "Nothing can arrive from outside your own system, so a flow that depends on a message a third party sends cannot be exercised here at all.",
+    "Isolation is by project rather than by test, so parallel workers share a space and you write the discriminator that keeps them out of each other's mail.",
+    "A shared space accumulates a backlog, and yesterday's message with today's subject is still sitting there waiting for an insufficiently specific query.",
+    "The sending half is younger than the capture half and competes with specialists, so the consolidation argument is stronger on paper than in the delivery record.",
+  ],
+  migrationChecklist: [
+    "Sort your existing email tests into two questions before choosing anything, because the answer differs per test rather than per project. Some are asking whether your application produced the right message, which is answered by looking at what it tried to send. Others are asking whether your system can take part in an exchange with the outside world, which needs a real address that anything can write to. A suite usually contains both, most teams have never separated them, and the sorting exercise takes an afternoon and frequently settles the decision by itself.",
+    "Make your shared pre-production environment structurally incapable of reaching a real person, rather than merely unlikely to. A configuration flag that suppresses sending is a policy, and policies get bypassed by the background job somebody wrote at the weekend. Pointing the outbound endpoint at a capture service is a property of the environment: a bug that iterates the whole user table produces ten thousand messages in a sandbox and none anywhere else. The distinction sounds pedantic right up to the afternoon it is the only thing standing between you and an apology.",
+    "Replace every fixed pause in an email test with a condition and a generous timeout, and write the helper once rather than in each file. A test that sleeps for two seconds passes on a developer's machine and fails on a loaded build runner, which is the single commonest cause of a suite people stop trusting. If your chosen product ships a blocking wait, use it. If it does not, build one helper that polls with backoff, put the timeout in one place so it can be raised when the runner gets slower, and never let a raw sleep back into the codebase.",
+    "Give every test a discriminator that makes its mail unmistakably its own, whichever product you pick. A unique address per case is the cleanest version; a token in the subject line works where addresses are shared. Without one, a query that matches on subject will eventually find a neighbour's message or one from an earlier run, and the resulting failure is intermittent, unreproducible and attributed to the provider. Decide the convention once, put it in the helper, and make it impossible to write a test that skips it.",
+    "Decide what happens to the backlog in a space that persists between runs, because it is the quiet source of false passes. A captured message from yesterday with the same subject as today's is still there, and a query that was specific enough in week one stops being specific enough in month six. Either clear the space before a run, scope every query by a timestamp as well as a subject, or use a product where the mailbox is created and destroyed with the test. Pick one deliberately; the failure mode of not picking is a test that passes without the feature working.",
+    "Count the messages your suite will actually generate before the pricing matters. Every commit, on every branch, across every parallel worker, plus the retries — teams routinely find the real figure is several times their estimate, because nobody counts the pull request that gets pushed eleven times in an afternoon. Get the number from a week of continuous integration logs rather than from arithmetic, then check it against whichever meter you are about to depend on, because discovering it from an invoice is an awkward conversation to have about a testing tool.",
+    "Separate the credentials by environment so thoroughly that a misconfigured deployment cannot send for real. The worst incident in this category is not a test that failed; it is a staging release that picked up production sending credentials from a shared configuration store and mailed live customers a fixture. Different secrets, different names, no fallback to a default, and an assertion at startup that the environment and the credential agree. This costs an hour and removes the one failure here that damages somebody other than you.",
+    "Schedule placement checks separately and give them an owner, because neither product answers the question and both will be assumed to. A content and configuration analysis catches a missing plain-text part, an unsigned message or a link on a bad domain — all worth catching and none of them a prediction about the inbox. Where mail actually lands depends on the reputation of the identity you send from, which no test environment has. Put seed addresses at the major providers on a schedule, look at them with human eyes, and stop expecting a green suite to mean anything about placement.",
+  ],
+  buyingQuestions: [
+    "Which of our email tests need a message from outside our own system, and which only need to see what we produced?",
+    "Can a bug in our pre-production environment physically reach a real customer, or merely not usually do so?",
+    "How many fixed sleeps are in our test suite today, and what would it take to replace all of them with a condition?",
+    "What stops one test reading another test's mail, and is that convention enforced or remembered?",
+    "Does anything in a shared capture space get cleared between runs, or could a query match yesterday's message?",
+    "How many messages did our suite generate last week, taken from the logs rather than estimated?",
+    "Could a staging deployment pick up production sending credentials, and what would tell us if it had?",
+  ],
   faqs: [
     {
       question: "Can I not just run a local fake SMTP server?",
@@ -2411,6 +2660,26 @@ const MAILSLURP_VS_MAILTRAP: VersusPage = {
         "Can I use one for continuous integration and the other for staging?",
       answer:
         "Yes, and the split is defensible: interception for the shared staging environment where the priority is that nothing escapes, and disposable real addresses in the test suite where the priority is isolation and receiving from outside. The cost is two vendors and two sets of helper code, so make somebody responsible for the decision about which tests belong where before it becomes folklore nobody can explain.",
+    },
+    {
+      question: "How do I stop a query matching yesterday's captured message?",
+      answer:
+        "Make the message identifiable rather than making the query cleverer, because a cleverer query is a thing that stops being clever enough. The reliable pattern is a token generated per test and embedded where you can search on it — a plus-addressed recipient, a header, or a short random string in the subject — so that a match is exact rather than probable. Filtering by timestamp helps and is not sufficient on its own, since a retried job or a slow neighbour can place a message inside your window that is not yours. If your product creates and destroys a mailbox per test, this problem does not exist and that is a genuine reason to prefer it for a large suite. If you are sharing a space, the discriminator belongs in the shared helper rather than in each test, because the one test that forgets it is the one that fails intermittently for a fortnight before anybody works out why. And clear the space on a schedule regardless: an accumulated backlog makes every debugging session slower even when it is not causing failures.",
+    },
+    {
+      question: "How many messages will my test suite actually generate?",
+      answer:
+        "More than the estimate, and the gap is usually a factor of three or four rather than a rounding error. The arithmetic people do is tests multiplied by runs per day. The reality is tests multiplied by runs per day, multiplied by the number of branches in flight, multiplied by how many times a pull request gets pushed before it merges, plus every retry of a flaky job, plus whatever a nightly full run adds. A team of six with a reasonable email test suite can comfortably produce tens of thousands of messages a month without anybody having a sense that they are doing so. Pull the real figure out of a week of build logs before committing to a meter, because this is a testing tool and an unexpected invoice for one is an annoying thing to have to explain. The secondary reason to know the number is that it tells you whether your suite is running email tests that do not need to be email tests — if a single change to a template triggers four hundred sends, some of those assertions belong at a lower level.",
+    },
+    {
+      question: "What stops a staging deploy from sending to real customers?",
+      answer:
+        "Nothing, unless you have made it structurally impossible, and a flag in the configuration does not count. The incident that actually happens is not a test misbehaving; it is a pre-production deployment that reads its sending credentials from a shared store, picks up the production ones because a default was inherited, and mails live customers a fixture — usually the one with obviously fake content, which makes the support conversation worse. The defences are all cheap. Give each environment its own credential with its own name and no fallback, so a missing value is an error rather than a silent promotion. Point pre-production at a capture endpoint so there is no route out even if the credential is wrong. Assert at startup that the environment name and the credential name agree, and refuse to boot if they do not. And if you use one supplier for both capture and delivery, be especially careful, because the two live behind the same account and the difference between them is a setting rather than a wall.",
+    },
+    {
+      question: "Should a test assert on the rendered HTML?",
+      answer:
+        "Almost never, and the instinct to do so is why email suites get abandoned. Rendered markup changes every time somebody adjusts a template, which means an assertion on it fails for reasons that have nothing to do with the behaviour under test, and a suite that cries wolf is a suite people start skipping. Assert on the things that carry meaning and change rarely: that a message arrived, that it went to the right recipient, that the subject matches a stable pattern, that the one-time code or the link is present and functional. Extract the code and follow the link if the test is about the flow — that is the behaviour worth protecting. What the message looks like is a different question with a different tool: render it across clients and have a person look, as part of the release rather than as part of the suite. Keeping those two activities separate is the single most useful structural decision in email testing, because it lets the automated checks be stable and the visual review be thorough, instead of both being neither.",
     },
   ],
 };
@@ -2603,6 +2872,9 @@ const AHASEND_VS_ZEPTOMAIL: VersusPage = {
       "prepaid email credits that expire",
       "low cost email api without an aws account",
       "email api under a cent per message",
+      "is a re-engagement email transactional or marketing",
+      "what happens when prepaid email credits run out",
+      "email provider support hours for a small team",
     ],
     rationale:
       "Price-led comparisons in this category are written by vendors who are not the cheapest, so the two products that genuinely are get described in terms of what they lack rather than in terms of the two very different bets a buyer is choosing between.",
@@ -2668,6 +2940,49 @@ const AHASEND_VS_ZEPTOMAIL: VersusPage = {
     "A data residency requirement makes the choice of processing region a contractual matter rather than a preference.",
     "You already use the wider suite, so authentication, billing and support are relationships that exist rather than new ones.",
   ],
+  prosA: [
+    "A quiet month simply costs less, so nobody is forecasting capacity and nobody is defending a purchase that turned out to be larger than the year needed.",
+    "The surface is small enough to read in one sitting, which makes it a component you can finish integrating and then genuinely stop thinking about.",
+    "No rule divides your mail into permitted and forbidden categories, so a message that sits awkwardly between a receipt and a nudge is not a compliance question.",
+    "The person who answers a question understands the product, which for a team debugging something strange is worth more than a queue that is always staffed.",
+  ],
+  consA: [
+    "A short operating history means a shared pool with little accumulated goodwill at the large mailbox providers, and no published record to inspect.",
+    "The dashboard is for debugging rather than for reporting, so anything you will want to know in six months has to be landing in your own store now.",
+    "Region choice is limited by a small footprint, which is a non-question for most teams and the very first question for anyone with a residency clause.",
+    "There is nobody on duty overnight, and the night that matters is the one where the answer cannot wait until somebody's morning.",
+  ],
+  prosB: [
+    "The marketing prohibition is why the shared pool stays as clean as it does, so the rule you resent is also the thing you are buying.",
+    "Data centres across several jurisdictions make residency a configuration choice rather than a reason to leave the low-cost end of the market.",
+    "A support organisation exists at every hour, and the parent company is not going to disappear between one renewal and the next.",
+    "If you already live inside the wider suite, authentication, billing and the administrative model are relationships that exist rather than ones you are creating.",
+  ],
+  consB: [
+    "Capacity bought in advance disappears on a date whether or not you used it, which turns a mis-forecast quarter into a straightforward loss.",
+    "Marketing content is a terms violation rather than a discouraged practice, so a second supplier is a certainty for most products rather than a possibility.",
+    "The account setup inherits an identity and administration model built for a much larger product, and it will take longer than the sending code did.",
+    "A first response may be reading from a script, which is the standard cost of a support organisation and is felt most on an unusual problem.",
+  ],
+  migrationChecklist: [
+    "List every kind of message you send and rule on each one against the transactional boundary before you integrate, not after. A receipt, a reset and a shipping notice are obviously permitted. A dormant-account nudge, a feature announcement to paying customers and a survey invitation are genuinely arguable, and the vendor's reading is the one that decides. Write your list, send the three most doubtful entries to the supplier during the trial, and keep the reply. An interpretation you inferred from a documentation page is not something you can point at later.",
+    "Work out your seasonal worst case before buying any capacity in advance, and find out precisely what happens when it runs out. A block sized for your busy quarter can quietly evaporate across a slow one, which converts the cheapest option into an expensive one with nothing visibly changing. The more urgent question is the failure mode at zero: sending that stops dead is an outage in your most important mail, sending that queues is an inconvenience, and an automatic top-up is a billing surprise. Establish which of the three you are buying.",
+    "Fix the processing region at account creation, because on one side that is a binding property of the account and on the other the menu is short. If any customer contract contains a clause about where personal data is handled, this is the first question rather than a detail to confirm later, and it is much easier to answer while the account is empty. Get the region written down alongside the account credentials so that whoever renews the contract in two years can see what was chosen and why it was chosen.",
+    "Start streaming delivery events into your own store on the first day, because neither of these is a place to answer a question from four months ago. Both give you the standard lifecycle over a webhook, which is all you need, and both have a dashboard tuned for debugging what happened this week. The record you will actually be asked for — whether a particular message was accepted, why a particular address stopped receiving, what your bounce rate looked like across a quarter — is one you keep or one you do not have.",
+    "Plan for the second supplier now if any of your mail is marketing, rather than treating it as a later problem. Where the separation is enforced by terms rather than suggested by good practice, there is no future version of that account which also sends your newsletter. That is not a reason to avoid the product, since separating the two traffic types is what you should be doing anyway. It is a reason to budget two integrations, two sets of authentication records and two places somebody looks when a customer says nothing arrived.",
+    "Budget the account structure separately from the sending code where the product lives inside a larger suite, because they are unrelated amounts of work. The API is short and conventional and will be done in an afternoon. The identity model, the access control, the administrative console and the region selection belong to a platform designed for something much bigger, and the documentation will occasionally assume a familiarity you do not have. Teams that estimate this as an API integration are the ones surprised by which half took the week.",
+    "Write down which of your messages would matter at three in the morning, then hold that list against each supplier's actual coverage. A small independent team answers well and answers during its own working hours. A support organisation answers at every hour and may take three exchanges to reach somebody who knows the product. Neither is wrong; they are different insurance policies. What decides it is whether the mail on your list can wait until somebody's morning, and that is a question about your product rather than about either vendor.",
+    "Decide in advance what outgrowing either of these looks like, because neither sells a way out. There is no isolated sending address, no managed ramp and no named deliverability contact on the price list, which means the day you need one of them is the day you change supplier rather than the day you upgrade a plan. That is a perfectly reasonable arrangement at this end of the market and it is worth knowing before rather than during. Note the trigger — a volume, a customer, a requirement — and revisit it on a date.",
+  ],
+  buyingQuestions: [
+    "Which of our messages sit in the grey area of the transactional rule, and has the vendor ruled on them in writing?",
+    "What is our slowest quarter, and would capacity bought for our busiest one survive it?",
+    "When the balance reaches zero, does sending stop, queue, or bill us automatically?",
+    "Which region is this account being created in, and does any customer contract have something to say about that?",
+    "Where will delivery events be stored so that we can answer a question about last quarter?",
+    "If any of our mail is marketing, who is the second supplier and has anybody budgeted that integration?",
+    "Which of our messages cannot wait until somebody's morning, and does this supplier have anyone awake then?",
+  ],
   faqs: [
     {
       question: "Is a cheap provider worse for deliverability?",
@@ -2695,6 +3010,27 @@ const AHASEND_VS_ZEPTOMAIL: VersusPage = {
       answer:
         "Yes, and the safe shape is gradual. Authenticate the new provider on a subdomain, send a low-stakes traffic class through it first, and watch bounce and complaint rates for a week before moving anything that a customer would notice missing. Import your existing suppression list on day one — that is the step people skip, and mailing addresses that previously bounced or complained is the fastest way to damage a reputation you have not finished building.",
     },
+    {
+      question:
+        "Is a re-engagement email transactional or marketing?",
+      answer:
+        "Marketing, almost always, and it is the single most common message people try to argue into the other category. The workable test is why the message exists rather than who receives it: a transactional message is caused by something the recipient did and would be missed if it did not arrive, while a marketing message is caused by something you decided and would not be. A dormant-account nudge fails that test on both halves — nobody triggered it and nobody is waiting for it — regardless of how useful it is or how clearly the person is an existing customer. Other regular candidates for wishful classification are feature announcements to paying users, survey invitations, trial-expiry reminders that arrive before anything expires, and the annual summary. Some of those are genuinely arguable and the vendor's reading is the one that counts, which is why the practical advice is to send your three most doubtful examples to support during the trial and keep the answer. A ruling in a support thread is something you can point at. An interpretation you formed from a documentation page is not.",
+    },
+    {
+      question: "What happens the moment prepaid capacity runs out?",
+      answer:
+        "That depends on the vendor and it is the most important sentence on the pricing page that the pricing page does not contain. There are three possible behaviours and they are not equivalent. Sending that stops dead is an outage in exactly the mail your product cannot do without, arriving at the worst possible moment, which is a busy period. Sending that continues and queues gives you time to notice and act, which is much the best outcome. Automatic replenishment keeps the mail flowing and hands you an invoice nobody approved, which is survivable but is the kind of surprise that makes a finance conversation out of a technical decision. Ask which one you are buying, then build the monitoring that makes it moot: an alert at a sensible remaining balance, sent somewhere a person actually reads, with enough margin to act during working hours rather than at the point of exhaustion. Prepaid models are genuinely cheaper for steady volume, and this single piece of operational hygiene is what separates the cheap outcome from the expensive one.",
+    },
+    {
+      question: "How much does overnight support really matter?",
+      answer:
+        "It matters exactly as much as your worst message does, which is a question about your product rather than about either supplier. Make the list: which of the mail you send would cause a real problem if it stopped for six hours in the middle of your night. For many products the honest answer is none — receipts can be re-sent, notifications can be late, and the incident is embarrassing rather than damaging. For a product where a one-time code gates the login, or where a delivery notification is part of a physical process, the answer is different and the availability of somebody to escalate to is a genuine part of what you are buying. The second half of the question is what that support is actually for, because coverage and competence are not the same thing. A small team answers within its own hours with somebody who knows the product and can look at your account. A large organisation answers at any hour and may take three exchanges to reach that person. Neither arrangement is better in the abstract. Decide which failure you would rather have at two in the morning, and buy that one deliberately.",
+    },
+    {
+      question: "What does outgrowing either of these look like?",
+      answer:
+        "It looks like a requirement arriving that has no line on the price list, which is a different shape from the usual experience of outgrowing a product. Normally you cross a threshold and buy a bigger plan. Here there is no bigger plan for the things that eventually matter: an isolated sending address, a managed ramp onto it, a named deliverability contact, a contractual response time, a compliance document a customer's reviewer will accept. Those are precisely what the expensive vendors are selling, and their absence is why these two cost what they do. The trigger is rarely volume by itself. It is usually one enterprise customer whose procurement process asks for four of those things at once, or a deliverability problem on a shared pool that you have no lever to influence. Both arrive without warning. The useful preparation is cheap and takes an afternoon: send from a domain you control, keep your own copy of the list of addresses you must not mail, keep the client behind a thin interface, and write down the trigger you are watching for with a date to revisit it.",
+    },
   ],
 };
 
@@ -2713,6 +3049,9 @@ const AHASEND_VS_BAVIMAIL: VersusPage = {
       "email api with inbound inboxes included",
       "is a new email provider safe to rely on",
       "flat rate transactional email pricing",
+      "email plan limited by number of domains not volume",
+      "what is the overage rate on an email plan",
+      "migrating inbound email addresses to another provider",
     ],
     rationale:
       "Both vendors are too new to appear in the comparison content that ranks today, so the person evaluating them is doing it from two pricing pages and no independent read of what each actually includes or what the risk of either is.",
@@ -2773,6 +3112,49 @@ const AHASEND_VS_BAVIMAIL: VersusPage = {
     "The free tier's size means a small project can run there indefinitely while you decide whether to commit.",
     "Your volume fits comfortably inside a bracket and is predictable enough that the ceiling is not a live concern.",
   ],
+  prosA: [
+    "The bill is a multiplication with nothing else in it, so there is no band to outgrow and no capability that can run out while your volume is still fine.",
+    "A spike produces a proportionally larger charge and nothing worse, which for a product whose traffic moves unpredictably removes the one genuine operational risk in pricing.",
+    "The integration is conventional enough that adopting it or removing it is a short piece of work in either direction, which is exactly what you want from a replaceable component.",
+    "There is no adjacent module trying to become part of your stack, so the thing you integrated in March is still the same thing in December.",
+  ],
+  consA: [
+    "Sending is all there is, so an application that needs to receive is acquiring a second supplier and a second set of authentication records to keep coherent.",
+    "Nothing on the price list isolates your sending, so a sender with enough volume to want that has no upgrade available at any figure.",
+    "The dashboard is for debugging rather than reporting, which means every question you will want answered later has to be landing somewhere else now.",
+    "The company is small and the history is short, which is the whole bet and is not made safer by the pricing being simple.",
+  ],
+  prosB: [
+    "Receiving arrives in the box, so an application wanting an address per customer or per ticket does not stand up a separate service to provide them.",
+    "The free allowance is large enough that a genuinely small project may never leave it, which makes evaluating it a matter of using it rather than trialling it.",
+    "Inbound and outbound share one authentication story and one bill, which is a real reduction in the number of places a domain's records can drift out of agreement.",
+    "Having both halves under one supplier means one place to look when a customer says a reply never arrived, rather than two logs that disagree.",
+  ],
+  consB: [
+    "A bracket bundles volume with counts of domains and inboxes, so a team with many of either meets a ceiling that has nothing to do with how much it sent.",
+    "The rate beyond the included volume is not clearly published, which is a real gap when the two possible answers are a charge and a stoppage.",
+    "Client libraries cover a small number of languages, so a team outside that set writes against the raw interface and absorbs work a mature supplier would have absorbed.",
+    "The inbound feature that makes it attractive is also the hardest part to unwind, because addresses your customers have saved do not move with you.",
+  ],
+  migrationChecklist: [
+    "Count the domains and the inboxes your architecture needs before you look at the volume figures, because on a bracketed plan those counts are ceilings too. A product that gives every customer a sending domain, or every support ticket an address, can exhaust a band at a message volume that looks trivially small — and the wall arrives as a provisioning failure in your application rather than as a larger bill. Write down all three numbers, project them a year out, and check each one against the bracket separately.",
+    "Get the rate beyond the included volume in writing before you depend on it, because the two possible answers are not variations on a theme. A published overage charge means a spike costs money and everything keeps working. Sending that halts at the ceiling means a spike is an outage in whatever your product uses mail for, arriving at your busiest moment. A pricing page that omits this is not hiding anything sinister; it is simply young. Ask, keep the answer, and set an alert well below wherever the ceiling turns out to be.",
+    "Write inbound correspondence into your own storage as it arrives, from the first message, because it is the hardest thing on this page to recover later. Send logs are reconstructible in principle and rarely needed in practice. Actual replies from customers are a business record, they exist nowhere else, and their value grows with age — which is exactly the profile of data you should not leave solely inside a young supplier's platform. The handler is a few lines in the webhook you are already writing, and it is free insurance.",
+    "Check whether your language has a maintained client and budget the difference honestly if it does not. Writing against a plain HTTP interface is not difficult and it is several days of work somebody has to do, plus the retries, the error mapping and the tests that a maintained library would have arrived with. That is one of the concrete ways a young product costs you time rather than money, and it is entirely predictable in advance — so predict it, rather than discovering it in the week you planned to integrate.",
+    "Exercise the free tier against your burstiest realistic day rather than your monthly average, and read its generosity for what it is. A large monthly allowance with a tighter daily ceiling underneath is the standard shape, and ordinary traffic is lumpy: a launch, an incident notice, a batch job catching up after an outage. Separately, treat a very generous free tier as a customer-acquisition decision rather than a permanent property of the product, because it is one, and it can be revised on a quarter's notice.",
+    "Run both free tiers in parallel for a fortnight behind one interface of your own, which is simultaneously the evaluation and the insurance. Neither supplier publishes a deliverability record, so the only independent data available is the data you generate: same domain authentication, same content, seed addresses you control at the major mailbox providers, and a look at where things land. Building the abstraction first means the comparison costs you a configuration change, and it leaves you with the abstraction afterwards.",
+    "Work out specifically what replacing the inbound half would involve, because it unwinds differently from the outbound half. Outbound is a client library and a set of records — a week, at worst. Inbound is addresses your customers have saved in their contacts, routing rules somebody configured, parsing your application depends on, and a period during which mail sent to the old addresses simply vanishes. If you adopt inbound at all, decide now whether those addresses are on a domain you control, because that single choice is the difference between a migration and an announcement.",
+    "Name who watches the bounce and complaint rates, because on a small shared pool your own numbers are a meaningful fraction of the whole. At a large supplier your sending is lost in the aggregate and the vendor polices the pool on your behalf. At a small one there are fewer neighbours to drag you down and fewer to hide behind, so a bad import of your own moves the pool you are sitting in. Put the two rates on a dashboard somebody actually opens, agree the number at which you stop and investigate, and do it before the first large send rather than after.",
+  ],
+  buyingQuestions: [
+    "How many domains and inboxes will we need in a year, and does any bracket cap those separately from our volume?",
+    "What is the published rate once we exceed the included volume, and if there is none, does sending stop?",
+    "Are we copying inbound correspondence into our own storage as it arrives, or trusting the supplier to keep it?",
+    "Is there a maintained client for our language, and if not, who is writing against the raw interface and when?",
+    "What did our burstiest single day look like, and does the daily ceiling under the free tier accommodate it?",
+    "Are the inbound addresses on a domain we control, so that changing supplier is a configuration change rather than an announcement?",
+    "Who here watches our bounce and complaint rates, and at what number do we stop and investigate?",
+  ],
   thirdOption:
     "Both of these ask you to put your sending reputation inside a company with a short history and no published deliverability record, and that — rather than price — is the thing worth thinking hardest about here. If the appeal is mostly that you are tired of paying a platform premium, the other way to stop paying it is to send through an AWS account you own, where the reputation, the suppression list and the event history belong to you and no vendor's plan change can reach them. Wraps is one way to do that. It is a worse fit than either product on this page if you want to send something today: you need an AWS account and SES production access, an approval that is AWS's to grant rather than ours, our SDKs cover TypeScript and Python only, contacts and templates live in our database rather than yours, and we are not SOC 2 certified.",
   faqs: [
@@ -2802,6 +3184,26 @@ const AHASEND_VS_BAVIMAIL: VersusPage = {
       question: "At what point should I outgrow both of these?",
       answer:
         "When you first want something neither can sell you: a dedicated sending address, a managed warm-up, a compliance document for a customer's security review, or a contractual response time. Those requirements do not arrive gradually — one enterprise deal produces all four at once — so the useful signal is not your volume but the size of the customer you are trying to close.",
+    },
+    {
+      question: "What happens if I exceed the volume included in a plan?",
+      answer:
+        "Ask, because the two possible answers are a charge and an outage, and a young pricing page frequently says neither. A published rate per additional message means a traffic spike costs you money and nothing else breaks, which is the behaviour you want for anything on a critical path. Sending that halts at the ceiling means a spike becomes an incident in whichever of your messages people most notice missing — the password reset, the one-time code, the order confirmation — and it arrives at your busiest moment by definition, because that is what a spike is. A third possibility worth ruling out is automatic escalation to the next band, which keeps the mail flowing and produces an invoice nobody approved. None of these is wrong, and you need to know which one you have bought. Get the answer from support rather than inferring it, then set an alert at something like seventy per cent of the included volume, delivered somewhere a person reads during working hours rather than to a channel nobody opens. Whichever answer you got, the alert is what turns it into a decision rather than a discovery.",
+    },
+    {
+      question: "How hard is it to move inbound addresses to another provider?",
+      answer:
+        "Far harder than moving the outbound half, and the difficulty is almost entirely determined by one decision you make at the beginning: whose domain the addresses are on. If your customers have been writing to addresses at a domain you control, changing supplier is a change to where the mail is routed — a DNS edit, a new webhook endpoint, a day of care — and nobody outside your company notices. If the addresses belong to the supplier's domain, they cannot move. Every address a customer has saved in their contacts stops working, every automated system on the other side that replies to a known address starts failing, and there is a period where mail sent to the old destinations goes nowhere at all with no bounce you control. On top of that sits the part people do remember: routing rules, the parsing your application does on the incoming message, and whatever shape the old supplier's webhook payload had, which the new one will not match. The routing and the parsing are a week of work. The addresses are not work, they are a loss, and the only time to prevent it is before the first customer writes to one.",
+    },
+    {
+      question: "Should a very generous free tier make me suspicious?",
+      answer:
+        "Not suspicious, but it should be read as what it is: a customer-acquisition decision made by a company that needs customers, rather than a permanent property of the product. Free allowances at young suppliers are set to remove every reason not to try, and they are among the first things revisited when the company's economics change or when a funding round imposes a new view of unit costs. That is not dishonest and it is not a reason to avoid the product. It is a reason to avoid building a business case that depends on the allowance staying where it is. The practical posture is to work out what you would pay if the free tier vanished tomorrow and confirm that you would still be comfortable, and to keep the integration thin enough that leaving is a configuration change. If both of those are true, a generous free tier is simply a good deal for as long as it lasts. If the generosity is the entire reason you chose the supplier, you have made a bet on somebody else's pricing strategy, which is a strange bet to take with your transactional mail.",
+    },
+    {
+      question: "Does it matter if there is no client library for my language?",
+      answer:
+        "It matters as a few days of work and as a small ongoing tax, which is worth naming rather than waving away. Sending an email over a plain HTTP interface is not difficult — it is a request with a body — and the parts that take the time are the ones a maintained library would have arrived with: retries with sensible backoff, mapping the supplier's error responses onto something your code can branch on, handling the difference between a message rejected for content and one rejected for credentials, multipart bodies and attachments, and enough tests that the next person to touch it is not guessing. Then it is yours to maintain when the supplier changes something. None of this is a reason to rule a product out, and all of it belongs in the estimate rather than being discovered in the week you had allocated to integration. The one case where it is closer to a blocker is a team with no appetite for owning that code at all, which is a legitimate position — and if that describes you, it is a cleaner signal than any feature comparison about which end of this market you should be shopping in.",
     },
   ],
 };
@@ -3172,6 +3574,9 @@ const BREVO_VS_SCALEWAY_TEM: VersusPage = {
       "eu hosted transactional email api",
       "scaleway transactional email review",
       "european alternative to sendgrid and mailgun",
+      "how to read a subprocessor list for a residency requirement",
+      "building an unsubscribe endpoint against a bare sending api",
+      "dedicated sending address on a european email provider",
     ],
     rationale:
       "Residency-driven searches return marketing pages asserting EU hosting without distinguishing where data is stored from who the subprocessors are, which is the distinction a procurement questionnaire actually asks about.",
@@ -3232,6 +3637,49 @@ const BREVO_VS_SCALEWAY_TEM: VersusPage = {
     "You are already building your own internal tooling and want a plain endpoint underneath it rather than a platform to work around.",
     "Volume is high enough that metered pricing without a platform fee is a material difference.",
   ],
+  prosA: [
+    "Consent capture, preference handling and unsubscribe machinery arrive built, which is most of what a lawful European marketing programme actually consists of.",
+    "Somebody who does not write code can operate the whole thing daily, which for a great many organisations is the requirement rather than a convenience.",
+    "Text messaging and a small customer database remove another supplier from a procurement list that was already the slow part of the project.",
+    "Volume rather than stored contacts is what the meter counts, so an audience you inherited and rarely write to accrues no monthly rent.",
+  ],
+  consA: [
+    "The subprocessor list is where a broad platform's European story frays, because breadth means integrations and integrations are where processing wanders across a border.",
+    "There is no clean route to an isolated sending address, so a sender who outgrows a shared pool finds nothing on the price list to buy.",
+    "Templates, segments and automations live in the supplier's system, and the shape of that logic is not something any platform makes portable.",
+    "The plan ladder was drawn for campaign volumes, and a workload of many messages against few contacts sits awkwardly across it.",
+  ],
+  prosB: [
+    "The sending infrastructure and the data centre belong to the same European company, which is the shortest answer available to a sovereignty requirement.",
+    "An isolated sending address is a step on the published plan ladder rather than an enterprise negotiation, which is unusual at this end of the market.",
+    "There is nothing above the send call to argue with, which is exactly right for a team that was going to build internal tooling anyway.",
+    "It sits inside a cloud that also has compute, storage and databases, so the supplier relationship may already exist and already be approved.",
+  ],
+  consB: [
+    "Consent records, preference pages and unsubscribe handling do not exist, and each one is yours to build and then to keep running indefinitely.",
+    "There is no template surface, no preview across clients and no searchable history, so the first support question arrives with no screen that answers it.",
+    "The console covers configuration, which means somebody in your company ends up owning an internal email tool nobody planned to write.",
+    "Nothing about the product improves as your volume grows, so the operational cost of the absent pieces rises alongside the traffic.",
+  ],
+  migrationChecklist: [
+    "Obtain the actual wording of the obligation before shortlisting anything, because three different requirements get described with the same phrase. Storage location is answered by a region. Corporate nationality — who could be compelled to hand data over — is answered by ownership and is unaffected by where a server sits. A chain-of-subprocessors requirement is answered by neither and needs a list. Get the sentence from whoever wrote it, decide which of the three you are holding, and only then look at suppliers, because the three readings produce three different shortlists.",
+    "Map each candidate's subprocessor list against that sentence, properly, rather than reading the marketing page. A platform is broad because it integrates, and integrations are precisely where processing outside your intended jurisdiction turns up: a deliverability service, an analytics dependency, a support tool whose staff can see message content. A bare endpoint from a cloud provider has a much shorter list for the uninteresting reason that it does much less. Neither fact is a verdict. The list is the evidence, and somebody has to read both of them.",
+    "Write down everything you will build to replace a console, then find the person who will still own it in two years. A template surface with previews, a searchable history of what was sent, an unsubscribe endpoint, a bounce and complaint handler, and suppression beyond the supplier's minimum are each a few days of work and together are a product. The days are not the risk. The risk is that nothing on that list ever gets a maintainer, so it rots quietly until the first time somebody urgently needs to know what a customer received.",
+    "Build the opt-out before the first campaign rather than after the first complaint, because on the primitive side none of it exists. That means an unsubscribe header mailbox providers will honour, a landing page that works without a login, a stored record of who opted out and when, and a check in your own sending path that consults it. For purely transactional traffic none of this applies and the primitive is genuinely simpler. The moment one message counts as marketing, this list becomes the project and the send call becomes the easy part.",
+    "Decide now whether an isolated sending address is part of the requirement, because the two sides offer very different routes to one. On the primitive it is a step on the published plan ladder, which is unusually accessible. On the platform there is no clean path at all, so a sender who grows past the point where a shared pool is comfortable has nothing to buy and has to change supplier instead. That is the one ceiling on this page which arrives with no warning, and it arrives as a delivery problem rather than as a larger bill.",
+    "Plan the DNS estate in both directions, including its removal. Both sides need authentication records, and a platform additionally wants a tracking hostname and a custom return path, which means records pointing at a supplier you may later leave. Those outlive the account: a dangling hostname aimed at a service nobody pays for any more is a small security problem and a permanent source of confusion. Record each entry as you create it, with an owner beside it, so the teardown is a checklist rather than an archaeology exercise.",
+    "Choose where your event history will live on the day you integrate, not after the first dispute. A primitive hands you a webhook and a short window of visibility, which is honest and is not somewhere to answer a question about four months ago. If you will ever need to show that a message was accepted, or to explain a pattern of bounces to somebody who is annoyed, those events have to be landing in a store you control from the very first send. Retrofitting the pipeline is easy; retrofitting the four months you did not keep is impossible.",
+    "Find out who in your organisation actually answers a security questionnaire, and put both suppliers' documentation in front of them before you commit. A cloud provider produces an infrastructure compliance pack written for an auditor. A messaging platform produces a data protection page written for a customer. Those are different documents at different depths, and the distance between what your reviewer expects and what the supplier publishes is where an approved project stalls for a quarter. Finding the shape of that gap is a one-hour conversation worth having first.",
+  ],
+  buyingQuestions: [
+    "What does our obligation actually say — where the data sits, who owns the company holding it, or which subprocessors touch it?",
+    "Has anybody read both subprocessor lists end to end, and which entries fall outside the jurisdiction we care about?",
+    "Which console features are we taking for granted that we would be building ourselves, and who maintains them in two years?",
+    "Who writes the unsubscribe page, stores the opt-out record, and checks it before each send goes out?",
+    "If our shared pool becomes uncomfortable, is there an isolated sending address to buy, or only another migration?",
+    "Which DNS records would point at this supplier, who owns them, and what removes them on the day we leave?",
+    "Where will delivery events be stored from day one, and could we answer a question about a message sent four months ago?",
+  ],
   thirdOption:
     "If the constraint driving this page is residency rather than features, it is worth noticing that the constraint is about where infrastructure runs and not about who writes the software on top of it. Sending through a cloud account you own in a European region satisfies the same requirement while leaving you free to choose tooling on its merits, and that is a third shape neither column here describes. Wraps is one way to do it, and the honest caveats are specific: you need an AWS account and SES production access, an approval on AWS's schedule rather than ours, our SDKs are TypeScript and Python only, we are not SOC 2 certified, and while sending and delivery events stay inside your own AWS region, contacts, templates and workflow state live in our database — which is a question you would need to put to your own data protection assessment rather than take on our word.",
   faqs: [
@@ -3262,6 +3710,27 @@ const BREVO_VS_SCALEWAY_TEM: VersusPage = {
       answer:
         "Send from your own domain, keep your own copy of the suppression list, and keep templates in your repository rather than only in a vendor's editor. Those three habits cost very little while you are happy and they are what make a future migration a code change rather than an archaeology project. They also protect you against the more common outcome, which is not that you leave but that you add a second provider for one traffic class.",
     },
+    {
+      question: "Can I get an isolated sending address on either of these?",
+      answer:
+        "On one of them it is a published plan step, and on the other there is no clean route to one, which is an unusual inversion of what the prices would lead you to expect. The cheaper, barer product treats an address of your own as a normal thing a growing sender buys. The broader platform expects you to live in its shared pool, and the pool is very large and contains a great many small senders whose list hygiene is unknowable to you. That matters less than people think at low volume, where a dedicated address is actually worse — there is not enough traffic to hold a reputation warm, and a quiet address looks suspicious. It starts to matter above the point where your own sending is steady and significant enough to stand on its own, and the awkward part is that the transition is not signalled by an invoice. You find out because delivery gets worse for reasons you cannot trace to anything you did. If you can already see that point coming, let the availability of isolation be part of the decision now rather than the trigger for a migration later.",
+    },
+    {
+      question:
+        "What do I have to build to send a lawful marketing email from a bare endpoint?",
+      answer:
+        "More than the send call, and the list is knowable in advance rather than discovered. You need a way to record consent with a timestamp and a source, because the question is never whether somebody is on the list but how they got there. You need an unsubscribe mechanism that works from the message itself, including the header that lets a mailbox provider offer a one-click opt-out, plus a landing page that functions for somebody who is not logged in. You need storage for the opt-outs and a check in the sending path that consults it every time, including from the background job somebody writes later. You need to handle bounces and complaints arriving on a webhook and to act on them rather than merely log them. And you need a record of what was sent to whom, because a regulator's question and a customer's question have the same shape. None of these is hard. Together they are a small internal product, and the honest framing is that choosing a primitive means choosing to own it.",
+    },
+    {
+      question: "Who answers a procurement questionnaire about subprocessors?",
+      answer:
+        "Somebody at your company, using documents the supplier publishes — which is why it is worth looking at those documents before you are under time pressure. A cloud provider tends to publish an infrastructure-shaped compliance pack: certifications, audit scope, a list of the regions a service runs in. A messaging platform tends to publish a data protection page aimed at a customer rather than an auditor, plus a subprocessor list that changes as its integrations do. Reviewers find different things missing from each. The pattern worth avoiding is a project that is technically finished and commercially approved and then sits for a quarter while somebody chases a document that was never going to exist in the form requested. Show your reviewer both suppliers' published material early, ask what they would still need, and get that question to the vendor while you are still a prospect rather than a customer.",
+    },
+    {
+      question: "Can I use the platform for campaigns and the endpoint for receipts?",
+      answer:
+        "Yes, and for a European company with both kinds of traffic it is often the right answer rather than a compromise. Marketing mail wants consent machinery, a template surface and somebody non-technical operating it; transactional mail wants a cheap, plain, reliable send call and nothing else. Splitting them also gives you the separation of sending reputations that you should want anyway, because a campaign to a stale list should not be able to degrade the delivery of a password reset. Two things to settle before you do it. First, which system holds the authoritative record of who opted out, because two systems each with an opinion is how somebody unsubscribes from a newsletter and stops receiving invoices. Second, who can answer what a given customer has been sent, given that the answer now lives in two places — usually solved by streaming both sides' events into one store of your own. Neither is difficult, and both are much easier to decide now than to reconstruct in eighteen months.",
+    },
   ],
 };
 
@@ -3279,6 +3748,9 @@ const CUSTOMER_IO_VS_KNOCK: VersusPage = {
       "who should own notification logic engineering or marketing",
       "in app notification feed with preferences",
       "notification system billed per profile or per send",
+      "idempotency key for notifications from a queue",
+      "cost of building an in app notification feed",
+      "which system owns notification preferences",
     ],
     rationale:
       "Teams discover late that these two are answering different questions, having evaluated them on an overlapping feature list; the decisive difference is organisational — which team owns the workflow — and no vendor page frames it that way.",
@@ -3349,6 +3821,49 @@ const CUSTOMER_IO_VS_KNOCK: VersusPage = {
     "Your preference requirements are granular enough that somebody will eventually have to prove what a user consented to.",
     "You have a large base of dormant accounts, and paying for profiles you never message would dominate the bill.",
   ],
+  prosA: [
+    "Audience logic is the product, so a message aimed at everybody who did one thing and not another is a rule somebody writes in an afternoon.",
+    "It sends the mail itself, which means one supplier, one relationship and nobody reconciling an orchestration bill against a delivery bill.",
+    "Timing has been a marketing concern for decades, so local-time scheduling and quiet windows arrive mature rather than as workflow primitives you assemble.",
+    "The person who iterates a sequence weekly does not need an engineer, which is why the sequences that get iterated are the ones that improve.",
+  ],
+  consA: [
+    "A signup who never came back is still a line on the bill, so cost tracks total registrations instead of tracking messaging activity.",
+    "Deduplication is modelled at the level of a journey, which leaves a single event your backend emits twice as something your own code must guard.",
+    "Messaging behaviour is configuration inside somebody else's interface, invisible to code review and absent from the pipeline that governs everything else you ship.",
+    "The consent model was drawn for campaign compliance, so the distinction between an optional digest and an alert somebody needs is yours to impose.",
+  ],
+  prosB: [
+    "A workflow is a file, so a change to notification behaviour is reviewed, promoted and reverted exactly like any other change you ship.",
+    "The trigger accepts a key that makes a repeat call harmless, which is the primitive you want when the caller is a queue with at-least-once delivery.",
+    "The feed with unread state is a finished product rather than a channel, and it is the piece teams most reliably underestimate when they build it themselves.",
+    "Nobody is billed for an account that was quiet this month, so a wide base of dormant users costs nothing to keep addressable.",
+  ],
+  consB: [
+    "A monthly fee is payable before the first notification, which dominates the cost entirely for a product that notifies a few thousand times a month.",
+    "Delivery is somebody else's, so one notification produces two bills and your domain authentication remains a thing you operate yourself.",
+    "There is no audience-building layer, so anything shaped like a campaign to a segment has to come from a second system.",
+    "Modelling a notification taxonomy properly is real design work on day one, and the product will not let you defer it the way a campaign tool would.",
+  ],
+  migrationChecklist: [
+    "Write out every notification your product emits and mark each one as something a person may switch off or something they may not. A payment failure, a security alert and a mention by a colleague sit in different categories, and only one of these two products will insist you say so. Doing the exercise is worthwhile even if you choose the other side, because the list you produce is the thing that tells you whether a marketing-shaped consent model is going to fight you, and it takes an afternoon rather than a sprint.",
+    "Find every place your backend can emit the same event twice, then decide where the guard lives. A queue with at-least-once delivery, a retried job, a webhook the sender re-posts and a user double-clicking all produce the same duplicate, and the difference between one notification and two is whether anything upstream deduplicates. One side accepts a key on the trigger and makes the repeat harmless; the other expects you to have solved it before the event was sent. Both are workable, and only one of them is free.",
+    "Cost the feed honestly before deciding whether to buy it. Unread state that stays consistent across two open tabs, pagination that does not skip an item inserted mid-scroll, a real-time transport that reconnects cleanly, a badge count that agrees with the list, and a read receipt that survives an offline period are each small and collectively are not. Teams routinely build the first eighty per cent in a sprint and then maintain the remainder forever, which is the specific shape of work worth paying somebody else for.",
+    "Count the accounts that signed up and never returned, because one meter charges for them and the other does not. A product with a wide free tier and modest conversion can find that dormant registrations are the majority of a per-person bill, and the usual remedy — pruning them — costs you the analytics that told you they were dormant. Run the number against your real user table before either quote means anything, and run it again against the growth you are forecasting rather than the size you are now.",
+    "Settle who sends the mail, because the two answers change what else you own. One product delivers and therefore holds your sending reputation, your domain authentication and your delivery telemetry. The other calls a provider you already have, which means your product notifications can leave from an identity you chose for that purpose, and it also means a second bill and a second place to look when something did not arrive. Neither is better in the abstract; they are different amounts of responsibility.",
+    "Decide where the copy and the logic are allowed to live, and be honest about what your organisation actually does. Configuration in a hosted interface is genuinely faster to change and genuinely invisible to review, and whether that trade is good depends on whether anybody has ever been paged because somebody edited a live message. Files in a repository are slower to change and are the reason you can answer what the behaviour was three months ago. Pick knowingly, because retrofitting governance onto a console is not a thing you can do.",
+    "Establish where a change gets exercised before a real person sees it. One side gives you a separate space with its own people and its own campaigns, which suits somebody sending themselves a test. The other gives you environments with promotion, which suits a pipeline that runs checks. If your notifications are triggered by product events rather than scheduled by a person, the second shape is the one that catches the mistake, because the mistake is usually in a condition rather than in the wording.",
+    "If you end up running both, name the single authority on preferences and make the other side read from it rather than keep an opinion. Two systems each believing they know what somebody opted into will drift within a quarter, and the drift is discovered by a customer who turned something off and kept receiving it. Decide which store is canonical, write the read path, and write down the decision somewhere that outlives the person who made it — because this is precisely the piece of institutional knowledge that leaves with them.",
+  ],
+  buyingQuestions: [
+    "Which of our notifications may a person switch off, and which must reach them regardless of what they have turned off?",
+    "Where in our system can the same event be emitted twice, and what stops that becoming two notifications?",
+    "If we built the feed ourselves, who maintains the read state, the pagination and the real-time transport in a year?",
+    "How many of our registered accounts were dormant last month, and does the meter in front of us charge for them?",
+    "Does this product deliver the message or call a provider we already pay, and have we budgeted for both bills?",
+    "Has anybody here been paged because somebody edited a live notification in a web interface?",
+    "If we run both systems, which one is the authority on what a person consented to, and who wrote that down?",
+  ],
   faqs: [
     {
       question: "Are these actually competitors?",
@@ -3375,6 +3890,26 @@ const CUSTOMER_IO_VS_KNOCK: VersusPage = {
       question: "What does it cost to move off either one later?",
       answer:
         "The messages are portable and the logic mostly is not. Campaign definitions, segment rules and workflow configuration are expressed in each vendor's own model, and there is no export that turns one into the other. Knock's file-based workflows preserve the shape of your logic even though the runtime does not travel, which is a genuine advantage and a reason to prefer the code-first path even if the visual builder is pleasant.",
+    },
+    {
+      question: "What does an idempotency key on a trigger actually prevent?",
+      answer:
+        "It prevents the same real-world occurrence turning into two messages because your infrastructure did its job. Almost every queue worth using delivers at least once rather than exactly once, which means a consumer that crashes after sending and before acknowledging will run again. Without a key, the second run is indistinguishable from a second event, and the customer gets told twice that their payment failed. With one, the platform recognises the repeat and drops it. The reason this matters more than it sounds is that the bug is invisible under normal conditions and appears only when something else is already going wrong — a deploy, a node restart, a backlog being worked through — which is precisely when a duplicate notification is most alarming to the person receiving it. If the product you choose has no such primitive, you have not avoided the problem; you have moved it into your own code, where it needs a store, a key, an expiry and somebody remembering to use it at every call site.",
+    },
+    {
+      question: "How do I decide which system owns preferences if I run both?",
+      answer:
+        "Pick the one closest to where the user changes them, and make the other read rather than remember. In practice that usually means the system your product's settings screen writes to, because that is the place a person believes they have expressed a choice, and a choice that is believed and not honoured is the failure you are trying to avoid. The implementation is unglamorous: one store, one read path consulted before anything sends, and a synchronisation job if the second system genuinely needs a copy. What does not work is letting both keep an opinion and reconciling periodically, because the reconciliation is always a day behind and the complaint arrives inside that day. Write the decision down in the repository rather than in a wiki, name the store, and add a test that fails if a send path skips the check — this is the kind of rule that holds for a year and then quietly stops holding when somebody adds a new channel in a hurry.",
+    },
+    {
+      question: "Is an in-app feed really hard enough to be worth buying?",
+      answer:
+        "The first version is not, and that is exactly what makes the decision difficult. A list of rows with a read flag is an afternoon. What takes the rest of the year is everything that follows: a badge count that agrees with the list after a partial read, pagination that behaves when something arrives while the user is scrolling, real-time updates that reconnect after a laptop wakes, read state that converges when the same person has two tabs open, and an archive story so the feed does not become an unbounded table. None of it is intellectually hard and all of it is fiddly, which means it gets built to eighty per cent, shipped, and then maintained by whoever touched it last. The honest test is whether the feed is part of what your product is or a convenience beside it. If a user would notice its absence, buying a finished one is usually cheaper than owning an unfinished one. If it is a nicety, build the simple version and do not pay a platform fee for it.",
+    },
+    {
+      question: "What does a platform fee mean for a product that notifies rarely?",
+      answer:
+        "It means you are buying the platform rather than the delivery, and whether that is sensible depends on what the platform is doing for you. At low volume a monthly floor can be the entire cost — the notifications themselves round to nothing — so the question is not what each message costs but whether the fee is less than the engineering it displaces. If it buys a finished feed, a preference model you would otherwise design, and workflows under version control, it can be straightforwardly worth it for a team of five. If you are using it to fan an event across two channels and nothing more, the fee is expensive for what it is and a metered product with no floor fits better. The trap in both directions is forecasting: a fee that is painful today is irrelevant at ten times the volume, and a meter that looks free today is the dominant line at a hundred times. Model both at the volume you expect in two years rather than the one you have now, and notice which of the two curves your growth is actually on.",
     },
   ],
 };
@@ -7906,6 +8441,9 @@ const BREVO_VS_LOOPS: VersusPage = {
       "brevo automation is on the higher tier",
       "eu email marketing platform for saas",
       "removing the vendor logo from marketing emails",
+      "do unsubscribed contacts count toward a contact priced plan",
+      "daily sending limit under a free email tier",
+      "moving sms sender registrations between providers",
     ],
     rationale:
       "Brevo is recommended constantly on price without anyone mentioning that automation sits a tier above the headline plan, and Loops is recommended on simplicity without anyone mentioning that a large dormant list is billed forever — the two facts that actually decide this.",
@@ -7981,6 +8519,49 @@ const BREVO_VS_LOOPS: VersusPage = {
     "Not counting sends is worth more than not paying for dormant contacts.",
     "You would rather a tool with no unlockable tiers than a headline price that is not the price of the product you need.",
   ],
+  prosA: [
+    "A quiet audience costs nothing until you mail it, so a company with a large seasonal list is not paying monthly rent on people it contacts twice a year.",
+    "Four channels and a small contact database arrive under one supplier relationship, which is a genuine reduction in paperwork for an organisation that buys software slowly.",
+    "The surface is generic enough to suit a clinic, an agency or a shop, which is why a business in no obvious software category still finds it usable.",
+    "There is always a higher band, so a capability you discover you need in month four is usually a purchase order rather than a change of supplier.",
+  ],
+  consA: [
+    "The features an evaluator assumes are included sit above the plan whose price they compared, which is the commonest way a shortlist involving this product turns out to have been wrong.",
+    "Another company's mark sits in the footer of mail leaving your own domain until you have climbed two steps of the plan ladder.",
+    "Breadth has accumulated over many years and the interface shows it: everything is reachable, and some of it takes an afternoon of reading to reach.",
+    "The shared pool holds an enormous number of small senders whose list practices you can neither inspect nor influence.",
+  ],
+  prosB: [
+    "What you can do does not change between bands, so whatever you build during the trial is what you keep and nothing waits behind an upgrade.",
+    "Teams stop weighing whether one more send is worth paying for, and the measurable consequence is more experiments rather than fewer.",
+    "The concepts are few enough that a founder builds and sends something without a walkthrough, on a team where nobody's title contains the word email.",
+    "Receipts and announcements leave through one system against one record, so a single screen answers the question of what this person has been sent.",
+  ],
+  consB: [
+    "A dormant signup from two years ago is rent, every month, whether or not you ever intend to write to them.",
+    "The day somebody decides a notice should also arrive by text you are adding a supplier, because the product has no intention of growing that way.",
+    "The company is young enough that a residency answer describes where things currently run, which is a weaker thing than a commitment about where they will.",
+    "There is no band to buy when a capability turns out to be missing, so a gap found in month four is a gap you keep.",
+  ],
+  migrationChecklist: [
+    "Model the two meters against your own list before reading another feature page, because the crossover is sharper than either pricing page implies and it settles most of this. One side multiplies people by nothing and messages by frequency; the other multiplies people by a monthly rate and messages by nothing. Fifty thousand contacts written to each quarter and three thousand written to each week land on opposite answers, and the second figure — how often you genuinely send, not how often you intend to — is the one teams get wrong by a factor of two.",
+    "Find out whether somebody who unsubscribed still counts toward a contact-priced band, and get that from the vendor rather than from a forum thread. On a meter that charges for people instead of for messages, the population you are billed for and the population you are permitted to write to are two different sets, and the gap between them widens every month. A list that has been collecting signups for three years carries a quantity of dead weight that is invisible on a send-metered bill and expensive on the other kind.",
+    "Check the daily ceiling underneath a monthly free allowance against your burstiest single day, not against your monthly average. A free tier generous enough to run a small product on is usually shaped as a monthly figure with a much tighter per-day limit below it, and a launch, an incident notice or an end-of-month billing run is exactly the traffic shape that fits the month and fails the day. Find the daily number, double your worst day, and see whether what you are looking at is a plan or a demonstration.",
+    "Inventory the text-message sender registrations before assuming that channel travels with you. Sender identifiers, per-country approvals and the paperwork behind them belong to the account that applied for them rather than to your company, and several jurisdictions take weeks to grant one. A team treating text messaging as a feature toggle finds at switchover that the channel is dark for a month in its two largest markets. If it matters at all, start the replacement registrations before giving notice on anything.",
+    "Search your own website for embedded scripts pointing at the supplier you are leaving. Hosted signup forms and landing pages are convenient precisely because they are somebody else's code running on your pages, and they keep running until the account closes — at which point a form quietly stops collecting and nobody notices for a fortnight, because forms fail silently and nobody monitors a thing that has never broken. List every embed, then decide for each whether it is being rebuilt, replaced or retired.",
+    "Decide what your password resets do when the messaging tool is unavailable, because folding transactional and lifecycle sending into one product turns that into an operational question rather than a theoretical one. One supplier and one contact record is a real simplification, and it couples the mail your product depends on to the availability of the tool your marketing runs in. Either accept the coupling deliberately, with somebody named to notice it, or keep a second path configured and dormant for the messages a customer cannot do without.",
+    "Get the residency answer into the agreement rather than reading it off a documentation page, because with a young company the honest position is that it may still be moving. A mature European supplier answers this by corporate nationality and a signed processing agreement, which is a fact about the company. A newer one answers it by describing where things currently run, which is a fact about this quarter. Those are different grades of assurance, and only one of them survives the supplier changing where it hosts.",
+    "Establish what happens when a capability turns out to be missing, because the two sides answer that very differently and only one answer costs money. A product with a ladder lets you buy out of most gaps, which is precisely why its headline price is not the price you end up paying. A product with one shape and bands of people cannot — the gap you find in month four is the gap you keep, and the remedy is a second supplier or another move. Neither arrangement is wrong. Knowing which one you bought is what keeps the discovery from being a crisis.",
+  ],
+  buyingQuestions: [
+    "How many contacts do we hold, how often do we genuinely send, and which of the two meters does that pair of numbers favour?",
+    "Does a person who unsubscribed still count toward a contact-priced band, and who at the vendor confirmed that in writing?",
+    "What is the daily ceiling under the free allowance, and what did our single busiest day look like last quarter?",
+    "Which text-message sender registrations belong to the account we would be leaving, and how long does a replacement take to grant?",
+    "Where on our website is a form or a landing page served by the supplier's own script, and who rebuilds each one?",
+    "If the messaging tool were unavailable for six hours, which of our messages would a customer actually miss?",
+    "Is the residency answer in a contract or on a documentation page, and would it survive the company changing where it hosts?",
+  ],
   faqs: [
     {
       question: "Is Brevo's entry plan enough?",
@@ -8007,6 +8588,26 @@ const BREVO_VS_LOOPS: VersusPage = {
       answer:
         "Contacts with their consent status and opt-in timestamps first, because when somebody consented is the one record you cannot reconstruct and the one a regulator asks about. Then your suppression list, imported before the first production send rather than after. Templates and automations cross no paradigm boundary and have to be rebuilt by hand, so budget that as real work rather than a migration step. Finally, list every place your application calls the old API — the background job nobody remembers is what keeps sending from an account you thought you had closed.",
     },
+    {
+      question: "Do unsubscribed contacts count toward a per-contact bill?",
+      answer:
+        "Ask, because it is the difference between two quite different invoices and the pricing page rarely says. Some products bill on everybody stored, some on everybody currently subscribed, and a few draw the line at anybody who has not hard-bounced. On a list that has been accumulating for three years the unsubscribed and unreachable population can be a meaningful fraction of the total, which means the same audience produces two figures depending on where the vendor counts from. The practical step is to pull your own numbers first: total records, currently subscribed, unsubscribed, hard-bounced, and never-engaged-in-a-year. Then ask which of those the quote is based on. If the answer is the largest one, you are paying to store the evidence of people who asked you to stop, and the remedy — deleting them — collides with the fact that you need to keep proof of the opt-out.",
+    },
+    {
+      question: "Can a small product run on either free tier indefinitely?",
+      answer:
+        "Often yes, and the figure that decides it is not the one on the pricing page. A free allowance is usually quoted monthly with a much tighter daily ceiling underneath, and ordinary product traffic is not evenly spread — a launch announcement, an incident notice or a billing run all arrive as a single day's spike that fits inside the month and does not fit inside the day. Work out your worst single day over the last quarter, double it, and check that against the daily limit rather than the monthly one. The second thing to check is what happens when you cross it: sending that queues and catches up is an inconvenience, and sending that is silently dropped is an outage in the messages your customers most notice missing.",
+    },
+    {
+      question: "What happens to my text messaging if I switch suppliers?",
+      answer:
+        "It stops, and then it takes longer to restart than anyone expects. The registrations that let you send under a recognisable sender name are held per country, granted to the account that applied, and in several jurisdictions they involve documentation, a waiting period and occasionally a local entity. None of that transfers. A team that thinks of text messaging as another channel on the same invoice tends to discover this at switchover, when the messages start arriving from an unrecognised number or stop arriving at all in the markets with the strictest rules. If the channel matters, treat it as its own migration with its own timeline: start the replacement registrations first, run both accounts in parallel while the approvals land, and only then move the email.",
+    },
+    {
+      question: "Which of these is the safer bet over three years?",
+      answer:
+        "They are risky in opposite directions, which is more useful to know than a verdict. The broad European suite is the safer bet on continuity — it is an established company with a large customer base and a diversified product line, and it is not going to disappear. Its risk is drift: the plan you are on gets re-cut, the feature you depend on moves up a tier, and the breadth that attracted you means any individual piece is maintained by a small part of a large organisation. The focused product is the safer bet on the thing it does — one shape, no tiers of capability, nothing that can be taken away by a repricing — and the riskier bet on the company, because a young vendor with a narrow product has fewer places to go when growth slows. The mitigations differ accordingly. Against drift, price the tier containing your real requirements and re-check it annually. Against vendor risk, send from your own domain, keep your own copy of the consent record, and make sure the integration is a module somebody could replace in a week rather than a dependency woven through the codebase.",
+    },
   ],
 };
 
@@ -8024,6 +8625,9 @@ const BREVO_VS_CUSTOMER_IO: VersusPage = {
       "when is a behavioural messaging platform worth it",
       "eu data residency for a messaging platform",
       "brevo automation versus a real journey builder",
+      "customer.io monthly minimum for a small company",
+      "can a customer.io data region be changed later",
+      "frequency capping on a behavioural messaging platform",
     ],
     rationale:
       "These two appear on the same shortlist whenever a growing company asks what comes after basic campaigns, and the honest deciding factors — a monthly floor that excludes small companies, and an event pipeline somebody has to build — are absent from both vendors' own comparisons.",
@@ -8094,6 +8698,49 @@ const BREVO_VS_CUSTOMER_IO: VersusPage = {
     "You want a real non-production workspace to test a journey end to end before customers see it.",
     "Somebody owns lifecycle messaging as an actual job, so a powerful canvas will be used rather than admired.",
   ],
+  prosA: [
+    "A company with no marketing function at all can have a competent campaign out the same week, because nothing in the product assumes a specialist is available to operate it.",
+    "Text messages, a chat widget and a light deal pipeline arrive on the same account, which removes three procurement conversations from a company assembling its first stack.",
+    "Nothing has to be emitted from your application before the tool becomes useful, so the marketing work is not queued behind an engineering backlog that may never clear.",
+    "Being a French company under European law answers a procurement question by naming who you contract with, which is quicker than demonstrating where a toggle was set.",
+  ],
+  consA: [
+    "The engine reasons about fields sitting on a contact and not about a sequence of things somebody did, and that wall arrives at roughly the third condition.",
+    "The behaviour most evaluators assume they are buying — sequences that fire on their own, and split testing — sits a tier above the plan the headline price describes.",
+    "The channels share an account rather than a journey, so a text message and an email are two things you scheduled, not two steps one system coordinated.",
+    "Verifying a campaign means mailing yourself a copy and reading it carefully, because there is no second space holding its own people and its own history.",
+  ],
+  prosB: [
+    "A journey can wait, re-check, branch on what changed in the meantime, and abandon itself entirely once the reason it existed stops being true.",
+    "Push, in-app and text sit inside the same workflow as the email, so the decision about where a message belongs is made once, in one place.",
+    "A separate workspace holds its own people and its own campaigns, so an entire sequence can be run to completion before anybody real is inside it.",
+    "Ceilings on how often somebody can be contacted are part of the product rather than something to remember, which is the difference between a busy week and an apology.",
+  ],
+  consB: [
+    "There is a floor payable before a single message leaves, and for a company whose entire software budget is under that number, no feature discussion follows.",
+    "Profiles are billed whether or not you ever message them, so a product with a wide free tier pays for an audience it has deliberately chosen not to talk to.",
+    "The data region is picked when the workspace is created, by whoever created it, and is not something you revisit during a compliance review eighteen months later.",
+    "The product does nothing until your application describes what people did, so messaging velocity becomes a function of whether the engineering queue has room in it.",
+  ],
+  migrationChecklist: [
+    "Price the things that are not email before anybody cancels anything. Text messages, the widget sitting on your website and the small deal pipeline are separate products arriving on one account, and each has somebody in the company quietly depending on it. Find out who has the widget open, who reads the conversations in it, and what becomes of that history when the account closes. The email part is the visible half of this migration; the half nobody scopes is the three other tools that came free with it.",
+    "Settle the processing region before the first import rather than during a later review. One side answers a residency question by corporate nationality, which is a fixed fact about the company. The other answers it by a selection made once, at workspace creation, by whoever happened to set the account up — and that selection is not something you casually revise afterwards. Confirm what was chosen, get the answer in the agreement, and do it before any person's record exists inside it.",
+    "Count the events your product does not currently emit, then find out whose quarter writing them lands in. A behavioural engine is an address book until the application describes what people did, and the dozen moments your messaging would depend on — finished setup, invited a colleague, upgraded, went quiet — are code somebody has to write, review and deploy. Get that estimate from an engineer before signing anything, rather than from a demonstration where the events already exist.",
+    "Configure the contact ceilings before the first journey is switched on, not after the first complaint. An engine that reacts to behaviour will message the same person four times in an hour when four things happen to them at once, and it is doing precisely what it was told. On the simpler side that risk barely exists, because a scheduled campaign cannot compound on itself. Travelling toward the engine means acquiring a category of accident you have never previously had to think about.",
+    "Decide what a person is once fields stop being enough to describe one. One side stores properties on a contact and asks you to reduce everything you know to them. The other stores a stream of things that happened and computes the properties from it. Flattening a stream into fields loses the question most worth asking, and inflating fields into a stream invents a history that never happened. Choose your direction knowingly and accept the specific loss that comes with it.",
+    "Name the person whose job this becomes, in writing, before the contract is signed. A canvas that can express anything only earns its price if somebody opens it most weeks, and the failure is never a bad journey — it is three journeys built during onboarding that nobody has touched since. On the simpler side, whoever has time is a genuine and sufficient answer to this question. On the other side it is not, and pretending otherwise is the most expensive mistake available here.",
+    "Work out which subdomain your receipts will leave from, because both sides will carry them and neither should carry them on the same sending identity as your campaigns. Sharing a supplier is sensible consolidation. Sharing a reputation between bulk mail and the message a customer needs at two in the morning is how a password reset arrives in a spam folder. Split the traffic by subdomain on whichever side you land, and do it while the account is new and the decision is free.",
+    "Take a dated snapshot of what you currently send and how often, because afterwards nobody will agree on what the baseline was. Campaign-shaped sending leaves a tidy history of discrete sends. Behaviour-driven sending leaves a continuous trickle that is genuinely hard to compare against it. Without a recorded starting point the first quarter's numbers become an argument rather than a measurement, and the person who championed the change is the one who loses that argument.",
+  ],
+  buyingQuestions: [
+    "Who here currently uses the text messaging, the website widget or the deal pipeline, and has anybody asked them what happens next?",
+    "Which processing region would our workspace be created in, who makes that choice, and can it still be revisited afterwards?",
+    "How many of the events our messaging would depend on does our application emit today, and whose quarter does writing the rest land in?",
+    "What stops one person receiving four messages in an hour because four things happened to them at once?",
+    "Is there a named person whose job this becomes, or are we buying a canvas for whoever has a free afternoon?",
+    "Which subdomain will our receipts leave from once campaigns and transactional mail share one supplier?",
+    "What is our current sending baseline, written down and dated, so next quarter's numbers can mean something?",
+  ],
   faqs: [
     {
       question: "How do I know when I have outgrown campaign-based tools?",
@@ -8119,6 +8766,26 @@ const BREVO_VS_CUSTOMER_IO: VersusPage = {
       question: "Which one is better for deliverability?",
       answer:
         "Neither, inherently, and both give you new ways to hurt yourself. Brevo's risk is a broad shared pool full of small senders of varying quality whom you cannot audit. Customer.io's risk is that a badly scoped trigger reaches a large audience very quickly, which is exactly why its frequency controls exist. What actually decides your placement is the same on both: authenticated domains with a DMARC policy, bulk mail on a separate subdomain from the mail your product depends on, prompt suppression handling, and not mailing people who stopped engaging a year ago.",
+    },
+    {
+      question: "Can I change the processing region after the account exists?",
+      answer:
+        "Treat the answer as no and plan accordingly. The region is a property of the workspace, fixed when the workspace is created, and moving an existing one is a vendor-assisted exercise rather than a setting you flip on a Tuesday afternoon. The trap is who makes the choice: it is usually an engineer during a trial, months before anybody in legal has read the contract, and by the time the question is asked properly there are already several hundred thousand people's records sitting in whichever region seemed reasonable at the time. If residency is a genuine obligation rather than a preference, write it into the setup instructions for the trial account, not into the security questionnaire you fill in afterwards. And if the obligation is really about corporate nationality — who can be compelled to hand data over, rather than which building it sits in — then no region toggle answers it and you are looking at the wrong half of this comparison.",
+    },
+    {
+      question: "What happens to the chat widget and the small CRM if I leave?",
+      answer:
+        "They stop, and the surprising part is how much of your company turns out to have been using them. The widget on your website is a live channel that somebody answers; the deals list is where a part-time salesperson keeps their pipeline; the conversation history is a record nobody thought of as data until it was about to disappear. None of it moves to a behavioural messaging platform, because a behavioural messaging platform is not trying to be a helpdesk or a contact manager. Before you cancel, take an inventory of who logs in and what for, export the conversation history and the deal records, and price the replacements — because two small subscriptions and an afternoon of setup is a perfectly manageable outcome, and discovering the need the week after the account closes is not.",
+    },
+    {
+      question: "What does a frequency cap actually stop?",
+      answer:
+        "It stops arithmetic you did not intend from becoming messages a person receives. A behavioural engine listens to a stream of events, and events arrive in clusters: somebody returns after a fortnight away, works through five things in twenty minutes, and trips four separate triggers that were each individually sensible. Without a ceiling they all fire, the person gets four emails inside an hour, and the tool is working exactly as configured. A cap is a rule that says no recipient receives more than n messages in a period, applied above every journey rather than inside any of them, so a new campaign cannot quietly break the promise an old one made. Set it before the first journey goes live, because the alternative is discovering the need from a complaint rate that has already moved, and complaint rates recover far more slowly than they rise.",
+    },
+    {
+      question: "Is there any way to rehearse a campaign on the simpler side?",
+      answer:
+        "Only informally, and it is worth being honest that this is a real gap rather than a preference. You can send yourself a test, you can send to a small internal list, and you can schedule to a segment of ten people before the segment of ten thousand. What you cannot do is exercise the whole thing — the trigger, the timing, the conditions, the follow-up — against a population that is not your actual customers, because there is only one set of contacts and one set of automations. For campaign-shaped sending that is usually proportionate: the worst outcome is an embarrassing email, sent once, to people who will forgive it. It stops being proportionate the moment your messaging starts reacting to behaviour, because then the mistake is not one email at a bad time, it is a rule that keeps firing until somebody notices. If you expect to end up there, the existence of a genuine second environment is worth more than any individual feature on either side of this page.",
     },
   ],
 };
