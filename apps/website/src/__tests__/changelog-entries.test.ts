@@ -6,11 +6,11 @@ import {
 } from "@/app/changelog/releases";
 
 /**
- * Entries migrated before the field existed. Lower this number whenever an
- * entry gains a summary; never raise it. New entries must ship one — the
- * changelog skill's editorial gate requires it.
+ * Entries migrated before the field existed. Measured 2026-09-17 after the
+ * September consolidation. Lower this whenever an entry gains a summary;
+ * never raise it. New entries must ship one — see the changelog skill's Step 0.
  */
-const ENTRIES_WITHOUT_SUMMARY_CEILING = 63;
+const ENTRIES_WITHOUT_SUMMARY_CEILING = 55;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

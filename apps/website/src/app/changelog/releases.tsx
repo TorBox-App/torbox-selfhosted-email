@@ -113,112 +113,61 @@ export const Code = ({ children }: { children: ReactNode }) => (
 
 export const releases: Release[] = [
   {
-    slug: "type-declarations-that-resolve",
-    versions: ["CDK v0.3.1", "Pulumi v0.4.1"],
-    date: "2026-09-01",
-    icon: Blocks,
-    title: "Type Declarations That Resolve",
-    tags: ["iac"],
-    items: [
-      <>
-        The declarations <Code>@wraps.dev/cdk</Code> and{" "}
-        <Code>@wraps.dev/pulumi</Code> publish no longer import{" "}
-        <Code>@wraps/core</Code>. Installing either package into a TypeScript
-        project failed with{" "}
-        <Code>Cannot find module &apos;@wraps/core&apos;</Code> in{" "}
-        <Code>index.d.ts</Code>: the build inlined core&rsquo;s JavaScript but
-        left its types referenced by name, and <Code>@wraps/core</Code> is not
-        published to npm. Every type routed through it —{" "}
-        <Code>EventsConfig</Code>, <Code>SMTPConfig</Code>,{" "}
-        <Code>ArchivingConfig</Code>, <Code>retentionToDays</Code> — failed to
-        resolve with it
-      </>,
-      <>
-        Running code was never affected. Core was already bundled into the
-        published JavaScript, so imports and <Code>require()</Code> resolved
-        normally; the gap was confined to typechecking
-      </>,
-    ],
-  },
-  {
-    slug: "support-link-points-somewhere",
-    versions: ["CLI v3.11.2"],
-    date: "2026-09-01",
-    icon: Wrench,
-    title: "Support Link Points Somewhere",
-    tags: ["cli"],
-    items: [
-      <>
-        <Code>wraps support</Code> prints a GitHub issues link under{" "}
-        <Code>wraps-team</Code>, the organization the repository lives in. It
-        pointed at a <Code>wraps-dev</Code> organization that returns a 404, so
-        the link was dead
-      </>,
-    ],
-  },
-  {
     slug: "teardown-that-leaves-your-dns-alone",
     versions: ["CLI v3.11.1"],
     date: "2026-09-01",
     icon: Wrench,
     title: "Teardown That Leaves Your DNS Alone",
     tags: ["cli"],
+    summary:
+      "wraps email destroy now touches only the DNS records Wraps created, across Route53, Cloudflare and Vercel.",
     items: [
       <>
         <Code>wraps email destroy</Code> deletes only the records Wraps created.
         Every deletion matches name, type and exact value, and a Route53 record
         set holding values Wraps did not write is rewritten without Wraps&rsquo;
-        value rather than deleted whole. Deletion previously matched name and
-        type alone, so accepting the DNS cleanup prompt on a domain that already
-        had a <Code>_dmarc</Code> policy removed that policy along with the
-        records Wraps wrote, and the same applied to every TXT record at the
-        MAIL FROM subdomain. Cloudflare and Vercel domains were never cleaned up
-        at all, since teardown only ever ran through Route53. The record lookup
-        is also paginated now, so zones larger than 500 record sets no longer
-        skip records silently
-      </>,
-      <>
-        If you ran <Code>wraps email destroy</Code> on a domain whose DMARC
-        policy predated Wraps, check that the <Code>_dmarc</Code> record is
-        still published before relying on it
+        value rather than deleted whole &mdash; deletion previously matched name
+        and type alone, so accepting the DNS cleanup prompt on a domain that
+        already had a <Code>_dmarc</Code> policy removed that policy along with
+        the records Wraps wrote. Cloudflare and Vercel domains are cleaned up
+        too, not just Route53, and the record lookup is paginated so zones
+        larger than 500 record sets no longer skip records silently. If you ran{" "}
+        <Code>destroy</Code> before this and the domain had a{" "}
+        <Code>_dmarc</Code> policy predating Wraps, confirm it is still
+        published
       </>,
       <>
         <Code>wraps email reply destroy</Code> deletes the MX and SPF records it
         created at <Code>r.mail.&lt;domain&gt;</Code> instead of printing a
-        reminder to remove them by hand. Once the receipt rule was gone the MX
-        still pointed at SES with nothing configured to receive, so signed reply
-        addresses bounced rather than failing closed.{" "}
-        <Code>wraps email inbound destroy</Code> now warns when reply threading
-        is configured, and still never deletes those records itself: they follow
-        the sending domain, not the inbound receiving domain
+        reminder to remove them by hand &mdash; left in place, the MX still
+        pointed at SES with nothing configured to receive, so signed reply
+        addresses bounced. <Code>wraps email inbound destroy</Code> now warns
+        when reply threading is configured, and still never deletes those
+        records itself: they follow the sending domain, not the inbound
+        receiving domain
       </>,
       <>
         Fix: a DNS write that correctly did nothing is no longer reported as a
         failure. Re-running <Code>wraps email inbound init</Code>,{" "}
         <Code>inbound add</Code> or <Code>reply init</Code> against records that
-        were already correct printed{" "}
-        <Code>Failed to create some DNS records</Code>, then printed the full
-        manual block instructing you to add{" "}
-        <Code>v=spf1 include:amazonses.com ~all</Code>. On a name that already
-        carried an SPF record, following that produced a second{" "}
-        <Code>v=spf1</Code> record, which is the RFC 7208 PermError the
-        preflight exists to prevent
+        were already correct used to print the full manual SPF block, and
+        following it against an existing SPF record produced a second{" "}
+        <Code>v=spf1</Code> record &mdash; the RFC 7208 PermError the preflight
+        exists to prevent
       </>,
       <>
         Fix: <Code>wraps email check</Code> recommends <Code>~all</Code> and no
-        longer grades a domain down for it. A <Code>-all</Code> deduction
+        longer grades a domain down for it. A <Code>-all</Code> deduction now
         applies only where the domain authorizes senders and DMARC is absent,
-        invalid, <Code>p=none</Code> or <Code>t=y</Code>, and a parked{" "}
-        <Code>v=spf1 -all</Code> is never flagged. RFC 9989 section 7.1 cautions
-        against <Code>-all</Code> because it rejects pre-DATA, before DMARC can
-        pass a message on an aligned DKIM signature
+        invalid, <Code>p=none</Code> or <Code>t=y</Code> &mdash; RFC 9989
+        section 7.1 cautions against <Code>-all</Code> because it rejects mail
+        pre-DATA, before DMARC can pass it on an aligned DKIM signature &mdash;
+        and a parked <Code>v=spf1 -all</Code> is never flagged
       </>,
-      <>
-        The apex SPF record is still left for you to edit by hand. Stripping{" "}
-        <Code>include:amazonses.com</Code> from a record that may carry other
-        providers&rsquo; includes is a rewrite rather than a deletion, and{" "}
-        <Code>destroy</Code> does not attempt it
-      </>,
+    ],
+    alsoFixed: [
+      "The apex SPF record is still left for you to edit by hand — stripping include:amazonses.com from a record that may carry other providers' includes is a rewrite rather than a deletion, and destroy does not attempt it.",
+      "wraps support printed a GitHub issues link under the wraps-dev organization, which 404s; it now points at wraps-team, where the repository lives (CLI v3.11.2).",
     ],
   },
   {
@@ -228,6 +177,8 @@ export const releases: Release[] = [
     icon: LayoutDashboard,
     title: "Sending Domains, Suppressions & Stale Roles",
     tags: ["dashboard"],
+    summary:
+      "Sending domains, suppressions and role health move from CLI-only into the dashboard.",
     media: {
       src: "/email/2026-09-dashboard-domains.png",
       alt: "A Wraps card reading: September 2026 — Add a domain in the dashboard. DKIM records, verification state, and the configuration set behind each identity.",
@@ -240,138 +191,43 @@ export const releases: Release[] = [
         state and the DKIM CNAMEs and MAIL FROM records still to publish, adds a
         domain with SES-managed Easy DKIM, and opens a per-identity sheet for
         the configuration set that governs it: tracking domain, TLS policy,
-        suppression reasons and event destinations. Onboarding had told
-        customers they could manage domains in the dashboard while the only
-        working paths were installing the CLI or rebuilding the CloudFormation
-        stack. The sheet flags an <Code>OPTIONAL</Code> tracking{" "}
-        <Code>HttpsPolicy</Code> and an empty event-destination list, which are
-        the usual reasons click links break and delivery events never arrive
+        suppression reasons and event destinations &mdash; the sheet flags an{" "}
+        <Code>OPTIONAL</Code> tracking <Code>HttpsPolicy</Code> and an empty
+        event-destination list, the usual reasons click links break and delivery
+        events never arrive. Onboarding had told customers they could manage
+        domains in the dashboard while the only working paths were installing
+        the CLI or rebuilding the CloudFormation stack
       </>,
       <>
         The SES suppression list is browsable from the dashboard, and an address
         can be removed. A <Code>COMPLAINT</Code>-reason removal re-reads the
         reason from SES rather than trusting the browser, and refuses without an
-        explicit acknowledgement. <Code>email.suppression.*</Code> in{" "}
-        <Code>@wraps.dev/email</Code> now works on every deployment path as
-        well: the CDK construct, the Pulumi provider and the CloudFormation
-        template each grant the four SES actions their roles never had, so those
-        calls returned AccessDenied everywhere except a CLI deployment
+        explicit acknowledgement. The underlying{" "}
+        <Code>email.suppression.*</Code> grants now ship on every deployment
+        path &mdash; CDK, Pulumi and CloudFormation &mdash; but an existing
+        deployment needs <Code>wraps platform update-role</Code> (CLI v3.9.0+),
+        a CDK 0.3.0+/Pulumi 0.4.0+ redeploy, or a CloudFormation stack update
+        before those calls stop returning AccessDenied
       </>,
       <>
-        Existing infrastructure does not pick either grant up on its own. A
-        platform connection needs <Code>wraps platform update-role</Code> from
-        CLI v3.9.0 or later; a CDK or Pulumi stack needs{" "}
-        <Code>@wraps.dev/cdk</Code> 0.3.0 or <Code>@wraps.dev/pulumi</Code>{" "}
-        0.4.0 and a redeploy; a CloudFormation stack needs an update against the
-        republished template
+        The account page flags when the console role&rsquo;s policy is behind
+        the version Wraps expects and links to the IAM-console repair route, and
+        reports AWS&rsquo;s actual SES production-access verdict instead of
+        discarding it. <Code>wraps email status --json</Code> reports sandbox
+        state and quota and recognizes a CloudFormation deployment instead of
+        exiting 1 with &ldquo;No email infrastructure found&rdquo;
       </>,
       <>
-        The account page warns when the console role&rsquo;s policy is behind
-        the version Wraps expects, and carries the IAM-console repair route the
-        card was missing &mdash; the one route that works regardless of how the
-        role was created. A customer on an old role saw features that looked
-        switched off, with nothing to explain why and no reason to visit the
-        page that fixes it
-      </>,
-      <>
-        The dashboard reports the SES production-access review verdict. AWS
-        returns <Code>Details.ReviewDetails</Code> on the{" "}
-        <Code>GetAccount</Code> call Wraps already makes hourly, and both
-        readers discarded it, so a request AWS had already failed still read as
-        &ldquo;Request production access&rdquo; to someone who believed they had
-        it
-      </>,
-      <>
-        <Code>wraps email status --json</Code> reports a <Code>sending</Code>{" "}
-        block with sandbox state and quota, and recognises a CloudFormation
-        deployment instead of exiting 1 with &ldquo;No email infrastructure
-        found&rdquo;. It is the command the onboarding wizard tells coding
-        agents to run to confirm setup
-      </>,
-      <>
-        Fix: a broadcast into an SES account AWS has paused is blocked at the
-        review step. <Code>assessQuotaHeadroom</Code> read{" "}
-        <Code>SendQuota</Code> off the <Code>GetAccount</Code> response while
-        discarding <Code>SendingEnabled</Code> and{" "}
-        <Code>EnforcementStatus</Code> on the same object, so the wizard ran
-        past the point-of-no-return dialog and every recipient failed. A
-        PROBATION account warns instead of blocking, and a check that cannot
-        read account state never refuses a legitimate send
-      </>,
-      <>
-        Fix: the sending-domains list pages through every SES identity rather
-        than showing the first 100, and the setup dashboard&rsquo;s &ldquo;Send
-        a test email&rdquo; step sends one instead of linking to the page the
-        reader was already on
+        Fix: a broadcast into an SES account AWS has paused is now blocked at
+        the review step instead of running past the point-of-no-return dialog
+        and failing every recipient &mdash; a <Code>PROBATION</Code> account
+        only warns rather than blocking, and a check that cannot read account
+        state never refuses a legitimate send. Fix: the sending-domains list
+        pages through every SES identity instead of showing only the first 100
       </>,
     ],
-  },
-  {
-    slug: "tracking-links-that-resolve",
-    versions: ["CLI v3.7.0"],
-    date: "2026-09-01",
-    icon: Wrench,
-    title: "Tracking Links That Resolve",
-    tags: ["cli"],
-    items: [
-      <>
-        <Code>wraps email domains list</Code> reports whether tracking links are
-        HTTPS, in both human and JSON output, and the dashboard qualifies the
-        tracking-domain row. An HTTPS tracking domain and an HTTP-only one
-        looked identical everywhere Wraps displayed them, and the failure hides
-        well: opens keep working over plain HTTP, so only clicks break and the
-        symptom reads as an unremarkable click-through rate. Tracking state is
-        recorded per configuration set, so a multi-domain account no longer
-        reports one set&rsquo;s state as the whole account&rsquo;s
-      </>,
-      <>
-        <Code>domains config --tracking-domain</Code> offers HTTPS at the point
-        it sets the domain, rather than only on a second trip through the menu
-      </>,
-      <>
-        Fix: every tracking-domain write now carries an explicit{" "}
-        <Code>HttpsPolicy</Code>. SES treats an omitted policy as{" "}
-        <Code>OPTIONAL</Code>, which wraps click links in the original
-        link&rsquo;s protocol &mdash; and every link in modern email is{" "}
-        <Code>https://</Code>, so a recipient got a certificate warning from{" "}
-        <Code>r.&lt;region&gt;.awstrack.me</Code> instead of the destination.
-        Three paths could reach that state, including{" "}
-        <Code>domains verify</Code> re-issuing a policy-less write that
-        downgraded an already-<Code>REQUIRE</Code> configuration set
-      </>,
-      <>
-        Fix: a zone-scoped Cloudflare token works for DNS automation. Validation
-        gated on <Code>GET /user/tokens/verify</Code>, which needs the token to
-        carry User &rarr; API Tokens &rarr; Read, so a token holding only Zone
-        &rarr; DNS &rarr; Edit &mdash; the least-privilege token for everything
-        the CLI asks of Cloudflare &mdash; was refused while being able to
-        create every record needed. Validation now lists zones, which is the
-        capability the feature actually exercises
-      </>,
-      <>
-        Fix: two DNS paths degraded silently. The tracking CNAME printed for
-        manual entry with no hint that a push had been attempted and refused,
-        and the ACM validation push discarded its result, so the record that
-        gates certificate issuance could be dropped while the CLI reported
-        success and HTTPS sat at pending forever. Both now say whether DNS was
-        written
-      </>,
-      <>
-        Fix: <Code>wraps --help</Code> hid thirteen shipped subcommands across
-        five groups, including <Code>wraps email reply</Code>,{" "}
-        <Code>wraps email logs</Code> and <Code>wraps workflow</Code> entirely.
-        A parity test reads the dispatcher and asserts every subcommand appears
-        in the help output
-      </>,
-      <>
-        Fix: both IaC packages accepted{" "}
-        <Code>tracking.customRedirectDomain</Code> and failed differently.{" "}
-        <Code>@wraps.dev/pulumi</Code> deployed it with SES&rsquo;s{" "}
-        <Code>OPTIONAL</Code> policy and no CloudFront &mdash; a
-        successful-looking deploy whose click links break &mdash; and{" "}
-        <Code>@wraps.dev/cdk</Code> ignored the option entirely. Each now warns
-        at deploy time
-      </>,
+    alsoFixed: [
+      'The setup dashboard\'s "Send a test email" step now links to the sending-domains page instead of sending a test email itself.',
     ],
   },
   {
@@ -381,6 +237,8 @@ export const releases: Release[] = [
     icon: Blocks,
     title: "The API Catches Up With the Dashboard",
     tags: ["api"],
+    summary:
+      "API keys can now manage templates, segments and broadcast batches, and read the account-health data the dashboard shows.",
     media: {
       src: "/email/2026-09-api-v1-2.png",
       alt: "A Wraps card reading: API v1.2 — Templates and segments by API key. Domain verification, email metrics and SES account health ship alongside them.",
@@ -392,54 +250,42 @@ export const releases: Release[] = [
         The template editor is reachable by API key. <Code>/v1/templates</Code>{" "}
         adds a cursor-paginated list, full detail, create, partial update,{" "}
         <Code>/:id/publish</Code> and <Code>/:id/duplicate</Code> &mdash;
-        publish running the same sequence the dashboard uses. The API does not
-        compile TSX, so <Code>compiledHtml</Code> must come from the caller.
-        There is no DELETE: templates are referenced by send history, and
-        removing one would silently detach it
-      </>,
-      <>
-        <Code>GET /v1/templates/pull</Code> gains a bound. It returned every
-        code-pushed template with full TSX source and no pagination, its only
-        ceiling Lambda&rsquo;s response limit. <Code>limit</Code> is opt-in, so
-        the CLI&rsquo;s push/pull protocol is byte-for-byte unchanged when it is
-        omitted
+        publish running the same sequence the dashboard uses. A{" "}
+        <Code>limit</Code> bound on <Code>GET /v1/templates/pull</Code> is
+        opt-in &mdash; it used to return every code-pushed template with full
+        TSX source and no pagination, its only ceiling Lambda&rsquo;s response
+        limit &mdash; so the CLI&rsquo;s push/pull protocol is byte-for-byte
+        unchanged when the bound is omitted. The API does not compile TSX, so{" "}
+        <Code>compiledHtml</Code> must come from the caller. There is no DELETE:
+        templates are referenced by send history, and removing one would
+        silently detach it
       </>,
       <>
         <Code>/v1/segments</Code> adds list, read, create, update, delete and{" "}
         <Code>/preview</Code> for an unsaved condition. The whole group sits
-        behind a Pro plan gate on every verb including reads.{" "}
+        behind a Pro plan gate on every verb including reads;{" "}
         <Code>memberCount</Code> is always computed live rather than read from
         the cached column, and a delete refuses with 409 while a scheduled or
         processing broadcast still targets the segment
       </>,
       <>
-        <Code>/v1/batch</Code> rounds out with a list, per-recipient outcomes
-        and a click breakdown. A caller could create, promote, get, cancel and
-        resume a broadcast but never see who it reached. The status endpoint
-        also reports the delivered, opened, clicked, bounced, complained and
-        suppressed counters the send already tracked
+        <Code>/v1/batch</Code> adds a list, per-recipient outcomes and a click
+        breakdown, so a caller can see who a broadcast reached instead of only
+        creating, promoting, getting, cancelling and resuming it
       </>,
       <>
-        <Code>GET /v1/domains</Code> answers whether a sending identity is
-        verified and DKIM is live, read from SES with no new IAM. A platform
-        provisioning domains for its own tenants could get that answer from the
-        CLI, the MCP server and onboarding, but never from an API key. An
+        <Code>GET /v1/domains</Code>, <Code>GET /v1/email/metrics</Code> and{" "}
+        <Code>GET /v1/account/health</Code> round out what a caller can read
+        about its own connected account: domain verification and DKIM status (an
         unreachable connected account is marked rather than failing the whole
-        request
-      </>,
-      <>
-        <Code>GET /v1/email/metrics</Code> returns aggregate email numbers with
-        dimension and granularity parameters. No plan gate &mdash; reading your
-        own numbers is not a paid feature
-      </>,
-      <>
-        <Code>GET /v1/account/health</Code> serves the SES verdict: sandbox
-        status, production access, enforcement pauses, the 24-hour quota. A
-        hosted provider cannot describe any of that, because there is no
-        per-customer SES account to describe. Thresholds come from the
-        classifier&rsquo;s exported constants so a caller computes its own
-        headroom without hardcoding AWS&rsquo;s numbers, <Code>unknown</Code>{" "}
-        never collapses to healthy, and the read costs zero AWS calls
+        request), aggregate email numbers by dimension and granularity with no
+        plan gate, and the SES verdict &mdash; sandbox status, production
+        access, enforcement pauses, 24-hour quota &mdash; a hosted provider has
+        no equivalent for, since there is no per-customer SES account to
+        describe. Health thresholds come from the classifier&rsquo;s exported
+        constants, so a caller computes its own headroom without hardcoding
+        AWS&rsquo;s numbers; <Code>unknown</Code> never collapses to healthy,
+        and the read costs zero AWS calls
       </>,
     ],
   },
@@ -450,6 +296,8 @@ export const releases: Release[] = [
     icon: ShieldCheck,
     title: "Audit Export, SMS Consent & Account Health",
     tags: ["dashboard"],
+    summary:
+      "Account health, audit export and SMS consent are now visible and self-service in the dashboard, without waiting on an alert to fire.",
     items: [
       <>
         Audit logs export to CSV on Business. The plan was sold on audit export
@@ -468,42 +316,37 @@ export const releases: Release[] = [
       </>,
       <>
         A header pill reports SES account health whenever it is not healthy,
-        from a Postgres-only read. The hourly sweep compared GetAccount and
-        CloudWatch reputation against AWS&rsquo;s enforcement lines and threw
-        every number away, so &ldquo;is my account okay right now?&rdquo; had no
-        answer anywhere unless an alert happened to fire in the last 24 hours
+        from a Postgres-only read. The hourly sweep compared{" "}
+        <Code>GetAccount</Code> and CloudWatch reputation against AWS&rsquo;s
+        enforcement lines and threw every number away, so &ldquo;is my account
+        okay right now?&rdquo; had no answer anywhere unless an alert happened
+        to fire in the last 24 hours
       </>,
       <>
         Fix: the stale-feed alert stops firing on foreign SES traffic. The
         fallback probe reads the account-wide SES send count, which includes
-        mail from applications that have nothing to do with Wraps and were never
-        owed an event. One customer sharing SES with their own app was flagged
-        with zero Wraps sends against 15,804 account-wide. The probe now
-        measures that count against a seven-day baseline of recorded sends and
-        stays quiet when the surplus is someone else&rsquo;s mail
+        mail from applications that have nothing to do with Wraps. One customer
+        sharing SES with their own app was flagged with zero Wraps sends against
+        15,804 account-wide; the probe now measures that count against a
+        seven-day baseline of recorded sends and stays quiet when the surplus is
+        someone else&rsquo;s mail
       </>,
-      <>
-        Fix: an unauthenticated waitlist endpoint on both the dashboard and
-        wraps.dev wrote into Wraps&rsquo; own contact list. On the
-        already-exists branch it resolved the contact by substring match and
-        took the first result without comparing the address, subscribing the
-        wrong person to a topic. Neither route had a caller; both are removed
-      </>,
-      <>
-        Fix: a documentation code block that omitted its default tab rendered as
-        an empty box, across 95 call sites in 16 files including the base URL on
-        the API reference. The default now falls back to the first item&rsquo;s
-        language
-      </>,
+    ],
+    alsoFixed: [
+      "An unauthenticated waitlist endpoint on the dashboard and wraps.dev could subscribe the wrong contact to a topic by resolving an existing address with a substring match; both routes had no caller and are removed.",
+      "A documentation code block that omitted its default tab rendered as an empty box, across 95 call sites in 16 files including the base URL on the API reference; the default now falls back to the first item's language.",
     ],
   },
   {
     slug: "custom-tracking-domains-and-proven-orphan-cleanup",
-    versions: ["CLI v3.6.0"],
+    versions: ["CLI v3.6.0", "CLI v3.7.0"],
     date: "2026-09-01",
     icon: Lock,
     title: "Custom Tracking Domains & Proven-Orphan Cleanup",
     tags: ["cli"],
+    summary:
+      "Custom tracking domains resolve over HTTPS by default, and doctor --cleanup no longer guesses at orphaned resources.",
+    docs: "/docs/guides/domain-verification",
     media: {
       src: "/email/2026-09-tracking-domains.png",
       alt: "A Wraps card reading: CLI v3.6.0 — Custom tracking domains. Open and click links resolve through a host you own.",
@@ -516,50 +359,52 @@ export const releases: Release[] = [
         <Code>wraps email domains config</Code> accept{" "}
         <Code>--tracking-domain</Code>, so open and click links resolve through
         a host under your own domain instead of{" "}
-        <Code>r.&lt;region&gt;.awstrack.me</Code>. SES sets this per
-        configuration set, so every managed domain needs its own
+        <Code>r.&lt;region&gt;.awstrack.me</Code>. <Code>--tracking-https</Code>{" "}
+        requests an ACM certificate and puts a CloudFront distribution in front
+        of that host &mdash; two runs, since ACM validation takes 5 to 30
+        minutes: the first prints the validation record, the second finishes
+        once the certificate is ISSUED
       </>,
       <>
-        <Code>--tracking-https</Code> requests an ACM certificate and puts a
-        CloudFront distribution in front of that host. ACM validation takes 5 to
-        30 minutes, so it is two runs: the first prints the validation record,
-        the second finishes once the certificate is ISSUED
+        <Code>wraps email domains list</Code> and the dashboard report whether
+        tracking links are HTTPS, per configuration set &mdash; a multi-domain
+        account no longer reports one set&rsquo;s state as the whole
+        account&rsquo;s. The failure hides well, since opens keep working over
+        plain HTTP and only clicks break. Every tracking-domain write now
+        carries an explicit <Code>HttpsPolicy</Code> instead of leaving it{" "}
+        <Code>OPTIONAL</Code>, which wrapped click links in the original
+        link&rsquo;s protocol and produced a certificate warning instead of the
+        destination &mdash; three paths could reach that <Code>OPTIONAL</Code>{" "}
+        default, including <Code>domains verify</Code> re-issuing a policy-less
+        write that downgraded an already-
+        <Code>REQUIRE</Code> configuration set
       </>,
       <>
-        The five tracking-domain error codes are documented at{" "}
-        <Code>/docs/reference/errors</Code>, and the domain verification guide
-        explains the CNAME to publish and why a subdomain that was never added
-        separately inherits the primary domain&rsquo;s tracking host
+        Fix: <Code>wraps email doctor --cleanup</Code> no longer treats an
+        unreachable Pulumi stack probe or an unchecked CloudFormation stack as a
+        proven orphan &mdash; a failed probe used to sweep in the console access
+        role and the configuration sets <Code>domains add</Code> creates, and a
+        CloudFormation quick-create deployment was mistaken for loose resources.
+        A check that cannot confirm an orphan now refuses <Code>--cleanup</Code>{" "}
+        instead of assuming, and names the owning stack when it finds one
       </>,
       <>
-        Fix: <Code>wraps email doctor --cleanup</Code> offered to delete
-        resources it had never proved were orphans. Any failure of the Pulumi
-        stack probe &mdash; stack not found, Pulumi not installed, an
-        unreachable state bucket &mdash; read the same as a proven-absent stack,
-        which swept in the console access role and the configuration sets{" "}
-        <Code>domains add</Code> creates. Stack state is now three-valued, and
-        only a positive absent may call anything an orphan
+        Fix: disabling and re-enabling HTTPS no longer hands back a CloudFront
+        distribution the CLI had already switched off, breaking every click link
+        until it is restored. A failed HTTPS provision during{" "}
+        <Code>domains add</Code> now warns and falls back to plain HTTP instead
+        of aborting and orphaning the identity it already created
       </>,
-      <>
-        Fix: doctor checks CloudFormation for a Wraps-owned stack before
-        labelling anything orphaned, so a dashboard quick-create deployment is
-        no longer mistaken for loose resources. An account it cannot check
-        refuses <Code>--cleanup</Code> rather than assuming, and names the
-        owning stack when it finds one
-      </>,
-      <>
-        Fix: disabling and re-enabling HTTPS handed back a CloudFront
-        distribution the CLI had switched off. SES rewrites every link in
-        outbound mail through the tracking domain, so recipients got CloudFront
-        errors on click rather than losing tracking. ACM and CloudFront listings
-        are paginated too, so a second page no longer causes a fresh certificate
-        request on every run
-      </>,
-      <>
-        Fix: a failure to provision HTTPS during <Code>domains add</Code> warns
-        and falls back to plain HTTP tracking instead of aborting the command
-        and orphaning the identity and configuration set it had already created
-      </>,
+    ],
+    alsoFixed: [
+      "The five tracking-domain error codes are documented at /docs/reference/errors; a subdomain that was never added separately inherits the primary domain's tracking host.",
+      "If you saw \"Cannot find module '@wraps/core'\" in index.d.ts when installing @wraps.dev/cdk or @wraps.dev/pulumi, upgrade to CDK v0.3.1 or Pulumi v0.4.1 — the published type declarations no longer reference the unpublished @wraps/core package.",
+      "domains config --tracking-domain now offers HTTPS at the point it sets the domain, instead of requiring a second trip through the menu.",
+      "A zone-scoped Cloudflare token (Zone → DNS → Edit) now validates correctly for DNS automation; validation previously required the broader User → API Tokens → Read scope it didn't need.",
+      "Two DNS paths that used to fail silently now report whether the record was written: the tracking CNAME print, and the ACM validation push that gates certificate issuance.",
+      "ACM and CloudFront listings are paginated too, so a second page no longer causes a fresh certificate request on every run.",
+      "wraps --help was hiding thirteen shipped subcommands across five groups, including email reply, email logs and workflow entirely; a parity test now checks the dispatcher against the help output.",
+      "@wraps.dev/pulumi and @wraps.dev/cdk both accepted tracking.customRedirectDomain and failed differently — Pulumi deployed it with SES's OPTIONAL policy and no CloudFront, CDK ignored it entirely; both now warn at deploy time.",
     ],
   },
   {
