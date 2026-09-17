@@ -1497,6 +1497,190 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
     rationale:
       "The decision here is organisational rather than technical — whether a person without commit access needs to change an email — and it is not a decision either vendor's pricing page is organised around, so the comparison has to be written from the outside.",
   },
+  {
+    route: "/versus/mailersend-vs-resend",
+    primaryQuery: "mailersend or resend for transactional email",
+    secondaryQueries: [
+      "email api where marketing can edit the template",
+      "react email versus drag and drop builder",
+      "mailersend api rate limit compared to resend",
+      "transactional email with sms on the same account",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Both vendors describe themselves as developer-friendly email APIs, which is why they show up in the same shortlist and why the shortlist is usually wrong — the deciding question is who is allowed to change an email without a deploy, and neither pricing page frames it that way.",
+  },
+  {
+    route: "/versus/resend-vs-smtp2go",
+    primaryQuery: "email api or smtp relay for an application i did not write",
+    secondaryQueries: [
+      "smtp relay for a legacy system with good reporting",
+      "resend smtp support versus a dedicated relay",
+      "sending email from an appliance or crm",
+      "smtp2go reporting compared to an email api",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Comparisons in this category assume the reader controls the sending code, and a large share of the people searching do not — they are wiring up a NAS, an ERP, a WordPress install or a vendor appliance whose only email setting is a hostname, a port and a password.",
+  },
+  {
+    route: "/versus/mandrill-vs-resend",
+    primaryQuery: "migrating transactional email from mandrill to a modern api",
+    secondaryQueries: [
+      "is mandrill worth keeping in 2026",
+      "mandrill rejection list export before migrating",
+      "replacing mailchimp transactional email",
+      "mandrill merge tags versus react email",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The searcher here already has the integration in production and is estimating the cost of leaving, so the useful content is the export list and the failure modes of the cutover — which no vendor comparison written for greenfield buyers contains.",
+  },
+  {
+    route: "/versus/mailersend-vs-postmark",
+    primaryQuery: "mailersend or postmark for product email",
+    secondaryQueries: [
+      "email api with a builder and good deliverability",
+      "postmark message streams versus a single domain",
+      "do i need message streams for transactional email",
+      "email vendor a non engineer can use safely",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "These two are cross-shopped by teams who want one vendor for product email and the occasional announcement, and the decisive difference is architectural rather than cosmetic — whether bulk and transactional reputation are separated by the product or by everyone remembering to be careful.",
+  },
+  {
+    route: "/versus/postmark-vs-smtp2go",
+    primaryQuery: "best email provider for diagnosing delivery problems",
+    secondaryQueries: [
+      "postmark activity view versus smtp2go reporting",
+      "smtp relay with blacklist monitoring",
+      "which email vendor shows the raw bounce reason",
+      "email provider for a support team to debug from",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Reporting is the one attribute both of these vendors are chosen for, so a page that separates per-message forensics from sender-health monitoring answers a comparison neither vendor will make, because each would rather claim the whole word.",
+  },
+  {
+    route: "/versus/mailersend-vs-mailgun",
+    primaryQuery: "mailersend or mailgun for a growing product",
+    secondaryQueries: [
+      "email api with conditional inbound routing rules",
+      "mailgun subaccounts versus a flat domain list",
+      "email validation built into the sending provider",
+      "mailgun flex plan closed to new signups",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Mailgun's December 2025 repricing pushed a cohort of small senders into evaluating alternatives for the first time in years, and the comparisons they find are written as if Mailgun were still primarily a cheap developer API rather than a volume platform with a routing engine attached.",
+  },
+  {
+    route: "/versus/mailgun-vs-smtp2go",
+    primaryQuery: "reliable smtp relay for business systems",
+    secondaryQueries: [
+      "mailgun alternative after the flex plan closed",
+      "smtp relay with dedicated ip and reporting",
+      "sending mail from devices and internal applications",
+      "mailgun routes versus a simple relay",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Mailgun's entry-level repricing in December 2025 sent a specific cohort looking: small businesses relaying modest volumes from software they did not write, for whom Mailgun's routing and validation surface was never the point and is now being paid for.",
+  },
+  {
+    route: "/versus/mailgun-vs-mandrill",
+    primaryQuery:
+      "transactional email that is not tied to a marketing platform",
+    secondaryQueries: [
+      "mandrill alternative that does inbound routing",
+      "mailgun routes compared to mandrill inbound",
+      "transactional email without buying mailchimp",
+      "which transactional provider is still being developed",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Both are long-established transactional products with an inbound story, which puts them on the same shortlist for teams doing reply handling — and the deciding facts are a purchasing prerequisite on one side and an ongoing investment question on the other, neither of which appears on a feature comparison.",
+  },
+  {
+    route: "/versus/klaviyo-vs-sendgrid",
+    primaryQuery: "klaviyo or sendgrid marketing campaigns for an online store",
+    secondaryQueries: [
+      "sendgrid marketing campaigns versus a dedicated ecommerce platform",
+      "do i need klaviyo or is sendgrid enough",
+      "ecommerce email attribution without klaviyo",
+      "moving marketing email off sendgrid",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "SendGrid Marketing Campaigns is bought by a lot of stores because it is already in the account, and the comparison they need is not about sending quality — it is about whether a contact list with custom fields can substitute for a behavioural profile, which no vendor will answer honestly.",
+  },
+  {
+    route: "/versus/loops-vs-sendgrid",
+    primaryQuery: "simple lifecycle email tool instead of sendgrid",
+    secondaryQueries: [
+      "loops.so versus sendgrid marketing campaigns",
+      "email tool for a small saas team",
+      "sendgrid replacement after the free tier ended",
+      "unlimited sends priced per contact",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "The cohort SendGrid's free-tier retirement pushed into the market is mostly small software teams, and the tools they are shown are enterprise platforms — the useful comparison is against a product deliberately scoped to their size, including where it stops.",
+  },
+  {
+    route: "/versus/customer-io-vs-sendgrid",
+    primaryQuery:
+      "behavioural messaging platform versus sendgrid marketing campaigns",
+    secondaryQueries: [
+      "customer.io instead of sendgrid for lifecycle email",
+      "do i need an event based messaging tool",
+      "sendgrid automations versus a real journey builder",
+      "sending events to a messaging platform from my app",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Teams already holding a SendGrid account evaluate Customer.io when their automations stop being expressible, and the real question is whether they are prepared to instrument their product with events — a cost that no pricing page shows and that decides whether the upgrade works at all.",
+  },
+  {
+    route: "/versus/klaviyo-vs-loops",
+    primaryQuery: "klaviyo or loops for a subscription business",
+    secondaryQueries: [
+      "marketing email tool for saas instead of ecommerce",
+      "loops.so compared to klaviyo",
+      "do i need ecommerce flows for a software product",
+      "email platform priced per contact with unlimited sends",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Klaviyo dominates the search results for marketing email regardless of the searcher's business model, so software teams keep landing on an ecommerce platform whose most valuable features — cart, catalogue and order attribution — have no analogue in what they sell.",
+  },
+  {
+    route: "/versus/brevo-vs-loops",
+    primaryQuery: "brevo or loops for a small software company",
+    secondaryQueries: [
+      "email platform priced on sends versus per contact",
+      "brevo automation is on the higher tier",
+      "eu email marketing platform for saas",
+      "removing the vendor logo from marketing emails",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "Brevo is recommended constantly on price without anyone mentioning that automation sits a tier above the headline plan, and Loops is recommended on simplicity without anyone mentioning that a large dormant list is billed forever — the two facts that actually decide this.",
+  },
+  {
+    route: "/versus/brevo-vs-customer-io",
+    primaryQuery: "brevo or customer.io for lifecycle messaging",
+    secondaryQueries: [
+      "affordable alternative to customer.io for a small team",
+      "when is a behavioural messaging platform worth it",
+      "eu data residency for a messaging platform",
+      "brevo automation versus a real journey builder",
+    ],
+    audience: "stranger-with-problem",
+    rationale:
+      "These two appear on the same shortlist whenever a growing company asks what comes after basic campaigns, and the honest deciding factors — a monthly floor that excludes small companies, and an event pipeline somebody has to build — are absent from both vendors' own comparisons.",
+  },
   // END GENERATED VERSUS INTENT
 ];
 

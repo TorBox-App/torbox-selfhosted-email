@@ -3934,6 +3934,1564 @@ const AMAZON_SES_VS_MAILERSEND: VersusPage = {
   ],
 };
 
+const MAILERSEND_VS_RESEND: VersusPage = {
+  slug: "mailersend-vs-resend",
+  a: "mailersend",
+  b: "resend",
+  title: "MailerSend vs Resend",
+  description:
+    "Two modern transactional APIs that look alike from the outside and were built for opposite people. One assumes a marketer will open the template. The other assumes nobody but an engineer ever will.",
+  search: {
+    primaryQuery: "mailersend or resend for transactional email",
+    secondaryQueries: [
+      "email api where marketing can edit the template",
+      "react email versus drag and drop builder",
+      "mailersend api rate limit compared to resend",
+      "transactional email with sms on the same account",
+    ],
+    rationale:
+      "Both vendors describe themselves as developer-friendly email APIs, which is why they show up in the same shortlist and why the shortlist is usually wrong — the deciding question is who is allowed to change an email without a deploy, and neither pricing page frames it that way.",
+  },
+  intro:
+    "These two land on the same shortlist constantly, and the reason is a bad one: both are modern, both have clean APIs, both are cheaper than the incumbents. Look at what each one put at the centre of the product and they diverge immediately. MailerSend built a drag-and-drop builder and wrapped an API around it. Resend built an API and made the template a React component in your repository. Everything that follows — who files the ticket when the copy is wrong, how the two products meter you, what else they will sell you — comes out of that one decision.",
+  dimensions: [
+    {
+      heading: "Where the template physically lives",
+      a: "In MailerSend's account, edited in a visual builder, with variables an engineer wires once and copy anybody can change afterwards. There is no deploy in the loop, which is the point. The cost is that your email templates are now state in somebody else's system: they are not in version control, a bad edit has no diff, and rolling one back means remembering what it used to say.",
+      b: "In your repository, as a React component, rendered by React Email at send time or build time. It diffs, it reviews, it rolls back with a revert, and it can be unit tested. The cost is symmetrical: every copy change is a pull request, and the person who wanted to soften a sentence in the welcome email now needs an engineer and a deploy window.",
+    },
+    {
+      heading: "The rate limit you will actually meet",
+      a: "MailerSend publishes per-endpoint API limits that rise with the plan, and it ships a bulk send endpoint specifically for pushing many messages in one call. A batch job is a supported shape rather than something you work around, and if you outgrow the entry limit the answer is a plan change rather than an architectural one.",
+      b: "Resend caps the API at two requests per second on every tier including the most expensive, and no amount of money removes it. For login codes and receipts that is ample. For a job that wants to emit ten thousand messages before the hour is out, you build a queue and a drip, which is ordinary work but it is work, and discovering it after you have written the integration is the common way to find out.",
+    },
+    {
+      heading: "What the free allowance is good for",
+      a: "A demonstration rather than an environment. The monthly free ceiling is low enough that a staging system with any real traffic will exhaust it, so plan on either a paid plan for non-production or a separate capture tool. That is easy to arrange deliberately and annoying to discover when a seeded test run eats the month on a Tuesday.",
+      b: "A small real environment, with a monthly allowance that is genuinely usable and a daily cap sitting underneath it. The daily cap is the part that surprises people: a load test or a bulk import can hit the ceiling for the day while the month still shows plenty of headroom, and the failure looks like an outage rather than a quota.",
+    },
+    {
+      heading: "What you can still answer three months from now",
+      a: "MailerSend keeps activity with a retention window that lengthens as you move up the plans, which makes retention a thing you can purchase rather than a fixed wall. Whether you should purchase it is a real question — for many teams the honest answer is that the second plan tier is being bought for history and seats rather than for sending.",
+      b: "Thirty days on every plan below Enterprise, then the record is gone. The scenario is not hypothetical: someone disputes a notification in March and you are looking in June. Streaming the webhook into your own store from the first week fixes it entirely and costs almost nothing, and virtually nobody does it until the first time the window closes on them.",
+    },
+    {
+      heading: "Receiving mail as well as sending it",
+      a: "Inbound routing is part of the product. You point a domain or subdomain at MailerSend, define routes, and parsed messages arrive at your webhook, which is enough to build reply-to-ticket handling on without a second vendor. The parsing handles the tedious parts — multipart bodies, attachments, quoted history — so your handler is a function rather than a MIME project.",
+      b: "Resend's centre of gravity is outbound, and inbound arrived later and stays deliberately narrower. If reply handling is load-bearing for your product rather than a nice extra, check the current shape of it against your actual requirement rather than assuming parity, because this is the axis where the two products are least comparable.",
+    },
+    {
+      heading: "Whose sending operation is underneath",
+      a: "MailerSend sits inside the same company as MailerLite and sends on infrastructure that company runs, with its own IP pools and its own abuse posture. The practical consequence is that the vendor you complain to is also the vendor that can fix it, and that the shared pool you sit in is populated by that company's other customers rather than by a hyperscaler's entire customer base.",
+      b: "Resend is a layer over Amazon SES, which it has never hidden. The deliverability floor underneath is AWS's and it is a high floor. It also means the AWS account is Resend's: the reputation you build accrues to their identities, and a policy decision made by AWS about their account is a policy decision about your sending.",
+    },
+    {
+      heading: "Channels other than email",
+      a: "MailerSend sells SMS alongside email on the same account, which matters if you are about to add one-time codes over a second channel and did not want a second vendor, a second contract and a second set of compliance questions. The depth is modest next to a dedicated messaging platform, and modest is usually what a verification code needs.",
+      b: "Email only, on purpose. Resend has stayed narrow and the product is better for it, but the narrowness is a real constraint the day somebody decides the checkout confirmation should also go by text. You will be adding a vendor, and the comparison you should run then is against a messaging provider rather than against MailerSend.",
+    },
+    {
+      heading: "What the higher plan is really selling",
+      a: "Seats, retention and support. The step up can cost substantially more than the entry plan for exactly the same sending volume, which reads as a mistake on the pricing page until you understand it as a per-organisation price. A solo developer should stay on the entry tier and stop reading; a team of six with a marketer and a support rota is the customer the upper plan was drawn for.",
+      b: "Headroom and a different risk posture. Resend splits into two ladders and identical volume costs materially different amounts depending which one you sit on, with the higher one aimed at teams whose sending is the business rather than a feature of it. Marketing contacts are metered separately from sends, so a list that grows raises the bill in a month you sent nothing to it.",
+    },
+    {
+      heading: "Bulk and campaign sending",
+      a: "There is real campaign capability here — lists, a scheduled send, the same builder — which suits the team that wanted one tool for the product emails and the occasional announcement. It is not a lifecycle platform and does not claim to be, but it clears the bar for a monthly product update without a second subscription.",
+      b: "Broadcasts exist and are deliberately simple: an audience, a React or HTML email, a send. For a changelog to people who asked for it that is the right amount of product. For segmentation on behaviour, branching journeys or anything a growth team would recognise as automation, you are buying a second tool and wiring the contacts across.",
+    },
+  ],
+  pickA: [
+    "Someone who does not write code needs to change email copy this week, and waiting for a deploy is the friction you are actually trying to remove.",
+    "Reply handling matters to your product, so inbound parsing needs to be a mature part of the vendor rather than a recent addition.",
+    "You are about to add SMS and would rather not run a second vendor relationship for one-time codes.",
+    "Your sending has burst shapes — an overnight digest, an import notification — and a hard two-per-second ceiling would mean building a queue you had not planned.",
+  ],
+  pickB: [
+    "Emails are part of the codebase to you: reviewed, versioned, tested, deployed with everything else.",
+    "Time from empty project to first sent message is the metric you are optimising, and React Email is already how you want to author.",
+    "Traffic is steady request-response mail well inside the rate ceiling, with nothing in the system that sends in batches.",
+    "You already intend to stream delivery events into your own warehouse, so a thirty-day vendor window is a non-issue rather than a trap.",
+  ],
+  faqs: [
+    {
+      question: "Can I use React Email with MailerSend?",
+      answer:
+        "Yes. React Email renders components to an HTML string and is not coupled to any particular vendor's API, so you can render and hand the result to MailerSend's send endpoint exactly as you would to anything else. What you lose is the reason to choose MailerSend in the first place: if templates live in the repository, the builder is not doing anything for you and the comparison should be run against vendors that optimise for the code path instead.",
+    },
+    {
+      question:
+        "Is the two-requests-per-second limit really on every Resend plan?",
+      answer:
+        "Yes, and it is the fact most likely to invalidate an otherwise sound evaluation. It is not a soft limit you grow out of by spending more. The workaround is standard — enqueue sends and drain the queue at a safe rate, with retries on the rejections — and it is perhaps a day of work. Budget the day, or confirm your traffic genuinely never bunches, before you commit the integration.",
+    },
+    {
+      question: "Which of these has better deliverability?",
+      answer:
+        "There is no honest general answer, and anybody giving you one is selling something. Resend inherits a high floor from AWS; MailerSend runs its own pools with its own abuse controls. Both are shared reputation, so your neighbours matter and you cannot audit them. What actually decides your placement is under your control anyway: authenticated domains with a DMARC policy, a separate subdomain for bulk mail, prompt suppression handling, and not sending to addresses that never asked.",
+    },
+    {
+      question:
+        "How do I let a marketer edit copy without giving up version control?",
+      answer:
+        "Split the template from the content. Keep the layout, the variables and the structural HTML in code where they are reviewed, and put the handful of strings that actually change into a small content store the marketer can edit — a database table, a CMS entry, a feature-flag payload. It is more work than a hosted builder and less than it sounds, and it is the arrangement teams usually land on after trying both extremes and disliking each.",
+    },
+    {
+      question: "What does migrating between these two actually cost?",
+      answer:
+        "The send call is a small change. Everything around it is not. Templates have to be rebuilt in the other paradigm, which is a genuine rewrite rather than an export, and webhook consumers have to be rewritten against different event shapes. Export your suppression list and import it before the first send rather than after, or you will re-send to addresses that already bounced and damage a reputation you are still establishing. Then grep your infrastructure for the old API key rather than for the vendor name — the forgotten cron job on a box nobody logs into is what turns a one-week migration into a quarter of stragglers.",
+    },
+  ],
+};
+
+const RESEND_VS_SMTP2GO: VersusPage = {
+  slug: "resend-vs-smtp2go",
+  a: "resend",
+  b: "smtp2go",
+  title: "Resend vs SMTP2GO",
+  description:
+    "An API for code you are writing against a relay for systems you cannot change. The question is not which is more modern. It is whether the thing sending your mail is something you are allowed to rewrite.",
+  search: {
+    primaryQuery: "email api or smtp relay for an application i did not write",
+    secondaryQueries: [
+      "smtp relay for a legacy system with good reporting",
+      "resend smtp support versus a dedicated relay",
+      "sending email from an appliance or crm",
+      "smtp2go reporting compared to an email api",
+    ],
+    rationale:
+      "Comparisons in this category assume the reader controls the sending code, and a large share of the people searching do not — they are wiring up a NAS, an ERP, a WordPress install or a vendor appliance whose only email setting is a hostname, a port and a password.",
+  },
+  intro:
+    "This pair gets miscast as old versus new. It is not. Resend is an HTTP API with SDKs, aimed at code you are actively writing, and a template story that assumes you have a React build. SMTP2GO is a relay built on the premise that a great deal of the world's business email is emitted by software nobody is permitted to modify, and that the vendor's job is to accept that traffic, deliver it, and tell you clearly what happened. Decide which of those describes your sender, and the rest follows without much argument.",
+  dimensions: [
+    {
+      heading: "What is emitting the message",
+      a: "Application code you own, calling an HTTP endpoint with a JSON body. Resend's SDKs, its error shapes and its documentation all assume an engineer is typing. There is an SMTP interface, and it is genuinely usable, but it is a compatibility path rather than the product's spine — the features that make Resend worth choosing live on the API side.",
+      b: "Anything that speaks SMTP, which in practice means an enormous amount: backup appliances, monitoring agents, a fifteen-year-old ERP, a printer, a CMS whose mail plugin nobody dares upgrade. SMTP2GO's whole design assumes the sender cannot be rewritten, so the setup is a hostname, a port, a username and a password, and the product's intelligence is applied after the message arrives.",
+    },
+    {
+      heading: "What the reporting is trying to tell you",
+      a: "Per-message delivery state with a webhook stream behind it, oriented toward answering a question about a specific send from inside your own systems. The dashboard is clean and current. The history is finite: thirty days on every plan below Enterprise, after which the answer to what happened to that email is that nobody knows.",
+      b: "Reporting is the reason people stay. Delivery and bounce breakdowns, spam-complaint tracking, blacklist monitoring on the addresses you send from, and a report that arrives in your inbox rather than waiting for you to open a dashboard. For a sender you cannot instrument — because you did not write it — vendor-side reporting is the only visibility that exists, which is why the relay invests there.",
+    },
+    {
+      heading: "The throughput ceiling, and where each one puts it",
+      a: "Two requests per second on the API, on every tier, permanently. For request-response mail that is more than enough and you will never think about it. For anything that bunches, you build a queue and drain it, and the work is neither hard nor optional.",
+      b: "A relay is metered by volume rather than by request rate, and an SMTP connection can carry many messages sequentially without a per-call ceiling of that shape. The limit you meet instead is the plan's monthly allowance and, on the free and entry tiers, a daily cap that will stop a bulk run cold in the middle of a Tuesday afternoon.",
+    },
+    {
+      heading: "Rendering the email at all",
+      a: "React Email is the answer, and it is a good one: components in your repository, reviewed and versioned like the rest of your code, with a rendering step that produces HTML you can test. It presumes a JavaScript build, and a Python or Go shop gets a noticeably thinner version of the experience than the marketing implies.",
+      b: "There is essentially no template layer, and that is coherent rather than missing. A relay receives a fully-formed message from a sender that already decided what it looks like — your ERP's invoice template, WordPress's password reset. Adding a rendering feature would serve nobody, because by the time SMTP2GO sees the mail, rendering already happened somewhere it does not control.",
+    },
+    {
+      heading: "When the credential leaks",
+      a: "An API key is revocable in one place, scoped, and visible in a list with a creation date next to it. Rotating it is a deploy. The exposure surface is your codebase and your secret store, which are things a security review knows how to reason about.",
+      b: "SMTP credentials get typed into device configuration screens by people who then leave the company, and they end up in wiki pages, shell scripts and appliance backups. SMTP2GO's answer is per-sender users so you can issue one credential per system and revoke it without touching the others, which is the single most useful operational habit on the relay side and the one teams most often skip.",
+    },
+    {
+      heading: "Dedicated addresses and the unlock point",
+      a: "Resend sits on shared AWS reputation by default and dedicated sending is an upper-tier conversation rather than a self-serve toggle. For most senders on this platform shared is correct — the pool is enormous and well managed — but it does mean isolation is not a lever you can pull on a bad week.",
+      b: "Dedicated IPs unlock at the Professional tier, alongside inbound parsing, which makes that tier a capability step rather than a volume step. Below it you are on a shared pool, and the blacklist monitoring in the reporting is partly there so you find out about a neighbour's problem the same day rather than from a customer.",
+    },
+    {
+      heading: "Where the mail is processed",
+      a: "On AWS, in the regions Resend operates, with the account boundary belonging to Resend. If your compliance answer needs to name a processor and a region, you are naming a company that is itself a customer of another company, and the questionnaire gets longer than it looks.",
+      b: "SMTP2GO runs relay endpoints in multiple regions and will pin your account's processing to one, which is a shorter answer to a data-residency question than most vendors in this category can give. For an EU or APAC organisation whose lawyer asks where the message body physically goes, having a single supplier with a single answer is worth more than a feature comparison.",
+    },
+    {
+      heading: "Receiving replies",
+      a: "Inbound is the narrower half of Resend and arrived well after the outbound product. If reply handling is structural to what you are building rather than a convenience, verify the current capability against your requirement directly rather than assuming it matches the polish of the send path.",
+      b: "Inbound parsing exists and unlocks with the Professional tier, forwarding structured messages to an endpoint you nominate. It is a sensible fit for the relay's audience — the appliance sends out, the replies come back somewhere a human or a ticket system can see them — and it is not a routing engine with conditional fan-out if that is what you need.",
+    },
+    {
+      heading: "What neither of these is",
+      a: "Not a marketing platform. Broadcasts exist and are deliberately minimal — an audience, an email, a send — which is right for a changelog and nowhere near a lifecycle tool. Anything involving behavioural segmentation or a branching journey is a second vendor.",
+      b: "Not a developer platform. There is no idiomatic SDK, no React rendering, no lifecycle automation, and the API is a thin management surface rather than the primary way you are expected to send. Choosing it because it is cheap and then wanting the things an API product gives you is the most common way teams end up unhappy with it.",
+    },
+  ],
+  pickA: [
+    "You are writing the code that sends, and want SDKs, typed errors and templates that live in the repository.",
+    "React Email is already how you want to author, and your stack has a JavaScript build to render it in.",
+    "Sending is steady request-response traffic that never bunches above a couple of messages a second.",
+    "You want the send path and the event stream to look like the rest of your application's infrastructure.",
+  ],
+  pickB: [
+    "Something in your estate speaks SMTP and nothing else, and rewriting it is not on anybody's roadmap.",
+    "You need vendor-side reporting good enough to debug from, because you cannot instrument the sender yourself.",
+    "Several separate systems send mail and you want one revocable credential per system rather than one shared secret.",
+    "A data-residency question needs a short answer naming one supplier and one region.",
+  ],
+  faqs: [
+    {
+      question: "Resend supports SMTP — why would I use a relay instead?",
+      answer:
+        "Because the SMTP interface and a relay product are different amounts of product. Resend's SMTP path exists so a legacy sender can be pointed at it, and it works. What it does not bring is the surrounding apparatus a relay-first vendor builds: per-sender credentials, blacklist monitoring on your sending addresses, long-lived aggregate reporting, and a support organisation whose customers are mostly people wiring up devices rather than writing integrations. If SMTP is the exception in your architecture, use Resend's. If it is the rule, buy the product built for it.",
+    },
+    {
+      question: "Will a relay hurt my deliverability compared to an API?",
+      answer:
+        "The protocol has no bearing on it. What decides placement is authentication, reputation and content: SPF and DKIM aligned to the domain in the From header, a DMARC policy, a clean list, and sensible complaint handling. Both vendors sign and align correctly when configured, and both will suspend you for a bad list. The one protocol-adjacent risk is that a legacy sender is more likely to emit malformed or unauthenticated mail than code you just wrote, which is a problem with the sender rather than with SMTP.",
+    },
+    {
+      question: "Can I use both at once?",
+      answer:
+        "Yes, and a fair number of organisations should. Point the application you are actively developing at the API, and point the appliances, the ERP and the wiki at the relay. Use different subdomains for the two so their reputations are independent, so a misbehaving legacy system cannot take down your password resets, and so the reporting for each is separable. The extra cost is one more vendor relationship and one more DNS record.",
+    },
+    {
+      question:
+        "What should I check before pointing a legacy system at either?",
+      answer:
+        "Three things, in order. Whether the system lets you set the envelope and header From independently, because misalignment there is the most common cause of DMARC failures on old software. Whether it supports STARTTLS on a port your network allows outbound, since a surprising number of corporate networks block the submission ports selectively. And whether it retries on a temporary failure or drops the message silently — if it drops, your vendor's reporting is the only place that failure will ever be visible, which is an argument for the vendor whose reporting is the product.",
+    },
+    {
+      question: "How long does each keep a record of a sent message?",
+      answer:
+        "Resend purges at thirty days on every plan short of Enterprise. SMTP2GO keeps reporting history longer, with the window varying by plan, and its archive-style features are part of what its higher tiers sell. Neither gives you an archive you own. If you have a regulatory or contractual reason to prove what was sent to whom two years ago, the only answer that survives a vendor change is to write the events into your own storage as they happen, which costs very little to build and is impossible to build retroactively.",
+    },
+  ],
+};
+
+const MANDRILL_VS_RESEND: VersusPage = {
+  slug: "mandrill-vs-resend",
+  a: "mandrill",
+  b: "resend",
+  title: "Mailchimp Transactional (Mandrill) vs Resend",
+  description:
+    "Almost nobody picks between these from a blank page. You are on Mandrill, you are wondering whether to leave, and Resend is the name that keeps coming up. That is a migration question wearing a comparison's clothes.",
+  search: {
+    primaryQuery: "migrating transactional email from mandrill to a modern api",
+    secondaryQueries: [
+      "is mandrill worth keeping in 2026",
+      "mandrill rejection list export before migrating",
+      "replacing mailchimp transactional email",
+      "mandrill merge tags versus react email",
+    ],
+    rationale:
+      "The searcher here already has the integration in production and is estimating the cost of leaving, so the useful content is the export list and the failure modes of the cutover — which no vendor comparison written for greenfield buyers contains.",
+  },
+  intro:
+    "This is not a purchase decision so much as an exit assessment. Mandrill arrived in your stack because somebody already paid for Mailchimp and noticed a transactional product attached, and it has probably worked without complaint for years. Resend is the name that surfaces when you start asking whether it should stay. The comparison worth having is therefore not feature against feature — it is what you currently depend on that would have to be rebuilt, and whether the thing you are unhappy about is actually fixed by moving.",
+  dimensions: [
+    {
+      heading: "What has to exist in your account for it to work",
+      a: "A paid Mailchimp plan, underneath, permanently. Mandrill is an add-on and cannot be bought alone, so the true cost of your transactional sending includes a marketing subscription that may be doing nothing else for you. If that subscription exists anyway because marketing runs campaigns in it, Mandrill is close to marginal cost. If transactional is the only reason it survives renewal, that line is part of the saving and part of the decision.",
+      b: "An account and a verified domain, and nothing else. There is no prerequisite product, no bundled platform and no dependency on a purchasing decision made by a different department. Whether that matters depends entirely on whether you are the department that would have to justify the Mailchimp renewal.",
+    },
+    {
+      heading: "How much the product is likely to change",
+      a: "Slowly, and that cuts both ways. Mandrill is mature to the point of stasis: it works, it has worked for a long time, and visible investment has been modest for years. A sender that stopped changing is a sender that stopped breaking, which is a real virtue for something your receipts depend on. It is a poor bet if you are counting on the surrounding tooling to improve.",
+      b: "Quickly, and that also cuts both ways. Resend ships frequently and the product surface today is meaningfully different from two years ago. You get improvements you did not ask for and occasionally changes you have to react to, and the flip side of a young platform moving fast is that its operational record is shorter than the thing you are considering leaving.",
+    },
+    {
+      heading: "The templating you would have to rewrite",
+      a: "Mailchimp's editor plus merge tags, a syntax inherited from a marketing product rather than designed for transactional mail. It is convenient if your marketing team already lives in that editor and slightly awkward if they do not, and in practice teams end up doing more of the conditional logic in application code than the feature list suggests.",
+      b: "React Email components in your repository, rendered at send time. It is a genuinely better authoring model for an engineering team and it is a full rewrite rather than an export — there is no path that carries merge-tag templates across. Budget for rebuilding every template by hand, and treat that as the largest single line in the migration estimate.",
+    },
+    {
+      heading: "Addresses your provider has quietly decided not to mail",
+      a: "Mandrill keeps a rejection list of hard bounces, complaints and manual blocks, and it is stricter than people expect. An address can sit on it indefinitely, so a customer who fixed their mailbox six months ago still receives nothing, silently. Knowing the list exists and auditing it is part of operating Mandrill competently, and exporting it is the first thing you do if you leave.",
+      b: "Suppression works on the same principle with better surfacing, and Resend's dashboard makes the list something you look at rather than something you remember exists. The rule on arrival is the same regardless of direction: import the old list before the first send, because mailing addresses that previously hard-bounced is the fastest available way to damage a reputation you have not built yet.",
+    },
+    {
+      heading: "How much you can push, and how fast",
+      a: "Capacity is bought in blocks covering a fixed number of messages, and the constraint you meet is the block rather than a request-rate ceiling. A batch job that emits a large burst is an ordinary thing to do here, and the arithmetic to work out your real per-message cost has to include the platform subscription underneath, which the pricing page will not do for you.",
+      b: "Two requests per second, on every plan, with no upgrade that lifts it. This is the single most common way a Mandrill-to-Resend migration goes wrong: the existing integration was written without a rate ceiling in mind, the cutover happens, and the nightly digest job starts collecting rejections at two in the morning. Queue and drip before you switch, not after.",
+    },
+    {
+      heading: "Inbound mail and reply handling",
+      a: "Mandrill routes inbound mail to a webhook and has done so stably for a long time. If some part of your product parses replies — a support thread, a bounce handler you wrote yourself — that configuration is a dependency you may not have thought about recently, and it is one of the pieces most often forgotten in a migration plan.",
+      b: "Inbound is the narrower part of Resend and came much later than the send path. Before you commit, check whether your specific reply-handling requirement is genuinely covered, because this is the axis on which the newer product is least likely to be at parity with the old one.",
+    },
+    {
+      heading: "Who actually operates the sending",
+      a: "Mailchimp's own infrastructure, inside a large company with its own abuse posture and its own IP pools. Your neighbours in that pool are Mailchimp's transactional customers. The account relationship is shared with the marketing side, which matters in the direction people do not expect: an account problem originating in campaigns is an account problem for your receipts.",
+      b: "Amazon SES with Resend's engineering on top. The deliverability floor is AWS's and it is high. The account is Resend's, so reputation accrues to their identities rather than yours, and the dependency chain has one more link in it than the comparison suggests.",
+    },
+    {
+      heading: "What you can look up afterwards",
+      a: "Outbound activity with content and delivery state, searchable within a retention window, which is adequate and shows its age. A support person chasing one customer's missing receipt takes more steps than they should, but the information is there.",
+      b: "A clean activity view and a webhook stream, with a hard thirty-day purge on every plan below Enterprise. Read that against whatever your current Mandrill window is before you move, because a migration that quietly shortens how far back your support team can look is a migration that generates complaints from a direction nobody predicted.",
+    },
+    {
+      heading: "What the cutover actually looks like",
+      a: "Leaving means exporting the rejection list, rebuilding every template, rewriting webhook consumers against different event shapes, and deciding what happens to the Mailchimp subscription. The part that bites is discovery: grep for the API key rather than the vendor name, because the integration nobody remembers was configured by hand on a server rather than committed to a repository.",
+      b: "Arriving means verifying domains, importing suppression before the first production send, putting a rate limiter in front of anything that bursts, and pointing the webhook somewhere durable on day one rather than after the first thirty-day window closes. Move one traffic class at a time and keep the mail customers would notice missing on the proven path until last.",
+    },
+  ],
+  pickA: [
+    "Marketing already runs campaigns in Mailchimp, so the platform subscription exists regardless and transactional is marginal cost on it.",
+    "The integration has run untouched for years, nothing is actually broken, and the migration has no funded owner.",
+    "Your sending has burst shapes that a hard two-per-second ceiling would force you to re-engineer around.",
+    "Inbound routing is load-bearing in your product and you would rather not re-verify that capability on a newer platform.",
+  ],
+  pickB: [
+    "You want templates in version control as components, reviewed and deployed like the rest of the codebase.",
+    "The Mailchimp subscription exists only to make transactional sending possible, and removing it is a real saving.",
+    "You are building new and want SDKs, current documentation and a product that is visibly being invested in.",
+    "Your traffic is steady request-response mail that will never approach the rate ceiling.",
+  ],
+  thirdOption:
+    "Both sides of this comparison end with the same structural fact: the sending identity, the suppression list and the delivery history belong to the vendor, which is exactly why leaving Mandrill is a quarter of work rather than a config change. If the reason you are reading this is that you never want to do this migration again, the third shape is to send through SES inside your own AWS account, where the domain identities, the suppression list and the event stream are resources you own and a future vendor change is a library swap rather than a rebuild. Wraps is one way to run that with tooling on top. It is the wrong answer if you want the new integration finished this week: it needs an AWS account and SES production access, which is an approval on AWS's schedule and can be refused.",
+  faqs: [
+    {
+      question: "Is Mandrill being discontinued?",
+      answer:
+        "There has been no announcement to that effect and it continues to operate, so describing it as discontinued would be wrong. What is fair is that visible investment has been modest for a long stretch, which is a legitimate input when you are deciding where to put something your product depends on. If it works today, that is not a reason to migrate this quarter. It is a reason not to build new dependencies on features you are hoping will improve.",
+    },
+    {
+      question: "What do I have to export before I switch?",
+      answer:
+        "The rejection list first, because sending to previously bounced addresses on a brand-new sending identity is the fastest way to start badly. Then every template, since nothing carries across between these two paradigms. Then as much delivery history as your window still holds, because a dispute about a message sent last quarter will not wait for your migration to finish. Finally, write down every system that holds an API key — the cron job on the old box is the one that keeps sending from an account you thought you had closed.",
+    },
+    {
+      question: "Will my deliverability improve if I move to Resend?",
+      answer:
+        "Possibly, and not because of the vendor. Most deliverability problems belong to the sender: a stale list, a missing DMARC policy, marketing and transactional sharing a domain, content that trips filters. Moving relocates those problems intact. What does change is your reputation history, which resets — you start as a new sender on a new pool, and the first two weeks of a migration are exactly when a bad list does the most damage. Warm up deliberately and move your highest-engagement traffic first.",
+    },
+    {
+      question: "How do I handle the rate limit for a batch job?",
+      answer:
+        "Put a queue between your application and the API, and drain it at a rate safely under the ceiling with retry-with-backoff on rejections. For most teams this is a day of work using infrastructure they already run. The thing to avoid is a naive loop with a sleep in it, because it fails badly the moment two instances of the job run at once — the limit is per account, not per process, and nothing in your code will tell you that until the retries start.",
+    },
+    {
+      question: "Can I run both during the migration?",
+      answer:
+        "Yes, and you should. Route by traffic class rather than by percentage: move the least critical mail first, watch bounce and complaint rates on the new identity for a couple of weeks, and keep password resets and receipts on the old path until the new one has a record. Use a distinct subdomain for the new sender so its reputation is genuinely separate, and keep both webhook consumers running until you have confirmed no straggler is still calling the old key.",
+    },
+  ],
+};
+
+const MAILERSEND_VS_POSTMARK: VersusPage = {
+  slug: "mailersend-vs-postmark",
+  a: "mailersend",
+  b: "postmark",
+  title: "MailerSend vs Postmark",
+  description:
+    "One built a template a marketer can open. The other built a mail operation and refuses to become anything else. Both are good at what they chose, and the choice is not close once you know which you need.",
+  search: {
+    primaryQuery: "mailersend or postmark for product email",
+    secondaryQueries: [
+      "email api with a builder and good deliverability",
+      "postmark message streams versus a single domain",
+      "do i need message streams for transactional email",
+      "email vendor a non engineer can use safely",
+    ],
+    rationale:
+      "These two are cross-shopped by teams who want one vendor for product email and the occasional announcement, and the decisive difference is architectural rather than cosmetic — whether bulk and transactional reputation are separated by the product or by everyone remembering to be careful.",
+  },
+  intro:
+    "Both of these are mid-market transactional email vendors with clean products and reasonable prices, which is why they end up on the same list. What they optimised is almost opposite. MailerSend spent its effort on the surface a non-engineer touches, so the builder is real and the account is comfortable to hand to a marketer. Postmark spent a decade on the parts nobody sees, and the clearest expression of that is message streams, which separate bulk from transactional reputation as a product concept rather than as a policy your team has to remember.",
+  dimensions: [
+    {
+      heading: "Whether bulk and transactional share a reputation",
+      a: "They share one. MailerSend gives you verified domains on a flat account, and keeping a newsletter away from your password resets is something you arrange yourself — typically by sending campaigns from a separate subdomain and being disciplined about it. That works, and it depends on every future engineer knowing why the rule exists.",
+      b: "They do not. Message streams are a first-class concept: transactional and broadcast traffic run on separate streams with separate reputations, enforced by the system. A campaign to a stale list cannot quietly degrade the delivery of a login code, because the product will not let the two share. This is the single design decision that best explains Postmark's placement record.",
+    },
+    {
+      heading: "Who is expected to open the editor",
+      a: "A marketer, comfortably and by design. The drag-and-drop builder is the centre of the product, not a checkbox on the feature list, and the variables are wired once by an engineer and left alone afterwards. For a team where one person writes code and another writes copy, that removes a standing source of friction and a standing source of small deploys.",
+      b: "An engineer, mostly. Postmark ships layouts, templates with versioning inside the product and a preview before you send, all aimed at people comfortable with a templating syntax. A non-engineer can safely change copy in it and nobody would mistake it for a design tool. The boundary is deliberate rather than an omission, and it is a real cost if your marketer expected otherwise.",
+    },
+    {
+      heading: "Chasing one message a customer says never arrived",
+      a: "Activity is searchable, current and pleasant to use, with retention lengthening as you move up the plans. It answers the question, and the workflow assumes you know roughly what you are looking for. For a support team handling a handful of these a week it is entirely adequate.",
+      b: "This is the feature Postmark customers name second, after deliverability. The rendered message, the full delivery path and the raw bounce text from the receiving server sit in one place, searchable without exporting anything first. The difference is between a log viewer and a support tool, and it shows up as minutes rather than hours the first time a large customer escalates.",
+    },
+    {
+      heading: "Receiving mail as well as sending it",
+      a: "Inbound routing is part of the product and forwards parsed messages to your webhook, which is enough to build reply-to-ticket handling on. It is configured alongside everything else and does not require a plan step, which makes it a reasonable default choice for a team that wants both directions from one vendor.",
+      b: "Postmark parses inbound mail into structured JSON and posts it to your endpoint, and the parsing is where the value is: multipart bodies, attachments and quoted reply history arrive already separated, so your handler is application logic rather than a MIME project. Neither is a routing engine with conditional fan-out if that is what you actually need.",
+    },
+    {
+      heading: "Isolating your sending from everyone else's",
+      a: "Dedicated addresses are available, and for most customers at this size the shared pool is the right answer anyway — it is well managed and the volumes involved are too low for isolation to help. The thing to understand is that if you do develop a reputation problem, your options for buying your way out of it are limited.",
+      b: "Dedicated IPs are gated behind the higher plans and carry a monthly volume minimum, which is the more honest arrangement — an IP sending too little mail warms badly and delivers worse than a shared pool. The consequence is the same in practice: a small team with a placement problem has nothing here to purchase as a remedy, and needs to fix the cause instead.",
+    },
+    {
+      heading: "Campaigns and the occasional announcement",
+      a: "There is real campaign capability alongside the API: lists, scheduling, the same builder, on one subscription. It is not a lifecycle platform and does not pretend to be, and for a team that sends a product update every few weeks it is precisely enough. This is the strongest argument for MailerSend and the clearest gap in the alternative.",
+      b: "Broadcast message streams will send a newsletter to a list and stop well short of a campaign builder, segmentation or automation. Postmark's position is that you should bring a separate marketing tool and keep the transactional stream clean, which is coherent and correct on its own terms, and it does mean two vendors and two invoices.",
+    },
+    {
+      heading: "Channels beyond email",
+      a: "SMS is available on the same account, which is the answer to the day somebody decides verification codes should also go by text. The depth is modest against a dedicated messaging provider, and a one-time code does not need depth.",
+      b: "Email only, permanently, and stated as a strategy rather than a gap. Postmark's argument is that being narrow is why the deliverability is good. It is a defensible argument and it means a second vendor the moment your requirements widen past the inbox.",
+    },
+    {
+      heading: "What each vendor does when something goes wrong",
+      a: "Support is responsive for a company of this size, with the usual caveat that the lowest tier waits longest. Notably, there is no widespread pattern of complaint about arbitrary account action, which counts for something in a category where sudden suspension is the dominant fear.",
+      b: "The support relationship is the quiet reason long-tenured Postmark customers stay. What people report when things go wrong is a policy conversation about content, opened by a human who explains what the problem is, rather than an unexplained stop discovered from a drop in signups. That is not a feature you can see on a pricing page and it is what you are paying the premium for.",
+    },
+    {
+      heading: "What the step up the ladder buys",
+      a: "Seats, retention and support rather than sending headroom, which reads oddly until you understand it as a price per organisation rather than per message. A solo developer belongs on the entry plan and should ignore the rest; a team with a marketer, a support rota and a compliance requirement is who the upper plan was drawn for.",
+      b: "Capability rather than allowance. Moving up buys dedicated addresses, longer retention and a higher grade of support, while the included volume stays the same. The curve is easy to forecast and it is the steeper of the two once you pass a few hundred thousand messages a month, which is worth modelling honestly if your sending is growing quickly.",
+    },
+  ],
+  pickA: [
+    "A non-engineer needs to change email copy without a deploy, and the builder being genuinely good is a requirement rather than a bonus.",
+    "You want product email and the occasional campaign on one subscription instead of two vendors.",
+    "SMS is on the roadmap and you would rather not add a second messaging relationship for it.",
+    "Your team is small enough that a flat account with a few verified domains is an accurate model of how you send.",
+  ],
+  pickB: [
+    "Inbox placement is the reason you are shopping rather than a tiebreaker at the end of the evaluation.",
+    "You send both transactional and bulk mail and want the separation enforced by the product rather than remembered by people.",
+    "Support answers questions about individual messages often enough that seeing the rendered email beats filtering an event log.",
+    "Reply handling matters and you want the inbound payload already parsed into structured fields rather than raw MIME.",
+  ],
+  faqs: [
+    {
+      question: "Do I actually need message streams?",
+      answer:
+        "You need the separation; whether you need it as a product feature depends on your team. If you send only transactional mail, one stream is fine and the concept is irrelevant. If you also send announcements or a newsletter, you need bulk and transactional reputations kept apart, and your choices are a vendor that enforces it or a convention your team maintains forever. Conventions survive exactly as long as the people who understood them, which is the argument for the enforced version.",
+    },
+    {
+      question: "Can a marketer safely edit templates without breaking sends?",
+      answer:
+        "Largely yes, and the failure modes are worth designing around rather than hoping about. Copy edits are safe. What breaks is someone deleting a variable placeholder, removing an unsubscribe link, or pasting styling that renders badly in Outlook. Mark the variables clearly, keep a known-good version to roll back to, and make a test send to a real inbox part of the routine. That discipline matters more than which editor you standardised on.",
+    },
+    {
+      question: "Which one has better deliverability?",
+      answer:
+        "Postmark, by reputation and by the length of its record, and the message-stream separation is a genuine mechanism rather than marketing. That said, most teams' placement problems are self-inflicted — unauthenticated domains, no DMARC policy, purchased lists, campaigns sent from the domain the product depends on — and neither vendor repairs any of those. Both will also suspend you for them, so the vendor choice is the smaller half of the outcome.",
+    },
+    {
+      question: "Is it a problem to run marketing email somewhere else?",
+      answer:
+        "No, it is the arrangement most teams end up with once they have some scale, and it has a real benefit: a marketing platform's reputation problem is contained to the marketing subdomain. The cost is two vendors, two suppression lists and the ongoing chore of keeping unsubscribes synchronised between them. Decide deliberately which system owns consent, write it down, and make the other one read from it rather than maintaining its own view.",
+    },
+    {
+      question: "How much work is switching between these two?",
+      answer:
+        "The API call is trivial, and everything around it is the project. Templates are a full rebuild because the paradigms differ — there is no export that carries a drag-and-drop layout into a templating syntax or the reverse. Webhook consumers have to be rewritten against different event shapes. Suppression must be exported and imported before your first production send, not after. And if you are moving to streams, spend an hour modelling which traffic belongs in which one, because reorganising that after reputation has accumulated is considerably more annoying than getting it right at the start.",
+    },
+  ],
+};
+
+const POSTMARK_VS_SMTP2GO: VersusPage = {
+  slug: "postmark-vs-smtp2go",
+  a: "postmark",
+  b: "smtp2go",
+  title: "Postmark vs SMTP2GO",
+  description:
+    "Both are famous for telling you what happened to your mail, and they mean different things by it. One gives you forensics on a single message. The other gives you a standing health report on a sender you cannot instrument.",
+  search: {
+    primaryQuery: "best email provider for diagnosing delivery problems",
+    secondaryQueries: [
+      "postmark activity view versus smtp2go reporting",
+      "smtp relay with blacklist monitoring",
+      "which email vendor shows the raw bounce reason",
+      "email provider for a support team to debug from",
+    ],
+    rationale:
+      "Reporting is the one attribute both of these vendors are chosen for, so a page that separates per-message forensics from sender-health monitoring answers a comparison neither vendor will make, because each would rather claim the whole word.",
+  },
+  intro:
+    "Ask users of either of these why they stay and you get the same word: visibility. That agreement hides a real split. Postmark's visibility is vertical — everything about one message, including the raw text the receiving server sent back. SMTP2GO's is horizontal — how your sending as a whole is trending, whether your addresses are on a blocklist this week, what proportion of a domain's mail is landing. Which one you need is decided almost entirely by whether you wrote the software that sends.",
+  dimensions: [
+    {
+      heading: "How a message gets handed over",
+      a: "An HTTP API is the intended path, with SMTP available and perfectly functional. The product's features — streams, templates, structured inbound — are expressed through the API, and a sender that only speaks SMTP can use Postmark but will touch a smaller share of what it is paying for.",
+      b: "SMTP is the product rather than a compatibility layer. The onboarding assumes you are configuring something rather than coding something: a hostname, a port, a credential, and a device or application on the other end that was shipped years ago with an email settings page. There is an API for management, and it is not where the value is.",
+    },
+    {
+      heading: "Two different meanings of good reporting",
+      a: "Per-message forensics. Open one send and you see the rendered email, the full delivery path, the timing, and the verbatim rejection text from the receiving server. For a support person asked whether a specific customer got a specific receipt, this is the difference between a two-minute answer and an afternoon.",
+      b: "Sender health over time. Delivery and bounce rates broken down by sending address and by receiving domain, complaint tracking, blocklist monitoring on the addresses you send from, and a scheduled report that arrives whether or not anybody opens the dashboard. When the sender is an appliance you cannot add logging to, the vendor's aggregate view is your only telemetry.",
+    },
+    {
+      heading: "Keeping one kind of mail from poisoning another",
+      a: "Message streams split transactional and broadcast traffic into separate reputations enforced by the product, so a newsletter to a stale list cannot degrade the delivery of a password reset. It is the design decision most responsible for Postmark's placement record, and it requires you to think about which stream each traffic type belongs in before you start.",
+      b: "A relay account is one reputation by default, and separation is something you construct: distinct sending subdomains, distinct SMTP users per system, and the discipline to keep them apart. The per-user credential model helps more than it looks like it does, because it lets you see and stop one badly-behaved system without touching the others.",
+    },
+    {
+      heading: "What is available to render an email",
+      a: "A template system with layouts, in-product versioning and a preview before you send, aimed squarely at engineers and testable. A non-engineer can change copy in it. It is not a design tool and was never trying to be, and it means the rendered HTML is the vendor's concern rather than your application's.",
+      b: "Nothing, correctly. The relay receives a finished message from a sender that already decided how it looks — your ERP's invoice layout, WordPress's reset email — so a template feature would have nobody to serve. If you need rendering, it happens in your application or in a library before the message reaches the relay at all.",
+    },
+    {
+      heading: "Inbound mail, and what arrives at your endpoint",
+      a: "Postmark parses incoming mail into structured JSON: headers, text and HTML parts, attachments and stripped reply text arrive already separated, so building reply-to-ticket handling is application logic rather than a MIME parsing exercise. This is one of the strongest single features in the pair.",
+      b: "Inbound parsing exists and unlocks at the Professional tier alongside dedicated IPs, forwarding messages to an endpoint you nominate. It suits the relay's audience — the appliance sends, the human replies, something has to catch it — and it is a plan step rather than a default, which is worth knowing before you design around it.",
+    },
+    {
+      heading: "Isolation, and when you are allowed to buy it",
+      a: "Dedicated IPs sit behind the higher plans and carry a monthly volume floor, which is the honest arrangement rather than an upsell: an IP that sends too little warms badly and performs worse than a well-run shared pool. The consequence is that a small sender with a reputation problem has to fix the cause, because there is nothing here to buy instead.",
+      b: "Dedicated IPs unlock at the Professional tier, and the blocklist monitoring that comes with the reporting exists partly because shared-pool customers need to learn about a neighbour's problem from their vendor rather than from an angry customer. For a mid-size sender that combination — shared pool plus active monitoring — is often the right economics.",
+    },
+    {
+      heading: "Where the mail is handled, and what you can tell a regulator",
+      a: "Postmark operates its own sending infrastructure with its own footprint, and the answer to a residency question is whatever answer that vendor gives, documented in its subprocessor list and its data processing agreement. That is straightforward to read and not configurable by you: there is no region selector, so if the requirement is that message bodies never traverse a particular jurisdiction, you are checking whether the published answer already satisfies it rather than arranging for it.",
+      b: "SMTP2GO runs relay endpoints in several regions and will pin an account's processing to one of them, which is a shorter and more satisfying answer than most of this category can give when a lawyer asks where a message body physically goes. For an organisation with a residency requirement and a fleet of devices to point somewhere, that single fact frequently decides the evaluation.",
+    },
+    {
+      heading: "Who each vendor's support is used to talking to",
+      a: "Long-tenured Postmark customers name the support relationship as the quiet reason they stay. When something does go wrong it tends to arrive as a policy conversation about content, opened by a human who explains the problem, rather than an unexplained stop discovered from a graph.",
+      b: "The support queue here is full of people configuring hardware, network appliances and CMS plugins, which is a different competence and a valuable one. Asking why your firewall is refusing the connection, or which port a particular NAS expects, gets a useful answer rather than a link to an SDK.",
+    },
+    {
+      heading: "Where each one runs out of road",
+      a: "Postmark stops deliberately short of marketing. Broadcast streams will send a newsletter and there is no campaign builder, no segmentation and no automation, on the stated view that staying narrow is why the deliverability is good. Widening your requirements past the inbox means a second vendor.",
+      b: "SMTP2GO stops short of being a developer platform. There is no idiomatic SDK, no rendering, no lifecycle tooling, and the API is management rather than the primary send path. Teams who pick it for the price and then want what an API product gives them are the ones who end up unhappy.",
+    },
+  ],
+  pickA: [
+    "You are writing the sending code and want streams, templates and parsed inbound expressed through an API.",
+    "Support answers questions about individual messages weekly, and the raw bounce text is what ends the conversation.",
+    "You send both transactional and bulk mail and want their reputations separated by the product rather than by convention.",
+    "Inbox placement for product-critical mail is the reason for the purchase rather than a tiebreaker.",
+  ],
+  pickB: [
+    "The senders are appliances, a CMS or an ERP, and SMTP is the only interface any of them has.",
+    "You need standing sender-health reporting and blocklist monitoring because you cannot add instrumentation to the sender.",
+    "Many separate systems send mail and you want one revocable credential per system.",
+    "A residency requirement needs a single supplier able to pin processing to a named region.",
+  ],
+  thirdOption:
+    "The shared limitation here is that both answers to what happened to that email live inside a vendor's window and disappear when it closes or when you leave. If the reason you are comparing reporting at all is that you need to prove, next year, what was sent and what came back, the third shape is to run SES in your own AWS account and write the delivery events into your own storage, where the retention policy is yours and the history survives a vendor change. Wraps is one way to operate that with tooling over the top. It is a poor fit if the sender is a device on a shelf and you wanted a hostname to type in this afternoon: it needs an AWS account and SES production access, an approval on AWS's schedule that can be refused.",
+  faqs: [
+    {
+      question: "Can Postmark handle mail from a legacy system over SMTP?",
+      answer:
+        "Yes, and it does it well. The question is not capability, it is what share of the product you end up using. Streams, templates and structured inbound are the reasons to pay Postmark's rate, and a device that only knows how to open an SMTP session touches almost none of them. If the legacy sender is one of several traffic sources and the rest is code you write, Postmark is fine for both. If the legacy sender is the entire estate, you are paying a specialist premium for a relay.",
+    },
+    {
+      question:
+        "Which one tells me sooner that I have a deliverability problem?",
+      answer:
+        "SMTP2GO, usually, because its reporting is designed to surface trends without anybody looking — scheduled reports and blocklist monitoring push the signal to you. Postmark's data is richer per message but more pull-shaped: you find the problem by noticing something and then investigating it. The honest arrangement, whichever vendor you pick, is to alert on your own bounce and complaint rates from the webhook stream rather than relying on a dashboard somebody remembers to open.",
+    },
+    {
+      question: "Do I need dedicated IPs?",
+      answer:
+        "Probably not, and the threshold is higher than most people assume. A dedicated IP needs consistent volume to hold a warm reputation; below that it performs worse than a well-managed shared pool because receiving servers have too little signal about it. Both vendors gate them behind higher tiers partly for that reason. If you are considering one to escape a placement problem, first check whether the actual cause is authentication, list hygiene or bulk mail on a transactional domain, because an IP change will not fix any of those.",
+    },
+    {
+      question: "How do I keep replies working if I switch relays?",
+      answer:
+        "Inventory the inbound path before you touch the outbound one. Find every MX record, every forwarding rule and every webhook endpoint that currently receives parsed mail, and note which plan tier each vendor requires for inbound at all. Then cut over inbound and outbound separately, with a period where both are live, because a reply that lands nowhere is invisible — nothing errors, nothing retries, the customer simply thinks you ignored them.",
+    },
+    {
+      question: "What does it cost to run both?",
+      answer:
+        "One extra vendor relationship and one extra subdomain, and for a fair number of organisations it is the right architecture. Put the code you actively develop on the API product and the fleet of unmodifiable systems on the relay, each on its own sending subdomain so their reputations are independent. The genuine ongoing costs are two suppression lists to reconcile and two dashboards to check, so decide up front which system owns the authoritative view of a bad address.",
+    },
+  ],
+};
+
+const MAILERSEND_VS_MAILGUN: VersusPage = {
+  slug: "mailersend-vs-mailgun",
+  a: "mailersend",
+  b: "mailgun",
+  title: "MailerSend vs Mailgun",
+  description:
+    "A focused product with a builder at its centre against a high-volume platform whose centre is a routing engine. Both send email competently. Only one of them is trying to be infrastructure.",
+  search: {
+    primaryQuery: "mailersend or mailgun for a growing product",
+    secondaryQueries: [
+      "email api with conditional inbound routing rules",
+      "mailgun subaccounts versus a flat domain list",
+      "email validation built into the sending provider",
+      "mailgun flex plan closed to new signups",
+    ],
+    rationale:
+      "Mailgun's December 2025 repricing pushed a cohort of small senders into evaluating alternatives for the first time in years, and the comparisons they find are written as if Mailgun were still primarily a cheap developer API rather than a volume platform with a routing engine attached.",
+  },
+  intro:
+    "These two are both called email APIs and the label does more harm than good. MailerSend is a product: a builder, a clean dashboard, an API around the outside, sized for a team that wants email handled. Mailgun is closer to infrastructure: routing rules with filter expressions, address validation as its own product, subaccounts for tenant isolation, and log retention you buy by the tier. You are usually choosing between wanting less to think about and wanting more control over how mail moves through your system.",
+  dimensions: [
+    {
+      heading: "What happens to mail arriving at your domain",
+      a: "Inbound routes deliver parsed messages to a webhook, which covers the common case — replies to a support address land in your application — without a plan step or much configuration. It is a forwarding feature done well, and it stops where forwarding stops.",
+      b: "Routes are a rule engine. You write match expressions against recipient, sender and headers, attach actions, and order the rules by priority, so a single inbound domain can fan out to several destinations under different conditions. If you are building something that receives mail as a real part of the product rather than as a reply path, this is the largest single gap between these two.",
+    },
+    {
+      heading: "Checking an address before you send to it",
+      a: "Verification tooling is available for screening a list before an import, which is the direct answer to the most common cause of a bounce-rate incident. Screening inside the same vendor that will judge you for the bounces removes a category of self-inflicted damage, and the depth is appropriate to the size of sender this product is for.",
+      b: "Validation is a product in its own right at Mailgun, with its own API, backed by the observation data of a very large sending operation and usable independently of whether you send through them. For a team that acquires addresses through forms at any real rate, the ability to reject a typo at signup rather than discover it as a hard bounce a week later is a meaningful, measurable improvement.",
+    },
+    {
+      heading: "Sending on behalf of other people",
+      a: "The model is flat: several verified domains on one account, sharing one reputation and one suppression list. For a single company with a handful of domains that is a correct and simple model. For an agency or a platform sending for many customers, the absence of real separation becomes a problem the first time one of those customers imports a purchased list.",
+      b: "Subaccounts give each tenant its own sending identity, its own suppression and its own reporting under one parent relationship, so one tenant's bad list is contained. If you are a platform rather than a company, this feature frequently decides the evaluation before anything else is compared, and it is genuinely hard to replicate by convention.",
+    },
+    {
+      heading: "Who is expected to write the email",
+      a: "A marketer, in a drag-and-drop builder that is the centre of the product rather than a feature on the list. Variables get wired once by an engineer, copy changes afterwards without a deploy, and for a small team that removes a recurring interruption. The trade is that templates become state in a vendor's system, outside version control and without a diff.",
+      b: "An engineer, in a handlebars-style templating syntax stored with the vendor and versioned there. It is competent and it is not a design surface, so the marketer who wants to reword a subject line is filing a ticket or learning the syntax. That is a reasonable answer for an infrastructure product and a poor one if template editing is the friction you were trying to remove.",
+    },
+    {
+      heading: "How long the logs live",
+      a: "Retention lengthens as you move up the plans, which makes history a purchasable quantity rather than a fixed wall. The practical upshot for a small team is that the upper tier is often being bought for retention and seats rather than for sending volume, and it is worth being honest with yourself about which one you need.",
+      b: "Retention is explicitly a tier attribute at Mailgun and the entry plans are short. This is the detail most likely to bite after a migration: your support team's ability to answer a question about last quarter changes silently with the plan, and nobody notices until somebody asks. Check the number on the plan you are actually buying rather than the one in the comparison table.",
+    },
+    {
+      heading: "The December 2025 repricing and who it moved",
+      a: "MailerSend's structure has been stable: an entry plan, a higher plan that sells seats and retention rather than volume, and overage published per thousand. Nothing about it recently forced a cohort of customers to re-evaluate, which is worth something on its own when you are choosing where to put a five-year dependency.",
+      b: "Flex closed to new signups in December 2025 and the legacy rate for existing users doubled, which is the event that put a large number of small Mailgun accounts into the market for the first time in years. Read any Mailgun comparison written before that date as describing different economics, and price the plan you can actually sign up for today.",
+    },
+    {
+      heading: "European handling",
+      a: "MailerSend is a European company, and for organisations whose requirement is really about who they are contracting with and under which regime, that is a simpler story than a region toggle inside a US platform. It is not a substitute for reading the data processing agreement, and it does shorten the conversation.",
+      b: "Mailgun operates an EU region you select at domain creation, and the selection is not reversible afterwards — a domain created in the wrong region has to be recreated. The capability is real and the footgun is real, and it is exactly the kind of detail that surfaces during a compliance review six months after somebody set the account up quickly.",
+    },
+    {
+      heading: "Dedicated addresses and the arithmetic around them",
+      a: "Dedicated sending is available and, at the volumes this product is usually bought at, shared is the better answer anyway — an IP without consistent volume behind it warms badly. The thing to understand is that isolation is not a lever you can pull on a bad week if your volume does not support it.",
+      b: "Dedicated IPs are included from the mid plans and additional ones are a published monthly line, which makes Mailgun one of the more straightforward vendors to price a multi-IP setup with. That matters if you genuinely send enough to warm several addresses and want to separate traffic classes across them rather than across subdomains.",
+    },
+    {
+      heading: "Who owns the company, and what that implies",
+      a: "MailerSend sits alongside MailerLite under one owner, which means the sending operation, the abuse posture and the roadmap all belong to a company whose entire business is email for small and mid-size senders. The pool you share is populated by that company's customers.",
+      b: "Mailgun is part of Sinch, a large communications group, and it has been through several ownership changes. The upside is the scale of the operation behind it and a genuinely deep feature surface. The downside is what a large group does to a product: pricing changes decided elsewhere, and suspensions that recur in public reviews with the impersonality large platforms are known for.",
+    },
+  ],
+  pickA: [
+    "A non-engineer needs to edit email copy without a deploy, and the builder being good is the requirement.",
+    "You are one company with a few domains, so tenant-level reputation isolation is something you do not need and should not pay for.",
+    "You want product email and the occasional campaign on one subscription rather than assembling them.",
+    "A simpler European contracting story is worth more to you than a region toggle you have to configure correctly.",
+  ],
+  pickB: [
+    "Inbound mail is part of the product and you need conditional routing rather than a single forwarding destination.",
+    "You send on behalf of customers and need per-tenant credentials, suppression and reporting.",
+    "Address validation at the point of signup would measurably reduce your bounce rate, and you want it from the same vendor.",
+    "You send enough to justify multiple dedicated addresses and want the per-IP price published rather than negotiated.",
+  ],
+  thirdOption:
+    "Both of these price the things around sending — retention, validation, tenant isolation, dedicated addresses — as plan steps, which is why the bill on either side climbs faster than the message count does. If what you actually want is the routing and the history under your own control rather than rented by the tier, the third shape is to run SES in your own AWS account, where event streams land in your storage on your retention policy and tenant separation is a configuration set you define rather than a product feature you unlock. Wraps is one way to operate that with a platform layer on top. It is the wrong answer if you want validation and a rule engine out of the box this week: it needs an AWS account and SES production access, an application AWS can refuse.",
+  faqs: [
+    {
+      question: "What replaced Mailgun's Flex plan?",
+      answer:
+        "Flex closed to new signups in December 2025, and accounts that remained on the legacy arrangement saw the per-thousand rate double. New customers choose from the named plans instead. The practical consequence for anyone reading older comparisons is that the cheap pay-as-you-go entry point people remember is not available to sign up for, so any recommendation resting on it is describing a product that no longer exists at that price.",
+    },
+    {
+      question: "Do I need subaccounts or will separate domains do?",
+      answer:
+        "Separate domains give you separate reputations and nothing else. Subaccounts give you separate credentials, separate suppression lists and separate reporting, which is what you actually need when a tenant can do something bad. The test is simple: if one customer imports a purchased list, does that harm any other customer's mail and can you see which customer did it? If the answer is yes and no, domains are not enough.",
+    },
+    {
+      question: "Is address validation worth paying for?",
+      answer:
+        "It depends entirely on how addresses enter your system. If they come from a form that a human types into, validation catches typos and disposable domains before they become hard bounces, and hard bounce rate is the number most likely to get your sending restricted. If your addresses come from authenticated accounts that already confirmed by email, you have validated them the only way that truly works and a validation service adds little. Nothing verifies that a valid mailbox belongs to somebody who wants your mail, which is what complaint rate actually measures.",
+    },
+    {
+      question: "Can I move an existing domain between regions?",
+      answer:
+        "Not on Mailgun — the region is fixed when the domain is created, and changing it means creating a new domain in the correct region and migrating to it, including re-publishing DNS records and re-warming reputation. Treat the region choice as a decision to make with whoever owns your compliance answer, before the first send, rather than something to tidy up later. It is a small step taken at the right time and a genuinely annoying project taken at the wrong one.",
+    },
+    {
+      question: "How do I estimate the real cost of moving between these two?",
+      answer:
+        "Count four things, not one. Rebuilding templates, which cross no paradigm boundary and have to be redone by hand. Rewriting webhook consumers against different event payloads. Rebuilding inbound routing, which is the piece most likely to be underestimated if you are moving away from a rule engine toward simple forwarding. And exporting and importing suppression before the first production send, never after. Then check the log retention on the plan you are landing on, because a shorter window is a support regression your team will discover the hard way.",
+    },
+  ],
+};
+
+const MAILGUN_VS_SMTP2GO: VersusPage = {
+  slug: "mailgun-vs-smtp2go",
+  a: "mailgun",
+  b: "smtp2go",
+  title: "Mailgun vs SMTP2GO",
+  description:
+    "Two vendors that both accept SMTP all day and are built for opposite customers. One wants to be the routing layer in your architecture. The other wants to be the thing your appliances point at and nobody thinks about again.",
+  search: {
+    primaryQuery: "reliable smtp relay for business systems",
+    secondaryQueries: [
+      "mailgun alternative after the flex plan closed",
+      "smtp relay with dedicated ip and reporting",
+      "sending mail from devices and internal applications",
+      "mailgun routes versus a simple relay",
+    ],
+    rationale:
+      "Mailgun's entry-level repricing in December 2025 sent a specific cohort looking: small businesses relaying modest volumes from software they did not write, for whom Mailgun's routing and validation surface was never the point and is now being paid for.",
+  },
+  intro:
+    "The overlap here is real — both take SMTP, both deliver at volume, both have a dedicated IP story — and it hides two quite different products. Mailgun is a platform with a rule engine, a validation service and tenant isolation, sold to people who are building something that moves mail around. SMTP2GO is a relay sold to people who have systems that emit mail and want them to arrive, with reporting good enough to debug from when they do not. The December 2025 repricing made this comparison urgent for a cohort who had never needed to make it.",
+  dimensions: [
+    {
+      heading: "What the vendor thinks you are building",
+      a: "An application. Mailgun's surface assumes you will write code against it: routing rules with match expressions, a validation API, tagging so you can slice a cohort of messages later, subaccounts because you might be a platform with tenants. All of that is real capability and all of it presumes somebody is engineering the mail flow.",
+      b: "Nothing. SMTP2GO assumes the mail is already being produced by software that exists and cannot be changed, and that your job is configuration rather than development. The product's intelligence is therefore applied after the message arrives — routing it well, reporting on it clearly, and warning you when a sending address gets blocklisted.",
+    },
+    {
+      heading: "Two takes on what reporting is for",
+      a: "Searching and slicing. Tags and custom variables let you attach your own dimensions to sends and then filter events by them, which is how you answer a question like how did the onboarding sequence perform this month. It is powerful, it assumes you set the tags at send time, and it is useless for traffic from a system that cannot set anything.",
+      b: "Standing sender health. Delivery and bounce rates per sending address and per receiving domain, complaint tracking, blocklist monitoring, and reports that arrive on a schedule rather than waiting to be opened. For traffic you cannot instrument, vendor-side aggregate reporting is the only telemetry that exists.",
+    },
+    {
+      heading: "Credentials and the systems that hold them",
+      a: "API keys and SMTP credentials scoped per domain, with subaccounts available if you need harder separation. The model is coherent for an engineering team with a secret store, and it was designed with code in mind rather than with a wiki page full of device configurations.",
+      b: "Per-sender SMTP users are the core operational idea: one credential per system, revocable independently, with its own reporting slice. That is precisely the right shape when credentials get typed into an appliance's settings page by somebody who later leaves, and it is the habit that makes an estate of twenty senders manageable rather than terrifying.",
+    },
+    {
+      heading: "Entry-level pricing after December 2025",
+      a: "Flex closed to new signups and the legacy rate doubled, which pushed a cohort of small senders into the market. What is available now is the named plan ladder, and the entry rung is priced for a business rather than for a side project. If your volume is modest and you are not using routes, validation or subaccounts, you are paying for a platform you do not touch.",
+      b: "A free tier with a daily cap, an inexpensive entry plan, and a Professional tier where dedicated IPs and inbound parsing unlock together. The ladder is shaped around what a relay customer actually needs next, which is usually isolation or inbound rather than raw volume, and the overage rates are published rather than negotiated.",
+    },
+    {
+      heading: "When a message does not send",
+      a: "Mailgun surfaces the failure in its event stream with a reason, and suspensions recur often enough in public reviews to be a planning input rather than a rumour. Large platforms are conservative about shared reputation and act first when a pattern looks unusual. If your traffic is spiky, budget for the possibility and keep a fallback path configured.",
+      b: "The failure shows up in the reporting, and the support conversation on the other end is with people who spend their days helping customers configure devices and networks. That is a different competence from an API support queue, and it is the more useful one when the real problem turns out to be a firewall rule, a TLS negotiation or an appliance that quietly drops messages instead of retrying.",
+    },
+    {
+      heading: "Dedicated addresses and warming",
+      a: "Dedicated IPs are included from the mid plans with additional ones at a published monthly rate, which makes a multi-IP setup straightforward to price. If you send enough to warm several addresses and want traffic classes separated across them, this is the more capable of the two on that axis.",
+      b: "Dedicated IPs unlock at the Professional tier, bundled with inbound parsing, so that tier is a capability step rather than a volume step. Below it you are on a shared pool with blocklist monitoring watching over it, which for a mid-size sender is frequently the better economics than an IP with too little volume behind it to stay warm.",
+    },
+    {
+      heading: "Receiving mail, and how conditional it can be",
+      a: "Routes are a genuine rule engine: match expressions on recipient, sender and headers, ordered by priority, with actions attached. A single inbound domain can fan out to different destinations under different conditions. If inbound is a real part of what you are building, nothing in the relay category comes close.",
+      b: "Inbound parsing forwards messages to an endpoint you nominate, from the Professional tier. It is the right amount of product for the audience — the device sends, a human replies, something catches it — and it is not conditional fan-out. Know which of those two you need before you choose, because retrofitting the difference is not a config change.",
+    },
+    {
+      heading: "Where the mail is processed",
+      a: "Mailgun offers a US or EU region selected when a domain is created, and that selection cannot be changed afterwards. The capability is genuine and the footgun is genuine: a domain created hastily in the wrong region has to be recreated and re-warmed, and that usually surfaces during a compliance review long after the fact.",
+      b: "Relay endpoints in several regions with account processing pinnable to one, which is a shorter answer to a residency question than most of this category can give. For an organisation pointing a fleet of systems at one supplier and needing a single sentence for the auditor, that simplicity has real value.",
+    },
+    {
+      heading: "What you are not getting from either",
+      a: "Not a marketing platform and not a template experience for non-engineers. Mailgun has a templating syntax stored vendor-side and it is aimed at developers. Anything resembling lifecycle automation, segmentation or a campaign builder is a separate purchase, and its own deliverability tooling is packaged separately too.",
+      b: "Not a developer platform. No idiomatic SDK, no rendering, no lifecycle tooling, and an API that manages the account rather than being the primary send path. Choosing it because it is inexpensive and then wanting the things a platform gives you is the most common route to being unhappy with it.",
+    },
+  ],
+  pickA: [
+    "Inbound mail is part of your product and you need conditional routing with ordered rules rather than one forwarding destination.",
+    "You send on behalf of tenants and need per-tenant credentials, suppression and reporting.",
+    "You want to tag sends with your own dimensions and slice the event stream by them later.",
+    "Your volume supports several dedicated addresses and you want the per-IP price published.",
+  ],
+  pickB: [
+    "The senders are business systems, appliances and plugins, and none of them will ever be rewritten.",
+    "You want one revocable credential per sending system, with its own reporting slice.",
+    "Blocklist monitoring and scheduled health reports are the visibility you need, because you cannot instrument the sender.",
+    "Your volume is modest and you would rather not pay for a routing engine and a validation service you never call.",
+  ],
+  faqs: [
+    {
+      question: "I was on Mailgun's Flex plan — what are my options now?",
+      answer:
+        "Flex closed to new signups in December 2025 and the legacy rate doubled, so the question is whether the platform features justify the named plan you would move onto. Audit honestly: do you use routes, validation, subaccounts or tagging? If none of them, you are paying a platform price for relay work and a relay is the cheaper and better-fitting answer. If you use even one of them meaningfully, replacing it elsewhere is likely to cost more in engineering than the plan difference saves.",
+    },
+    {
+      question: "Does an SMTP relay deliver worse than an API?",
+      answer:
+        "No. Placement is decided by authentication, reputation and content, not by the protocol the message arrived over. Both vendors sign with DKIM and align SPF correctly when configured properly, and both will restrict you for a bad list. The one indirect risk is that legacy senders are likelier than fresh code to emit unauthenticated or malformed mail, and to use an envelope sender that does not align with the visible From address — which is a problem with the sender, fixable in its configuration.",
+    },
+    {
+      question: "How many sending credentials should I create?",
+      answer:
+        "One per system, always, and it costs nothing to do. The value shows up the day a credential leaks or a system starts misbehaving: you revoke exactly one thing rather than rotating a shared secret across an estate nobody has a complete inventory of. It also makes the reporting useful, because you can see which system's mail is bouncing without correlating by From address. Shared credentials are the single most common operational mistake in relay setups.",
+    },
+    {
+      question: "What should I check on the receiving side before switching?",
+      answer:
+        "Your DNS, three records deep. SPF has to include the new vendor and must not exceed ten lookups, which is easy to breach when you are temporarily including both the old and new providers during a cutover. DKIM keys are per-vendor, so both need publishing while you run in parallel. And DMARC alignment needs verifying with a real test send, because a legacy sender that sets an envelope From on a different domain will fail alignment silently and land in spam while every dashboard shows delivered.",
+    },
+    {
+      question: "Can I keep long-term records of what was sent?",
+      answer:
+        "Not from either vendor's own retention, which is plan-dependent on both sides and finite everywhere. If you have a contractual or regulatory reason to prove what was sent to whom two years ago, the only durable arrangement is to consume the webhook or event stream as it happens and write it into storage you control. It is inexpensive to build and impossible to build retroactively, which is why the people who need it almost always discover the requirement one quarter too late.",
+    },
+  ],
+};
+
+const MAILGUN_VS_MANDRILL: VersusPage = {
+  slug: "mailgun-vs-mandrill",
+  a: "mailgun",
+  b: "mandrill",
+  title: "Mailgun vs Mailchimp Transactional (Mandrill)",
+  description:
+    "Two transactional products that both live inside something larger — one inside a communications group, one inside a marketing platform you have to buy first. That parentage explains more about each than their feature lists do.",
+  search: {
+    primaryQuery:
+      "transactional email that is not tied to a marketing platform",
+    secondaryQueries: [
+      "mandrill alternative that does inbound routing",
+      "mailgun routes compared to mandrill inbound",
+      "transactional email without buying mailchimp",
+      "which transactional provider is still being developed",
+    ],
+    rationale:
+      "Both are long-established transactional products with an inbound story, which puts them on the same shortlist for teams doing reply handling — and the deciding facts are a purchasing prerequisite on one side and an ongoing investment question on the other, neither of which appears on a feature comparison.",
+  },
+  intro:
+    "Neither of these is a young product and neither is independent. Mandrill is an add-on to a marketing platform and cannot be bought without it. Mailgun is a piece of Sinch, a large communications group, and has changed hands more than once. Teams compare them because both send transactional mail at volume and both parse inbound, which is a narrower overlap than it looks. The decision usually turns on two things that are not features: what you have to purchase to get it, and how much you expect it to change.",
+  dimensions: [
+    {
+      heading: "The prerequisite purchase",
+      a: "None. Mailgun is bought on its own, priced on its own plan ladder, and depends on no decision made by another department. Whether that matters to you depends on whether anybody else in your organisation is already paying for the alternative's parent product.",
+      b: "A paid Mailchimp plan, permanently, underneath. Mandrill is an add-on and cannot be purchased alone, so the true cost of transactional sending includes a marketing subscription. For a company already running campaigns there it is close to marginal cost. For everybody else it is the single fact that ends the evaluation, and it belongs at the top of your arithmetic rather than in a footnote.",
+    },
+    {
+      heading: "How much investment each is still receiving",
+      a: "Active but turbulent. Mailgun continues to ship, and it has also changed ownership and repriced — Flex closed to new signups in December 2025 and the legacy rate doubled. You are betting on a product that is being managed commercially, which cuts both ways: it improves, and the terms change under you.",
+      b: "Stable to the point of stasis. Mandrill works, has worked for years, and visible investment has been modest for a long stretch. A transactional sender that stopped changing is a transactional sender that stopped breaking, which is a real virtue. It is a poor bet if your plan depends on the surrounding tooling getting better.",
+    },
+    {
+      heading: "What each does with mail arriving at your domain",
+      a: "Routes are a rule engine: match expressions against recipient, sender and headers, ordered by priority, with actions attached, so one inbound domain can fan out to different destinations under different conditions. For anything where receiving mail is part of the product rather than a reply path, this is the stronger half of the pair by a wide margin.",
+      b: "Inbound routing forwards parsed messages to a webhook and has done so stably for a very long time. It covers reply handling and bounce parsing well, and it is forwarding rather than conditional fan-out. If your existing Mandrill inbound configuration is load-bearing, inventory it carefully before assuming any replacement is at parity.",
+    },
+    {
+      heading: "Addresses your provider has stopped mailing",
+      a: "Suppression lists cover bounces, complaints and unsubscribes, exposed through the API so you can audit and manage them programmatically. That programmatic access is the part that matters operationally: you can reconcile the vendor's view against your own database on a schedule rather than trusting a dashboard.",
+      b: "The rejection list is stricter than people expect. An address that hard-bounced once can remain on it indefinitely, so a customer who fixed their mailbox months ago silently receives nothing. Auditing that list is part of operating Mandrill competently, and it is the first thing to export if you ever leave.",
+    },
+    {
+      heading: "Checking an address before it becomes a bounce",
+      a: "Validation is a separate Mailgun product with its own API, backed by a very large sending operation's observation data, usable at signup time rather than only on an import. For a product acquiring addresses through forms, rejecting a typo at the point of entry is measurably better than discovering it as a hard bounce a week later.",
+      b: "There is no equivalent. Mandrill will tell you that an address bounced and will add it to the rejection list; it will not help you avoid sending to it in the first place. If list quality is your live problem, that is a real gap and it has to be filled with a separate service or with your own confirmation flow.",
+    },
+    {
+      heading: "How the templates are written and by whom",
+      a: "A handlebars-style templating syntax stored vendor-side and versioned there, aimed at developers. It is competent and it is not a design surface, so a marketer wanting to change a subject line is filing a ticket or learning the syntax.",
+      b: "Mailchimp's editor with merge tags, a syntax inherited from a marketing product. Convenient if your marketing team already lives in that editor, awkward if they do not, and in practice teams end up doing more of the conditional logic in application code than the feature list suggests. There is no export path that carries these templates anywhere else.",
+    },
+    {
+      heading: "Finding a cohort of messages later",
+      a: "Tags and custom variables let you attach your own dimensions at send time and filter the event stream by them afterwards, which is how you answer a question about a campaign or a release rather than about one message. Log retention is a tier attribute and the entry plans are short, so check the number on the plan you are actually buying.",
+      b: "Outbound activity with content and delivery state, searchable within a retention window, adequate and visibly aged. A support person chasing one customer's missing receipt takes more steps than they should, and slicing by a dimension you defined is not really what the interface is for.",
+    },
+    {
+      heading: "How the money is counted",
+      a: "A named plan ladder with included volume and published overage, plus dedicated IPs included from the mid plans and extras at a monthly rate. It is easy to forecast, and since December 2025 the cheap pay-as-you-go entry point people remember is not available to new signups.",
+      b: "Blocks of messages bought at a time, plus a dedicated address as a monthly extra, plus the mandatory platform subscription underneath. Working out a true per-message cost requires arithmetic the pricing page does not do for you, and the honest number is materially higher than the block price suggests.",
+    },
+    {
+      heading: "What happens when an account is questioned",
+      a: "Suspensions recur in Mailgun's public reviews often enough to treat as a planning input. Large platforms are conservative about shared reputation and act first when a sending pattern looks unusual, which means spiky traffic deserves a warm fallback path and somebody who knows how to reach support.",
+      b: "The account relationship is shared with the marketing side, and that matters in the direction people do not expect: a problem originating in campaigns is a problem for the account your receipts depend on. Separating the two is not something you can arrange within the product, because the dependency is the product.",
+    },
+  ],
+  pickA: [
+    "You need conditional inbound routing rather than a single forwarding webhook.",
+    "Address validation at the point of signup would measurably improve your bounce rate.",
+    "You want to buy transactional sending on its own terms, with no other subscription required to make it work.",
+    "Slicing your own send dimensions out of the event stream is how your team answers questions about email.",
+  ],
+  pickB: [
+    "Marketing already runs campaigns in Mailchimp, so the platform subscription exists regardless and transactional is marginal cost.",
+    "The integration has run untouched for years, nothing is broken, and no one has funded a migration.",
+    "Your marketing team owns the templates and already works in that editor every day.",
+    "You would rather depend on a product that has stopped changing than on one whose terms were repriced last year.",
+  ],
+  faqs: [
+    {
+      question: "Can I buy Mandrill without a Mailchimp plan?",
+      answer:
+        "No. It is an add-on requiring an active paid Mailchimp plan, and that requirement ends more evaluations than any feature gap does. When you compare per-message costs, include the subscription underneath in the total. A transactional product that looks inexpensive per message can be the more expensive option overall once its prerequisite is counted, and the prerequisite does not go away at any volume.",
+    },
+    {
+      question: "Which one is the safer long-term dependency?",
+      answer:
+        "They fail differently, which is why there is no single answer. Mandrill's risk is stagnation: it keeps working and stops gaining, so a feature you need in two years may never arrive. Mailgun's risk is change: it gains features and it also reprices and changes hands, as December 2025 demonstrated. Pick based on which you can absorb. A team with no appetite for migration work should fear repricing; a team building something that will need more from its email vendor should fear stagnation.",
+    },
+    {
+      question: "What is the hardest part of moving off either one?",
+      answer:
+        "Inbound, if you use it, followed by templates. Outbound sending is a small code change and inbound is a re-architecture whenever you are moving between a rule engine and simple forwarding in either direction. Templates cross no paradigm boundary and must be rebuilt by hand. After that comes discovery: grep your infrastructure for the API credential rather than the vendor name, because the integration nobody remembers was configured by hand on a server rather than committed to a repository, and it will keep sending happily from an account you thought you had closed.",
+    },
+    {
+      question:
+        "Do either of these separate marketing from transactional mail?",
+      answer:
+        "Not as a product concept the way message streams do elsewhere. On both, keeping a newsletter's reputation away from your password resets is something you arrange: a separate sending subdomain for bulk mail, separate credentials, and the discipline to keep them apart forever. It works and it depends on every future engineer understanding why the rule exists, which is a weaker guarantee than a vendor that refuses to let the two share.",
+    },
+    {
+      question: "What should I export before leaving either?",
+      answer:
+        "The suppression or rejection list first, because sending to previously bounced addresses from a brand-new identity is the fastest way to damage a reputation you have not yet built. Then templates, which nothing carries across. Then as much delivery history as the window still holds, since a dispute about last quarter will not wait for your migration. And on Mandrill specifically, decide what happens to the Mailchimp subscription — if transactional was the only reason it survived renewal, cancelling it is part of the saving and should be in the business case.",
+    },
+  ],
+};
+
+const KLAVIYO_VS_SENDGRID: VersusPage = {
+  slug: "klaviyo-vs-sendgrid",
+  a: "klaviyo",
+  b: "sendgrid",
+  title: "Klaviyo vs SendGrid",
+  description:
+    "Both will send your marketing email. Only one of them was built to know that a customer abandoned a cart worth ninety pounds on Tuesday, and that knowledge is what the price difference is for.",
+  search: {
+    primaryQuery: "klaviyo or sendgrid marketing campaigns for an online store",
+    secondaryQueries: [
+      "sendgrid marketing campaigns versus a dedicated ecommerce platform",
+      "do i need klaviyo or is sendgrid enough",
+      "ecommerce email attribution without klaviyo",
+      "moving marketing email off sendgrid",
+    ],
+    rationale:
+      "SendGrid Marketing Campaigns is bought by a lot of stores because it is already in the account, and the comparison they need is not about sending quality — it is about whether a contact list with custom fields can substitute for a behavioural profile, which no vendor will answer honestly.",
+  },
+  intro:
+    "This one gets decided by a question nobody phrases correctly. It is not which sends better marketing email, because both send it perfectly well. It is what your email is allowed to know. SendGrid's marketing product operates on contact lists with custom fields — a reasonable model that has served a great many businesses. Klaviyo operates on profiles assembled from a live feed of store events, so the message can react to what somebody did an hour ago. If your email does not need to react to anything, you are about to overpay dramatically.",
+  dimensions: [
+    {
+      heading: "What the system knows about a person",
+      a: "A profile assembled from a continuous feed of store activity: products viewed, carts started and abandoned, orders placed, revenue to date, time since last purchase. The data model was designed for commerce and it arrives without anybody writing an integration, which is why a segment like browsed this category twice and has not ordered in sixty days is a few clicks rather than a project.",
+      b: "A contact with custom fields you define and populate yourself. It is a flexible and honest model, and it means every behavioural attribute in your emails exists because somebody built a pipeline to put it there and keeps that pipeline running. For a business whose segmentation is genuinely list-shaped — customers, trial users, newsletter subscribers — that is not a limitation.",
+    },
+    {
+      heading: "Showing that the channel paid for itself",
+      a: "Attribution is the actual product. Klaviyo ties orders back to the message that preceded them and reports revenue per campaign and per flow, which is the number a store owner uses to justify the subscription. The attribution windows are configurable and generous, so treat the headline figure as directional rather than as a controlled experiment, and the direction is usually right.",
+      b: "You get opens, clicks and deliveries, and connecting those to money is your own work — export the events, join them against orders in your warehouse or analytics tool, and maintain that join. Some teams do this well and end up with a more honest number than any vendor's default attribution. Most teams do not do it at all, and therefore cannot say what the channel is worth.",
+    },
+    {
+      heading: "What the meter counts",
+      a: "Active profiles, billed whether or not you ever message them, with a volume allowance pinned at a multiple of the profile count. Two consequences follow and both surprise people: signups you never email still raise the invoice, and the plan auto-upgrades when profiles grow without ever auto-downgrading when they shrink. Pruning the list is a billing activity, not just a hygiene one.",
+      b: "Sending volume, on a plan ladder. The marketing product is priced as its own plan rather than bundled with the transactional one, so the one-vendor story is two subscriptions. A dormant contact costs nothing until you mail it, which is the better shape for a business with a large, quiet list and the worse shape for one that mails a small list constantly.",
+    },
+    {
+      heading: "Transactional mail on the same account",
+      a: "Klaviyo is a marketing platform and its transactional story is thin. Order confirmations and shipping notices generally come from the store platform or a separate sending vendor, which is the normal arrangement and means Klaviyo is an addition to your stack rather than a consolidation of it.",
+      b: "This is SendGrid's real advantage in the pair. The API, the SMTP relay and the marketing product live under one account with one vendor relationship, so receipts, password resets and campaigns are one procurement conversation. Keep them on separate subdomains anyway, because sharing a vendor is fine and sharing a sending reputation is not.",
+    },
+    {
+      heading: "Building a multi-step sequence",
+      a: "Flows are the half of Klaviyo that earns the money: triggered by store events, branching on profile attributes and behaviour, with waits, splits and back-in-stock or abandoned-cart templates that arrive pre-built. A merchant can assemble a working abandoned-cart sequence in an afternoon without engineering help, and that is the specific capability people are buying.",
+      b: "Automations exist and are list-and-trigger shaped rather than behaviour shaped: a welcome series, a date-based sequence, a send when somebody joins a list. It covers a great deal of ordinary marketing. What it does not do easily is react to something that happened in your product ten minutes ago, unless you built the pipeline that tells it.",
+    },
+    {
+      heading: "Where the store data comes from",
+      a: "Native integrations with the major commerce platforms, Shopify most deeply, syncing catalogue, customers and orders both directions without an engineer. That depth is why the evaluation is frequently over before it starts for a Shopify merchant, and it is worth noticing that it is also what makes leaving expensive later.",
+      b: "An API and a contacts import, plus whatever middleware you choose to run. Everything is possible and nothing is automatic. For a business with an engineering team and an existing data warehouse this is sometimes preferable — the pipeline is yours, the definitions are yours, and no vendor is guessing what a customer is.",
+    },
+    {
+      heading: "Sending for several brands or clients",
+      a: "Klaviyo's model is one account per store, and agencies manage a collection of accounts rather than tenants inside one. That is a coherent arrangement for merchants and an administrative cost for anybody operating at portfolio scale.",
+      b: "Subusers are the strongest structural feature SendGrid has: each gets its own credentials, reputation, suppression and reporting under one parent account. If you send on behalf of customers, this alone often decides the evaluation, and there is no comparable concept on the other side of this pair.",
+    },
+    {
+      heading: "Who is responsible when mail stops arriving",
+      a: "Klaviyo watches your sending closely because ecommerce marketing is where complaint problems live, and it will restrict an account that misbehaves. The support relationship is oriented toward merchants and the guidance tends to be practical: prune the list, segment on engagement, stop mailing people who have ignored you for a year.",
+      b: "Support latency and abrupt suspension are the two themes that dominate SendGrid's public reviews, consistently enough to be a planning input rather than a rumour. A campaign that spikes volume against a shared pool is exactly the pattern a large platform acts on first. Keep a fallback path warm and know how you would reach a human before you need to.",
+    },
+    {
+      heading: "Getting people onto the list in the first place",
+      a: "Sign-up forms, pop-ups and their targeting rules are part of the product, and the collected data lands directly in the profile with no glue in between. That is a genuine time saving for a store and it is also another thread tying you to the platform.",
+      b: "There is no meaningful form product; you build the capture yourself or buy it elsewhere and push contacts in through the API. That is fine for a team that already has its own signup flow and an unwelcome extra project for a small store that assumed it was included.",
+    },
+  ],
+  pickA: [
+    "You run an online store and want email that reacts to browsing, carts and order history without building the pipeline yourself.",
+    "Revenue per campaign is the number you need to justify the spend, and you want it calculated for you.",
+    "A merchant rather than an engineer will own the flows day to day.",
+    "Sign-up forms and list growth being part of the same product is worth real money to you.",
+  ],
+  pickB: [
+    "Transactional and marketing mail on one vendor relationship is a genuine requirement rather than a preference.",
+    "Your segmentation is list-shaped, so a behavioural profile would be capability you pay for and never use.",
+    "You send on behalf of customers and need per-tenant credentials, suppression and reporting.",
+    "You have a data warehouse and would rather own the attribution join than accept a vendor's default windows.",
+  ],
+  faqs: [
+    {
+      question:
+        "Is SendGrid's marketing product good enough to replace Klaviyo?",
+      answer:
+        "For a business whose email is announcements and newsletters, comfortably yes, and the saving is large. For a store whose best-performing messages are abandoned cart, browse abandonment and post-purchase sequences, no — not because the sending is worse but because the data is not there. You can build the equivalent by piping store events into contact fields and triggering on them, and the honest estimate for that is weeks of engineering plus ongoing maintenance, which is frequently more expensive than the subscription it avoids.",
+    },
+    {
+      question: "Why does my Klaviyo bill go up when I am not sending more?",
+      answer:
+        "Because the meter is profiles rather than sends, and profiles accumulate on their own. Every signup, every checkout that captured an address, every import adds to a count that the plan tracks upward automatically and does not track back down. The discipline that keeps it in check is a standing suppression policy for people who have not engaged in a year, applied on a schedule. It also improves deliverability, so it is worth doing regardless of what it does to the invoice.",
+    },
+    {
+      question:
+        "Can I keep transactional mail on SendGrid and run marketing on Klaviyo?",
+      answer:
+        "Yes, and it is the arrangement a large number of stores end up with. Use separate subdomains for the two so their reputations cannot affect each other, and decide explicitly which system holds the authoritative record of consent and unsubscribes. The failure mode to avoid is two systems each maintaining their own view of who has opted out, because the first time somebody unsubscribes from marketing and then stops receiving order confirmations, you have a support problem and possibly a compliance one.",
+    },
+    {
+      question: "What does the volume cap on a Klaviyo plan actually mean?",
+      answer:
+        "Sending is limited to a multiple of your profile count, and past that limit sends stop rather than costing extra. That is fine for a normal cadence and it bites in exactly one situation: a small, highly engaged list that you mail frequently. If you have ten thousand profiles and a daily send, run the arithmetic before you commit, because the ceiling is a hard stop in the middle of a campaign rather than an overage line on the invoice.",
+    },
+    {
+      question: "How hard is it to leave either one?",
+      answer:
+        "Contacts export cleanly from both, and that is the easy part. What does not export is the work: flows and automations have to be rebuilt by hand, templates cross no paradigm boundary, and attribution history stays behind entirely, so your year-on-year comparisons break at the migration date. On the Klaviyo side there is an extra thread — the native store integration means the platform holds catalogue and order data that has to be re-established elsewhere. Export a full contact snapshot with consent timestamps before you start, because proving when somebody opted in is the one record you cannot reconstruct.",
+    },
+  ],
+};
+
+const LOOPS_VS_SENDGRID: VersusPage = {
+  slug: "loops-vs-sendgrid",
+  a: "loops",
+  b: "sendgrid",
+  title: "Loops vs SendGrid",
+  description:
+    "A tool built for one kind of company against a platform built for everyone. The narrow one is faster and will run out of room. The broad one will do whatever you ask and make you configure it first.",
+  search: {
+    primaryQuery: "simple lifecycle email tool instead of sendgrid",
+    secondaryQueries: [
+      "loops.so versus sendgrid marketing campaigns",
+      "email tool for a small saas team",
+      "sendgrid replacement after the free tier ended",
+      "unlimited sends priced per contact",
+    ],
+    rationale:
+      "The cohort SendGrid's free-tier retirement pushed into the market is mostly small software teams, and the tools they are shown are enterprise platforms — the useful comparison is against a product deliberately scoped to their size, including where it stops.",
+  },
+  intro:
+    "One of these was designed around a specific customer — a software company with subscribers, onboarding sequences and a product update to send — and everything in it assumes that shape. The other was designed to be configurable enough for anybody, and carries the accumulated compromises of twelve years of keeping many kinds of customer satisfied. Choosing is mostly a question of whether you are the customer the narrow tool was drawn for, and whether you expect to still be that customer in three years.",
+  dimensions: [
+    {
+      heading: "Who the product was drawn around",
+      a: "A software business with subscribers: onboarding sequences, feature announcements, trial nudges, a monthly update. Because the assumed customer is that specific, a great deal of configuration simply does not exist — there is one obvious way to do most things and it is usually the right one. A team outside that shape will feel the absences quickly.",
+      b: "Everyone, which is a strategy rather than an accident. An enterprise with subusers, a store, an agency, an internal tool sending one alert a day: all of them are supported, and the cost of supporting all of them is a surface where nothing is opinionated and most things need configuring before they work.",
+    },
+    {
+      heading: "What the bill is charged against",
+      a: "Subscribed contacts, with sending unlimited. You stop counting messages entirely, which changes behaviour — nobody hesitates over an extra send because it does not cost anything. The trade is that a large dormant free list stays on the invoice forever whether you mail it or not, so list pruning becomes a billing decision.",
+      b: "Sending volume, on a plan ladder, with the marketing product priced as its own plan rather than an add-on. A quiet list costs nothing until you mail it. The structure rewards a business with many contacts and infrequent campaigns and punishes one that sends often to a small, engaged audience.",
+    },
+    {
+      heading: "Product email and campaigns in one place",
+      a: "Transactional sends and lifecycle campaigns live in the same tool against the same contact record, which is the consolidation that makes Loops attractive to a small team. One vendor, one list, one view of a person, and an engineer triggering a password reset is using the same system the marketer schedules an announcement in.",
+      b: "Both exist under one account and they are separate products with separate plans, separate interfaces and separate mental models. That is more capability and less consolidation: the procurement relationship is single and almost nothing else about the experience is.",
+    },
+    {
+      heading: "Who opens it on a Monday morning",
+      a: "Anybody on the team. The interface is modern, the concepts are few, and a founder or a marketer can build and send something without a walkthrough. That accessibility is the main reason small teams choose it, and it is a real operational saving when there is no dedicated email person.",
+      b: "Somebody who has learned it. SendGrid's marketing interface is capable and carries a decade of accumulated options, and getting a campaign out involves knowing which of several similar-looking things you want. On a larger team that is fine, because the person who knows it is the person who does it.",
+    },
+    {
+      heading: "How far a segment can go",
+      a: "Audience filters on contact properties and on events you send in, which is enough for the segments a SaaS team actually uses: on a trial, signed up this month, has not completed setup, on the paid plan. It stops well short of multi-condition behavioural logic, and the moment you want a rule with three nested branches you have found the ceiling.",
+      b: "Segments on contact fields and engagement, with the depth limited by what you put into the fields. It is more configurable than Loops and no more behavioural, because the underlying model is still a contact with attributes rather than a stream of events. Both stop in the same place, arriving there from different directions.",
+    },
+    {
+      heading: "The developer surface",
+      a: "A small, current API with SDKs, aimed at identifying contacts and sending events from your application so the tool can react. The surface is deliberately compact and that is appropriate for the product's scope. It is not a general-purpose sending platform and does not pretend to be.",
+      b: "A large mature API, SMTP relay, webhooks with rich event metadata, tagging and custom arguments for slicing analysis later, and a decade of third-party integrations built against it by other people. At volume this is the more capable half of the pair by some distance, and the price is an interface somebody had to learn.",
+    },
+    {
+      heading: "Systems that only speak SMTP",
+      a: "Loops is an API-and-interface product. If something in your estate can only be pointed at an SMTP host — a CMS, a monitoring agent, an appliance — that traffic is not going here and needs somewhere else to go.",
+      b: "SMTP is a first-class path and has been forever, which is why so much software has a SendGrid option in a dropdown. A great deal of infrastructure was configured against it years ago by people who have since left, and that inertia is a genuine reason accounts stay, independent of whether the product is the best choice today.",
+    },
+    {
+      heading: "What happens when an account is questioned",
+      a: "A smaller vendor with a smaller support queue, which usually means faster and more personal answers, and a shorter operating record to judge it by. There is no widespread pattern of complaint about arbitrary account action, which counts for something in a category where sudden suspension is the dominant fear.",
+      b: "Support latency and abrupt suspension dominate SendGrid's public reviews, consistently enough to plan around. Large platforms act first when a sending pattern looks unusual against a shared pool, and a campaign is exactly that pattern. Keep a fallback configured and know in advance how you would reach a human.",
+    },
+    {
+      heading: "Where each one stops being enough",
+      a: "You outgrow Loops when your messaging needs to branch on behaviour in ways a filter cannot express, when you need per-tenant sending isolation, or when a legacy system needs an SMTP host. Those are real ceilings and they arrive at a predictable size, which is an argument for choosing it deliberately as a stage rather than as a forever decision.",
+      b: "You outgrow SendGrid's marketing half when you need genuine behavioural journeys, at which point you add a lifecycle platform and keep SendGrid for sending underneath it. That is the arrangement a great many companies land on, and it is worth recognising as the likely destination when you are pricing the marketing plan today.",
+    },
+  ],
+  pickA: [
+    "You are a small software team and the emails you send are onboarding, announcements and product updates.",
+    "You want product email and lifecycle campaigns against one contact record rather than two products.",
+    "Not counting sends is worth more to you than not paying for dormant contacts.",
+    "Nobody on the team is going to learn a platform, so the tool has to be obvious on first open.",
+  ],
+  pickB: [
+    "Something in your estate needs an SMTP host and rewriting it is not on anybody's roadmap.",
+    "You send on behalf of customers and need per-tenant credentials, suppression and reporting.",
+    "Your list is large and quiet, so paying per contact for people you rarely mail would be the worse deal.",
+    "Procurement prefers a vendor inside a large public company, and that preference is a constraint rather than an opinion.",
+  ],
+  thirdOption:
+    "Notice what this comparison is not about: neither side is being chosen for how well it puts mail in an inbox, because both are adequate at that and the decision is really about the layer above. If the sending underneath is the part you would rather own — because the bill scales with it, because the retention window is short, or because you want the same infrastructure to survive changing your marketing tool twice — the third shape is to run SES in your own AWS account and point whichever lifecycle tool you pick at it. Wraps is one way to operate that with tooling on top. It does nothing for the campaign-building half of this page, and it needs an AWS account and SES production access, an approval on AWS's schedule that can be refused.",
+  faqs: [
+    {
+      question: "Is unlimited sending really unlimited?",
+      answer:
+        "Within a fair-use posture, yes, and the honest framing is that the constraint moved rather than disappeared. You are no longer metered per message; you are metered on how many people are on the list. That genuinely changes behaviour for the better — teams that stop counting sends run more experiments and split more tests — and it means the wrong-shaped customer, one with an enormous list they rarely mail, pays a lot for the privilege of not counting.",
+    },
+    {
+      question: "What happened to SendGrid's free tier?",
+      answer:
+        "It was retired in May 2025 and replaced by a sixty-day trial. A very large number of small projects, side businesses and internal tools had been running on that tier for years, and all of them had to make a purchasing decision inside the same window. If you are reading a comparison written before that date, its recommendations were formed under different economics and should be re-checked rather than trusted.",
+    },
+    {
+      question: "Can I run marketing on Loops and transactional on SendGrid?",
+      answer:
+        "Yes, and for some teams it is the sensible split — the legacy systems keep their SMTP host, the product emails go somewhere pleasant to work in. Use separate subdomains so the reputations are independent, and decide explicitly which system owns the authoritative consent record. Two systems each keeping their own view of who unsubscribed is how somebody stops receiving order confirmations because they opted out of a newsletter.",
+    },
+    {
+      question:
+        "How do I know if my segmentation needs are too complex for Loops?",
+      answer:
+        "Write down the three most valuable messages you want to send and the exact condition each depends on. If the conditions are properties and simple events — is on a trial, has not finished onboarding, upgraded last week — a filter-based tool covers them. If any of them contains the word and followed by a time window and a negation, such as did X but not Y within fourteen days, you are describing a behavioural journey and you should evaluate tools built for that instead of hoping to grow into one.",
+    },
+    {
+      question: "What does migrating between these two actually involve?",
+      answer:
+        "Contacts and their consent status export from both, and that is the straightforward part. Campaigns and automations have to be rebuilt by hand because nothing crosses the paradigm. Templates likewise. The piece most often underestimated is the application integration: every place your code identifies a contact or fires an event has to be rewritten against the other API, and the forgotten one is usually in a background job rather than in the main request path. Run both in parallel for a cycle with the new system receiving events but not sending, so you can confirm the data is arriving correctly before anybody's inbox depends on it.",
+    },
+  ],
+};
+
+const CUSTOMER_IO_VS_SENDGRID: VersusPage = {
+  slug: "customer-io-vs-sendgrid",
+  a: "customer-io",
+  b: "sendgrid",
+  title: "Customer.io vs SendGrid",
+  description:
+    "One is a messaging engine that happens to send email. The other is an email platform that happens to have a campaign builder. Which you need depends on whether your best messages are triggered by behaviour or scheduled by a person.",
+  search: {
+    primaryQuery:
+      "behavioural messaging platform versus sendgrid marketing campaigns",
+    secondaryQueries: [
+      "customer.io instead of sendgrid for lifecycle email",
+      "do i need an event based messaging tool",
+      "sendgrid automations versus a real journey builder",
+      "sending events to a messaging platform from my app",
+    ],
+    rationale:
+      "Teams already holding a SendGrid account evaluate Customer.io when their automations stop being expressible, and the real question is whether they are prepared to instrument their product with events — a cost that no pricing page shows and that decides whether the upgrade works at all.",
+  },
+  intro:
+    "The gap between these two is not features, it is what you have to feed them. SendGrid's marketing product works on contacts with fields, so you can start sending the day you import a list. Customer.io works on people described by a stream of events from your product, so it does nothing useful until your application is telling it what users are doing. That instrumentation is the real price of admission, it is not on the pricing page, and it is the single best predictor of whether a team gets value from the switch.",
+  dimensions: [
+    {
+      heading: "What you have to build before it works",
+      a: "An event stream. Customer.io expects your application to identify people and emit events as they do things, and until that exists the platform is an expensive address book. The work is usually a week or two and then ongoing, because every new message you want depends on an event somebody has to add. Teams that skip it end up paying a platform price for list-based sending.",
+      b: "An import. Contacts with custom fields get you to a first campaign in an afternoon, and any behavioural attribute you want later is a field you populate yourself from your own pipeline. That is a lower floor and a lower ceiling, and it is why SendGrid remains a sensible answer for teams whose engineering time is committed elsewhere.",
+    },
+    {
+      heading: "Authoring something with more than one step",
+      a: "A visual workflow canvas with triggers, delays, branches, attribute updates and webhook actions, capable of expressing genuinely complicated logic: wait three days, check whether they finished setup, branch, send a different message, stop the whole journey if they upgraded. It is the reason the product exists and it takes real learning to use well.",
+      b: "Automations that are list-and-trigger shaped: a welcome series on joining a list, a date-based sequence, a simple branch. It covers a great deal of ordinary marketing and it starts to feel like fighting the tool at about the third condition. What looks like a missing feature is actually the data model — a contact with fields cannot easily express a sequence of things that happened.",
+    },
+    {
+      heading: "What the invoice is charged against",
+      a: "Profiles, with a monthly floor that is the first filter in this comparison. You pay per person in the workspace whether or not you ever message them, so a free tier full of signups you never mail is a real line on the bill. The floor also means a company below a certain size cannot sensibly buy it, which resolves the choice for them.",
+      b: "Sending volume, with the marketing product on its own plan alongside the transactional one. Dormant contacts are free until mailed. For a business with a large quiet audience that is plainly the better shape, and for one with a small, deeply instrumented user base it is the worse one.",
+    },
+    {
+      heading: "Transactional mail, and where it ends up",
+      a: "Customer.io has a transactional API and it is competent, and the usual arrangement is still to trigger transactional sends through the same platform so that one system holds the complete record of what a person received. That is a genuine benefit — support sees everything in one timeline — and it means your receipts now depend on your marketing platform being up.",
+      b: "The transactional API and SMTP relay are the mature centre of the whole company, and they are what the marketing product is bolted onto. If the question is where should receipts and password resets live, SendGrid answers it more convincingly than any lifecycle platform, and it remains a common answer even for teams whose marketing has moved elsewhere.",
+    },
+    {
+      heading: "Channels other than email",
+      a: "Push, SMS, in-app messages and webhooks are part of the same workflow, so a journey can decide that this step is better delivered in the product than in an inbox. For a mobile product that is not a nice extra, it is the reason to buy: coordinating those channels from separate tools means nobody can see the whole sequence.",
+      b: "Email is the product. Twilio sells SMS and the other channels next door, and they are a different console, a different plan and a different integration. One corporate relationship is genuine value at procurement time and it is not the same thing as one orchestration layer.",
+    },
+    {
+      heading: "Testing a message without mailing real people",
+      a: "Separate workspaces let you run a full non-production environment with its own people, events and campaigns, so you can exercise a whole journey end to end before it touches a customer. For a product where a mistake means thousands of wrong messages in minutes, that separation is not optional and it is one of the strongest reasons to prefer a platform built for this.",
+      b: "Subusers and separate API keys give you isolation of sending identity rather than a full parallel environment, and teams typically improvise the rest with a test list and a staging sender. It works and it is more careful hand-holding than a workspace boundary, which is exactly the sort of difference that only matters on the day somebody makes a mistake.",
+    },
+    {
+      heading: "Not telling somebody the same thing twice",
+      a: "Frequency controls, global suppressions and workflow-level rules about who may enter and how often exist because a behavioural platform will happily message somebody five times in an hour if five events fire. The controls are there precisely because the engine is powerful enough to need them, and configuring them is part of setting the product up rather than an optimisation for later.",
+      b: "The risks are smaller because the engine is simpler: a scheduled campaign to a list is not going to fire six times because a user clicked around. What you get instead is the ordinary discipline of suppression lists and unsubscribe groups, which is adequate for the shape of sending the product does.",
+    },
+    {
+      heading: "Who is expected to own it",
+      a: "A lifecycle or growth person, with engineering support behind them for the event schema. The division is real and it is worth naming before you buy: if nobody owns the messaging strategy, an expensive workflow canvas becomes an expensive place to store three campaigns somebody built once.",
+      b: "A marketer for campaigns and a developer for the API, working largely independently in different parts of the same account. That separation suits organisations where those functions do not coordinate closely, which is a great many of them.",
+    },
+    {
+      heading: "Deliverability, and whose reputation is in play",
+      a: "You authenticate your own sending domain and Customer.io sends on infrastructure it manages, with your reputation shaped by what your journeys do. A behavioural platform can damage a reputation fast, because a badly-scoped trigger reaches a lot of people quickly, which is why the frequency controls exist.",
+      b: "Shared pools by default with dedicated addresses available on the higher plans, run at very large scale. The consistent theme in reviews is that the platform acts first and explains later when a pattern looks unusual, and a marketing campaign is the pattern most likely to look unusual.",
+    },
+  ],
+  pickA: [
+    "Your best messages depend on what somebody did in your product, and you are willing to instrument it with events.",
+    "Push, in-app or SMS need to be steps in the same sequence as the email rather than a separate tool.",
+    "You want a real non-production workspace to test a journey end to end before it reaches customers.",
+    "Somebody owns lifecycle messaging as an actual job, so a powerful canvas will be used rather than admired.",
+  ],
+  pickB: [
+    "Transactional email and SMTP are the load-bearing requirement, and campaigns are secondary.",
+    "Your segmentation is list-shaped and adding an event pipeline would be capability you pay for and never use.",
+    "You send on behalf of customers and need per-tenant credentials, suppression and reporting.",
+    "The monthly floor of a behavioural platform is more than your entire email budget.",
+  ],
+  thirdOption:
+    "Both of these bundle two separable things: deciding what message to send, and putting it in an inbox. The bundling is why the invoice grows with your user count rather than with your messaging sophistication, and why a vendor change means re-establishing reputation from scratch. If the sending layer is the part you would rather own permanently, the third shape is to run SES in your own AWS account and point whichever orchestration tool you choose at it, so the domain identities, suppression list and event history survive swapping the layer above. Wraps is one way to operate that with tooling on top. It builds no journeys for you, and it needs an AWS account and SES production access, an application AWS can refuse.",
+  faqs: [
+    {
+      question: "How much engineering work is instrumenting events?",
+      answer:
+        "Plan on a week or two for a first useful schema and then a permanent small tax. The initial work is identifying users and emitting the dozen events your messaging actually depends on — signed up, completed setup, invited a teammate, upgraded, cancelled. The ongoing part is what people underestimate: every new message idea tends to need an event that does not exist yet, so the marketing team's velocity becomes coupled to the engineering backlog unless somebody keeps the schema ahead of demand.",
+    },
+    {
+      question: "Can I use both, with Customer.io sending through SendGrid?",
+      answer:
+        "Orchestrating in one tool and sending through another is a normal architecture, and whether these two specific products support the arrangement you want is worth verifying directly rather than assuming. The reason to do it is reputation continuity: your sending identity stops changing every time you change orchestration tools. The reason not to is that debugging spans two vendors, and when a message does not arrive you now have two dashboards and two support queues between you and the answer.",
+    },
+    {
+      question: "What is a profile and when does it start costing me?",
+      answer:
+        "A person in the workspace, counted whether or not you ever message them. Every signup, every imported contact and every identify call from your application adds one, so the bill tracks your user count rather than your sending. The discipline that keeps it honest is deciding explicitly which users belong in the messaging platform at all — plenty of teams pipe every signup in reflexively and then pay for years to store people who never opened anything.",
+    },
+    {
+      question: "Will switching improve my deliverability?",
+      answer:
+        "Not by itself, and a behavioural platform can make it worse if you configure it carelessly. Most placement problems are self-inflicted: unauthenticated domains, no DMARC policy, marketing sent from the domain your product depends on, and mailing people who stopped engaging a year ago. A powerful journey engine adds a new way to hurt yourself — a badly scoped trigger reaching a large audience quickly — which is why frequency caps and entry rules are setup work rather than polish.",
+    },
+    {
+      question: "What should I decide before migrating either direction?",
+      answer:
+        "Which system owns consent, and write it down. Both keep their own view of who has unsubscribed, and a migration is exactly when those views diverge — somebody opts out during the cutover, the record lands in the system you are leaving, and they get mailed again from the new one. Export consent status with timestamps before you start, import it as the first action rather than the last, and keep the old system receiving unsubscribes until you have confirmed nothing still points at it.",
+    },
+  ],
+};
+
+const KLAVIYO_VS_LOOPS: VersusPage = {
+  slug: "klaviyo-vs-loops",
+  a: "klaviyo",
+  b: "loops",
+  title: "Klaviyo vs Loops",
+  description:
+    "One assumes your customer buys things. The other assumes they subscribe to something. Almost every disagreement between these two products traces back to that single assumption about how you make money.",
+  search: {
+    primaryQuery: "klaviyo or loops for a subscription business",
+    secondaryQueries: [
+      "marketing email tool for saas instead of ecommerce",
+      "loops.so compared to klaviyo",
+      "do i need ecommerce flows for a software product",
+      "email platform priced per contact with unlimited sends",
+    ],
+    rationale:
+      "Klaviyo dominates the search results for marketing email regardless of the searcher's business model, so software teams keep landing on an ecommerce platform whose most valuable features — cart, catalogue and order attribution — have no analogue in what they sell.",
+  },
+  intro:
+    "Both of these price on contacts and both let a non-engineer build a sequence, which is enough surface similarity to put them on one list. Underneath, each was built around a different idea of a customer. Klaviyo's customer places orders, so the product is organised around carts, catalogues and revenue per campaign. Loops' customer subscribes, so the product is organised around signup, onboarding, activation and the monthly update. Neither adapts gracefully to the other's world, and that is the decision.",
+  dimensions: [
+    {
+      heading: "The transaction each product assumes",
+      a: "A purchase. Klaviyo's entire data model orbits the order: what was viewed, what was added to a cart, what was bought, how much it was worth, how long since the last one. Everything valuable in the product is downstream of that event stream arriving automatically from a store platform, and a business with no orders is left holding a general-purpose email tool at a specialist price.",
+      b: "A subscription. Loops assumes people sign up, get onboarded, activate or do not, upgrade or churn, and receive product news along the way. The primitives are contacts with properties and events you send from your own application, which is the right shape when the meaningful moments happen inside software rather than at a checkout.",
+    },
+    {
+      heading: "Where the data arrives from",
+      a: "Native commerce integrations, Shopify most deeply, syncing catalogue, customers and orders in both directions with no engineering involved. That depth is why a merchant's evaluation is often over before it starts, and it is also the thread that makes leaving expensive later, because the platform ends up holding product data as well as contacts.",
+      b: "Your application, through a compact API and SDKs: identify a contact, set properties, send events. Nothing is automatic and nothing is guessed, which means a week of integration work and then a data model that matches your product exactly rather than an ecommerce schema you are bending.",
+    },
+    {
+      heading: "How the invoice behaves",
+      a: "Billed on active profiles with a sending allowance pinned at a multiple of that count, and the plan steps up automatically as profiles grow without ever stepping back down. The second half of that sentence is the one that surprises people: pruning your list is a billing action as well as a hygiene one, and nobody does it until the invoice prompts them.",
+      b: "Billed on subscribed contacts with sending unlimited. You stop counting messages entirely, which changes team behaviour — nobody debates whether an extra send is worth it. The cost is symmetric to the other side's: a large dormant free-tier list sits on the bill permanently whether or not you ever mail it.",
+    },
+    {
+      heading: "Proving the channel did something",
+      a: "Revenue attribution is the actual product. Orders are tied back to the message that preceded them, reported per campaign and per flow, and that number is what justifies the subscription to whoever signs it. The attribution windows are configurable and generous, so read the figure as directional rather than as a controlled experiment.",
+      b: "Opens, clicks and the events you send back in. If you want to know whether the onboarding sequence improved activation, you define activation, send that event, and compare — which is more honest than a default attribution window and considerably more work. There is no equivalent of revenue per email here, because for most subscription businesses there is no equivalent revenue event.",
+    },
+    {
+      heading: "How much logic a sequence can carry",
+      a: "Flows branch on profile attributes and store behaviour with waits and splits, and the commerce-specific ones — abandoned cart, browse abandonment, back in stock, post-purchase — arrive as working templates. A merchant can assemble a genuinely effective sequence in an afternoon, which is the specific capability being bought.",
+      b: "Loops are triggered by events and filtered on properties, with the depth a SaaS lifecycle usually needs: on a trial, has not finished setup, upgraded last week. It stops short of deeply nested behavioural branching, and the ceiling arrives at a predictable size, which is an argument for choosing it deliberately as a stage rather than as a permanent answer.",
+    },
+    {
+      heading: "Transactional mail and where it lives",
+      a: "Klaviyo is a marketing platform and its transactional story is thin. Order confirmations and shipping notices come from the store platform or a separate sending vendor, so Klaviyo adds to your stack rather than consolidating it, and your customer's message history is split across at least two systems.",
+      b: "Transactional sends and lifecycle campaigns share the same tool and the same contact record, which is the consolidation that makes Loops attractive to a small team: one vendor, one list, one view of what a person has received. The flip side is that your password resets now depend on your marketing tool.",
+    },
+    {
+      heading: "Growing the list in the first place",
+      a: "Sign-up forms and pop-ups with targeting rules are part of the product, and collected data lands straight into the profile with no glue. For a store that is a real saving in both time and integration surface, and it is another thread tying you to the platform.",
+      b: "Signup happens in your product, because your contacts are your users. There is no form builder and there does not need to be one — the moment somebody creates an account is the moment they become a contact, and the integration you already wrote handles it.",
+    },
+    {
+      heading: "Who has it open day to day",
+      a: "A marketer or a merchant, frequently supported by an agency. The interface assumes ecommerce fluency and rewards somebody who works in it regularly, and the depth on offer is wasted on a team that sends four campaigns a year.",
+      b: "Anybody on a small team. The concepts are few, the interface is modern, and a founder can build and send something without a walkthrough. That accessibility is the main reason small software teams pick it, and it is a real saving when nobody's job title contains the word email.",
+    },
+    {
+      heading: "What the ceiling looks like on each side",
+      a: "You outgrow Klaviyo when you need messaging in channels it does not orchestrate, or when the profile-based bill outpaces the revenue the channel is attributed. The sending cap pinned to profile count is the other wall, and it is a hard stop mid-campaign rather than an overage charge.",
+      b: "You outgrow Loops when your messaging needs conditions a filter cannot express, when you need per-tenant sending isolation, or when a legacy system needs somewhere to relay SMTP. Those are real ceilings arriving at a predictable size, and knowing where they are is more useful than pretending they are not there.",
+    },
+    {
+      heading: "What a template is allowed to contain",
+      a: "Catalogue-aware blocks. A Klaviyo template can pull real products into the message — the exact items left in a cart, recommendations drawn from browsing, the thing that just came back into stock — because the platform already holds the catalogue. That capability is unusual and it is most of why the commerce flows convert as well as they do.",
+      b: "Copy, structure and variables from your contact record. The editor is clean and the constraint is that there is no product feed behind it, which for a subscription business is not a constraint at all: the message is usually a sentence and a link into the product, not a grid of merchandise with prices on it.",
+    },
+    {
+      heading: "Compliance, consent and who is on the list",
+      a: "Ecommerce lists grow from checkouts, pop-ups and imports, which is the environment where consent gets muddled fastest and where complaint rates do the most damage. Klaviyo watches accounts closely for that reason and will restrict one that misbehaves, and its guidance to merchants tends to be practical rather than legalistic: prune, segment on engagement, stop mailing people who have ignored you for a year.",
+      b: "Contacts are your users, so consent is usually unambiguous — somebody created an account and agreed to your terms — and the harder question is the one between product notices and marketing. Keep the distinction explicit in the contact record rather than implicit in which campaign you happen to be sending, because somebody unsubscribing from a monthly update should not stop receiving a security notice.",
+    },
+  ],
+  pickA: [
+    "You sell products and the highest-value emails you send are about carts, catalogues and past orders.",
+    "Revenue per campaign is the number that justifies the spend, and you want the platform to calculate it.",
+    "Forms and pop-ups being part of the same tool is worth paying for.",
+    "A merchant or an agency, not an engineer, will own the programme day to day.",
+  ],
+  pickB: [
+    "You sell a subscription and the moments that matter happen inside your product rather than at a checkout.",
+    "You want lifecycle campaigns and transactional sends against one contact record in one tool.",
+    "Not counting sends matters more to you than not paying for contacts you never mail.",
+    "The team is small and the tool has to be usable by whoever has time, without training.",
+  ],
+  faqs: [
+    {
+      question: "Can I use Klaviyo for a SaaS product?",
+      answer:
+        "You can, and a number of companies do, and you should understand what you are paying for. The parts of Klaviyo that justify its price — order attribution, catalogue-aware templates, abandoned cart, back in stock — have no analogue in a subscription business. What remains is a competent, expensive general marketing tool with a profile-based bill. If you are drawn to it because the integrations list is long and the brand is familiar, price the features you would actually use before committing.",
+    },
+    {
+      question: "What happens when I hit Klaviyo's send limit?",
+      answer:
+        "Sending stops. The allowance is a multiple of your profile count and past it the sends halt rather than costing extra, which is a materially different failure mode from an overage line on an invoice. It rarely bites a normal monthly cadence and it bites exactly one profile: a small, highly engaged list mailed frequently. Run the arithmetic against your real cadence before you commit, because discovering the ceiling mid-campaign is not a good afternoon.",
+    },
+    {
+      question: "Is unlimited sending on Loops genuinely unlimited?",
+      answer:
+        "Within a fair-use posture, yes, and the honest framing is that the constraint moved rather than vanished. You are metered on how many people are on the list instead of how many messages you send. That changes behaviour for the better — teams that stop counting run more experiments — and it makes the wrong-shaped customer, one with an enormous list they rarely mail, pay handsomely for the privilege of not counting.",
+    },
+    {
+      question:
+        "How do I measure whether lifecycle email is working without revenue attribution?",
+      answer:
+        "Define the outcome you care about as an event and compare cohorts who received a sequence against those who did not. For a subscription product that is usually activation, second-week retention or upgrade rate rather than an order. The discipline this forces is a genuine advantage: an attribution window that credits an email for a purchase made six days later is convenient and generous, whereas a holdout group tells you what the sequence actually caused.",
+    },
+    {
+      question: "What does migrating between them involve?",
+      answer:
+        "Contacts and consent status export from both, and everything else is rebuilt by hand. Flows and campaigns cross no paradigm boundary, templates likewise, and attribution history stays behind so your year-on-year comparisons break at the migration date. Moving away from Klaviyo has an extra thread: the native store integration means it holds catalogue and order data that has to be re-established wherever you land. Export a full contact snapshot including opt-in timestamps before you start — when somebody consented is the one record you cannot reconstruct afterwards.",
+    },
+  ],
+};
+
+const BREVO_VS_LOOPS: VersusPage = {
+  slug: "brevo-vs-loops",
+  a: "brevo",
+  b: "loops",
+  title: "Brevo vs Loops",
+  description:
+    "One is a broad European suite that will also do SMS, WhatsApp and a light CRM. The other does one job for one kind of company. Breadth and focus are both defensible, and they produce very different bills.",
+  search: {
+    primaryQuery: "brevo or loops for a small software company",
+    secondaryQueries: [
+      "email platform priced on sends versus per contact",
+      "brevo automation is on the higher tier",
+      "eu email marketing platform for saas",
+      "removing the vendor logo from marketing emails",
+    ],
+    rationale:
+      "Brevo is recommended constantly on price without anyone mentioning that automation sits a tier above the headline plan, and Loops is recommended on simplicity without anyone mentioning that a large dormant list is billed forever — the two facts that actually decide this.",
+  },
+  intro:
+    "These two disagree about how much a marketing tool should try to be. Brevo is a suite: email, SMS, WhatsApp, chat, a light CRM, priced on the volume you send and aimed at a small European business that would rather have one invoice. Loops is deliberately narrow: lifecycle and transactional email for a software company, priced on contacts with sending unlimited. The comparison is not really about features, it is about whether consolidation or focus is the thing currently costing you time.",
+  dimensions: [
+    {
+      heading: "What the meter counts, and which list shape it punishes",
+      a: "Send volume. A contact costs nothing until you mail them, so a large quiet audience is cheap and a small engaged list mailed constantly is not. For a business with seasonal campaigns to a big list this is plainly the better shape, and it means every send decision carries a small cost calculation.",
+      b: "Subscribed contacts, with sending unlimited. You stop counting messages, which measurably changes behaviour — more experiments, more splits, less hesitation. The symmetric cost is that dormant free-tier signups sit on the invoice forever, so list pruning becomes a billing decision as much as a hygiene one.",
+    },
+    {
+      heading: "The tier where the feature you assumed lives",
+      a: "Automation and A/B testing sit on the Business tier rather than the entry one, and so does removing Brevo's own logo from the footer of your emails. The headline price is therefore not the price of the product most people are evaluating, and this is the single most common way a Brevo comparison ends up wrong.",
+      b: "One product, one shape. What you can do does not change much between plan bands, because the bands are about how many contacts you hold rather than which features are unlocked. That makes the comparison honest and it also means there is no upgrade path to buy your way out of a capability gap.",
+    },
+    {
+      heading: "Everything that is not email",
+      a: "SMS, WhatsApp, a chat widget and a light CRM on one account and one invoice. For a small business that would otherwise be assembling three vendors, that consolidation is the entire pitch and it is a real one. The depth of each piece is modest next to a specialist, which is usually acceptable and occasionally not.",
+      b: "Email, and nothing else, on purpose. The day somebody decides a notification should also go by text, you are adding a vendor. That narrowness is why the product is pleasant to use and it is a genuine constraint rather than a roadmap gap.",
+    },
+    {
+      heading: "Who the product was drawn around",
+      a: "A small business of almost any kind — a shop, an agency, a clinic, a local service — which is why the surface is broad and the concepts are generic. Contacts, lists, campaigns, automations: a model that fits everybody reasonably and nobody perfectly.",
+      b: "A software company with subscribers. Onboarding sequences, trial nudges, feature announcements, a monthly update. Because the assumed customer is that specific, a great deal of configuration simply does not exist and the defaults are usually right. A business outside that shape feels the absences immediately.",
+    },
+    {
+      heading: "European data handling",
+      a: "Brevo is a French company operating under EU regimes, which for organisations whose real requirement is about who they contract with and under which law is a shorter conversation than a region toggle inside an American platform. It does not replace reading the data processing agreement and it does shorten the meeting.",
+      b: "Loops is a smaller, newer vendor and the residency answer is whatever its documentation currently states. If you have a hard requirement rather than a preference, verify it directly and get it in the agreement, because with a young company the honest position is that the answer may still be evolving.",
+    },
+    {
+      heading: "Transactional mail on the same account",
+      a: "Brevo has a transactional API and SMTP relay alongside the marketing product, so receipts and campaigns can share a vendor. Keep them on separate subdomains regardless, because sharing a vendor is sensible and sharing a sending reputation between bulk and transactional mail is not.",
+      b: "Transactional and lifecycle live in the same tool against the same contact record, which is the consolidation small teams actually want: one view of everything a person received. It also means your password resets depend on your marketing tool being available, which is a trade worth stating out loud.",
+    },
+    {
+      heading: "The developer surface",
+      a: "A large API covering the whole suite, plus SMTP, plus SDKs, with the surface area and the occasional inconsistency of a product that has grown by addition over many years. Everything is reachable; some of it takes reading.",
+      b: "A small, current API aimed at identifying contacts and sending events so the tool can react. The scope is deliberately compact and appropriate to the product. It is not a general-purpose sending platform and there is no pretence otherwise.",
+    },
+    {
+      heading: "Deliverability posture",
+      a: "Shared sending pools draw mixed reports, which is the ordinary condition of a platform serving an enormous number of small senders of wildly varying quality. Authenticate properly, warm deliberately, and consider whether your volume justifies dedicated sending, because on a broad shared pool your neighbours matter and you cannot audit them.",
+      b: "A smaller, younger sending operation with a shorter public record and a customer base that skews toward software companies mailing their own users, which is a comparatively clean traffic profile. There is no widespread pattern of complaint about arbitrary account action, which counts for something in a category where sudden suspension is the dominant fear.",
+    },
+    {
+      heading: "What happens when you outgrow it",
+      a: "You outgrow Brevo when you need genuine behavioural journeys rather than list-and-trigger automations, or when the breadth stops compensating for the depth. The usual next step is a specialist lifecycle platform, with Brevo sometimes retained for SMS or the CRM.",
+      b: "You outgrow Loops when conditions stop being expressible as filters, when you need per-tenant isolation, or when a legacy system needs an SMTP host. The ceilings arrive at a predictable size, which is an argument for choosing it deliberately as a stage rather than pretending it is a permanent answer.",
+    },
+    {
+      heading: "What the free tier is actually for",
+      a: "Getting a small business sending. Brevo's free allowance has a daily cap under it and is a genuine starting point rather than a demonstration, which is why so many small organisations run on it for months before ever paying. The visible cost is that the vendor's logo sits in the footer until you move up two tiers, which some businesses mind and many do not.",
+      b: "Proving the shape fits before you commit. The free band holds a modest number of contacts with a monthly send allowance, enough to wire the integration, build an onboarding sequence and watch it run against real signups. Because the paid plans are bands of contacts rather than unlocked features, what you build on the free tier is what you keep — there is no discovery later that the thing you designed around was a paid capability.",
+    },
+    {
+      heading: "Reporting, and the question you ask next quarter",
+      a: "Campaign-level statistics with the usual opens, clicks, bounces and unsubscribes, plus per-contact activity, and enough filtering to answer most questions somebody asks in a Monday meeting. History is retained on the vendor's terms, and because the suite spans several channels the reporting is broad rather than deep on any one of them.",
+      b: "Per-contact timelines showing what a person was sent and what they did, which is the shape a SaaS team actually asks questions in: did this user get the activation nudge, and did it work. Aggregate reporting is lighter than a mature platform's, and the honest answer to a long-range analytics question is to send the events back into your own warehouse and ask them there.",
+    },
+  ],
+  pickA: [
+    "You want email, SMS and a light CRM on one invoice rather than assembling three vendors.",
+    "Your list is large and quiet, so paying per contact for people you rarely mail would be the worse deal.",
+    "Contracting with a European company under European law shortens a conversation you have to have anyway.",
+    "Campaigns are seasonal or occasional rather than a constant cadence to a small audience.",
+  ],
+  pickB: [
+    "You are a software company and the emails that matter are onboarding, activation and product updates.",
+    "You want lifecycle and transactional sends against one contact record in one tool.",
+    "Not counting sends is worth more than not paying for dormant contacts.",
+    "You would rather a tool with no unlockable tiers than a headline price that is not the price of the product you need.",
+  ],
+  faqs: [
+    {
+      question: "Is Brevo's entry plan enough?",
+      answer:
+        "Only if you are sending campaigns and nothing else. Automation and A/B testing live on the Business tier, and so does removing Brevo's logo from your email footer. If your plan involves any sequence that triggers on its own, or you object to another company's branding on mail from your domain, the tier you are actually buying is the higher one and the comparison should be priced there. Doing this arithmetic first is the single most useful step in evaluating Brevo.",
+    },
+    {
+      question: "Which one is cheaper?",
+      answer:
+        "It depends entirely on the shape of your list, and the crossover is sharper than people expect. Model it with your own numbers: contacts multiplied by nothing on one side, sends multiplied by frequency on the other. A business with fifty thousand mostly dormant contacts mailing quarterly is far cheaper on send-based pricing. A business with three thousand engaged users receiving a weekly sequence is far cheaper on contact-based pricing. Neither vendor's pricing page will run your version of this.",
+    },
+    {
+      question: "Can a non-engineer run either of these?",
+      answer:
+        "Yes, with different learning curves. Loops is obvious on first open because there are few concepts and one way to do most things. Brevo is broader and more generic, so the first campaign takes longer to find your way through, and once learned it does considerably more. If nobody on the team has time to learn a platform, that difference is worth more than any feature comparison in this list.",
+    },
+    {
+      question: "How do I handle unsubscribes if I run two tools?",
+      answer:
+        "Decide explicitly which system holds the authoritative consent record and make the other read from it rather than maintaining its own view. Two systems each keeping their own opinion about who opted out is how somebody unsubscribes from a newsletter and then stops receiving order confirmations, which is a support problem and possibly a compliance one. Write the decision down, because this is exactly the piece of institutional knowledge that leaves with the person who set it up.",
+    },
+    {
+      question: "What should I export before switching either direction?",
+      answer:
+        "Contacts with their consent status and opt-in timestamps first, because when somebody consented is the one record you cannot reconstruct and the one a regulator asks about. Then your suppression list, imported before the first production send rather than after. Templates and automations cross no paradigm boundary and have to be rebuilt by hand, so budget that as real work rather than a migration step. Finally, list every place your application calls the old API — the background job nobody remembers is what keeps sending from an account you thought you had closed.",
+    },
+  ],
+};
+
+const BREVO_VS_CUSTOMER_IO: VersusPage = {
+  slug: "brevo-vs-customer-io",
+  a: "brevo",
+  b: "customer-io",
+  title: "Brevo vs Customer.io",
+  description:
+    "A broad European suite for a small business against a behavioural messaging engine for a product team. The price floor alone resolves this for a lot of readers, and the data model resolves it for the rest.",
+  search: {
+    primaryQuery: "brevo or customer.io for lifecycle messaging",
+    secondaryQueries: [
+      "affordable alternative to customer.io for a small team",
+      "when is a behavioural messaging platform worth it",
+      "eu data residency for a messaging platform",
+      "brevo automation versus a real journey builder",
+    ],
+    rationale:
+      "These two appear on the same shortlist whenever a growing company asks what comes after basic campaigns, and the honest deciding factors — a monthly floor that excludes small companies, and an event pipeline somebody has to build — are absent from both vendors' own comparisons.",
+  },
+  intro:
+    "There is a version of this comparison where you weigh features, and it is the wrong version. Start instead with two facts. Customer.io has a monthly floor that is more than many small businesses spend on software in total, and it does nothing useful until your application is emitting events about what users do. Brevo has neither the floor nor the prerequisite, and also cannot express the messaging a behavioural engine makes routine. Most readers are resolved by the first paragraph; the rest have a genuine decision.",
+  dimensions: [
+    {
+      heading: "The floor, and who it excludes",
+      a: "Brevo starts cheap and stays proportionate, priced on send volume with a free tier underneath. A business sending a few thousand emails a month can be a real customer, which is the whole point of the product and the reason it is recommended so widely to small teams.",
+      b: "Customer.io has a monthly minimum before you send anything, and profiles are billed whether or not you message them. That floor is a deliberate filter: the product is sold to companies where somebody's job is lifecycle messaging. If it exceeds your entire marketing software budget, the comparison is already decided and no feature will change that.",
+    },
+    {
+      heading: "What you feed it before it works",
+      a: "A contact import with fields you define. You are sending a campaign the same afternoon, and any behavioural attribute you want later is a field you populate from your own pipeline. Low floor, low ceiling, and no engineering dependency to get started.",
+      b: "A live event stream from your product. Customer.io expects your application to identify people and emit events as they act, and until that exists it is an expensive address book. Budget a week or two for a first schema and a permanent small tax afterwards, because each new message idea tends to need an event that does not exist yet.",
+    },
+    {
+      heading: "How much logic a sequence can express",
+      a: "Automations are list-and-trigger shaped: join a list and get a welcome series, a date-based sequence, a simple condition. That covers a great deal of ordinary marketing and starts to feel like fighting the tool around the third condition. The limit is the data model rather than the builder — a contact with fields cannot easily represent a sequence of things that happened.",
+      b: "A workflow canvas with triggers, delays, branches, attribute updates and webhook actions, able to express logic like wait three days, check whether setup finished, branch, send something different, and exit the whole journey if they upgraded. It is the reason the product exists and it takes real learning to use well.",
+    },
+    {
+      heading: "Channels, and whether they are one sequence",
+      a: "Email, SMS, WhatsApp and a chat widget on one account and one invoice, which is genuine consolidation for a small business assembling a stack. They are largely separate capabilities sharing a vendor rather than steps in a single orchestrated journey, and for most Brevo customers that distinction does not matter.",
+      b: "Email, push, SMS, in-app messages and webhooks as steps inside the same workflow, so a journey can decide that this message belongs in the product rather than the inbox. For a mobile product that is the reason to buy: coordinating those channels from separate tools means nobody can see the whole sequence.",
+    },
+    {
+      heading: "Where the data sits",
+      a: "Brevo is a French company operating under EU regimes, which is the shortest possible answer when the requirement is about who you contract with and under which law rather than about a configurable region. It does not replace reading the processing agreement and it does end the argument faster.",
+      b: "Customer.io offers a choice of data region, selected when the account or workspace is created, which is the more configurable answer and the one with a footgun attached: the selection is made early, by whoever set the account up, and is not something you casually change later. Confirm it before the first import rather than during a compliance review.",
+    },
+    {
+      heading: "Not messaging somebody five times in an hour",
+      a: "The risk is small because the engine is simple. A scheduled campaign to a list does not fire repeatedly because a user clicked around, so ordinary suppression lists and unsubscribe handling are adequate to the shape of sending the product does.",
+      b: "Frequency caps, global suppressions and workflow entry rules exist because a behavioural engine will cheerfully message somebody repeatedly when several events fire together. These controls are setup work rather than polish, and skipping them is one of the fastest ways to damage a sending reputation with a tool that is otherwise working exactly as configured.",
+    },
+    {
+      heading: "Testing before it reaches a customer",
+      a: "A test send and a careful eye, which is the normal standard for campaign tools and is proportionate to the risk. A mistimed campaign is embarrassing; it is not the same category of accident as a broken journey firing at everybody.",
+      b: "Separate workspaces give you a genuine non-production environment with its own people, events and campaigns, so a whole journey can be exercised end to end before it touches anybody real. For a product where a mistake means thousands of wrong messages in minutes, that boundary is not a luxury.",
+    },
+    {
+      heading: "Who is expected to own it",
+      a: "Whoever has time — an owner, an office manager, a part-time marketer who also does three other jobs. The product is designed so that no specialist is required to get a competent campaign out, and that accessibility is a large part of why it is so widely used by businesses that have no marketing function at all. The cost of designing for that person is that the tool never gets much deeper than they need.",
+      b: "A lifecycle or growth specialist, with engineering support behind them for the event schema. Naming that person before you buy is the most useful thing you can do, because without an owner an expensive workflow canvas becomes an expensive place to keep three campaigns somebody built once and nobody has touched since.",
+    },
+    {
+      heading: "Transactional mail",
+      a: "There is a transactional API and an SMTP relay alongside the marketing product, so receipts and campaigns can share a vendor and an invoice. Use separate subdomains anyway: sharing a vendor is sensible, sharing a reputation between bulk and transactional mail is not.",
+      b: "A competent transactional API, and the usual arrangement is to route transactional sends through the platform too so one system holds the complete record of what a person received. Support seeing everything on one timeline is a real benefit, and it does mean your receipts depend on your messaging platform.",
+    },
+    {
+      heading: "How much of your first quarter goes into setup",
+      a: "Days. Import a contact file, verify a sending domain, build a campaign, send it. The speed is not a shortcut, it is a consequence of the product asking very little of you, and it means a small business can have working marketing email before anybody has scheduled a kickoff meeting about it.",
+      b: "A quarter, honestly counted, and the software is the smaller half of it. You are defining an event schema, instrumenting the application, agreeing what a profile means, building the first journeys and then rebuilding them once you see what the data actually looks like. Teams that treat this as a tool purchase rather than a project are the ones who conclude two quarters later that the platform did not work for them, when what did not work was the absence of an owner.",
+    },
+  ],
+  pickA: [
+    "Your budget for messaging software is smaller than the other option's monthly floor.",
+    "Nobody is going to instrument the product with events, so a behavioural engine would sit unused.",
+    "You want email, SMS and a light CRM on one invoice rather than assembling a stack.",
+    "Contracting with a European company under European law is the requirement rather than a configurable region.",
+  ],
+  pickB: [
+    "Your most valuable messages depend on what somebody did in your product, and you will instrument it.",
+    "Push or in-app messages need to be steps in the same journey as the email.",
+    "You want a real non-production workspace to test a journey end to end before customers see it.",
+    "Somebody owns lifecycle messaging as an actual job, so a powerful canvas will be used rather than admired.",
+  ],
+  faqs: [
+    {
+      question: "How do I know when I have outgrown campaign-based tools?",
+      answer:
+        "Write down the three messages you most want to send and the exact condition each depends on. If they are properties and simple triggers — joined this list, signed up in March, bought last week — a campaign tool covers them. If any condition contains a time window plus a negation, such as did X but not Y within fourteen days, you are describing a behavioural journey. That single test is more reliable than any feature matrix, and it also tells you which events you would need to emit.",
+    },
+    {
+      question: "Is the automation on Brevo's entry plan?",
+      answer:
+        "No. Automation and A/B testing sit on the Business tier, and so does removing Brevo's own logo from the footer of your emails. That makes the headline price not the price of the product most evaluators actually need, and it is the most common reason a Brevo comparison turns out to have been wrong. Price the tier that contains the features you are counting on before you compare it with anything.",
+    },
+    {
+      question: "How much engineering time does Customer.io really need?",
+      answer:
+        "A week or two for a first useful schema, then a permanent small tax. The initial work is identifying users and emitting the dozen events your messaging depends on — signed up, finished onboarding, invited a teammate, upgraded, cancelled. The ongoing part is what gets underestimated: marketing velocity becomes coupled to the engineering backlog unless somebody keeps the event schema ahead of the ideas, which is an organisational commitment rather than a project.",
+    },
+    {
+      question: "Can I run both?",
+      answer:
+        "You can, and it is usually a transitional state rather than a destination — campaigns and SMS staying on the cheaper suite while product-triggered journeys move to the behavioural platform. If you do, use separate sending subdomains so the reputations are independent, and decide explicitly which system holds the authoritative consent record. Two systems each with their own view of who unsubscribed is how somebody opts out of marketing and then stops receiving something they needed.",
+    },
+    {
+      question: "Which one is better for deliverability?",
+      answer:
+        "Neither, inherently, and both give you new ways to hurt yourself. Brevo's risk is a broad shared pool full of small senders of varying quality whom you cannot audit. Customer.io's risk is that a badly scoped trigger reaches a large audience very quickly, which is exactly why its frequency controls exist. What actually decides your placement is the same on both: authenticated domains with a DMARC policy, bulk mail on a separate subdomain from the mail your product depends on, prompt suppression handling, and not mailing people who stopped engaging a year ago.",
+    },
+  ],
+};
+
 export const VERSUS_PAGES: readonly VersusPage[] = [
   POSTMARK_VS_RESEND,
   LOOPS_VS_RESEND,
@@ -3971,6 +5529,20 @@ export const VERSUS_PAGES: readonly VersusPage[] = [
   CUSTOMER_IO_VS_RESEND,
   KLAVIYO_VS_RESEND,
   AMAZON_SES_VS_MAILERSEND,
+  MAILERSEND_VS_RESEND,
+  RESEND_VS_SMTP2GO,
+  MANDRILL_VS_RESEND,
+  MAILERSEND_VS_POSTMARK,
+  POSTMARK_VS_SMTP2GO,
+  MAILERSEND_VS_MAILGUN,
+  MAILGUN_VS_SMTP2GO,
+  MAILGUN_VS_MANDRILL,
+  KLAVIYO_VS_SENDGRID,
+  LOOPS_VS_SENDGRID,
+  CUSTOMER_IO_VS_SENDGRID,
+  KLAVIYO_VS_LOOPS,
+  BREVO_VS_LOOPS,
+  BREVO_VS_CUSTOMER_IO,
 ];
 
 /**
