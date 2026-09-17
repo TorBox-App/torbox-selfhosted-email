@@ -1079,6 +1079,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "mailgun flex plan discontinued",
       "postmark message streams explained",
       "which email api has better inbound routing",
+      "postmark servers versus mailgun sending domains",
+      "how many tags per message can i send",
+      "email api that does not offer list validation",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1118,6 +1121,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "does brevo put its logo on my emails",
       "brevo automation which plan",
       "gdpr compliant transactional email provider",
+      "brevo contact attribute must exist before import",
+      "brevo transactional template id required",
+      "new email account daily sending limit first week",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1285,6 +1291,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "email api with drag and drop templates",
       "sending for multiple brands from one account",
       "moving off sendgrid after the free tier ended",
+      "mailersend account approval before sending",
+      "what replaces sendgrid subusers",
+      "bulk email endpoint versus personalizations array",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1299,6 +1308,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "is mandrill still being developed",
       "transactional email separate from marketing platform",
       "mailchimp transactional email alternatives",
+      "do mandrill email credits expire",
+      "converting mailchimp merge tags to another provider",
+      "mandrill rejection list stuck address",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1562,6 +1574,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "react email versus drag and drop builder",
       "mailersend api rate limit compared to resend",
       "transactional email with sms on the same account",
+      "idempotency key for sending transactional email",
+      "verifying email provider webhook signatures",
+      "choosing a region for a sending domain",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1575,6 +1590,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "resend smtp support versus a dedicated relay",
       "sending email from an appliance or crm",
       "smtp2go reporting compared to an email api",
+      "which outbound smtp port is blocked on my network",
+      "legacy app drops email silently instead of retrying",
+      "daily sending cap versus monthly allowance",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1601,6 +1619,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "postmark message streams versus a single domain",
       "do i need message streams for transactional email",
       "email vendor a non engineer can use safely",
+      "how many message streams should i create",
+      "moving inbound parsing between email providers",
+      "email provider that also sends sms on one account",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1614,6 +1635,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "smtp relay with blacklist monitoring",
       "which email vendor shows the raw bounce reason",
       "email provider for a support team to debug from",
+      "one smtp credential per device instead of a shared password",
+      "email relay that pins processing to a region",
+      "appliance fails dmarc envelope and header from",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1683,6 +1707,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "email tool for a small saas team",
       "sendgrid replacement after the free tier ended",
       "unlimited sends priced per contact",
+      "does loops have an smtp server",
+      "loops transactional email needs a published template",
+      "sendgrid marketing contacts billed separately from sending",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1697,6 +1724,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "do i need an event based messaging tool",
       "sendgrid automations versus a real journey builder",
       "sending events to a messaging platform from my app",
+      "customer.io workspace identifier id or email",
+      "do transactional messages skip the unsubscribe check",
+      "cost of instrumenting events for a messaging platform",
     ],
     audience: "stranger-with-problem",
     rationale:
