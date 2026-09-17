@@ -1050,6 +1050,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "per contact or per send email pricing",
       "loops transactional email quality",
       "onboarding sequence without building it yourself",
+      "keeping email templates in version control",
+      "building drip sequences with durable timers",
+      "email provider with both an smtp relay and an api",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1095,6 +1098,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "customer.io profile based pricing explained",
       "lifecycle email tool that is not ecommerce first",
       "per profile billing marketing automation",
+      "klaviyo smart sending skipped recipients",
+      "lifecycle messaging triggered by an account not a person",
+      "exporting segment membership from a marketing platform",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1108,6 +1114,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "klaviyo bill keeps going up",
       "cheaper klaviyo alternative for a big list",
       "klaviyo sending limit ten times profiles",
+      "per list unsubscribe versus global suppression",
+      "does my email tool store the product catalogue",
+      "keeping proof of opt-in when changing email platform",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1137,6 +1146,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "lifecycle and transactional email in one tool",
       "customer.io minimum monthly cost",
       "when do you outgrow loops",
+      "segment on events over a rolling time window",
+      "test a lifecycle email before it reaches customers",
+      "alert when automated emails stop sending",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1251,6 +1263,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "send email from a device or appliance over smtp",
       "which smtp service has the best logs",
       "smtp relay with a staging sandbox",
+      "assert on email contents in integration tests",
+      "separate streams for bulk and transactional mail",
+      "spam score and html check before sending",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1606,6 +1621,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "mandrill rejection list export before migrating",
       "replacing mailchimp transactional email",
       "mandrill merge tags versus react email",
+      "what replaces mandrill subaccounts",
+      "email api that keeps the content of sent messages",
+      "tagging sends so you can group events later",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1651,6 +1669,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "mailgun subaccounts versus a flat domain list",
       "email validation built into the sending provider",
       "mailgun flex plan closed to new signups",
+      "retrieve the original mime of a message you sent",
+      "email validation api without sending through the same vendor",
+      "inbound routing rules evaluated in priority order",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1664,6 +1685,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "smtp relay with dedicated ip and reporting",
       "sending mail from devices and internal applications",
       "mailgun routes versus a simple relay",
+      "mailgun sandbox domain authorized recipients",
+      "smtp relay that verifies sender addresses",
+      "one smtp credential per system instead of a shared password",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1678,6 +1702,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "mailgun routes compared to mandrill inbound",
       "transactional email without buying mailchimp",
       "which transactional provider is still being developed",
+      "how much does mailchimp transactional really cost",
+      "mandrill hourly quota and reputation score",
+      "setting up a custom click tracking domain",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1740,6 +1767,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "loops.so compared to klaviyo",
       "do i need ecommerce flows for a software product",
       "email platform priced per contact with unlimited sends",
+      "klaviyo predictive analytics minimum order history",
+      "does a transactional email respect an unsubscribe",
+      "moving email templates between platforms",
     ],
     audience: "stranger-with-problem",
     rationale:
