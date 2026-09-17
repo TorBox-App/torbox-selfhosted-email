@@ -197,6 +197,115 @@ function AtAGlance({ a, b }: { a: Vendor; b: Vendor }) {
   );
 }
 
+/**
+ * Strengths and trade-offs side by side. Rendered only when the page carries
+ * all four arrays, so the corpus can be deepened in batches without half a
+ * page's worth of empty headings appearing on the ones not yet rewritten.
+ */
+function ProsAndCons({
+  a,
+  b,
+  page,
+}: {
+  a: Vendor;
+  b: Vendor;
+  page: VersusPage;
+}) {
+  const { prosA, consA, prosB, consB } = page;
+  if (!(prosA && consA && prosB && consB)) {
+    return null;
+  }
+
+  const columns = [
+    { vendor: a, pros: prosA, cons: consA },
+    { vendor: b, pros: prosB, cons: consB },
+  ];
+
+  return (
+    <section aria-labelledby="pros-cons" className="mt-12">
+      <h2
+        className="mb-6 font-heading font-bold text-2xl tracking-tight"
+        id="pros-cons"
+      >
+        Pros and cons, side by side
+      </h2>
+      <div className="grid gap-6 sm:grid-cols-2">
+        {columns.map((column) => (
+          <div className="rounded-lg border p-5" key={column.vendor.id}>
+            <h3 className="mb-4 font-semibold text-lg">{column.vendor.name}</h3>
+            <p className="mb-2 font-mono text-muted-foreground text-xs uppercase tracking-widest">
+              Strengths
+            </p>
+            <ul className="mb-5 list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              {column.pros.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <p className="mb-2 font-mono text-muted-foreground text-xs uppercase tracking-widest">
+              Trade-offs
+            </p>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              {column.cons.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MigrationChecklist({ items }: { items?: readonly string[] }) {
+  if (!items?.length) {
+    return null;
+  }
+  return (
+    <section aria-labelledby="migration" className="mt-12">
+      <h2
+        className="mb-3 font-heading font-bold text-2xl tracking-tight"
+        id="migration"
+      >
+        What actually moves when you switch
+      </h2>
+      <p className="mb-6 text-muted-foreground">
+        In roughly the order you would do it. The expensive parts of an email
+        migration are never the send call.
+      </p>
+      <ol className="list-decimal space-y-3 pl-5 text-muted-foreground">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function BuyingQuestions({ items }: { items?: readonly string[] }) {
+  if (!items?.length) {
+    return null;
+  }
+  return (
+    <section aria-labelledby="buying-questions" className="mt-12">
+      <h2
+        className="mb-3 font-heading font-bold text-2xl tracking-tight"
+        id="buying-questions"
+      >
+        Questions to ask before you sign
+      </h2>
+      <p className="mb-6 text-muted-foreground">
+        Put these to a sales rep, or find the answer in the documentation before
+        anyone quotes you a number.
+      </p>
+      <ol className="list-decimal space-y-3 pl-5 text-muted-foreground">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export function VersusArticle({ page }: { page: VersusPage }) {
   const a = VENDORS[page.a];
   const b = VENDORS[page.b];
@@ -268,6 +377,8 @@ export function VersusArticle({ page }: { page: VersusPage }) {
             </div>
           </section>
 
+          <ProsAndCons a={a} b={b} page={page} />
+
           <section aria-labelledby="pick" className="mt-12">
             <h2
               className="mb-6 font-heading font-bold text-2xl tracking-tight"
@@ -298,6 +409,10 @@ export function VersusArticle({ page }: { page: VersusPage }) {
               </div>
             </div>
           </section>
+
+          <MigrationChecklist items={page.migrationChecklist} />
+
+          <BuyingQuestions items={page.buyingQuestions} />
 
           {page.thirdOption ? (
             <section

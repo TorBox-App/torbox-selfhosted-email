@@ -98,6 +98,104 @@ describe("every versus page carries enough substance to be worth publishing", ()
   );
 });
 
+describe("the deepened sections are either absent or real", () => {
+  // The depth pass lands ~10 pages at a time, so these fields are optional
+  // while it is mid-flight. Optional must not mean unchecked: a page that
+  // carries one of them carries a written one, at the shape the renderer
+  // expects. The final run of the pass makes all six required and raises the
+  // word floor, at which point "absent" stops being a legal state.
+
+  it.each(cases)(
+    "%s: brings all four pros/cons arrays or none of them",
+    (_slug, page) => {
+      const present = [page.prosA, page.consA, page.prosB, page.consB].filter(
+        Boolean
+      ).length;
+      expect([0, 4]).toContain(present);
+    }
+  );
+
+  it.each(cases)(
+    "%s: writes three or four of each, not stubs",
+    (_slug, page) => {
+      for (const list of [page.prosA, page.consA, page.prosB, page.consB]) {
+        if (!list) {
+          continue;
+        }
+        expect(list.length).toBeGreaterThanOrEqual(3);
+        expect(list.length).toBeLessThanOrEqual(4);
+        expect(new Set(list).size).toBe(list.length);
+        for (const item of list) {
+          expect(item.length).toBeGreaterThan(40);
+          expect(item.length).toBeLessThan(400);
+        }
+      }
+    }
+  );
+
+  it.each(cases)(
+    "%s: gives the migration checklist real steps when it has one",
+    (_slug, page) => {
+      if (!page.migrationChecklist) {
+        return;
+      }
+      expect(page.migrationChecklist.length).toBeGreaterThanOrEqual(5);
+      expect(page.migrationChecklist.length).toBeLessThanOrEqual(9);
+      expect(new Set(page.migrationChecklist).size).toBe(
+        page.migrationChecklist.length
+      );
+      for (const step of page.migrationChecklist) {
+        // A step short enough to fit in a tweet is a heading, not a step.
+        expect(step.length).toBeGreaterThan(80);
+        expect(step.length).toBeLessThan(600);
+      }
+    }
+  );
+
+  it.each(cases)(
+    "%s: asks buying questions that are questions",
+    (_slug, page) => {
+      if (!page.buyingQuestions) {
+        return;
+      }
+      expect(page.buyingQuestions.length).toBeGreaterThanOrEqual(5);
+      expect(page.buyingQuestions.length).toBeLessThanOrEqual(8);
+      expect(new Set(page.buyingQuestions).size).toBe(
+        page.buyingQuestions.length
+      );
+      for (const question of page.buyingQuestions) {
+        expect(question.length).toBeGreaterThan(40);
+        expect(question.length).toBeLessThan(500);
+        expect(question).toContain("?");
+      }
+    }
+  );
+
+  it("keeps no deepened line identical across two pages", () => {
+    // A pros bullet or a checklist step that appears verbatim on a sibling is
+    // the templating failure this whole pass is meant to avoid, and it is
+    // cheaper to catch here than in the shingle guard, which only notices once
+    // enough of them accumulate.
+    const lines = VERSUS_PAGES.flatMap((page) => [
+      ...(page.prosA ?? []),
+      ...(page.consA ?? []),
+      ...(page.prosB ?? []),
+      ...(page.consB ?? []),
+      ...(page.migrationChecklist ?? []),
+      ...(page.buyingQuestions ?? []),
+    ]);
+    const seen = new Set<string>();
+    const duplicated = lines.filter((line) => {
+      if (seen.has(line)) {
+        return true;
+      }
+      seen.add(line);
+      return false;
+    });
+    expect(duplicated).toEqual([]);
+  });
+});
+
 describe("prices are read from the vendor records, never restated", () => {
   it("writes no price literal into the config", () => {
     // A price written here is a price that will be wrong after the next
@@ -250,6 +348,12 @@ function pageProse(page: {
   dimensions: readonly { heading: string; a: string; b: string }[];
   pickA: readonly string[];
   pickB: readonly string[];
+  prosA?: readonly string[];
+  consA?: readonly string[];
+  prosB?: readonly string[];
+  consB?: readonly string[];
+  migrationChecklist?: readonly string[];
+  buyingQuestions?: readonly string[];
   thirdOption?: string;
   faqs: readonly { question: string; answer: string }[];
 }): string {
@@ -270,6 +374,12 @@ function pageProse(page: {
     ...page.dimensions.flatMap((d) => [d.heading, d.a, d.b]),
     ...page.pickA,
     ...page.pickB,
+    ...(page.prosA ?? []),
+    ...(page.consA ?? []),
+    ...(page.prosB ?? []),
+    ...(page.consB ?? []),
+    ...(page.migrationChecklist ?? []),
+    ...(page.buyingQuestions ?? []),
     page.thirdOption ?? "",
     ...page.faqs.flatMap((faq) => [faq.question, faq.answer]),
   ].join("\n\n");

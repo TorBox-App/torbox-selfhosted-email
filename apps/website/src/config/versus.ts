@@ -93,7 +93,34 @@ export type VersusPage = {
    * written for this pair. Fewer than 40% of pages carry one, enforced.
    */
   thirdOption?: string;
-  /** Four to six, unique to this pair. */
+  /**
+   * Scannable strengths and trade-offs, three or four each, written against
+   * THIS counterpart rather than in the abstract. A SERP snippet pulls these
+   * more often than it pulls prose, which is the reason they are separate
+   * fields rather than another dimension.
+   *
+   * Optional only while the depth pass is mid-flight. All four arrive together
+   * or none of them do, and the final run of that pass makes them required.
+   */
+  prosA?: readonly string[];
+  consA?: readonly string[];
+  prosB?: readonly string[];
+  consB?: readonly string[];
+  /**
+   * What actually moves when you switch between these two, in the order you
+   * would do it. Five to nine items naming real artefacts on both sides —
+   * a suppression list, a template syntax, a webhook payload shape, an IP that
+   * does not travel. A generic checklist pasted across pairs is exactly what
+   * the shingle guard exists to reject, so write it per pair or omit it.
+   */
+  migrationChecklist?: readonly string[];
+  /**
+   * Five to eight questions to put to a sales rep or find the answer to in the
+   * docs, aimed at this pair's real failure modes rather than at a feature
+   * grid. Optional until the depth pass completes.
+   */
+  buyingQuestions?: readonly string[];
+  /** Four to six, unique to this pair. Eight to ten once deepened. */
   faqs: readonly VersusFaq[];
 };
 
@@ -111,6 +138,9 @@ const POSTMARK_VS_RESEND: VersusPage = {
       "resend 30 day log retention limit",
       "resend two requests per second rate limit",
       "react email with postmark",
+      "which transactional provider stores the message body",
+      "moving postmark layouts into react email components",
+      "enforced separation between bulk and transactional mail",
     ],
     rationale:
       "The two facts that decide this in practice — Resend purging logs at thirty days on every non-Enterprise plan, and a two-per-second API ceiling that does not lift on any tier — appear in neither vendor's own comparison, because neither vendor is going to write them down.",
@@ -166,6 +196,49 @@ const POSTMARK_VS_RESEND: VersusPage = {
     "Traffic is steady request-response mail well under two per second and nothing in your system sends in batches.",
     "You already intend to stream delivery events into your own warehouse, so the thirty-day window is a non-issue rather than a trap.",
   ],
+  prosA: [
+    "A decade of operating its own mail network, with inbox placement treated as the thing being sold rather than as a property inherited from whatever runs underneath.",
+    "Bulk and transactional traffic travel on separate streams by construction, so a newsletter cannot quietly spend the standing that your password resets depend on.",
+    "The activity view holds the rendered message, so somebody in support answers did this arrive from a search box today, without a log pipeline needing to exist first.",
+    "Throughput is not a constraint anyone meets here, which removes an entire category of architectural decision from the project before it is made.",
+  ],
+  consA: [
+    "Address isolation is gated behind the higher plans with a monthly volume minimum attached, so a small team with a reputation problem has nothing available to buy its way out of it.",
+    "There is no campaign builder and the company has spent a decade declining to build one, which makes lifecycle marketing a second product and a second record of consent.",
+    "The template editor is aimed squarely at engineers. Somebody in marketing can change a line of copy in it and nobody would mistake it for a design tool.",
+    "The curve steepens past a few hundred thousand messages a month, and an account opened years ago is not sitting on the figures a new one gets quoted.",
+  ],
+  prosB: [
+    "React Email is first-party and actively maintained, so templates are components under code review in your repository rather than rows in a vendor's database.",
+    "Domain verification and a working integration complete in roughly the time DNS takes, and the delivery floor underneath is AWS's, which is a high floor to inherit for free.",
+    "A permanent free allowance exists, which is what makes a staging environment or a weekend project something that does not generate an invoice.",
+    "The product surface is small enough that nobody spends their first hour picking between four supported ways to accomplish one task.",
+  ],
+  consB: [
+    "Logs are purged at thirty days on every plan short of Enterprise, and the scenario that breaks is concrete: a customer disputes a notice from March and you are looking in June.",
+    "Two requests per second on every tier, unmoved by any upgrade, so a batch job becomes a drip you build, operate and never get to delete.",
+    "Suspension during a traffic spike is the complaint that recurs across its public reviews, and it lands on exactly the mail you least want to lose.",
+    "The account and the standing behind it belong to the vendor, so leaving means verifying elsewhere and earning reputation again from nothing.",
+  ],
+  migrationChecklist: [
+    "Pick the direction on the constraint rather than on the price, because the two moves are not symmetrical. Going one way buys enforced stream separation and a stored message archive; going the other buys React Email and a free allowance and costs you retention. Only one of those is cheap to reverse once the identity has warmed.",
+    "Export the suppression record from every stream and every audience rather than from the main one. Postmark scopes suppressions per message stream and Resend keeps its own bounce and complaint record, so a single export in either direction is partial — and the addresses it omits are precisely the ones that must not be mailed.",
+    "Take the message archive with you if you are leaving the side that keeps one. Postmark stores rendered bodies and the other does not, so the activity view a support agent relied on stops existing on the morning of the cutover. Teams generally learn this during the dispute that needed it.",
+    "Rebuild the templates instead of converting them. Layouts and substitution syntax are evaluated on the vendor's side; components are evaluated on yours. In either direction the HTML travels and the logic does not, and rendering inside your own application is what makes the move after this one a code change.",
+    "Map the streams onto whatever the destination actually has, and be honest that it is less. The transactional and broadcast split is enforced on one side; on the other it is a convention you maintain with separate domains, which works exactly as reliably as somebody remembering to maintain it.",
+    "Test the traffic shape against a two-per-second ceiling before committing in that direction. There is no comparable limit on the other side, so a nightly batch that is unremarkable today becomes a queue you build and then own, and no plan removes it afterwards.",
+    "Re-point the webhooks and re-derive everything downstream. Both providers post signed payloads to a URL you nominate, and that surface resemblance is misleading: event names, bounce subtypes and payload shapes differ enough that a dashboard built against one produces wrong numbers when fed the other.",
+    "Ramp across subdomains rather than switching in an evening. Whichever direction you travel, you arrive as an identity with no history, and the placement you were enjoying was a property of the vendor's operation rather than of your domain. Start with digests, keep receipts last, and watch the numbers for weeks.",
+  ],
+  buyingQuestions: [
+    "When support asks whether a customer received a particular message, do they need the status or the content — and which of these two can still answer that in six months?",
+    "Does anybody send bulk mail from the same domain as our password resets today, and what specifically stops that continuing after the switch?",
+    "Is any of our traffic batch-shaped, and has somebody counted calls per second at peak rather than messages per month?",
+    "How long must we be able to prove what we sent, and is that a written obligation or a habit nobody has examined?",
+    "Who writes and edits our transactional copy, and does that person open pull requests as part of their normal week?",
+    "If sending stopped tomorrow morning, who would we contact, and would that person be able to tell us what triggered it?",
+    "Are we deciding on deliverability or on developer experience — and if it is deliverability, what evidence do we have that is not one of the two vendors' own pages?",
+  ],
   thirdOption:
     "Both vendors keep your delivery history on their terms and inside their window, and neither can fix that for you, because the record lives in their system rather than yours. If losing the history is the part of this decision that actually worries you, the third shape is to send through SES inside your own AWS account, so events land in your storage under your retention policy. Wraps is one way to do that with a platform layer on top. It is a worse answer than either vendor here if what you want is to send an email this afternoon: it needs an AWS account and SES production access, an approval on AWS's schedule rather than ours.",
   faqs: [
@@ -198,6 +271,21 @@ const POSTMARK_VS_RESEND: VersusPage = {
       question: "How do I test either of them without sending real email?",
       answer:
         "Both give you a sandbox or test mode that accepts the call and does not deliver, which is enough to prove your integration compiles and your template renders. Neither tells you anything about inbox placement, because placement is a property of reputation and content rather than of the API call. If you want to know how a message will actually land, send it to seed addresses at the major mailbox providers and look, or use a dedicated placement testing service. Treat a green response from either sandbox as a syntax check, not an outcome.",
+    },
+    {
+      question: "Does Resend have anything like Postmark's message streams?",
+      answer:
+        "Not as an enforced mechanism. You can achieve the same separation by sending marketing and transactional traffic from different domains or subdomains with their own DKIM keys, which is genuinely effective and is what a careful team does everywhere. The difference is that Postmark makes it structural and will argue with you about bulk mail on the transactional path, whereas everywhere else it is a convention. Conventions work until an engineer who was not in the original conversation adds a send call to the obvious place.",
+    },
+    {
+      question: "Can either of these receive inbound mail?",
+      answer:
+        "Postmark can, through an inbound stream that parses the message and posts structured fields to your webhook, with the same activity view over what arrived. Resend does not, and treats that as a scope decision rather than a gap. Teams needing replies alongside Resend generally put Cloudflare Email Routing or an SES receipt rule in front and parse the result themselves, which means a second system, a second set of credentials and an outgoing message tracked in a different place from the reply to it.",
+    },
+    {
+      question: "Which one copes better with a sudden large send?",
+      answer:
+        "Postmark, and not by a small margin, because the constraint on that side is the plan's included volume rather than a request rate. A burst costs money and completes. On Resend the same burst meets a fixed two-per-second ceiling that no tier lifts, so it becomes a queue that drains over hours. Batch endpoints accepting several recipients per call stretch that considerably, so the real answer depends on how your send loop is written — but it is an architectural constraint rather than a commercial one, which means you engineer around it rather than paying to remove it.",
     },
   ],
 };
@@ -324,6 +412,9 @@ const MAILGUN_VS_SENDGRID: VersusPage = {
       "sendgrid account suspended no warning",
       "is sendgrid marketing campaigns a separate plan",
       "dedicated ip mailgun or sendgrid",
+      "mailgun routes compared with inbound parse",
+      "subaccounts versus subusers for multi tenant sending",
+      "keeping category reporting across an email migration",
     ],
     rationale:
       "Both vendors' free tiers are gone — SendGrid's ended in May 2025, Mailgun's is a hard hundred a day — and nearly every comparison still treats one of them as the free option. The suspension pattern that dominates both vendors' public reviews is likewise absent from every vendor-written page.",
@@ -380,6 +471,49 @@ const MAILGUN_VS_SENDGRID: VersusPage = {
     "You want automated IP warm-up rather than running the schedule yourself.",
     "Marketing and transactional genuinely need to be in one console and you have budgeted for both plans, not one.",
   ],
+  prosA: [
+    "Inbound Routes and address validation are both first-party, so the two capabilities a sending platform usually leaves to somebody else arrive inside the relationship you are already buying.",
+    "A dedicated address is included from the middle plans rather than reserved for the top of the ladder, which lets a multi-brand sender isolate per brand without an enterprise conversation first.",
+    "Log search shows the receiving server's SMTP response on the relay path as well as the API path, so an appliance nobody owns is as debuggable as code somebody wrote.",
+    "Marketing stays deliberately out of the way, which keeps the sending account's purpose unambiguous and its suppression semantics about one kind of traffic.",
+  ],
+  consA: [
+    "Flex closed to new signups in December 2025 and the legacy pay-as-you-go rate doubled, so any cost model assembled from remembered numbers is wrong by a factor that changes the decision.",
+    "The free allowance is a hard hundred a day, which is a demo rather than a staging environment and will not survive a CI pipeline that sends verification mail per pull request.",
+    "Response time on the lower plans is the complaint that recurs, and account actions tend to arrive carrying less explanation than the sender expected.",
+    "Roadmap gravity follows the parent group's portfolio, so the product is durable and slow rather than responsive to anything you might ask for.",
+  ],
+  prosB: [
+    "The broadest relay compatibility surface in the category, which matters precisely at the moment the sender is a system nobody is allowed to rewrite and nobody wants to own.",
+    "Automated IP warm-up, which is a genuine difference for a team that has never warmed an address and would rather not learn the schedule on production traffic.",
+    "A Twilio relationship consolidates email alongside SMS and voice under one agreement, which is procurement leverage rather than a product feature and is often the whole argument.",
+    "Subusers give per-tenant credentials, reputation and reporting, which is the structural answer for anybody sending on behalf of customers rather than only for themselves.",
+  ],
+  consB: [
+    "The free tier ended in May 2025 and became a sixty-day trial at the same daily cap, so neither vendor in this pair now offers anything a staging environment could live on.",
+    "Marketing Campaigns runs on its own plan and its own meter, so a quote compared against the other side covers less product than it appears to and the gap only shows up at renewal.",
+    "Dedicated addresses are reserved for the upper tier, so you buy the tier to reach the address whether or not anything else in that tier was wanted.",
+    "Support latency and abrupt suspension dominate its public reviews with more volume behind them than any other vendor in this comparison, which is a planning input rather than a rumour.",
+  ],
+  migrationChecklist: [
+    "Price the entire surface on both sides before writing a number down, because the plan page is not the invoice. Campaign tooling is a separate meter on one side and largely absent on the other, additional dedicated addresses are monthly on both, and the two quotes being compared routinely cover different amounts of product.",
+    "Inventory the SMTP senders first, because they are the long pole on a migration between two incumbents. Application code is a configuration change; an appliance, a CMS plugin or a partner system that only knows how to be pointed at one relay is a ticket on somebody else's calendar, and there are always more of them than the first count found.",
+    "Map subusers onto subaccounts, or establish early that you cannot. Per-tenant credentials, reputation and reporting are structured differently on the two sides, and an agency or platform leaning on that isolation needs to confirm the destination's equivalent before anything else in the plan matters.",
+    "Export suppression state from every construct that holds it. Unsubscribe groups, bounces, spam reports and blocks are separate collections rather than one list, and a migration that imports the unsubscribes and forgets the complaints produces a complaint rate on an identity with no history to absorb it.",
+    "Re-implement the templates rather than exporting them. Both vendors evaluate their own substitution syntax on their own side, so the HTML is portable and the logic is not. Teams that use the occasion to move rendering into the application make the migration after this one a code change instead of a project.",
+    "Rewrite the event consumer and then re-derive everything downstream of it. Payload shapes, event names and batching behaviour all differ, so every dashboard, alert and finance report built on the old vocabulary is quietly wrong until somebody has re-derived it against the new one.",
+    "Reproduce inbound deliberately if you use it. Routes on one side and Inbound Parse on the other are similar in intent and different in matching syntax, in what arrives at your endpoint and in how a failure surfaces, so treat it as a re-implementation with its own test plan rather than as a change of hostname.",
+    "Plan the reputation ramp as a quarter rather than a sprint. The dedicated IP does not travel and neither does its warm-up, so the standard approach is both vendors running in parallel with a percentage of traffic shifting weekly — which means two invoices for a while, and that number belongs in the business case rather than in a surprise.",
+  ],
+  buyingQuestions: [
+    "Does the quote in front of us include campaign tooling, or is that a second plan on a second meter that nobody folded into the comparison?",
+    "How many of our senders are systems we cannot modify, and has somebody enumerated them rather than estimated from memory?",
+    "Which tier do we have to buy to get a dedicated address, and do we actually want the rest of what that tier contains?",
+    "Do we need per-tenant isolation, and does the destination structure it the way the thing we depend on today is structured?",
+    "What response commitment comes with the plan we are buying, and what comes with the one above it — because that difference is what a bad day costs?",
+    "How spiky is our traffic, and has anybody considered what that pattern looks like to an enforcement system that acts before a human reads anything?",
+    "How many weeks of paying both vendors are in the budget, and who signs off when the ramp takes longer than the plan said?",
+  ],
   thirdOption:
     "Both of these send from their own infrastructure, on shared reputation they manage, and both are well represented in public reviews by people whose accounts stopped without much warning. That specific risk is structural rather than a service-quality problem: when the sending identity belongs to the vendor, an enforcement decision about someone else's traffic can reach yours. The other shape is to send through SES in an AWS account you own, where the identity, the reputation and the enforcement relationship are yours. Wraps builds that out and runs the platform layer on top. It is not a free lunch: SES production access is an AWS approval that takes anywhere from an hour to three days, and it is not ours to grant.",
   faqs: [
@@ -412,6 +546,21 @@ const MAILGUN_VS_SENDGRID: VersusPage = {
       question: "How long does an enterprise migration between these take?",
       answer:
         "Plan a quarter, not a sprint, and expect the calendar to be driven by reputation rather than by code. The engineering is a few weeks: rewrite the send path, re-point webhooks, re-verify domains, import suppressions. Then comes the part nobody can compress, which is ramping volume on new infrastructure while watching complaint and bounce rates at each step. Running both vendors in parallel and shifting a percentage of traffic weekly is the standard approach, and it means paying two bills for a while. Budget for that overlap explicitly or it will arrive as a surprise.",
+    },
+    {
+      question: "How do Mailgun Routes and SendGrid Inbound Parse compare?",
+      answer:
+        "They answer the same question differently. Routes use an expression syntax matching on recipient, sender or header, and can forward to a URL, an address or storage. Inbound Parse binds a hostname you point MX records at and posts the parsed message to one endpoint. Routes are the more expressive of the two and Inbound Parse is the simpler to set up. Neither maps onto the other mechanically, so treat a move between them as a small re-implementation with its own tests rather than as a configuration change.",
+    },
+    {
+      question: "Does Mailgun have an equivalent to SendGrid subusers?",
+      answer:
+        "It has subaccounts, which serve the same purpose — isolating one customer's sending, suppression and reporting from another's underneath one parent — and they are structured differently enough that a migration is a modelling exercise rather than a mapping. The questions to settle before committing are whether reputation is genuinely isolated per tenant or only reporting is, how credentials are scoped, and whether a parent-level view exists across all of them. Get those three answers in writing, because an agency's whole operating model sits on top of them.",
+    },
+    {
+      question: "Can we keep our category and tag reporting across a move?",
+      answer:
+        "The mechanism survives and the reports do not. Both vendors let you attach a label to a message and slice delivery statistics by it, so the dimension you have been analysing by continues to exist. What does not continue is the aggregation: the console's charts, the saved views and any historical series behind them stay with the vendor you left, so year-on-year comparisons acquire a seam at the migration date. Snapshot whatever anybody cites regularly before the account closes, and rebuild the dashboard as part of the project rather than after it.",
     },
   ],
 };
@@ -971,6 +1120,9 @@ const AMAZON_SES_VS_RESEND: VersusPage = {
       "what does resend add on top of ses",
       "moving from resend to raw ses",
       "ses sandbox versus a hosted email api",
+      "exporting resend logs before the window closes",
+      "does a hosted provider reputation transfer to my aws account",
+      "requesting an ses sending rate increase",
     ],
     rationale:
       "Almost every result for this comparison is published by one of the two parties, and neither leads with the fact that decides it: they share a delivery substrate, so the real trade is ownership and tooling rather than inbox placement.",
@@ -1031,6 +1183,49 @@ const AMAZON_SES_VS_RESEND: VersusPage = {
     "Traffic is steady request-response mail comfortably under two calls a second, with nothing batch-shaped anywhere in the system.",
     "You would rather buy a dashboard, a verification flow and a log viewer than build three mediocre versions of them.",
   ],
+  prosA: [
+    "The throughput limit is an opening position rather than a ceiling. AWS raises the per-second rate and the daily quota on request while bounce and complaint numbers stay healthy, so a batch job becomes a capacity request instead of a permanent drip.",
+    "Events land wherever you send them and stay for exactly as long as you decide, because there is no vendor window to close — retention becomes a line in your own infrastructure rather than a plan feature.",
+    "The account, the warmed addresses and everything the mailbox providers have learned about them belong to you, which turns replacing the layer above into a code change rather than a migration with a warm-up attached.",
+    "Standing is isolated to your own identity, so no neighbour's bad month reaches you and no shared-pool protection decision ever gets made about your traffic on someone else's behalf.",
+  ],
+  consA: [
+    "Every operational feature is missing and each one is a small project of its own — a dashboard, a suppression view, a template preview, an event store, something to search it with. None is hard and collectively they never finish.",
+    "The sandbox is the first thing you meet, and leaving it is an application a person reads on AWS's schedule rather than on yours. It is the most common reason a launch date on this side slips.",
+    "React Email works against it perfectly well, but the integrated preview and the maintained first-party path are not there, so the template workflow is something you assemble from parts.",
+    "Nothing warns you before an enforcement. The thresholds are published and the metrics are in your account, but only a team that built the alarm actually sees the number climbing.",
+  ],
+  prosB: [
+    "The AWS approval has already happened. You inherit a sending account that is out of the sandbox, warmed and operating, the moment your DNS verifies, which is the strongest practical argument the layered model has.",
+    "Time to a first delivered message is bounded by DNS propagation rather than by anybody's review queue, and the SDK surface is small enough that the integration really is finished the same afternoon.",
+    "React Email is first-party and actively maintained, with the preview tooling and the polish that the open-source renderer on its own does not hand you.",
+    "A dashboard, a domain verification flow and a log view exist without anybody wiring them up, which is three projects that never appear on your backlog.",
+  ],
+  consB: [
+    "Two API requests per second on every tier including the most expensive, with no plan that lifts it, so anything batch-shaped gets a queue that is permanent rather than a temporary workaround.",
+    "Logs are purged at thirty days on every plan short of Enterprise, which covers an integration bug and does not cover a billing dispute, a compliance request or a year-over-year comparison.",
+    "The standing you send on is theirs and shared, so a spike in your traffic can be paused by a platform making the correct decision for everybody else on the pool.",
+    "Marketing contacts are metered separately from sends, so a list that grows on its own raises the invoice in a month when nothing was mailed to it.",
+  ],
+  migrationChecklist: [
+    "Apply for production access first and assume it is the critical path. You are asking AWS to grant what the incumbent already holds, and the answer turns on how convincingly you describe address collection, bounce handling and complaint processing. Nothing else in this move is gated by a human reading prose.",
+    "Export the log history while the window is still open. Thirty days is the entire archive on any plan short of Enterprise, so this cannot be scheduled for after the cutover — everything older than the window has already gone, and no support request brings it back.",
+    "Copy the suppression record across before the first production send rather than after it. A brand-new AWS account starts with an empty account-level suppression list, so the first campaign following a migration is the one that re-mails every person who previously filed a complaint.",
+    "Keep React Email and abandon the idea that it was ever the lock-in. The library renders components to an HTML string and the destination send call accepts one, so templates move unchanged. What you rebuild is the preview environment and the review workflow that surrounded them.",
+    "Swap the webhook consumer for an event destination. The incumbent posts a signed payload to an endpoint you nominate; the replacement publishes through SNS, EventBridge or Firehose, where the event types, the field names and the delivery guarantees all differ — so the consumer and every alert built on it are new code.",
+    "Request the sending-rate increase before you need it rather than during the first batch. Both the per-second rate and the daily quota start conservative, and the increase is granted against a healthy history that a one-day-old account has not accumulated yet.",
+    "Build the bounce-rate alarm before the first production send. AWS acts on published thresholds and does not telephone anybody, and that single alarm is the entire difference between a week of warning and a suspension you learn about from a drop in signups.",
+    "Ramp across subdomains rather than switching over. Run both providers from separate subdomains so DKIM keys and DMARC alignment stay independent, start with digests and other low-stakes traffic, and leave password resets on the warmed path until the new identity has weeks of clean data behind it.",
+  ],
+  buyingQuestions: [
+    "Is any of our traffic batch-shaped — a digest, a nightly job, a launch announcement — and has anybody checked that shape against a fixed per-second ceiling that no plan lifts?",
+    "How far back do we need to answer a question about one specific message, and is that number written down anywhere or merely assumed?",
+    "Who would own production access, the quota increases and the bounce alarm, and does that person have the time this quarter rather than in principle?",
+    "If our sending were paused during a traffic spike tomorrow, what breaks first, and how many hours can the business tolerate it?",
+    "Are marketing contacts in the cost model or only sends, given that one of these two prices a list that grows while nobody is mailing it?",
+    "What would we lose on the day we left, and could a regulator or a customer ask us for any of it afterwards?",
+    "Do we actually want the AWS approval, or are we renting somebody else's completed one and describing that as a product decision?",
+  ],
   thirdOption:
     "This is the pair where the choice is most often presented as binary and most obviously is not. Resend exists because raw SES ships no product on top of itself, and SES is cheap because it is only a primitive — so the third shape is a platform layer over an SES account you own, which leaves the reputation, the quota and the event stream on your side of the line. Wraps is one way to do that. The honest cost is the same thing that pushes people to Resend to begin with: you need an AWS account and SES production access, an approval on AWS's schedule rather than ours, and our SDKs are TypeScript and Python only. Contacts, templates and workflow state live in our database — only sending and delivery events stay in your AWS — and we are not SOC 2 certified.",
   faqs: [
@@ -1063,6 +1258,21 @@ const AMAZON_SES_VS_RESEND: VersusPage = {
       question: "Can I run both at the same time?",
       answer:
         "Yes, and it is a sensible way to de-risk a migration in either direction. Use a separate subdomain per provider so DKIM keys, reputation and DMARC alignment stay independent, then move traffic class by class — start with something low-stakes like digests, keep password resets on the proven path until last. The cost is two suppression lists and two sets of webhooks that nobody reconciles until something has already gone wrong.",
+    },
+    {
+      question: "How do I keep more than thirty days of delivery history?",
+      answer:
+        "By not relying on the vendor's view for it. Resend exposes webhooks, so the durable answer is to consume every delivery, bounce and complaint event into your own store from the first day and treat the dashboard purely as a convenience. That is roughly a day of work and it is the single highest-value thing a team on a hosted provider can build, because it is the only version of the history that survives both the retention window and the relationship. Doing it later does not recover what already expired.",
+    },
+    {
+      question: "What happens to suppressions and unsubscribes when I switch?",
+      answer:
+        "Nothing automatic, and this is where migrations do real damage. Each provider keeps its own record of who bounced, who complained and who opted out, and a new AWS account begins with that record empty. Export it and load it into the account-level suppression list before the first production send, not as a follow-up task. The failure is loud and public: the first mail after the cutover reaches everybody the previous provider had correctly stopped mailing, and the complaints that follow land against an identity with no history to absorb them.",
+    },
+    {
+      question: "Should I request a sending quota increase before migrating?",
+      answer:
+        "Yes, and earlier than feels necessary. Both the per-second rate and the twenty-four-hour quota start conservative on a new account, and AWS grants increases against a record of healthy bounce and complaint rates — which a freshly approved account does not yet have. The practical sequence is to get production access, send real but modest traffic for a while, then ask, with the metrics to point at. Leaving the request until the evening of a large batch is how a migration ends up throttled on the one night it had an audience.",
     },
   ],
 };
@@ -2487,6 +2697,9 @@ const AMAZON_SES_VS_SENDGRID: VersusPage = {
       "sendgrid free tier retired replacement",
       "sendgrid smtp relay versus ses smtp endpoint",
       "aws support plan cost when running ses",
+      "migrating sendgrid dynamic templates to ses",
+      "is there a subuser equivalent in amazon ses",
+      "sendgrid event webhook compared to ses notifications",
     ],
     rationale:
       "Everyone answering this compares a plan price to a per-thousand rate and stops. The costs that decide it in practice — an AWS support plan you did not previously need on one side, a marketing plan sold separately on the other — appear on neither pricing page next to the number people quote.",
@@ -2547,6 +2760,49 @@ const AMAZON_SES_VS_SENDGRID: VersusPage = {
     "You need a support ticket to be included rather than purchased, and an enterprise certification pack that a procurement team can read in one sitting.",
     "Volume is modest and stable, so the plan price is noise against the engineering cost of building what SES omits.",
   ],
+  prosA: [
+    "Metered per message with no platform fee and no tier to outgrow, arriving on an invoice finance already reconciles if the company is on AWS — which turns adding email into a configuration change rather than a supplier onboarding.",
+    "The sending identity, the quota and the accumulated standing sit in an account you keep, so replacing the tooling above them later is a code change rather than a warm-up you have to serve a second time.",
+    "The thresholds AWS enforces against are published and the metrics that approach them are in your own CloudWatch, so the enforcement that stops sending is one a single alarm gives you a week of notice on.",
+    "Choosing a jurisdiction is a per-account setting rather than a sales conversation, which makes a residency clause something an engineer satisfies in an afternoon.",
+  ],
+  consA: [
+    "Nothing above the send call exists, and a half-built replacement is worse than none: the event consumer that captures deliveries but silently drops complaints looks like it is working right up until AWS pauses you.",
+    "Getting a human to look at your account means buying an AWS support plan on top of the sending bill, and for a small team that plan is several multiples of the mail it protects.",
+    "There is no campaign product and there is not going to be one, so the marketing team's requirements become a second vendor, a second consent record and a second answer to who opted out.",
+    "A new account starts in a sandbox that only delivers to addresses you verified, and leaving it is an application a person at AWS reads on their timetable rather than yours.",
+  ],
+  prosB: [
+    "Fifteen years as the industry default relay means the instructions for pointing your CRM, your ticketing tool or a warehouse appliance at it already exist, usually written by that system's own vendor rather than by SendGrid.",
+    "Suppression management, an activity feed, a template editor and campaign tooling are all there on day one, so the first afternoon ends with an email operation instead of a backlog of things to build.",
+    "A support ticket is included in the plan rather than purchased as a separate contract, with a defined severity scale and a queue that exists before you need it.",
+    "Campaign traffic and application traffic share one suppression list and one standing with the mailbox providers, which is exactly the reconciliation nobody performs when those two live at different vendors.",
+  ],
+  consB: [
+    "The permanent free allowance ended in May 2025 and became a time-boxed trial, so every staging environment and internal tool quietly parked there turned into a billing decision with a deadline attached.",
+    "Marketing Campaigns is metered as its own plan rather than folded into the sending tier, so a cost model drawn from the sending price alone will be short by an entire line.",
+    "Being cut off without notice is the theme that dominates its public reviews, and the compliance function that does it is not reachable through the first-line queue you would be escalating in.",
+    "It is a new supplier: a security review, a data processing agreement and an annual renewal, which in a regulated shop is weeks of questionnaire that nobody put on the launch plan.",
+  ],
+  migrationChecklist: [
+    "Apply for SES production access before writing a line of integration code. The form asks how you collect addresses and how you process bounces, a person reads the answer, and a vague one buys a round of follow-up questions rather than a refusal. This is the step that moves launch dates.",
+    "Verify the sending domains in SES and publish its DKIM records alongside SendGrid's rather than instead of them. Both sets coexist happily, and removing the incumbent's records early is how a rollback quietly stops being available halfway through the cutover.",
+    "Export all four of SendGrid's suppression collections — global unsubscribes, bounces, spam reports and blocks — and load every one into the SES account-level suppression list. They live behind separate endpoints, and a team that exports only the unsubscribe group will mail people who previously filed a complaint.",
+    "Rewrite anything built on SendGrid dynamic templates. The handlebars-style substitution is evaluated inside SendGrid and the SES template API is not a comparable destination, so most teams end up rendering finished HTML in the application and handing SES a string. Plan for that rather than for a translation.",
+    "Replace the event consumer rather than reconfiguring it. SendGrid posts a batched array to a single URL; SES publishes individual notifications through SNS, EventBridge or Firehose under different field names, so the webhook handler is new code and the delivery-status mapping is a decision somebody has to make.",
+    "Choose where the campaign mail is going before the transactional cutover, not after. SES will not take it, and a marketing send due the week after the switch is the most reliable way to get a migration reversed by somebody who was not in the planning meeting.",
+    "Convert the SMTP senders one system at a time. SES credentials are derived from an IAM user through a conversion step instead of being issued directly, and the endpoint belongs to one region, so a failover story has to name a second. Budget a day for each appliance with opinions about TLS.",
+    "Treat the dedicated IP as unrecoverable. The address and everything the mailbox providers learned about it stay with SendGrid, so raise volume on the new identity across several weeks, leading with the recipients who open most, and keep the old path live until placement data says you can stop paying for it.",
+  ],
+  buyingQuestions: [
+    "Which AWS support plan would we genuinely need, and what does it add to the sending bill — because on the default tier a mail problem gets you documentation and a forum thread?",
+    "Does the SendGrid quote in front of us cover Marketing Campaigns, or is that a second plan on a second meter that nobody added to the spreadsheet?",
+    "How many of our senders are systems we are not permitted to modify, and does a documented relay path exist for each of them on the side we are proposing to move to?",
+    "On the morning sending stops, who do we contact, what response time are we contractually owed, and does that commitment exist on the plan we are actually buying rather than the one above it?",
+    "Where do delivery events land, how long are they kept, and could we answer a billing dispute about a message sent eleven months ago without asking the vendor for a favour?",
+    "Who inside the company needs a visual campaign builder, and has anybody asked them — because one side of this comparison has no answer and is not building one?",
+    "How many calendar weeks does a new-supplier security review take here, and is that shorter or longer than waiting on an AWS production-access decision?",
+  ],
   thirdOption:
     "The specific trap on this pair is that the two ends are so far apart. A team leaving SendGrid over price is usually not leaving over the product, and discovers at month two that it has traded an invoice for a backlog: an event consumer, a suppression view, a template pipeline, somewhere to look up a message. That is the gap a platform layer over your own SES account fills, and Wraps is one way to buy it while the account, the reputation and the sending data stay in AWS you control. The honest costs: you still need an AWS account and SES production access, which is an AWS approval on AWS's timetable and not ours to grant, our SDKs cover TypeScript and Python only, contacts and templates live in our database rather than yours, and we are not SOC 2 certified — so a procurement team that chose SendGrid for the certification pack has not been answered by this.",
   faqs: [
@@ -2580,6 +2836,22 @@ const AMAZON_SES_VS_SENDGRID: VersusPage = {
       answer:
         "AWS will pause sending, and it does so on published bounce and complaint thresholds you can watch approach in your own metrics. That is the substantive difference: the mechanism is documented and the leading indicator is visible to you, so a team with a single CloudWatch alarm gets a week of warning. Whether the recovery conversation is faster depends entirely on whether you are paying for a support plan, which is the cost that keeps reappearing in this comparison.",
     },
+    {
+      question: "Does SES have anything equivalent to SendGrid subusers?",
+      answer:
+        "Not as one feature. The pieces exist scattered across AWS primitives — separate verified identities, separate configuration sets, separate IAM principals, separate dedicated addresses — and assembling them into per-tenant credentials with per-tenant reporting and per-tenant suppression is a project rather than a setting. Agencies and platforms sending on behalf of customers should price that project honestly, because it is the single largest thing SendGrid gives you that SES does not, and it is considerably more work than the send path it sits around.",
+    },
+    {
+      question:
+        "Can we run both during the migration, and how long should the overlap be?",
+      answer:
+        "Yes, and you should. Put each provider on its own subdomain so the DKIM keys, the reputation and the DMARC alignment stay independent, then move one traffic class at a time and leave the highest-stakes mail until last. The overlap is dictated by placement data rather than by engineering progress: you are watching complaint and bounce rates on the new identity climb into normal range, which usually takes several weeks at meaningful volume. Budget for two invoices during that period explicitly, because the alternative is discovering it at the end of the month.",
+    },
+    {
+      question: "Do SendGrid's event webhooks map cleanly onto SES events?",
+      answer:
+        "No, and assuming they do is a common way to lose a week. SendGrid posts a batch of events as a JSON array to one endpoint you nominate. SES emits individual notifications through SNS, EventBridge or Firehose, with a different envelope, different field names and a different set of event types — and you choose the destination and the delivery guarantees yourself. The consumer is new code, and somebody has to decide explicitly how the two vocabularies line up before the reporting built on the old shape can be trusted again.",
+    },
   ],
 };
 
@@ -2597,6 +2869,9 @@ const AMAZON_SES_VS_POSTMARK: VersusPage = {
       "how long does postmark keep message content",
       "is postmark worth the price over raw ses",
       "transactional email that never shares a pool with marketing",
+      "exporting postmark suppressions before leaving",
+      "replacing postmark activity search on aws",
+      "what to do with postmark layouts when moving to ses",
     ],
     rationale:
       "The interesting claim on this pair is not the price gap, which is obvious, but whether a managed sender's inbox placement is structurally better than a well-run account of your own. Nobody neutral writes that down, because both parties have an interest in the answer.",
@@ -2653,6 +2928,49 @@ const AMAZON_SES_VS_POSTMARK: VersusPage = {
     "You want the transactional and broadcast separation enforced by the product, because in practice nobody on the team will enforce it by convention.",
     "Volume is in the tens of thousands a month, where the price difference does not fund the operational work that SES requires.",
   ],
+  prosA: [
+    "Metered with no included allowance to price around, which past the low hundreds of thousands a month stops being a close comparison and becomes the reason large senders are here at all.",
+    "Identities, configuration sets and dedicated addresses are raw materials rather than an opinion, so a traffic split nobody else anticipated — per brand, per tenant, per regulatory boundary — is something you can actually construct.",
+    "Where you configure archiving, the ceiling is permanent rather than a rolling window, which is the difference between a retention policy a regulator accepts and a debugging convenience.",
+    "Leaving is about as cheap as it gets in this field: the verified domains and the standing behind them live in an account you keep, so a second provider runs from a sibling subdomain and takes traffic at whatever pace you choose.",
+  ],
+  consA: [
+    "Nothing stops you putting a campaign and a password reset behind the same identity, so the most common self-inflicted placement injury in the category is the default behaviour and no part of the console will mention it.",
+    "The rendered message is never kept, so what did we actually send them is answerable only from an archive you built in advance — and it is not a question you can answer retroactively.",
+    "Diagnosing a placement problem means reading DMARC aggregate reports, engagement data and postmaster tooling, none of which AWS supplies and all of which somebody on the team has to learn on a bad week.",
+    "First-line support is not staffed by deliverability specialists, and no support plan reliably converts a mail question into a conversation with somebody who has operated mail.",
+  ],
+  prosB: [
+    "The split between bulk and transactional traffic is enforced by the software rather than left to a convention the team will abandon in eighteen months, which removes the failure that puts receipts in the spam folder the week after a campaign.",
+    "The activity view holds the rendered body and the delivery trace for a named recipient, so a support agent closes the did-it-arrive ticket in under a minute without escalating to engineering or opening a query console.",
+    "Tickets are answered by people who have run mail infrastructure, and a placement question produces an investigation instead of a runbook link — which is most of what the per-message premium is actually buying.",
+    "Templates have layouts, versioning inside the product and a preview rendered against real clients, so changing the wording of a receipt is not a deploy.",
+  ],
+  consB: [
+    "The standing you deliver on belongs to their pool, so leaving means verifying elsewhere and earning reputation from zero while the stored history stays behind on their side of the line.",
+    "The plan ladder crosses a metered rate somewhere in the low hundreds of thousands a month, and the early-2026 repricing means a long-standing account is not on the figures a new one is quoted — confirm which you are on before modelling anything.",
+    "No segmentation engine, no visual campaign designer, no automation, and a decade of the company declining to build them, which makes lifecycle marketing a second product and a second consent record by design.",
+    "Retention is a window rather than a policy. The tooling inside it is unusually good and there is nothing whatsoever outside it.",
+  ],
+  migrationChecklist: [
+    "Open the SES production-access application first, and answer it the way you would answer an onboarding questionnaire rather than a form: how addresses are collected, how bounces and complaints are processed, what the mail is for. The decision is on AWS's calendar, and this is the step most likely to move the date.",
+    "Map the message streams onto separate verified subdomains, not just onto configuration sets. The streams were performing reputational isolation; configuration sets only separate event routing. Reproducing what you had means distinct sending identities, and above a certain volume distinct dedicated addresses behind them.",
+    "Export the suppression list from every stream rather than from the transactional one. Postmark keeps suppressions per stream, so a single export is a partial export, and the broadcast stream is precisely where the complaints you least want to repeat were recorded.",
+    "Pull the activity history you still care about while the account is open. Postmark holds the rendered message and AWS will hold nothing, so anything not exported is the last copy of what you sent. Teams generally discover this during the dispute that needed it rather than during the move.",
+    "Re-implement the templates rather than translating them. Layouts and the substitution syntax are evaluated inside Postmark, and the SES template API is not somewhere you want them to land. Rendering in the application and sending finished HTML is where these migrations end up anyway, so go straight there.",
+    "Rebuild the support workflow before the cutover, because the activity search an agent was using is the feature the invoice was paying for. On the other side that is a pipeline — configuration set, event destination, somewhere to store it, an index, and an interface a non-engineer can use — and a half-finished version is worse than being honest about not having one.",
+    "Rewrite the event consumers. Postmark posts one JSON object per event to a URL nominated per stream; SES publishes through SNS, EventBridge or Firehose with a different envelope, and the two vocabularies of bounce subtype do not line up, so the reporting built on the old shape needs re-deriving before anyone trusts it.",
+    "Ramp instead of cutting over. You are a sending identity with no history and the placement you enjoyed was a property of somebody else's operation, so keep receipts and password resets on the proven path while the low-stakes traffic proves itself clean for several weeks.",
+  ],
+  buyingQuestions: [
+    "On the day placement drops, who on our team diagnoses it, with which data, and has that person read a DMARC aggregate report before?",
+    "How often does support need the content of a specific message rather than its status, and what happens to those tickets when only the status is available?",
+    "At the volume we actually send, does the price gap fund the person who would own mail operations, or is it a saving that reappears as a salary line nobody wrote down?",
+    "Is our retention requirement a debugging habit or a written obligation — and if it is written, how many months, and who audits it?",
+    "Who sends the next marketing campaign, from which domain, and is there anything in the proposed arrangement that stops it sharing standing with the password resets?",
+    "If a plan price has been quoted to us, is it the current list or the terms an existing account happens to be grandfathered onto?",
+    "How many weeks would we be paying both vendors while the new identity warms, and has that overlap been budgeted rather than assumed away?",
+  ],
   thirdOption:
     "This is the pair where the crossover is most often mis-modelled. Teams look at the invoice at half a million messages, decide SES wins, and quietly commit to rebuilding the activity view, the stored message body and the support workflow that made Postmark worth paying for — which is the actual product, not the sending. If the thing you want is SES economics with a console that a support agent can use, a platform over your own AWS account is the shape that gives you both, and Wraps is one implementation of it. What it does not give you is Postmark's deliverability operation: you still need an AWS account and SES production access, an approval on AWS's timetable rather than ours, and the reputation that follows is yours to earn and yours to lose. Contacts and templates sit in our database rather than yours, our SDKs are TypeScript and Python only, and we are not SOC 2 certified.",
   faqs: [
@@ -2682,6 +3000,27 @@ const AMAZON_SES_VS_POSTMARK: VersusPage = {
       answer:
         "Yes, and it is a more common architecture than either vendor advertises. Use separate subdomains so DKIM keys, reputation and DMARC alignment stay independent, and keep the highest-stakes messages on the path with the best placement. The cost is two suppression lists, two sets of webhooks and a reconciliation nobody performs until a customer who unsubscribed receives a newsletter and complains.",
     },
+    {
+      question: "How much of my Postmark data can I actually take with me?",
+      answer:
+        "Suppressions and templates come out cleanly, per stream, and are the parts everybody remembers. The rendered message archive is the part people forget, and it is the one with no equivalent waiting on the other side, so whatever you do not export is simply the last copy. Delivery events export within the retention window only. Plan the extraction as a task with an owner and a deadline before the account is cancelled, because a closed account is not a slow export — it is no export.",
+    },
+    {
+      question:
+        "What does a support agent use on SES instead of the activity view?",
+      answer:
+        "Whatever you built. The usual shape is a configuration set publishing events to EventBridge or Firehose, landing in a store, indexed, behind an interface that accepts an email address and a date range. None of it is difficult and all of it is real work, and the version that shows delivery events but not the message body only answers half the tickets. Decide before the migration whether a support agent is a user of this system, because retrofitting them into it later is considerably more expensive than designing for them once.",
+    },
+    {
+      question: "Does SES receive inbound mail the way Postmark does?",
+      answer:
+        "Both can receive, and they hand you very different things. Postmark's inbound stream parses the message and posts structured fields to your webhook. SES receipt rules, available in a subset of regions, can drop the raw message into S3, invoke a Lambda, publish to SNS or reject it — and the parsing, the threading and the attachment handling are yours to write. If replies are a feature of your product rather than an afterthought, that difference is a subsystem rather than a configuration line.",
+    },
+    {
+      question: "Is a dedicated IP worth buying on either side?",
+      answer:
+        "Only above a volume floor that both vendors will tell you about if you ask, and for the same underlying reason: an address needs consistent traffic to hold a reputation, and a dedicated one sending sporadically performs worse than the shared pool it left. On Postmark it is gated behind the higher plans with a monthly minimum attached. On SES you can provision one at any volume, including a managed option that runs the warm-up schedule, which means it is easier to buy and just as easy to buy too early.",
+    },
   ],
 };
 
@@ -2699,6 +3038,9 @@ const AMAZON_SES_VS_MAILGUN: VersusPage = {
       "email address validation api alternatives",
       "mailgun flex plan closed to new signups",
       "searchable email logs without building a pipeline",
+      "turning mailgun routes into ses receipt rules",
+      "replacing mailgun validation after a migration",
+      "mailgun webhook signing versus sns notifications",
     ],
     rationale:
       "Mailgun sits closer to SES on the stack than any other hosted vendor, so the comparison turns on specific capabilities rather than on philosophy — and on a repricing in December 2025 that existing customers noticed and prospective ones have not heard about.",
@@ -2754,6 +3096,49 @@ const AMAZON_SES_VS_MAILGUN: VersusPage = {
     "A dedicated address bundled into a plan is more attractive than provisioning and warming one yourself.",
     "The team has no AWS presence and adding one for email alone is more organisational work than the saving justifies.",
   ],
+  prosA: [
+    "The price list belongs to a company that reprices rarely and in visible steps, which is the direct answer to watching a plan close to new signups and a legacy rate double while you hold no lever at all.",
+    "A dedicated address you warmed stays yours through every change in the tooling above it, so six weeks of patient ramping is an investment rather than something you spend again at the next migration.",
+    "Jurisdiction is an account-level choice from a long list of regions, and because the identity belongs to you it is a configuration decision rather than a per-domain setting with a second API hostname attached to it.",
+    "It will not be discontinued, will not be acquired and will not change its API underneath you. For infrastructure, that indifference is the feature.",
+  ],
+  consA: [
+    "There is no address validation of any kind, so the typo that would have been caught at the registration form instead becomes a bounce against the precise metric AWS uses to decide whether you keep sending.",
+    "Inbound arrives as raw MIME behind a rule set that is easy to misconfigure into dropping mail silently, and parsing, threading, attachment handling and deciding what a reply even is are all yours to write and to maintain.",
+    "There is no log to search because nothing is stored, and the five moving parts that fix that are routinely estimated as a weekend by people who have not built them.",
+    "Nobody is watching the account on your behalf, so the first signal that something is wrong usually arrives as an enforcement rather than as a warning.",
+  ],
+  prosB: [
+    "Routes match on recipient, sender or header and deliver already-extracted fields to your endpoint, which removes the least interesting week of work in any inbound project and removes it permanently.",
+    "Validation is a real product — syntax, domain and mailbox-level, callable at the signup form rather than at send time — and it is the clearest case on this page of a capability worth buying rather than building.",
+    "Log search exists in the console from the first day and shows the receiving server's own SMTP response, which is the field that settles an argument about whether a message was delivered or merely accepted.",
+    "A dedicated address comes bundled from the middle plans upward, which is genuine convenience at exactly the volume where having one starts to make sense.",
+  ],
+  consB: [
+    "Flex closed to new signups in December 2025 and the legacy pay-as-you-go rate doubled, which is a concrete demonstration that a hosted price is somebody else's decision and migration is the only response a customer has.",
+    "Retention is a plan feature, so the searchable history shortens the moment you downgrade and none of it comes with you when you leave.",
+    "The European region is chosen per domain and has its own API hostname, so verifying in one and calling the other produces a week of failures that the error messages do not explain.",
+    "Investment now follows an acquiring parent's portfolio priorities rather than the sending product's, and a repricing is precisely the kind of event that follows from that.",
+  ],
+  migrationChecklist: [
+    "Work out which region can receive before choosing where to send from. SES inbound exists in a subset of regions and need not be the region you send in, so an inbound requirement can quietly dictate the whole account layout, and discovering that after the identities are verified is a rebuild rather than a setting change.",
+    "Open the production-access application early and write it as prose. It asks how addresses are collected and how bounces and complaints are processed; a person reads the answer, and the cases that take days are almost always the ones answered vaguely.",
+    "Decide what replaces validation before the signup form loses it. The realistic options are a third-party validation API, a syntax and MX check of your own, or accepting a higher bounce rate — and the third is riskier than it sounds, because bounce rate is the number the new provider watches to decide whether you keep sending.",
+    "Turn the Routes into receipt rules, then write the parser that Routes was. Mailgun hands your endpoint extracted fields; the replacement hands you raw MIME in object storage or a function invocation. Threading, attachments and what counts as a reply all become yours, and a misconfigured rule set drops mail with no error anywhere to notice.",
+    "Stand the event pipeline up before the cutover rather than beside it. Configuration set, event destination, a stream, somewhere to keep it, an index, an interface — until all six exist, what happened to this message has no answer at all, and the partial build that records deliveries but not complaints is the dangerous one.",
+    "Export suppressions and whatever searchable history still matters. Retention is a plan feature, so the window on your current tier is the whole of what you can take, and the console search that made a support agent self-sufficient is being replaced rather than moved.",
+    "Replace the webhook verification as well as the payload handling. Mailgun signs its posts with a timestamp and token scheme your handler checks; the replacement delivers through SNS, EventBridge or Firehose, each with its own authentication model and envelope, so the security review is separate work from the field mapping.",
+    "Warm a new dedicated address instead of expecting to keep the old one. The IP and everything the mailbox providers learned about it stay behind, and a managed warm-up option exists if you would rather not run the schedule by hand — but either way the unit is weeks, and the shared pool is the better place to be during them.",
+  ],
+  buyingQuestions: [
+    "Does our product receive mail, and if it does, are we willing to own the parser — or is that a subsystem we have quietly been assuming somebody else maintains?",
+    "What is the bounce rate on our signup traffic today, and what does it become if validation stops happening at the form?",
+    "Who answers a support ticket about one specific message, and which interface are they using on the morning after the switch?",
+    "How long is log retention on the exact plan being quoted, and what does extending it cost — because the tier's headline volume is not the number that decides this?",
+    "If the price list moves next December the way it moved last December, what is our response, and how many weeks would executing it take?",
+    "Does our residency requirement name a region, and does the inbound capability we need actually exist in the region that would satisfy it?",
+    "What does a dedicated address cost on each side once the warm-up period is counted as a cost rather than as free waiting?",
+  ],
   thirdOption:
     "Of every pair in this cluster, this is the one where the middle position is least hypothetical, because Mailgun's feature list is close to a specification for what teams build on top of SES. The reason to think about a platform over your own AWS account here is narrow and specific: it removes the December-2025 problem, where a vendor reprices and your only response is to migrate an account you never owned. Wraps is one way to take that shape. It does not match Mailgun feature for feature — there is no address validation product, and inbound is a thinner story. You will need an AWS account and SES production access, an approval AWS grants on its own timetable and not ours, our SDKs cover TypeScript and Python only, contacts and templates live in our database while sending data and delivery events stay in your AWS, and we are not SOC 2 certified.",
   faqs: [
@@ -2782,6 +3167,26 @@ const AMAZON_SES_VS_MAILGUN: VersusPage = {
       answer:
         "SES on economics, decisively, once volume is high enough for the per-message rate to matter. Mailgun's argument at volume is not price, it is that routing, validation and log search arrive already built, and that a dedicated address comes with the plan. The real question is whether your team wants to operate a mail pipeline. If the answer is yes, SES is cheaper and more durable; if it is no, the saving becomes a backlog.",
     },
+    {
+      question: "Can SES receive mail in the same region I send from?",
+      answer:
+        "Sometimes, and it is worth checking before anything else, because inbound is supported in fewer regions than outbound. The two do not have to match — you can receive in one region and send from another — but that is an architectural decision with latency, data-residency and IAM consequences, not a checkbox. Teams with an inbound requirement should pick the receiving region first and let the rest of the account layout follow, because reversing that order means re-verifying identities you have already warmed.",
+    },
+    {
+      question: "How do Mailgun's webhooks compare to SES event notifications?",
+      answer:
+        "They solve the same problem with different assumptions. Mailgun posts events to a URL you nominate and signs each request with a timestamp and token your handler verifies. SES publishes to SNS, EventBridge or Firehose, and you choose which — each with its own authentication story, its own delivery guarantees and its own envelope around the payload. The field names and the event vocabulary differ throughout, so migrating the consumer is a rewrite plus a security review rather than a configuration change.",
+    },
+    {
+      question: "What happens to my Mailgun log history when I leave?",
+      answer:
+        "It stays. Retention is a plan feature, the search interface belongs to the vendor, and there is no historical archive handed over on the way out — which is the ordinary arrangement everywhere, not a Mailgun peculiarity. If any of that history has a use beyond debugging, export it while the account is live, and treat the export as a dated task with an owner. The broader lesson is worth acting on early: history you need to outlive a vendor relationship has to land somewhere you own from the start.",
+    },
+    {
+      question: "Can I keep tag-based reporting after moving to SES?",
+      answer:
+        "The mechanism exists and the reporting does not. SES lets you attach message tags and configuration sets, both of which flow through to the events you publish, so the dimension you were slicing by survives. What does not survive is a console that aggregates by it — that becomes whatever your own store and query layer can do. If the tags were feeding a dashboard somebody reads weekly, rebuild that dashboard as part of the migration rather than as a follow-up, because a metric nobody can see is one nobody acts on.",
+    },
   ],
 };
 
@@ -2799,6 +3204,9 @@ const RESEND_VS_SENDGRID: VersusPage = {
       "resend rate limit two requests per second",
       "sendgrid trial after free tier ended",
       "does resend have marketing campaigns",
+      "converting sendgrid dynamic templates to react email",
+      "per tenant sending credentials for an agency",
+      "what to do when a sendgrid trial expires",
     ],
     rationale:
       "Almost every result is a migration guide published by one of the two. The facts that decide it — a fixed request-rate ceiling on one side that no plan lifts, a retired free tier on the other — are in neither guide, because neither company benefits from raising them.",
@@ -2859,6 +3267,49 @@ const RESEND_VS_SENDGRID: VersusPage = {
     "Procurement needs a certification pack, a data processing agreement and a named support escalation before anything ships.",
     "A campaign going out fast is a billing question rather than an architecture question, because the rate ceiling is not something you can engineer around.",
   ],
+  prosA: [
+    "A permanent free allowance still exists here, with a daily cap sitting alongside the monthly one, which is the reason an enormous number of side projects and staging environments now live on this side of the comparison.",
+    "The SDK is small enough to read in one sitting and domain verification genuinely completes in minutes, so the email portion of a new product is finished before the rest of the afternoon is.",
+    "Templates are React components in your own repository, reviewed like any other code, and they render to plain HTML that any provider will accept — so adopting them commits you to less than it appears.",
+    "There is no settings page asking for a decision you are not qualified to make, which sounds like a small thing until you have spent an hour choosing between four supported ways to do one job.",
+  ],
+  consA: [
+    "Two API requests per second on every tier, unlifted by any upgrade, so batch-shaped traffic gets a queue rather than a plan change and the queue is permanent.",
+    "Marketing contacts are metered apart from sends — a contact-priced model quietly attached to a send-priced product — so an accumulating list raises the invoice with no campaign behind it.",
+    "SMTP is supported rather than cultivated, so pointing a CRM, a build server and a WordPress install at it means writing the configuration notes that nobody else has written yet.",
+    "Thirty days of log retention on every plan short of Enterprise, in a view designed to debug this week's integration rather than to answer a question about last quarter.",
+  ],
+  prosB: [
+    "Fifteen years as the default relay, which means whatever appliance, plugin or unloved internal system needs configuring, somebody has already documented pointing it here — usually that product's own vendor.",
+    "A template editor a non-engineer can actually use, with versioning and test sends, so the person who needs to fix a subject line before the weekend does not need a developer or a deploy.",
+    "Subusers give per-tenant credentials, reputation, suppression and reporting beneath one parent account, and for anybody sending on behalf of customers that single feature frequently decides the evaluation.",
+    "The procurement machinery exists and works: a certification pack, a data processing agreement, a defined severity scale and a named escalation contact on the higher tiers.",
+  ],
+  consB: [
+    "The permanent free tier ended in May 2025 and became a sixty-day trial at a low daily cap, which is the specific event that sends most people to this comparison in the first place.",
+    "Marketing Campaigns runs on its own plan and its own meter, so the promised consolidation happens at the login screen rather than on the invoice.",
+    "Being cut off abruptly and waiting on support are the two themes that dominate its public reviews, and the compliance function responsible for the first is not reachable through the queue handling the second.",
+    "The console carries fifteen years of accumulated surface, and a team that only ever calls the send endpoint experiences every bit of that breadth as friction.",
+  ],
+  migrationChecklist: [
+    "Measure the traffic shape against the rate ceiling before committing to anything else. Two requests per second on every tier is the one constraint here that money cannot remove, and a nightly job that loops over a list making one call per recipient will meet it on the first run. Batch endpoints taking several recipients per call are the mitigation; rewriting the send loop is the work.",
+    "Export all four SendGrid suppression collections — global unsubscribes, bounces, spam reports and blocks — and import them before the first message goes out. They sit behind separate endpoints, and a partial export is precisely how a migration re-mails everybody who previously complained.",
+    "Re-implement the dynamic templates as components. The handlebars-style substitution is evaluated inside SendGrid and does not travel; the HTML does. This is usually the largest single chunk of the project, and unusually for a migration task it leaves the codebase better than it found it.",
+    "Settle where the campaign mail lives. Broadcasts and an audience concept exist on the destination and are deliberately lighter than Marketing Campaigns — no segmentation engine, no visual designer. If a marketing team is working in that console today, have the conversation before the sending cutover rather than the week after it.",
+    "Inventory every SMTP sender and cost each one on its own. Anything currently pointed at SendGrid through a documented integration has to be re-pointed using instructions nobody has written yet, and the awkward ones — an appliance, a legacy plugin, a vendor that only knows one relay — are where the schedule actually slips.",
+    "Rewrite the event consumer. SendGrid posts a batched array of events to one URL; the destination posts individually signed payloads with a different vocabulary, so every alert and report derived from the old shape has to be re-derived before anybody trusts the new numbers.",
+    "Plan around thirty days of history rather than whatever you had. The destination purges at thirty days on every plan short of Enterprise, so if any process depends on older records, building the event pipeline into your own store belongs inside this migration rather than on the list after it.",
+    "Warm the new identity before moving the mail that matters. The dedicated IP and everything the mailbox providers learned about it stay behind, so begin on a subdomain with low-stakes traffic, watch the complaint and bounce rates settle, and move password resets last.",
+  ],
+  buyingQuestions: [
+    "Does anything in our system send in batches, and has somebody counted API calls per second at peak rather than on a monthly average?",
+    "Who edits email copy today — an engineer or somebody in marketing — and what does that person's Friday afternoon look like after the switch?",
+    "How many of our senders are systems we cannot modify, and does a written integration path exist for each of them on the side we are moving to?",
+    "Do we send on behalf of customers, and if so does the destination offer per-tenant credentials, suppression and reporting, or would we be building that ourselves?",
+    "What is our current invoice actually made of — one plan, or a sending plan plus a marketing plan plus dedicated IP charges nobody folded into the comparison?",
+    "Will procurement accept the new vendor's certification posture, and has anybody asked them before the engineering work started rather than after?",
+    "How far back do we need delivery records to reach, and does that answer survive a thirty-day window?",
+  ],
   faqs: [
     {
       question: "Why is Resend so much cheaper at small volume?",
@@ -2886,6 +3337,27 @@ const RESEND_VS_SENDGRID: VersusPage = {
       answer:
         "Yes. It ended in May 2025 and was replaced by a sixty-day trial with a low daily cap, after which a paid plan is required. This is worth stating plainly because a large amount of the writing comparing these two predates the change and still describes an allowance that no longer exists, and because it is the specific event that pushed a great many small projects into running this comparison in the first place.",
     },
+    {
+      question: "Does Resend have an equivalent of SendGrid subusers?",
+      answer:
+        "Not in the same shape. SendGrid's subusers are a genuine multi-tenancy primitive: each one carries its own credentials, its own sending reputation, its own suppression list and its own reporting, all underneath a parent account somebody administers. Resend's model is an account with domains and API keys, which serves a single product well and does not give an agency or a platform per-customer isolation. If you send on behalf of other businesses, price rebuilding that isolation honestly, because it is not a feature request you can wait out.",
+    },
+    {
+      question: "We pay for a dedicated IP on SendGrid. Does it come with us?",
+      answer:
+        "No, in the same way that no dedicated address travels anywhere: the IP is the vendor's asset and the reputation attached to it is a record mailbox providers keep about that address, not about your domain. What you are really giving up is the calendar — weeks of gradually increasing volume that somebody already served. Resend offers dedicated addresses on its higher tiers, so the capability exists, but you start the schedule again. For most senders below a few hundred thousand messages a month the shared pool is the better place to be anyway.",
+    },
+    {
+      question: "What can Resend's broadcasts actually do?",
+      answer:
+        "Send a message to an audience, with a basic contact record and unsubscribe handling. That covers a product announcement, a changelog mail or a newsletter with one list. What it does not cover is behavioural segmentation, a visual designer a marketer would choose to work in, branching automations, or campaign analytics beyond opens and clicks. Teams treating it as a Marketing Campaigns replacement generally discover the gap during the first campaign somebody in marketing owns, which is a bad time to discover it.",
+    },
+    {
+      question:
+        "How long does a migration between these two realistically take?",
+      answer:
+        "The send path is days. The schedule is set by three other things: re-implementing dynamic templates, re-pointing the SMTP senders you do not control, and warming a new identity. The first two are estimable once you have counted them, and the third cannot be compressed — you are raising volume gradually while watching complaint and bounce rates, which takes weeks at meaningful volume. Run both providers in parallel on separate subdomains and budget for two invoices during the overlap, because that cost arrives whether or not anybody planned it.",
+    },
   ],
 };
 
@@ -2903,6 +3375,9 @@ const MAILGUN_VS_RESEND: VersusPage = {
       "resend api rate limit for bulk sending",
       "mailgun pay as you go plan discontinued",
       "email api with address validation built in",
+      "what to do with mailgun routes when switching provider",
+      "how long does mailgun keep logs on each plan",
+      "sending bulk email under a strict api rate limit",
     ],
     rationale:
       "Teams arrive at this comparison after the December 2025 Mailgun repricing and evaluate Resend on developer experience alone, which is the half that is easy to see. The capabilities they would be giving up — inbound routing, validation, deep log search — are not on Resend's feature page to be missed.",
@@ -2963,6 +3438,49 @@ const MAILGUN_VS_RESEND: VersusPage = {
     "Volume is small enough that the cheaper plan and the permanent free allowance genuinely change the monthly number.",
     "You want the integration finished this afternoon and are willing to add a second service later if inbound ever becomes a requirement.",
   ],
+  prosA: [
+    "Inbound routing is a whole subsystem arriving for free: expression matching on recipient, sender or header, with the message already broken into fields your endpoint can read.",
+    "Validation is callable at the registration form, which lowers the bounce rate that gets accounts paused before any bounce has actually happened.",
+    "Log search surfaces the receiving server's own SMTP response and reaches back as far as the plan allows, which is what makes a support agent self-sufficient rather than a queue for engineering.",
+    "The binding constraint is the plan's included volume rather than a request rate, so a burst costs money and completes instead of draining over several hours.",
+  ],
+  consA: [
+    "Flex closed to new signups in December 2025 and the legacy pay-as-you-go rate doubled, which is the event that put most people on this page and the reason a remembered figure is now wrong.",
+    "Templates sit in the vendor rather than in version control unless somebody builds a sync, so a change is not reviewable and reproducing production locally is harder than it should be.",
+    "Retention, dedicated addresses and support latency are all plan features, so a downgrade silently removes capability the team had come to rely on.",
+    "Investment follows an acquiring group's portfolio, which is a slower kind of risk than a bad quarter and considerably harder to plan around.",
+  ],
+  prosB: [
+    "React Email is the clearest quality win on this page: components in the repository, reviewed alongside everything else, rendering to HTML that any provider will accept.",
+    "The integration is genuinely done the same afternoon, with domain verification completing inside the time DNS takes to propagate.",
+    "A permanent free allowance, which is what turns a staging environment or a prototype into something that does not appear on an invoice at all.",
+    "Cheaper at small volume, and the product surface is small enough that nothing in the first hour requires a decision you are unqualified to make.",
+  ],
+  consB: [
+    "There is no inbound, so replies mean a second service in front and a seam where a sent message and the answer to it are tracked in different systems.",
+    "No validation product either, which on an open signup form leaves a third-party API, a check you write, or a bounce rate you are gambling with.",
+    "Two API requests per second on every tier, which is an architectural constraint rather than a commercial one and therefore not something money removes.",
+    "No named region to satisfy a residency clause, and thirty days of retention on everything short of Enterprise.",
+  ],
+  migrationChecklist: [
+    "Count what you actually use inbound for before anything else, because there is none on the other side. Reply handling, ticket ingestion, per-customer addresses and catch-all forwarding each need a named replacement — Cloudflare Email Routing, an SES receipt rule, or keeping a minimal account open purely for Routes — and every answer costs a second set of credentials.",
+    "Decide what happens at the signup form once validation stops. The realistic choices are a third-party validation API, a syntax and MX check of your own, or a higher bounce rate against an identity with no history to absorb it. The third is the one that gets accounts paused in the first month.",
+    "Measure peak calls per second against a fixed two-per-second ceiling. Mailgun does not constrain request rate the way the destination does, so send loops written without that in mind meet the limit on the first run. Batch endpoints accepting several recipients per call are the mitigation; rewriting the loop is the work.",
+    "Export the searchable history you still need while the plan's retention window is still yours. It shortens on downgrade and ends at cancellation, and the destination purges at thirty days on every plan short of Enterprise — so if anything downstream reads older records, the pipeline into your own store belongs inside this project.",
+    "Pull the suppression list and the bounce record and load them before the first send. Each side keeps its own and neither hands anything to the other, so the first campaign after the cutover is exactly where an incomplete export turns into a complaint rate you cannot explain away.",
+    "Move the templates out of the vendor. Handlebars-style templates are evaluated on Mailgun's side and the drag-and-drop builder emits HTML that does not want to become a component, so re-authoring is real work — and it is the part of this migration that leaves the codebase better than it found it.",
+    "Replace the signature verification as well as the payload handler. Mailgun signs with a timestamp and token pair; the destination signs differently and uses a different event vocabulary, so the verification code and the field mapping are both new and both belong in the security review rather than in a follow-up ticket.",
+    "Warm a new identity and keep the old one alive while you do. Mailgun's dedicated address and everything the mailbox providers learned about it stay behind, so run the destination on a subdomain with low-stakes traffic and accept several weeks of two invoices rather than compressing the ramp.",
+  ],
+  buyingQuestions: [
+    "Does anything in our product depend on mail arriving rather than leaving, and have we listed every one of those flows rather than the obvious ones?",
+    "What is our bounce rate on self-serve signups today, and what does it become if nothing validates the address at the form?",
+    "Has anybody measured peak API calls per second, or are we reasoning about throughput from a monthly total?",
+    "Is our data residency requirement a written clause naming a region, or a preference somebody expressed in a meeting once?",
+    "How far back does a support agent search today, and how often does that search go past thirty days?",
+    "Who owns our templates — an engineer in a pull request or a marketer in a builder — and which of these two suits that person's week?",
+    "If we are on grandfathered pay-as-you-go terms, what are they precisely, and is the comparison being drawn against those or against the current list?",
+  ],
   faqs: [
     {
       question: "Can I use React Email with Mailgun?",
@@ -2989,6 +3507,26 @@ const MAILGUN_VS_RESEND: VersusPage = {
       answer:
         "The honest answer is that this is decided by your own sending behaviour rather than by the choice. Both run shared pools, both will deliver well for a sender with clean lists and correct authentication, and both have public complaints about suspension. Mailgun has a longer operating history and its own network; Resend rides on Amazon SES. Neither of those facts predicts your placement as strongly as your bounce rate and your engagement do.",
     },
+    {
+      question: "Can I export my Mailgun logs before I leave?",
+      answer:
+        "Within whatever retention your current plan gives you, yes, and outside it there is nothing to export. That window is the thing to check first, because it shortens if you downgrade and it disappears entirely when the account closes. Treat the export as a dated task with a named owner rather than a cleanup item, and while you are at it consider whether any of that history should have been landing in your own store all along — because the same question arrives again at the next vendor, with a shorter window.",
+    },
+    {
+      question: "Does Resend offer a European region?",
+      answer:
+        "Not in the sense a residency clause means. Resend publishes its subprocessors and documents its data handling, which satisfies a great many buyers, but there is no equivalent of selecting a region and having your mail stay inside it — which Mailgun has offered for years, chosen per domain with its own API hostname. If your requirement is written down as a jurisdiction rather than expressed as a preference, this dimension ends the comparison rather than contributing to it, and it is worth establishing before anybody builds a prototype.",
+    },
+    {
+      question: "How do I replace address validation after leaving Mailgun?",
+      answer:
+        "Three options, in descending order of how well they work. Buy a dedicated validation API and call it at the signup form, which is the closest substitute and one more contract. Write a syntax and MX check yourself, which catches obvious typos and misses disposable addresses and full mailboxes. Or accept a higher bounce rate, which is only sane if your users are invited rather than self-serve. The reason this matters more than it sounds is that bounce rate is the metric providers use to decide whether you keep sending at all.",
+    },
+    {
+      question: "Which is better for an agency sending on behalf of clients?",
+      answer:
+        "Mailgun, on structure rather than on quality. Sending for other businesses needs per-tenant credentials, per-tenant suppression and per-tenant reporting, so that one client's list practices cannot reach another client's placement and so that a report means one customer. Mailgun's subaccount model addresses that directly. Resend's model is an account with domains and API keys, which serves one product well and leaves an agency administering a collection of separate accounts with no shared view across them.",
+    },
   ],
 };
 
@@ -3006,6 +3544,9 @@ const POSTMARK_VS_SENDGRID: VersusPage = {
       "postmark message streams versus sendgrid categories",
       "which email provider suspends accounts less",
       "transactional email with a real support team",
+      "moving sendgrid suppression lists to another provider",
+      "per client sending isolation without subusers",
+      "inbound parse alternatives for transactional email",
     ],
     rationale:
       "This pair is searched by people already on SendGrid and unhappy about something specific — a suspension, a support ticket, a retired free tier. The comparison they need is operational rather than a feature grid, and nobody writes the operational one because it makes both vendors look partly bad.",
@@ -3066,6 +3607,49 @@ const POSTMARK_VS_SENDGRID: VersusPage = {
     "Procurement needs a certification pack, a data processing agreement and a named escalation contact before anything ships.",
     "Volume is high enough that the per-message gap is a real recurring number rather than a rounding error.",
   ],
+  prosA: [
+    "Stream separation is enforced by the software rather than offered as an option, which is a mechanism rather than a slogan and the honest explanation for why its placement record reads the way it does.",
+    "The activity view carries the rendered message alongside the trace, so a support agent closes the did-it-arrive ticket without an engineer and without a query console.",
+    "Tickets reach people who have run mail infrastructure, and a placement problem produces an investigation rather than a link to a runbook somebody wrote in 2019.",
+    "The product is small enough that there is nothing to learn beyond the thing you came for, which is an underrated property in a tool three people have to share.",
+  ],
+  consA: [
+    "No campaign builder, no segmentation and no automation, by a decade of stated policy, which makes marketing a second vendor and a second understanding of who has opted out.",
+    "There is no integration catalogue, so every system you do not control needs its own configuration note, written by you, for an audience of one.",
+    "A small company meeting an enterprise security review means more back-and-forth — not because the paperwork is missing but because the machinery answering the questionnaire is smaller.",
+    "The per-message price genuinely inverts against the other side somewhere in the hundreds of thousands a month, and it keeps going in that direction afterwards.",
+  ],
+  prosB: [
+    "One vendor covering the API, the relay and the campaigns, which is a single procurement conversation instead of three and a single annual renewal instead of two.",
+    "Subusers provide per-tenant credentials, reputation, suppression and reporting under one parent account, and there is nothing corresponding on the other side of this pair.",
+    "Twilio's certification programme and contracting machinery, which an enterprise buyer gets through routinely rather than as an exception negotiated by somebody's manager.",
+    "The widest relay compatibility surface in the category, accumulated over fifteen years rather than designed, and worth more than elegance when the sender is a system nobody may rewrite.",
+  ],
+  consB: [
+    "Nothing obliges you to keep bulk mail off the transactional path. Categories, subusers and IP pools can produce that separation and none of them require it, and organisational drift does the rest.",
+    "The activity feed answers the status question well and the content question poorly, so did we send them the right thing becomes an engineering task despite being a support problem.",
+    "Being cut off abruptly dominates its public reviews, and the compliance function that does it operates independently of the queue you would be escalating in.",
+    "Marketing Campaigns is priced as its own plan, so the one-vendor story is two subscriptions and a comparison drawn on the sending tier alone is short by a line.",
+  ],
+  migrationChecklist: [
+    "Divide the traffic into streams before writing any code, because that is the decision the narrower product is built around. Transactional and broadcast mail go on separate streams with separate standing, and mail that has been leaving one SendGrid account for years frequently turns out to belong in two places that must never share reputation.",
+    "Export all four suppression collections and then map them per stream. SendGrid keeps global unsubscribes, bounces, spam reports and blocks separately; the destination scopes suppressions by stream. Getting that mapping wrong means either re-mailing people who complained or silently dropping people you are perfectly entitled to contact.",
+    "Re-author the dynamic templates. Handlebars-style substitution evaluated inside SendGrid has no counterpart on the other side, and a layouts-plus-templates model is a different shape rather than a different syntax. The HTML travels; the logic is rewritten by somebody who understands what it was for.",
+    "Find a home for the campaign mail, because no segmentation engine and no visual designer is waiting for it, and the company is explicit that this is policy rather than roadmap. A marketing team currently working in Marketing Campaigns needs a named destination before the transactional cutover, not after it.",
+    "Account for the subusers explicitly. If you send on behalf of customers, per-tenant credentials, reputation and reporting are a SendGrid primitive with nothing equivalent on the other side, so that isolation becomes separate accounts or separate streams that somebody on your team administers by hand.",
+    "Re-point the SMTP senders and expect to write the instructions yourself. Fifteen years of accumulated prior art does not transfer, so each appliance, plugin or unloved internal system becomes its own small task with nobody else's documentation to follow.",
+    "Rebuild the webhook consumers around a per-stream model. SendGrid posts batched arrays of events to one URL for the whole account; the destination posts per event type to URLs nominated per stream, which is a different architecture as well as a different payload, and the alerting has to follow.",
+    "Warm the new identity on the low-stakes stream first. The dedicated IP stays behind with everything the mailbox providers learned about it, and a shared pool only carries a sender whose own behaviour justifies it — so ramp across weeks and keep the receipts on the old path until the last possible moment.",
+  ],
+  buyingQuestions: [
+    "How many departments send mail from our domain, and would every one of them fit inside the narrower product without complaining?",
+    "What does our support team do today when a customer says an email never arrived, and does that workflow still exist after the move?",
+    "Is there anything in our account that is marketing mail wearing a transactional label, and who gets to decide which it is?",
+    "Do we send on behalf of customers, and if so who is rebuilding the per-tenant isolation and on what timeline?",
+    "What does procurement require in writing, and has the smaller vendor's paperwork been checked against that list rather than assumed adequate?",
+    "At the volume we expect in eighteen months rather than today, which side of the price crossover are we standing on?",
+    "On the morning sending stops, what is the written escalation path, and does it exist on the plan we are buying or only on the one above it?",
+  ],
   faqs: [
     {
       question:
@@ -3093,6 +3677,26 @@ const POSTMARK_VS_SENDGRID: VersusPage = {
       question: "Which one is less likely to cut me off without warning?",
       answer:
         "Both will stop your sending if your metrics justify it, and neither will consult you first. The difference people report is what the conversation is like afterwards: Postmark's is with a small team that explains the trigger, SendGrid's is with a compliance function that operates independently of the support queue you are shouting into. Neither is a guarantee, and the only real protection on either side is clean list practices and a bounce-rate alert you built before you needed it.",
+    },
+    {
+      question: "Does Postmark have anything like subusers?",
+      answer:
+        "No, and for a platform sending on behalf of other businesses that is the most consequential gap in this comparison. Message streams separate traffic types within one account; they do not give each of your customers their own credentials, their own reputation and their own report. The workaround is one Postmark account per tenant, administered by you, with no consolidated view across them — which works at five customers and does not work at two hundred. Price that honestly before the deliverability argument wins the evaluation.",
+    },
+    {
+      question: "Can Postmark handle our inbound mail too?",
+      answer:
+        "Yes, through an inbound stream that parses the message and posts structured fields to your webhook, with the same activity view over what arrived as over what left. SendGrid's Inbound Parse does the equivalent job, matching on a hostname you point at it. The two are close enough in intent that either will serve, and different enough in matching rules, payload shape and how failures surface that moving between them is a re-implementation with its own testing rather than a change of URL.",
+    },
+    {
+      question: "What happens to our dedicated IP and the warm-up behind it?",
+      answer:
+        "Both stay with the vendor you are leaving. The address is theirs and the reputation is a record the mailbox providers keep about that address rather than about your domain, so the weeks of gradually increasing volume somebody already served are spent again. On the narrower side a dedicated address is gated behind the higher plans with a monthly volume minimum, so check you clear that floor before assuming the option exists — and remember that a dedicated address sending sporadically performs worse than the shared pool it left.",
+    },
+    {
+      question: "How long should we run both providers in parallel?",
+      answer:
+        "Until the placement data says stop, which is weeks rather than days at meaningful volume and is not compressible by working harder. The standard shape is both vendors live on separate subdomains with a percentage of traffic shifting each week, lowest-stakes class first, while somebody watches complaint and bounce rates at every step. The part teams forget is the invoice: two subscriptions for the duration, which is a real number that belongs in the business case rather than arriving as a surprise in month two.",
     },
   ],
 };
@@ -4824,6 +5428,9 @@ const KLAVIYO_VS_SENDGRID: VersusPage = {
       "do i need klaviyo or is sendgrid enough",
       "ecommerce email attribution without klaviyo",
       "moving marketing email off sendgrid",
+      "why does my klaviyo bill go up without sending",
+      "who owns consent when marketing and transactional split",
+      "separate subdomain for marketing and receipts",
     ],
     rationale:
       "SendGrid Marketing Campaigns is bought by a lot of stores because it is already in the account, and the comparison they need is not about sending quality — it is about whether a contact list with custom fields can substitute for a behavioural profile, which no vendor will answer honestly.",
@@ -4889,6 +5496,49 @@ const KLAVIYO_VS_SENDGRID: VersusPage = {
     "You send on behalf of customers and need per-tenant credentials, suppression and reporting.",
     "You have a data warehouse and would rather own the attribution join than accept a vendor's default windows.",
   ],
+  prosA: [
+    "A profile assembled from live store activity, so a segment that describes behaviour is a few clicks rather than a data pipeline that somebody has to keep running afterwards.",
+    "Revenue attribution is the product rather than a report, which gives a store owner the number that justifies the subscription without exporting anything into a spreadsheet first.",
+    "Flows branch on store events, with abandoned-cart and back-in-stock sequences already built, and a merchant can assemble a working one in an afternoon without engineering help.",
+    "Sign-up forms and their targeting rules are part of the product, and whatever they collect lands directly in the profile with no glue in between for anyone to maintain.",
+  ],
+  consA: [
+    "The meter counts active profiles, so signups you never message raise the invoice, and the plan steps up automatically as profiles accumulate while never stepping back down on its own.",
+    "Sending is capped at a multiple of the profile count, and that cap is a hard stop in the middle of a campaign rather than an overage line on a later invoice.",
+    "The transactional story is thin, so order confirmations come from the store platform or another vendor — making this an addition to the stack rather than a consolidation of it.",
+    "One account per store, so an agency administers a collection of separate accounts rather than tenants inside one, with no view across the portfolio.",
+  ],
+  prosB: [
+    "Transactional and marketing mail under one account and one vendor relationship, which turns receipts, password resets and campaigns into a single procurement conversation.",
+    "Subusers give per-tenant credentials, reputation, suppression and reporting, which is frequently decisive for anybody sending on behalf of clients rather than only for themselves.",
+    "A dormant contact costs nothing until you mail it, which is the better economic shape for a business sitting on a large and mostly quiet list.",
+    "An API and an import rather than a native sync, which a team with its own warehouse often prefers because the definition of a customer stays theirs rather than the vendor's.",
+  ],
+  consB: [
+    "Contacts carry custom fields you populate yourself, so every behavioural attribute in an email exists because somebody built a pipeline and is still maintaining it this quarter.",
+    "You get opens, clicks and deliveries, and joining those to money is your own work — which most teams never do, and therefore cannot say what the channel is actually worth.",
+    "Automations are list-and-trigger shaped rather than behaviour shaped, so reacting to something that happened ten minutes ago requires the pipeline nobody built.",
+    "There is no meaningful form product, so list growth becomes a project that a small store had reasonably assumed was included in the price.",
+  ],
+  migrationChecklist: [
+    "Establish first whether this is a replacement or a split, because most stores end up with a split. Transactional mail usually stays where it is and only the campaign side moves, which means adding a vendor rather than swapping one — and the plan should say so before anybody exports a contact list.",
+    "Export contacts with their consent timestamps rather than only their addresses. When somebody opted in, and to what, is the one record that cannot be reconstructed afterwards and the one a regulator asks for. Custom fields come out cleanly; the provenance behind them generally does not.",
+    "Reconcile the suppression lists and name the system that is authoritative about consent. The failure here is specific and public: somebody unsubscribes from marketing in one tool and stops receiving order confirmations from the other, which is a support problem and possibly a compliance one.",
+    "Connect the store integration and let it backfill before writing a single segment. Profiles are assembled from order and browse history, so a segment authored on day one evaluates against a fraction of the data it will hold on day thirty, and the figures you show a stakeholder will be wrong in an embarrassing direction.",
+    "Rebuild the automations rather than porting them. A list-and-trigger automation and an event-driven flow are different models rather than different syntaxes, so every sequence is a design decision again — which is the point of moving, but it is design work with a calendar rather than an export.",
+    "Split the subdomains before the first send. If campaigns are leaving the account that also sends receipts, give each its own subdomain and DKIM keys so a campaign's complaint rate cannot reach the transactional standing. This is the cheapest protective step in the whole migration and the one most often skipped.",
+    "Prune before importing, because on the profile-metered side the list is the invoice. Every address that has ignored you for a year costs money the moment it arrives and drags the engagement metrics down with it, and pruning afterwards leaves you on a tier the plan will not step back down from by itself.",
+    "Accept that the attribution history stays behind. Revenue per campaign does not export into any form another tool can use, so year-on-year comparisons break at the migration date. Snapshot the reports somebody will want to cite before the account closes, and warn them the series has a seam in it.",
+  ],
+  buyingQuestions: [
+    "How many of our best-performing messages actually react to behaviour, and how many are announcements sent to a list on a schedule?",
+    "What is our active profile count today, and what does it become in twelve months if nobody makes pruning somebody's job?",
+    "Who owns email day to day — a merchant or an engineer — and which of these two tools matches how that person works?",
+    "Once marketing and transactional live in different systems, which one holds the authoritative record of consent, and who wrote that down?",
+    "Do we have a warehouse and somebody who would maintain an attribution join, or would we be accepting a vendor's default windows and calling it measurement?",
+    "Do we send on behalf of other businesses, and does the option we are leaning toward give each of them isolated credentials, suppression and reporting?",
+    "If we mail a small list frequently, has anybody checked the send cap against our real cadence rather than against our monthly total?",
+  ],
   faqs: [
     {
       question:
@@ -4916,6 +5566,28 @@ const KLAVIYO_VS_SENDGRID: VersusPage = {
       question: "How hard is it to leave either one?",
       answer:
         "Contacts export cleanly from both, and that is the easy part. What does not export is the work: flows and automations have to be rebuilt by hand, templates cross no paradigm boundary, and attribution history stays behind entirely, so your year-on-year comparisons break at the migration date. On the Klaviyo side there is an extra thread — the native store integration means the platform holds catalogue and order data that has to be re-established elsewhere. Export a full contact snapshot with consent timestamps before you start, because proving when somebody opted in is the one record you cannot reconstruct.",
+    },
+    {
+      question:
+        "Should marketing and transactional mail share a sending domain?",
+      answer:
+        "No, and this is the one piece of advice on this page that applies whichever vendor you choose. Campaign mail attracts complaints — that is the nature of it, even when everything is done correctly — and a complaint rate earned by a promotion should not be allowed to decide whether a password reset reaches the inbox. Give each traffic type its own subdomain with its own DKIM keys, so the two reputations are separate records as far as the mailbox providers are concerned. It costs one DNS change and it is the cheapest insurance in email.",
+    },
+    {
+      question:
+        "How long does the store backfill take before segments are useful?",
+      answer:
+        "Long enough that the first week's numbers should not leave the room. A native commerce integration syncs historical orders and customers on connection and then builds browse and cart behaviour forward from the moment it is live, so anything describing recent activity is evaluating against a window that is still filling. A segment written on day one and shown to a stakeholder on day three will understate reality and nobody will remember why later. Give it a few weeks of live traffic before anyone treats a flow's performance as a signal.",
+    },
+    {
+      question: "Can SendGrid subusers work for a multi-store operation?",
+      answer:
+        "Yes, and it is one of the few places SendGrid is structurally ahead in this pair. Each subuser carries its own credentials, its own sending reputation, its own suppression list and its own reporting beneath a parent account somebody administers, which is exactly what an operator of several storefronts or an agency needs. The counterpart is one account per store with no consolidated view, so if portfolio-level administration matters, this dimension may outweigh everything the behavioural data model offers.",
+    },
+    {
+      question: "Does Klaviyo send order confirmations?",
+      answer:
+        "It can send transactional-style messages, and in practice most stores do not use it that way. Order confirmations and shipping notices generally come from the commerce platform itself or from a dedicated sending vendor, because those messages are triggered by systems that already own the order record and because keeping them off the marketing reputation is good hygiene. Treating a marketing platform as your receipts provider also means the mail you least want to lose depends on a subscription priced by profile count, which is a coupling worth avoiding.",
     },
   ],
 };

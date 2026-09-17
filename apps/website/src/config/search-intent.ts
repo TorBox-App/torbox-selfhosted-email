@@ -1034,6 +1034,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "resend 30 day log retention limit",
       "resend two requests per second rate limit",
       "react email with postmark",
+      "which transactional provider stores the message body",
+      "moving postmark layouts into react email components",
+      "enforced separation between bulk and transactional mail",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1060,6 +1063,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "sendgrid account suspended no warning",
       "is sendgrid marketing campaigns a separate plan",
       "dedicated ip mailgun or sendgrid",
+      "mailgun routes compared with inbound parse",
+      "subaccounts versus subusers for multi tenant sending",
+      "keeping category reporting across an email migration",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1138,6 +1144,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "what does resend add on top of ses",
       "moving from resend to raw ses",
       "ses sandbox versus a hosted email api",
+      "exporting resend logs before the window closes",
+      "does a hosted provider reputation transfer to my aws account",
+      "requesting an ses sending rate increase",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1323,6 +1332,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "sendgrid free tier retired replacement",
       "sendgrid smtp relay versus ses smtp endpoint",
       "aws support plan cost when running ses",
+      "migrating sendgrid dynamic templates to ses",
+      "is there a subuser equivalent in amazon ses",
+      "sendgrid event webhook compared to ses notifications",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1336,6 +1348,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "how long does postmark keep message content",
       "is postmark worth the price over raw ses",
       "transactional email that never shares a pool with marketing",
+      "exporting postmark suppressions before leaving",
+      "replacing postmark activity search on aws",
+      "what to do with postmark layouts when moving to ses",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1349,6 +1364,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "email address validation api alternatives",
       "mailgun flex plan closed to new signups",
       "searchable email logs without building a pipeline",
+      "turning mailgun routes into ses receipt rules",
+      "replacing mailgun validation after a migration",
+      "mailgun webhook signing versus sns notifications",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1362,6 +1380,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "resend rate limit two requests per second",
       "sendgrid trial after free tier ended",
       "does resend have marketing campaigns",
+      "converting sendgrid dynamic templates to react email",
+      "per tenant sending credentials for an agency",
+      "what to do when a sendgrid trial expires",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1375,6 +1396,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "resend api rate limit for bulk sending",
       "mailgun pay as you go plan discontinued",
       "email api with address validation built in",
+      "what to do with mailgun routes when switching provider",
+      "how long does mailgun keep logs on each plan",
+      "sending bulk email under a strict api rate limit",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1388,6 +1412,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "postmark message streams versus sendgrid categories",
       "which email provider suspends accounts less",
       "transactional email with a real support team",
+      "moving sendgrid suppression lists to another provider",
+      "per client sending isolation without subusers",
+      "inbound parse alternatives for transactional email",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1610,6 +1637,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "do i need klaviyo or is sendgrid enough",
       "ecommerce email attribution without klaviyo",
       "moving marketing email off sendgrid",
+      "why does my klaviyo bill go up without sending",
+      "who owns consent when marketing and transactional split",
+      "separate subdomain for marketing and receipts",
     ],
     audience: "stranger-with-problem",
     rationale:
