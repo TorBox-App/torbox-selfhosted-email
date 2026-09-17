@@ -1160,6 +1160,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "self hosted smtp deliverability problems",
       "port 25 blocked on cloud provider",
       "cost of running your own outbound mail server",
+      "reverse dns ptr record for a sending mail server",
+      "enrolling in complaint feedback loops for a new ip",
+      "what aws asks in the ses production access request",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1173,6 +1176,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "parse incoming email into a lambda",
       "free way to receive email programmatically",
       "ses receipt rules explained",
+      "does cloudflare email routing require cloudflare dns",
+      "what happens when an email worker throws an error",
+      "switching mx records without losing inbound mail",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1428,6 +1434,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "gdpr compliant email sending without a us vendor",
       "which brevo plan includes automation",
       "do i need a marketing platform or just a send api",
+      "how to move from brevo to amazon ses",
+      "does amazon ses generate an unsubscribe link",
+      "exporting brevo blocklisted contacts to a suppression list",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1441,6 +1450,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "klaviyo sending limit ten times profile count",
       "cheaper way to send ecommerce campaigns",
       "shopify transactional email without klaviyo",
+      "does klaviyo attributed revenue data export",
+      "moving order confirmations off klaviyo",
+      "rebuilding abandoned cart without a marketing platform",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1454,6 +1466,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "what it takes to build drip campaigns on ses",
       "who should own onboarding email logic",
       "cheaper alternative to a behavioural messaging platform",
+      "migrating liquid templates off a messaging platform",
+      "topic level unsubscribe with amazon ses",
+      "exporting customer.io workflows to another system",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1467,6 +1482,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "email tool for saas with a big free tier",
       "dormant signups inflating email bill",
       "one tool for product and marketing email",
+      "single subscription state across product and marketing mail",
+      "how to preview transactional email on amazon ses",
+      "exporting mailing list membership when changing email tools",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1480,6 +1498,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "resend broadcasts versus a real marketing tool",
       "eu based email platform for gdpr",
       "does resend charge for marketing contacts",
+      "sending a large campaign under a two per second rate limit",
+      "using react email with a marketing suite",
+      "what happens to email logs after thirty days",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1493,6 +1514,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "customer.io versus sending email from your own code",
       "when to move lifecycle email off an api",
       "cost of a messaging platform for a small saas",
+      "segment on engagement older than thirty days",
+      "subscription topics versus a single unsubscribe flag",
+      "tagging sends so reporting can group by campaign",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1506,6 +1530,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "klaviyo profile billing keeps increasing",
       "what you lose leaving an ecommerce marketing platform",
       "send order confirmations without a marketing tool",
+      "sending order confirmations during a flash sale rate limit",
+      "how long are transactional email logs kept",
+      "where to store manually suppressed customers",
     ],
     audience: "stranger-with-problem",
     rationale:
@@ -1519,6 +1546,9 @@ export const SEARCH_INTENT: readonly SearchIntentEntry[] = [
       "who edits transactional email templates",
       "aws ses template api limitations",
       "multi brand transactional email for an agency",
+      "blocking an entire domain from receiving your email",
+      "where to store amazon ses delivery events for search",
+      "separating client sending accounts on aws",
     ],
     audience: "stranger-with-problem",
     rationale:
