@@ -38,6 +38,28 @@ export function routeForPageFile(pageFile: string): string {
   return `/${route}`.replace(TRAILING_SLASH, "") || "/";
 }
 
+const DYNAMIC_SEGMENT = /\[[^\]]+\]/;
+
+/**
+ * `/changelog/[slug]` is a template, not a page. Five separate places glob
+ * `**\/page.tsx` and turn each hit into a route — the sitemap, its generator,
+ * and three test suites (sitemap.test.ts, search-intent-map.test.ts,
+ * agent-surface.test.ts). Without this filter the literal string `[slug]`
+ * reaches the public sitemap and the search-intent map demands an entry for
+ * it. A dynamic route's real URLs are contributed by whoever owns its data.
+ */
+export function isDynamicRoute(route: string): boolean {
+  return DYNAMIC_SEGMENT.test(route);
+}
+
+/** Every concrete page route under src/app, sorted. Templates excluded. */
+export function staticPageRoutes(pageFiles: string[]): string[] {
+  return pageFiles
+    .map(routeForPageFile)
+    .filter((route) => !isDynamicRoute(route))
+    .sort();
+}
+
 /**
  * Route directories, longest first, so the nearest route ancestor wins.
  * `page.tsx` at the root becomes ".", which owns anything no deeper route does.
@@ -47,6 +69,7 @@ export function routeDirsByDepth(pageFiles: string[]): string[] {
     .map((file) =>
       file === "page.tsx" ? "." : file.replace(NESTED_PAGE_FILE, "")
     )
+    .filter((dir) => !DYNAMIC_SEGMENT.test(dir))
     .sort((a, b) => b.length - a.length);
 }
 

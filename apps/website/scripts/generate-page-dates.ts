@@ -25,7 +25,7 @@ import { join, relative, resolve } from "node:path";
 import {
   ownerRouteFor,
   routeDirsByDepth,
-  routeForPageFile,
+  staticPageRoutes,
 } from "../src/lib/page-dates";
 
 /** A `git log --format=%cI` line, as opposed to a file path. */
@@ -120,9 +120,7 @@ function main(): void {
     }
   }
 
-  const routes = pageFiles
-    .map(routeForPageFile)
-    .sort((a, b) => a.localeCompare(b));
+  const routes = staticPageRoutes(pageFiles).sort((a, b) => a.localeCompare(b));
   // Emit what the formatter would produce, so a regenerate never fails lint:
   // biome wraps the value onto its own line once the pair exceeds 80 columns.
   const entries = routes.map((route) => {

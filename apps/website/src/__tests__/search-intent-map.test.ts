@@ -2,12 +2,12 @@ import { globSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { NON_CONTENT_ROUTES, SEARCH_INTENT } from "@/config/search-intent";
-import { routeForPageFile } from "@/lib/page-dates";
+import { staticPageRoutes } from "@/lib/page-dates";
 
 const appDir = resolve(__dirname, "..", "app");
 
 function pageRoutes(): string[] {
-  return globSync("**/page.tsx", { cwd: appDir }).map(routeForPageFile).sort();
+  return staticPageRoutes(globSync("**/page.tsx", { cwd: appDir }));
 }
 
 /** Case-insensitive, whitespace-collapsed — matches how a search engine treats two queries as "the same". */

@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { AGENT_CONTENT } from "@/lib/agent-content";
 import { AGENT_CONTENT_PATHS } from "@/lib/agent-content-paths";
+import { staticPageRoutes } from "@/lib/page-dates";
 import { middleware } from "@/middleware";
 
 // One covered path and one real-but-uncovered path, used across the
@@ -29,17 +30,10 @@ const AGENT_CONTENT_PATHS_WITHOUT_PAGE_ROUTE = new Set([
 ]);
 
 function pageRoutes(underDir: string): Set<string> {
-  const pages = globSync("**/page.tsx", { cwd: appDir });
-  const routes = pages
-    .filter((file) => file.startsWith(underDir))
-    .map((file) => {
-      const route = file
-        .replace(/\/page\.tsx$/, "")
-        .replace(/page\.tsx$/, "")
-        .replace(/\([^)]+\)\/?/g, "");
-      return `/${route}`.replace(/\/$/, "") || "/";
-    });
-  return new Set(routes);
+  const pages = globSync("**/page.tsx", { cwd: appDir }).filter((file) =>
+    file.startsWith(underDir)
+  );
+  return new Set(staticPageRoutes(pages));
 }
 
 describe("agent-content-paths.ts stays in sync with agent-content.ts", () => {

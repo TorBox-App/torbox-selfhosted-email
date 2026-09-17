@@ -6,7 +6,7 @@ import { PAGE_DATES } from "@/config/page-dates";
 import {
   ownerRouteFor,
   routeDirsByDepth,
-  routeForPageFile,
+  staticPageRoutes,
 } from "@/lib/page-dates";
 
 /** A `git log --format=%cI` line, as opposed to a file path. */
@@ -17,7 +17,7 @@ const repoRoot = resolve(webRoot, "..", "..");
 const appDir = resolve(webRoot, "src/app");
 
 function pageRoutes(): string[] {
-  return globSync("**/page.tsx", { cwd: appDir }).map(routeForPageFile).sort();
+  return staticPageRoutes(globSync("**/page.tsx", { cwd: appDir }));
 }
 
 describe("sitemap lastmod manifest stays in sync with the pages", () => {
@@ -130,4 +130,38 @@ describe("sitemap lastmod manifest is not stale", () => {
       expect(behind).toEqual([]);
     }
   );
+});
+
+describe("sitemap covers changelog entries without leaking the template", () => {
+  it("emits no literal dynamic segment", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = sitemap().map((entry) => entry.url);
+    expect(urls.filter((url) => url.includes("["))).toEqual([]);
+  });
+
+  it("emits one URL per changelog entry, dated from the entry itself", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const { releases } = await import("@/app/changelog/releases");
+    const byUrl = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const missing = releases.filter(
+      (release) => !byUrl.has(`https://wraps.dev/changelog/${release.slug}`)
+    );
+    expect(missing.map((release) => release.slug)).toEqual([]);
+
+    const wrongDate = releases.filter((release) => {
+      const entry = byUrl.get(`https://wraps.dev/changelog/${release.slug}`);
+      const recorded = entry?.lastModified;
+      return (
+        recorded === undefined ||
+        new Date(recorded).toISOString().slice(0, 10) !== release.date
+      );
+    });
+    expect(wrongDate.map((release) => release.slug)).toEqual([]);
+  });
+
+  it("still lists the changelog index itself", async () => {
+    const { default: sitemap } = await import("@/app/sitemap");
+    const urls = sitemap().map((entry) => entry.url);
+    expect(urls).toContain("https://wraps.dev/changelog");
+  });
 });
