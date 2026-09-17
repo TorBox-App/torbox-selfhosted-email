@@ -10,6 +10,11 @@
     "./baseline/org-scoped-select.grit"
   ],
   "files": {
+    // versus.ts crossed Biome's 1 MiB default in Sep 2026 and was
+    // SILENTLY skipped — an info message, exit 0, so check:fast stayed
+    // green while a 1.1 MiB config went entirely unlinted. Raised so the
+    // /versus cluster can keep growing without losing lint coverage.
+    "maxSize": 4194304,
     "ignoreUnknown": false,
     "includes": [
       "**/*.ts",
