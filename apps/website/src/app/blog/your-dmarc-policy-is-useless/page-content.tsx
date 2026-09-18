@@ -642,6 +642,25 @@ export const BreachTimeline = () => {
   );
 };
 
+// A parked domain publishes "v=spf1 -all" and nothing else, for which -all is
+// exactly right. Only records that authorize a sender get the hardfail hint.
+const AUTHORIZING_MECHANISM =
+  /^(?:a|mx|ptr)(?:[:/]|$)|^(?:ip4|ip6|include|exists):/i;
+const SPF_TERM_SEPARATOR = /\s+/;
+const SPF_REDIRECT = /^redirect=/i;
+const SPF_QUALIFIER = /^[+\-~?]/;
+
+const authorizesSenders = (record: string | null): boolean =>
+  (record ?? "")
+    .trim()
+    .split(SPF_TERM_SEPARATOR)
+    .slice(1)
+    .some(
+      (term) =>
+        SPF_REDIRECT.test(term) ||
+        AUTHORIZING_MECHANISM.test(term.replace(SPF_QUALIFIER, ""))
+    );
+
 // Real Domain Checker using Wraps API
 const API_URL = "https://api.wraps.dev";
 
@@ -753,8 +772,19 @@ export const DomainChecker = () => {
     if (result.spf.allMechanism === "+all") {
       return "fail";
     }
-    if (result.spf.allMechanism === "~all") {
-      return "warn";
+    // ~all is the recommendation for a sending domain; -all only earns its keep
+    // once DMARC enforces, or it rejects pre-DATA before DKIM can authenticate a
+    // forwarded copy. Mirrors hardfailWithoutEnforcingDmarc in @wraps/email-check.
+    if (
+      result.spf.allMechanism === "-all" &&
+      authorizesSenders(result.spf.record)
+    ) {
+      const enforcing =
+        result.dmarc.exists &&
+        result.dmarc.valid &&
+        (result.dmarc.policy === "quarantine" ||
+          result.dmarc.policy === "reject");
+      return enforcing ? "pass" : "warn";
     }
     return "pass";
   };

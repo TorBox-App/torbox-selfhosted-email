@@ -135,7 +135,7 @@ const THE_FIX_STEPS = [
   {
     num: 2,
     title: "Fix legitimate senders",
-    code: "v=spf1 include:_spf.google.com include:amazonses.com -all",
+    code: "v=spf1 include:_spf.google.com include:amazonses.com ~all",
     desc: "Add all legitimate services to SPF. Configure DKIM for each sender. This typically takes 2-4 weeks.",
   },
   {
@@ -224,8 +224,8 @@ const MISCONFIGURATIONS = [
     result: "Subdomains unprotected",
   },
   {
-    issue: "SPF uses ~all vs -all",
-    result: "Soft fail allows spoofs",
+    issue: "SPF -all, DMARC p=none",
+    result: "Forwards die pre-DATA",
   },
   {
     issue: "Missing rua= tag",

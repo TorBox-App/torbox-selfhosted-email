@@ -257,7 +257,7 @@ export default function Page() {
             </div>
 
             <CodeBlock label="Example SPF Record">
-              v=spf1 include:_spf.google.com include:amazonses.com -all
+              v=spf1 include:_spf.google.com include:amazonses.com ~all
             </CodeBlock>
 
             <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -521,14 +521,14 @@ export default function Page() {
                 <h4 className="mb-2 font-medium">Before Flattening</h4>
                 <CodeBlock label="9 lookups">{`v=spf1 include:_spf.google.com
        include:sendgrid.net
-       include:amazonses.com -all`}</CodeBlock>
+       include:amazonses.com ~all`}</CodeBlock>
               </div>
               <div>
                 <h4 className="mb-2 font-medium">After Flattening</h4>
                 <CodeBlock label="0 lookups">{`v=spf1 ip4:209.85.128.0/17
        ip4:167.89.0.0/17
        ip4:23.249.208.0/20
-       ... (many more IPs) -all`}</CodeBlock>
+       ... (many more IPs) ~all`}</CodeBlock>
               </div>
             </div>
 
@@ -587,11 +587,15 @@ export default function Page() {
                 <CheckCircle className="mt-0.5 h-5 w-5 text-success" />
                 <div>
                   <h4 className="font-medium">
-                    Use -all (hard fail) in production
+                    End with ~all and let DMARC do the enforcing
                   </h4>
                   <p className="text-muted-foreground text-sm">
-                    Start with ~all during testing, but switch to -all once
-                    verified. Soft fail still allows spoofed email through.
+                    M3AAWG's authentication BCP puts ~all on sending domains and
+                    reserves -all for domains that never send. A hard fail can
+                    get the message rejected before DATA, so a forwarded copy
+                    dies even when its DKIM signature would have passed DMARC,
+                    and it never shows up in an aggregate report. Publish ~all
+                    and move DMARC to p=reject.
                   </p>
                 </div>
               </div>
