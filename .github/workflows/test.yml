@@ -304,7 +304,8 @@ jobs:
             --filter=mail-audit \
             --filter=@wraps/template-render \
             --filter=@wraps/unsubscribe-token \
-            --filter=@wraps.dev/cdk
+            --filter=@wraps.dev/cdk \
+            --filter=wraps-templates
 
   baseline:
     if: github.repository == 'wraps-team/wraps'

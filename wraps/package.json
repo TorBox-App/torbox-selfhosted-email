@@ -1,5 +1,9 @@
 {
+  "name": "wraps-templates",
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "devDependencies": {
     "@email-lint/core": "0.2.1",
     "@email-lint/react-email": "0.2.1",
