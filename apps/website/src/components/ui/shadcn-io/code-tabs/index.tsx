@@ -39,6 +39,13 @@ function useResolvedTheme() {
   return resolvedTheme;
 }
 
+/**
+ * `card` is the default chrome: rounded, bordered, tinted panel.
+ * `flush` drops the panel and matches the homepage comparison table —
+ * flat on the section background, mono uppercase labels, brand underline.
+ */
+type CodeTabsVariant = "card" | "flush";
+
 type CodeTabsProps = {
   codes: Record<string, string>;
   lang?: string;
@@ -49,6 +56,7 @@ type CodeTabsProps = {
   copyButton?: boolean;
   /** Called when copy is attempted. Return false to prevent copy action. */
   onCopy?: (content: string) => boolean | undefined;
+  variant?: CodeTabsVariant;
 } & Omit<TabsProps, "children">;
 
 function CodeTabsContent({
@@ -60,13 +68,16 @@ function CodeTabsContent({
   },
   copyButton = true,
   onCopy,
+  variant = "card",
 }: {
   codes: Record<string, string>;
   lang?: string;
   themes?: { light: string; dark: string };
   copyButton?: boolean;
   onCopy?: (content: string) => boolean | undefined;
+  variant?: CodeTabsVariant;
 }) {
+  const isFlush = variant === "flush";
   const resolvedTheme = useResolvedTheme();
   const { activeValue } = useTabs();
 
@@ -103,14 +114,26 @@ function CodeTabsContent({
   return (
     <>
       <TabsList
-        activeClassName="rounded-none shadow-none bg-transparent after:content-[''] after:absolute after:inset-x-0 after:h-0.5 after:bottom-0 dark:after:bg-white after:bg-black after:rounded-t-full"
-        className="relative h-10 w-full justify-between rounded-none border-border/75 border-b bg-muted px-4 py-0 text-current dark:border-border/50"
+        activeClassName={cn(
+          "rounded-none bg-transparent shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-t-full after:content-['']",
+          isFlush ? "after:bg-brand" : "after:bg-black dark:after:bg-white"
+        )}
+        className={cn(
+          "relative h-10 w-full justify-between rounded-none border-b py-0 text-current",
+          isFlush
+            ? "border-border bg-transparent px-0"
+            : "border-border/75 bg-muted px-4 dark:border-border/50"
+        )}
         data-slot="install-tabs-list"
       >
         <div className="flex h-full gap-x-3">
           {Object.keys(codes).map((code) => (
             <TabsTrigger
-              className="px-0 text-muted-foreground data-[state=active]:text-current"
+              className={cn(
+                "px-0 text-muted-foreground data-[state=active]:text-current",
+                isFlush &&
+                  "font-medium font-mono text-xs uppercase tracking-widest data-[state=active]:text-foreground"
+              )}
               key={code}
               value={code}
             >
@@ -121,7 +144,12 @@ function CodeTabsContent({
 
         {copyButton && (
           <CopyButton
-            className="-me-2 bg-transparent hover:bg-black/5 dark:hover:bg-white/10"
+            className={cn(
+              "bg-transparent hover:bg-black/5 dark:hover:bg-white/10",
+              // The card variant pads the list, so the button pulls back into
+              // that padding. Flush has no padding to pull into.
+              isFlush ? "me-0" : "-me-2"
+            )}
             content={codes[activeValue]}
             onCopy={onCopy}
             size="sm"
@@ -132,7 +160,10 @@ function CodeTabsContent({
       <TabsContents data-slot="install-tabs-contents">
         {Object.entries(codes).map(([code, rawCode]) => (
           <TabsContent
-            className="flex w-full items-center overflow-auto p-4 text-sm"
+            className={cn(
+              "flex w-full items-center overflow-auto text-sm",
+              isFlush ? "px-0 py-4" : "p-4"
+            )}
             data-slot="install-tabs-content"
             key={code}
             value={code}
@@ -168,6 +199,7 @@ function CodeTabs({
   onValueChange,
   copyButton = true,
   onCopy,
+  variant = "card",
   ...props
 }: CodeTabsProps) {
   const firstKey = React.useMemo(() => Object.keys(codes)[0] ?? "", [codes]);
@@ -181,7 +213,10 @@ function CodeTabs({
   return (
     <Tabs
       className={cn(
-        "w-full gap-0 overflow-hidden rounded-xl border bg-muted/50",
+        "w-full gap-0 overflow-hidden",
+        variant === "flush"
+          ? "rounded-none border-0 bg-transparent"
+          : "rounded-xl border bg-muted/50",
         className
       )}
       data-slot="install-tabs"
@@ -194,6 +229,7 @@ function CodeTabs({
         lang={lang}
         onCopy={onCopy}
         themes={themes}
+        variant={variant}
       />
     </Tabs>
   );

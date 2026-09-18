@@ -1,21 +1,12 @@
 "use client";
 
 import { Button } from "@wraps/ui/components/ui/button";
-import {
-  CodeBlock,
-  CodeBlockBody,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockFilename,
-  CodeBlockFiles,
-  CodeBlockHeader,
-  CodeBlockItem,
-} from "@/components/ui/shadcn-io/code-block";
+import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 import { Github } from "@/components/ui/svgs/brand-icons";
 import { SectionKicker } from "./section-kicker";
 
-const sampleCode = `// Install: npm i @wraps.dev/email
-import { WrapsEmail } from '@wraps.dev/email';
+const codeExamples: Record<string, string> = {
+  "@wraps.dev/email": `import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail();
 
@@ -24,11 +15,27 @@ await email.send({
   to: user.email,
   subject: 'Welcome to Acme',
   react: <WelcomeEmail name={user.name} />,
-});`;
+});`,
+  "@aws-sdk/client-sesv2": `import {
+  SESv2Client,
+  SendEmailCommand,
+} from '@aws-sdk/client-sesv2';
 
-const codeData = [
-  { language: "tsx", filename: "src/emails/welcome.tsx", code: sampleCode },
-];
+const ses = new SESv2Client();
+
+// No ConfigurationSetName needed. Wraps binds it to
+// the domain identity, so your events land either way.
+await ses.send(new SendEmailCommand({
+  FromEmailAddress: 'hello@acme.com',
+  Destination: { ToAddresses: [user.email] },
+  Content: {
+    Simple: {
+      Subject: { Data: 'Welcome to Acme' },
+      Body: { Html: { Data: html } },
+    },
+  },
+}));`,
+};
 
 export function CodeSampleSection() {
   return (
@@ -43,6 +50,10 @@ export function CodeSampleSection() {
           <p className="mt-4 max-w-[52ch] text-lg text-muted-foreground leading-relaxed">
             One import, one client, one call. Events stream to DynamoDB in your
             account — query them yourself or use the dashboard.
+          </p>
+          <p className="mt-4 max-w-[52ch] text-lg text-muted-foreground leading-relaxed">
+            Your code talks to SES, not to us. Swap the SDK for the AWS SDK,
+            boto3, or plain SMTP and the events still land.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Button asChild className="cursor-pointer" variant="brand">
@@ -62,31 +73,12 @@ export function CodeSampleSection() {
         </div>
 
         {/* Code */}
-        <CodeBlock className="h-auto" data={codeData} defaultValue="tsx">
-          <CodeBlockHeader>
-            <CodeBlockFiles>
-              {(item) => (
-                <CodeBlockFilename key={item.language} value={item.language}>
-                  {item.filename}
-                </CodeBlockFilename>
-              )}
-            </CodeBlockFiles>
-            <CodeBlockCopyButton />
-          </CodeBlockHeader>
-          <CodeBlockBody>
-            {(item) => (
-              <CodeBlockItem
-                key={item.language}
-                lineNumbers={false}
-                value={item.language}
-              >
-                <CodeBlockContent language={item.language}>
-                  {item.code}
-                </CodeBlockContent>
-              </CodeBlockItem>
-            )}
-          </CodeBlockBody>
-        </CodeBlock>
+        <CodeTabs
+          codes={codeExamples}
+          lang="tsx"
+          themes={{ light: "vitesse-light", dark: "vitesse-dark" }}
+          variant="flush"
+        />
       </div>
     </section>
   );
