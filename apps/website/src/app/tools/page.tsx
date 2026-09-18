@@ -165,17 +165,6 @@ export default function ToolsPage() {
                   </Link>{" "}
                   first.
                 </p>
-                <p className="mt-4 text-muted-foreground text-sm">
-                  Already refused? The{" "}
-                  <Link
-                    className="text-brand underline underline-offset-2"
-                    href="/tools/ses-production-access/kit"
-                  >
-                    production access kit
-                  </Link>{" "}
-                  is the paid follow-on: the bounce stack, the evidence pages
-                  and ten filled requests.
-                </p>
               </CardContent>
             </Card>
 

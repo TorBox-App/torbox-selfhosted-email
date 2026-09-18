@@ -1163,19 +1163,6 @@ export default function SandboxGuideContent() {
             and draft the reply for the support case. It runs in your browser;
             the denial text is not uploaded anywhere.
           </p>
-          <p className="mt-4 text-muted-foreground">
-            It stops where honesty makes it stop: the reply comes out with every
-            claim in brackets, because the tool cannot know what is true of your
-            account. Closing those gaps for real — the bounce and complaint
-            stack, the pages a reviewer can reach, ten filled requests — is the{" "}
-            <Link
-              className="text-primary underline underline-offset-2"
-              href="/tools/ses-production-access/kit"
-            >
-              SES Production Access Kit
-            </Link>
-            . That one is paid, and on pre-order.
-          </p>
         </section>
 
         {/* Common Mistakes */}

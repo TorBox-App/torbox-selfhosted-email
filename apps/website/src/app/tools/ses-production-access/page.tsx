@@ -1,9 +1,7 @@
 import { Button } from "@wraps/ui/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@wraps/ui/components/ui/card";
@@ -265,31 +263,6 @@ export default function SESProductionAccessPage() {
               first — it is free, it ticks off as you go, and most refusals are
               something on it that was skipped.
             </p>
-
-            <Card className="mt-8 border-border bg-card">
-              <CardHeader>
-                <CardTitle
-                  asChild
-                  className="font-heading font-semibold text-xl tracking-tight"
-                >
-                  <h3>Already been refused once</h3>
-                </CardTitle>
-                <CardDescription className="text-base">
-                  This builder writes the request. Closing the gaps it leaves in
-                  brackets is a different job: the bounce and complaint stack,
-                  the pages a reviewer can reach, ten filled requests. That is
-                  the paid kit, on pre-order.
-                </CardDescription>
-                <CardAction className="self-center">
-                  <Button asChild size="lg" variant="outline">
-                    <Link href="/tools/ses-production-access/kit">
-                      See the kit
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardAction>
-              </CardHeader>
-            </Card>
 
             <section className="mt-16">
               <h2 className="mb-6 font-heading font-semibold text-2xl tracking-tight">
