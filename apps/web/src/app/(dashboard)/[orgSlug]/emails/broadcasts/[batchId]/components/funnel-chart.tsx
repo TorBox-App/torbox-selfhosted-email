@@ -71,7 +71,7 @@ export function FunnelChart(props: FunnelChartProps) {
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent>
         {/* Stage labels — grid with N equal columns */}
         <div
           className="mb-3"

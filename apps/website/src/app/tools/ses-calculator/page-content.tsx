@@ -831,7 +831,7 @@ function SESCalculatorInner() {
 
         {/* AWS Free Tier Notice */}
         <Card className="border-success/20 bg-success/5">
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex gap-3">
               <Info
                 aria-hidden="true"

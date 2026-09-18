@@ -137,7 +137,7 @@ export default function ToolsPage() {
 
             {/* Production access CTA */}
             <Card className="mt-8 border-border bg-card">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
                   <div className="flex-1">
                     <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">
@@ -155,12 +155,33 @@ export default function ToolsPage() {
                     </Link>
                   </Button>
                 </div>
+                <p className="mt-4 text-muted-foreground text-sm">
+                  Not submitted yet? Work through the{" "}
+                  <Link
+                    className="text-brand underline underline-offset-2"
+                    href="/blog/ses-sandbox-guide#pre-request-checklist"
+                  >
+                    16-point pre-request checklist
+                  </Link>{" "}
+                  first.
+                </p>
+                <p className="mt-4 text-muted-foreground text-sm">
+                  Already refused? The{" "}
+                  <Link
+                    className="text-brand underline underline-offset-2"
+                    href="/tools/ses-production-access/kit"
+                  >
+                    production access kit
+                  </Link>{" "}
+                  is the paid follow-on: the bounce stack, the evidence pages
+                  and ten filled requests.
+                </p>
               </CardContent>
             </Card>
 
             {/* Cost Calculator CTA */}
             <Card className="mt-8 border-border bg-card">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
                   <div className="flex-1">
                     <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">

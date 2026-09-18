@@ -148,7 +148,7 @@ export default function UpgradePage() {
     return (
       <div className="flex min-h-[80vh] items-center justify-center px-4">
         <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
+          <CardContent className="text-center">
             <p className="text-muted-foreground">Organization not found</p>
           </CardContent>
         </Card>

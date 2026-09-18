@@ -55,7 +55,7 @@ function ActivityCard({
         !isComplete && "hover:border-primary/20"
       )}
     >
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="flex items-start justify-between mb-3">
           <div
             className={cn(

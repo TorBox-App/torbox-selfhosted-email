@@ -304,7 +304,7 @@ export default function SESCalculatorPage() {
                 </p>
               </div>
 
-              <div className="mx-auto max-w-3xl space-y-4">
+              <div className="space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
@@ -470,7 +470,7 @@ export default function SESCalculatorPage() {
             {/* Cross-links to other tools */}
             <section className="mt-12">
               <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="pt-6">
+                <CardContent>
                   <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
                     <div className="flex-1">
                       <h3 className="mb-2 font-bold text-xl">

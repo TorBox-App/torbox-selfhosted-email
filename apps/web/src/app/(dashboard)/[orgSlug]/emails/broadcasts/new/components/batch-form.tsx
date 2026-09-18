@@ -1528,7 +1528,7 @@ function RecipientPreviewCard({
     <>
       {/* Recipient Count & Sample Preview */}
       <Card className="bg-muted/50">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
@@ -2106,7 +2106,7 @@ function ReviewStep({
       )}
 
       <Card className="bg-muted/50">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">

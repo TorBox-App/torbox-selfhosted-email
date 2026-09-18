@@ -139,7 +139,7 @@ export default function SPFBuilderPage() {
 
             {/* CTA */}
             <Card className="mt-6 border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
                   <div className="flex-1">
                     <h3 className="mb-2 font-bold text-xl">
@@ -162,7 +162,7 @@ export default function SPFBuilderPage() {
 
             {/* Cost Calculator CTA */}
             <Card className="mt-6 border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
                   <div className="flex-1">
                     <h3 className="mb-2 font-bold text-xl">

@@ -52,7 +52,7 @@ export default function EmailDetailLoading() {
       <div className="space-y-6 px-4 lg:px-6">
         {/* Envelope hero */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">

@@ -37,8 +37,8 @@ const checklistData = [
         id: "domain-verified",
         title: "Verify your domain in SES",
         description:
-          "Domain-level verification (not just email address) is required to send",
-        required: true,
+          "Not formally required, but AWS says verifying a domain first helps the request get approved faster — and a single verified address gives a reviewer nothing to check",
+        recommended: true,
       },
       {
         id: "dkim-enabled",
@@ -107,9 +107,9 @@ const checklistData = [
     items: [
       {
         id: "use-case-detailed",
-        title: "Write detailed use case",
+        title: "Know what the form actually asks",
         description:
-          "Explain exactly what emails you send and why (~500+ words)",
+          "Marketing or transactional, a website URL, up to 4 contact addresses, a language and an acknowledgement — there is no free-text use-case box. Save the detail for the support case if AWS comes back asking",
         required: true,
       },
       {
@@ -377,7 +377,7 @@ const ReadinessChecklist = ({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden scroll-mt-24" id="pre-request-checklist">
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-3">
         <div className="flex items-center gap-2 font-semibold">
           <Shield className="h-4 w-4 text-primary" />
@@ -455,9 +455,10 @@ const DecisionFlowDiagram = () => (
           YES
         </div>
         <div className="rounded-xl border border-info/50 bg-info/5 p-4">
-          <div className="font-semibold">Write detailed request</div>
+          <div className="font-semibold">Answer what the form leaves out</div>
           <div className="text-muted-foreground text-sm">
-            Target ~1000 words with specific details
+            There is no free-text box — the detail goes on the support case if
+            AWS asks
           </div>
         </div>
       </div>
@@ -778,10 +779,10 @@ const DenialRecoveryFlow = () => (
           YES — First denial
         </div>
         <div className="rounded-xl border border-info/50 bg-info/5 p-4">
-          <div className="font-semibold">Resubmit with more detail</div>
+          <div className="font-semibold">Reply on the case AWS opened</div>
           <div className="text-muted-foreground text-sm">
-            Expand your request to ~1000 words. Add specifics about your tech
-            setup, consent flow, and handling processes.
+            Fix the gap first, then reply on the existing case with your tech
+            setup, consent flow and handling. Do not open a fresh request.
           </div>
         </div>
       </div>
@@ -792,8 +793,8 @@ const DenialRecoveryFlow = () => (
         <div className="rounded-xl border border-info/50 bg-info/5 p-4">
           <div className="font-semibold">Request escalation</div>
           <div className="text-muted-foreground text-sm">
-            Ask for "secondary review" or "escalation to senior reviewer" in
-            your next submission.
+            Reply on the same case and list only changes you have already made —
+            AWS says outright not to include steps you plan to take.
           </div>
         </div>
       </div>
@@ -1161,6 +1162,19 @@ export default function SandboxGuideContent() {
             and it will tell you which of the four gaps the refusal points at
             and draft the reply for the support case. It runs in your browser;
             the denial text is not uploaded anywhere.
+          </p>
+          <p className="mt-4 text-muted-foreground">
+            It stops where honesty makes it stop: the reply comes out with every
+            claim in brackets, because the tool cannot know what is true of your
+            account. Closing those gaps for real — the bounce and complaint
+            stack, the pages a reviewer can reach, ten filled requests — is the{" "}
+            <Link
+              className="text-primary underline underline-offset-2"
+              href="/tools/ses-production-access/kit"
+            >
+              SES Production Access Kit
+            </Link>
+            . That one is paid, and on pre-order.
           </p>
         </section>
 

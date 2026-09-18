@@ -471,6 +471,80 @@ describe("icon buttons have accessible labels", () => {
 });
 
 // ─────────────────────────────────────────────────────────
+// Test: CardContent must not re-add top padding
+// ─────────────────────────────────────────────────────────
+
+describe("cards do not stack top padding", () => {
+  test("CardContent in a headerless Card must not add pt-*", () => {
+    const files = [
+      ...findFiles("apps/web/src/**/*.tsx"),
+      ...findFiles("apps/website/src/**/*.tsx"),
+      ...findFiles("packages/ui/src/**/*.tsx"),
+      ...findFiles("packages/console/src/**/*.tsx"),
+    ].filter((f) => !(f.includes("__tests__") || f.includes(".test.")));
+
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const content = readFile(file);
+      if (!content.includes("<CardContent")) {
+        continue;
+      }
+
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].includes("<CardContent")) {
+          continue;
+        }
+
+        // The whole opening tag, which may wrap over a few lines.
+        let tag = "";
+        for (let j = i; j < Math.min(lines.length, i + 6); j++) {
+          tag += lines[j];
+          if (lines[j].includes(">")) {
+            break;
+          }
+        }
+
+        const classes =
+          /className="([^"]*)"/.exec(tag)?.[1]?.split(/\s+/) ?? [];
+        const addsTop = classes.some((c) => /(^|:)pt-\d/.test(c));
+        const addsBottom = classes.some((c) => /(^|:)(pb|py)-\d/.test(c));
+
+        if (!addsTop || addsBottom) {
+          continue;
+        }
+
+        // A CardHeader between the opening <Card> and here means the gap is
+        // Card's own `gap-6`, not the doubled py-6 this rule is about.
+        let cardStart = i;
+        for (let j = i; j >= Math.max(0, i - 60); j--) {
+          if (/<Card(?![A-Za-z])/.test(lines[j])) {
+            cardStart = j;
+            break;
+          }
+        }
+        const cardBlock = lines.slice(cardStart, i).join("\n");
+        if (cardBlock.includes("<CardHeader")) {
+          continue;
+        }
+
+        if (tag.includes("baseline:allow-card-padding")) {
+          continue;
+        }
+
+        violations.push(
+          `${file}:${i + 1} — Card already has py-6; CardContent pt-* doubles the top and leaves the bottom short. Drop it, or use CardHeader + CardAction for a title-and-button row.`
+        );
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
 // Test: No Unicode ellipsis — use three dots instead
 // ─────────────────────────────────────────────────────────
 

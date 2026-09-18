@@ -905,7 +905,7 @@ serve(async () => {
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                   <h4 className="mb-3 font-semibold">What You Own</h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
@@ -928,7 +928,7 @@ serve(async () => {
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                   <h4 className="mb-3 font-semibold">What Wraps Adds</h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">

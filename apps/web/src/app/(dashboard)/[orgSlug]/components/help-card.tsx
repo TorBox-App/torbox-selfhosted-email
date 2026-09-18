@@ -7,7 +7,7 @@ export const CAL_BOOKING_URL = "https://cal.com/wraps/get-started-with-wraps";
 export function HelpCard() {
   return (
     <Card className="bg-muted/30">
-      <CardContent className="pt-6">
+      <CardContent>
         <h3 className="font-semibold text-sm mb-1">Need help?</h3>
         <p className="text-muted-foreground text-sm mb-4">
           Free 15-minute walkthrough — we&apos;ll help you get set up.

@@ -539,7 +539,7 @@ export default function ToolsPageContent() {
 
       {/* Search Box */}
       <Card className="mb-8">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
@@ -622,7 +622,7 @@ export default function ToolsPageContent() {
           className="mb-8 border-destructive/20 bg-destructive/5"
           role="alert"
         >
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               <p className="text-destructive">{error}</p>
@@ -636,7 +636,7 @@ export default function ToolsPageContent() {
         <div className="space-y-6">
           {/* Score Card */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
                 <div className="text-center md:text-left">
                   <h2 className="mb-2 font-bold text-2xl">{result.domain}</h2>
@@ -729,7 +729,7 @@ export default function ToolsPageContent() {
           {/* AWS SES DKIM Prompt */}
           {isAwsSesWithoutDkim && (
             <Card className="border-info/20 bg-info/5">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">
                     <Key className="mt-0.5 h-5 w-5 text-info" />
@@ -1397,7 +1397,7 @@ export default function ToolsPageContent() {
 
           {/* CTA */}
           <Card className="border-border bg-card">
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex flex-col gap-4 md:flex-row md:items-center">
                 <div className="flex-1">
                   <h3 className="mb-2 font-heading font-semibold text-xl tracking-tight">

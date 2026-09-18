@@ -151,6 +151,17 @@ export default function ProductionAccessPageContent() {
             for instructions.
           </p>
         </div>
+        <p className="mt-4 text-muted-foreground">
+          There is a{" "}
+          <Link
+            className="font-medium text-primary underline"
+            href="/blog/ses-sandbox-guide#pre-request-checklist"
+          >
+            16-point pre-request checklist
+          </Link>{" "}
+          that covers the technical setup, the account profile and the request
+          itself. It ticks off as you go and remembers where you got to.
+        </p>
       </section>
 
       {/* Request via Console */}
@@ -465,6 +476,20 @@ export default function ProductionAccessPageContent() {
             not uploaded anywhere.
           </p>
         </div>
+        <p className="mb-6 text-muted-foreground text-sm">
+          The builder writes the reply but refuses to claim anything on your
+          behalf, so every line comes out in brackets for you to make true. If
+          closing those gaps is the part you are stuck on — the bounce and
+          complaint stack, the pages a reviewer can reach, ten filled requests —
+          that is the{" "}
+          <Link
+            className="font-medium text-primary underline"
+            href="/tools/ses-production-access/kit"
+          >
+            SES Production Access Kit
+          </Link>
+          , which is paid and on pre-order.
+        </p>
         <h3 className="mb-2 font-medium text-lg">What to put in the reply</h3>
         <p className="mb-4 text-muted-foreground">
           Answer the questions the form never asked. Reply on the support case

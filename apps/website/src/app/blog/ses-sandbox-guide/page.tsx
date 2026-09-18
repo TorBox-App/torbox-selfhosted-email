@@ -160,9 +160,9 @@ export default function Page() {
                 </div>
               </div>
               <div>
-                <div className="font-mono text-2xl text-primary">~1000</div>
+                <div className="font-mono text-2xl text-primary">4</div>
                 <div className="text-muted-foreground text-sm">
-                  Words recommended
+                  Gaps behind most denials
                 </div>
               </div>
             </div>

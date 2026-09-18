@@ -334,7 +334,7 @@ export default function Page() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                   <h4 className="mb-3 font-semibold text-destructive">
                     Mechanisms That Count
                   </h4>
@@ -379,7 +379,7 @@ export default function Page() {
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-6">
+                <CardContent>
                   <h4 className="mb-3 font-semibold text-success">
                     Mechanisms That Don't Count
                   </h4>

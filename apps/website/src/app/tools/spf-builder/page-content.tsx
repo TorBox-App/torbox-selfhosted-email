@@ -775,7 +775,7 @@ export default function SPFBuilderWidget() {
       <div className="space-y-6">
         {/* Lookup Counter */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="mb-3 flex items-center justify-between">
               <span className="font-medium text-muted-foreground text-sm">
                 DNS Lookups Used
