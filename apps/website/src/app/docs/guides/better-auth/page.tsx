@@ -30,18 +30,18 @@ const breadcrumbSchema = {
 export const metadata: Metadata = {
   title: "Better Auth",
   description:
-    "Sync Better Auth signups to Wraps contacts and send verification, password reset, magic link, OTP, and invitation emails from your own AWS SES account.",
+    "One plugin block sends every Better Auth auth email through SES in your own AWS account: verification, password reset, magic link, OTP, and organization invites. No Wraps account needed.",
   openGraph: {
     title: "Better Auth | Wraps",
     description:
-      "Sync Better Auth signups to Wraps contacts and send auth emails from your own AWS SES account with the @wraps.dev/better-auth plugin.",
+      "One plugin block sends every Better Auth auth email through SES in your own AWS account, with @wraps.dev/better-auth.",
     type: "website",
     url: "https://wraps.dev/docs/guides/better-auth",
   },
   twitter: {
     title: "Better Auth | Wraps",
     description:
-      "Sync Better Auth signups to Wraps contacts and send auth emails from your own AWS SES account.",
+      "Send Better Auth verification, password reset, magic link, and OTP emails through SES in your own AWS account.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/guides/better-auth",
@@ -56,18 +56,24 @@ export default function BetterAuthPage() {
       <article aria-hidden="true" className="sr-only">
         <h1>Better Auth</h1>
         <p>
-          Sync Better Auth signups to Wraps contacts and send verification,
-          password reset, magic link, OTP, and invitation emails from your own
-          AWS SES account.
+          The @wraps.dev/better-auth plugin sends every auth email Better Auth
+          leaves to you through SES in your own AWS account, from one plugin
+          block: verification, password reset, password changed, magic link,
+          OTP, and organization invites. Sending runs on your AWS credentials
+          alone, so no Wraps account is required.
         </p>
+        <h2>Prerequisites</h2>
         <h2>Installation</h2>
-        <h2>Quick Start</h2>
-        <h2>Auth Emails</h2>
-        <h2>Contact Sync</h2>
-        <h2>Consent and Topics</h2>
-        <h2>Options</h2>
+        <h2>Send the Verification Email</h2>
+        <h2>The Other Auth Emails</h2>
+        <h2>AWS Credentials</h2>
+        <h2>Branding and Templates</h2>
+        <h2>When a Send Fails</h2>
         <h2>Serverless and waitUntil</h2>
-        <h2>Error Handling</h2>
+        <h2>Troubleshooting</h2>
+        <h2>Sync Signups to Wraps Contacts (Optional)</h2>
+        <h2>Options</h2>
+        <h2>Next Steps</h2>
       </article>
       <BetterAuthPageContent />
     </>

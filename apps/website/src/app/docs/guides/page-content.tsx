@@ -174,7 +174,7 @@ const guides = [
   {
     title: "Better Auth",
     description:
-      "Sync Better Auth signups to Wraps contacts and send verification, password reset, magic link, OTP, and invitation emails from your own SES account.",
+      "One plugin block sends every Better Auth auth email through SES in your own AWS account. Templates included, no Wraps account needed.",
     href: "/docs/guides/better-auth",
     icon: KeyRound,
     readTime: "6 min read",

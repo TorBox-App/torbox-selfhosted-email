@@ -373,7 +373,7 @@ Failures SES throws no exception for. Every percentage is quoted from AWS docume
 - [Context7 (AI Docs)](https://wraps.dev/docs/guides/context7): Pipe current Wraps docs into Claude Code, Cursor, Windsurf, or any MCP-compatible editor
 - [Self-Hosted Deployment](https://wraps.dev/docs/guides/self-hosted): Deploy the full Wraps control plane (API, dashboard, database, email infrastructure) to your own AWS account
 - [SMTP Credentials](https://wraps.dev/docs/guides/smtp): Generate SMTP credentials for AWS SES — use with WordPress, Nodemailer, PHPMailer, or any SMTP client
-- [Better Auth](https://wraps.dev/docs/guides/better-auth): Sync Better Auth signups to Wraps contacts and send verification, password reset, magic link, OTP, and invitation emails from your own AWS SES account
+- [Better Auth](https://wraps.dev/docs/guides/better-auth): One plugin block sends every Better Auth auth email through SES in your own AWS account, plus optional signup-to-contact sync
 
 ## Product Pages
 
