@@ -36,6 +36,8 @@ const FILES = [
   "apps/website/src/app/page.tsx",
   "apps/website/src/app/platform/components/pricing-section.tsx",
   "apps/website/src/app/terms/page.tsx",
+  "apps/website/src/app/tools/ses-calculator/page-content.tsx",
+  "apps/website/src/app/tools/ses-calculator/page.tsx",
   "apps/website/src/app/why-wraps/components/faq-section.tsx",
   "apps/website/src/app/why-wraps/page.tsx",
   "apps/website/src/config/pricing.ts",
