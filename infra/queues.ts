@@ -141,8 +141,13 @@ const batchSenderSubscription = batchQueue.subscribe(
       // The stuck-broadcast alert emails the org from wraps.dev, which is
       // verified in the dogfood account (010836206701), not this platform
       // account. getWrapsClient() assumes this role from the function's
-      // execution role — the sts:AssumeRole grant below on wraps-* already
-      // covers it. Same identity the EventFeedStaleness cron uses.
+      // execution role. Same identity the EventFeedStaleness cron uses.
+      //
+      // The sts:AssumeRole grant below on wraps-* is only the identity half
+      // of cross-account AssumeRole; the dogfood account's wraps-email-role
+      // must also trust this account in its trust policy. It did not until
+      // 2026-09-22, which made this alert a silent no-op. See the longer
+      // note in infra/cron.ts before changing either half.
       WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
     },
     nodejs: {

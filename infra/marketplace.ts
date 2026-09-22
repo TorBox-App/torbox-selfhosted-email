@@ -95,9 +95,19 @@ marketplaceQueue.subscribe(
       SENTRY_DSN: sentryDsn.value,
       // The confirmation email is sent from wraps.dev, which is verified in
       // the dogfood account (010836206701), not this platform account.
-      // getWrapsClient() assumes this role from the function's execution role;
-      // the sts:AssumeRole grant below covers it. Same identity the batch
-      // sender and EventFeedStaleness cron use.
+      // getWrapsClient() assumes this role from the function's execution role.
+      // Same identity the batch sender and EventFeedStaleness cron use.
+      //
+      // The sts:AssumeRole grant below is only the identity half of
+      // cross-account AssumeRole; the dogfood account's wraps-email-role must
+      // also trust this account. It did not until 2026-09-22 — a Marketplace
+      // buyer would have been charged and never received the confirmation.
+      //
+      // This function's execution role is named prod-Marketplace*, NOT
+      // wraps-production-* like every other handler: SST truncates the prefix
+      // when the generated name would exceed IAM's 64-character limit. The
+      // trust policy's aws:PrincipalArn condition must keep covering both
+      // prefixes. See the longer note in infra/cron.ts.
       WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
       // Link target in the confirmation email.
       APP_BASE_URL:

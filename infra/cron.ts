@@ -201,8 +201,24 @@ export const eventFeedStalenessCron = new sst.aws.CronV2("EventFeedStaleness", {
       // wraps.dev is verified in the dogfood account's SES (010836206701),
       // not this platform account — getWrapsClient() sees this env var and
       // assumes the role from this function's execution role, the same
-      // sending identity the web app reaches via Vercel OIDC. The role's
-      // trust policy also trusts this platform account for sts:AssumeRole.
+      // sending identity the web app reaches via Vercel OIDC.
+      //
+      // Cross-account AssumeRole needs BOTH halves, and the grant below is
+      // only the identity half. The other half lives in the dogfood account:
+      // wraps-email-role's trust policy must carry a statement allowing
+      // sts:AssumeRole from arn:aws:iam::905130073023:root, conditioned on
+      // aws:PrincipalArn matching this account's Lambda execution roles.
+      // It did not, so every send from here failed AccessDenied and
+      // alertOwner() swallowed it — silent for as long as it existed
+      // (Sentry API #7747581442, fixed 2026-09-22).
+      //
+      // That trust policy is NOT managed by this repo. It is a hand-applied
+      // change in 010836206701: the role is created by the customer-facing
+      // cloudformation/wraps-email-infrastructure.yaml, whose template must
+      // NOT grow platform trust — that would let Wraps assume every
+      // customer's sending role. Verify with:
+      //   aws iam get-role --role-name wraps-email-role \
+      //     --profile wraps-dogfood --query Role.AssumeRolePolicyDocument
       WRAPS_EMAIL_ROLE_ARN: "arn:aws:iam::010836206701:role/wraps-email-role",
     },
     // @sentry/profiling-node ships native .node binaries that esbuild cannot
