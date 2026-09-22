@@ -307,6 +307,45 @@ const senders = [
   },
 ];
 
+/*
+ * Light and dark renders of the same figure, swapped on the site's `.dark`
+ * class — it sits on the page background, so a single dark clip reads as a
+ * hole punched in the light theme. The still is a CSS background rather than
+ * the `poster` attribute: a poster downloads even when the video is
+ * display:none, a background-image does not.
+ *
+ * Source composition: wraps-private, `BetterAuthFlow` / `BetterAuthFlowLight`.
+ */
+function FlowVideo({ theme }: { theme: "light" | "dark" }) {
+  const suffix = theme === "light" ? "-light" : "";
+
+  return (
+    <video
+      autoPlay
+      className={
+        theme === "light"
+          ? "size-full bg-cover bg-center object-cover bg-(image:--poster) dark:hidden"
+          : "hidden size-full bg-cover bg-center object-cover bg-(image:--poster) dark:block"
+      }
+      loop
+      muted
+      playsInline
+      preload="metadata"
+      src={`/docs/better-auth-flow${suffix}.mp4`}
+      style={
+        {
+          "--poster": `url(/docs/better-auth-flow${suffix}.jpg)`,
+        } as React.CSSProperties
+      }
+    >
+      <track
+        kind="descriptions"
+        label="The wraps plugin added to a Better Auth config, supplying senders for verification, password reset, password changed, magic link, one-time code, and organization invite, which SES in your own AWS account delivers from your verified domain, with an optional branch syncing the signup to Wraps Contacts"
+      />
+    </video>
+  );
+}
+
 export default function BetterAuthPageContent() {
   return (
     <DocsLayout>
@@ -325,6 +364,26 @@ export default function BetterAuthPageContent() {
           so no Wraps account is required.
         </p>
       </div>
+
+      {/*
+       * The whole integration in one frame, before the prose starts: readers
+       * arriving from better-auth.com's provider list are deciding whether
+       * "your own AWS account" means real work, and the figure answers that
+       * faster than the config example can. The caption carries the same chain
+       * in text, for search engines and for anyone the video never plays for.
+       */}
+      <figure className="mb-8">
+        <div className="aspect-[16/9] overflow-hidden rounded-xl border border-border bg-background">
+          <FlowVideo theme="light" />
+          <FlowVideo theme="dark" />
+        </div>
+        <figcaption className="mt-3 text-muted-foreground text-sm">
+          One plugin block in <Code>auth.ts</Code> gives Better Auth senders for
+          all six auth emails. Each one is delivered by SES in your own AWS
+          account, from your verified domain. Syncing the signup to Wraps
+          Contacts is optional, and the only part that needs a Wraps API key.
+        </figcaption>
+      </figure>
 
       {/* Orientation for readers arriving from better-auth.com */}
       <div className="mb-8 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
