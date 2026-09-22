@@ -80,7 +80,7 @@ export const PAGE_DATES: Record<string, string> = {
   "/docs/guides/aws-setup/permissions": "2026-09-15T08:41:41-06:00",
   "/docs/guides/aws-setup/quick": "2026-09-15T08:41:41-06:00",
   "/docs/guides/aws-setup/troubleshooting": "2026-09-15T08:41:41-06:00",
-  "/docs/guides/better-auth": "2026-09-20T21:58:19-06:00",
+  "/docs/guides/better-auth": "2026-09-22T09:17:17-06:00",
   "/docs/guides/bounce-handling": "2026-09-15T09:45:49-06:00",
   "/docs/guides/configuration-presets": "2026-09-15T08:41:41-06:00",
   "/docs/guides/context7": "2026-09-15T08:41:41-06:00",
