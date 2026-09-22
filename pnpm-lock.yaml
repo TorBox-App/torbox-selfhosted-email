@@ -100,8 +100,8 @@ catalogs:
       specifier: 1.7.1
       version: 1.7.1
     better-inbox:
-      specifier: 0.1.2
-      version: 0.1.2
+      specifier: 0.3.0
+      version: 0.3.0
     dotenv:
       specifier: ^17.4.2
       version: 17.4.2
@@ -647,7 +647,7 @@ importers:
         version: 1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9)
       better-inbox:
         specifier: 'catalog:'
-        version: 0.1.2(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8)
+        version: 0.3.0(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8)
       chrono-node:
         specifier: 2.9.1
         version: 2.9.1
@@ -1148,7 +1148,7 @@ importers:
         version: 1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9)
       better-inbox:
         specifier: 'catalog:'
-        version: 0.1.2(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8)
+        version: 0.3.0(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8)
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -8399,8 +8399,8 @@ packages:
       zod:
         optional: true
 
-  better-inbox@0.1.2:
-    resolution: {integrity: sha512-2NiBguGlG1CSl0pln9XQHqbLZ9MaD79HNfEjYzycYDINgvj4g3pRIT92efdr/lyTkWZNfwH/jTx2nZyf5yv8tw==}
+  better-inbox@0.3.0:
+    resolution: {integrity: sha512-pxDFjmzb7K+hskWBmMGyW9cVfJZF9oUo1zY8riP8o+2IhcB+2HUgOtwAqkOxf9zL5NdpurAXZ9x4VOlyzzS8eg==}
     peerDependencies:
       better-auth: ^1.6.23
       react: '>=18'
@@ -20512,7 +20512,7 @@ snapshots:
     optionalDependencies:
       zod: 4.4.3
 
-  better-inbox@0.1.2(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8):
+  better-inbox@0.3.0(better-auth@1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9))(react@19.2.8):
     dependencies:
       better-auth: 1.7.1(@opentelemetry/api@1.9.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(kysely@0.29.4)(pg@8.22.0))(mongodb@7.1.0(@aws-sdk/credential-providers@3.1095.0)(socks@2.8.9))(next@16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.10.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.22.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.14)(vitest@4.1.9)
       zod: 4.4.3
