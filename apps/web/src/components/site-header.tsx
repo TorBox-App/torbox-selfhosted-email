@@ -124,11 +124,14 @@ export function SiteHeader() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <SesHealthPill orgSlug={orgSlug} />
-            <InboxButton
-              client={authClient}
-              onNavigate={(href) => router.push(href)}
-              organizationId={activeOrganization?.id}
-            />
+            {activeOrganization ? (
+              <InboxButton
+                client={authClient}
+                key={activeOrganization.id}
+                onNavigate={(href) => router.push(href)}
+                organizationId={activeOrganization.id}
+              />
+            ) : null}
           </div>
         </div>
       </header>
