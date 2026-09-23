@@ -67,8 +67,12 @@ describe("buildAttribution", () => {
     });
   });
 
-  it("returns null when there is nothing to attribute", () => {
-    expect(buildAttribution(request("https://wraps.dev/pricing"))).toBeNull();
+  it("still attributes an untagged, organic visit", () => {
+    const attribution = buildAttribution(request("https://wraps.dev/pricing"));
+
+    expect(attribution).toMatchObject({ landing_page: "/pricing" });
+    expect(attribution.timestamp).toBeTruthy();
+    expect(attribution).not.toHaveProperty("utm_source");
   });
 
   it("records an off-site referrer", () => {
@@ -81,6 +85,25 @@ describe("buildAttribution", () => {
     expect(attribution?.referrer).toBe(
       "https://www.reddit.com/r/aws/comments/abc"
     );
+  });
+
+  it("records an off-site referrer for an untagged visit", () => {
+    const attribution = buildAttribution(
+      request("https://wraps.dev/pricing", {
+        referer: "https://www.google.com/",
+      })
+    );
+
+    expect(attribution.referrer).toBe("https://www.google.com/");
+  });
+
+  it("truncates a pathologically long referrer to 512 chars", () => {
+    const referer = `https://x.com/${"a".repeat(2000)}`;
+    const attribution = buildAttribution(
+      request("https://wraps.dev/pricing", { referer })
+    );
+
+    expect(attribution.referrer).toHaveLength(512);
   });
 
   it("ignores our own pages as a referrer", () => {
@@ -131,11 +154,16 @@ describe("setAttributionCookie", () => {
     expect(set).not.toHaveBeenCalled();
   });
 
-  it("writes nothing for untagged traffic", () => {
+  it("writes a first-touch cookie for untagged traffic", () => {
     const { response: res, set } = response();
 
     setAttributionCookie(request("https://wraps.dev/pricing"), res);
 
-    expect(set).not.toHaveBeenCalled();
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(set).toHaveBeenCalledWith(
+      ATTRIBUTION_COOKIE,
+      expect.stringContaining('"landing_page":"/pricing"'),
+      expect.anything()
+    );
   });
 });

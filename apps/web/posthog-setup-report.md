@@ -13,7 +13,7 @@ The wizard has completed a deep integration of your Next.js 16.1.0 project with 
 
 | Event Name | Description | File Path |
 |------------|-------------|-----------|
-| `user_signed_up` | User successfully creates a new account | `src/components/sign-up-form.tsx` |
+| `sign_up_form_completed` | Email/password signup form finished; carries selected_plan and billing_interval. The canonical `user_signed_up` is server-side in `packages/auth/src/index.ts` | `src/components/sign-up-form.tsx` |
 | `user_signed_in` | User successfully signs in to their account | `src/components/sign-in-form.tsx` |
 | `two_factor_verified` | User successfully verifies two-factor authentication | `src/components/sign-in-form.tsx` |
 | `passkey_sign_in` | User signs in using a passkey | `src/components/sign-in-form.tsx` |

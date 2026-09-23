@@ -139,10 +139,34 @@ describe("proxy behavior", () => {
     expect(response.cookies.get("wraps_attribution")).toBeUndefined();
   });
 
-  it("sets no wraps_attribution cookie when there is no UTM or ref param", () => {
-    const request = new NextRequest("https://example.com/");
+  it("sets a wraps_attribution cookie for a visitor with no UTM or ref param", () => {
+    const request = new NextRequest("https://example.com/auth");
     const response = proxy(request);
-    expect(response.cookies.get("wraps_attribution")).toBeUndefined();
+    const value = response.cookies.get("wraps_attribution")?.value;
+    expect(value).toBeDefined();
+    expect(JSON.parse(value as string)).toMatchObject({
+      landing_page: "/auth",
+    });
+  });
+
+  it("records an off-site referrer", () => {
+    const request = new NextRequest("https://example.com/auth", {
+      headers: { referer: "https://github.com/wraps-team/wraps" },
+    });
+    const response = proxy(request);
+    const value = response.cookies.get("wraps_attribution")?.value;
+    expect(JSON.parse(value as string)).toMatchObject({
+      referrer: "https://github.com/wraps-team/wraps",
+    });
+  });
+
+  it("does not record a same-site referrer", () => {
+    const request = new NextRequest("https://example.com/auth", {
+      headers: { referer: "https://wraps.dev/pricing" },
+    });
+    const response = proxy(request);
+    const value = response.cookies.get("wraps_attribution")?.value;
+    expect(JSON.parse(value as string)).not.toHaveProperty("referrer");
   });
 
   it("sets an x-request-id header on every response, generating one if absent", () => {

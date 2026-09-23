@@ -146,7 +146,8 @@ export default function SignUpForm({
         name: value.name,
         ...attribution,
       });
-      posthog.capture("user_signed_up", {
+      // user_signed_up is emitted server-side for every signup method (packages/auth); this event only adds the plan the form was opened with.
+      posthog.capture("sign_up_form_completed", {
         email: value.email,
         name: value.name,
         selected_plan: plan || null,

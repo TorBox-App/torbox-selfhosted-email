@@ -136,6 +136,8 @@ vi.mock("@/lib/utils", () => ({
   toSafeRedirectPath: (_path: unknown, fallback: string) => fallback,
 }));
 
+import posthog from "posthog-js";
+import { authClient } from "@/lib/auth-client";
 import SignUpForm from "../sign-up-form";
 
 describe("SignUpForm - per-field validation", () => {
@@ -217,5 +219,78 @@ describe("SignUpForm - per-field validation", () => {
         screen.getAllByText("Password must be at least 6 characters")
       ).toHaveLength(1);
     });
+  });
+});
+
+describe("SignUpForm - analytics on successful signup", () => {
+  // NEXT_PUBLIC_TURNSTILE_SITE_KEY is a module-level constant read once when
+  // sign-up-form.tsx first loads. In this checkout it is not actually unset:
+  // vitest.config.ts's `loadEnv("test", ...)` merges in apps/web/.env.local,
+  // which sets a real site key, so the statically-imported SignUpForm above
+  // has Turnstile "on" and its onSubmit bails before calling
+  // authClient.signUp.email — there is no captcha widget in this test
+  // environment to produce a token. Stub the var empty and re-import the
+  // module fresh (with its dependencies) so this describe's component
+  // matches the no-Turnstile behavior the rest of the suite assumes.
+  let DynamicSignUpForm: typeof SignUpForm;
+  let dynamicAuthClient: typeof authClient;
+  let dynamicPosthog: typeof posthog;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockUseSession.mockReturnValue({ isPending: false, data: null });
+
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "");
+    vi.resetModules();
+
+    ({ default: DynamicSignUpForm } = await import("../sign-up-form"));
+    ({ authClient: dynamicAuthClient } = await import("@/lib/auth-client"));
+    dynamicPosthog = (await import("posthog-js")).default;
+
+    vi.mocked(dynamicAuthClient.signUp.email).mockResolvedValue({
+      error: null,
+    } as never);
+    vi.mocked(dynamicAuthClient.signIn.email).mockResolvedValue({
+      error: null,
+    } as never);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllEnvs();
+  });
+
+  it("fires sign_up_form_completed, never the server-side user_signed_up name", async () => {
+    render(<DynamicSignUpForm onSwitchToSignIn={vi.fn()} />);
+
+    const nameInput = screen.getByLabelText(/name/i);
+    const emailInput = screen.getByPlaceholderText(/m@example\.com/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+
+    fireEvent.change(nameInput, { target: { value: "Ada Lovelace" } });
+    fireEvent.blur(nameInput);
+    fireEvent.change(emailInput, { target: { value: "ada@example.com" } });
+    fireEvent.blur(emailInput);
+    fireEvent.change(passwordInput, { target: { value: "abcdef12" } });
+    fireEvent.blur(passwordInput);
+
+    const submitButton = screen.getByRole("button", {
+      name: /create account/i,
+    });
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(dynamicPosthog.capture).toHaveBeenCalledWith(
+        "sign_up_form_completed",
+        expect.objectContaining({ email: "ada@example.com" })
+      );
+    });
+    expect(dynamicPosthog.capture).not.toHaveBeenCalledWith(
+      "user_signed_up",
+      expect.anything()
+    );
   });
 });

@@ -13,6 +13,7 @@ import type { NextRequest, NextResponse } from "next/server";
 export const ATTRIBUTION_COOKIE = "wraps_attribution";
 
 const ATTRIBUTION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const MAX_REFERRER_LENGTH = 512;
 
 export const UTM_PARAMS = [
   "utm_source",
@@ -36,10 +37,14 @@ export function attributionCookieDomain(hostname: string): string | undefined {
     : undefined;
 }
 
-/** Build the attribution payload, or null when there is nothing to attribute. */
-export function buildAttribution(
-  request: NextRequest
-): Record<string, string> | null {
+/**
+ * Build the attribution payload for this request.
+ *
+ * Every visit produces one, tagged or not: organic (Google, Reddit,
+ * directories, direct) traffic is most of the traffic, and without a payload
+ * here the eventual signup record would have no source at all.
+ */
+export function buildAttribution(request: NextRequest): Record<string, string> {
   const { searchParams, pathname, hostname } = request.nextUrl;
 
   const attribution: Record<string, string> = {};
@@ -56,15 +61,11 @@ export function buildAttribution(
     attribution.ref = ref;
   }
 
-  if (Object.keys(attribution).length === 0) {
-    return null;
-  }
-
   // Only an off-site referrer is worth recording. Our own pages are navigation,
   // not a source, and writing one here would misreport the visit's origin.
   const referrer = request.headers.get("referer");
   if (referrer && !isSameSite(referrer, hostname)) {
-    attribution.referrer = referrer;
+    attribution.referrer = referrer.slice(0, MAX_REFERRER_LENGTH);
   }
 
   attribution.landing_page = pathname;
@@ -85,9 +86,9 @@ function isSameSite(referrer: string, hostname: string): boolean {
 }
 
 /**
- * Write the attribution cookie when this request carries campaign params and
- * no cookie exists yet. First touch wins: a visitor who arrives from Reddit and
- * comes back a week later via Google stays attributed to Reddit.
+ * Write the attribution cookie for this request's first touch, if no cookie
+ * exists yet. First touch wins: a visitor who arrives from Reddit and comes
+ * back a week later via Google stays attributed to Reddit.
  */
 export function setAttributionCookie(
   request: NextRequest,
@@ -98,9 +99,6 @@ export function setAttributionCookie(
   }
 
   const attribution = buildAttribution(request);
-  if (!attribution) {
-    return;
-  }
 
   const domain = attributionCookieDomain(request.nextUrl.hostname);
 

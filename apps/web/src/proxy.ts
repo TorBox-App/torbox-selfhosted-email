@@ -29,13 +29,28 @@ function attributionCookieDomain(hostname: string): string | undefined {
     : undefined;
 }
 
+const MAX_REFERRER_LENGTH = 512;
+
+function isSameSite(referrer: string, hostname: string): boolean {
+  try {
+    const host = new URL(referrer).hostname;
+    return (
+      host === hostname || host === "wraps.dev" || host.endsWith(".wraps.dev")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Set a first-touch attribution cookie if UTM or ref params are present
- * and no attribution cookie exists yet.
+ * Set a first-touch attribution cookie for this request, if no attribution
+ * cookie exists yet.
  *
  * Most campaign traffic never reaches this function — it arrives on wraps.dev,
- * where apps/website's middleware writes the cookie. This covers links that
- * point straight at the app with params attached.
+ * where apps/website's middleware writes the cookie. This one records first
+ * touch for any visitor who reaches the app before the marketing site (about
+ * 38% of signups land on app.wraps.dev directly), not only tagged links.
+ * Keep in sync with apps/website/src/lib/attribution.ts.
  */
 function setAttributionCookie(
   request: NextRequest,
@@ -43,12 +58,6 @@ function setAttributionCookie(
 ): void {
   const { searchParams } = request.nextUrl;
 
-  const hasUtm = UTM_PARAMS.some((p) => searchParams.has(p));
-  const hasRef = searchParams.has("ref");
-
-  if (!(hasUtm || hasRef)) {
-    return;
-  }
   if (request.cookies.has(ATTRIBUTION_COOKIE)) {
     return;
   }
@@ -68,8 +77,8 @@ function setAttributionCookie(
   }
 
   const referrer = request.headers.get("referer");
-  if (referrer) {
-    attribution.referrer = referrer;
+  if (referrer && !isSameSite(referrer, request.nextUrl.hostname)) {
+    attribution.referrer = referrer.slice(0, MAX_REFERRER_LENGTH);
   }
 
   attribution.landing_page = request.nextUrl.pathname;

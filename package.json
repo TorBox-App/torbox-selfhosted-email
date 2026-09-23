@@ -45,6 +45,7 @@
     "selfhost:upgrade": "pnpm selfhost:build-deps && tsx scripts/selfhost/upgrade.ts",
     "selfhost:destroy": "tsx scripts/selfhost/destroy.ts",
     "test:scripts": "vitest run --config scripts/vitest.config.ts",
+    "analytics:signup-journeys": "node scripts/signup-journeys.mjs",
     "test:deploy": "./tests/deployment/run.sh",
     "test:deploy:cli": "./tests/deployment/run.sh cli",
     "test:deploy:cdk": "./tests/deployment/run.sh cdk",
