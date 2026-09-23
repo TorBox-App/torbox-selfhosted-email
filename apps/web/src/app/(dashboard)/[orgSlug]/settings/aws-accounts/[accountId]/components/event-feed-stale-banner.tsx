@@ -13,6 +13,10 @@ type EventFeedStaleBannerProps = {
     InferSelectModel<typeof awsAccount>,
     "eventFeedStaleSince" | "lastEventReceivedAt"
   >;
+  /** Masked AWS account id, set only where several accounts can appear
+   * together, so the banner cannot be read as being about a different
+   * account's mail. */
+  accountLabel?: string;
 };
 
 /**
@@ -21,7 +25,10 @@ type EventFeedStaleBannerProps = {
  * Server component — reads the already org-scoped `account` row fetched by
  * the parent page, no extra query needed.
  */
-export function EventFeedStaleBanner({ account }: EventFeedStaleBannerProps) {
+export function EventFeedStaleBanner({
+  account,
+  accountLabel,
+}: EventFeedStaleBannerProps) {
   if (!account.eventFeedStaleSince) {
     return null;
   }
@@ -36,14 +43,18 @@ export function EventFeedStaleBanner({ account }: EventFeedStaleBannerProps) {
   return (
     <Alert variant="destructive">
       <AlertTriangle />
-      <AlertTitle>Event streaming appears disconnected</AlertTitle>
+      <AlertTitle>
+        {accountLabel
+          ? `Event streaming appears disconnected for AWS account ${accountLabel}`
+          : "Event streaming appears disconnected"}
+      </AlertTitle>
       <AlertDescription>
         <p>
           The last delivery event we received was{" "}
           {formatRelativeTime(new Date(account.lastEventReceivedAt))}, though
-          emails are being sent. The email timeline and analytics for this
-          account are frozen, and bounce/complaint handling is blind until the
-          feed recovers. Run{" "}
+          emails are still being sent from this account. The email timeline and
+          analytics for this account are frozen, and bounce/complaint handling
+          is blind until the feed recovers. Run{" "}
           <code className="rounded bg-muted px-1 py-0.5">
             wraps email doctor
           </code>{" "}

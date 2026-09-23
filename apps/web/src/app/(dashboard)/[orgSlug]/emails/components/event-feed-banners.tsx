@@ -6,6 +6,7 @@ import {
   AlertTitle,
 } from "@wraps/ui/components/ui/alert";
 import { RadioTower } from "lucide-react";
+import { Fragment } from "react";
 import { EventFeedStaleBanner } from "../../settings/aws-accounts/[accountId]/components/event-feed-stale-banner";
 import type { EmailListFeed } from "../types";
 
@@ -43,12 +44,7 @@ export function EmailFeedBanners({ feed }: { feed: EmailListFeed | null }) {
   return (
     <div className="space-y-3">
       {stale.map((account) => (
-        <div className="space-y-1" key={`stale-${account.maskedAccountId}`}>
-          {nameAccounts ? (
-            <p className="text-muted-foreground text-xs">
-              AWS account {account.maskedAccountId}
-            </p>
-          ) : null}
+        <Fragment key={`stale-${account.maskedAccountId}`}>
           <EventFeedStaleBanner
             account={{
               eventFeedStaleSince: account.eventFeedStaleSince
@@ -58,8 +54,9 @@ export function EmailFeedBanners({ feed }: { feed: EmailListFeed | null }) {
                 ? new Date(account.lastEventReceivedAt)
                 : null,
             }}
+            accountLabel={nameAccounts ? account.maskedAccountId : undefined}
           />
-        </div>
+        </Fragment>
       ))}
 
       {silent.map((account) => (

@@ -53,6 +53,39 @@ describe("EventFeedStaleBanner", () => {
     expect(screen.getByText(/[45]m ago/)).toBeInTheDocument();
   });
 
+  it("names the AWS account in the title when accountLabel is given", () => {
+    render(
+      <EventFeedStaleBanner
+        account={{
+          eventFeedStaleSince: new Date(Date.now() - 60_000),
+          lastEventReceivedAt: new Date(Date.now() - 60_000),
+        }}
+        accountLabel="8184...6748"
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "Event streaming appears disconnected for AWS account 8184...6748"
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("says emails are still being sent from this account", () => {
+    render(
+      <EventFeedStaleBanner
+        account={{
+          eventFeedStaleSince: new Date(Date.now() - 60_000),
+          lastEventReceivedAt: new Date(Date.now() - 60_000),
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText(/still being sent from this account/)
+    ).toBeInTheDocument();
+  });
+
   it("returns null when lastEventReceivedAt is null even if eventFeedStaleSince is set", () => {
     // Plan 194's sweep gate should make this combination unreachable in
     // production (the sweep never sets eventFeedStaleSince on a never-
