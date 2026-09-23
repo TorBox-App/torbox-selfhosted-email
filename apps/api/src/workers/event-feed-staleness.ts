@@ -148,6 +148,14 @@ const ATTRIBUTION_BASELINE_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 // alert this gate exists to stop.
 const ATTRIBUTION_RATIO = 1.5;
 const ATTRIBUTION_SLACK = 5;
+// The fallback's minimum evidence. The metric cannot tell whose send it
+// counted, and on a near-idle account the attribution gate above cannot
+// either: its slack swallows the baseline. One stray send from a dev stage
+// sharing the account flagged 818491106748 on 2026-09-22 with
+// sesSendCount:1, and a flag only clears when an event arrives, so an
+// account Wraps no longer sends through stays flagged forever. Below this,
+// the probe is noise, not a stall.
+const SES_FALLBACK_MIN_SENDS = 3;
 
 /**
  * STS/CloudWatch codes that all mean the same thing operationally: the
@@ -739,8 +747,9 @@ export const handler: Handler = wrapHandler(async () => {
           graceCutoff
         );
         // null means "couldn't check" (no role, no permission) — never treat
-        // it as "sent nothing". Only a positive count is evidence of a stall.
-        if (sesSendCount !== null && sesSendCount > 0) {
+        // it as "sent nothing". Only a count of at least SES_FALLBACK_MIN_SENDS
+        // is evidence of a stall.
+        if (sesSendCount !== null && sesSendCount >= SES_FALLBACK_MIN_SENDS) {
           // ...and only if those sends were plausibly Wraps' own. The metric
           // is account-and-region-wide, so on an account that shares SES with
           // its owner's application it reports that application's traffic and

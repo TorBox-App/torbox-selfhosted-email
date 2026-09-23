@@ -269,6 +269,13 @@ describe("event-feed-staleness worker", () => {
     // old enough to reach the fallback still resolves to "not stale" without
     // needing its own CloudWatch setup.
     mockGetCredentials.mockResolvedValue(DEFAULT_CREDENTIALS);
+    // Reset before reapplying the default: a test whose probe stays below
+    // SES_FALLBACK_MIN_SENDS never consumes the second `mockResolvedValueOnce`
+    // a helper like queueMetrics queued for the attribution baseline read, and
+    // `vi.clearAllMocks()` above does not drain that queue -- it would
+    // otherwise survive into the next test and answer its first CloudWatch
+    // call instead of that test's own mock.
+    mockCloudWatchSend.mockReset();
     mockCloudWatchSend.mockResolvedValue(metricResult([]));
   });
 
@@ -528,6 +535,74 @@ describe("event-feed-staleness worker", () => {
 
     expect(updateCalls).toHaveLength(0);
     expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("[2026-09-22 false flag regression] does not flag on a single unattributed SES send", async () => {
+    // Production log on 2026-09-22 03:15 UTC for account c78ef729... (AWS
+    // account 818491106748): total:0, unacknowledged:0, sesSendCount:1,
+    // lastEventAt:2026-09-21T14:59:48Z. A baseline of 6 account-wide sends
+    // against 1 Wraps send is what made the old code flag it: the
+    // attribution gate saw 6 > 1*1.5+5 as false, attributed the send to
+    // Wraps, and flagged. The threshold has to stop it before that gate
+    // ever runs.
+    setupSelects({
+      connectedAccounts: [{ ...BASE_ACCOUNT }],
+      unacknowledgedSend: false,
+      baselineWrapsSends: 1,
+    });
+    queueMetrics([1], 6);
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(0);
+    expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not flag on two SES sends (below SES_FALLBACK_MIN_SENDS)", async () => {
+    setupSelects({
+      connectedAccounts: [{ ...BASE_ACCOUNT }],
+      unacknowledgedSend: false,
+      baselineWrapsSends: 1,
+    });
+    queueMetrics([2], 6);
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(0);
+    expect(mockSendEventFeedStaleEmail).not.toHaveBeenCalled();
+  });
+
+  it("flags at exactly SES_FALLBACK_MIN_SENDS sends", async () => {
+    setupSelects({
+      connectedAccounts: [{ ...BASE_ACCOUNT }],
+      unacknowledgedSend: false,
+      baselineWrapsSends: 10,
+    });
+    queueMetrics([3]);
+    const updateCalls = setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(updateCalls).toHaveLength(1);
+    expect(updateCalls[0].set).toHaveBeenCalledWith(
+      expect.objectContaining({ eventFeedStaleSince: expect.any(Date) })
+    );
+  });
+
+  it("does not pay for the baseline read when the probe is below SES_FALLBACK_MIN_SENDS", async () => {
+    setupSelects({
+      connectedAccounts: [{ ...BASE_ACCOUNT }],
+      unacknowledgedSend: false,
+      baselineWrapsSends: 1,
+    });
+    mockCloudWatchSend.mockResolvedValueOnce(metricResult([1]));
+    setupUpdateCapture();
+
+    await handler({} as never, {} as never, {} as never);
+
+    expect(mockCloudWatchSend).toHaveBeenCalledTimes(1);
   });
 
   // ─── The attribution gate on the fallback (Propiedata, 2026-09-02) ────
