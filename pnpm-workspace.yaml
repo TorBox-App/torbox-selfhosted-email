@@ -113,7 +113,7 @@ catalog:
   '@types/pg': ^8.20.0
   '@vitest/coverage-v8': 4.1.9
   '@vitest/ui': 4.1.9
-  better-auth: 1.7.1
+  better-auth: 1.7.5
   better-inbox: 0.3.1
   dotenv: ^17.4.2
   drizzle-orm: ^0.45.2
