@@ -46,6 +46,9 @@ describe("account table vs better-auth", () => {
 
   it("links and finds an OAuth account the way the callback does", async () => {
     const [row] = await db.select().from(user).where(eq(user.email, email));
+    if (!row) {
+      throw new Error("signup test did not leave a user row");
+    }
     const ctx = await auth.$context;
 
     await ctx.internalAdapter.linkAccount({
