@@ -2,6 +2,7 @@ import { passkey } from "@better-auth/passkey";
 import { type SCIMCanonicalUser, scim } from "@better-auth/scim";
 import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
+import { captureException } from "@sentry/nextjs";
 import { and, auditLog, db, eq, member } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import * as scimSchema from "@wraps/db/schema/scim-provider";
@@ -604,8 +605,34 @@ function extraTrustedIdpOrigins(): string[] {
     .filter((origin) => /^https?:\/\/.+/.test(origin));
 }
 
+/**
+ * better-auth catches its own failures. An OAuth callback that cannot query
+ * the database logs and redirects to `/auth?error=internal_server_error`; an
+ * endpoint that throws logs and answers 500. Neither reaches Sentry, so the
+ * 1.7.1 `account.issuer` break stopped every signup for nine days in silence.
+ * Error-level entries are reported here; everything still goes to the console.
+ */
+export function logAuthEvent(
+  level: "debug" | "info" | "warn" | "error",
+  message: string,
+  ...args: unknown[]
+): void {
+  const line = `[better-auth] ${message}`;
+  if (level !== "error") {
+    console.warn(line, ...args);
+    return;
+  }
+  console.error(line, ...args);
+  const error = args.find((arg) => arg instanceof Error);
+  captureException(error ?? new Error(line), {
+    tags: { feature: "better-auth" },
+    extra: { message },
+  });
+}
+
 export const auth = betterAuth<BetterAuthOptions>({
   baseURL: process.env.BETTER_AUTH_URL,
+  logger: { log: logAuthEvent },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { ...schema, ...ssoSchema, ...scimSchema },
